@@ -1,0 +1,38 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: Validate Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Enable corepack
+        run: corepack enable
+        
+      - name: Install dependencies
+        run: yarn install
+      
+      - name: Type check
+        run: yarn check
+      
+      - name: Lint
+        run: yarn lint
+      
+      - name: Run tests
+        run: yarn test
+      
+      - name: Build
+        run: yarn build

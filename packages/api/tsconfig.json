@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "es2022",                                  /* Set to ES2022 for Node.js 18+ support */
+    "module": "NodeNext",                                /* Use NodeNext for ESM support */
+    "moduleResolution": "NodeNext",                      /* Required for ESM in TypeScript */
+    "lib": ["es2022"],                                   /* Include ES2022 library definitions */
+    "allowImportingTsExtensions": true,                  /* Allow importing .ts files directly */
+    "noEmit": true,                                      /* Required with allowImportingTsExtensions */
+    
+    /* Project Structure */
+    "rootDir": ".",                                  /* Source code root directory */
+    "outDir": "./dist",                                  /* Output directory for compiled code */
+    
+    /* Module Features */
+    "resolveJsonModule": true,                           /* Enable importing .json files */
+    "allowSyntheticDefaultImports": true,                /* Allow imports from modules with no default export */
+    "esModuleInterop": true,                             /* Enables CommonJS/ES Module interoperability */
+    "forceConsistentCasingInFileNames": true,            /* Ensure correct casing in imports */
+    
+    /* Type Safety */
+    "strict": true,                                      /* Enable all strict type-checking options */
+    "noUnusedLocals": true,                              /* Report errors on unused locals */
+    "noUnusedParameters": true,                          /* Report errors on unused parameters */
+    "noImplicitReturns": true,                           /* Report error when not all code paths return */
+    "noFallthroughCasesInSwitch": true,                  /* Report errors for fallthrough cases in switch */
+    
+    /* Source Maps & Declaration Files */
+    "sourceMap": true,                                   /* Generate source maps for debugging */
+    "declaration": true,                                 /* Generate .d.ts declaration files */
+    
+    /* Completeness */
+    "skipLibCheck": true                                 /* Skip type checking all .d.ts files */
+  },
+  "include": ["src/**/*", "vi.config.js", "tsup.config.ts", "eslint.config.js", "commitlint.config.js", ".versionrc.js", "drizzle.config.ts", "vitest.config.ts"],  /* Only include files in the src directory */
+  "exclude": ["node_modules", "dist"]                    /* Exclude node_modules and build directory */
+}
