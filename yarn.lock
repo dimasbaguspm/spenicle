@@ -1011,7 +1011,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/js@npm:^9.21.0":
+"@eslint/js@npm:9.28.0, @eslint/js@npm:^9.21.0":
   version: 9.28.0
   resolution: "@eslint/js@npm:9.28.0"
   checksum: 10/c2ab0416aef01f28f189525c9a86253f531852a1ed45db94a97f01bcc51d15720f38a8c201af7a7331eb1e80c991a7ef54c4be193b17540e48044672dba69bd8
@@ -1456,7 +1456,7 @@ __metadata:
     "@commitlint/cli": "npm:19.8.1"
     "@commitlint/config-conventional": "npm:19.8.1"
     "@eslint/eslintrc": "npm:3.3.1"
-    "@eslint/js": "npm:9.27.0"
+    "@eslint/js": "npm:9.28.0"
     "@types/bcrypt": "npm:5.0.2"
     "@types/cors": "npm:2.8.18"
     "@types/express": "npm:5.0.2"
@@ -1507,7 +1507,7 @@ __metadata:
     "@commitlint/cli": "npm:19.8.1"
     "@commitlint/config-conventional": "npm:19.8.1"
     "@eslint/eslintrc": "npm:3.3.1"
-    "@eslint/js": "npm:9.27.0"
+    "@eslint/js": "npm:9.28.0"
     "@tailwindcss/vite": "npm:4.1.7"
     "@tanstack/eslint-config": "npm:0.1.0"
     "@tanstack/react-query": "npm:5.77.0"
