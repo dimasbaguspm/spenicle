@@ -2,7 +2,17 @@ import { Trash2 } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { Controller } from 'react-hook-form';
 
-import { Drawer, TextInput, Select, TextArea, Button, IconButton, Modal, Segment } from '../../../../components';
+import {
+  Drawer,
+  TextInput,
+  Select,
+  TextArea,
+  Button,
+  IconButton,
+  Modal,
+  Segment,
+  DateTimePicker,
+} from '../../../../components';
 
 import type { EditTransactionDrawerProps } from './types';
 import { useEditTransactionForm } from './use-edit-transaction-form.hook';
@@ -147,11 +157,10 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
               control={control}
               rules={{ required: 'Date is required' }}
               render={({ field }) => (
-                <TextInput
-                  label="Date"
-                  type="date"
-                  value={field.value ?? ''}
-                  onChange={field.onChange}
+                <DateTimePicker
+                  label="Date & Time"
+                  value={field.value ? new Date(field.value) : undefined}
+                  onChange={(date) => field.onChange(date?.toISOString())}
                   errorText={errors.date?.message}
                 />
               )}

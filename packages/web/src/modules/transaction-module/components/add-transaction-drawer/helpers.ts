@@ -9,7 +9,7 @@ export const DEFAULT_FORM_VALUES: Partial<AddTransactionFormData> = {
   amount: 0,
   currency: 'USD',
   type: 'expense',
-  date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+  date: new Date().toISOString(), // Current datetime in ISO format
   note: null,
   recurrenceId: null,
 };
