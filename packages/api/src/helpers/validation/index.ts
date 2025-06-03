@@ -12,6 +12,7 @@ export * from './account-limit.schema.ts';
 export * from './recurrence.schema.ts';
 export * from './refresh-token.schema.ts';
 export * from './user-preference.schema.ts';
+export * from './summary.schema.ts';
 
 export const validate = async <Schema>(schema: ZodSchema<Schema>, input: unknown) => {
   const output = await schema.safeParseAsync(input);

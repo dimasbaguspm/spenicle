@@ -43,7 +43,11 @@ export {
 } from './transaction-recurrence.controller.ts';
 
 // Summary controller functions
-export { getSummary } from './summary.controller.ts';
+export {
+  getSummaryAccountsPeriod,
+  getSummaryCategoriesPeriod,
+  getSummaryTransactionsPeriod,
+} from './summary.controller.ts';
 
 // User preference controller functions
 export {

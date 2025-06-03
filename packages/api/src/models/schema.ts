@@ -170,3 +170,32 @@ export type UserPreference = typeof userPreferences.$inferSelect;
 export type PagedUserPreferences = PaginatedResponse<UserPreference>;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
 export type UpdateUserPreference = Partial<NewUserPreference>;
+
+export interface SummaryTransactionPeriod {
+  startDate: string;
+  endDate: string;
+  totalIncome: number; // total income for the period
+  totalExpenses: number; // total expenses for the period
+  netAmount: number; // net amount (income - expenses)
+  totalTransactions?: number; // total number of transactions in the period
+}
+
+export interface SummaryAccountPeriod {
+  accountId: number; // account ID for which the summary is calculated
+  startDate: string;
+  endDate: string;
+  totalIncome: number; // total income
+  totalExpenses: number; // total expenses
+  totalNet: number; // total net amount (income - expenses)
+  totalTransactions: number; // total number of transactions
+}
+
+export interface SummaryCategoryPeriod {
+  categoryId: number; // category ID for which the summary is calculated
+  startDate: string;
+  endDate: string;
+  totalIncome: number; // total income
+  totalExpenses: number; // total expenses
+  totalNet: number; // total net amount (income - expenses)
+  totalTransactions: number; // total number of transactions
+}
