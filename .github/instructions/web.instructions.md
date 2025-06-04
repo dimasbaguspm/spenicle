@@ -12,6 +12,7 @@ There are a color palette and a set of design tokens that should be used consist
 - src/providers/**, should contain context providers that able to use global components and hooks 
 - src/routes/**, should contain the routes of the application
 - src/modules/**/**/*, should contain the modules of the application, which can be a combination of components, hooks, and providers
+- when creating a new component, keep in mind the component should be reusable and modular, and the props should be fully support dynamic; ensure the pattern that is used is consistent with the existing components (prefer to have Compound Components pattern)
 
 ## Domain Knowledge
 - The application is a web-based platform that requires a responsive design but we're prioritizing mobile first

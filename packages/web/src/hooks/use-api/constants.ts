@@ -147,6 +147,27 @@ export const QUERY_KEYS = {
         type: 'single',
         params,
       }),
+    transactions: (params?: unknown) =>
+      createQueryKey({
+        entity: 'summary',
+        type: 'list',
+        id: 'transactions',
+        params,
+      }),
+    accounts: (params?: unknown) =>
+      createQueryKey({
+        entity: 'summary',
+        type: 'list',
+        id: 'accounts',
+        params,
+      }),
+    categories: (params?: unknown) =>
+      createQueryKey({
+        entity: 'summary',
+        type: 'list',
+        id: 'categories',
+        params,
+      }),
   },
 
   // Health

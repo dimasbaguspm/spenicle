@@ -1,42 +1,38 @@
-import type { Error } from '../../../types/api';
+import type {
+  Error,
+  SummaryAccountsPeriod,
+  SummaryPeriodQueryParameters,
+  SummaryTransactionsPeriod,
+} from '../../../types/api';
 import { QUERY_KEYS } from '../constants';
 import { useApiQuery, type UseApiQueryResult } from '../use-api-query';
 
-interface FinancialSummary {
-  summary: {
-    totalIncome: number;
-    totalExpenses: number;
-    netIncome: number;
-    accountBalances: Array<{
-      accountId: string;
-      accountName: string;
-      balance: number;
-    }>;
-    categoryBreakdown: Array<{
-      categoryId: string;
-      categoryName: string;
-      amount: number;
-      type: 'income' | 'expense';
-    }>;
-  };
-  period: {
-    startDate: string;
-    endDate: string;
-  };
-}
+export const useApiSummaryTransactionsQuery = (
+  params?: SummaryPeriodQueryParameters
+): UseApiQueryResult<SummaryTransactionsPeriod, Error> => {
+  return useApiQuery<SummaryTransactionsPeriod, SummaryPeriodQueryParameters, Error>({
+    queryKey: QUERY_KEYS.SUMMARY.transactions(params),
+    path: '/summary/transactions-period',
+    queryParams: params,
+  });
+};
 
-interface SummaryQueryParams {
-  startDate?: string;
-  endDate?: string;
-  accountId?: string;
-  categoryId?: string;
-}
+export const useApiSummaryAccountsQuery = (
+  params?: SummaryPeriodQueryParameters
+): UseApiQueryResult<SummaryAccountsPeriod, Error> => {
+  return useApiQuery<SummaryAccountsPeriod, SummaryPeriodQueryParameters, Error>({
+    queryKey: QUERY_KEYS.SUMMARY.accounts(params),
+    path: '/summary/accounts-period',
+    queryParams: params,
+  });
+};
 
-// Get financial summary
-export const useApiSummaryQuery = (params?: SummaryQueryParams): UseApiQueryResult<FinancialSummary, Error> => {
-  return useApiQuery<FinancialSummary, SummaryQueryParams, Error>({
-    queryKey: QUERY_KEYS.SUMMARY.get(params),
-    path: '/summary',
+export const useApiSummaryCategoriesQuery = (
+  params?: SummaryPeriodQueryParameters
+): UseApiQueryResult<SummaryAccountsPeriod, Error> => {
+  return useApiQuery<SummaryAccountsPeriod, SummaryPeriodQueryParameters, Error>({
+    queryKey: QUERY_KEYS.SUMMARY.categories(params),
+    path: '/summary/categories-period',
     queryParams: params,
   });
 };

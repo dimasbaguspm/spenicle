@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-03T23:00:07.401Z
+ * Generated on: 2025-06-04T22:02:58.785Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -28,6 +28,117 @@ export interface Error {
    * @example {"field":"email","issue":"invalid format"}
    */
   details?: Record<string, any>;
+}
+
+export interface QueryParameters {
+  /**
+   * Page number for pagination
+   * @min 1
+   * @default 1
+   * @example 1
+   */
+  pageNumber?: number;
+  /**
+   * Number of items per page
+   * @min 1
+   * @default 25
+   * @example 25
+   */
+  pageSize?: number;
+  /**
+   * Sort order
+   * @default "asc"
+   * @example "asc"
+   */
+  sortOrder?: "asc" | "desc";
+}
+
+export interface UserRegistration {
+  /**
+   * User full name
+   * @maxLength 255
+   * @example "John Doe"
+   */
+  name: string;
+  /**
+   * User email address
+   * @format email
+   * @maxLength 255
+   * @example "john.doe@example.com"
+   */
+  email: string;
+  /**
+   * User password (minimum 8 characters)
+   * @minLength 8
+   * @example "securePassword123"
+   */
+  password: string;
+}
+
+export interface GroupRegistration {
+  /**
+   * Group name
+   * @maxLength 255
+   * @example "Family Budget"
+   */
+  name: string;
+  /**
+   * Default currency code (3 characters)
+   * @minLength 3
+   * @maxLength 3
+   * @default "USD"
+   * @example "USD"
+   */
+  defaultCurrency?: string;
+}
+
+export interface RegistrationWithGroup {
+  user: UserRegistration;
+  group: GroupRegistration;
+}
+
+export interface LoginRequest {
+  /**
+   * User email address
+   * @format email
+   * @example "john.doe@example.com"
+   */
+  email: string;
+  /**
+   * User password
+   * @example "securePassword123"
+   */
+  password: string;
+}
+
+export interface LoginResponse {
+  /**
+   * JWT access token
+   * @example "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+   */
+  accessToken?: string;
+  /**
+   * JWT refresh token
+   * @example "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+   */
+  refreshToken?: string;
+  user?: User;
+}
+
+export interface LogoutResponse {
+  /**
+   * Success message
+   * @example "Logged out successfully"
+   */
+  message?: string;
+}
+
+export interface RefreshTokenRequest {
+  /**
+   * JWT refresh token
+   * @example "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+   */
+  refreshToken: string;
 }
 
 export interface User {
@@ -62,336 +173,6 @@ export interface User {
    * @example "2023-12-01T10:30:00Z"
    */
   updatedAt?: string;
-}
-
-export interface Group {
-  /** Group unique identifier */
-  id?: number;
-  /**
-   * Group name
-   * @maxLength 255
-   */
-  name?: string;
-  /**
-   * Default currency code (3 characters)
-   * @minLength 3
-   * @maxLength 3
-   * @example "USD"
-   */
-  defaultCurrency?: string;
-  /**
-   * Group creation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  createdAt?: string;
-  /**
-   * Group last update timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  updatedAt?: string;
-}
-
-export interface Account {
-  /** Account unique identifier */
-  id?: number;
-  /** Group identifier the account belongs to */
-  groupId?: number;
-  /**
-   * Account name
-   * @maxLength 255
-   */
-  name?: string;
-  /**
-   * Account type (e.g., checking, savings, credit, cash)
-   * @maxLength 50
-   * @example "checking"
-   */
-  type?: string;
-  /** Optional account notes */
-  note?: string | null;
-  /**
-   * Optional metadata for storing custom account information as key-value pairs
-   * @example {"bankCode":"ABC123","accountNumber":"1234567890","branch":"Main Branch"}
-   */
-  metadata?: Record<string, any>;
-  /**
-   * Account creation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  createdAt?: string;
-  /**
-   * Account last update timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  updatedAt?: string;
-}
-
-export interface Category {
-  /** Category unique identifier */
-  id?: number;
-  /** Group identifier the category belongs to */
-  groupId?: number;
-  /** Parent category ID for nested categories */
-  parentId?: number | null;
-  /**
-   * Category name
-   * @maxLength 100
-   */
-  name?: string;
-  /** Optional category notes */
-  note?: string | null;
-  /**
-   * Optional metadata for storing custom category information as key-value pairs
-   * @example {"categoryType":"expense","color":"#FF5733","icon":"shopping-cart"}
-   */
-  metadata?: Record<string, any>;
-  /**
-   * Category creation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  createdAt?: string;
-  /**
-   * Category last update timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  updatedAt?: string;
-}
-
-export interface Transaction {
-  /** Transaction unique identifier */
-  id?: number;
-  /** Group identifier */
-  groupId?: number;
-  /** Account identifier */
-  accountId?: number;
-  /** Category identifier */
-  categoryId?: number;
-  /** User who created the transaction */
-  createdByUserId?: number;
-  /**
-   * Transaction amount with 2 decimal precision
-   * @multipleOf 0.01
-   * @example 123.45
-   */
-  amount?: number;
-  /**
-   * Currency code (3 characters)
-   * @minLength 3
-   * @maxLength 3
-   * @example "USD"
-   */
-  currency?: string;
-  /**
-   * Transaction type
-   * @example "expense"
-   */
-  type?: "expense" | "income" | "transfer";
-  /**
-   * Transaction date with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  date?: string;
-  /** Optional transaction notes */
-  note?: string | null;
-  /** Recurrence pattern ID if this is a recurring transaction */
-  recurrenceId?: number | null;
-  /**
-   * Whether the transaction is marked as highlighted/important
-   * @default false
-   * @example false
-   */
-  isHighlighted?: boolean;
-  /**
-   * Transaction creation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  createdAt?: string;
-  /**
-   * Transaction last update timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  updatedAt?: string;
-}
-
-export interface AuthTokens {
-  /** JWT access token */
-  accessToken?: string;
-  /** JWT refresh token */
-  refreshToken?: string;
-  /** Access token expiration time in seconds */
-  expiresIn?: number;
-}
-
-export interface AccountLimit {
-  /** Account limit unique identifier */
-  id?: number;
-  /** Account identifier */
-  accountId?: number;
-  /** Limit period */
-  period?: "month" | "week";
-  /**
-   * Spending limit amount
-   * @min 0
-   * @multipleOf 0.01
-   */
-  limit?: number;
-  /**
-   * Account limit creation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  createdAt?: string;
-  /**
-   * Account limit last update timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  updatedAt?: string;
-}
-
-export interface Recurrence {
-  /** Recurrence unique identifier */
-  id?: number;
-  /** Recurrence frequency */
-  frequency?: "daily" | "weekly" | "monthly" | "yearly";
-  /**
-   * Interval between recurrences
-   * @min 1
-   */
-  interval?: number;
-  /**
-   * Next occurrence date with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  nextOccurrenceDate?: string;
-  /**
-   * End date for recurrence with timezone support
-   * @format date-time
-   * @example "2023-12-31T23:59:59Z"
-   */
-  endDate?: string | null;
-  /**
-   * Recurrence creation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  createdAt?: string;
-  /**
-   * Recurrence last update timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  updatedAt?: string;
-}
-
-export interface RefreshToken {
-  /** Refresh token unique identifier */
-  id?: number;
-  /** User identifier */
-  userId?: number;
-  /** Refresh token value */
-  token?: string;
-  /**
-   * Token expiration timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  expires?: string;
-  /**
-   * Token creation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  createdAt?: string;
-  /**
-   * Token revocation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  revokedAt?: string | null;
-  /** Token that replaced this one */
-  replacedByToken?: string | null;
-}
-
-export interface PaginatedResponse {
-  /** Array of items */
-  items?: any[];
-  /** Current page number */
-  pageNumber?: number;
-  /** Number of items per page */
-  pageSize?: number;
-  /** Total number of items */
-  totalItems?: number;
-  /** Total number of pages */
-  totalPages?: number;
-}
-
-export type PagedGroups = PaginatedResponse & {
-  items?: Group[];
-};
-
-export type PagedUsers = PaginatedResponse & {
-  items?: User[];
-};
-
-export type PagedAccounts = PaginatedResponse & {
-  items?: Account[];
-};
-
-export type PagedAccountLimits = PaginatedResponse & {
-  items?: AccountLimit[];
-};
-
-export type PagedCategories = PaginatedResponse & {
-  items?: Category[];
-};
-
-export type PagedRecurrences = PaginatedResponse & {
-  items?: Recurrence[];
-};
-
-export type PagedTransactions = PaginatedResponse & {
-  items?: Transaction[];
-};
-
-export interface NewGroup {
-  /**
-   * Group name
-   * @maxLength 255
-   */
-  name: string;
-  /**
-   * Default currency code (3 characters)
-   * @minLength 3
-   * @maxLength 3
-   * @example "USD"
-   */
-  defaultCurrency: string;
-}
-
-export interface UpdateGroup {
-  /**
-   * Group name
-   * @maxLength 255
-   */
-  name?: string;
-  /**
-   * Default currency code (3 characters)
-   * @minLength 3
-   * @maxLength 3
-   * @example "USD"
-   */
-  defaultCurrency?: string;
 }
 
 export interface NewUser {
@@ -447,62 +228,126 @@ export interface UpdateUser {
   isOnboard?: boolean;
 }
 
-export interface UserRegistration {
-  /**
-   * User full name
-   * @maxLength 255
-   * @example "John Doe"
-   */
-  name: string;
-  /**
-   * User email address
-   * @format email
-   * @maxLength 255
-   * @example "john.doe@example.com"
-   */
-  email: string;
-  /**
-   * User password (minimum 8 characters)
-   * @minLength 8
-   * @example "securePassword123"
-   */
-  password: string;
-}
+export type UserQueryParameters = QueryParameters & {
+  /** Filter by user ID */
+  id?: number;
+  /** Filter by group ID */
+  groupId?: number;
+  /** Filter by email address */
+  email?: string;
+  /** Filter by user name */
+  name?: string;
+  /** Filter by active status */
+  isActive?: boolean;
+  /** Filter by onboarding status */
+  isOnboard?: boolean;
+  /** Field to sort by */
+  sortBy?: "name" | "email" | "createdAt";
+};
 
-export interface GroupRegistration {
+export interface Group {
+  /** Group unique identifier */
+  id?: number;
   /**
    * Group name
    * @maxLength 255
-   * @example "Doe Family Budget"
    */
-  name: string;
+  name?: string;
   /**
-   * Default currency for the group (3-letter code)
+   * Default currency code (3 characters)
    * @minLength 3
    * @maxLength 3
    * @example "USD"
    */
-  defaultCurrency?: string | null;
+  defaultCurrency?: string;
+  /**
+   * Group creation timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  createdAt?: string;
+  /**
+   * Group last update timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  updatedAt?: string;
 }
 
-export interface RegistrationRequest {
-  user: UserRegistration;
-  group: GroupRegistration;
+export interface NewGroup {
+  /**
+   * Group name
+   * @maxLength 255
+   */
+  name: string;
+  /**
+   * Default currency code (3 characters)
+   * @minLength 3
+   * @maxLength 3
+   * @example "USD"
+   */
+  defaultCurrency: string;
 }
 
-export interface LoginRequest {
+export interface UpdateGroup {
   /**
-   * User email address
-   * @format email
-   * @example "john.doe@example.com"
+   * Group name
+   * @maxLength 255
    */
-  email: string;
+  name?: string;
   /**
-   * User password
-   * @format password
-   * @example "securePassword123"
+   * Default currency code (3 characters)
+   * @minLength 3
+   * @maxLength 3
+   * @example "USD"
    */
-  password: string;
+  defaultCurrency?: string;
+}
+
+export type GroupQueryParameters = QueryParameters & {
+  /** Filter by group ID */
+  id?: number;
+  /** Filter by group name */
+  name?: string;
+  /** Field to sort by */
+  sortBy?: "name" | "createdAt";
+};
+
+export interface Account {
+  /** Account unique identifier */
+  id?: number;
+  /** Group identifier the account belongs to */
+  groupId?: number;
+  /**
+   * Account name
+   * @maxLength 255
+   */
+  name?: string;
+  /**
+   * Account type (e.g., checking, savings, credit, cash)
+   * @maxLength 50
+   * @example "checking"
+   */
+  type?: string;
+  /** Optional account notes */
+  note?: string | null;
+  /**
+   * Optional metadata for storing custom account information as key-value pairs
+   * @example {"bankName":"Chase Bank","accountNumber":"****1234","routingNumber":"123456789"}
+   */
+  metadata?: Record<string, any>;
+  /**
+   * Account creation timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  createdAt?: string;
+  /**
+   * Account last update timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  updatedAt?: string;
 }
 
 export interface NewAccount {
@@ -523,14 +368,12 @@ export interface NewAccount {
   note?: string | null;
   /**
    * Optional metadata for storing custom account information as key-value pairs
-   * @example {"bankCode":"ABC123","accountNumber":"1234567890","branch":"Main Branch"}
+   * @example {"bankName":"Chase Bank","accountNumber":"****1234","routingNumber":"123456789"}
    */
   metadata?: Record<string, any>;
 }
 
 export interface UpdateAccount {
-  /** Group identifier the account belongs to */
-  groupId?: number;
   /**
    * Account name
    * @maxLength 255
@@ -546,9 +389,49 @@ export interface UpdateAccount {
   note?: string | null;
   /**
    * Optional metadata for storing custom account information as key-value pairs
-   * @example {"bankCode":"ABC123","accountNumber":"1234567890","branch":"Main Branch"}
+   * @example {"bankName":"Chase Bank","accountNumber":"****1234","routingNumber":"123456789"}
    */
   metadata?: Record<string, any>;
+}
+
+export type AccountQueryParameters = QueryParameters & {
+  /** Filter by account ID */
+  id?: number;
+  /** Filter by group ID */
+  groupId?: number;
+  /** Filter by account name */
+  name?: string;
+  /** Filter by account type */
+  type?: string;
+  /** Field to sort by */
+  sortBy?: "name" | "type" | "createdAt";
+};
+
+export interface AccountLimit {
+  /** Account limit unique identifier */
+  id?: number;
+  /** Account identifier */
+  accountId?: number;
+  /** Limit period */
+  period?: "month" | "week";
+  /**
+   * Spending limit amount
+   * @min 0
+   * @multipleOf 0.01
+   */
+  limit?: number;
+  /**
+   * Account limit creation timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  createdAt?: string;
+  /**
+   * Account limit last update timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  updatedAt?: string;
 }
 
 export interface NewAccountLimit {
@@ -565,8 +448,6 @@ export interface NewAccountLimit {
 }
 
 export interface UpdateAccountLimit {
-  /** Account identifier */
-  accountId?: number;
   /** Limit period */
   period?: "month" | "week";
   /**
@@ -577,86 +458,74 @@ export interface UpdateAccountLimit {
   limit?: number;
 }
 
-export interface NewCategory {
-  /** Group identifier the category belongs to */
-  groupId: number;
-  /** Parent category ID for nested categories */
-  parentId?: number | null;
-  /**
-   * Category name
-   * @maxLength 100
-   */
-  name: string;
-  /** Optional category notes */
-  note?: string | null;
-  /**
-   * Optional metadata for storing custom category information as key-value pairs
-   * @example {"categoryType":"expense","color":"#FF5733","icon":"shopping-cart"}
-   */
-  metadata?: Record<string, any>;
-}
+export type AccountLimitQueryParameters = QueryParameters & {
+  /** Filter by account limit ID */
+  id?: number;
+  /** Filter by account ID */
+  accountId?: number;
+  /** Filter by period */
+  period?: "month" | "week";
+  /** Field to sort by */
+  sortBy?: "period" | "limit" | "startDate" | "createdAt";
+};
 
-export interface UpdateCategory {
-  /** Group identifier the category belongs to */
+export interface Transaction {
+  /** Transaction unique identifier */
+  id?: number;
+  /** Group identifier */
   groupId?: number;
-  /** Parent category ID for nested categories */
-  parentId?: number | null;
+  /** Account identifier */
+  accountId?: number;
+  /** Category identifier */
+  categoryId?: number;
+  /** User who created the transaction */
+  createdByUserId?: number;
   /**
-   * Category name
-   * @maxLength 100
+   * Transaction amount with 2 decimal precision
+   * @multipleOf 0.01
+   * @example 123.45
    */
-  name?: string;
-  /** Optional category notes */
+  amount?: number;
+  /**
+   * Currency code (3 characters)
+   * @minLength 3
+   * @maxLength 3
+   * @example "USD"
+   */
+  currency?: string;
+  /**
+   * Transaction type
+   * @example "expense"
+   */
+  type?: "expense" | "income" | "transfer";
+  /**
+   * Transaction date with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  date?: string;
+  /** Optional transaction notes */
   note?: string | null;
   /**
-   * Optional metadata for storing custom category information as key-value pairs
-   * @example {"categoryType":"expense","color":"#FF5733","icon":"shopping-cart"}
+   * Whether the transaction is marked as highlighted/important
+   * @default false
+   * @example false
    */
-  metadata?: Record<string, any>;
-}
-
-export interface NewRecurrence {
-  /** Recurrence frequency */
-  frequency: "daily" | "weekly" | "monthly" | "yearly";
+  isHighlighted?: boolean;
+  /** Recurrence pattern ID if this is a recurring transaction */
+  recurrenceId?: number | null;
   /**
-   * Interval between recurrences
-   * @min 1
-   */
-  interval: number;
-  /**
-   * Next occurrence date with timezone support
+   * Transaction creation timestamp with timezone support
    * @format date-time
    * @example "2023-12-01T10:30:00Z"
    */
-  nextOccurrenceDate: string;
+  createdAt?: string;
   /**
-   * End date for recurrence with timezone support
-   * @format date-time
-   * @example "2023-12-31T23:59:59Z"
-   */
-  endDate?: string | null;
-}
-
-export interface UpdateRecurrence {
-  /** Recurrence frequency */
-  frequency?: "daily" | "weekly" | "monthly" | "yearly";
-  /**
-   * Interval between recurrences
-   * @min 1
-   */
-  interval?: number;
-  /**
-   * Next occurrence date with timezone support
+   * Transaction last update timestamp with timezone support
    * @format date-time
    * @example "2023-12-01T10:30:00Z"
    */
-  nextOccurrenceDate?: string;
-  /**
-   * End date for recurrence with timezone support
-   * @format date-time
-   * @example "2023-12-31T23:59:59Z"
-   */
-  endDate?: string | null;
+  updatedAt?: string;
 }
 
 export interface NewTransaction {
@@ -743,131 +612,10 @@ export interface UpdateTransaction {
   recurrenceId?: number | null;
   /**
    * Whether the transaction is marked as highlighted/important
-   * @default false
    * @example false
    */
   isHighlighted?: boolean;
 }
-
-export interface NewRefreshToken {
-  /** User identifier */
-  userId: number;
-  /** Refresh token value */
-  token: string;
-  /**
-   * Token expiration timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  expires: string;
-  /**
-   * Token revocation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  revokedAt?: string | null;
-  /** Token that replaced this one */
-  replacedByToken?: string | null;
-}
-
-export interface UpdateRefreshToken {
-  /** User identifier */
-  userId?: number;
-  /** Refresh token value */
-  token?: string;
-  /**
-   * Token expiration timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  expires?: string;
-  /**
-   * Token revocation timestamp with timezone support
-   * @format date-time
-   * @example "2023-12-01T10:30:00Z"
-   */
-  revokedAt?: string | null;
-  /** Token that replaced this one */
-  replacedByToken?: string | null;
-}
-
-export interface QueryParameters {
-  /**
-   * Page number for pagination
-   * @min 1
-   * @default 1
-   */
-  pageNumber?: number;
-  /**
-   * Number of items per page
-   * @min 1
-   * @max 100
-   * @default 25
-   */
-  pageSize?: number;
-  /** Field to sort by */
-  sortBy?: string;
-  /**
-   * Sort order
-   * @default "asc"
-   */
-  sortOrder?: "asc" | "desc";
-}
-
-export type UserQueryParameters = QueryParameters & {
-  /** Filter by user ID */
-  id?: number;
-  /** Filter by group ID */
-  groupId?: number;
-  /**
-   * Filter by email
-   * @format email
-   */
-  email?: string;
-  /** Filter by name */
-  name?: string;
-  /** Filter by active status */
-  isActive?: boolean;
-  /** Filter by onboarding status */
-  isOnboard?: boolean;
-  /** Field to sort by */
-  sortBy?: "name" | "email" | "createdAt";
-};
-
-export type GroupQueryParameters = QueryParameters & {
-  /** Filter by group ID */
-  id?: number;
-  /** Filter by group name */
-  name?: string;
-  /** Field to sort by */
-  sortBy?: "name" | "createdAt";
-};
-
-export type AccountQueryParameters = QueryParameters & {
-  /** Filter by account ID */
-  id?: number;
-  /** Filter by group ID */
-  groupId?: number;
-  /** Filter by account name */
-  name?: string;
-  /** Filter by account type */
-  type?: string;
-  /** Field to sort by */
-  sortBy?: "name" | "type" | "createdAt";
-};
-
-export type CategoryQueryParameters = QueryParameters & {
-  /** Filter by category ID */
-  id?: number;
-  /** Filter by group ID */
-  groupId?: number;
-  /** Filter by parent category ID */
-  parentId?: number | null;
-  /** Filter by category name */
-  name?: string;
-  /** Field to sort by */
-  sortBy?: "name" | "createdAt";
-};
 
 export type TransactionQueryParameters = QueryParameters & {
   /** Filter by transaction ID */
@@ -911,34 +659,212 @@ export type TransactionQueryParameters = QueryParameters & {
   isHighlighted?: boolean;
 };
 
-export type AccountLimitQueryParameters = QueryParameters & {
-  /** Filter by account limit ID */
+export interface Recurrence {
+  /** Recurrence unique identifier */
   id?: number;
-  /** Filter by account ID */
+  /** User identifier that owns this recurrence */
+  userId?: number;
+  /**
+   * Recurrence name
+   * @example "Monthly Salary"
+   */
+  name?: string;
+  /**
+   * Recurrence description
+   * @example "Salary payment every month"
+   */
+  description?: string;
+  /**
+   * Recurrence frequency
+   * @example "monthly"
+   */
+  frequency?: "daily" | "weekly" | "monthly" | "yearly";
+  /**
+   * Interval between occurrences (e.g., every 2 weeks)
+   * @min 1
+   * @example 1
+   */
+  interval?: number;
+  /**
+   * Next occurrence date with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  nextOccurrenceDate?: string;
+  /**
+   * End date for recurrence (optional)
+   * @format date-time
+   * @example "2024-12-31T23:59:59Z"
+   */
+  endDate?: string;
+  /**
+   * Whether the recurrence is active
+   * @example true
+   */
+  isActive?: boolean;
+  /**
+   * Transaction amount
+   * @example 5000
+   */
+  amount?: number;
+  /**
+   * Transaction type
+   * @example "income"
+   */
+  type?: "income" | "expense";
+  /** Account ID for the transaction */
   accountId?: number;
-  /** Filter by period */
-  period?: "month" | "week";
-  /** Field to sort by */
-  sortBy?: "period" | "limit" | "startDate" | "createdAt";
-};
+  /** Category ID for the transaction */
+  categoryId?: number;
+  /**
+   * Recurrence creation timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  createdAt?: string;
+  /**
+   * Recurrence last update timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  updatedAt?: string;
+}
+
+export interface CreateRecurrence {
+  /** User identifier that owns this recurrence */
+  userId: number;
+  /**
+   * Recurrence name
+   * @example "Monthly Salary"
+   */
+  name: string;
+  /**
+   * Recurrence description
+   * @example "Salary payment every month"
+   */
+  description?: string;
+  /**
+   * Recurrence frequency
+   * @example "monthly"
+   */
+  frequency: "daily" | "weekly" | "monthly" | "yearly";
+  /**
+   * Interval between occurrences (e.g., every 2 weeks)
+   * @min 1
+   * @example 1
+   */
+  interval: number;
+  /**
+   * Next occurrence date with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  nextOccurrenceDate: string;
+  /**
+   * End date for recurrence (optional)
+   * @format date-time
+   * @example "2024-12-31T23:59:59Z"
+   */
+  endDate?: string;
+  /**
+   * Whether the recurrence is active
+   * @default true
+   * @example true
+   */
+  isActive?: boolean;
+  /**
+   * Transaction amount
+   * @example 5000
+   */
+  amount: number;
+  /**
+   * Transaction type
+   * @example "income"
+   */
+  type: "income" | "expense";
+  /** Account ID for the transaction */
+  accountId: number;
+  /** Category ID for the transaction */
+  categoryId: number;
+}
+
+export interface UpdateRecurrence {
+  /**
+   * Recurrence name
+   * @example "Monthly Salary"
+   */
+  name?: string;
+  /**
+   * Recurrence description
+   * @example "Salary payment every month"
+   */
+  description?: string;
+  /**
+   * Recurrence frequency
+   * @example "monthly"
+   */
+  frequency?: "daily" | "weekly" | "monthly" | "yearly";
+  /**
+   * Interval between occurrences (e.g., every 2 weeks)
+   * @min 1
+   * @example 1
+   */
+  interval?: number;
+  /**
+   * Next occurrence date with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  nextOccurrenceDate?: string;
+  /**
+   * End date for recurrence (optional)
+   * @format date-time
+   * @example "2024-12-31T23:59:59Z"
+   */
+  endDate?: string;
+  /**
+   * Whether the recurrence is active
+   * @example true
+   */
+  isActive?: boolean;
+  /**
+   * Transaction amount
+   * @example 5000
+   */
+  amount?: number;
+  /**
+   * Transaction type
+   * @example "income"
+   */
+  type?: "income" | "expense";
+  /** Account ID for the transaction */
+  accountId?: number;
+  /** Category ID for the transaction */
+  categoryId?: number;
+}
 
 export type RecurrenceQueryParameters = QueryParameters & {
   /** Filter by recurrence ID */
   id?: number;
+  /** Filter by user ID */
+  userId?: number;
+  /** Filter by recurrence name (partial match) */
+  name?: string;
   /** Filter by frequency */
   frequency?: "daily" | "weekly" | "monthly" | "yearly";
   /**
-   * Filter recurrences starting from this date with timezone support
-   * @format date-time
-   * @example "2023-12-01T00:00:00Z"
+   * Filter by interval
+   * @min 1
    */
-  startDate?: string;
-  /**
-   * Filter recurrences ending before this date with timezone support
-   * @format date-time
-   * @example "2023-12-31T23:59:59Z"
-   */
-  endDate?: string;
+  interval?: number;
+  /** Filter by active status */
+  isActive?: boolean;
+  /** Filter by transaction type */
+  type?: "income" | "expense";
+  /** Filter by account ID */
+  accountId?: number;
+  /** Filter by category ID */
+  categoryId?: number;
   /** Field to sort by */
   sortBy?: "frequency" | "interval" | "nextOccurrenceDate" | "createdAt";
 };
@@ -1082,7 +1008,7 @@ export type UserPreferenceQueryParameters = QueryParameters & {
   sortBy?: "userId" | "monthlyStartDate" | "createdAt";
 };
 
-export type SummaryPeriodQueryParameters = QueryParameters & {
+export type SummaryPeriodQueryParameters = {
   /**
    * Start date (ISO 8601)
    * @format date-time
