@@ -1,5 +1,5 @@
 // Auth controller functions
-export { registerUser, loginUser, forgotPassword, resetPassword } from './auth.controller.ts';
+export { registerUser, loginUser, refreshToken, logout, forgotPassword, resetPassword } from './auth.controller.ts';
 
 // Group controller functions
 export { createGroup, getGroup, updateGroup, inviteUser, listGroupUsers } from './group.controller.ts';

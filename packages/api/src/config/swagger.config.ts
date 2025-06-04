@@ -369,6 +369,56 @@ const options: swaggerJSDoc.Options = {
             },
           },
         },
+        RefreshTokenRequest: {
+          type: 'object',
+          required: ['refreshToken'],
+          properties: {
+            refreshToken: {
+              type: 'string',
+              description: 'Valid refresh token',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+          },
+        },
+        LogoutRequest: {
+          type: 'object',
+          required: ['refreshToken'],
+          properties: {
+            refreshToken: {
+              type: 'string',
+              description: 'Valid refresh token to revoke',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+          },
+        },
+        AuthResponse: {
+          type: 'object',
+          properties: {
+            token: {
+              type: 'string',
+              description: 'JWT access token',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+            refreshToken: {
+              type: 'string',
+              description: 'JWT refresh token',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+            user: {
+              $ref: '#/components/schemas/User',
+            },
+          },
+        },
+        LogoutResponse: {
+          type: 'object',
+          properties: {
+            message: {
+              type: 'string',
+              description: 'Success message',
+              example: 'Logged out successfully',
+            },
+          },
+        },
         AccountLimit: {
           type: 'object',
           properties: {
@@ -1702,7 +1752,6 @@ const options: swaggerJSDoc.Options = {
         },
         SummaryPeriodQueryParameters: {
           allOf: [
-            { $ref: '#/components/schemas/QueryParameters' },
             {
               type: 'object',
               properties: {

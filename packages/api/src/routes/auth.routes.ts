@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { registerUser, loginUser } from '../controllers/index.ts';
+import { registerUser, loginUser, refreshToken, logout } from '../controllers/index.ts';
 
 const router = Router();
 
@@ -24,15 +24,7 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "User registered successfully"
- *                 user:
- *                   $ref: '#/components/schemas/User'
- *                 tokens:
- *                   $ref: '#/components/schemas/AuthTokens'
+ *               $ref: '#/components/schemas/AuthResponse'
  *       400:
  *         description: Bad request - validation errors
  *         content:
@@ -74,15 +66,7 @@ router.post('/register', registerUser);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Login successful"
- *                 user:
- *                   $ref: '#/components/schemas/User'
- *                 tokens:
- *                   $ref: '#/components/schemas/AuthTokens'
+ *               $ref: '#/components/schemas/AuthResponse'
  *       401:
  *         description: Unauthorized - invalid credentials
  *         content:
@@ -103,6 +87,84 @@ router.post('/register', registerUser);
  *               $ref: '#/components/schemas/Error'
  */
 router.post('/login', loginUser);
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     description: Exchange refresh token for new access and refresh tokens
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RefreshTokenRequest'
+ *     responses:
+ *       200:
+ *         description: Token refresh successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Bad request - missing or invalid refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized - invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/refresh', refreshToken);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: User logout
+ *     description: Revoke refresh token and log out user
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LogoutRequest'
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LogoutResponse'
+ *       400:
+ *         description: Bad request - missing or invalid refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/logout', logout);
 
 // // Optional password reset functionality
 // router.post('/forgot-password', forgotPassword);
