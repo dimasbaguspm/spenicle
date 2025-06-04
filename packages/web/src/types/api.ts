@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-01T22:36:28.121Z
+ * Generated on: 2025-06-03T23:00:07.401Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -1081,3 +1081,89 @@ export type UserPreferenceQueryParameters = QueryParameters & {
   /** Field to sort by */
   sortBy?: "userId" | "monthlyStartDate" | "createdAt";
 };
+
+export type SummaryPeriodQueryParameters = QueryParameters & {
+  /**
+   * Start date (ISO 8601)
+   * @format date-time
+   */
+  startDate?: string;
+  /**
+   * End date (ISO 8601)
+   * @format date-time
+   */
+  endDate?: string;
+  /** Filter by account ID */
+  accountId?: string;
+  /** Filter by category ID */
+  categoryId?: string;
+  /** Sort by field */
+  sortBy?: "totalIncome" | "totalExpenses" | "totalNet" | "netAmount";
+  /** Sort order */
+  sortOrder?: "asc" | "desc";
+};
+
+export type SummaryCategoriesPeriod = {
+  /** @example 1 */
+  categoryId?: number;
+  /**
+   * @format date-time
+   * @example "2024-01-01T00:00:00Z"
+   */
+  startDate?: string;
+  /**
+   * @format date-time
+   * @example "2024-01-31T23:59:59Z"
+   */
+  endDate?: string;
+  /** @example 5000 */
+  totalIncome?: number;
+  /** @example 3500 */
+  totalExpenses?: number;
+  /** @example 1500 */
+  totalNet?: number;
+  /** @example 42 */
+  totalTransactions?: number;
+}[];
+
+export type SummaryAccountsPeriod = {
+  /** @example 2 */
+  accountId?: number;
+  /**
+   * @format date-time
+   * @example "2024-01-01T00:00:00Z"
+   */
+  startDate?: string;
+  /**
+   * @format date-time
+   * @example "2024-01-31T23:59:59Z"
+   */
+  endDate?: string;
+  /** @example 8000 */
+  totalIncome?: number;
+  /** @example 2000 */
+  totalExpenses?: number;
+  /** @example 6000 */
+  totalNet?: number;
+  /** @example 30 */
+  totalTransactions?: number;
+}[];
+
+export type SummaryTransactionsPeriod = {
+  /**
+   * @format date-time
+   * @example "2024-01-01T00:00:00Z"
+   */
+  startDate?: string;
+  /**
+   * @format date-time
+   * @example "2024-01-07T23:59:59Z"
+   */
+  endDate?: string;
+  /** @example 2000 */
+  totalIncome?: number;
+  /** @example 1200 */
+  totalExpenses?: number;
+  /** @example 800 */
+  netAmount?: number;
+}[];
