@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-04T22:02:58.785Z
+ * Generated on: 2025-06-05T22:23:22.660Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -467,6 +467,88 @@ export type AccountLimitQueryParameters = QueryParameters & {
   period?: "month" | "week";
   /** Field to sort by */
   sortBy?: "period" | "limit" | "startDate" | "createdAt";
+};
+
+export interface Category {
+  /** Category unique identifier */
+  id?: number;
+  /** Group identifier the category belongs to */
+  groupId?: number;
+  /** Parent category ID for nested categories */
+  parentId?: number | null;
+  /**
+   * Category name
+   * @maxLength 100
+   */
+  name?: string;
+  /** Optional category notes */
+  note?: string | null;
+  /**
+   * Optional metadata for storing custom category information as key-value pairs
+   * @example {"categoryType":"expense","color":"#FF5733","icon":"shopping-cart"}
+   */
+  metadata?: Record<string, any>;
+  /**
+   * Category creation timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  createdAt?: string;
+  /**
+   * Category last update timestamp with timezone support
+   * @format date-time
+   * @example "2023-12-01T10:30:00Z"
+   */
+  updatedAt?: string;
+}
+
+export interface NewCategory {
+  /** Group identifier the category belongs to */
+  groupId: number;
+  /** Parent category ID for nested categories */
+  parentId?: number | null;
+  /**
+   * Category name
+   * @maxLength 100
+   */
+  name: string;
+  /** Optional category notes */
+  note?: string | null;
+  /**
+   * Optional metadata for storing custom category information as key-value pairs
+   * @example {"categoryType":"expense","color":"#FF5733","icon":"shopping-cart"}
+   */
+  metadata?: Record<string, any>;
+}
+
+export interface UpdateCategory {
+  /** Parent category ID for nested categories */
+  parentId?: number | null;
+  /**
+   * Category name
+   * @maxLength 100
+   */
+  name?: string;
+  /** Optional category notes */
+  note?: string | null;
+  /**
+   * Optional metadata for storing custom category information as key-value pairs
+   * @example {"categoryType":"expense","color":"#FF5733","icon":"shopping-cart"}
+   */
+  metadata?: Record<string, any>;
+}
+
+export type CategoryQueryParameters = QueryParameters & {
+  /** Filter by category ID */
+  id?: number;
+  /** Filter by group ID */
+  groupId?: number;
+  /** Filter by parent category ID */
+  parentId?: number | null;
+  /** Filter by category name */
+  name?: string;
+  /** Field to sort by */
+  sortBy?: "name" | "createdAt";
 };
 
 export interface Transaction {

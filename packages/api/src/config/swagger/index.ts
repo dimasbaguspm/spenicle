@@ -4,6 +4,7 @@ import { accountLimitSchemas } from './account-limit.schemas.ts';
 import { accountSchemas } from './account.schemas.ts';
 import { authSchemas } from './auth.schemas.ts';
 import { baseConfig } from './base.config.ts';
+import { categorySchemas } from './category.schemas.ts';
 import { coreSchemas } from './core.schemas.ts';
 import { groupSchemas } from './group.schemas.ts';
 import { recurrenceSchemas } from './recurrence.schemas.ts';
@@ -22,6 +23,7 @@ export const getAllSchemas = () => ({
   ...groupSchemas,
   ...accountSchemas,
   ...accountLimitSchemas,
+  ...categorySchemas,
   ...transactionSchemas,
   ...recurrenceSchemas,
   ...userPreferencesSchemas,
