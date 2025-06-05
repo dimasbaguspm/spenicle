@@ -1,7 +1,7 @@
 import React, { createContext, type ReactNode } from 'react';
 
 import { Tile } from '../../../../components';
-import { cn } from '../../../../libs/utils';
+import { cn, formatNumberCompact } from '../../../../libs/utils';
 
 // Compound component context (future extensibility, currently unused)
 const FinancialSummaryCardContext = createContext<object>({});
@@ -47,7 +47,8 @@ interface ValueProps extends React.HTMLAttributes<HTMLParagraphElement> {
 }
 const Value: React.FC<ValueProps> = ({ amount, prefix = '', className, variant, ...props }) => (
   <p className={cn('text-2xl font-bold', VARIANT_CLASS_MAP[variant], className)} {...props}>
-    {prefix}${amount.toLocaleString()}
+    {prefix}
+    {formatNumberCompact(amount)}
   </p>
 );
 
