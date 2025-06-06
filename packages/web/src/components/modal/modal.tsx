@@ -100,7 +100,7 @@ export function Modal({
       >
         <div
           className={cn(
-            'relative bg-white rounded-lg shadow-lg transform-gpu flex flex-col w-full',
+            'relative bg-white rounded-lg shadow-lg transform-gpu flex flex-col w-full overflow-hidden',
             'transition-all duration-200 ease-out will-change-transform',
             sizeClasses[size],
             'max-h-[90vh]',

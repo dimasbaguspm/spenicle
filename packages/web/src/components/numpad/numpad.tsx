@@ -1,10 +1,10 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Delete, ArrowLeft } from 'lucide-react';
-import { forwardRef } from 'react';
+import { Delete, Plus, Minus, Divide, X } from 'lucide-react';
+import React, { forwardRef, useEffect } from 'react';
 
 import { cn } from '../../libs/utils';
 
-const numpadVariants = cva('grid grid-cols-3 gap-2 p-4 bg-cream-50 rounded-lg border border-mist-200', {
+const numpadVariants = cva('grid grid-cols-4 gap-2 p-4 bg-cream-50 border border-mist-200', {
   variants: {
     size: {
       sm: 'gap-1 p-2',
@@ -39,7 +39,7 @@ const numpadButtonVariants = cva(
       buttonType: {
         number: '',
         action: 'font-semibold',
-        special: 'col-span-2 bg-coral-500 text-white hover:bg-coral-600 border-coral-500',
+        special: 'bg-coral-500 text-white hover:bg-coral-600 border-coral-500',
         clear: 'bg-danger-500 text-white hover:bg-danger-600 border-danger-500',
       },
       size: {
@@ -64,6 +64,7 @@ export interface NumpadProps
   onBackspace?: () => void;
   onClear?: () => void;
   onEnter?: () => void;
+  onOperatorPress?: (operator: string) => void;
   showDecimal?: boolean;
   showClear?: boolean;
   showEnter?: boolean;
@@ -101,9 +102,7 @@ export const Numpad = forwardRef<HTMLDivElement, NumpadProps>(
       onBackspace,
       onClear,
       onEnter,
-      showDecimal = true,
-      showClear = true,
-      showEnter = true,
+      onOperatorPress,
       disabled = false,
       buttonVariant = 'default',
       ...props
@@ -113,6 +112,11 @@ export const Numpad = forwardRef<HTMLDivElement, NumpadProps>(
     const handleNumberPress = (number: string) => {
       if (!disabled && onNumberPress) {
         onNumberPress(number);
+      }
+    };
+    const handleOperatorPress = (operator: string) => {
+      if (!disabled && onOperatorPress) {
+        onOperatorPress(operator);
       }
     };
 
@@ -142,37 +146,41 @@ export const Numpad = forwardRef<HTMLDivElement, NumpadProps>(
 
     const buttonSize = size ?? 'md';
 
+    // Keyboard event handler
+    useEffect(() => {
+      function handleKeyDown(e: KeyboardEvent) {
+        if (disabled) return;
+
+        const key = e.key;
+        if (key >= '0' && key <= '9') {
+          handleNumberPress(key);
+        } else if (key === '.') {
+          handleDecimalPress();
+        } else if (key === '+' || key === '-' || key === '*' || key === '/' || key === '=') {
+          handleOperatorPress(key);
+        } else if (key === 'Enter') {
+          handleEnter();
+        } else if (key === 'Backspace') {
+          handleBackspace();
+        } else if (key.toLowerCase() === 'c') {
+          handleClear();
+        }
+      }
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [disabled]);
+
     return (
-      <div className={cn(numpadVariants({ size, variant }), className)} ref={ref} {...props}>
-        {/* Row 1: 1, 2, 3 */}
-        {['1', '2', '3'].map((number) => (
-          <NumpadButton
-            key={number}
-            variant={buttonVariant}
-            size={buttonSize}
-            disabled={disabled}
-            onClick={() => handleNumberPress(number)}
-            aria-label={`Number ${number}`}
-          >
-            {number}
-          </NumpadButton>
-        ))}
-
-        {/* Row 2: 4, 5, 6 */}
-        {['4', '5', '6'].map((number) => (
-          <NumpadButton
-            key={number}
-            variant={buttonVariant}
-            size={buttonSize}
-            disabled={disabled}
-            onClick={() => handleNumberPress(number)}
-            aria-label={`Number ${number}`}
-          >
-            {number}
-          </NumpadButton>
-        ))}
-
-        {/* Row 3: 7, 8, 9 */}
+      <div
+        className={cn(
+          'grid grid-cols-4 gap-2 p-4 bg-cream-50 border border-mist-200',
+          numpadVariants({ size, variant }),
+          className
+        )}
+        ref={ref}
+        {...props}
+      >
+        {/* Row 1 */}
         {['7', '8', '9'].map((number) => (
           <NumpadButton
             key={number}
@@ -185,23 +193,73 @@ export const Numpad = forwardRef<HTMLDivElement, NumpadProps>(
             {number}
           </NumpadButton>
         ))}
-
-        {/* Row 4: Decimal/Empty, 0, Backspace */}
-        {showDecimal ? (
+        <NumpadButton
+          variant={buttonVariant}
+          buttonType="action"
+          size={buttonSize}
+          disabled={disabled}
+          onClick={() => handleOperatorPress('-')}
+          aria-label="Minus"
+        >
+          <Minus className="h-4 w-4" />
+        </NumpadButton>
+        {/* Row 2 */}
+        {['4', '5', '6'].map((number) => (
           <NumpadButton
+            key={number}
             variant={buttonVariant}
-            buttonType="action"
             size={buttonSize}
             disabled={disabled}
-            onClick={handleDecimalPress}
-            aria-label="Decimal point"
+            onClick={() => handleNumberPress(number)}
+            aria-label={`Number ${number}`}
           >
-            .
+            {number}
           </NumpadButton>
-        ) : (
-          <div /> // Empty space
-        )}
-
+        ))}
+        <NumpadButton
+          variant={buttonVariant}
+          buttonType="action"
+          size={buttonSize}
+          disabled={disabled}
+          onClick={() => handleOperatorPress('/')}
+          aria-label="Divide"
+        >
+          <Divide className="h-4 w-4" />
+        </NumpadButton>
+        {/* Row 3 */}
+        {['1', '2', '3'].map((number) => (
+          <NumpadButton
+            key={number}
+            variant={buttonVariant}
+            size={buttonSize}
+            disabled={disabled}
+            onClick={() => handleNumberPress(number)}
+            aria-label={`Number ${number}`}
+          >
+            {number}
+          </NumpadButton>
+        ))}
+        <NumpadButton
+          variant={buttonVariant}
+          buttonType="action"
+          size={buttonSize}
+          disabled={disabled}
+          onClick={() => handleOperatorPress('*')}
+          aria-label="Multiply"
+        >
+          <X className="h-4 w-4" />
+        </NumpadButton>
+        {/* Row 4 */}
+        <NumpadButton
+          variant={buttonVariant}
+          buttonType="action"
+          size={buttonSize}
+          disabled={true} // Disable decimal button
+          onClick={handleDecimalPress}
+          aria-label="Decimal point"
+        >
+          .
+        </NumpadButton>
         <NumpadButton
           variant={buttonVariant}
           size={buttonSize}
@@ -211,56 +269,52 @@ export const Numpad = forwardRef<HTMLDivElement, NumpadProps>(
         >
           0
         </NumpadButton>
-
         <NumpadButton
           variant={buttonVariant}
           buttonType="action"
           size={buttonSize}
           disabled={disabled}
-          onClick={handleBackspace}
-          aria-label="Backspace"
+          onClick={() => handleOperatorPress('+')}
+          aria-label="Plus"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Plus className="h-4 w-4" />
+        </NumpadButton>
+        <NumpadButton
+          variant={buttonVariant}
+          buttonType="special"
+          size={buttonSize}
+          disabled={disabled}
+          onClick={() => handleOperatorPress('=')}
+          aria-label="Equals"
+        >
+          =
         </NumpadButton>
 
-        {/* Row 5: Clear and Enter (conditional) */}
-        {(showClear || showEnter) && (
-          <>
-            {showClear && (
-              <NumpadButton
-                buttonType="clear"
-                size={buttonSize}
-                disabled={disabled}
-                onClick={handleClear}
-                aria-label="Clear all"
-              >
-                <Delete className="h-4 w-4 mr-1" />
-                Clear
-              </NumpadButton>
-            )}
-
-            {showEnter && (
-              <NumpadButton
-                buttonType="special"
-                size={buttonSize}
-                disabled={disabled}
-                onClick={handleEnter}
-                aria-label="Enter"
-                className={!showClear ? 'col-span-3' : ''}
-              >
-                Enter
-              </NumpadButton>
-            )}
-
-            {/* Fill empty space if only one action button */}
-            {showClear && !showEnter && <div />}
-          </>
-        )}
+        {/* Row 5 */}
+        <NumpadButton
+          buttonType="clear"
+          size={buttonSize}
+          disabled={disabled}
+          onClick={handleClear}
+          aria-label="Clear all"
+        >
+          <Delete className="h-4 w-4 mr-1" />C
+        </NumpadButton>
+        <div />
+        <div />
+        <NumpadButton
+          variant="coral"
+          buttonType="special"
+          size={buttonSize}
+          disabled={disabled}
+          onClick={handleEnter}
+          aria-label="Submit"
+        >
+          Submit
+        </NumpadButton>
       </div>
     );
   }
 );
-
-Numpad.displayName = 'Numpad';
 
 export { numpadVariants, numpadButtonVariants };

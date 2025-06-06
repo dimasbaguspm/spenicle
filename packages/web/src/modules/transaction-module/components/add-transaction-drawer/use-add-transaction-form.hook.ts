@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 
 import {
@@ -46,7 +47,12 @@ export const useAddTransactionForm = ({
     formState: { errors, isValid },
   } = useForm<AddTransactionFormData>({
     mode: 'onChange',
-    defaultValues: { ...DEFAULT_FORM_VALUES, groupId: user?.groupId, createdByUserId: user?.id },
+    defaultValues: {
+      ...DEFAULT_FORM_VALUES,
+      date: dayjs().toISOString(),
+      groupId: user?.groupId,
+      createdByUserId: user?.id,
+    },
   });
 
   /**

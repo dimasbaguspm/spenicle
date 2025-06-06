@@ -51,10 +51,11 @@ export function TransactionGroup({
   const getTotalAmount = () => {
     return transactions.reduce((total, seamlessTransaction) => {
       const { type, amount } = seamlessTransaction.transaction;
+
       if (type === 'income') {
-        return total + (amount ?? 0);
+        return total + Number(amount ?? 0);
       } else if (type === 'expense') {
-        return total - (amount ?? 0);
+        return total - Number(amount ?? 0);
       } else {
         return total;
       }

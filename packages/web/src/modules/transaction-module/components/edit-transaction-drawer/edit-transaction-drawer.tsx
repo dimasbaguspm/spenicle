@@ -4,7 +4,6 @@ import { Controller } from 'react-hook-form';
 
 import {
   Drawer,
-  TextInput,
   Select,
   TextArea,
   Button,
@@ -12,6 +11,7 @@ import {
   Modal,
   Segment,
   DateTimePicker,
+  AmountField,
 } from '../../../../components';
 
 import type { EditTransactionDrawerProps } from './types';
@@ -117,15 +117,13 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
                 },
               }}
               render={({ field }) => (
-                <TextInput
+                <AmountField
                   label="Amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={field.value?.toString() ?? ''}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  value={field.value}
+                  onChange={field.onChange}
                   errorText={errors.amount?.message}
+                  disabled={isPending}
+                  required
                 />
               )}
             />
