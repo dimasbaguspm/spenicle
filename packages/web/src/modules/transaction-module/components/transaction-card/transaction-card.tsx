@@ -65,7 +65,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
             aria-label={categoryName}
             className="mt-1"
           />
-          <AccountIcon iconValue={accountIcon} colorValue={accountColor} className="w-6 h-6" aria-label={accountName} />
+          <AccountIcon iconValue={accountIcon} colorValue={accountColor} size="xs" aria-label={accountName} />
         </div>
         {/* Middle column: labels and account name */}
         <div className="col-span-7 flex flex-col justify-between h-full ml-2">

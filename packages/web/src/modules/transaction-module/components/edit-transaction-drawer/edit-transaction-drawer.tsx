@@ -4,15 +4,16 @@ import { Controller } from 'react-hook-form';
 
 import {
   Drawer,
-  Select,
-  TextArea,
   Button,
   IconButton,
   Modal,
   Segment,
   DateTimePicker,
   AmountField,
+  CategorySelector,
+  TextArea,
 } from '../../../../components';
+import { AccountSelector } from '../../../../modules/account-module/components/account-selector';
 
 import type { EditTransactionDrawerProps } from './types';
 import { useEditTransactionForm } from './use-edit-transaction-form.hook';
@@ -58,17 +59,15 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-6">
             <Controller
-              name="accountId"
+              name="date"
               control={control}
-              rules={{ required: 'Account is required' }}
+              rules={{ required: 'Date is required' }}
               render={({ field }) => (
-                <Select
-                  label="Account"
-                  placeholder="Select an account"
-                  options={accountOptions}
-                  value={field.value?.toString() ?? ''}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-                  errorText={errors.accountId?.message}
+                <DateTimePicker
+                  label="Date & Time"
+                  value={field.value ? new Date(field.value) : undefined}
+                  onChange={(date) => field.onChange(date?.toISOString())}
+                  errorText={errors.date?.message}
                 />
               )}
             />
@@ -79,28 +78,12 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
               rules={{ required: 'Transaction type is required' }}
               render={({ field }) => (
                 <Segment
-                  label="Type"
+                  label="Transaction Type"
                   options={typeOptions}
-                  value={field.value ?? 'expense'}
+                  value={field.value ?? ''}
                   onValueChange={field.onChange}
                   errorText={errors.type?.message}
                   className="w-full"
-                />
-              )}
-            />
-
-            <Controller
-              name="categoryId"
-              control={control}
-              rules={{ required: 'Category is required' }}
-              render={({ field }) => (
-                <Select
-                  label="Category"
-                  placeholder="Select a category"
-                  options={categoryOptions}
-                  value={field.value?.toString() ?? ''}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-                  errorText={errors.categoryId?.message}
                 />
               )}
             />
@@ -128,15 +111,35 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
             />
 
             <Controller
-              name="date"
+              name="categoryId"
               control={control}
-              rules={{ required: 'Date is required' }}
+              rules={{ required: 'Category is required' }}
               render={({ field }) => (
-                <DateTimePicker
-                  label="Date & Time"
-                  value={field.value ? new Date(field.value) : undefined}
-                  onChange={(date) => field.onChange(date?.toISOString())}
-                  errorText={errors.date?.message}
+                <CategorySelector
+                  label="Category"
+                  placeholder="Select a category"
+                  categories={categoryOptions}
+                  value={categoryOptions.find((cat) => cat.id === field.value) ?? null}
+                  onChange={(cat) => field.onChange(cat?.id ?? null)}
+                  errorText={errors.categoryId?.message}
+                  disabled={isPending}
+                />
+              )}
+            />
+
+            <Controller
+              name="accountId"
+              control={control}
+              rules={{ required: 'Account is required' }}
+              render={({ field }) => (
+                <AccountSelector
+                  label="Account"
+                  placeholder="Select an account"
+                  accounts={accountOptions}
+                  value={accountOptions.find((acc) => acc.id === field.value) ?? null}
+                  onChange={(acc) => field.onChange(acc?.id ?? null)}
+                  errorText={errors.accountId?.message}
+                  disabled={isPending}
                 />
               )}
             />

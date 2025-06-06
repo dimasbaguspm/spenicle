@@ -1,27 +1,33 @@
 ---
 applyTo: 'packages/web/**/*.{ts|tsx|js|jsx|json}'
 ---
-This app is built with React and TypeScript, and builds on top of libraries like Tanstack Query, Tanstack Router, and Tailwind CSS v4.
+This app is a web-based platform designed with a strong focus on professional UI and UX principles. The goal is to create an intuitive, accessible, and delightful experience for all users, making it easy to understand and interact with the application at every step—without violating the established color palette or design tokens (see COLOR_PALETTE.md).
 
-There are a color palette and a set of design tokens that should be used consistently across the application (COLOR_PALETTE.md)
+## UI/UX Standards
 
-## Coding Standards
-- src/libs/**, should contain libraries/utils that specified to the application and can be reused globally
-- src/components/**, should contain reusable components across the application and not allowed to use global components
-- src/hooks/**, should contain reusable hooks, and not allowed to use global components
-- src/providers/**, should contain context providers that able to use global components and hooks 
-- src/routes/**, should contain the routes of the application
-- src/modules/**/**/*, should contain the modules of the application, which can be a combination of components, hooks, and providers
-- when creating a new component, keep in mind the component should be reusable and modular, and the props should be fully support dynamic; ensure the pattern that is used is consistent with the existing components (prefer to have Compound Components pattern)
-
-## Domain Knowledge
-- The application is a web-based platform that requires a responsive design but we're prioritizing mobile first
-- The application should be accessible and follow best practices for web accessibility (WCAG 2.1)
-- The application should be performant and follow best practices for web performance (e.g., lazy loading, code splitting)
+- Prioritize clarity and simplicity in all user interactions; every screen and component should clearly communicate its purpose and current state.
+- Use established color tokens and design guidelines for all interface elements to ensure visual consistency and brand alignment.
+- Provide immediate, meaningful feedback for user actions (e.g., loading indicators, success/error messages, disabled states).
+- Ensure all interactive elements are easily discoverable and have clear affordances.
+- Use concise, user-friendly language for all labels, tooltips, and messages.
+- Design for accessibility from the start (WCAG 2.1 AA or better): support keyboard navigation, screen readers, and sufficient color contrast.
+- Favor mobile-first, responsive layouts that adapt gracefully to all screen sizes.
+- Use whitespace and layout to guide attention and reduce cognitive load.
+- Minimize the number of steps required to complete common tasks; streamline flows wherever possible.
+- Use progressive disclosure to avoid overwhelming users with information or options.
+- When introducing new features or complex flows, provide contextual help or onboarding cues.
+- Validate user input in real-time and provide actionable, friendly error messages.
+- Ensure performance optimizations do not compromise the clarity or usability of the interface.
 
 ## Preferences
-- Use functional components and React hooks
-- Use TypeScript for type safety and better developer experience
-- Use Tailwind CSS for styling and layout
-- Use Tanstack Query for data fetching and caching
-- Use Tanstack Router for routing and navigation
+
+- Use functional components and React hooks for UI logic.
+- Use TypeScript for type safety and maintainability.
+- Use Tailwind CSS for styling, strictly adhering to the defined color palette and design tokens.
+- Use Tanstack Query and Tanstack Router for data and navigation, ensuring loading and error states are clearly communicated to users.
+- Favor modular, reusable components that can be easily composed for different flows.
+- Document any UX decisions or deviations from standard patterns with clear rationale.
+
+## Goal
+
+Every user should feel confident and in control while using the application, with the interface guiding them naturally and transparently through their tasks—never surprising, confusing, or overwhelming them.

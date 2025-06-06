@@ -8,7 +8,7 @@ import { ACCOUNT_COLORS, ACCOUNT_ICONS } from './constants';
 interface AccountIconProps {
   iconValue?: string;
   colorValue?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: '2xs' | 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
@@ -27,12 +27,16 @@ export const AccountIcon = forwardRef<HTMLDivElement, AccountIconProps>(
 
     // Size configurations
     const sizeClasses = {
+      '2xs': 'w-4 h-4',
+      xs: 'w-6 h-6',
       sm: 'w-8 h-8',
       md: 'w-10 h-10',
       lg: 'w-12 h-12',
     };
 
     const iconSizeClasses = {
+      '2xs': 'h-2 w-2',
+      xs: 'h-3 w-3',
       sm: 'h-4 w-4',
       md: 'h-5 w-5',
       lg: 'h-6 w-6',

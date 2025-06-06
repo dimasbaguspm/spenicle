@@ -9,6 +9,7 @@ import {
 } from '../../../../hooks';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router/context';
 import { useSnack } from '../../../../providers/snack';
+import type { Account, Category } from '../../../../types/api';
 
 import {
   DEFAULT_FORM_VALUES,
@@ -102,17 +103,9 @@ export const useAddTransactionForm = ({
   };
 
   // Prepare options for selects
-  const accountOptions =
-    accountsData?.items?.map((account: { id?: number; name?: string; type?: string }) => ({
-      value: account.id?.toString() ?? '',
-      label: `${account.name} (${account.type})`,
-    })) ?? [];
+  const accountOptions = (accountsData?.items ?? []) as Account[];
 
-  const categoryOptions =
-    categoriesData?.items?.map((category: { id?: number; name?: string }) => ({
-      value: category.id?.toString() ?? '',
-      label: category.name ?? '',
-    })) ?? [];
+  const categoryOptions = (categoriesData?.items ?? []) as Category[];
 
   return {
     // Form methods
