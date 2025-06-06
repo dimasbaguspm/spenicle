@@ -23,7 +23,10 @@ export const Categories: React.FC<CategoriesProps> = ({ periodType, periodIndex,
   // Calculate period range
   const { startDate, endDate } = useMemo(() => getPeriodRange(periodType, periodIndex), [periodType, periodIndex]);
 
-  const [summaryData, , queryState] = useApiSummaryCategoriesQuery({ startDate, endDate }, { staleTime: 0, gcTime: 0 });
+  const [summaryData, , queryState] = useApiSummaryCategoriesQuery(
+    { startDate, endDate },
+    { staleTime: 60000, gcTime: 300000 } // 1 min fresh, 5 min cache
+  );
   const [categoriesResponse] = useApiCategoriesQuery({ pageSize: 1000 });
   const allCategories =
     categoriesResponse && 'items' in categoriesResponse ? (categoriesResponse.items as Category[]) : [];

@@ -10,7 +10,7 @@ export const PeriodBreakdownLoader: React.FC<PeriodBreakdownLoaderProps> = ({ co
   return (
     <div className="space-y-4">
       {Array.from({ length: count }).map((_, i) => (
-        <Skeleton key={i} className="h-24 w-full rounded-lg" />
+        <Skeleton key={i} className="h-24 w-full rounded-lg" variant="mist" />
       ))}
     </div>
   );

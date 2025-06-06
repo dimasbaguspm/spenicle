@@ -25,7 +25,10 @@ export const Accounts: React.FC<AccountsProps> = ({ periodType, periodIndex, set
 
   const [accountsResponse] = useApiAccountsQuery({ pageSize: 1000 });
   const allAccounts = accountsResponse?.items as Account[] | undefined;
-  const [accountsData, , queryState] = useApiSummaryAccountsQuery({ startDate, endDate }, { staleTime: 0, gcTime: 0 });
+  const [accountsData, , queryState] = useApiSummaryAccountsQuery(
+    { startDate, endDate },
+    { staleTime: 60000, gcTime: 300000 } // 1 min fresh, 5 min cache
+  );
 
   // Build a map of accountId to account object from API data
   const accountMap = useMemo(() => {

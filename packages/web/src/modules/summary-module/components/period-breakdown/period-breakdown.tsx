@@ -32,7 +32,10 @@ export const PeriodBreakdown: React.FC<PeriodBreakdownProps> = ({
     [periodType, periodIndex]
   );
 
-  const [data, , queryState] = useApiSummaryTransactionsQuery({ startDate, endDate }, { staleTime: 0, gcTime: 0 });
+  const [data, , queryState] = useApiSummaryTransactionsQuery(
+    { startDate, endDate },
+    { staleTime: 60000, gcTime: 300000 } // 1 min fresh, 5 min cache
+  );
 
   const groupedData = React.useMemo(() => {
     if (periodType === 'weekly') {
