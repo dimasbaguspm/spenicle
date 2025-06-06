@@ -69,8 +69,8 @@ export const useAddTransactionForm = ({
     }
 
     try {
-      // Create the transaction
-      const transactionData = transformToTransactionData(data);
+      // Create the transaction with hardcoded currency
+      const transactionData = transformToTransactionData(data); // transform already hardcodes currency
       await createTransaction(transactionData);
 
       success('Transaction created successfully!');
@@ -103,13 +103,13 @@ export const useAddTransactionForm = ({
 
   // Prepare options for selects
   const accountOptions =
-    accountsData?.items?.map((account) => ({
+    accountsData?.items?.map((account: { id?: number; name?: string; type?: string }) => ({
       value: account.id?.toString() ?? '',
       label: `${account.name} (${account.type})`,
     })) ?? [];
 
   const categoryOptions =
-    categoriesData?.items?.map((category) => ({
+    categoriesData?.items?.map((category: { id?: number; name?: string }) => ({
       value: category.id?.toString() ?? '',
       label: category.name ?? '',
     })) ?? [];

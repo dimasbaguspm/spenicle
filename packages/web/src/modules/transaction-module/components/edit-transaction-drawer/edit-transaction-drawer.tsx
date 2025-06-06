@@ -31,7 +31,6 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
     closeDrawer,
     accountOptions,
     categoryOptions,
-    currencyOptions,
     typeOptions,
   } = useEditTransactionForm({ transaction, onSuccess, onError });
 
@@ -124,28 +123,6 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
                   errorText={errors.amount?.message}
                   disabled={isPending}
                   required
-                />
-              )}
-            />
-
-            <Controller
-              name="currency"
-              control={control}
-              rules={{
-                required: 'Currency is required',
-                pattern: {
-                  value: /^[A-Z]{3}$/,
-                  message: 'Currency must be 3 uppercase letters (e.g., USD, EUR)',
-                },
-              }}
-              render={({ field }) => (
-                <Select
-                  label="Currency"
-                  placeholder="Select currency"
-                  options={currencyOptions}
-                  value={field.value ?? ''}
-                  onChange={field.onChange}
-                  errorText={errors.currency?.message}
                 />
               )}
             />

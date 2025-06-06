@@ -1,6 +1,6 @@
 import type { UpdateTransaction, Transaction } from '../../../../types/api';
 
-export type EditTransactionFormData = UpdateTransaction;
+export type EditTransactionFormData = Omit<UpdateTransaction, 'currency'>;
 
 export interface EditTransactionDrawerProps {
   transaction: Transaction;

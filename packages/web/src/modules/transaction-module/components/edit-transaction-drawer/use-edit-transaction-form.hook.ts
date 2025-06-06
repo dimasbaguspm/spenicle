@@ -13,7 +13,6 @@ import { useSnack } from '../../../../providers/snack';
 import {
   getDefaultFormValues,
   VALIDATION_RULES,
-  CURRENCY_OPTIONS,
   TRANSACTION_TYPE_OPTIONS,
   transformToTransactionData,
   validateFormData,
@@ -65,7 +64,7 @@ export const useEditTransactionForm = ({ transaction, onSuccess, onError }: Edit
         return;
       }
 
-      // Transform and submit data
+      // Transform and submit data (currency always hardcoded)
       const transactionData = transformToTransactionData(data);
       await updateTransaction({ ...transactionData, transactionId: transaction.id! });
 
@@ -98,18 +97,16 @@ export const useEditTransactionForm = ({ transaction, onSuccess, onError }: Edit
 
   // Prepare options for dropdowns
   const accountOptions =
-    accountsData?.items?.map((account) => ({
+    accountsData?.items?.map((account: { id?: number; name?: string; type?: string }) => ({
       value: account.id?.toString() ?? '',
       label: `${account.name} (${account.type})`,
     })) ?? [];
 
   const categoryOptions =
-    categoriesData?.items?.map((category) => ({
+    categoriesData?.items?.map((category: { id?: number; name?: string }) => ({
       value: category.id?.toString() ?? '',
       label: category.name ?? '',
     })) ?? [];
-
-  const currencyOptions = CURRENCY_OPTIONS;
 
   // Transaction type options
   const typeOptions = TRANSACTION_TYPE_OPTIONS;
@@ -130,7 +127,6 @@ export const useEditTransactionForm = ({ transaction, onSuccess, onError }: Edit
     closeDrawer,
     accountOptions,
     categoryOptions,
-    currencyOptions,
     typeOptions,
     validationRules,
     setValue,

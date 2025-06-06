@@ -4,7 +4,6 @@ export interface AddTransactionFormData {
   categoryId: number;
   createdByUserId: number;
   amount: number;
-  currency: string;
   type: 'expense' | 'income' | 'transfer';
   date: string;
   note: string | null;

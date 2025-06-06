@@ -16,7 +16,6 @@ export const AddTransactionDrawer: FC = () => {
     closeDrawer,
     accountOptions,
     categoryOptions,
-    currencyOptions,
     typeOptions,
   } = useAddTransactionForm();
 
@@ -31,17 +30,15 @@ export const AddTransactionDrawer: FC = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-6">
             <Controller
-              name="accountId"
+              name="date"
               control={control}
-              rules={{ required: 'Account is required' }}
+              rules={{ required: 'Date is required' }}
               render={({ field }) => (
-                <Select
-                  label="Account"
-                  placeholder="Select an account"
-                  options={accountOptions}
-                  value={field.value?.toString() ?? ''}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-                  errorText={errors.accountId?.message}
+                <DateTimePicker
+                  label="Date & Time"
+                  value={field.value ? new Date(field.value) : undefined}
+                  onChange={(date) => field.onChange(date?.toISOString())}
+                  errorText={errors.date?.message}
                 />
               )}
             />
@@ -58,22 +55,6 @@ export const AddTransactionDrawer: FC = () => {
                   onValueChange={field.onChange}
                   errorText={errors.type?.message}
                   className="w-full"
-                />
-              )}
-            />
-
-            <Controller
-              name="categoryId"
-              control={control}
-              rules={{ required: 'Category is required' }}
-              render={({ field }) => (
-                <Select
-                  label="Category"
-                  placeholder="Select a category"
-                  options={categoryOptions}
-                  value={field.value?.toString() ?? ''}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-                  errorText={errors.categoryId?.message}
                 />
               )}
             />
@@ -101,37 +82,33 @@ export const AddTransactionDrawer: FC = () => {
             />
 
             <Controller
-              name="currency"
+              name="categoryId"
               control={control}
-              rules={{
-                required: 'Currency is required',
-                pattern: {
-                  value: /^[A-Z]{3}$/,
-                  message: 'Currency must be 3 uppercase letters (e.g., USD, EUR)',
-                },
-              }}
+              rules={{ required: 'Category is required' }}
               render={({ field }) => (
                 <Select
-                  label="Currency"
-                  placeholder="Select currency"
-                  options={currencyOptions}
-                  value={field.value ?? ''}
-                  onChange={field.onChange}
-                  errorText={errors.currency?.message}
+                  label="Category"
+                  placeholder="Select a category"
+                  options={categoryOptions}
+                  value={field.value?.toString() ?? ''}
+                  onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                  errorText={errors.categoryId?.message}
                 />
               )}
             />
 
             <Controller
-              name="date"
+              name="accountId"
               control={control}
-              rules={{ required: 'Date is required' }}
+              rules={{ required: 'Account is required' }}
               render={({ field }) => (
-                <DateTimePicker
-                  label="Date & Time"
-                  value={field.value ? new Date(field.value) : undefined}
-                  onChange={(date) => field.onChange(date?.toISOString())}
-                  errorText={errors.date?.message}
+                <Select
+                  label="Account"
+                  placeholder="Select an account"
+                  options={accountOptions}
+                  value={field.value?.toString() ?? ''}
+                  onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                  errorText={errors.accountId?.message}
                 />
               )}
             />

@@ -14,7 +14,6 @@ export const getDefaultFormValues = (transaction: Transaction): EditTransactionF
   categoryId: transaction.categoryId,
   createdByUserId: transaction.createdByUserId,
   amount: transaction.amount,
-  currency: transaction.currency,
   type: transaction.type ?? 'expense',
   date: transaction.date,
   note: transaction.note,
@@ -39,21 +38,6 @@ export const VALIDATION_RULES = {
     min: {
       value: 0.01,
       message: 'Amount must be greater than 0',
-    },
-  },
-  currency: {
-    required: 'Currency is required',
-    minLength: {
-      value: 3,
-      message: 'Currency must be exactly 3 characters (e.g., USD, EUR)',
-    },
-    maxLength: {
-      value: 3,
-      message: 'Currency must be exactly 3 characters (e.g., USD, EUR)',
-    },
-    pattern: {
-      value: /^[A-Z]{3}$/,
-      message: 'Currency must be 3 uppercase letters (e.g., USD, EUR)',
     },
   },
   type: {
@@ -129,10 +113,6 @@ export const validateFormData = (data: EditTransactionFormData): { isValid: bool
     return { isValid: false, error: 'Amount must be greater than 0' };
   }
 
-  if (!data.currency || data.currency.length !== 3) {
-    return { isValid: false, error: 'Currency must be exactly 3 characters' };
-  }
-
   if (!data.date) {
     return { isValid: false, error: 'Date is required' };
   }
@@ -149,7 +129,7 @@ export const transformToTransactionData = (data: EditTransactionFormData): Updat
   categoryId: data.categoryId,
   createdByUserId: data.createdByUserId,
   amount: data.amount,
-  currency: data.currency,
+  currency: 'USD', // always hardcoded
   type: data.type,
   date: data.date,
   note: data.note,
