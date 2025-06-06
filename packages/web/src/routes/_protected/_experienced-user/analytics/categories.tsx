@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { Expense } from '../../../../modules/summary-module';
+import { Categories } from '../../../../modules/summary-module';
 
-export const Route = createFileRoute('/_protected/_experienced-user/analytics/expenses')({
+export const Route = createFileRoute('/_protected/_experienced-user/analytics/categories')({
   component: RouteComponent,
 });
 
@@ -17,7 +17,7 @@ function RouteComponent() {
   };
 
   return (
-    <Expense
+    <Categories
       periodType={categoriesPeriodType}
       periodIndex={categoriesIndex}
       setPeriodType={handleCategoriesPeriodType}

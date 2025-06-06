@@ -57,14 +57,14 @@ function RouteComponent() {
       href: '/analytics',
       icon: BarChart3,
       label: 'Reports',
-      isActive: currentPath === '/analytics',
+      isActive: currentPath.includes('analytics'),
       isLink: true,
     },
     {
       href: '/settings',
       icon: Settings,
       label: 'Settings',
-      isActive: currentPath === '/settings',
+      isActive: currentPath.includes('/settings'),
       isLink: true,
     },
   ];

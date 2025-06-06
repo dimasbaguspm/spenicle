@@ -2,12 +2,11 @@ import React from 'react';
 
 import { Skeleton } from '../../../../components/skeleton';
 
-interface ExpenseLoaderProps {
+interface CategoriesLoaderProps {
   count?: number;
 }
 
-export const ExpenseLoader: React.FC<ExpenseLoaderProps> = ({ count = 5 }) => {
-  // Render animated skeletons for loading state
+export const CategoriesLoader: React.FC<CategoriesLoaderProps> = ({ count = 5 }) => {
   return (
     <div className="space-y-4" aria-busy="true" aria-label="Loading expenses by category">
       {Array.from({ length: count }).map((_, i) => (

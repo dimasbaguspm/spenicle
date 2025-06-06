@@ -14,7 +14,9 @@ import { useApiMutate, type UseApiMutateResult } from '../use-api-mutate';
 import { useApiQuery, type UseApiQueryResult } from '../use-api-query';
 
 // List all categories
-export const useApiCategoriesQuery = (params?: CategoryQueryParameters): UseApiQueryResult<Category, Error> => {
+export const useApiCategoriesQuery = (
+  params?: CategoryQueryParameters
+): UseApiQueryResult<PaginatedResponse, Error> => {
   return useApiQuery<PaginatedResponse, CategoryQueryParameters, Error>({
     queryKey: QUERY_KEYS.CATEGORIES.list(params),
     path: '/categories',

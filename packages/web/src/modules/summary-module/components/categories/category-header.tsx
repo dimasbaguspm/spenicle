@@ -4,7 +4,7 @@ import React from 'react';
 
 import { Button, IconButton } from '../../../../components';
 
-interface ExpenseHeaderProps {
+interface CategoriesHeaderProps {
   periodType: 'weekly' | 'monthly' | 'yearly';
   periodIndex: number;
   setPeriodType: (type: 'weekly' | 'monthly' | 'yearly') => void;
@@ -12,7 +12,7 @@ interface ExpenseHeaderProps {
   // Add more props as needed for summary data
 }
 
-export const ExpenseHeader: React.FC<ExpenseHeaderProps> = ({
+export const CategoriesHeader: React.FC<CategoriesHeaderProps> = ({
   periodType,
   periodIndex,
   setPeriodType,
@@ -59,7 +59,7 @@ export const ExpenseHeader: React.FC<ExpenseHeaderProps> = ({
     <div className="flex flex-col gap-4 mb-6">
       {/* Title and navigation */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900">Expenses by Category</h3>
+        <h3 className="text-lg font-semibold text-slate-900">Categories by Category</h3>
         <div className="flex items-center gap-2">
           <IconButton
             variant="ghost"
