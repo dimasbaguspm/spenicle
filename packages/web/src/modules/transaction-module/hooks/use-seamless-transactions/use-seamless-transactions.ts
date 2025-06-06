@@ -5,16 +5,16 @@ import { useMemo, useCallback, useRef, useState } from 'react';
 import { useApiAccountsQuery } from '../../../../hooks/use-api/built-in/use-accounts';
 import { useApiCategoriesQuery } from '../../../../hooks/use-api/built-in/use-categories';
 import { useApiGetTransactionsMutation } from '../../../../hooks/use-api/built-in/use-transactions';
-import type { TransactionQueryParameters } from '../../../../types/api';
-import { type Transaction } from '../../components/transaction-card';
+import type { Transaction, TransactionQueryParameters } from '../../../../types/api';
 
 import {
-  convertApiTransactionToComponent,
   generateDateRange,
   createAccountsMap,
   createCategoriesMap,
   groupTransactionsByDate,
+  convertApiTransactionToSeamlessTransactionFormat,
 } from './helpers';
+import type { SeamlessTransaction } from './types';
 
 export interface UseSeamlessTransactionsParams {
   selectedDate: Dayjs;
@@ -48,7 +48,7 @@ export function useSeamlessTransactions({
   const fetchFormattedTransactions = async (
     fetchStartDate: string,
     fetchEndDate: string
-  ): Promise<[string, Transaction[]][]> => {
+  ): Promise<[string, SeamlessTransaction[]][]> => {
     const queryParams: TransactionQueryParameters = {
       startDate: fetchStartDate,
       endDate: fetchEndDate,
@@ -63,8 +63,8 @@ export function useSeamlessTransactions({
     const response = await getTransactions(queryParams);
 
     const formattedTransactions =
-      response.items?.map((apiTransaction) =>
-        convertApiTransactionToComponent(apiTransaction, accountsMap, categoriesMap)
+      (response.items as Transaction[])?.map((apiTransaction) =>
+        convertApiTransactionToSeamlessTransactionFormat(apiTransaction, accountsMap, categoriesMap)
       ) ?? [];
 
     const allDates = generateDateRange(dayjs(fetchStartDate), dayjs(fetchEndDate));
@@ -82,9 +82,9 @@ export function useSeamlessTransactions({
 
     const newData = await fetchFormattedTransactions(fetchStartDate, fetchEndDate);
 
-    queryClient.setQueryData(queryKey, (prev: [string, Transaction[]][] | undefined) => {
+    queryClient.setQueryData(queryKey, (prev: [string, SeamlessTransaction[]][] | undefined) => {
       const currentData = prev ?? [];
-      const mergedData = new Map<string, Transaction[]>();
+      const mergedData = new Map<string, SeamlessTransaction[]>();
 
       currentData.forEach(([date, transactions]) => {
         mergedData.set(date, transactions);
