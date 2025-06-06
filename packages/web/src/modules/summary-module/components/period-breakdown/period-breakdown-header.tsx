@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import React from 'react';
 
 import { Button, IconButton } from '../../../../components';
@@ -68,7 +69,6 @@ export const PeriodBreakdownHeader: React.FC<PeriodBreakdownHeaderProps> = ({
   return (
     <div className="flex flex-col gap-4 mb-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900">Period Breakdown</h3>
         <div className="flex items-center gap-2">
           <IconButton
             variant="ghost"
@@ -77,17 +77,7 @@ export const PeriodBreakdownHeader: React.FC<PeriodBreakdownHeaderProps> = ({
             disabled={!canNavigatePrev()}
             className="text-slate-600 hover:text-coral-600"
           >
-            <svg
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
+            <ChevronLeft className="h-4 w-4" />
           </IconButton>
           <PeriodBreakdownTitle title={getPeriodTitle()} />
           <IconButton
@@ -97,35 +87,25 @@ export const PeriodBreakdownHeader: React.FC<PeriodBreakdownHeaderProps> = ({
             disabled={!canNavigateNext()}
             className="text-slate-600 hover:text-coral-600"
           >
-            <svg
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+            <ChevronRight className="h-4 w-4" />
           </IconButton>
         </div>
-      </div>
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant={periodType === 'weekly' ? 'coral' : 'slate-outline'}
-          size="sm"
-          onClick={() => setPeriodType('weekly')}
-        >
-          Weekly
-        </Button>
-        <Button
-          variant={periodType === 'monthly' ? 'coral' : 'slate-outline'}
-          size="sm"
-          onClick={() => setPeriodType('monthly')}
-        >
-          Monthly
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={periodType === 'weekly' ? 'coral' : 'slate-outline'}
+            size="sm"
+            onClick={() => setPeriodType('weekly')}
+          >
+            Weekly
+          </Button>
+          <Button
+            variant={periodType === 'monthly' ? 'coral' : 'slate-outline'}
+            size="sm"
+            onClick={() => setPeriodType('monthly')}
+          >
+            Monthly
+          </Button>
+        </div>
       </div>
     </div>
   );

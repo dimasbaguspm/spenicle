@@ -57,9 +57,7 @@ export const CategoriesHeader: React.FC<CategoriesHeaderProps> = ({
 
   return (
     <div className="flex flex-col gap-4 mb-6">
-      {/* Title and navigation */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900">Categories by Category</h3>
         <div className="flex items-center gap-2">
           <IconButton
             variant="ghost"
@@ -83,30 +81,29 @@ export const CategoriesHeader: React.FC<CategoriesHeaderProps> = ({
             <ChevronRight className="h-4 w-4" />
           </IconButton>
         </div>
-      </div>
-      {/* Period selector */}
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant={periodType === 'weekly' ? 'coral' : 'slate-outline'}
-          size="sm"
-          onClick={() => setPeriodType('weekly')}
-        >
-          Weekly
-        </Button>
-        <Button
-          variant={periodType === 'monthly' ? 'coral' : 'slate-outline'}
-          size="sm"
-          onClick={() => setPeriodType('monthly')}
-        >
-          Monthly
-        </Button>
-        <Button
-          variant={periodType === 'yearly' ? 'coral' : 'slate-outline'}
-          size="sm"
-          onClick={() => setPeriodType('yearly')}
-        >
-          Yearly
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={periodType === 'weekly' ? 'coral' : 'slate-outline'}
+            size="sm"
+            onClick={() => setPeriodType('weekly')}
+          >
+            Weekly
+          </Button>
+          <Button
+            variant={periodType === 'monthly' ? 'coral' : 'slate-outline'}
+            size="sm"
+            onClick={() => setPeriodType('monthly')}
+          >
+            Monthly
+          </Button>
+          <Button
+            variant={periodType === 'yearly' ? 'coral' : 'slate-outline'}
+            size="sm"
+            onClick={() => setPeriodType('yearly')}
+          >
+            Yearly
+          </Button>
+        </div>
       </div>
     </div>
   );
