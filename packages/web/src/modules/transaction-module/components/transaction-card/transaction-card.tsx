@@ -73,7 +73,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
             {txn.note ? (
               <>
                 <span
-                  className="text-base md:text-lg font-medium text-slate-900 truncate max-w-full whitespace-nowrap"
+                  className="text-base font-medium text-slate-900 truncate max-w-full whitespace-nowrap"
                   title={txn.note.length > 50 ? txn.note : undefined}
                 >
                   {txn.note.length > 50 ? `${txn.note.slice(0, 50)}...` : txn.note}
@@ -83,10 +83,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
                 </span>
               </>
             ) : (
-              <span
-                className="text-base md:text-lg font-medium text-slate-900 truncate whitespace-nowrap"
-                title={categoryName}
-              >
+              <span className="text-base font-medium text-slate-900 truncate whitespace-nowrap" title={categoryName}>
                 {categoryName}
               </span>
             )}
@@ -97,7 +94,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
         </div>
         {/* Right column: amount (top), time (bottom) */}
         <div className="col-span-4 flex flex-col items-end justify-between h-full">
-          <span className={cn('font-bold text-lg md:text-xl', amountColor)}>{formattedAmount}</span>
+          <span className={cn('font-bold text-lg', amountColor)}>{formattedAmount}</span>
           <span className="text-sm text-slate-400 mb-1">{formattedTime}</span>
         </div>
       </div>

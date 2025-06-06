@@ -22,7 +22,7 @@ const weeklyDateRibbonVariants = cva('sticky top-0 z-20 border-b border-slate-20
 });
 
 const dayItemVariants = cva(
-  'relative flex-shrink-0 w-16 px-2 py-3 cursor-pointer transition-all duration-200 border-b-2 border-transparent select-none text-center',
+  'relative flex-shrink-0 cursor-pointer px-2 py-3 transition-all duration-200 border-b-2 border-transparent select-none text-center',
   {
     variants: {
       variant: {
@@ -33,9 +33,9 @@ const dayItemVariants = cva(
         cream: 'hover:bg-cream-100 data-[selected=true]:bg-cream-100 data-[selected=true]:border-cream-500',
       },
       size: {
-        sm: 'w-12 px-1 py-2',
-        md: 'w-16 px-2 py-3',
-        lg: 'w-20 px-3 py-4',
+        sm: '',
+        md: '',
+        lg: '',
       },
     },
     defaultVariants: {
@@ -68,7 +68,7 @@ const WeeklyDateRibbon = forwardRef<HTMLDivElement, WeeklyDateRibbonProps>(
 
     return (
       <div ref={ref} className={cn(weeklyDateRibbonVariants({ variant }), className)} {...props}>
-        <div className="flex justify-between">
+        <div className="flex w-full">
           {days.map((date) => {
             const isSelected = isSameDay(date, selectedDate);
             const dayIsToday = isToday(date);
@@ -78,7 +78,7 @@ const WeeklyDateRibbon = forwardRef<HTMLDivElement, WeeklyDateRibbonProps>(
                 key={date.toISOString()}
                 data-date={date.toISOString()}
                 data-selected={isSelected}
-                className={cn(dayItemVariants({ variant, size }))}
+                className={cn('flex-1', dayItemVariants({ variant, size }))}
                 onClick={() => handleDateSelect(date)}
               >
                 <div className="flex flex-col items-center">
