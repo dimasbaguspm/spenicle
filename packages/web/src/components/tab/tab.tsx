@@ -9,12 +9,21 @@ export interface TabProps {
   defaultValue?: string;
   value?: string;
   onValueChange?: (value: string) => void;
-  variant?: 'underline' | 'tabs' | 'ghost';
+  type?: 'underline' | 'tabs' | 'ghost';
+  variant?: 'coral' | 'sage' | 'mist' | 'slate' | 'success' | 'info' | 'warning' | 'danger';
   className?: string;
 }
 
 // Tab Component
-export function Tab({ children, defaultValue, value, onValueChange, variant = 'underline', className }: TabProps) {
+export function Tab({
+  children,
+  defaultValue,
+  value,
+  onValueChange,
+  type = 'underline',
+  variant,
+  className,
+}: TabProps) {
   const [internalValue, setInternalValue] = useState(defaultValue ?? '');
 
   const activeTab = value ?? internalValue;
@@ -27,7 +36,7 @@ export function Tab({ children, defaultValue, value, onValueChange, variant = 'u
   };
 
   return (
-    <TabContext.Provider value={{ activeTab, onTabChange: handleTabChange, variant }}>
+    <TabContext.Provider value={{ activeTab, onTabChange: handleTabChange, type, variant }}>
       <div className={cn('w-full', className)}>{children}</div>
     </TabContext.Provider>
   );

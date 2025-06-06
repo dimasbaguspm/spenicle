@@ -16,16 +16,18 @@ export function TabList({ children, className }: TabListProps) {
     throw new Error('TabList must be used within a Tab component');
   }
 
-  const { variant } = context;
+  const { type } = context;
 
-  const variantClasses = {
+  const typeClasses = {
     underline: 'border-b border-gray-200',
     tabs: 'bg-gray-100 rounded-lg p-1',
     ghost: '',
   };
 
+  // Add color variant support if needed in the future
+
   return (
-    <div className={cn('flex', variantClasses[variant], className)} role="tablist">
+    <div className={cn('flex', typeClasses[type], className)} role="tablist">
       {children}
     </div>
   );

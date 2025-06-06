@@ -55,7 +55,7 @@ function AnalyticsComponent() {
         {/* Financial Summary Period Cards - Always visible */}
         <FinancialSummaryPeriodCardList selectedPeriod={selectedPeriod} />
 
-        <Tab value={activeTab} onValueChange={handleOnTabChange} variant="tabs">
+        <Tab value={activeTab} onValueChange={handleOnTabChange} type="tabs">
           <Tab.List className="w-full grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
             <Tab.Trigger value="period-breakdown" className="text-center">
               Period Breakdown
