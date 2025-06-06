@@ -111,6 +111,7 @@ export const AmountField = React.forwardRef<HTMLInputElement, AmountFieldProps>(
             required={required}
             variant={variant}
             size={size}
+            state={actualState} // Pass state to match error/invalid scenario
             className={cn('pr-10', className)}
             aria-invalid={actualState === 'error'}
             aria-describedby={errorText ? `${id}-error` : helperText ? `${id}-helper` : undefined}
