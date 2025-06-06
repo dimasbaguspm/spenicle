@@ -1,6 +1,7 @@
 export const DRAWER_IDS = {
   CREATE_TRANSACTION: 'create-transaction',
   EDIT_TRANSACTION: 'edit-transaction',
+  FILTER_TRANSACTION: 'filter-transaction',
   ADD_ACCOUNT: 'add-account',
   EDIT_ACCOUNT: 'edit-account',
   ADD_CATEGORY: 'add-category',

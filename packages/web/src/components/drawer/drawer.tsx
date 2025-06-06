@@ -135,7 +135,7 @@ export function Drawer({
       <div
         className={cn(
           'fixed inset-0 z-50 flex bg-black/50 backdrop-blur-sm',
-          'transition-all duration-200 ease-out',
+          'transition-all duration-100 ease-out',
           positionConfig.container,
           isAnimatingOut ? 'opacity-0' : overlayVisible ? 'opacity-100' : 'opacity-0',
           overlayClassName
@@ -147,7 +147,7 @@ export function Drawer({
         <div
           className={cn(
             'relative bg-white shadow-lg transform-gpu flex flex-col',
-            'transition-all duration-250 ease-out will-change-transform',
+            'transition-all duration-150 ease-out will-change-transform',
             positionConfig.content,
             isVertical ? sizeClasses[size] : sizeClasses[size],
             isVertical ? 'max-h-[80vh]' : 'w-full h-full',

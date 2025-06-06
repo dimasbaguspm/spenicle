@@ -1,20 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router';
 import dayjs, { Dayjs } from 'dayjs';
-import { Filter, Calendar } from 'lucide-react';
+import { Calendar, Filter } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-import { PageLayout, PageHeader, IconButton, DatePicker } from '../../../components';
+import { PageLayout, PageHeader, IconButton, DatePicker, Badge } from '../../../components';
+import { DRAWER_IDS } from '../../../constants/drawer-id';
 import {
   WeeklyDateRibbon,
   SeamlessTransactionList,
   type SeamlessTransactionListRef,
 } from '../../../modules/transaction-module';
+import { useDrawerRouterProvider } from '../../../providers/drawer-router';
 
 export const Route = createFileRoute('/_protected/_experienced-user/transactions')({
   component: TransactionsComponent,
 });
 
 function TransactionsComponent() {
+  const { openDrawer } = useDrawerRouterProvider();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
@@ -39,6 +42,10 @@ function TransactionsComponent() {
     setShouldScroll(false);
   };
 
+  const handleOpenFilterDrawer = async () => {
+    await openDrawer(DRAWER_IDS.FILTER_TRANSACTION);
+  };
+
   return (
     <PageLayout
       background="cream"
@@ -50,25 +57,8 @@ function TransactionsComponent() {
             showBackButton={true}
             rightContent={
               <div className="flex items-center gap-2">
-                <IconButton
-                  variant="ghost"
-                  size="md"
-                  onClick={() => {
-                    handleOpenAddTransactionDrawer();
-                  }}
-                  title="Select Date"
-                >
+                <IconButton variant="ghost" size="md" onClick={handleOpenAddTransactionDrawer} title="Select Date">
                   <Calendar className="h-5 w-5" />
-                </IconButton>
-                <IconButton
-                  variant="ghost"
-                  size="md"
-                  onClick={() => {
-                    // TODO: Open filter drawer
-                  }}
-                  title="Filter Transactions"
-                >
-                  <Filter className="h-5 w-5" />
                 </IconButton>
               </div>
             }
@@ -103,6 +93,15 @@ function TransactionsComponent() {
           onTopDateChange={handleOnTopDateChange}
           ribbonElement={ribbonRef.current}
         />
+      </div>
+
+      <div className="sticky w-full bottom-20 left-0 right-0 translate-y-0 flex justify-center items-center z-3">
+        <button className="pointer-events-auto" onClick={handleOpenFilterDrawer} aria-label="Open filter options">
+          <Badge variant="info-outline" size="lg" className="bg-white py-2 text-base">
+            <Filter className="h-4 w-4 mr-3" />
+            Filter
+          </Badge>
+        </button>
       </div>
     </PageLayout>
   );

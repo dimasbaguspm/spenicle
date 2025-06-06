@@ -6,7 +6,7 @@ import { useApiAccountQuery, useApiCategoryQuery, useApiTransactionQuery } from 
 import { AddAccountDrawer } from '../../modules/account-module';
 import { EditAccountDrawer } from '../../modules/account-module/components';
 import { AddCategoryDrawer, EditCategoryDrawer } from '../../modules/category-module';
-import { AddTransactionDrawer, EditTransactionDrawer } from '../../modules/transaction-module';
+import { AddTransactionDrawer, EditTransactionDrawer, TransactionFilterDrawer } from '../../modules/transaction-module';
 
 import { DrawerRouterContextProvider } from './context';
 
@@ -96,6 +96,7 @@ export const DrawerRouterProvider: FC<PropsWithChildren> = ({ children }) => {
 
       {is(DRAWER_IDS.CREATE_TRANSACTION) && <AddTransactionDrawer />}
       {is(DRAWER_IDS.EDIT_TRANSACTION) && transaction && <EditTransactionDrawer transaction={transaction} />}
+      {is(DRAWER_IDS.FILTER_TRANSACTION) && <TransactionFilterDrawer />}
       {is(DRAWER_IDS.ADD_ACCOUNT) && <AddAccountDrawer />}
       {is(DRAWER_IDS.EDIT_ACCOUNT) && account && <EditAccountDrawer account={account} />}
       {is(DRAWER_IDS.ADD_CATEGORY) && <AddCategoryDrawer />}
