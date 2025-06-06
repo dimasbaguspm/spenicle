@@ -94,7 +94,11 @@ export const FinancialSummaryPeriodCardList: React.FC = () => {
           <FinancialSummaryCard.Label>{card.label}</FinancialSummaryCard.Label>
           <FinancialSummaryCard.Value amount={card.amount} prefix={card.prefixAmount} variant={card.variant} />
           <div className="flex justify-start items-center mt-1 min-h-0">
-            <DiffPill diff={card.diff ?? 0} className="text-[10px] min-h-0 min-w-0" />
+            <DiffPill
+              diff={card.diff ?? 0}
+              className="text-[10px] min-h-0 min-w-0"
+              isExpense={card.label.toLowerCase().includes('expenses')}
+            />
           </div>
           {card.subLabel && (
             <FinancialSummaryCard.SubLabel variant={card.variant}>{card.subLabel}</FinancialSummaryCard.SubLabel>
