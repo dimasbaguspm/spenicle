@@ -87,7 +87,7 @@ export const FinancialSummaryPeriodCardList: React.FC<FinancialSummaryPeriodCard
     return (
       <div className="grid grid-cols-3 gap-4">
         {[...Array(3)].map((_, idx) => (
-          <SkeletonCard key={idx} size="4xl" />
+          <SkeletonCard key={idx} className="p-6 min-h-[150px]" />
         ))}
       </div>
     );
