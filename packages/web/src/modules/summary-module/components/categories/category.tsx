@@ -1,5 +1,3 @@
-// ExpenseBreakdown.tsx
-// Modular component for category-based expense analytics, following period-breakdown pattern
 import React, { useMemo } from 'react';
 
 import { Tile } from '../../../../components';
@@ -20,12 +18,14 @@ interface CategoriesProps {
 }
 
 export const Categories: React.FC<CategoriesProps> = ({ periodType, periodIndex, setPeriodType, setPeriodIndex }) => {
-  // Calculate period range
   const { startDate, endDate } = useMemo(() => getPeriodRange(periodType, periodIndex), [periodType, periodIndex]);
 
   const [summaryData, , queryState] = useApiSummaryCategoriesQuery(
     { startDate, endDate },
-    { staleTime: 60000, gcTime: 300000 } // 1 min fresh, 5 min cache
+    {
+      staleTime: 60000,
+      gcTime: 300000,
+    }
   );
   const [categoriesResponse] = useApiCategoriesQuery({ pageSize: 1000 });
   const allCategories =

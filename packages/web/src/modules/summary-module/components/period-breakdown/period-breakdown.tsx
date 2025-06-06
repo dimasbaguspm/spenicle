@@ -34,7 +34,10 @@ export const PeriodBreakdown: React.FC<PeriodBreakdownProps> = ({
 
   const [data, , queryState] = useApiSummaryTransactionsQuery(
     { startDate, endDate },
-    { staleTime: 60000, gcTime: 300000 } // 1 min fresh, 5 min cache
+    {
+      staleTime: 60000,
+      gcTime: 300000,
+    }
   );
 
   const groupedData = React.useMemo(() => {
@@ -76,7 +79,6 @@ export const PeriodBreakdown: React.FC<PeriodBreakdownProps> = ({
         periodIndex={periodIndex}
         setPeriodType={setPeriodType}
         setPeriodIndex={setPeriodIndex}
-        data={data ?? []}
       />
       {queryState.isFetching ? (
         <PeriodBreakdownLoader count={5} />

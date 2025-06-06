@@ -24,6 +24,7 @@ export interface UseApiQueryOptions<Data, Query, TError> {
   onError?: (error: TError) => void;
   staleTime?: number;
   gcTime?: number;
+  select?: (data: Data | undefined) => Data;
 }
 
 type QueryState = Pick<
@@ -68,10 +69,12 @@ export const useApiQuery = <TData, TQuery, TError = Error>(
     gcTime,
     onSuccess,
     onError,
+    select,
   } = options ?? {};
 
   const query = useQuery<TData | undefined, TError>({
     queryKey: queryKey.filter(Boolean),
+
     queryFn: async () => {
       try {
         const response = await axios.get<TData>(path, {
@@ -95,6 +98,7 @@ export const useApiQuery = <TData, TQuery, TError = Error>(
     retry,
     staleTime,
     gcTime,
+    select,
     meta: {
       silentError,
     },

@@ -1,3 +1,5 @@
+import dayjs from 'dayjs';
+
 import type {
   Error,
   SummaryAccountsPeriod,
@@ -17,6 +19,15 @@ export const useApiSummaryTransactionsQuery = (
     queryKey: QUERY_KEYS.SUMMARY.transactions(params),
     path: '/summary/transactions-period',
     queryParams: params,
+    // NOTE: This is a workaround to ensure the dates are adjusted correctly for the UI
+    // because the API returns dates in UTC and we want to display them in local time.
+    select: (valueData = []) => {
+      return valueData.map((item) => ({
+        ...item,
+        startDate: dayjs(item.startDate).add(1, 'day').startOf('day').toISOString(),
+        endDate: dayjs(item.endDate).add(1, 'day').endOf('day').toISOString(),
+      }));
+    },
   });
 };
 
@@ -29,6 +40,15 @@ export const useApiSummaryAccountsQuery = (
     queryKey: QUERY_KEYS.SUMMARY.accounts(params),
     path: '/summary/accounts-period',
     queryParams: params,
+    // NOTE: This is a workaround to ensure the dates are adjusted correctly for the UI
+    // because the API returns dates in UTC and we want to display them in local time.
+    select: (valueData = []) => {
+      return valueData.map((item) => ({
+        ...item,
+        startDate: dayjs(item.startDate).add(1, 'day').startOf('day').toISOString(),
+        endDate: dayjs(item.endDate).add(1, 'day').endOf('day').toISOString(),
+      }));
+    },
   });
 };
 
@@ -41,5 +61,14 @@ export const useApiSummaryCategoriesQuery = (
     queryKey: QUERY_KEYS.SUMMARY.categories(params),
     path: '/summary/categories-period',
     queryParams: params,
+    // NOTE: This is a workaround to ensure the dates are adjusted correctly for the UI
+    // because the API returns dates in UTC and we want to display them in local time.
+    select: (valueData = []) => {
+      return valueData.map((item) => ({
+        ...item,
+        startDate: dayjs(item.startDate).add(1, 'day').startOf('day').toISOString(),
+        endDate: dayjs(item.endDate).add(1, 'day').endOf('day').toISOString(),
+      }));
+    },
   });
 };

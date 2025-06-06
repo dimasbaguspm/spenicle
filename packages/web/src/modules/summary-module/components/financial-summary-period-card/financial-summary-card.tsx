@@ -12,7 +12,7 @@ interface FinancialSummaryCardRootProps extends React.HTMLAttributes<HTMLDivElem
 
 const FinancialSummaryCardRoot: React.FC<FinancialSummaryCardRootProps> = ({ className = '', children, ...props }) => (
   <FinancialSummaryCardContext.Provider value={{}}>
-    <Tile className={cn('p-6', className)} {...props}>
+    <Tile className={cn('p-3', className)} {...props}>
       {children}
     </Tile>
   </FinancialSummaryCardContext.Provider>

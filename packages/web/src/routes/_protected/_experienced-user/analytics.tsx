@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useNavigate, useLocation } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
-import { PageLayout, Select, Tab } from '../../../components';
+import { PageLayout, Tab } from '../../../components';
 import { FinancialSummaryPeriodCardList } from '../../../modules/summary-module';
 
 export const Route = createFileRoute('/_protected/_experienced-user/analytics')({
@@ -11,7 +11,6 @@ export const Route = createFileRoute('/_protected/_experienced-user/analytics')(
 function AnalyticsComponent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedPeriod, setSelectedPeriod] = useState('this-month');
 
   // Determine active tab from location
   const getActiveTab = () => {
@@ -37,23 +36,9 @@ function AnalyticsComponent() {
   }, [location.pathname, navigate]);
 
   return (
-    <PageLayout
-      background="cream"
-      title="Analytics"
-      showBackButton
-      rightContent={
-        <Select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)}>
-          <option value="this-week">This Week</option>
-          <option value="last-week">Last Week</option>
-          <option value="this-month">This Month</option>
-          <option value="last-month">Last Month</option>
-          <option value="this-year">This Year</option>
-        </Select>
-      }
-    >
+    <PageLayout background="cream" title="Analytics" showBackButton>
       <div className="space-y-6">
-        {/* Financial Summary Period Cards - Always visible */}
-        <FinancialSummaryPeriodCardList selectedPeriod={selectedPeriod} />
+        <FinancialSummaryPeriodCardList />
 
         <Tab value={activeTab} onValueChange={handleOnTabChange} type="tabs">
           <Tab.List className="w-full grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">

@@ -1,5 +1,3 @@
-// Accounts.tsx
-// Modular component for account-based financial analytics, following expense pattern
 import React, { useMemo } from 'react';
 
 import { Tile } from '../../../../components';
@@ -27,7 +25,10 @@ export const Accounts: React.FC<AccountsProps> = ({ periodType, periodIndex, set
   const allAccounts = accountsResponse?.items as Account[] | undefined;
   const [accountsData, , queryState] = useApiSummaryAccountsQuery(
     { startDate, endDate },
-    { staleTime: 60000, gcTime: 300000 } // 1 min fresh, 5 min cache
+    {
+      staleTime: 60000,
+      gcTime: 300000,
+    }
   );
 
   // Build a map of accountId to account object from API data

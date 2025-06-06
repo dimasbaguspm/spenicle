@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import React from 'react';
 
 import { Button, IconButton } from '../../../../components';
-import type { SummaryTransactionsPeriod } from '../../../../types/api';
 
 import { PeriodBreakdownTitle } from './period-breakdown-title';
 
@@ -12,15 +11,13 @@ interface PeriodBreakdownHeaderProps {
   periodIndex: number;
   setPeriodType: (type: 'weekly' | 'monthly') => void;
   setPeriodIndex: (index: number) => void;
-  data: SummaryTransactionsPeriod;
 }
 
-export const PeriodBreakdownHeader: React.FC<PeriodBreakdownHeaderProps> = ({
+export const PeriodBreakdownHeader: React.FC<Omit<PeriodBreakdownHeaderProps, 'data'>> = ({
   periodType,
   periodIndex,
   setPeriodType,
   setPeriodIndex,
-  data,
 }) => {
   const now = dayjs();
   const selectedMonth = now.subtract(periodIndex, 'month');
@@ -28,35 +25,21 @@ export const PeriodBreakdownHeader: React.FC<PeriodBreakdownHeaderProps> = ({
 
   const getPeriodTitle = () => {
     if (periodType === 'weekly') {
-      return selectedMonth.format('MMMM YYYY');
+      const isCurrentYear = selectedMonth.year() === now.year();
+      if (isCurrentYear) {
+        return selectedMonth.format('MMMM');
+      } else {
+        return selectedMonth.format('MMMM YYYY');
+      }
     } else {
       return selectedYear.format('YYYY');
     }
   };
 
-  const canNavigatePrev = () => {
-    if (periodType === 'weekly') {
-      const earliest = (data ?? []).reduce((min, item) => {
-        const d = dayjs(item.startDate);
-        return d.isBefore(min) ? d : min;
-      }, now);
-      return selectedMonth.startOf('month').isAfter(earliest.startOf('month'));
-    } else {
-      const earliest = (data ?? []).reduce((min, item) => {
-        const d = dayjs(item.startDate);
-        return d.isBefore(min) ? d : min;
-      }, now);
-      return selectedYear.startOf('year').isAfter(earliest.startOf('year'));
-    }
-  };
+  const MAX_PERIOD_INDEX = 100;
 
-  const canNavigateNext = () => {
-    if (periodType === 'weekly') {
-      return selectedMonth.isBefore(now, 'month');
-    } else {
-      return selectedYear.isBefore(now, 'year');
-    }
-  };
+  const canNavigatePrev = () => periodIndex < MAX_PERIOD_INDEX;
+  const canNavigateNext = () => periodIndex > 0;
 
   const navigatePeriod = (direction: 'prev' | 'next') => {
     if (direction === 'prev' && canNavigatePrev()) {
