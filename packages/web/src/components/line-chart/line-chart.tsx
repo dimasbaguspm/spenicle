@@ -7,6 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Legend,
 } from 'recharts';
 
 import { formatLineChartAmount } from './helpers';
@@ -95,6 +96,12 @@ export const LineChart: FC<Omit<LineChartProps, 'color'> & { color?: string }> =
             const meta = LINE_META[key as 'totalIncome' | 'totalExpenses' | 'totalNet'];
             return [formatLineChartAmount(Number(value), { compact: false }), meta ? meta.name : name];
           }}
+        />
+        <Legend
+          wrapperStyle={{ fontSize: 13, color: '#3d405b', fontWeight: 500 }}
+          iconType="circle"
+          align="center"
+          verticalAlign="bottom"
         />
         {keys.map((key) => (
           <Line
