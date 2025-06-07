@@ -1500,7 +1500,7 @@ __metadata:
     tsup: "npm:8.5.0"
     tsx: "npm:4.19.4"
     typescript: "npm:5.8.3"
-    typescript-eslint: "npm:8.32.1"
+    typescript-eslint: "npm:8.33.0"
     vite: "npm:6.3.5"
     vitest: "npm:3.1.4"
     zod: "npm:3.25.28"
@@ -10835,21 +10835,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript-eslint@npm:8.32.1":
-  version: 8.32.1
-  resolution: "typescript-eslint@npm:8.32.1"
-  dependencies:
-    "@typescript-eslint/eslint-plugin": "npm:8.32.1"
-    "@typescript-eslint/parser": "npm:8.32.1"
-    "@typescript-eslint/utils": "npm:8.32.1"
-  peerDependencies:
-    eslint: ^8.57.0 || ^9.0.0
-    typescript: ">=4.8.4 <5.9.0"
-  checksum: 10/4a042815f73825b510954579938a26c8664c2134e9663b0ac6f771f5f7338d4d41d78e5ded685ab42c1c6410117d955bac2c01fcc7e8ad3ef06c5e7dc2c95a7d
-  languageName: node
-  linkType: hard
-
-"typescript-eslint@npm:^8.25.0":
+"typescript-eslint@npm:8.33.0, typescript-eslint@npm:^8.25.0":
   version: 8.33.0
   resolution: "typescript-eslint@npm:8.33.0"
   dependencies:
