@@ -1,11 +1,11 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import dayjs from 'dayjs';
 import { Calendar } from 'lucide-react';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { cn } from '../../libs/utils';
 import { Modal } from '../modal';
-import { TextInput } from '../text-input';
+import { textInputVariants } from '../text-input/text-input';
 
 import { DatePickerCalendar } from './date-picker-calendar';
 import { DatePickerContext } from './date-picker-context';
@@ -78,7 +78,7 @@ export function DatePicker({
   helperText,
   errorText,
   disabled = false,
-  required = false,
+  // required = false,
   showLabel = true,
   labelClassName,
   helperClassName,
@@ -86,7 +86,7 @@ export function DatePicker({
   wrapperClassName,
   className,
   id,
-  name,
+  // name,
   format = 'MM/DD/YYYY',
   minDate,
   maxDate,
@@ -112,7 +112,7 @@ export function DatePicker({
     return dayjs();
   });
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  // const inputRef = useRef<HTMLInputElement>(null);
 
   // Use external isOpen prop if provided, otherwise use internal state
   const modalIsOpen = isOpen ?? internalIsOpen;
@@ -209,34 +209,66 @@ export function DatePicker({
       <div className={cn(datePickerVariants({ variant, size }), wrapperClassName)}>
         {showInput && (
           <>
-            <TextInput
-              ref={inputRef}
+            {/* Label */}
+            {label && showLabel && (
+              <label
+                htmlFor={id}
+                className={cn(
+                  'block text-sm font-medium mb-2',
+                  errorText ? 'text-danger-700' : 'text-slate-700',
+                  disabled && 'text-slate-400',
+                  labelClassName
+                )}
+              >
+                {label}
+              </label>
+            )}
+            {/* Button styled as input */}
+            <button
+              type="button"
               id={id}
-              name={name}
-              value={displayValue}
-              placeholder={placeholder}
-              label={label}
-              helperText={helperText}
-              errorText={errorText}
+              aria-label={label}
+              aria-disabled={disabled}
               disabled={disabled}
-              required={required}
-              showLabel={showLabel}
-              labelClassName={labelClassName}
-              helperClassName={helperClassName}
-              errorClassName={errorClassName}
-              variant={variant}
-              size={size}
-              readOnly
+              tabIndex={0}
               onClick={handleInputClick}
               onKeyDown={handleInputKeyDown}
-              className={cn('cursor-pointer', disabled && 'cursor-not-allowed', className)}
+              className={cn(
+                textInputVariants({ variant, size }),
+                'w-full flex items-center pr-10 text-left relative',
+                className
+              )}
               style={{ caretColor: 'transparent' }}
-            />
-
-            {/* Calendar Icon */}
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <Calendar className={cn('h-4 w-4 text-slate-400', disabled && 'text-slate-300')} />
-            </div>
+            >
+              <span className={cn('flex-1 truncate', !displayValue && 'text-slate-400')}>
+                {displayValue || placeholder}
+              </span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                <Calendar className={cn('h-4 w-4 text-slate-400', disabled && 'text-slate-300')} />
+              </span>
+            </button>
+            {/* Helper Text */}
+            {helperText && !errorText && (
+              <p className={cn('mt-2 text-xs text-slate-500', helperClassName)}>{helperText}</p>
+            )}
+            {/* Error Text */}
+            {errorText && (
+              <p className={cn('mt-2 text-xs text-danger-600 flex items-center gap-1', errorClassName)}>
+                <svg
+                  className="h-3 w-3 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {errorText}
+              </p>
+            )}
           </>
         )}
 

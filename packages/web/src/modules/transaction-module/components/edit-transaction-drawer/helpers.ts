@@ -1,6 +1,3 @@
-import { TrendingDown, TrendingUp, ArrowRightLeft } from 'lucide-react';
-import React from 'react';
-
 import type { UpdateTransaction, Transaction } from '../../../../types/api';
 
 import type { EditTransactionFormData } from './types';
@@ -66,27 +63,6 @@ export const CURRENCY_OPTIONS = [
   { value: 'GBP', label: 'GBP - British Pound' },
   { value: 'CAD', label: 'CAD - Canadian Dollar' },
   { value: 'AUD', label: 'AUD - Australian Dollar' },
-];
-
-/**
- * Transaction type options for the segment control
- */
-export const TRANSACTION_TYPE_OPTIONS = [
-  {
-    value: 'expense' as const,
-    label: 'Expense',
-    icon: React.createElement(TrendingDown, { className: 'w-4 h-4' }),
-  },
-  {
-    value: 'income' as const,
-    label: 'Income',
-    icon: React.createElement(TrendingUp, { className: 'w-4 h-4' }),
-  },
-  {
-    value: 'transfer' as const,
-    label: 'Transfer',
-    icon: React.createElement(ArrowRightLeft, { className: 'w-4 h-4' }),
-  },
 ];
 
 /**

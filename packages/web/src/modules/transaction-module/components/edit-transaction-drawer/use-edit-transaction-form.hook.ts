@@ -9,15 +9,8 @@ import {
 } from '../../../../hooks';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router/context';
 import { useSnack } from '../../../../providers/snack';
-import type { Account, Category } from '../../../../types/api';
 
-import {
-  getDefaultFormValues,
-  VALIDATION_RULES,
-  TRANSACTION_TYPE_OPTIONS,
-  transformToTransactionData,
-  validateFormData,
-} from './helpers';
+import { getDefaultFormValues, VALIDATION_RULES, transformToTransactionData, validateFormData } from './helpers';
 import type { EditTransactionFormData, EditTransactionDrawerProps } from './types';
 
 /**
@@ -97,12 +90,9 @@ export const useEditTransactionForm = ({ transaction, onSuccess, onError }: Edit
   };
 
   // Prepare options for dropdowns
-  const accountOptions = (accountsData?.items ?? []) as Account[];
+  const accountOptions = accountsData?.items ?? [];
 
-  const categoryOptions = (categoriesData?.items ?? []) as Category[];
-
-  // Transaction type options
-  const typeOptions = TRANSACTION_TYPE_OPTIONS;
+  const categoryOptions = categoriesData?.items ?? [];
 
   // Validation rules
   const validationRules = VALIDATION_RULES;
@@ -120,7 +110,6 @@ export const useEditTransactionForm = ({ transaction, onSuccess, onError }: Edit
     closeDrawer,
     accountOptions,
     categoryOptions,
-    typeOptions,
     validationRules,
     setValue,
   };

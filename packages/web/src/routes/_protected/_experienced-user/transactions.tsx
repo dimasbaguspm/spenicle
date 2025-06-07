@@ -1,23 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router';
 import dayjs, { Dayjs } from 'dayjs';
-import { Calendar, Filter } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-import { PageLayout, PageHeader, IconButton, DatePicker, Badge } from '../../../components';
-import { DRAWER_IDS } from '../../../constants/drawer-id';
+import { PageLayout, PageHeader, IconButton, DatePicker } from '../../../components';
 import {
   WeeklyDateRibbon,
   SeamlessTransactionList,
   type SeamlessTransactionListRef,
 } from '../../../modules/transaction-module';
-import { useDrawerRouterProvider } from '../../../providers/drawer-router';
+import { TransactionFilterEntry } from '../../../modules/transaction-module/components/transaction-filter-entry/transaction-filter-entry';
 
 export const Route = createFileRoute('/_protected/_experienced-user/transactions')({
   component: TransactionsComponent,
 });
 
 function TransactionsComponent() {
-  const { openDrawer } = useDrawerRouterProvider();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
@@ -40,10 +38,6 @@ function TransactionsComponent() {
   const handleOnTopDateChange = (date: Dayjs) => {
     setSelectedDate(date.startOf('day'));
     setShouldScroll(false);
-  };
-
-  const handleOpenFilterDrawer = async () => {
-    await openDrawer(DRAWER_IDS.FILTER_TRANSACTION);
   };
 
   return (
@@ -95,14 +89,7 @@ function TransactionsComponent() {
         />
       </div>
 
-      <div className="sticky w-full bottom-20 left-0 right-0 translate-y-0 flex justify-center items-center z-3">
-        <button className="pointer-events-auto" onClick={handleOpenFilterDrawer} aria-label="Open filter options">
-          <Badge variant="info-outline" size="lg" className="bg-white py-2 text-base">
-            <Filter className="h-4 w-4 mr-3" />
-            Filter
-          </Badge>
-        </button>
-      </div>
+      <TransactionFilterEntry />
     </PageLayout>
   );
 }

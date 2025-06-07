@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
 import { Button, Loader } from '../../../../components';
 import { cn } from '../../../../libs/utils';
-import { useSeamlessTransactions, useDateIntersectionObserver } from '../../hooks';
+import { useSeamlessTransactions, useDateIntersectionObserver, useTransactionFilters } from '../../hooks';
 import { TransactionGroup } from '../transaction-card';
 
 export interface SeamlessTransactionListProps {
@@ -19,9 +19,12 @@ export interface SeamlessTransactionListRef {
 
 export const SeamlessTransactionList = forwardRef<SeamlessTransactionListRef, SeamlessTransactionListProps>(
   ({ selectedDate, shouldScroll, onTopDateChange, ribbonElement }, ref) => {
+    useTransactionFilters();
     const isRender = useRef<boolean>(false);
 
+    const filters = useTransactionFilters();
     const { transactionsByDate, isLoading, isError, error, fetchMore, refreshTransactions } = useSeamlessTransactions({
+      ...filters,
       selectedDate,
       onSuccessLoadInitial: () => {
         isRender.current = true;

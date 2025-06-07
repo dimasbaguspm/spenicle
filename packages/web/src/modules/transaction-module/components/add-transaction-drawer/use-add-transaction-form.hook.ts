@@ -9,13 +9,11 @@ import {
 } from '../../../../hooks';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router/context';
 import { useSnack } from '../../../../providers/snack';
-import type { Account, Category } from '../../../../types/api';
 
 import {
   DEFAULT_FORM_VALUES,
   VALIDATION_RULES,
   CURRENCY_OPTIONS,
-  TRANSACTION_TYPE_OPTIONS,
   transformToTransactionData,
   validateFormData,
 } from './helpers';
@@ -103,9 +101,9 @@ export const useAddTransactionForm = ({
   };
 
   // Prepare options for selects
-  const accountOptions = (accountsData?.items ?? []) as Account[];
+  const accountOptions = accountsData?.items ?? [];
 
-  const categoryOptions = (categoriesData?.items ?? []) as Category[];
+  const categoryOptions = categoriesData?.items ?? [];
 
   return {
     // Form methods
@@ -137,6 +135,5 @@ export const useAddTransactionForm = ({
     accountOptions,
     categoryOptions,
     currencyOptions: CURRENCY_OPTIONS,
-    typeOptions: TRANSACTION_TYPE_OPTIONS,
   };
 };

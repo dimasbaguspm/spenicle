@@ -89,7 +89,7 @@ const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
     const actualSize = inputSize ?? size;
 
     return (
-      <div className={cn('w-full', wrapperClassName)}>
+      <div className={cn('w-full relative', wrapperClassName)}>
         {/* Label */}
         {label && showLabel && (
           <label

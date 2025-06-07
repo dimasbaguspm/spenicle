@@ -7,13 +7,13 @@ import {
   Button,
   IconButton,
   Modal,
-  Segment,
   DateTimePicker,
   AmountField,
   CategorySelector,
   TextArea,
 } from '../../../../components';
 import { AccountSelector } from '../../../../modules/account-module/components/account-selector';
+import { TransactionTypeSelector } from '../transaction-type-selector/transaction-type-selector';
 
 import type { EditTransactionDrawerProps } from './types';
 import { useEditTransactionForm } from './use-edit-transaction-form.hook';
@@ -32,7 +32,6 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
     closeDrawer,
     accountOptions,
     categoryOptions,
-    typeOptions,
   } = useEditTransactionForm({ transaction, onSuccess, onError });
 
   const handleDeleteClick = () => {
@@ -77,12 +76,11 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
               control={control}
               rules={{ required: 'Transaction type is required' }}
               render={({ field }) => (
-                <Segment
-                  label="Transaction Type"
-                  options={typeOptions}
+                <TransactionTypeSelector
                   value={field.value ?? ''}
-                  onValueChange={field.onChange}
+                  onChange={field.onChange}
                   errorText={errors.type?.message}
+                  disabled={isPending}
                   className="w-full"
                 />
               )}

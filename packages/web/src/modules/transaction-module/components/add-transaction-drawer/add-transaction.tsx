@@ -1,17 +1,10 @@
 import { type FC } from 'react';
 import { Controller } from 'react-hook-form';
 
-import {
-  Drawer,
-  TextArea,
-  Button,
-  Segment,
-  DateTimePicker,
-  AmountField,
-  CategorySelector,
-} from '../../../../components';
+import { Drawer, TextArea, Button, DateTimePicker, AmountField, CategorySelector } from '../../../../components';
 import { AccountSelector } from '../../../../modules/account-module/components/account-selector';
 import type { Account, Category } from '../../../../types/api';
+import { TransactionTypeSelector } from '../transaction-type-selector';
 
 import { useAddTransactionForm } from './use-add-transaction-form.hook';
 
@@ -26,7 +19,6 @@ export const AddTransactionDrawer: FC = () => {
     closeDrawer,
     accountOptions,
     categoryOptions,
-    typeOptions,
   } = useAddTransactionForm();
 
   return (
@@ -58,12 +50,11 @@ export const AddTransactionDrawer: FC = () => {
               control={control}
               rules={{ required: 'Transaction type is required' }}
               render={({ field }) => (
-                <Segment
-                  label="Transaction Type"
-                  options={typeOptions}
+                <TransactionTypeSelector
                   value={field.value ?? ''}
-                  onValueChange={field.onChange}
+                  onChange={field.onChange}
                   errorText={errors.type?.message}
+                  disabled={isPending}
                   className="w-full"
                 />
               )}
@@ -116,8 +107,8 @@ export const AddTransactionDrawer: FC = () => {
                 <AccountSelector
                   label="Account"
                   placeholder="Select an account"
-                  accounts={accountOptions as Account[]}
-                  value={(accountOptions as Account[]).find((acc) => acc.id === field.value) ?? null}
+                  accounts={accountOptions}
+                  value={accountOptions.find((acc) => acc.id === field.value) ?? null}
                   onChange={(acc: Account | null) => field.onChange(acc?.id ?? null)}
                   errorText={errors.accountId?.message}
                   disabled={isPending}

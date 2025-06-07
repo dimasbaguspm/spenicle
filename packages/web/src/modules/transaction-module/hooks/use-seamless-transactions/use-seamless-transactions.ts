@@ -21,6 +21,8 @@ export interface UseSeamlessTransactionsParams {
   groupId?: number;
   accountId?: number;
   categoryId?: number;
+  type?: 'expense' | 'income' | 'transfer';
+  isHighlighted?: boolean;
   onSuccessLoadInitial?: () => void;
 }
 
@@ -29,6 +31,8 @@ export function useSeamlessTransactions({
   groupId,
   accountId,
   categoryId,
+  type,
+  isHighlighted = false,
   onSuccessLoadInitial,
 }: UseSeamlessTransactionsParams) {
   const [currentDate, setCurrentDate] = useState<Dayjs>(selectedDate);
@@ -43,7 +47,7 @@ export function useSeamlessTransactions({
   const accountsMap = useMemo(() => createAccountsMap(accountsData?.items), [accountsData?.items]);
   const categoriesMap = useMemo(() => createCategoriesMap(categoriesData?.items), [categoriesData?.items]);
 
-  const queryKey = ['transactions', 'seamless', currentDate, accountId, categoryId];
+  const queryKey = ['transactions', 'seamless', currentDate, accountId, categoryId, type, isHighlighted];
 
   const fetchFormattedTransactions = async (
     fetchStartDate: string,
@@ -54,6 +58,7 @@ export function useSeamlessTransactions({
       endDate: fetchEndDate,
       groupId,
       accountId,
+      type,
       categoryId,
       sortBy: 'date' as const,
       sortOrder: 'desc' as const,

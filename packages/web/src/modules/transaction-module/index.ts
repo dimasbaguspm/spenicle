@@ -4,3 +4,4 @@ export * from './components/seamless-transaction-list';
 export * from './components/add-transaction-drawer';
 export * from './components/edit-transaction-drawer';
 export * from './components/transaction-filter-drawer';
+export * from './components/transaction-filter-entry';
