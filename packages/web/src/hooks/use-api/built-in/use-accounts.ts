@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import type {
   Account,
   AccountQueryParameters,
-  PaginatedResponse,
   Error,
   PagedAccounts,
   NewAccount,
@@ -15,8 +14,8 @@ import { useApiMutate, type UseApiMutateResult } from '../use-api-mutate';
 import { useApiQuery, type UseApiQueryResult } from '../use-api-query';
 
 // List all accounts
-export const useApiAccountsQuery = (params?: AccountQueryParameters): UseApiQueryResult<PaginatedResponse, Error> => {
-  return useApiQuery<PaginatedResponse, AccountQueryParameters, Error>({
+export const useApiAccountsQuery = (params?: AccountQueryParameters): UseApiQueryResult<PagedAccounts, Error> => {
+  return useApiQuery<PagedAccounts, AccountQueryParameters, Error>({
     queryKey: QUERY_KEYS.ACCOUNTS.list(params),
     path: '/accounts',
     queryParams: params,

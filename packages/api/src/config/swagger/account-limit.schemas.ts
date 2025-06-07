@@ -103,4 +103,14 @@ export const accountLimitSchemas = {
       },
     ],
   },
+  PagedAccountLimits: {
+    type: 'object',
+    properties: {
+      items: { type: 'array', items: { $ref: '#/components/schemas/AccountLimit' } },
+      pageNumber: { type: 'integer', example: 1 },
+      pageSize: { type: 'integer', example: 25 },
+      totalItems: { type: 'integer', example: 100 },
+      totalPages: { type: 'integer', example: 4 },
+    },
+  },
 } as const;

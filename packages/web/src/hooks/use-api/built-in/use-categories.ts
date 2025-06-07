@@ -7,6 +7,7 @@ import type {
   Error,
   NewCategory,
   UpdateCategory,
+  PagedCategories,
 } from '../../../types/api';
 import { QUERY_KEYS } from '../constants';
 import { useApiInfinite, type UseApiInfiniteResult } from '../use-api-infinite';
@@ -14,10 +15,8 @@ import { useApiMutate, type UseApiMutateResult } from '../use-api-mutate';
 import { useApiQuery, type UseApiQueryResult } from '../use-api-query';
 
 // List all categories
-export const useApiCategoriesQuery = (
-  params?: CategoryQueryParameters
-): UseApiQueryResult<PaginatedResponse, Error> => {
-  return useApiQuery<PaginatedResponse, CategoryQueryParameters, Error>({
+export const useApiCategoriesQuery = (params?: CategoryQueryParameters): UseApiQueryResult<PagedCategories, Error> => {
+  return useApiQuery<PagedCategories, CategoryQueryParameters, Error>({
     queryKey: QUERY_KEYS.CATEGORIES.list(params),
     path: '/categories',
     queryParams: params,
@@ -27,8 +26,8 @@ export const useApiCategoriesQuery = (
 // List all categories with infinite scroll
 export const useApiCategoriesInfiniteQuery = (
   params?: Omit<CategoryQueryParameters, 'pageNumber'>
-): UseApiInfiniteResult<PaginatedResponse, Error> => {
-  return useApiInfinite<PaginatedResponse, CategoryQueryParameters, Error>({
+): UseApiInfiniteResult<PagedCategories, Error> => {
+  return useApiInfinite<PagedCategories, CategoryQueryParameters, Error>({
     queryKey: QUERY_KEYS.CATEGORIES.infinite(params),
     path: '/categories',
     queryParams: params,

@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import type {
   AccountLimit,
   AccountLimitQueryParameters,
-  PaginatedResponse,
   Error,
   NewAccountLimit,
   UpdateAccountLimit,
@@ -17,8 +16,8 @@ import { useApiQuery, type UseApiQueryResult } from '../use-api-query';
 export const useApiListAccountLimitsQuery = (
   accountId: number,
   params?: Omit<AccountLimitQueryParameters, 'accountId'>
-): UseApiQueryResult<PaginatedResponse, Error> => {
-  return useApiQuery<PaginatedResponse, AccountLimitQueryParameters, Error>({
+): UseApiQueryResult<PagedAccountLimits, Error> => {
+  return useApiQuery<PagedAccountLimits, AccountLimitQueryParameters, Error>({
     queryKey: QUERY_KEYS.ACCOUNT_LIMITS.list(accountId, params),
     path: `/accounts/${accountId}/limits`,
     queryParams: params,

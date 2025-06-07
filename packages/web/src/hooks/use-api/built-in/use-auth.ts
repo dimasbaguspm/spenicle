@@ -1,20 +1,10 @@
-import type { User, Error } from '../../../types/api';
+import type { User, Error, RegistrationWithGroup, LoginRequest } from '../../../types/api';
 import { useApiMutate, type UseApiMutateResult } from '../use-api-mutate';
 
 // Register user
 export const useApiRegisterMutation = (): UseApiMutateResult<
   { message: string; user: User; token: string },
-  {
-    user: {
-      name: string;
-      email: string;
-      password: string;
-    };
-    group: {
-      name: string;
-      defaultCurrency?: string;
-    };
-  },
+  RegistrationWithGroup,
   Error
 > => {
   return useApiMutate({
@@ -29,10 +19,7 @@ export const useApiRegisterMutation = (): UseApiMutateResult<
 // Login user
 export const useApiLoginMutation = (): UseApiMutateResult<
   { message: string; user: User; token: string },
-  {
-    email: string;
-    password: string;
-  },
+  LoginRequest,
   Error
 > => {
   return useApiMutate({

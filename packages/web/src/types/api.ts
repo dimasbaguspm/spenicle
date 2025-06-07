@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-05T22:23:22.660Z
+ * Generated on: 2025-06-07T04:04:31.111Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -245,6 +245,18 @@ export type UserQueryParameters = QueryParameters & {
   sortBy?: "name" | "email" | "createdAt";
 };
 
+export interface PagedUsers {
+  items?: User[];
+  /** @example 1 */
+  pageNumber?: number;
+  /** @example 25 */
+  pageSize?: number;
+  /** @example 100 */
+  totalItems?: number;
+  /** @example 4 */
+  totalPages?: number;
+}
+
 export interface Group {
   /** Group unique identifier */
   id?: number;
@@ -312,6 +324,18 @@ export type GroupQueryParameters = QueryParameters & {
   /** Field to sort by */
   sortBy?: "name" | "createdAt";
 };
+
+export interface PagedGroups {
+  items?: Group[];
+  /** @example 1 */
+  pageNumber?: number;
+  /** @example 25 */
+  pageSize?: number;
+  /** @example 100 */
+  totalItems?: number;
+  /** @example 4 */
+  totalPages?: number;
+}
 
 export interface Account {
   /** Account unique identifier */
@@ -407,6 +431,18 @@ export type AccountQueryParameters = QueryParameters & {
   sortBy?: "name" | "type" | "createdAt";
 };
 
+export interface PagedAccounts {
+  items?: Account[];
+  /** @example 1 */
+  pageNumber?: number;
+  /** @example 25 */
+  pageSize?: number;
+  /** @example 100 */
+  totalItems?: number;
+  /** @example 4 */
+  totalPages?: number;
+}
+
 export interface AccountLimit {
   /** Account limit unique identifier */
   id?: number;
@@ -468,6 +504,18 @@ export type AccountLimitQueryParameters = QueryParameters & {
   /** Field to sort by */
   sortBy?: "period" | "limit" | "startDate" | "createdAt";
 };
+
+export interface PagedAccountLimits {
+  items?: AccountLimit[];
+  /** @example 1 */
+  pageNumber?: number;
+  /** @example 25 */
+  pageSize?: number;
+  /** @example 100 */
+  totalItems?: number;
+  /** @example 4 */
+  totalPages?: number;
+}
 
 export interface Category {
   /** Category unique identifier */
@@ -550,6 +598,18 @@ export type CategoryQueryParameters = QueryParameters & {
   /** Field to sort by */
   sortBy?: "name" | "createdAt";
 };
+
+export interface PagedCategories {
+  items?: Category[];
+  /** @example 1 */
+  pageNumber?: number;
+  /** @example 25 */
+  pageSize?: number;
+  /** @example 100 */
+  totalItems?: number;
+  /** @example 4 */
+  totalPages?: number;
+}
 
 export interface Transaction {
   /** Transaction unique identifier */
@@ -740,6 +800,18 @@ export type TransactionQueryParameters = QueryParameters & {
    */
   isHighlighted?: boolean;
 };
+
+export interface PagedTransactions {
+  items?: Transaction[];
+  /** @example 1 */
+  pageNumber?: number;
+  /** @example 25 */
+  pageSize?: number;
+  /** @example 100 */
+  totalItems?: number;
+  /** @example 4 */
+  totalPages?: number;
+}
 
 export interface Recurrence {
   /** Recurrence unique identifier */
@@ -962,6 +1034,18 @@ export type RefreshTokenQueryParameters = QueryParameters & {
   sortBy?: "userId" | "expires" | "createdAt";
 };
 
+export interface PagedRecurrences {
+  items?: Recurrence[];
+  /** @example 1 */
+  pageNumber?: number;
+  /** @example 25 */
+  pageSize?: number;
+  /** @example 100 */
+  totalItems?: number;
+  /** @example 4 */
+  totalPages?: number;
+}
+
 export interface UserPreference {
   /** User preference unique identifier */
   id?: number;
@@ -1089,6 +1173,18 @@ export type UserPreferenceQueryParameters = QueryParameters & {
   /** Field to sort by */
   sortBy?: "userId" | "monthlyStartDate" | "createdAt";
 };
+
+export interface PagedUserPreferences {
+  items?: UserPreference[];
+  /** @example 1 */
+  pageNumber?: number;
+  /** @example 25 */
+  pageSize?: number;
+  /** @example 100 */
+  totalItems?: number;
+  /** @example 4 */
+  totalPages?: number;
+}
 
 export type SummaryPeriodQueryParameters = {
   /**
