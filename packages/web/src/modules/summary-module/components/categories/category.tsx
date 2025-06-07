@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { Tile } from '../../../../components';
+import { Tile, RadarChart } from '../../../../components';
 import { useApiCategoriesQuery } from '../../../../hooks/use-api/built-in/use-categories';
 import { useApiSummaryCategoriesQuery } from '../../../../hooks/use-api/built-in/use-summary';
 import type { Category } from '../../../../types/api';
@@ -67,10 +67,21 @@ export const Categories: React.FC<CategoriesProps> = ({ periodType, periodIndex,
         setPeriodType={setPeriodType}
         setPeriodIndex={setPeriodIndex}
       />
+
       {queryState.isFetching ? (
         <CategoriesLoader count={5} />
       ) : (
-        <CategoryCardList periods={mergedCategoriesData} categories={allCategories} />
+        <div className="space-y-6">
+          <RadarChart
+            data={mergedCategoriesData.map(({ categoryId, ...rest }) => ({
+              category: allCategories.find((c) => c.id === categoryId)?.name ?? 'Unknown',
+              ...rest,
+            }))}
+            dataKey={['totalIncome', 'totalExpenses', 'totalNet']}
+            legendAlign="center"
+          />
+          <CategoryCardList periods={mergedCategoriesData} categories={allCategories} />
+        </div>
       )}
     </Tile>
   );

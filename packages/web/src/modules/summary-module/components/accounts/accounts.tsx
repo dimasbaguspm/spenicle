@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { Tile } from '../../../../components';
+import { Tile, RadarChart } from '../../../../components';
 import { useApiAccountsQuery } from '../../../../hooks/use-api/built-in/use-accounts';
 import { useApiSummaryAccountsQuery } from '../../../../hooks/use-api/built-in/use-summary';
 import type { Account } from '../../../../types/api';
@@ -22,7 +22,7 @@ export const Accounts: React.FC<AccountsProps> = ({ periodType, periodIndex, set
   const { startDate, endDate } = useMemo(() => getPeriodRange(periodType, periodIndex), [periodType, periodIndex]);
 
   const [accountsResponse] = useApiAccountsQuery({ pageSize: 1000 });
-  const allAccounts = accountsResponse?.items as Account[] | undefined;
+  const allAccounts = accountsResponse?.items;
   const [accountsData, , queryState] = useApiSummaryAccountsQuery(
     { startDate, endDate },
     {
@@ -70,6 +70,19 @@ export const Accounts: React.FC<AccountsProps> = ({ periodType, periodIndex, set
     });
   }, [allAccounts, accountsData]);
 
+  // Prepare radar chart data with category (account name)
+  const radarChartData = useMemo(
+    () =>
+      mergedAccountsData.map((item) => {
+        const id = item.accountId ?? -1;
+        return {
+          ...item,
+          category: accountMap[id]?.name ?? `Account ${id}`,
+        };
+      }),
+    [mergedAccountsData, accountMap]
+  );
+
   return (
     <Tile className="p-6">
       <AccountsHeader
@@ -81,7 +94,10 @@ export const Accounts: React.FC<AccountsProps> = ({ periodType, periodIndex, set
       {queryState.isFetching ? (
         <AccountsLoader count={5} />
       ) : (
-        <AccountsCardList accountsData={mergedAccountsData} accountMap={accountMap} />
+        <div className="space-y-6">
+          <RadarChart data={radarChartData} dataKey={['totalIncome', 'totalExpenses']} legendAlign="center" />
+          <AccountsCardList accountsData={mergedAccountsData} accountMap={accountMap} />
+        </div>
       )}
     </Tile>
   );

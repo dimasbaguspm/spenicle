@@ -29,6 +29,7 @@ interface BarChartProps {
    */
   dataKey?: Array<'totalIncome' | 'totalExpenses' | 'totalNet'>;
   legendAlign?: 'left' | 'center' | 'right';
+  xAxisTickFormatter?: (value: string) => string;
 }
 
 const BAR_META: Record<'totalIncome' | 'totalExpenses' | 'totalNet', { name: string; fill: string }> = {
@@ -41,7 +42,7 @@ const BAR_META: Record<'totalIncome' | 'totalExpenses' | 'totalNet', { name: str
  * BarChart component for visualizing income and expenses.
  * Accessible, responsive, and styled with Tailwind for integration with design tokens.
  */
-export const BarChart: FC<BarChartProps> = ({ data, xKey, dataKey, legendAlign = 'center' }) => {
+export const BarChart: FC<BarChartProps> = ({ data, xKey, dataKey, legendAlign = 'center', xAxisTickFormatter }) => {
   const keys = dataKey && dataKey.length > 0 ? dataKey : ['totalIncome', 'totalExpenses'];
   return (
     <ResponsiveContainer width="100%" height={260}>
@@ -52,6 +53,7 @@ export const BarChart: FC<BarChartProps> = ({ data, xKey, dataKey, legendAlign =
           tick={{ fontSize: 12, fill: '#3d405b', fontWeight: 400 }}
           axisLine={{ stroke: '#3d405b', strokeWidth: 0.5 }}
           tickLine={{ stroke: '#3d405b', strokeWidth: 1 }}
+          tickFormatter={xAxisTickFormatter}
         />
         <YAxis
           tick={{ fontSize: 12, fill: '#3d405b', fontWeight: 400 }}

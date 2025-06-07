@@ -8,7 +8,7 @@ export const Route = createFileRoute('/_protected/_experienced-user/analytics/ca
 });
 
 function RouteComponent() {
-  const [categoriesPeriodType, setCategoriesPeriodType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [categoriesPeriodType, setCategoriesPeriodType] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
   const [categoriesIndex, setCategoriesIndex] = useState(0);
 
   const handleCategoriesPeriodType = (type: 'weekly' | 'monthly' | 'yearly') => {
