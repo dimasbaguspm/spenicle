@@ -77,7 +77,7 @@ export const Categories: React.FC<CategoriesProps> = ({ periodType, periodIndex,
               category: allCategories.find((c) => c.id === categoryId)?.name ?? 'Unknown',
               ...rest,
             }))}
-            dataKey={['totalIncome', 'totalExpenses', 'totalNet']}
+            dataKey={['totalIncome', 'totalExpenses']}
             legendAlign="center"
           />
           <CategoryCardList periods={mergedCategoriesData} categories={allCategories} />
