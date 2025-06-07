@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-07T04:04:31.111Z
+ * Generated on: 2025-06-07T04:15:33.608Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -770,6 +770,11 @@ export type TransactionQueryParameters = QueryParameters & {
   categoryId?: number;
   /** Filter by user who created the transaction */
   createdByUserId?: number;
+  /**
+   * Filter by highlighted status
+   * @example true
+   */
+  isHighlighted?: boolean;
   /** Search in transaction notes */
   note?: string;
   /**
@@ -790,15 +795,32 @@ export type TransactionQueryParameters = QueryParameters & {
    * @maxLength 3
    */
   currency?: string;
+  /** Filter by transaction type */
+  type?: "expense" | "income" | "transfer";
   /** Filter by recurrence ID */
   recurrenceId?: number;
+  /**
+   * Page number for pagination (default: 1)
+   * @min 1
+   * @default 1
+   * @example 1
+   */
+  pageNumber?: number;
+  /**
+   * Number of items per page (default: 25)
+   * @min 1
+   * @default 25
+   * @example 25
+   */
+  pageSize?: number;
   /** Field to sort by */
   sortBy?: "date" | "amount" | "createdAt";
   /**
-   * Filter by highlighted status
-   * @example true
+   * Sort order
+   * @default "desc"
+   * @example "desc"
    */
-  isHighlighted?: boolean;
+  sortOrder?: "asc" | "desc";
 };
 
 export interface PagedTransactions {

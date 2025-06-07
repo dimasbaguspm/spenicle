@@ -230,6 +230,11 @@ export const transactionSchemas = {
             type: 'integer',
             description: 'Filter by user who created the transaction',
           },
+          isHighlighted: {
+            type: 'boolean',
+            description: 'Filter by highlighted status',
+            example: true,
+          },
           note: {
             type: 'string',
             description: 'Search in transaction notes',
@@ -252,19 +257,40 @@ export const transactionSchemas = {
             maxLength: 3,
             description: 'Filter by currency code',
           },
+          type: {
+            type: 'string',
+            enum: ['expense', 'income', 'transfer'],
+            description: 'Filter by transaction type',
+          },
           recurrenceId: {
             type: 'integer',
             description: 'Filter by recurrence ID',
+          },
+          pageNumber: {
+            type: 'integer',
+            minimum: 1,
+            description: 'Page number for pagination (default: 1)',
+            example: 1,
+            default: 1,
+          },
+          pageSize: {
+            type: 'integer',
+            minimum: 1,
+            description: 'Number of items per page (default: 25)',
+            example: 25,
+            default: 25,
           },
           sortBy: {
             type: 'string',
             enum: ['date', 'amount', 'createdAt'],
             description: 'Field to sort by',
           },
-          isHighlighted: {
-            type: 'boolean',
-            description: 'Filter by highlighted status',
-            example: true,
+          sortOrder: {
+            type: 'string',
+            enum: ['asc', 'desc'],
+            description: 'Sort order',
+            example: 'desc',
+            default: 'desc',
           },
         },
       },
