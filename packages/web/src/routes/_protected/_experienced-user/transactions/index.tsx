@@ -3,15 +3,15 @@ import dayjs, { Dayjs } from 'dayjs';
 import { Calendar } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-import { PageLayout, PageHeader, IconButton, DatePicker } from '../../../components';
+import { PageLayout, PageHeader, IconButton, DatePicker } from '../../../../components';
 import {
   WeeklyDateRibbon,
   SeamlessTransactionList,
+  TransactionFilterEntry,
   type SeamlessTransactionListRef,
-} from '../../../modules/transaction-module';
-import { TransactionFilterEntry } from '../../../modules/transaction-module/components/transaction-filter-entry/transaction-filter-entry';
+} from '../../../../modules/transaction-module';
 
-export const Route = createFileRoute('/_protected/_experienced-user/transactions')({
+export const Route = createFileRoute('/_protected/_experienced-user/transactions/')({
   component: TransactionsComponent,
 });
 

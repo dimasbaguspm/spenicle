@@ -42,7 +42,7 @@ function RouteComponent() {
       href: '/transactions',
       icon: Receipt,
       label: 'Transactions',
-      isActive: currentPath === '/transactions',
+      isActive: currentPath.includes('transactions'),
       isLink: true,
     },
     {
