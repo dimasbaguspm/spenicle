@@ -2,7 +2,7 @@ import { createFileRoute, useSearch } from '@tanstack/react-router';
 import dayjs from 'dayjs';
 
 import { PageHeader, PageLayout } from '../../../../components';
-import { PeriodTransactionList } from '../../../../modules/transaction-module';
+import { PeriodTransactionList, TransactionFilterEntry } from '../../../../modules/transaction-module';
 
 export const Route = createFileRoute('/_protected/_experienced-user/transactions/period')({
   component: RouteComponent,
@@ -52,6 +52,8 @@ function RouteComponent() {
       }
     >
       <PeriodTransactionList startDate={startDate} endDate={endDate} />
+
+      <TransactionFilterEntry />
     </PageLayout>
   );
 }

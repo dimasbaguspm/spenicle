@@ -18,8 +18,7 @@ import { Route as AuthLoginImport } from './routes/_auth/login'
 import { Route as ProtectedNewUserRouteImport } from './routes/_protected/_new-user/route'
 import { Route as ProtectedExperiencedUserRouteImport } from './routes/_protected/_experienced-user/route'
 import { Route as ProtectedExperiencedUserIndexImport } from './routes/_protected/_experienced-user/index'
-import { Route as ProtectedExperiencedUserAnalyticsImport } from './routes/_protected/_experienced-user/analytics'
-import { Route as ProtectedExperiencedUserAddImport } from './routes/_protected/_experienced-user/add'
+import { Route as ProtectedExperiencedUserAnalyticsRouteImport } from './routes/_protected/_experienced-user/analytics/route'
 import { Route as ProtectedNewUserOnboardingIndexImport } from './routes/_protected/_new-user/onboarding/index'
 import { Route as ProtectedExperiencedUserTransactionsIndexImport } from './routes/_protected/_experienced-user/transactions/index'
 import { Route as ProtectedExperiencedUserSettingsIndexImport } from './routes/_protected/_experienced-user/settings/index'
@@ -82,17 +81,10 @@ const ProtectedExperiencedUserIndexRoute =
     getParentRoute: () => ProtectedExperiencedUserRouteRoute,
   } as any)
 
-const ProtectedExperiencedUserAnalyticsRoute =
-  ProtectedExperiencedUserAnalyticsImport.update({
+const ProtectedExperiencedUserAnalyticsRouteRoute =
+  ProtectedExperiencedUserAnalyticsRouteImport.update({
     id: '/analytics',
     path: '/analytics',
-    getParentRoute: () => ProtectedExperiencedUserRouteRoute,
-  } as any)
-
-const ProtectedExperiencedUserAddRoute =
-  ProtectedExperiencedUserAddImport.update({
-    id: '/add',
-    path: '/add',
     getParentRoute: () => ProtectedExperiencedUserRouteRoute,
   } as any)
 
@@ -198,21 +190,21 @@ const ProtectedExperiencedUserAnalyticsPeriodBreakdownRoute =
   ProtectedExperiencedUserAnalyticsPeriodBreakdownImport.update({
     id: '/period-breakdown',
     path: '/period-breakdown',
-    getParentRoute: () => ProtectedExperiencedUserAnalyticsRoute,
+    getParentRoute: () => ProtectedExperiencedUserAnalyticsRouteRoute,
   } as any)
 
 const ProtectedExperiencedUserAnalyticsCategoriesRoute =
   ProtectedExperiencedUserAnalyticsCategoriesImport.update({
     id: '/categories',
     path: '/categories',
-    getParentRoute: () => ProtectedExperiencedUserAnalyticsRoute,
+    getParentRoute: () => ProtectedExperiencedUserAnalyticsRouteRoute,
   } as any)
 
 const ProtectedExperiencedUserAnalyticsAccountsRoute =
   ProtectedExperiencedUserAnalyticsAccountsImport.update({
     id: '/accounts',
     path: '/accounts',
-    getParentRoute: () => ProtectedExperiencedUserAnalyticsRoute,
+    getParentRoute: () => ProtectedExperiencedUserAnalyticsRouteRoute,
   } as any)
 
 const ProtectedNewUserOnboardingSetupCategoryRoute =
@@ -275,18 +267,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRegisterImport
       parentRoute: typeof AuthRouteImport
     }
-    '/_protected/_experienced-user/add': {
-      id: '/_protected/_experienced-user/add'
-      path: '/add'
-      fullPath: '/add'
-      preLoaderRoute: typeof ProtectedExperiencedUserAddImport
-      parentRoute: typeof ProtectedExperiencedUserRouteImport
-    }
     '/_protected/_experienced-user/analytics': {
       id: '/_protected/_experienced-user/analytics'
       path: '/analytics'
       fullPath: '/analytics'
-      preLoaderRoute: typeof ProtectedExperiencedUserAnalyticsImport
+      preLoaderRoute: typeof ProtectedExperiencedUserAnalyticsRouteImport
       parentRoute: typeof ProtectedExperiencedUserRouteImport
     }
     '/_protected/_experienced-user/': {
@@ -301,21 +286,21 @@ declare module '@tanstack/react-router' {
       path: '/accounts'
       fullPath: '/analytics/accounts'
       preLoaderRoute: typeof ProtectedExperiencedUserAnalyticsAccountsImport
-      parentRoute: typeof ProtectedExperiencedUserAnalyticsImport
+      parentRoute: typeof ProtectedExperiencedUserAnalyticsRouteImport
     }
     '/_protected/_experienced-user/analytics/categories': {
       id: '/_protected/_experienced-user/analytics/categories'
       path: '/categories'
       fullPath: '/analytics/categories'
       preLoaderRoute: typeof ProtectedExperiencedUserAnalyticsCategoriesImport
-      parentRoute: typeof ProtectedExperiencedUserAnalyticsImport
+      parentRoute: typeof ProtectedExperiencedUserAnalyticsRouteImport
     }
     '/_protected/_experienced-user/analytics/period-breakdown': {
       id: '/_protected/_experienced-user/analytics/period-breakdown'
       path: '/period-breakdown'
       fullPath: '/analytics/period-breakdown'
       preLoaderRoute: typeof ProtectedExperiencedUserAnalyticsPeriodBreakdownImport
-      parentRoute: typeof ProtectedExperiencedUserAnalyticsImport
+      parentRoute: typeof ProtectedExperiencedUserAnalyticsRouteImport
     }
     '/_protected/_experienced-user/settings/accounts': {
       id: '/_protected/_experienced-user/settings/accounts'
@@ -448,13 +433,13 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
   AuthRouteRouteChildren,
 )
 
-interface ProtectedExperiencedUserAnalyticsRouteChildren {
+interface ProtectedExperiencedUserAnalyticsRouteRouteChildren {
   ProtectedExperiencedUserAnalyticsAccountsRoute: typeof ProtectedExperiencedUserAnalyticsAccountsRoute
   ProtectedExperiencedUserAnalyticsCategoriesRoute: typeof ProtectedExperiencedUserAnalyticsCategoriesRoute
   ProtectedExperiencedUserAnalyticsPeriodBreakdownRoute: typeof ProtectedExperiencedUserAnalyticsPeriodBreakdownRoute
 }
 
-const ProtectedExperiencedUserAnalyticsRouteChildren: ProtectedExperiencedUserAnalyticsRouteChildren =
+const ProtectedExperiencedUserAnalyticsRouteRouteChildren: ProtectedExperiencedUserAnalyticsRouteRouteChildren =
   {
     ProtectedExperiencedUserAnalyticsAccountsRoute:
       ProtectedExperiencedUserAnalyticsAccountsRoute,
@@ -464,14 +449,13 @@ const ProtectedExperiencedUserAnalyticsRouteChildren: ProtectedExperiencedUserAn
       ProtectedExperiencedUserAnalyticsPeriodBreakdownRoute,
   }
 
-const ProtectedExperiencedUserAnalyticsRouteWithChildren =
-  ProtectedExperiencedUserAnalyticsRoute._addFileChildren(
-    ProtectedExperiencedUserAnalyticsRouteChildren,
+const ProtectedExperiencedUserAnalyticsRouteRouteWithChildren =
+  ProtectedExperiencedUserAnalyticsRouteRoute._addFileChildren(
+    ProtectedExperiencedUserAnalyticsRouteRouteChildren,
   )
 
 interface ProtectedExperiencedUserRouteRouteChildren {
-  ProtectedExperiencedUserAddRoute: typeof ProtectedExperiencedUserAddRoute
-  ProtectedExperiencedUserAnalyticsRoute: typeof ProtectedExperiencedUserAnalyticsRouteWithChildren
+  ProtectedExperiencedUserAnalyticsRouteRoute: typeof ProtectedExperiencedUserAnalyticsRouteRouteWithChildren
   ProtectedExperiencedUserIndexRoute: typeof ProtectedExperiencedUserIndexRoute
   ProtectedExperiencedUserSettingsAccountsRoute: typeof ProtectedExperiencedUserSettingsAccountsRoute
   ProtectedExperiencedUserSettingsCategoriesRoute: typeof ProtectedExperiencedUserSettingsCategoriesRoute
@@ -489,9 +473,8 @@ interface ProtectedExperiencedUserRouteRouteChildren {
 
 const ProtectedExperiencedUserRouteRouteChildren: ProtectedExperiencedUserRouteRouteChildren =
   {
-    ProtectedExperiencedUserAddRoute: ProtectedExperiencedUserAddRoute,
-    ProtectedExperiencedUserAnalyticsRoute:
-      ProtectedExperiencedUserAnalyticsRouteWithChildren,
+    ProtectedExperiencedUserAnalyticsRouteRoute:
+      ProtectedExperiencedUserAnalyticsRouteRouteWithChildren,
     ProtectedExperiencedUserIndexRoute: ProtectedExperiencedUserIndexRoute,
     ProtectedExperiencedUserSettingsAccountsRoute:
       ProtectedExperiencedUserSettingsAccountsRoute,
@@ -565,8 +548,7 @@ export interface FileRoutesByFullPath {
   '': typeof ProtectedNewUserRouteRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
-  '/add': typeof ProtectedExperiencedUserAddRoute
-  '/analytics': typeof ProtectedExperiencedUserAnalyticsRouteWithChildren
+  '/analytics': typeof ProtectedExperiencedUserAnalyticsRouteRouteWithChildren
   '/': typeof ProtectedExperiencedUserIndexRoute
   '/analytics/accounts': typeof ProtectedExperiencedUserAnalyticsAccountsRoute
   '/analytics/categories': typeof ProtectedExperiencedUserAnalyticsCategoriesRoute
@@ -593,8 +575,7 @@ export interface FileRoutesByTo {
   '': typeof ProtectedNewUserRouteRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
-  '/add': typeof ProtectedExperiencedUserAddRoute
-  '/analytics': typeof ProtectedExperiencedUserAnalyticsRouteWithChildren
+  '/analytics': typeof ProtectedExperiencedUserAnalyticsRouteRouteWithChildren
   '/': typeof ProtectedExperiencedUserIndexRoute
   '/analytics/accounts': typeof ProtectedExperiencedUserAnalyticsAccountsRoute
   '/analytics/categories': typeof ProtectedExperiencedUserAnalyticsCategoriesRoute
@@ -625,8 +606,7 @@ export interface FileRoutesById {
   '/_protected/_new-user': typeof ProtectedNewUserRouteRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
-  '/_protected/_experienced-user/add': typeof ProtectedExperiencedUserAddRoute
-  '/_protected/_experienced-user/analytics': typeof ProtectedExperiencedUserAnalyticsRouteWithChildren
+  '/_protected/_experienced-user/analytics': typeof ProtectedExperiencedUserAnalyticsRouteRouteWithChildren
   '/_protected/_experienced-user/': typeof ProtectedExperiencedUserIndexRoute
   '/_protected/_experienced-user/analytics/accounts': typeof ProtectedExperiencedUserAnalyticsAccountsRoute
   '/_protected/_experienced-user/analytics/categories': typeof ProtectedExperiencedUserAnalyticsCategoriesRoute
@@ -655,7 +635,6 @@ export interface FileRouteTypes {
     | ''
     | '/login'
     | '/register'
-    | '/add'
     | '/analytics'
     | '/'
     | '/analytics/accounts'
@@ -682,7 +661,6 @@ export interface FileRouteTypes {
     | ''
     | '/login'
     | '/register'
-    | '/add'
     | '/analytics'
     | '/'
     | '/analytics/accounts'
@@ -712,7 +690,6 @@ export interface FileRouteTypes {
     | '/_protected/_new-user'
     | '/_auth/login'
     | '/_auth/register'
-    | '/_protected/_experienced-user/add'
     | '/_protected/_experienced-user/analytics'
     | '/_protected/_experienced-user/'
     | '/_protected/_experienced-user/analytics/accounts'
@@ -779,7 +756,6 @@ export const routeTree = rootRoute
       "filePath": "_protected/_experienced-user/route.tsx",
       "parent": "/_protected",
       "children": [
-        "/_protected/_experienced-user/add",
         "/_protected/_experienced-user/analytics",
         "/_protected/_experienced-user/",
         "/_protected/_experienced-user/settings/accounts",
@@ -814,12 +790,8 @@ export const routeTree = rootRoute
       "filePath": "_auth/register.tsx",
       "parent": "/_auth"
     },
-    "/_protected/_experienced-user/add": {
-      "filePath": "_protected/_experienced-user/add.tsx",
-      "parent": "/_protected/_experienced-user"
-    },
     "/_protected/_experienced-user/analytics": {
-      "filePath": "_protected/_experienced-user/analytics.tsx",
+      "filePath": "_protected/_experienced-user/analytics/route.tsx",
       "parent": "/_protected/_experienced-user",
       "children": [
         "/_protected/_experienced-user/analytics/accounts",

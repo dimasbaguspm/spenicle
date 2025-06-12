@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet, useNavigate, useLocation } from '@tanstack/react-router';
 import { useEffect } from 'react';
 
-import { PageLayout, Tab } from '../../../components';
-import { FinancialSummaryPeriodCardList } from '../../../modules/summary-module';
+import { PageLayout, Tab } from '../../../../components';
+import { FinancialSummaryPeriodCardList } from '../../../../modules/summary-module';
 
 export const Route = createFileRoute('/_protected/_experienced-user/analytics')({
   component: AnalyticsComponent,

@@ -9,6 +9,7 @@ import {
   useApiTransactionsQuery,
 } from '../../../../hooks';
 import type { Transaction } from '../../../../types/api';
+import { useTransactionFilters } from '../../hooks';
 import { NoTransactionsCard } from '../transaction-card/no-transactions-card';
 import { TransactionGroup } from '../transaction-card/transaction-group';
 
@@ -18,12 +19,24 @@ export interface PeriodTransactionListProps {
 }
 
 export const PeriodTransactionList: FC<PeriodTransactionListProps> = ({ startDate, endDate }) => {
-  // Fetch summary for BarChart
-  const [summary] = useApiSummaryTransactionsQuery({ startDate, endDate });
-  // Fetch transaction details
-  const [transactions] = useApiTransactionsQuery({ startDate, endDate });
-  const [accounts] = useApiAccountsQuery({ pageSize: 1000 }); // Fetch accounts, not used directly but may be needed for context
-  const [categories] = useApiCategoriesQuery({ pageSize: 1000 }); // Fetch categories, not used directly but may be needed for context
+  const filters = useTransactionFilters();
+
+  const [summary] = useApiSummaryTransactionsQuery({
+    startDate,
+    endDate,
+    accountId: String(filters.accountId),
+    categoryId: String(filters.categoryId),
+  });
+  const [transactions] = useApiTransactionsQuery({
+    startDate,
+    endDate,
+    accountId: filters.accountId,
+    categoryId: filters.categoryId,
+    type: filters.type,
+  });
+
+  const [accounts] = useApiAccountsQuery({ pageSize: 1000 });
+  const [categories] = useApiCategoriesQuery({ pageSize: 1000 });
 
   const allAccounts = accounts?.items ?? [];
   const allCategories = categories?.items ?? [];
@@ -41,10 +54,8 @@ export const PeriodTransactionList: FC<PeriodTransactionListProps> = ({ startDat
       return itemDate.isSameOrAfter(dayjs(startDate), 'day') && itemDate.isSameOrBefore(dayjs(endDate), 'day');
     });
 
-  // Extract transaction list if paged
   const transactionList: Transaction[] = transactions && Array.isArray(transactions.items) ? transactions.items : [];
 
-  // Group transactions by date (YYYY-MM-DD)
   const transactionsByDate: Record<string, typeof transactionList> = {};
   transactionList.forEach((tx) => {
     const dateKey = dayjs(tx.date).startOf('day').toISOString();
@@ -52,19 +63,15 @@ export const PeriodTransactionList: FC<PeriodTransactionListProps> = ({ startDat
     transactionsByDate[dateKey].push(tx);
   });
 
-  // Sort date keys descending (latest first)
   const sortedDateKeys = Object.keys(transactionsByDate).sort((a, b) => dayjs(b).valueOf() - dayjs(a).valueOf());
 
-  // Determine if the period is a week
   const isWeekly = dayjs(endDate).diff(dayjs(startDate), 'day') <= 7;
 
-  // Custom formatter for x-axis ticks
   const xAxisTickFormatter = (date: string) => {
     const d = dayjs(date);
     if (isWeekly) {
-      return d.format('D MMM'); // e.g., '7 Jun'
+      return d.format('D MMM');
     }
-    // For longer periods, show range (start - end of period)
     const endOfPeriod = d.endOf('week');
     return `${d.format('D MMM')} - ${endOfPeriod.format('D MMM')}`;
   };
@@ -95,7 +102,7 @@ export const PeriodTransactionList: FC<PeriodTransactionListProps> = ({ startDat
             />
           ))
         ) : (
-          <NoTransactionsCard message="No transactions found for this period." />
+          <NoTransactionsCard message="No transactions found for this period" />
         )}
       </div>
     </div>

@@ -1,4 +1,5 @@
-import { useNavigate } from '@tanstack/react-router';
+import { useLocation, useNavigate } from '@tanstack/react-router';
+import dayjs from 'dayjs';
 import { useForm, Controller } from 'react-hook-form';
 
 import { Button, Drawer, FormLayout, Switch } from '../../../../components';
@@ -10,10 +11,20 @@ import { CategorySelector } from '../../../category-module';
 import { useTransactionFilters } from '../../hooks';
 import { TransactionTypeSelector } from '../transaction-type-selector';
 
+const queryKeyParams: string[] = ['categoryId', 'accountId', 'type', 'isHighlighted'];
+
 export const TransactionFilterDrawer = () => {
   const { closeDrawer } = useDrawerRouterProvider();
-  const filters = useTransactionFilters();
   const navigate = useNavigate();
+
+  const filters = useTransactionFilters();
+  const params = useLocation({
+    select: ({ search }) => ({
+      startDate: search?.startDate ?? dayjs().startOf('week').toISOString(),
+      endDate: search?.endDate ?? dayjs().endOf('week').toISOString(),
+      ...filters,
+    }),
+  });
 
   const [accounts] = useApiAccountsQuery();
   const [categories] = useApiCategoriesQuery();
@@ -25,8 +36,6 @@ export const TransactionFilterDrawer = () => {
   const onSubmit = form.handleSubmit(async (values) => {
     const queryParams: TransactionQueryParameters = {
       ...values,
-      startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
-      endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
       categoryId: values.categoryId ?? undefined,
       accountId: values.accountId ?? undefined,
       type: (values?.type ?? '').length >= 1 ? values.type : undefined,
@@ -44,7 +53,10 @@ export const TransactionFilterDrawer = () => {
     } else {
       await navigate({
         // @ts-expect-error is a bug from tanstack/react-router
-        search: queryParams,
+        search: {
+          ...params,
+          ...validQueryParams,
+        },
         replace: true,
         resetScroll: false,
       });
@@ -53,8 +65,13 @@ export const TransactionFilterDrawer = () => {
 
   const handleReset = async () => {
     await navigate({
-      // @ts-expect-error is a bug from tanstack/react-router
-      search: {},
+      search: {
+        ...Object.entries(params)
+          .filter(([key]) => !queryKeyParams.includes(key as keyof TransactionQueryParameters))
+          .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {}),
+        // @ts-expect-error drawerId is not part of the params
+        drawerId: undefined,
+      },
       replace: true,
       resetScroll: false,
     });
