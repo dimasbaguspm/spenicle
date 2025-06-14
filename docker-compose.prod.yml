@@ -22,7 +22,6 @@ services:
     build:
       context: .
       dockerfile: packages/api/Dockerfile.prod
-      target: production
     container_name: spenicle-staging-api
     environment:
       NODE_ENV: production
@@ -45,7 +44,6 @@ services:
     build:
       context: .
       dockerfile: packages/web/Dockerfile.prod
-      target: production
     container_name: spenicle-staging-web
     environment:
       NODE_ENV: production
