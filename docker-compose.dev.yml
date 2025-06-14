@@ -1,0 +1,80 @@
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: spenicle-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: spenicle
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile.dev
+    container_name: spenicle-api
+    environment:
+      NODE_ENV: development
+      API_PGDATA: /var/lib/postgresql/data
+      API_PGHOST: postgres
+      API_PGUSER: postgres
+      API_PGPASSWORD: postgres
+      API_PGDATABASE: spenicle
+      API_PGPORT: 5432
+      API_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/spenicle
+      API_JWT_SECRET: development_jwt_secret_key_change_in_production
+      API_PORT: 3000
+      API_STAGE: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./packages/api:/app/packages/api
+      - ./package.json:/app/package.json
+      - ./yarn.lock:/app/yarn.lock
+      - api_node_modules:/app/packages/api/node_modules
+      - root_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["yarn", "workspace", "@spenicle/api", "dev"]
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile.dev
+    container_name: spenicle-web
+    environment:
+      NODE_ENV: development
+      WEB_SERVICE_BASE_URL: http://localhost:3000/api
+      WEB_PORT: 8080
+      WEB_STAGE: development
+      VITE_API_BASE_URL: http://localhost:3000/api
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./packages/web:/app/packages/web
+      - ./package.json:/app/package.json
+      - ./yarn.lock:/app/yarn.lock
+      - web_node_modules:/app/packages/web/node_modules
+      - root_node_modules:/app/node_modules
+    depends_on:
+      - api
+    command: yarn workspace @spenicle/web dev --host 0.0.0.0 --port 8080
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  api_node_modules:
+  web_node_modules:
+  root_node_modules:

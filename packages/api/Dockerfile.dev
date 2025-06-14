@@ -1,0 +1,12 @@
+# Development Dockerfile for API (runs dev server, hot reload)
+FROM node:22-alpine
+
+RUN corepack enable
+WORKDIR /app
+
+COPY package.json yarn.lock ./
+COPY packages/api/package.json ./packages/api/
+RUN yarn install
+COPY packages/api ./packages/api/
+EXPOSE 3000
+CMD ["yarn", "workspace", "@spenicle/api", "dev"]

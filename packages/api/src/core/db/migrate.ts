@@ -21,7 +21,7 @@ const db = drizzle(pool);
 // Run migrations
 async function main() {
   console.log('Running migrations...');
-  await migrate(db, { migrationsFolder: join(__dirname, '../../../', 'sql') });
+  await migrate(db, { migrationsFolder: join(__dirname, '../', 'sql') });
   console.log('Migrations completed');
   await pool.end();
 }

@@ -6,6 +6,8 @@ import { pool } from './core/db/config.ts';
 import { notFoundHandler } from './middleware/not-found.middleware.ts';
 import apiRoutes from './routes/api.routes.ts';
 
+import './core/db/migrate.ts';
+
 const app = express();
 const PORT = process.env.API_PORT ?? 3000;
 

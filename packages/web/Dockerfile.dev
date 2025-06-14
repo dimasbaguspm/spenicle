@@ -1,0 +1,15 @@
+# Development Dockerfile for local use
+FROM node:22-alpine
+
+RUN corepack enable
+WORKDIR /app
+
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY packages/web/package.json ./packages/web/
+RUN yarn
+
+# Copy source code for dev (will be overridden by volume mount in compose)
+COPY packages/web ./packages/web/
+
+EXPOSE 8080
+CMD ["yarn", "workspace", "@spenicle/web", "dev", "--host", "0.0.0.0", "--port", "8080"]

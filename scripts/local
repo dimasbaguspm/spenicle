@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+# Use docker-compose.dev.yml for local development
+COMPOSE_FILE="docker-compose.dev.yml"
+
+case "$1" in
+  up)
+    docker compose -f $COMPOSE_FILE up -d
+    ;;
+  down)
+    docker compose -f $COMPOSE_FILE down
+    ;;
+  backup-db)
+    docker compose -f $COMPOSE_FILE exec -T postgres pg_dump -U postgres spenicle > backup.sql
+    ;;
+  restore-db)
+    docker compose -f $COMPOSE_FILE exec -T postgres psql -U postgres spenicle < backup.sql
+    ;;
+  logs)
+    docker compose -f $COMPOSE_FILE logs -f
+    ;;
+  *)
+    echo "Usage: $0 {up|down|backup-db|restore-db|logs}"
+    exit 1
+    ;;
+esac

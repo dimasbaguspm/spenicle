@@ -1,0 +1,77 @@
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: spenicle-staging-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: spenicle
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile.prod
+      target: production
+    container_name: spenicle-staging-api
+    environment:
+      NODE_ENV: production
+      API_PGDATA: /var/lib/postgresql/data
+      API_PGHOST: postgres
+      API_PGUSER: postgres
+      API_PGPASSWORD: postgres
+      API_PGDATABASE: spenicle
+      API_PGPORT: 5432
+      API_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/spenicle
+      API_JWT_SECRET: $API_JWT_SECRET
+      API_PORT: 3000
+      API_STAGE: staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile.prod
+      target: production
+    container_name: spenicle-staging-web
+    environment:
+      NODE_ENV: production
+      WEB_SERVICE_BASE_URL: http://nginx/api
+      WEB_PORT: 8080
+      WEB_STAGE: staging
+      VITE_API_BASE_URL: http://nginx/api
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: spenicle-staging-nginx
+    volumes:
+      - ./nginx/nginx.staging.conf:/etc/nginx/nginx.conf:ro
+      - web_build:/usr/share/nginx/html:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  web_build:
