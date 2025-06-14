@@ -76,9 +76,6 @@ function HomeComponent() {
             },
           }}
           todayTransactions={{
-            transactionCount: 3,
-            totalAmount: -58.49,
-            currencySymbol: '$',
             onClick: async () => {
               await navigate({ to: '/transactions' });
             },

@@ -1,57 +1,55 @@
-import { CreditCard } from 'lucide-react';
+import { formatAmount } from '../../../../libs/format-amount';
+import type { Account } from '../../../../types/api';
+import { AccountIcon } from '../../../account-module/components/account-icon';
 
-export interface AccountSummaryAccount {
-  id: string;
-  name: string;
+export interface AccountSummaryItem {
+  account: Account;
   lastActivity: string;
   amount: number;
-  iconColor: string;
-  iconBgColor: string;
 }
 
 export interface AccountSummaryListProps {
   /**
-   * Array of account data to display
+   * Array of account data with activity information to display
    */
-  accounts: AccountSummaryAccount[];
+  accounts: AccountSummaryItem[];
 }
 
 /**
- * AccountSummaryList displays the most active accounts in a compact list format.
+ * AccountSummaryList displays accounts with clear visual hierarchy.
+ * Account names are prominently shown with descriptive activity status below.
  */
 export function AccountSummaryList({ accounts }: AccountSummaryListProps) {
-  const formatAmount = (amount: number) => {
-    const sign = amount < 0 ? '-' : '+';
-    const absoluteAmount = (Math.abs(amount) / 1000).toFixed(1);
-    return `${sign}$${absoluteAmount}K`;
-  };
-
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-slate-700">Most Active</p>
-
-      {accounts.map((account) => (
-        <div key={account.id} className="flex items-center justify-between py-2">
+      {accounts.map((item) => (
+        <div key={item.account.id} className="flex items-center justify-between py-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div
-              className={`w-8 h-8 rounded-full ${account.iconBgColor} flex items-center justify-center flex-shrink-0`}
-            >
-              <CreditCard className={`h-4 w-4 ${account.iconColor}`} />
-            </div>
+            <AccountIcon iconValue={item.account.metadata?.icon} colorValue={item.account.metadata?.color} size="md" />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-900 truncate">{account.name}</span>
-                <span className="text-xs text-slate-500 flex-shrink-0">•</span>
-                <span className="text-xs text-slate-500 flex-shrink-0">{account.lastActivity}</span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-slate-900 truncate">{item.account.name}</span>
+                <span className="text-xs text-slate-500">
+                  {item.lastActivity === 'No activity'
+                    ? 'No recent transactions'
+                    : item.lastActivity === 'Very active'
+                      ? 'Very active this month'
+                      : item.lastActivity === 'Today'
+                        ? 'Last transaction today'
+                        : `Last transaction ${item.lastActivity}`}
+                </span>
               </div>
             </div>
           </div>
           <span
             className={`text-sm font-semibold flex-shrink-0 ml-3 ${
-              account.amount >= 0 ? 'text-sage-600' : 'text-coral-600'
+              item.amount >= 0 ? 'text-sage-600' : 'text-coral-600'
             }`}
           >
-            {formatAmount(account.amount)}
+            {formatAmount(item.amount, {
+              type: item.amount === 0 ? 'transfer' : item.amount >= 0 ? 'income' : 'expense',
+              compact: true,
+            })}
           </span>
         </div>
       ))}

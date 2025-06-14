@@ -1,14 +1,16 @@
+import { formatAmount } from '../../../../libs/format-amount';
+
 export interface AccountSummaryStatsProps {
   /**
-   * Total net worth amount
+   * Total net worth amount (actual account balances)
    */
   totalNetWorth: number;
   /**
-   * This month's change amount
+   * This month's net change amount (income - expenses)
    */
   thisMonth: number;
   /**
-   * This week's change amount
+   * This week's net change amount (income - expenses)
    */
   thisWeek: number;
   /**
@@ -26,24 +28,42 @@ export function AccountSummaryStats({
   thisWeek,
   currencySymbol = '$',
 }: AccountSummaryStatsProps) {
-  const formatAmount = (amount: number) => {
-    const sign = amount < 0 ? '-' : '+';
-    const absoluteAmount = (Math.abs(amount) / 1000).toFixed(1);
-    return `${sign}${currencySymbol}${absoluteAmount}K`;
+  const getAmountColor = (amount: number) => {
+    if (amount > 0) return 'text-sage-600'; // Positive - sage
+    if (amount < 0) return 'text-coral-600'; // Negative - coral
+    return 'text-mist-600'; // Neutral/zero - mist
   };
 
   return (
     <div className="grid grid-cols-3 gap-6 text-center">
       <div className="space-y-1">
-        <p className="text-2xl font-bold text-sage-600">{formatAmount(totalNetWorth)}</p>
+        <p className={`text-2xl font-bold ${getAmountColor(totalNetWorth)}`}>
+          {formatAmount(totalNetWorth, {
+            type: totalNetWorth >= 0 ? 'income' : 'expense',
+            compact: true,
+            currencySymbol,
+          })}
+        </p>
         <p className="text-xs text-slate-500 font-medium">Total Net Worth</p>
       </div>
       <div className="space-y-1">
-        <p className="text-2xl font-bold text-mist-600">{formatAmount(thisMonth)}</p>
+        <p className={`text-2xl font-bold ${getAmountColor(thisMonth)}`}>
+          {formatAmount(thisMonth, {
+            type: thisMonth >= 0 ? 'income' : 'expense',
+            compact: true,
+            currencySymbol,
+          })}
+        </p>
         <p className="text-xs text-slate-500 font-medium">This Month</p>
       </div>
       <div className="space-y-1">
-        <p className="text-2xl font-bold text-coral-600">{formatAmount(thisWeek)}</p>
+        <p className={`text-2xl font-bold ${getAmountColor(thisWeek)}`}>
+          {formatAmount(thisWeek, {
+            type: thisWeek >= 0 ? 'income' : 'expense',
+            compact: true,
+            currencySymbol,
+          })}
+        </p>
         <p className="text-xs text-slate-500 font-medium">This Week</p>
       </div>
     </div>

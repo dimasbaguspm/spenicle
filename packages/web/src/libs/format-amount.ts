@@ -14,7 +14,7 @@ export interface FormatAmountOptions {
  * - Optionally shows/hides currency symbol
  */
 export const formatAmount = (amount: number, options: FormatAmountOptions = {}): string => {
-  const { type = 'expense', compact = false, showCurrency = true, currencySymbol = '$' } = options;
+  const { type = 'expense', compact = false, showCurrency = false, currencySymbol = '$' } = options;
   const prefix = type === 'income' ? '+' : type === 'expense' ? '-' : '↔';
   const absAmount = Math.abs(amount);
   const formatted = compact

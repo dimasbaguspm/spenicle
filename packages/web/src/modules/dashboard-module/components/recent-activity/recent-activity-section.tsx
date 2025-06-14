@@ -29,7 +29,7 @@ export function RecentActivitySection({
   trackingStreak,
   todayTransactions,
   title = 'Recent Activity',
-  statusText = 'Live Updates',
+  statusText = 'Today',
 }: RecentActivitySectionProps) {
   return (
     <div className="space-y-4">
