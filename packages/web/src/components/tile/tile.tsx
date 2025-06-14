@@ -1,13 +1,13 @@
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef, type ReactNode, type HTMLAttributes } from 'react';
 
-interface TileProps {
+interface TileProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   className?: string;
 }
 
-export const Tile = forwardRef<HTMLDivElement, TileProps>(({ children, className = '' }, ref) => {
+export const Tile = forwardRef<HTMLDivElement, TileProps>(({ children, className = '', ...props }, ref) => {
   return (
-    <div ref={ref} className={`bg-cream-50 rounded-lg border border-mist-200 overflow-hidden ${className}`}>
+    <div ref={ref} className={`bg-cream-50 rounded-lg border border-mist-200 overflow-hidden ${className}`} {...props}>
       {children}
     </div>
   );
