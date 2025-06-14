@@ -1,5 +1,7 @@
 export * from './components/add-category-drawer';
 export * from './components/categories-list';
+export * from './components/categories-empty-state';
+export * from './components/categories-search-empty-state';
 export * from './components/category-item';
 export * from './components/edit-category-drawer';
 export * from './components/category-icon';

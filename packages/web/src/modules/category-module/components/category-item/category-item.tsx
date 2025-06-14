@@ -1,4 +1,4 @@
-import { Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Edit2, Trash2, ChevronDown, ChevronRight, Circle, CornerDownRight } from 'lucide-react';
 
 import { IconButton } from '../../../../components/button/icon-button';
 import { DRAWER_IDS } from '../../../../constants/drawer-id';
@@ -30,34 +30,35 @@ export function CategoryItem({
   const { openDrawer } = useDrawerRouterProvider();
 
   return (
-    <div className={isChild ? '' : 'border-b border-slate-100'}>
-      <div className={`flex items-center gap-4 ${isChild ? 'py-3 pr-4' : 'p-4'}`}>
-        {/* Tree connector + icon section for child categories */}
+    <div className={isChild ? '' : 'border-b border-mist-100'}>
+      <div
+        className={`flex items-center gap-4 ${isChild ? 'py-3 pr-4 pl-6' : 'p-4'} hover:bg-mist-25 transition-colors`}
+      >
         {isChild ? (
-          <div className="flex items-center gap-3 pl-6 relative">
-            {/* Tree connector lines */}
-            <div className="absolute left-2 top-0 bottom-0 w-px bg-slate-200">
-              <div className="absolute top-1/2 left-0 w-4 h-px bg-slate-200 -translate-y-0.5"></div>
+          <>
+            {/* Nested indicator for child categories */}
+            <div className="flex-shrink-0 p-1.5 text-slate-300">
+              <CornerDownRight className="w-3 h-3" />
             </div>
-            {/* Category Icon */}
-            <div className="flex-shrink-0 ml-4">
+            <div className="flex-shrink-0">
               <CategoryIcon
                 iconValue={category.metadata?.icon ?? 'tag'}
                 colorValue={category.metadata?.color ?? 'coral'}
                 size="sm"
               />
             </div>
-          </div>
+          </>
         ) : (
           <>
             {/* Expand/Collapse Button for Parent Categories */}
             <button
               onClick={() => hasChildren && onToggleExpand?.()}
-              className={`flex-shrink-0 p-1 rounded transition-colors ${
+              className={`flex-shrink-0 p-1.5 rounded-md transition-all ${
                 hasChildren
-                  ? 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-                  : 'text-transparent cursor-default'
+                  ? 'text-slate-500 hover:text-slate-700 hover:bg-mist-100 focus:outline-none focus:ring-2 focus:ring-coral-200'
+                  : 'text-slate-300 cursor-default'
               }`}
+              aria-label={hasChildren ? (isExpanded ? 'Collapse subcategories' : 'Expand subcategories') : undefined}
             >
               {hasChildren ? (
                 isExpanded ? (
@@ -66,7 +67,7 @@ export function CategoryItem({
                   <ChevronRight className="w-4 h-4" />
                 )
               ) : (
-                <div className="w-4 h-4" />
+                <Circle className="w-3 h-3" />
               )}
             </button>
 
@@ -84,24 +85,44 @@ export function CategoryItem({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className={`font-medium ${isChild ? 'text-sm text-slate-700' : 'text-slate-900'}`}>{category.name}</h3>
+            <h3 className={`font-medium truncate ${isChild ? 'text-sm text-slate-700' : 'text-base text-slate-900'}`}>
+              {category.name}
+            </h3>
             {hasChildren && childCount > 0 && (
-              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{childCount}</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-mist-100 text-mist-700 flex-shrink-0">
+                {childCount} {childCount === 1 ? 'subcategory' : 'subcategories'}
+              </span>
             )}
           </div>
-          <p className={`text-sm text-slate-500 ${isChild ? 'text-xs' : ''}`}>Category #{category.id}</p>
+          {category.note && (
+            <p className={`text-slate-500 truncate ${isChild ? 'text-xs' : 'text-sm'}`}>{category.note}</p>
+          )}
+          {!category.note && (
+            <p className={`text-slate-400 ${isChild ? 'text-xs' : 'text-sm'}`}>
+              Category #{category.id}
+              {category.metadata && ' • Custom appearance'}
+            </p>
+          )}
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
           <IconButton
             onClick={() => openDrawer(DRAWER_IDS.EDIT_CATEGORY, { categoryId: category.id })}
             variant="ghost"
             size="sm"
+            className="hover:bg-mist-100 focus:ring-2 focus:ring-coral-200"
+            aria-label={`Edit ${category.name}`}
           >
             <Edit2 className="w-4 h-4" />
           </IconButton>
-          <IconButton onClick={() => category.id && onDelete(category.id)} variant="error-ghost" size="sm">
+          <IconButton
+            onClick={() => category.id && onDelete(category.id)}
+            variant="ghost"
+            size="sm"
+            className="hover:bg-danger-50 hover:text-danger-600 focus:ring-2 focus:ring-danger-200"
+            aria-label={`Delete ${category.name}`}
+          >
             <Trash2 className="w-4 h-4" />
           </IconButton>
         </div>

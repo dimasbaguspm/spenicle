@@ -1,19 +1,26 @@
-import { Tag } from 'lucide-react';
-import { useState } from 'react';
+import { AlertCircle } from 'lucide-react';
+import { useState, useMemo } from 'react';
 
 import { Button } from '../../../../components';
 import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { useApiCategoriesQuery } from '../../../../hooks/use-api';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router/context';
 import type { Category } from '../../../../types/api';
+import { useCategoriesSearch } from '../../hooks';
+import { CategoriesEmptyState } from '../categories-empty-state';
+import { CategoriesSearchEmptyState } from '../categories-search-empty-state';
 import { CategoryItem } from '../category-item';
 import { DeleteCategoryModal } from '../delete-category-modal';
 
+import { CategoriesListLoader } from './categories-list-loader';
+
 export interface CategoriesListProps {
   onAddCategory?: () => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
-export function CategoriesList() {
+export function CategoriesList({ searchQuery = '', onSearchChange }: CategoriesListProps) {
   const [categoriesData, , categoriesState] = useApiCategoriesQuery();
   const { openDrawer } = useDrawerRouterProvider();
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
@@ -22,20 +29,18 @@ export function CategoriesList() {
 
   const categories = categoriesData?.items ?? [];
 
-  // Separate parent and child categories
-  const parentCategories = categories.filter((category) => category.parentId === null);
-  const childCategories = categories.filter((category) => category.parentId !== null);
+  // Use the custom hook for search functionality
+  const { filteredParentCategories, filteredChildrenByParent, autoExpandedCategories } = useCategoriesSearch({
+    categories,
+    searchQuery,
+  });
 
-  // Group children by parent ID
-  const childrenByParent = childCategories.reduce(
-    (acc, child) => {
-      const parentId = child.parentId!;
-      acc[parentId] ??= [];
-      acc[parentId].push(child);
-      return acc;
-    },
-    {} as Record<number, Category[]>
-  );
+  // Merge auto-expanded categories with manually expanded ones
+  const effectiveExpandedCategories = useMemo(() => {
+    const combined = new Set(expandedCategories);
+    autoExpandedCategories.forEach((id) => combined.add(id));
+    return combined;
+  }, [expandedCategories, autoExpandedCategories]);
 
   const toggleCategory = (categoryId: number) => {
     const newExpanded = new Set(expandedCategories);
@@ -48,9 +53,9 @@ export function CategoriesList() {
   };
 
   const renderCategoryItem = (category: Category, isChild = false) => {
-    const hasChildren = !isChild && childrenByParent[category.id!]?.length > 0;
-    const isExpanded = expandedCategories.has(category.id!);
-    const childCount = childrenByParent[category.id!]?.length ?? 0;
+    const hasChildren = !isChild && filteredChildrenByParent[category.id!]?.length > 0;
+    const isExpanded = effectiveExpandedCategories.has(category.id!);
+    const childCount = filteredChildrenByParent[category.id!]?.length ?? 0;
 
     return (
       <CategoryItem
@@ -65,7 +70,9 @@ export function CategoriesList() {
       >
         {hasChildren &&
           isExpanded &&
-          childrenByParent[category.id!].map((childCategory: Category) => renderCategoryItem(childCategory, true))}
+          filteredChildrenByParent[category.id!].map((childCategory: Category) =>
+            renderCategoryItem(childCategory, true)
+          )}
       </CategoryItem>
     );
   };
@@ -95,29 +102,40 @@ export function CategoriesList() {
   };
 
   if (categoriesState.isLoading) {
+    return <CategoriesListLoader count={6} />;
+  }
+
+  if (categoriesState.isError) {
     return (
       <div className="p-8 text-center">
-        <p className="text-slate-500">Loading categories...</p>
+        <div className="w-12 h-12 bg-danger-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-6 h-6 text-danger-600" />
+        </div>
+        <h3 className="text-lg font-medium text-slate-900 mb-2">Failed to load categories</h3>
+        <p className="text-slate-600 mb-4">We couldn't load your categories. Please try again.</p>
+        <Button variant="coral" onClick={() => window.location.reload()}>
+          Try Again
+        </Button>
       </div>
     );
   }
 
   return (
     <>
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-mist-100">
         {/* Show only parent categories with accordion functionality */}
-        {parentCategories.map((category) => renderCategoryItem(category, false))}
+        {filteredParentCategories.map((category) => renderCategoryItem(category, false))}
 
-        {/* Empty state */}
-        {categories.length === 0 && (
-          <div className="p-8 text-center">
-            <Tag className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 mb-4">No categories added yet</p>
+        {/* Empty state for no categories */}
+        {categories.length === 0 && <CategoriesEmptyState onAddCategory={handleOpenAddCategoryDrawer} />}
 
-            <Button variant="coral" onClick={handleOpenAddCategoryDrawer}>
-              Add Your First Category
-            </Button>
-          </div>
+        {/* Empty state for search with no results */}
+        {categories.length > 0 && filteredParentCategories.length === 0 && searchQuery && (
+          <CategoriesSearchEmptyState
+            searchQuery={searchQuery}
+            onClearSearch={() => onSearchChange?.('')}
+            onAddCategory={handleOpenAddCategoryDrawer}
+          />
         )}
       </div>
 
