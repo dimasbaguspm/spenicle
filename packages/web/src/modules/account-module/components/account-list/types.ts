@@ -1,8 +1,8 @@
 import type { Account } from '../../../../types/api';
 
 export interface AccountListProps {
-  accounts: Account[];
-  isLoading?: boolean;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 export interface AccountItemProps {

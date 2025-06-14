@@ -1,26 +1,33 @@
-import { Plus } from 'lucide-react';
+import { Search } from 'lucide-react';
 
-import { Button } from '../../../../components';
-import { useDrawerRouterProvider } from '../../../../providers/drawer-router';
+import { TextInput } from '../../../../components';
 
-export function AccountListHeader() {
-  const { openDrawer } = useDrawerRouterProvider();
+export interface AccountListHeaderProps {
+  accountCount?: number;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+}
 
-  const handleAddAccount = async () => {
-    await openDrawer('add-account');
+export function AccountListHeader({ accountCount = 0, searchValue = '', onSearchChange }: AccountListHeaderProps) {
+  if (accountCount < 0) return null;
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onSearchChange?.(e.target.value);
   };
 
   return (
-    <div className="p-6 border-b border-slate-100">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900">Your Accounts</h3>
-          <p className="text-sm text-slate-600 mt-1">Manage your payment accounts</p>
+    <div className="p-6 border-b border-mist-100">
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+          <Search className="w-5 h-5 text-slate-400" />
         </div>
-        <Button variant="coral" size="sm" onClick={handleAddAccount} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Account
-        </Button>
+        <TextInput
+          value={searchValue}
+          onChange={handleSearchChange}
+          placeholder="Search accounts by name or notes..."
+          size="md"
+          className="w-full sm:max-w-xl text-base py-3 text-slate-700 placeholder-slate-400"
+        />
       </div>
     </div>
   );

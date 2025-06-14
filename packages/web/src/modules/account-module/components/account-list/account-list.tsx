@@ -1,15 +1,24 @@
-import { CreditCard, Loader, AlertTriangle } from 'lucide-react';
+import { Loader, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button, Modal } from '../../../../components';
+import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { useApiAccountsQuery, useApiDeleteAccountMutation } from '../../../../hooks/use-api/built-in/use-accounts';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router';
 import { useSnack } from '../../../../providers/snack';
 import type { Account } from '../../../../types/api';
+import { useAccountsSearch } from '../../hooks';
+import { AccountsEmptyState } from '../accounts-empty-state';
+import { AccountsSearchEmptyState } from '../accounts-search-empty-state';
 
 import { AccountItem } from './account-item';
 
-export function AccountList() {
+export interface AccountListProps {
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+}
+
+export function AccountList({ searchQuery = '', onSearchChange }: AccountListProps) {
   const [pagedAccounts, , { isLoading }] = useApiAccountsQuery();
   const [deleteAccount] = useApiDeleteAccountMutation();
   const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
@@ -17,6 +26,12 @@ export function AccountList() {
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
 
   const accounts = pagedAccounts?.items ?? [];
+
+  // Use the search hook to filter accounts
+  const { filteredAccounts } = useAccountsSearch({
+    accounts,
+    searchQuery,
+  });
 
   const { openDrawer } = useDrawerRouterProvider();
   const { success, error } = useSnack();
@@ -51,11 +66,11 @@ export function AccountList() {
   };
 
   const handleAddAccount = async () => {
-    await openDrawer('add-account');
+    await openDrawer(DRAWER_IDS.ADD_ACCOUNT);
   };
 
   const handleEditAccount = async (account: Account) => {
-    await openDrawer('edit-account', { accountId: account.id });
+    await openDrawer(DRAWER_IDS.EDIT_ACCOUNT, { accountId: account.id });
   };
 
   if (isLoading) {
@@ -68,8 +83,9 @@ export function AccountList() {
 
   return (
     <>
-      <div className="divide-y divide-slate-100">
-        {accounts.map((account) => (
+      <div className="divide-y divide-mist-100">
+        {/* Show filtered accounts */}
+        {filteredAccounts.map((account) => (
           <AccountItem
             key={account.id}
             account={account}
@@ -79,14 +95,16 @@ export function AccountList() {
           />
         ))}
 
-        {accounts.length === 0 && (
-          <div className="p-8 text-center">
-            <CreditCard className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 mb-4">No accounts added yet</p>
-            <Button variant="coral" onClick={handleAddAccount}>
-              Add Your First Account
-            </Button>
-          </div>
+        {/* Empty state for no accounts */}
+        {accounts.length === 0 && <AccountsEmptyState onAddAccount={handleAddAccount} />}
+
+        {/* Empty state for search with no results */}
+        {accounts.length > 0 && filteredAccounts.length === 0 && searchQuery && (
+          <AccountsSearchEmptyState
+            searchQuery={searchQuery}
+            onClearSearch={() => onSearchChange?.('')}
+            onAddAccount={handleAddAccount}
+          />
         )}
       </div>
 
