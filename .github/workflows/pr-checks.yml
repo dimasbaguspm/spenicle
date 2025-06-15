@@ -30,13 +30,13 @@ jobs:
         run: yarn install
       
       - name: Type check
-        run: yarn check
+        run: yarn workspaces foreach --all --parallel --interlaced run check
       
       - name: Lint
-        run: yarn workspaces foreach -all --parallel --interlaced run lint
+        run: yarn workspaces foreach --all --parallel --interlaced run lint
       
       - name: Run tests
-        run: yarn workspaces foreach -all --parallel --interlaced run test
+        run: yarn workspaces foreach --all --parallel --interlaced run test run
       
       - name: Build
-        run: yarn workspaces foreach -all --parallel --interlaced run build
+        run: yarn workspaces foreach --all --parallel --interlaced run build
