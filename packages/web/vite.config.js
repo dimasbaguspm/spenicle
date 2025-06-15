@@ -10,7 +10,6 @@ export default defineConfig({
   plugins: [TanStackRouterVite({ autoCodeSplitting: true }), viteReact(), tailwindcss()],
   define: {
     'process.env': {
-      BASE_URL: process.env.WEB_SERVICE_BASE_URL,
       STAGE: process.env.WEB_STAGE,
     },
   },
