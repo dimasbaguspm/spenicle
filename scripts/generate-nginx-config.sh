@@ -22,10 +22,10 @@ if [ ! -f "nginx/nginx.prod.conf.template" ]; then
   exit 1
 fi
 
-echo "📋 Using domain configuration:"
-echo "   - Base domain: $DOMAIN_BASE"
-echo "   - App subdomain: $DOMAIN_APP_SUBDOMAIN"
-echo "   - API subdomain: $DOMAIN_API_SUBDOMAIN"
+echo "📋 Using subdomain configuration:"
+echo "   - Base domain: $DOMAIN_BASE (not served by nginx)"
+echo "   - App subdomain: $DOMAIN_APP_SUBDOMAIN.$DOMAIN_BASE"
+echo "   - API subdomain: $DOMAIN_API_SUBDOMAIN.$DOMAIN_BASE"
 
 # Process template and generate nginx configuration
 if ! sed -e "s/\${DOMAIN_BASE}/$DOMAIN_BASE/g" \

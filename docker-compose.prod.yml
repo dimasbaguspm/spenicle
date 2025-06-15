@@ -78,7 +78,6 @@ services:
     container_name: spenicle-staging-nginx
     volumes:
       - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/index.html:/etc/nginx/html/index.html:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     ports:
       - "80:80"

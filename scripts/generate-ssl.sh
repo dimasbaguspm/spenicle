@@ -21,8 +21,7 @@ DOMAIN_BASE="${DOMAIN_BASE:-example.com}"
 DOMAIN_APP_SUBDOMAIN="${DOMAIN_APP_SUBDOMAIN:-spenicle}"
 DOMAIN_API_SUBDOMAIN="${DOMAIN_API_SUBDOMAIN:-spenicle-api}"
 
-# Construct full domain names
-MAIN_DOMAIN="$DOMAIN_BASE"
+# Construct full domain names for subdomains only
 APP_DOMAIN="$DOMAIN_APP_SUBDOMAIN.$DOMAIN_BASE"
 API_DOMAIN="$DOMAIN_API_SUBDOMAIN.$DOMAIN_BASE"
 
@@ -30,9 +29,11 @@ API_DOMAIN="$DOMAIN_API_SUBDOMAIN.$DOMAIN_BASE"
 mkdir -p nginx/ssl
 
 echo "Domain Configuration:"
-echo "- Main domain: $MAIN_DOMAIN"
 echo "- App domain: $APP_DOMAIN"
 echo "- API domain: $API_DOMAIN"
+echo ""
+echo "ℹ️  Note: This setup only covers subdomains. You can use any other"
+echo "   server/service for your main domain ($DOMAIN_BASE)."
 echo ""
 echo "You have several options for SSL certificates:"
 echo ""
@@ -54,12 +55,12 @@ case $option in
     echo "sudo apt update"
     echo "sudo apt install certbot python3-certbot-nginx"
     echo ""
-    echo "# Get certificates for your domains"
-    echo "sudo certbot certonly --standalone -d $MAIN_DOMAIN -d $APP_DOMAIN -d $API_DOMAIN"
+    echo "# Get certificates for your subdomains"
+    echo "sudo certbot certonly --standalone -d $APP_DOMAIN -d $API_DOMAIN"
     echo ""
     echo "# Copy certificates to your project"
-    echo "sudo cp /etc/letsencrypt/live/$MAIN_DOMAIN/fullchain.pem \$(pwd)/nginx/ssl/"
-    echo "sudo cp /etc/letsencrypt/live/$MAIN_DOMAIN/privkey.pem \$(pwd)/nginx/ssl/"
+    echo "sudo cp /etc/letsencrypt/live/$APP_DOMAIN/fullchain.pem \$(pwd)/nginx/ssl/"
+    echo "sudo cp /etc/letsencrypt/live/$APP_DOMAIN/privkey.pem \$(pwd)/nginx/ssl/"
     echo "sudo chown \$USER:\$USER \$(pwd)/nginx/ssl/*.pem"
     echo ""
     echo "📝 Note: Remember to set up automatic renewal:"
@@ -84,12 +85,12 @@ case $option in
     echo "🧪 Generating self-signed certificates (testing only)..."
     echo ""
     
-    # Generate self-signed certificate
+    # Generate self-signed certificate for subdomains only
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
       -keyout nginx/ssl/privkey.pem \
       -out nginx/ssl/fullchain.pem \
-      -subj "/C=US/ST=State/L=City/O=Organization/CN=$MAIN_DOMAIN" \
-      -addext "subjectAltName=DNS:$MAIN_DOMAIN,DNS:$APP_DOMAIN,DNS:$API_DOMAIN"
+      -subj "/C=US/ST=State/L=City/O=Organization/CN=$APP_DOMAIN" \
+      -addext "subjectAltName=DNS:$APP_DOMAIN,DNS:$API_DOMAIN"
     
     echo "✅ Self-signed certificates generated!"
     echo "⚠️  WARNING: These are for testing only and will show security warnings in browsers."
@@ -103,17 +104,17 @@ esac
 echo ""
 echo "🎯 Next steps:"
 echo "1. Make sure your DNS A records point to your VPS IP:"
-echo "   - $MAIN_DOMAIN → YOUR_VPS_IP"
 echo "   - $APP_DOMAIN → YOUR_VPS_IP"
 echo "   - $API_DOMAIN → YOUR_VPS_IP"
+echo "   (Main domain $DOMAIN_BASE can point anywhere you want)"
 echo ""
 echo "2. Deploy your application:"
 echo "   docker-compose -f docker-compose.prod.yml up -d --build"
 echo ""
 echo "3. Your services will be available at:"
-echo "   🌐 https://$MAIN_DOMAIN (Landing page)"
 echo "   📱 https://$APP_DOMAIN (Web app)"
 echo "   🔧 https://$API_DOMAIN/api/docs (API docs)"
+echo "   🌐 $DOMAIN_BASE (Configure separately - not handled by this nginx)"
 echo ""
 echo "📖 For more detailed instructions, see the main README.md"
 echo ""

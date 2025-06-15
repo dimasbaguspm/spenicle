@@ -1,9 +1,12 @@
 # NGINX Configuration Template
 # This is a template file that gets processed to generate nginx.prod.conf
 # Environment variables will be substituted:
-# - ${DOMAIN_BASE} - Main domain
+# - ${DOMAIN_BASE} - Main domain (not served by this nginx, only used for subdomains)
 # - ${DOMAIN_APP_SUBDOMAIN} - App subdomain  
 # - ${DOMAIN_API_SUBDOMAIN} - API subdomain
+# 
+# This configuration only serves subdomains. The main domain can be
+# configured separately with any other web server or service.
 # 
 # DO NOT edit nginx.prod.conf directly - it will be overwritten!
 
@@ -66,23 +69,6 @@ http {
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-        }
-    }
-
-    # Main domain - serve "Hi spenicle" page
-    server {
-        listen 443 ssl;
-        server_name ${DOMAIN_BASE};
-
-        ssl_certificate     /etc/nginx/ssl/fullchain.pem;
-        ssl_certificate_key /etc/nginx/ssl/privkey.pem;
-        ssl_protocols       TLSv1.2 TLSv1.3;
-        ssl_ciphers         HIGH:!aNULL:!MD5;
-
-        # Serve "Hi spenicle" page
-        location / {
-            root /etc/nginx/html;
-            try_files /index.html =404;
         }
     }
 }
