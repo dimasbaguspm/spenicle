@@ -18,6 +18,7 @@ WORKDIR /app
 # Copy the built application
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
 COPY --from=builder /app/packages/api/package.json ./packages/api/
+COPY --from=builder /app/packages/api/sql ./packages/api/sql
 
 # Copy root package.json and yarn files for workspace support
 COPY --from=builder /app/package.json ./
