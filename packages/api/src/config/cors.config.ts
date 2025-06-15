@@ -22,9 +22,10 @@ export const corsOptions: CorsOptions = {
       'http://127.0.0.1:5173',
       'http://127.0.0.1:8080',
 
-      // Add production origins here
-      // 'https://yourdomain.com',
-      // 'https://www.yourdomain.com',
+      // Production origins
+      'https://spenicle.dimasbaguspm.com',
+      'https://spenicle-api.dimasbaguspm.com',
+      'https://dimasbaguspm.com',
     ];
 
     // In development, allow all localhost origins

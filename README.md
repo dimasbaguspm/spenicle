@@ -41,48 +41,71 @@ A modern expense tracking and financial management application built with TypeSc
 - **React Web App**: Frontend with Vite and TypeScript
 - **Development Tools**: Hot reloading, migrations, and testing setup
 
-## 🚦 Staging Deployment (with SSL & Nginx)
+## 🚦 Production Deployment (with SSL & Domain)
 
 ### Prerequisites
 - Docker and Docker Compose
+- Domain name with DNS configured
 - SSL certificates (see below)
 
 ### 1. Prepare SSL Certificates
-- Place your SSL certificate and private key in `nginx/ssl/`:
-  - `nginx/ssl/fullchain.pem` (certificate + chain)
-  - `nginx/ssl/privkey.pem` (private key)
-- For testing/staging, you can generate a self-signed certificate:
-  ```bash
-  mkdir -p nginx/ssl
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout nginx/ssl/privkey.pem \
-    -out nginx/ssl/fullchain.pem \
-    -subj "/CN=your-staging-domain.com"
-  ```
+
+Use the SSL certificate generator script:
+```bash
+./scripts/generate-ssl.sh
+```
+
+**Options available:**
+- **Let's Encrypt (Recommended)**: Free SSL certificates for production
+- **Existing Certificates**: Use your own SSL certificates  
+- **Self-signed**: For development/testing only
+
+**For production with domain `dimasbaguspm.com`:**
+1. Ensure DNS A records point to your VPS:
+   - `dimasbaguspm.com` → YOUR_VPS_IP
+   - `spenicle.dimasbaguspm.com` → YOUR_VPS_IP  
+   - `spenicle-api.dimasbaguspm.com` → YOUR_VPS_IP
+
+2. Run the SSL generator and choose option 1 (Let's Encrypt)
+
+3. Follow the provided commands to set up certificates on your VPS
+
+### 2. Start Production Services
+```bash
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+### 3. Access Your Application
+- **Landing Page**: https://dimasbaguspm.com
+- **Web App**: https://spenicle.dimasbaguspm.com  
+- **API Documentation**: https://spenicle-api.dimasbaguspm.com/api/docs
+
+## 🧪 Staging Deployment (for testing)
+
+### Prerequisites
+- Docker and Docker Compose
+- SSL certificates (self-signed for testing)
+
+### 1. Generate Self-Signed Certificates
+```bash
+./scripts/generate-ssl.sh
+```
+Choose option 3 for self-signed certificates (testing only).
 
 ### 2. Start Staging Services
 ```bash
-./scripts/staging up
+docker-compose -f docker-compose.prod.yml up -d --build
 ```
-- Nginx will serve the web app over HTTPS and proxy API requests.
-- Access your app at: https://<your-staging-domain> (or your VPS IP)
+- Access via your VPS IP with HTTPS (will show security warnings for self-signed certs)
 
 ### 3. Other Useful Commands
 - Stop services:
   ```bash
-  ./scripts/staging down
+  docker-compose -f docker-compose.prod.yml down
   ```
 - View logs:
   ```bash
-  ./scripts/staging logs
-  ```
-- Backup database:
-  ```bash
-  ./scripts/staging backup-db
-  ```
-- Restore database:
-  ```bash
-  ./scripts/staging restore-db
+  docker-compose -f docker-compose.prod.yml logs -f
   ```
 
 ## 📄 License

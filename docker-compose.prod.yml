@@ -34,7 +34,7 @@ services:
       API_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/spenicle
       API_JWT_SECRET: $API_JWT_SECRET
       API_PORT: 3000
-      API_STAGE: staging
+      API_STAGE: production
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,8 +48,8 @@ services:
     environment:
       NODE_ENV: production
       WEB_PORT: 8080
-      WEB_STAGE: staging
-      VITE_API_BASE_URL: /api
+      WEB_STAGE: production
+      VITE_API_BASE_URL: https://spenicle-api.dimasbaguspm.com
     depends_on:
       - api
     restart: unless-stopped
