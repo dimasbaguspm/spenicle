@@ -28,8 +28,48 @@ case "$1" in
   logs)
     docker compose -f $COMPOSE_FILE logs -f
     ;;
+  restart)
+    SERVICE=${2:-""}
+    if [ -n "$SERVICE" ]; then
+      echo "Restarting service: $SERVICE"
+      docker compose -f $COMPOSE_FILE restart $SERVICE
+    else
+      echo "Restarting all services"
+      docker compose -f $COMPOSE_FILE restart
+    fi
+    ;;
+  clean-cache)
+    SERVICE=${2:-""}
+    if [ -n "$SERVICE" ]; then
+      echo "Cleaning cache for service: $SERVICE"
+      # Stop the specific service
+      docker compose -f $COMPOSE_FILE stop $SERVICE
+      # Remove the container
+      docker compose -f $COMPOSE_FILE rm -f $SERVICE
+      # Remove the image
+      IMAGE_NAME=$(docker compose -f $COMPOSE_FILE config | grep -A5 "$SERVICE:" | grep "image:" | awk '{print $2}')
+      if [ -n "$IMAGE_NAME" ]; then
+        docker rmi -f $IMAGE_NAME 2>/dev/null || echo "Image $IMAGE_NAME not found or already removed"
+      fi
+      # Rebuild and start the service
+      docker compose -f $COMPOSE_FILE build --no-cache $SERVICE
+      docker compose -f $COMPOSE_FILE up -d $SERVICE
+    else
+      echo "Cleaning cache for all services"
+      # Stop all services
+      docker compose -f $COMPOSE_FILE down
+      # Remove all containers and images
+      docker compose -f $COMPOSE_FILE rm -f
+      # Remove dangling images and build cache
+      docker image prune -f
+      docker builder prune -f
+      # Rebuild all services
+      docker compose -f $COMPOSE_FILE build --no-cache
+      docker compose -f $COMPOSE_FILE up -d
+    fi
+    ;;
   *)
-    echo "Usage: $0 {up|down|rebuild [service]|backup-db|restore-db|logs}"
+    echo "Usage: $0 {up|down|rebuild [service]|backup-db|restore-db|logs|restart [service]|clean-cache [service]}"
     exit 1
     ;;
 esac

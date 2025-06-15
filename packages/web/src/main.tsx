@@ -21,6 +21,8 @@ const router = createRouter({
 
 const rootElement = document.getElementById('app');
 if (rootElement && !rootElement.innerHTML) {
+  console.log('Rendering React application...');
+  console.log('env:', process.env);
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <App>
