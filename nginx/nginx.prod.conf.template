@@ -1,3 +1,12 @@
+# NGINX Configuration Template
+# This is a template file that gets processed to generate nginx.prod.conf
+# Environment variables will be substituted:
+# - ${DOMAIN_BASE} - Main domain
+# - ${DOMAIN_APP_SUBDOMAIN} - App subdomain  
+# - ${DOMAIN_API_SUBDOMAIN} - API subdomain
+# 
+# DO NOT edit nginx.prod.conf directly - it will be overwritten!
+
 user  nginx;
 worker_processes  auto;
 
@@ -23,7 +32,7 @@ http {
     # API service subdomain
     server {
         listen 443 ssl;
-        server_name spenicle-api.dimasbaguspm.com;
+        server_name ${DOMAIN_API_SUBDOMAIN}.${DOMAIN_BASE};
 
         ssl_certificate     /etc/nginx/ssl/fullchain.pem;
         ssl_certificate_key /etc/nginx/ssl/privkey.pem;
@@ -43,7 +52,7 @@ http {
     # Web application subdomain
     server {
         listen 443 ssl;
-        server_name spenicle.dimasbaguspm.com;
+        server_name ${DOMAIN_APP_SUBDOMAIN}.${DOMAIN_BASE};
 
         ssl_certificate     /etc/nginx/ssl/fullchain.pem;
         ssl_certificate_key /etc/nginx/ssl/privkey.pem;
@@ -63,7 +72,7 @@ http {
     # Main domain - serve "Hi spenicle" page
     server {
         listen 443 ssl;
-        server_name dimasbaguspm.com;
+        server_name ${DOMAIN_BASE};
 
         ssl_certificate     /etc/nginx/ssl/fullchain.pem;
         ssl_certificate_key /etc/nginx/ssl/privkey.pem;

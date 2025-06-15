@@ -59,5 +59,8 @@ coverage
 .env.dev
 .env.prod
 
+# Generated nginx configuration (created from template)
+nginx/nginx.prod.conf
+
 .direnv
 node_modules

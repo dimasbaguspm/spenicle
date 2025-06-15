@@ -10,6 +10,11 @@ export const corsOptions: CorsOptions = {
     // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) return callback(null, true);
 
+    // Get domain configuration from environment variables
+    const domainBase = process.env.DOMAIN_BASE ?? 'example.com';
+    const appSubdomain = process.env.DOMAIN_APP_SUBDOMAIN ?? 'spenicle';
+    const apiSubdomain = process.env.DOMAIN_API_SUBDOMAIN ?? 'spenicle-api';
+
     // Define allowed origins based on environment
     const allowedOrigins = [
       // Development origins
@@ -22,10 +27,10 @@ export const corsOptions: CorsOptions = {
       'http://127.0.0.1:5173',
       'http://127.0.0.1:8080',
 
-      // Production origins
-      'https://spenicle.dimasbaguspm.com',
-      'https://spenicle-api.dimasbaguspm.com',
-      'https://dimasbaguspm.com',
+      // Production origins (using environment variables)
+      `https://${appSubdomain}.${domainBase}`,
+      `https://${apiSubdomain}.${domainBase}`,
+      `https://${domainBase}`,
     ];
 
     // In development, allow all localhost origins

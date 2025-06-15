@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # SSL Certificate Generator
 # Unified script for generating SSL certificates for all environments
@@ -10,9 +10,30 @@ echo "This script provides comprehensive SSL certificate setup"
 echo "for development, testing, and production environments."
 echo ""
 
+# Load environment variables from .env.prod if it exists
+if [ -f .env.prod ]; then
+  # Export variables for use in this script
+  export $(grep -v '^#' .env.prod | xargs)
+fi
+
+# Get domain configuration from environment variables with defaults
+DOMAIN_BASE="${DOMAIN_BASE:-example.com}"
+DOMAIN_APP_SUBDOMAIN="${DOMAIN_APP_SUBDOMAIN:-spenicle}"
+DOMAIN_API_SUBDOMAIN="${DOMAIN_API_SUBDOMAIN:-spenicle-api}"
+
+# Construct full domain names
+MAIN_DOMAIN="$DOMAIN_BASE"
+APP_DOMAIN="$DOMAIN_APP_SUBDOMAIN.$DOMAIN_BASE"
+API_DOMAIN="$DOMAIN_API_SUBDOMAIN.$DOMAIN_BASE"
+
 # Create SSL directory if it doesn't exist
 mkdir -p nginx/ssl
 
+echo "Domain Configuration:"
+echo "- Main domain: $MAIN_DOMAIN"
+echo "- App domain: $APP_DOMAIN"
+echo "- API domain: $API_DOMAIN"
+echo ""
 echo "You have several options for SSL certificates:"
 echo ""
 echo "1. 🚀 Recommended: Use Certbot (Let's Encrypt) - FREE"
@@ -34,12 +55,12 @@ case $option in
     echo "sudo apt install certbot python3-certbot-nginx"
     echo ""
     echo "# Get certificates for your domains"
-    echo "sudo certbot certonly --standalone -d dimasbaguspm.com -d spenicle.dimasbaguspm.com -d spenicle-api.dimasbaguspm.com"
+    echo "sudo certbot certonly --standalone -d $MAIN_DOMAIN -d $APP_DOMAIN -d $API_DOMAIN"
     echo ""
     echo "# Copy certificates to your project"
-    echo "sudo cp /etc/letsencrypt/live/dimasbaguspm.com/fullchain.pem $(pwd)/nginx/ssl/"
-    echo "sudo cp /etc/letsencrypt/live/dimasbaguspm.com/privkey.pem $(pwd)/nginx/ssl/"
-    echo "sudo chown \$USER:\$USER $(pwd)/nginx/ssl/*.pem"
+    echo "sudo cp /etc/letsencrypt/live/$MAIN_DOMAIN/fullchain.pem \$(pwd)/nginx/ssl/"
+    echo "sudo cp /etc/letsencrypt/live/$MAIN_DOMAIN/privkey.pem \$(pwd)/nginx/ssl/"
+    echo "sudo chown \$USER:\$USER \$(pwd)/nginx/ssl/*.pem"
     echo ""
     echo "📝 Note: Remember to set up automatic renewal:"
     echo "sudo crontab -e"
@@ -67,8 +88,8 @@ case $option in
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
       -keyout nginx/ssl/privkey.pem \
       -out nginx/ssl/fullchain.pem \
-      -subj "/C=US/ST=State/L=City/O=Organization/CN=dimasbaguspm.com" \
-      -addext "subjectAltName=DNS:dimasbaguspm.com,DNS:spenicle.dimasbaguspm.com,DNS:spenicle-api.dimasbaguspm.com"
+      -subj "/C=US/ST=State/L=City/O=Organization/CN=$MAIN_DOMAIN" \
+      -addext "subjectAltName=DNS:$MAIN_DOMAIN,DNS:$APP_DOMAIN,DNS:$API_DOMAIN"
     
     echo "✅ Self-signed certificates generated!"
     echo "⚠️  WARNING: These are for testing only and will show security warnings in browsers."
@@ -82,17 +103,17 @@ esac
 echo ""
 echo "🎯 Next steps:"
 echo "1. Make sure your DNS A records point to your VPS IP:"
-echo "   - dimasbaguspm.com → YOUR_VPS_IP"
-echo "   - spenicle.dimasbaguspm.com → YOUR_VPS_IP"
-echo "   - spenicle-api.dimasbaguspm.com → YOUR_VPS_IP"
+echo "   - $MAIN_DOMAIN → YOUR_VPS_IP"
+echo "   - $APP_DOMAIN → YOUR_VPS_IP"
+echo "   - $API_DOMAIN → YOUR_VPS_IP"
 echo ""
 echo "2. Deploy your application:"
 echo "   docker-compose -f docker-compose.prod.yml up -d --build"
 echo ""
 echo "3. Your services will be available at:"
-echo "   🌐 https://dimasbaguspm.com (Landing page)"
-echo "   📱 https://spenicle.dimasbaguspm.com (Web app)"
-echo "   🔧 https://spenicle-api.dimasbaguspm.com/api/docs (API docs)"
+echo "   🌐 https://$MAIN_DOMAIN (Landing page)"
+echo "   📱 https://$APP_DOMAIN (Web app)"
+echo "   🔧 https://$API_DOMAIN/api/docs (API docs)"
 echo ""
 echo "📖 For more detailed instructions, see the main README.md"
 echo ""

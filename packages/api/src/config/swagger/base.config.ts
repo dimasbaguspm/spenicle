@@ -18,7 +18,7 @@ export const baseConfig: Options['definition'] = {
     {
       url:
         process.env.API_STAGE === 'production'
-          ? 'https://spenicle-api.dimasbaguspm.com/api'
+          ? `https://${process.env.DOMAIN_API_SUBDOMAIN ?? 'spenicle-api'}.${process.env.DOMAIN_BASE ?? 'example.com'}/api`
           : `http://localhost:${process.env.API_PORT ?? 3000}/api`,
       description: process.env.API_STAGE === 'production' ? 'Production server' : 'Development server',
     },

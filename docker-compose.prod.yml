@@ -69,7 +69,7 @@ services:
     image: nginx:1.25-alpine
     container_name: spenicle-staging-nginx
     volumes:
-      - ./nginx/nginx.staging.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/index.html:/etc/nginx/html/index.html:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     ports:

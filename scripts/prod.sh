@@ -5,8 +5,35 @@ set -e
 COMPOSE_FILE="docker-compose.prod.yml"
 ENV_FILE=".env.prod"
 
+# Function to print environment info
+print_env_info() {
+  echo "🚀 Spenicle Production Environment"
+  echo "📄 Compose file: $COMPOSE_FILE"
+  echo "🔧 Environment file: $ENV_FILE"
+  echo "🐳 Docker Compose command: docker compose -f $COMPOSE_FILE --env-file $ENV_FILE"
+  echo ""
+}
+
+# Print environment info immediately for all commands except help
+if [ "$1" != "" ] && [ "$1" != "--help" ] && [ "$1" != "-h" ]; then
+  print_env_info
+  
+  # Validate required files exist
+  if [ ! -f "$COMPOSE_FILE" ]; then
+    echo "❌ Error: Compose file '$COMPOSE_FILE' not found!"
+    exit 1
+  fi
+  
+  if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ Error: Environment file '$ENV_FILE' not found!"
+    exit 1
+  fi
+fi
+
 case "$1" in
   up)
+    # Generate nginx configuration from template with environment variables
+    ./scripts/generate-nginx-config.sh
     docker compose -f $COMPOSE_FILE --env-file $ENV_FILE up -d
     ;;
   down)
@@ -71,6 +98,8 @@ case "$1" in
     ;;
   *)
     echo "Usage: $0 {up|down|rebuild [service]|backup-db|restore-db|logs|restart [service]|clean-cache [service]}"
+    echo ""
+    print_env_info
     exit 1
     ;;
 esac
