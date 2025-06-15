@@ -47,10 +47,9 @@ services:
     container_name: spenicle-staging-web
     environment:
       NODE_ENV: production
-      WEB_SERVICE_BASE_URL: http://nginx/api
       WEB_PORT: 8080
       WEB_STAGE: staging
-      VITE_API_BASE_URL: http://nginx/api
+      VITE_API_BASE_URL: /api
     depends_on:
       - api
     restart: unless-stopped
@@ -60,7 +59,7 @@ services:
     container_name: spenicle-staging-nginx
     volumes:
       - ./nginx/nginx.staging.conf:/etc/nginx/nginx.conf:ro
-      - web_build:/usr/share/nginx/html:ro
+      - ./nginx/index.html:/etc/nginx/html/index.html:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     ports:
       - "80:80"
@@ -72,4 +71,3 @@ services:
 
 volumes:
   postgres_data:
-  web_build:
