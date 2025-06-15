@@ -50,6 +50,7 @@ services:
       WEB_PORT: 8080
       WEB_STAGE: production
       VITE_API_BASE_URL: https://spenicle-api.dimasbaguspm.com
+      WEB_SERVICE_BASE_URL: https://spenicle-api.dimasbaguspm.com
     depends_on:
       - api
     restart: unless-stopped
