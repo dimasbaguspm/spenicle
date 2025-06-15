@@ -28,10 +28,20 @@ echo "   - App subdomain: $DOMAIN_APP_SUBDOMAIN"
 echo "   - API subdomain: $DOMAIN_API_SUBDOMAIN"
 
 # Process template and generate nginx configuration
-sed -e "s/\${DOMAIN_BASE}/$DOMAIN_BASE/g" \
+if ! sed -e "s/\${DOMAIN_BASE}/$DOMAIN_BASE/g" \
     -e "s/\${DOMAIN_APP_SUBDOMAIN}/$DOMAIN_APP_SUBDOMAIN/g" \
     -e "s/\${DOMAIN_API_SUBDOMAIN}/$DOMAIN_API_SUBDOMAIN/g" \
-    nginx/nginx.prod.conf.template > nginx/nginx.prod.conf
+    nginx/nginx.prod.conf.template > nginx/nginx.prod.conf; then
+  echo "❌ Failed to process template!"
+  exit 1
+fi
+
+# Verify the generated file is valid
+if [ ! -s "nginx/nginx.prod.conf" ]; then
+  echo "❌ Generated nginx configuration is empty!"
+  exit 1
+fi
 
 echo "✅ Nginx configuration generated successfully!"
 echo "📁 Configuration saved to: nginx/nginx.prod.conf"
+echo "📊 File size: $(du -h nginx/nginx.prod.conf | cut -f1)"
