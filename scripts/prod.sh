@@ -60,11 +60,80 @@ case "$1" in
       docker compose -f $COMPOSE_FILE --env-file $ENV_FILE build --no-cache
     fi
     ;;
-  backup-db)
-    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T postgres pg_dump -U postgres spenicle > backup.sql
+  backup-now)
+    echo "🗄️ Creating immediate database backup..."
+    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T db-backup /scripts/backup-db-cron.sh
     ;;
-  restore-db)
-    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T postgres psql -U postgres spenicle < backup.sql
+  backup-status)
+    echo "📊 Backup service status:"
+    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE ps db-backup
+    echo ""
+    echo "📁 Available backups:"
+    if [ -d "backups" ]; then
+      ls -la backups/spenicle_backup_*.sql.gz 2>/dev/null || echo "  No automated backups found"
+    else
+      echo "  Backups directory not found"
+    fi
+    ;;
+  backup-logs)
+    echo "📋 Backup service logs:"
+    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs db-backup
+    ;;
+  restore-backup)
+    BACKUP_FILE=${2:-""}
+    if [ -z "$BACKUP_FILE" ]; then
+      echo "❌ Error: Please specify backup file"
+      echo "Usage: $0 restore-backup <backup-file>"
+      echo ""
+      echo "Available backups:"
+      ls -la backups/spenicle_backup_*.sql.gz 2>/dev/null || echo "  No automated backups found"
+      exit 1
+    fi
+    if [ ! -f "backups/$BACKUP_FILE" ]; then
+      echo "❌ Error: Backup file 'backups/$BACKUP_FILE' not found"
+      exit 1
+    fi
+    
+    # Source environment variables to get database credentials
+    if [ -f "$ENV_FILE" ]; then
+      set -a  # automatically export all variables
+      source "$ENV_FILE"
+      set +a
+    fi
+    
+    echo "⚠️  WARNING: This will completely replace the current database!"
+    echo "📂 Backup file: $BACKUP_FILE"
+    echo "🗄️  Target database: ${POSTGRES_DB:-spenicle}"
+    echo ""
+    read -p "Are you sure you want to continue? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo "❌ Restore cancelled"
+      exit 1
+    fi
+    
+    echo "🔄 Restoring database from backup: $BACKUP_FILE"
+    
+    # Step 1: Drop and recreate the database to ensure clean state
+    echo "  🗑️  Dropping existing database..."
+    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -c "DROP DATABASE IF EXISTS \"${POSTGRES_DB:-spenicle}\";"
+    
+    echo "  🆕 Creating fresh database..."
+    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -c "CREATE DATABASE \"${POSTGRES_DB:-spenicle}\";"
+    
+    # Step 2: Restore from backup
+    echo "  📥 Restoring data from backup..."
+    if gunzip -c "backups/$BACKUP_FILE" | docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T postgres psql -U "${POSTGRES_USER:-postgres}" "${POSTGRES_DB:-spenicle}" > /dev/null; then
+      echo "  ✅ Database restored successfully!"
+      echo ""
+      echo "📊 Restore summary:"
+      echo "  📂 Source: $BACKUP_FILE"
+      echo "  🗄️  Target: ${POSTGRES_DB:-spenicle}"
+      echo "  📅 Completed: $(date)"
+    else
+      echo "  ❌ Database restore failed!"
+      exit 1
+    fi
     ;;
   logs)
     docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs -f
@@ -192,19 +261,21 @@ case "$1" in
     echo "✅ Configuration generated successfully"
     ;;
   *)
-    echo "Usage: $0 {up|down|rebuild [service]|backup-db|restore-db|logs|restart [service]|clean-cache [service]|check|generate-config}"
+    echo "Usage: $0 {up|down|rebuild [service]|backup-now|backup-status|backup-logs|restore-backup <file>|logs|restart [service]|clean-cache [service]|check|generate-config}"
     echo ""
     echo "Commands:"
-    echo "  up                    - Start all services"
-    echo "  down                  - Stop all services"
-    echo "  rebuild [service]     - Rebuild and restart service(s)"
-    echo "  backup-db            - Create database backup"
-    echo "  restore-db           - Restore database from backup"
-    echo "  logs                 - Show service logs"
-    echo "  restart [service]    - Restart service(s)"
-    echo "  clean-cache [service] - Clean Docker cache and rebuild (without auto-start)"
-    echo "  check                - Run pre-deployment checks"
-    echo "  generate-config      - Generate nginx configuration"
+    echo "  up                      - Start all services"
+    echo "  down                    - Stop all services"
+    echo "  rebuild [service]       - Rebuild and restart service(s)"
+    echo "  backup-now             - Trigger immediate automated backup"
+    echo "  backup-status          - Show backup service status and available backups"
+    echo "  backup-logs            - Show backup service logs"
+    echo "  restore-backup <file>  - Restore database from automated backup"
+    echo "  logs                   - Show service logs"
+    echo "  restart [service]      - Restart service(s)"
+    echo "  clean-cache [service]  - Clean Docker cache and rebuild (without auto-start)"
+    echo "  check                  - Run pre-deployment checks"
+    echo "  generate-config        - Generate nginx configuration"
     echo ""
     print_env_info
     exit 1

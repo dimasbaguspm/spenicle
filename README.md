@@ -79,9 +79,11 @@ The project includes convenient scripts for managing the development environment
 # Clean cache and rebuild (useful for dependency updates)
 ./scripts/local.sh clean-cache
 
-# Database operations
-./scripts/local.sh backup-db    # Creates backup.sql
-./scripts/local.sh restore-db   # Restores from backup.sql
+# Database backup operations
+./scripts/local.sh backup-now                   # Create immediate backup
+./scripts/local.sh backup-status                # Check backup service and list backups
+./scripts/local.sh backup-logs                  # View backup service logs
+./scripts/local.sh restore-backup <backup-file> # Restore from automated backup
 ```
 
 ## 🏗️ What's Included
@@ -218,10 +220,50 @@ Use these scripts for managing the production environment:
 # Clean cache and rebuild
 ./scripts/prod.sh clean-cache
 
-# Database operations
-./scripts/prod.sh backup-db
-./scripts/prod.sh restore-db
+# Database operations (automated backup system)
+./scripts/prod.sh backup-now                   # Create immediate backup
+./scripts/prod.sh backup-status                # Check backup service and list backups
+./scripts/prod.sh backup-logs                  # View backup service logs
+./scripts/prod.sh restore-backup <backup-file> # Restore from automated backup
 ```
+
+## 📊 Database Backup System
+
+Spenicle includes an **automated backup system** that runs as a containerized service alongside your application, providing reliable database backups with minimal setup.
+
+### ⏰ **Backup Schedules**
+- **Production**: Daily at 2:00 AM (`BACKUP_INTERVAL_HOURS=24`)
+- **Development**: Every 6 hours (`BACKUP_INTERVAL_HOURS=6`)
+- **Retention**: 30 days (older backups automatically deleted)
+
+### ✨ **Features**
+- **Compressed Storage**: All backups are gzipped to save disk space
+- **Timestamped Files**: Format: `spenicle_backup_YYYYMMDD_HHMMSS.sql.gz`
+- **Automatic Cleanup**: Old backups removed after retention period
+- **Health Monitoring**: All operations logged for monitoring
+- **Zero Downtime**: Uses simple loop scheduling for better container reliability
+
+### 🔧 **Quick Commands**
+```bash
+# Create immediate backup
+./scripts/prod.sh backup-now
+
+# List all available backups
+./scripts/prod.sh backup-status
+
+# Restore from specific backup
+./scripts/prod.sh restore-backup spenicle_backup_20250615_020000.sql.gz
+
+# Monitor backup service
+./scripts/prod.sh backup-logs
+```
+
+### 🛠️ **Troubleshooting**
+- **Service not starting**: Check PostgreSQL health and environment variables
+- **No backup files**: Verify `backups/` directory exists and is writable
+- **Permission issues**: Ensure script is executable: `chmod +x scripts/backup-db-cron.sh`
+
+The backup system uses environment variables from your `.env` files and requires no additional configuration.
 
 ### 5. Access Your Application
 Your application will be available at URLs based on your domain configuration:

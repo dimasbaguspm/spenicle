@@ -18,6 +18,13 @@ x-web-env: &web-env
   WEB_STAGE: ${WEB_STAGE}
   VITE_API_BASE_URL: ${VITE_API_BASE_URL}
 
+x-db-backup-env: &db-backup-env
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB}
+  PGPASSWORD: ${POSTGRES_PASSWORD}
+  BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS}
+
 services:
   postgres:
     image: postgres:16
@@ -81,6 +88,29 @@ services:
     depends_on:
       - api
     command: yarn workspace @spenicle/web dev --host 0.0.0.0 --port ${WEB_PORT}
+    restart: unless-stopped
+
+  db-backup:
+    image: postgres:16
+    container_name: spenicle-dev-db-backup
+    environment:
+      <<: *db-backup-env
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup-db-cron.sh:/scripts/backup-db-cron.sh:ro
+    command: >
+      sh -c "
+        echo 'Database backup service starting with ${BACKUP_INTERVAL_HOURS}h interval...' &&
+        while true; do
+          echo '$(date): Running scheduled backup...' &&
+          cd /scripts && ./backup-db-cron.sh &&
+          echo '$(date): Backup completed. Sleeping for ${BACKUP_INTERVAL_HOURS} hours...' &&
+          sleep $((${BACKUP_INTERVAL_HOURS} * 3600))
+        done
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

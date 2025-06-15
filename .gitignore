@@ -62,5 +62,9 @@ coverage
 # Generated nginx configuration (created from template)
 nginx/nginx.prod.conf
 
+# Database backups
+backups/
+backup.sql
+
 .direnv
 node_modules
