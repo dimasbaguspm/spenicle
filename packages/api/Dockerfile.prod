@@ -25,7 +25,7 @@ COPY --from=builder /app/yarn.lock ./
 COPY --from=builder /app/.yarnrc.yml ./
 
 # Install production dependencies in the runner stage
-RUN yarn install --production
+RUN yarn install 
 
 EXPOSE 3000
 CMD ["node", "packages/api/dist/index.js"]
