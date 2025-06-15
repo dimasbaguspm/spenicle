@@ -11,7 +11,7 @@ A modern expense tracking and financial management application built with TypeSc
 - Docker and Docker Compose
 - Git
 
-### Running with Docker Compose
+### Setup Environment
 
 1. **Clone the repository:**
    ```bash
@@ -19,9 +19,24 @@ A modern expense tracking and financial management application built with TypeSc
    cd spenicle
    ```
 
-2. **Start all services:**
+2. **Set up environment variables:**
    ```bash
-   docker-compose up --build -d
+   # Copy the example environment file
+   cp .env.example .env.dev
+   
+   # Edit the development environment file
+   nano .env.dev
+   ```
+   
+   **Important**: Update the `API_JWT_SECRET` with a strong, unique secret key.
+
+3. **Start all services:**
+   ```bash
+   # Using the convenience script (recommended)
+   ./scripts/local up
+   
+   # Or directly with docker-compose
+   docker-compose -f docker-compose.dev.yml --env-file .env.dev up --build -d
    ```
 
 3. **Access the applications:**
@@ -31,8 +46,41 @@ A modern expense tracking and financial management application built with TypeSc
 
 4. **Stop the services:**
    ```bash
-   docker-compose down
+   # Using the convenience script
+   ./scripts/local down
+   
+   # Or directly with docker-compose
+   docker-compose -f docker-compose.dev.yml --env-file .env.dev down
    ```
+
+### Development Scripts
+
+The project includes convenient scripts for managing the development environment:
+
+```bash
+# Start all services
+./scripts/local up
+
+# Stop all services
+./scripts/local down
+
+# Rebuild a specific service (e.g., after code changes)
+./scripts/local rebuild api
+./scripts/local rebuild web
+
+# View logs
+./scripts/local logs
+
+# Restart services
+./scripts/local restart
+
+# Clean cache and rebuild (useful for dependency updates)
+./scripts/local clean-cache
+
+# Database operations
+./scripts/local backup-db    # Creates backup.sql
+./scripts/local restore-db   # Restores from backup.sql
+```
 
 ## 🏗️ What's Included
 
@@ -48,7 +96,20 @@ A modern expense tracking and financial management application built with TypeSc
 - Domain name with DNS configured
 - SSL certificates (see below)
 
-### 1. Prepare SSL Certificates
+### 1. Environment Setup
+
+```bash
+# Copy and configure production environment
+cp .env.example .env.prod
+nano .env.prod
+```
+
+**Important variables to update in `.env.prod`:**
+- `API_JWT_SECRET` - Use a strong, unique secret for production
+- `API_BASE_URL` - Update to your production API endpoint
+- Database credentials if different from defaults
+
+### 2. Prepare SSL Certificates
 
 Use the SSL certificate generator script:
 ```bash
@@ -70,9 +131,42 @@ Use the SSL certificate generator script:
 
 3. Follow the provided commands to set up certificates on your VPS
 
-### 2. Start Production Services
+### 3. Start Production Services
 ```bash
-docker-compose -f docker-compose.prod.yml up -d --build
+# Using the convenience script (recommended)
+./scripts/staging up
+
+# Or directly with docker-compose
+docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+### 4. Production Scripts
+
+Similar to development, but for staging/production environment:
+
+```bash
+# Start all production services
+./scripts/staging up
+
+# Stop all services
+./scripts/staging down
+
+# Rebuild services
+./scripts/staging rebuild api
+./scripts/staging rebuild web
+
+# View logs
+./scripts/staging logs
+
+# Restart services
+./scripts/staging restart
+
+# Clean cache and rebuild
+./scripts/staging clean-cache
+
+# Database operations
+./scripts/staging backup-db
+./scripts/staging restore-db
 ```
 
 ### 3. Access Your Application
@@ -86,27 +180,57 @@ docker-compose -f docker-compose.prod.yml up -d --build
 - Docker and Docker Compose
 - SSL certificates (self-signed for testing)
 
-### 1. Generate Self-Signed Certificates
+### 1. Environment Setup
+```bash
+# Copy and configure staging environment (can use same as prod)
+cp .env.example .env.prod
+nano .env.prod
+```
+
+### 2. Generate Self-Signed Certificates
 ```bash
 ./scripts/generate-ssl.sh
 ```
 Choose option 3 for self-signed certificates (testing only).
 
-### 2. Start Staging Services
+### 3. Start Staging Services
 ```bash
-docker-compose -f docker-compose.prod.yml up -d --build
+./scripts/staging up
 ```
 - Access via your VPS IP with HTTPS (will show security warnings for self-signed certs)
 
-### 3. Other Useful Commands
-- Stop services:
-  ```bash
-  docker-compose -f docker-compose.prod.yml down
-  ```
-- View logs:
-  ```bash
-  docker-compose -f docker-compose.prod.yml logs -f
-  ```
+## 🔧 Environment Configuration
+
+This project uses environment files to manage configuration across different environments:
+
+### Environment Files
+- **`.env.example`** - Template with all required variables
+- **`.env.dev`** - Development environment (not committed to git)
+- **`.env.prod`** - Production environment (not committed to git)
+
+### Key Environment Variables
+
+**API Configuration:**
+- `NODE_ENV` - Environment mode (development/production)
+- `API_PORT` - Port for the API server (default: 3000)
+- `API_JWT_SECRET` - Secret key for JWT tokens (⚠️ **Must be unique per environment**)
+- `API_BASE_URL` - Base URL for API calls
+
+**Database Configuration:**
+- `API_PGHOST` - PostgreSQL host (default: postgres)
+- `API_PGUSER` - PostgreSQL username (default: postgres)
+- `API_PGPASSWORD` - PostgreSQL password (default: postgres)
+- `API_PGDATABASE` - PostgreSQL database name (default: spenicle)
+- `API_DATABASE_URL` - Complete database connection string
+
+**Web Configuration:**
+- `WEB_PORT` - Port for the web server (default: 8080)
+- `API_BASE_URL` - Base URL for API calls
+
+### Security Notes
+- Never commit `.env.dev` or `.env.prod` files to version control
+- Use strong, unique secrets for each environment
+- Rotate secrets regularly in production
 
 ## 📄 License
 

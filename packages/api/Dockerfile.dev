@@ -1,6 +1,30 @@
 # Development Dockerfile for API (runs dev server, hot reload)
 FROM node:22-alpine
 
+# Accept build arguments for environment variables
+ARG NODE_ENV=development
+ARG API_PORT=3000
+ARG API_STAGE=development
+ARG API_PGHOST
+ARG API_PGUSER
+ARG API_PGPASSWORD
+ARG API_PGDATABASE
+ARG API_PGPORT
+ARG API_DATABASE_URL
+ARG API_JWT_SECRET
+
+# Set environment variables
+ENV NODE_ENV=${NODE_ENV}
+ENV API_PORT=${API_PORT}
+ENV API_STAGE=${API_STAGE}
+ENV API_PGHOST=${API_PGHOST}
+ENV API_PGUSER=${API_PGUSER}
+ENV API_PGPASSWORD=${API_PGPASSWORD}
+ENV API_PGDATABASE=${API_PGDATABASE}
+ENV API_PGPORT=${API_PGPORT}
+ENV API_DATABASE_URL=${API_DATABASE_URL}
+ENV API_JWT_SECRET=${API_JWT_SECRET}
+
 RUN corepack enable
 WORKDIR /app
 
@@ -8,5 +32,5 @@ COPY package.json yarn.lock ./
 COPY packages/api/package.json ./packages/api/
 RUN yarn install
 COPY packages/api ./packages/api/
-EXPOSE 3000
+EXPOSE ${API_PORT}
 CMD ["yarn", "workspace", "@spenicle/api", "dev"]

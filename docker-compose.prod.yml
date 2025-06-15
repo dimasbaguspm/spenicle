@@ -1,12 +1,31 @@
 
+# YAML anchors for environment variables
+x-api-env: &api-env
+  NODE_ENV: ${NODE_ENV}
+  API_PORT: ${API_PORT}
+  API_STAGE: ${API_STAGE}
+  API_PGHOST: ${API_PGHOST}
+  API_PGUSER: ${API_PGUSER}
+  API_PGPASSWORD: ${API_PGPASSWORD}
+  API_PGDATABASE: ${API_PGDATABASE}
+  API_PGPORT: ${API_PGPORT}
+  API_DATABASE_URL: ${API_DATABASE_URL}
+  API_JWT_SECRET: ${API_JWT_SECRET}
+
+x-web-env: &web-env
+  NODE_ENV: ${NODE_ENV}
+  WEB_PORT: ${WEB_PORT}
+  WEB_STAGE: ${WEB_STAGE}
+  API_BASE_URL: ${API_BASE_URL}
+
 services:
   postgres:
     image: postgres:16
     container_name: spenicle-staging-postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: spenicle
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -22,19 +41,12 @@ services:
     build:
       context: .
       dockerfile: packages/api/Dockerfile.prod
+      args:
+        <<: *api-env
     container_name: spenicle-staging-api
     environment:
-      NODE_ENV: production
-      API_PGDATA: /var/lib/postgresql/data
-      API_PGHOST: postgres
-      API_PGUSER: postgres
-      API_PGPASSWORD: postgres
-      API_PGDATABASE: spenicle
-      API_PGPORT: 5432
-      API_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/spenicle
-      API_JWT_SECRET: $API_JWT_SECRET
-      API_PORT: 3000
-      API_STAGE: production
+      <<: *api-env
+      API_PGDATA: ${API_PGDATA}  # Additional env var not in build args
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,12 +56,11 @@ services:
     build:
       context: .
       dockerfile: packages/web/Dockerfile.prod
+      args:
+        <<: *web-env
     container_name: spenicle-staging-web
     environment:
-      NODE_ENV: production
-      WEB_PORT: 8080
-      WEB_STAGE: production
-      API_BASE_URL: https://spenicle-api.dimasbaguspm.com/api
+      <<: *web-env
     depends_on:
       - api
     restart: unless-stopped
