@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useViewport } from '../../hooks';
 import { escapeManager } from '../../libs/escape-manager';
 import { cn } from '../../libs/utils';
 
@@ -38,6 +39,10 @@ export function Modal({
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(false);
+
+  // Simple mobile detection for positioning
+  const viewport = useViewport();
+  const isMobile = viewport.isMobile;
 
   const handleClose = () => {
     if (!onClose) return;
@@ -89,8 +94,9 @@ export function Modal({
     <ModalContext.Provider value={{ onClose }}>
       <div
         className={cn(
-          'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm',
-          'transition-all duration-200 ease-out',
+          'fixed inset-0 z-50 flex bg-black/50 backdrop-blur-sm transition-all duration-200 ease-out',
+          // Simple positioning: mobile = top, desktop = center
+          isMobile ? 'items-start justify-center pt-6 pb-4' : 'items-center justify-center p-4',
           isAnimatingOut ? 'opacity-0' : overlayVisible ? 'opacity-100' : 'opacity-0',
           overlayClassName
         )}
@@ -103,7 +109,8 @@ export function Modal({
             'relative bg-white rounded-lg shadow-lg transform-gpu flex flex-col w-full overflow-hidden',
             'transition-all duration-200 ease-out will-change-transform',
             sizeClasses[size],
-            'max-h-[90vh]',
+            // Simple height constraint: mobile gets more space for keyboard
+            isMobile ? 'max-h-[85vh]' : 'max-h-[90vh]',
             isAnimatingOut ? 'scale-95 opacity-0' : isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
             className
           )}

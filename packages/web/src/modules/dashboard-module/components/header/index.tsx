@@ -4,7 +4,7 @@ import { IconButton } from '../../../../components';
 
 export function Header() {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+    <div className="flex flex-row items-center justify-between gap-4 mb-6">
       {/* Left: Branding */}
       <div className="flex items-center gap-3">
         <div className="p-2 bg-coral-500 rounded-xl shadow-sm">
