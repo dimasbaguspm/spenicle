@@ -23,6 +23,7 @@ const rootElement = document.getElementById('app');
 if (rootElement && !rootElement.innerHTML) {
   console.log('Rendering React application...');
   console.log('env:', process.env);
+  console.log(import.meta.env);
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <App>
