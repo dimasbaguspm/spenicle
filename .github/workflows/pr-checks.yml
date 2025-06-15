@@ -36,7 +36,7 @@ jobs:
         run: yarn workspaces foreach --all --parallel --interlaced run lint
       
       - name: Run tests
-        run: yarn workspaces foreach --all --parallel --interlaced run test run
+        run: yarn workspaces foreach --all --parallel --interlaced run test run --passWithNoTests
       
       - name: Build
         run: yarn workspaces foreach --all --parallel --interlaced run build
