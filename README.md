@@ -14,7 +14,7 @@ A modern expense tracking and financial management application built with TypeSc
 
 1. **Clone and setup:**
    ```bash
-   git clone <repository-url>
+   git clone https://githun.com/dimasbaguspm/spenicle.git
    cd spenicle
    cp .env.example .env.dev
    ```
