@@ -17,5 +17,5 @@ export {
   type AccountSummaryHeaderProps,
   type AccountSummaryStatsProps,
   type AccountSummaryListProps,
-  type AccountSummaryAccount,
+  type AccountSummaryItem,
 } from './account-summary';

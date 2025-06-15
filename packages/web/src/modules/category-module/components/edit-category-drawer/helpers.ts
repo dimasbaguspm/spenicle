@@ -3,7 +3,6 @@ import type { Category } from '../../../../types/api';
 import type { EditCategoryFormData } from './types';
 
 export const getDefaultFormValues = (category: Category): Partial<EditCategoryFormData> => ({
-  groupId: category.groupId,
   name: category.name ?? '',
   note: category.note,
   parentId: category.parentId,
@@ -43,7 +42,6 @@ export const VALIDATION_RULES = {
  * Transforms form data to API format for category update
  */
 export const transformToCategoryData = (data: EditCategoryFormData) => ({
-  groupId: data.groupId,
   name: data.name,
   note: data.note,
   parentId: data.parentId,
@@ -54,10 +52,6 @@ export const transformToCategoryData = (data: EditCategoryFormData) => ({
  * Validates if the form data is ready for submission
  */
 export const validateFormData = (data: EditCategoryFormData): { isValid: boolean; error?: string } => {
-  if (!data.groupId) {
-    return { isValid: false, error: 'Group is required' };
-  }
-
   if (!data.name?.trim()) {
     return { isValid: false, error: 'Category name is required' };
   }

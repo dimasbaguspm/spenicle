@@ -10,10 +10,19 @@ import {
 } from '@tanstack/react-query';
 import axios from 'axios';
 
-import type { Error, PaginatedResponse } from '../../types/api';
+import type { Error } from '../../types/api';
 import { TokenManager } from '../use-session';
 
 import { BASE_URL } from './constants';
+
+// Define PaginatedResponse interface locally since it's not in the generated API types
+interface PaginatedResponse {
+  items?: unknown[];
+  pageNumber?: number;
+  pageSize?: number;
+  totalItems?: number;
+  totalPages?: number;
+}
 
 export interface UseApiInfiniteOptions<TData, Query, TError> {
   queryKey: unknown[];

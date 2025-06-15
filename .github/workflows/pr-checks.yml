@@ -1,12 +1,16 @@
-name: Pull Request Checks
+name: Health Checks
 
 on:
+  push:
+    branches:
+      - main
+
   pull_request:
     branches:
       - main
 
 jobs:
-  validate:
+  health-checks:
     name: Validate Code
     runs-on: ubuntu-latest
     
@@ -29,10 +33,10 @@ jobs:
         run: yarn check
       
       - name: Lint
-        run: yarn lint
+        run: yarn workspaces foreach -all --parallel --interlaced run lint
       
       - name: Run tests
-        run: yarn test
+        run: yarn workspaces foreach -all --parallel --interlaced run test
       
       - name: Build
-        run: yarn build
+        run: yarn workspaces foreach -all --parallel --interlaced run build

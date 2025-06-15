@@ -119,7 +119,7 @@ export const AccountAppearanceSelector = <T extends FieldValues>({
                               selectedColor={tempColor ?? colorField.value}
                               colorVariant={colorVariant}
                               onColorSelect={setTempColor}
-                              onVariantChange={handleVariantChange}
+                              onVariantChange={(variant) => handleVariantChange(variant, tempColor ?? colorField.value)}
                             />
 
                             {/* Preview */}

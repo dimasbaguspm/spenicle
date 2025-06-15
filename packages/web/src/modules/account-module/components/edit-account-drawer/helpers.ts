@@ -3,7 +3,6 @@ import type { UpdateAccount, UpdateAccountLimit, Account, AccountLimit } from '.
 import type { EditAccountFormData } from './types';
 
 export const getDefaultFormValues = (account: Account, accountLimit?: AccountLimit): Partial<EditAccountFormData> => ({
-  groupId: account.groupId,
   name: account.name ?? '',
   type: account.type ?? 'checking',
   note: account.note,
@@ -95,7 +94,6 @@ export const PERIOD_OPTIONS = [
  * Transforms form data to API format for account update
  */
 export const transformToAccountData = (data: EditAccountFormData): UpdateAccount => ({
-  groupId: data.groupId,
   name: data.name,
   type: data.type,
   note: data.note,
@@ -121,8 +119,7 @@ export const mapPeriodToApiFormat = (period: 'daily' | 'weekly' | 'monthly' | 'y
 /**
  * Transforms form data to API format for account limit update
  */
-export const transformToAccountLimitData = (data: EditAccountFormData, accountId: number): UpdateAccountLimit => ({
-  accountId,
+export const transformToAccountLimitData = (data: EditAccountFormData, _accountId: number): UpdateAccountLimit => ({
   period: mapPeriodToApiFormat(data.limitPeriod),
   limit: data.limitAmount,
 });
@@ -140,10 +137,6 @@ export const transformToNewAccountLimitData = (data: EditAccountFormData, accoun
  * Validates if the form data is ready for submission
  */
 export const validateFormData = (data: EditAccountFormData): { isValid: boolean; error?: string } => {
-  if (!data.groupId) {
-    return { isValid: false, error: 'Group is required' };
-  }
-
   if (!data.name?.trim()) {
     return { isValid: false, error: 'Account name is required' };
   }
