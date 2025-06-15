@@ -4,18 +4,28 @@ FROM node:22-alpine AS builder
 RUN corepack enable
 WORKDIR /app
 
-COPY package.json yarn.lock ./
+COPY package.json yarn.lock .yarnrc.yml ./
 COPY packages/api/package.json ./packages/api/
-RUN yarn install
+RUN yarn install --frozen-lockfile
 COPY packages/api ./packages/api/
 WORKDIR /app/packages/api
 RUN yarn build
 
 FROM node:22-alpine AS runner
+RUN corepack enable
 WORKDIR /app
 
+# Copy the built application
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
 COPY --from=builder /app/packages/api/package.json ./packages/api/
+
+# Copy root package.json and yarn files for workspace support
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/yarn.lock ./
+COPY --from=builder /app/.yarnrc.yml ./
+
+# Install production dependencies in the runner stage
+RUN yarn install --production --frozen-lockfile
 
 EXPOSE 3000
 CMD ["node", "packages/api/dist/index.js"]

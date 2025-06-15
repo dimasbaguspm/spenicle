@@ -11,6 +11,14 @@ case "$1" in
   down)
     docker compose -f $COMPOSE_FILE down
     ;;
+  rebuild)
+    SERVICE=${2:-""}
+    if [ -n "$SERVICE" ]; then
+      docker compose -f $COMPOSE_FILE build --no-cache $SERVICE
+    else
+      docker compose -f $COMPOSE_FILE build --no-cache
+    fi
+    ;;
   backup-db)
     docker compose -f $COMPOSE_FILE exec -T postgres pg_dump -U postgres spenicle > backup.sql
     ;;
@@ -21,7 +29,7 @@ case "$1" in
     docker compose -f $COMPOSE_FILE logs -f
     ;;
   *)
-    echo "Usage: $0 {up|down|backup-db|restore-db|logs}"
+    echo "Usage: $0 {up|down|rebuild [service]|backup-db|restore-db|logs}"
     exit 1
     ;;
 esac
