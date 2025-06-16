@@ -136,7 +136,14 @@ case "$1" in
     fi
     ;;
   logs)
-    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs -f
+    SERVICE=${2:-""}
+    if [ -n "$SERVICE" ]; then
+      echo "📋 Showing logs for service: $SERVICE"
+      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs -f $SERVICE
+    else
+      echo "📋 Showing logs for all services"
+      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs -f
+    fi
     ;;
   restart)
     SERVICE=${2:-""}
@@ -161,16 +168,26 @@ case "$1" in
         echo "  ℹ️  Service $SERVICE is not running"
       fi
       
-      # Remove the container
+      # Remove the container completely
       echo "  🗑️  Removing container for: $SERVICE"
-      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE rm -f $SERVICE
+      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE rm -f -v $SERVICE
       
-      # Remove the image
+      # Get and remove the image
       IMAGE_NAME=$(docker compose -f $COMPOSE_FILE --env-file $ENV_FILE config | grep -A5 "$SERVICE:" | grep "image:" | awk '{print $2}')
       if [ -n "$IMAGE_NAME" ]; then
         echo "  🗑️  Removing image: $IMAGE_NAME"
         docker rmi -f $IMAGE_NAME 2>/dev/null || echo "  ⚠️  Image $IMAGE_NAME not found or already removed"
       fi
+      
+      # Remove associated volumes if it's postgres service
+      if [ "$SERVICE" = "postgres" ]; then
+        echo "  🗄️  Removing postgres volume..."
+        docker volume rm -f "$(basename "$(pwd)")_postgres_data" 2>/dev/null || echo "  ⚠️  Postgres volume not found or already removed"
+      fi
+      
+      # Remove orphaned containers
+      echo "  🧹 Removing orphaned containers..."
+      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE down --remove-orphans
       
       # Rebuild the service (without starting)
       echo "  🔨 Rebuilding service: $SERVICE"
@@ -178,20 +195,50 @@ case "$1" in
       echo "  ✅ Cache cleaned and service rebuilt for: $SERVICE"
       echo "  💡 Run './scripts/prod.sh up' to start all services"
     else
+      echo "⚠️  WARNING: This will completely remove ALL containers, images, and volumes!"
+      echo "🗄️  This includes the postgres database volume - all data will be lost!"
+      echo ""
+      read -p "Are you sure you want to continue? (y/N): " -n 1 -r
+      echo
+      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "❌ Clean cache cancelled"
+        exit 1
+      fi
+      
       echo "Cleaning cache for all services"
       
-      # Stop all services
-      echo "  🛑 Stopping all services..."
-      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE down
+      # Stop all services and remove volumes
+      echo "  🛑 Stopping all services and removing volumes..."
+      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE down --volumes --remove-orphans
       
-      # Remove all containers and images
-      echo "  🗑️  Removing containers..."
-      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE rm -f
+      # Remove all containers forcefully
+      echo "  🗑️  Removing all containers..."
+      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE rm -f -v
+      
+      # Get all images from the compose file and remove them
+      echo "  🗑️  Removing all compose images..."
+      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE config --images | while read -r image; do
+        if [ -n "$image" ]; then
+          echo "    🗑️  Removing image: $image"
+          docker rmi -f "$image" 2>/dev/null || echo "    ⚠️  Image $image not found or already removed"
+        fi
+      done
+      
+      # Remove project-specific volumes
+      echo "  🗄️  Removing project volumes..."
+      PROJECT_NAME=$(basename "$(pwd)")
+      docker volume ls -q --filter "name=${PROJECT_NAME}_" | while read -r volume; do
+        if [ -n "$volume" ]; then
+          echo "    🗑️  Removing volume: $volume"
+          docker volume rm -f "$volume" 2>/dev/null || echo "    ⚠️  Volume $volume not found or already removed"
+        fi
+      done
       
       # Remove dangling images and build cache
-      echo "  🗑️  Removing dangling images and build cache..."
+      echo "  🧹 Removing dangling images and build cache..."
       docker image prune -f
       docker builder prune -f
+      docker volume prune -f
       
       # Rebuild all services (without starting)
       echo "  🔨 Rebuilding all services..."
@@ -261,7 +308,7 @@ case "$1" in
     echo "✅ Configuration generated successfully"
     ;;
   *)
-    echo "Usage: $0 {up|down|rebuild [service]|backup-now|backup-status|backup-logs|restore-backup <file>|logs|restart [service]|clean-cache [service]|check|generate-config}"
+    echo "Usage: $0 {up|down|rebuild [service]|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|clean-cache [service]|check|generate-config}"
     echo ""
     echo "Commands:"
     echo "  up                      - Start all services"
@@ -271,9 +318,9 @@ case "$1" in
     echo "  backup-status          - Show backup service status and available backups"
     echo "  backup-logs            - Show backup service logs"
     echo "  restore-backup <file>  - Restore database from automated backup"
-    echo "  logs                   - Show service logs"
+    echo "  logs [service]         - Show service logs (all services if no service specified)"
     echo "  restart [service]      - Restart service(s)"
-    echo "  clean-cache [service]  - Clean Docker cache and rebuild (without auto-start)"
+    echo "  clean-cache [service]  - Clean Docker cache, remove containers/images/volumes and rebuild"
     echo "  check                  - Run pre-deployment checks"
     echo "  generate-config        - Generate nginx configuration"
     echo ""
