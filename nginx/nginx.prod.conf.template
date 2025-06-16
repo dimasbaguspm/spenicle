@@ -26,6 +26,14 @@ http {
     sendfile        on;
     keepalive_timeout  65;
 
+    # Rate limiting zones for DDoS protection
+    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=web:10m rate=20r/s;
+    limit_req_zone $binary_remote_addr zone=general:10m rate=5r/s;
+    
+    # Connection limiting
+    limit_conn_zone $binary_remote_addr zone=addr:10m;
+
     server {
         listen 80;
         server_name _;
@@ -41,6 +49,10 @@ http {
         ssl_certificate_key /etc/nginx/ssl/privkey.pem;
         ssl_protocols       TLSv1.2 TLSv1.3;
         ssl_ciphers         HIGH:!aNULL:!MD5;
+
+        # Rate limiting and connection limits
+        limit_req zone=api burst=20 nodelay;
+        limit_conn addr 10;
 
         # Proxy all requests to API service
         location / {
@@ -61,6 +73,10 @@ http {
         ssl_certificate_key /etc/nginx/ssl/privkey.pem;
         ssl_protocols       TLSv1.2 TLSv1.3;
         ssl_ciphers         HIGH:!aNULL:!MD5;
+
+        # Rate limiting and connection limits
+        limit_req zone=web burst=40 nodelay;
+        limit_conn addr 15;
 
         # Proxy all requests to web service
         location / {

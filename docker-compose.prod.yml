@@ -44,6 +44,14 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+          cpus: "0.4"
+        reservations:
+          memory: 200M
+          cpus: "0.2"
 
   api:
     build:
@@ -59,6 +67,14 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 330M
+          cpus: "0.35"
+        reservations:
+          memory: 200M
+          cpus: "0.18"
 
   web:
     build:
@@ -72,6 +88,14 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 120M
+          cpus: "0.15"
+        reservations:
+          memory: 60M
+          cpus: "0.08"
 
   nginx:
     image: nginx:1.25-alpine
@@ -86,6 +110,14 @@ services:
       - web
       - api
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 50M
+          cpus: "0.1"
+        reservations:
+          memory: 25M
+          cpus: "0.05"
 
   db-backup:
     image: postgres:16
@@ -109,6 +141,14 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+          cpus: "0.1"
+        reservations:
+          memory: 50M
+          cpus: "0.05"
 
 volumes:
   postgres_data:
