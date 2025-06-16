@@ -33,22 +33,6 @@ You are an experienced UX/UI designer with **15 years of design leadership** at 
 - **Warning**: `#e08a47` (coral-harmonized amber)
 - **Danger**: `#e06650` (coral-family red)
 
-#### Button Variant Standards
-```tsx
-// Primary hierarchy
-<Button variant="coral">Primary Action</Button>
-<Button variant="sage">Secondary Action</Button>
-<Button variant="mist">Tertiary Action</Button>
-<Button variant="slate">Ghost Action</Button>
-
-// Semantic actions
-<Button variant="success">Success Action</Button>
-<Button variant="warning">Warning Action</Button>
-<Button variant="danger">Danger Action</Button>
-
-// Outline variants available for all
-<Button variant="coral-outline">Primary Outline</Button>
-```
 
 ### 3. **Visual Harmony & Connection** 🔗
 - **Maintain consistent spacing** using a systematic scale (4px, 8px, 16px, 24px, 32px, 48px)
