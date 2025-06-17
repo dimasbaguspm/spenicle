@@ -16,12 +16,17 @@ ENV API_BASE_URL=${API_BASE_URL}
 RUN corepack enable
 WORKDIR /app
 
+# Copy workspace configuration
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY packages/web/package.json ./packages/web/
-RUN yarn
+
+# Copy all package.json files to respect workspace structure
+COPY packages/web/package.json ./packages/web/package.json
+
+# Install all dependencies from root (this installs workspace dependencies correctly)
+RUN yarn install
 
 # Copy source code for dev (will be overridden by volume mount in compose)
 COPY packages/web ./packages/web/
 
 EXPOSE ${WEB_PORT}
-CMD ["yarn workspace @spenicle/web dev --host 0.0.0.0 --port ${WEB_PORT}"]
+CMD ["sh", "-c", "yarn workspace @spenicle/web dev --host 0.0.0.0 --port $WEB_PORT"]

@@ -61,8 +61,6 @@ services:
       - ./package.json:/app/package.json
       - ./yarn.lock:/app/yarn.lock
       - ./.yarnrc.yml:/app/.yarnrc.yml
-      - api_node_modules:/app/packages/api/node_modules
-      - root_node_modules:/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,11 +83,9 @@ services:
       - ./package.json:/app/package.json
       - ./yarn.lock:/app/yarn.lock
       - ./.yarnrc.yml:/app/.yarnrc.yml
-      - web_node_modules:/app/packages/web/node_modules
-      - root_node_modules:/app/node_modules
     depends_on:
       - api
-    command: ["yarn", "workspace", "@spenicle/web", "dev" , "--host 0.0.0.0 --port ${WEB_PORT}"]
+    command: ["sh", "-c", "yarn workspace @spenicle/web dev --host 0.0.0.0 --port $$WEB_PORT"]
     restart: unless-stopped
 
   db-backup:
@@ -117,6 +113,3 @@ services:
 
 volumes:
   postgres_data:
-  api_node_modules:
-  web_node_modules:
-  root_node_modules:
