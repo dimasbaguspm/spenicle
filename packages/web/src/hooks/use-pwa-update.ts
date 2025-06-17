@@ -64,11 +64,6 @@ export const usePwaUpdate = (): UpdateInfo => {
     }
   }, [updateServiceWorker, setIsUpdateAvailable, setIsUpdateReady]);
 
-  // cleanup function to reset update availability
-  const dismissUpdate = useCallback(() => {
-    setIsUpdateAvailable(false);
-    setUpdateError(null);
-  }, [setIsUpdateAvailable]);
 
   // check for updates when component mounts
   useEffect(() => {
