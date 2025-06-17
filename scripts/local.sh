@@ -45,6 +45,10 @@ case "$1" in
       docker compose -f $COMPOSE_FILE --env-file $ENV_FILE build --no-cache
     fi
     ;;
+  seed)
+    echo "🌱 Seeding development database..."
+    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec api yarn db:seed
+    ;;
   backup-now)
     echo "🗄️ Creating immediate database backup..."
     docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T db-backup /scripts/backup-db-cron.sh
@@ -282,12 +286,13 @@ case "$1" in
     echo "  2. Or running services individually without Docker Compose"
     ;;
   *)
-    echo "Usage: $0 {up|down|rebuild [service]|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|clean-cache [service]|check|generate-config}"
+    echo "Usage: $0 {up|down|rebuild [service]|seed|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|clean-cache [service]|check|generate-config}"
     echo ""
     echo "Commands:"
     echo "  up                      - Start all services"
     echo "  down                    - Stop all services"
     echo "  rebuild [service]       - Rebuild and restart service(s)"
+    echo "  seed                    - Seed development database with fake data"
     echo "  backup-now             - Trigger immediate automated backup"
     echo "  backup-status          - Show backup service status and available backups"
     echo "  backup-logs            - Show backup service logs"
