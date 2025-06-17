@@ -15,6 +15,7 @@
 
 import { faker } from '@faker-js/faker';
 import bcrypt from 'bcrypt';
+import dayjs from 'dayjs';
 
 import { db, pool } from '../src/core/db/config.ts';
 import {
@@ -44,25 +45,25 @@ type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
 type LimitPeriod = 'week' | 'month';
 type PreferencePeriod = 'weekly' | 'monthly' | 'annually';
 
-// seeding configuration with enhanced type safety
+// seeding configuration with enhanced type safety - single user setup
 const SEED_CONFIG = {
-  groups: 3,
-  usersPerGroup: 5,
-  accountsPerGroup: 8,
-  categoriesPerGroup: 15,
-  transactionsPerAccount: 50,
-  accountLimitsPerAccount: 0.7, // 70% chance of having limits
-  recurrences: 10,
+  groups: 1,
+  usersPerGroup: 1,
+  accountsPerGroup: 4, // more accounts for realistic data
+  categoriesPerGroup: 15, // more categories for variety
+  transactionsPerAccount: 350, // ~1400 total transactions (4 accounts × 350)
+  accountLimitsPerAccount: 0.5, // 50% chance of having limits
+  recurrences: 5, // moderate recurrences
   batchSize: 1000, // for bulk operations
-  defaultPassword: 'password123',
+  defaultPassword: 'dev123!@#',
   bcryptRounds: 12,
 } as const satisfies Record<string, number | string>;
 
-// realistic data generation configurations - indonesian context
+// realistic data generation configurations - indonesian context with varied amounts
 const AMOUNT_RANGES = {
-  expense: { min: 10_000, max: 2_500_000, fractionDigits: 0 }, // rp 10k - 2.5m
-  income: { min: 500_000, max: 25_000_000, fractionDigits: 0 }, // rp 500k - 25m
-  transfer: { min: 100_000, max: 10_000_000, fractionDigits: 0 }, // rp 100k - 10m
+  expense: { min: 5_000, max: 5_000_000, fractionDigits: 0 }, // rp 5k - 5m (wider range)
+  income: { min: 1_000_000, max: 50_000_000, fractionDigits: 0 }, // rp 1m - 50m (higher range)
+  transfer: { min: 50_000, max: 20_000_000, fractionDigits: 0 }, // rp 50k - 20m (wider range)
 } as const satisfies Record<TransactionType, { min: number; max: number; fractionDigits: number }>;
 
 const CURRENCIES = ['IDR', 'USD', 'EUR', 'SGD', 'MYR'] as const satisfies readonly Currency[];
@@ -198,28 +199,47 @@ const generateRealisticAmount = (type: TransactionType): number => {
   return faker.number.float(range);
 };
 
-const generateDateInRange = (options: { daysBack?: number } = {}): string => {
-  const { daysBack = 90 } = options;
-  const date = faker.date.recent({ days: daysBack });
+const generateDateInRange = (options: { daysBack?: number; maxDaysBack?: number } = {}): string => {
+  const { maxDaysBack = 365 } = options; // up to 1 year back
+  
+  // weighted date generation - 70% in last 3 months, 30% in the rest of the year
+  const isRecentTransaction = faker.datatype.boolean(0.7);
+  
+  let randomDaysBack: number;
+  if (isRecentTransaction) {
+    // last 3 months (90 days) - 70% of transactions
+    randomDaysBack = faker.number.int({ min: 1, max: 90 });
+  } else {
+    // 3 months to 1 year ago - 30% of transactions
+    randomDaysBack = faker.number.int({ min: 91, max: maxDaysBack });
+  }
+  
+  const date = dayjs().subtract(randomDaysBack, 'day').toDate();
   return date.toISOString();
 };
+
+// single user generation with fixed random email
+let GENERATED_EMAIL = '';
 
 // type-safe data generators with indonesian locale
 const generateUserData = (groupId: number) => ({
   generateUser: async (): Promise<NewUser> => {
-    // generate indonesian names
-    const firstName = faker.person.firstName();
-    const lastName = faker.person.lastName();
-    const email = faker.internet.email({ firstName, lastName }).toLowerCase();
+    // generate single random email for development
+    if (!GENERATED_EMAIL) {
+      const firstName = faker.person.firstName();
+      const lastName = faker.person.lastName();
+      GENERATED_EMAIL = faker.internet.email({ firstName, lastName }).toLowerCase();
+    }
+    
     const passwordHash = await bcrypt.hash(SEED_CONFIG.defaultPassword, SEED_CONFIG.bcryptRounds);
 
     return {
       groupId,
-      email,
+      email: GENERATED_EMAIL,
       passwordHash,
-      name: `${firstName} ${lastName}`,
-      isActive: faker.datatype.boolean(0.9), // 90% active users
-      isOnboard: faker.datatype.boolean(0.8), // 80% onboarded users
+      name: faker.person.fullName(),
+      isActive: true, // always active for single user
+      isOnboard: true, // always onboarded for single user
     } satisfies NewUser;
   },
 });
@@ -277,14 +297,32 @@ const generateTransactionData = (params: {
   recurrenceId?: number;
 }) => ({
   generateTransaction: (): NewTransaction => {
-    const transactionType = faker.helpers.arrayElement(['expense', 'income', 'transfer'] as const);
+    // realistic transaction type distribution - more expenses than income/transfers
+    const transactionTypeWeights = [
+      { type: 'expense' as const, weight: 0.75 }, // 75% expenses
+      { type: 'income' as const, weight: 0.15 },  // 15% income
+      { type: 'transfer' as const, weight: 0.10 }, // 10% transfers
+    ];
+    
+    const randomWeight = Math.random();
+    let cumulativeWeight = 0;
+    let transactionType: TransactionType = 'expense';
+    
+    for (const { type, weight } of transactionTypeWeights) {
+      cumulativeWeight += weight;
+      if (randomWeight <= cumulativeWeight) {
+        transactionType = type;
+        break;
+      }
+    }
+    
     const amount = generateRealisticAmount(transactionType);
     // primarily use IDR, with occasional other currencies
-    const currency = faker.datatype.boolean(0.85) ? 'IDR' : faker.helpers.arrayElement(CURRENCIES);
+    const currency = faker.datatype.boolean(0.90) ? 'IDR' : faker.helpers.arrayElement(CURRENCIES);
 
     // get appropriate indonesian note for transaction type
     const noteOptions = INDONESIAN_TRANSACTION_NOTES[transactionType];
-    const indonesianNote = faker.datatype.boolean(0.6) ? faker.helpers.arrayElement(noteOptions) : null;
+    const indonesianNote = faker.datatype.boolean(0.7) ? faker.helpers.arrayElement(noteOptions) : null;
 
     return {
       groupId: params.groupId,
@@ -294,9 +332,9 @@ const generateTransactionData = (params: {
       amount,
       currency,
       type: transactionType,
-      date: generateDateInRange({ daysBack: 90 }),
+      date: generateDateInRange({ maxDaysBack: 365 }), // weighted distribution over 1 year
       note: indonesianNote,
-      isHighlighted: faker.datatype.boolean(0.1),
+      isHighlighted: faker.datatype.boolean(0.05), // fewer highlighted transactions
       recurrenceId: params.recurrenceId ?? null,
     } satisfies NewTransaction;
   },
@@ -306,8 +344,16 @@ const generateRecurrenceData = () => ({
   generateRecurrence: (): NewRecurrence => {
     const frequency = faker.helpers.arrayElement(RECURRENCE_FREQUENCIES);
     const interval = faker.number.int({ min: 1, max: 3 });
-    const nextOccurrenceDate = faker.date.future().toISOString();
-    const endDate = faker.datatype.boolean(0.3) ? faker.date.future({ years: 2 }).toISOString() : null;
+    
+    // next occurrence should be in the near future (within next 30 days)
+    const nextOccurrenceDate = dayjs()
+      .add(faker.number.int({ min: 1, max: 30 }), 'day')
+      .toISOString();
+    
+    // end date should be reasonable (within next 1-2 years)
+    const endDate = faker.datatype.boolean(0.3) 
+      ? dayjs().add(faker.number.int({ min: 365, max: 730 }), 'day').toISOString() 
+      : null;
 
     return {
       frequency,
@@ -578,7 +624,11 @@ const runSeeder = async (): Promise<void> => {
 
     console.log('🎉 database seeding completed successfully!');
     console.log('📊 seeding summary:', summary);
-    console.log('🔑 default password for all users:', SEED_CONFIG.defaultPassword);
+    console.log('');
+    console.log('🔐 DEVELOPMENT CREDENTIALS:');
+    console.log('📧 Email:', GENERATED_EMAIL);
+    console.log('🔑 Password:', SEED_CONFIG.defaultPassword);
+    console.log('');
     console.log('💰 primary currency: IDR (Indonesian Rupiah)');
     console.log('🌏 localization: Indonesian context with local banks and transaction patterns');
   } catch (error) {

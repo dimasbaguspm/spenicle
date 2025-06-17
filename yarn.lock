@@ -1493,6 +1493,7 @@ __metadata:
     "@typescript-eslint/parser": "npm:8.32.1"
     bcrypt: "npm:6.0.0"
     cors: "npm:2.8.5"
+    dayjs: "npm:1.11.13"
     dotenv: "npm:16.5.0"
     drizzle-kit: "npm:0.31.1"
     drizzle-orm: "npm:0.43.1"
