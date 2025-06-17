@@ -55,7 +55,7 @@ const SEED_CONFIG = {
   accountLimitsPerAccount: 0.5, // 50% chance of having limits
   recurrences: 5, // moderate recurrences
   batchSize: 1000, // for bulk operations
-  defaultPassword: 'dev123!@#',
+  defaultPassword: 'test12345',
   bcryptRounds: 12,
 } as const satisfies Record<string, number | string>;
 
@@ -70,45 +70,124 @@ const CURRENCIES = ['IDR', 'USD', 'EUR', 'SGD', 'MYR'] as const satisfies readon
 
 const ACCOUNT_TYPES = ['checking', 'savings', 'credit', 'investment', 'cash'] as const satisfies readonly AccountType[];
 
-// indonesian expense categories
-const EXPENSE_CATEGORIES = [
-  'belanja harian', // daily shopping
-  'transportasi',
-  'hiburan',
-  'listrik & air', // utilities
-  'kesehatan',
-  'pakaian',
-  'pendidikan',
-  'makan di luar',
-  'langganan digital', // digital subscriptions
-  'perawatan rumah',
-  'asuransi',
-  'perawatan diri',
-  'olahraga',
-  'teknologi',
-  'liburan',
-  'bensin', // fuel
-  'pulsa & internet',
-  'ojek online', // ride-hailing
-  'warung makan', // local food stalls
-  'kopi', // coffee
-] as const satisfies readonly string[];
+// enhanced account structure with type-specific visual metadata
+const ACCOUNT_TYPE_CONFIG = {
+  checking: {
+    icons: ['credit-card', 'wallet', 'building', 'landmark'],
+    colors: ['info', 'info-outline', 'mist', 'slate'],
+    description: 'rekening giro untuk transaksi harian'
+  },
+  savings: {
+    icons: ['piggy-bank', 'hand-coins', 'vault', 'shield'],
+    colors: ['success', 'success-outline', 'sage', 'sage-outline'],
+    description: 'rekening tabungan untuk menyimpan dana'
+  },
+  credit: {
+    icons: ['credit-card', 'zap', 'smartphone', 'target'],
+    colors: ['warning', 'warning-outline', 'coral', 'coral-outline'],
+    description: 'kartu kredit untuk pembayaran kredit'
+  },
+  investment: {
+    icons: ['trending-up', 'circle-dollar-sign', 'coins', 'calculator'],
+    colors: ['info', 'mist', 'success', 'sage'],
+    description: 'akun investasi untuk portfolio keuangan'
+  },
+  cash: {
+    icons: ['banknote', 'wallet', 'coins', 'hand-coins'],
+    colors: ['slate', 'coral', 'warning', 'danger'],
+    description: 'uang tunai fisik'
+  }
+} as const satisfies Record<AccountType, {
+  icons: readonly string[];
+  colors: readonly string[];
+  description: string;
+}>;
 
-// indonesian income categories
+
+// enhanced category structure with parent-child relationships and visual metadata
+const CATEGORY_STRUCTURE = {
+  // parent categories with their children
+  parents: {
+    'belanja & konsumsi': {
+      icon: 'shopping-cart',
+      color: 'coral',
+      children: [
+        { name: 'belanja harian', icon: 'shopping-cart', color: 'coral-outline' },
+        { name: 'warung makan', icon: 'utensils', color: 'coral-outline' },
+        { name: 'kopi', icon: 'coffee', color: 'coral-outline' },
+        { name: 'makan di luar', icon: 'utensils', color: 'coral-outline' }
+      ]
+    },
+    'transportasi': {
+      icon: 'car',
+      color: 'info',
+      children: [
+        { name: 'bensin', icon: 'car', color: 'info-outline' },
+        { name: 'ojek online', icon: 'smartphone', color: 'info-outline' },
+        { name: 'parkir', icon: 'car', color: 'info-outline' }
+      ]
+    },
+    'rumah & utilitas': {
+      icon: 'home',
+      color: 'sage',
+      children: [
+        { name: 'listrik & air', icon: 'home', color: 'sage-outline' },
+        { name: 'perawatan rumah', icon: 'wrench', color: 'sage-outline' },
+        { name: 'sewa rumah', icon: 'home', color: 'sage-outline' }
+      ]
+    },
+    'kesehatan & olahraga': {
+      icon: 'heart',
+      color: 'success',
+      children: [
+        { name: 'kesehatan', icon: 'heart', color: 'success-outline' },
+        { name: 'olahraga', icon: 'dumbbell', color: 'success-outline' },
+        { name: 'perawatan diri', icon: 'heart', color: 'success-outline' }
+      ]
+    },
+    'teknologi & digital': {
+      icon: 'smartphone',
+      color: 'mist',
+      children: [
+        { name: 'teknologi', icon: 'smartphone', color: 'mist-outline' },
+        { name: 'pulsa & internet', icon: 'smartphone', color: 'mist-outline' },
+        { name: 'langganan digital', icon: 'smartphone', color: 'mist-outline' }
+      ]
+    },
+    'hiburan & liburan': {
+      icon: 'gamepad-2',
+      color: 'warning',
+      children: [
+        { name: 'hiburan', icon: 'gamepad-2', color: 'warning-outline' },
+        { name: 'liburan', icon: 'plane', color: 'warning-outline' },
+        { name: 'film & musik', icon: 'film', color: 'warning-outline' }
+      ]
+    }
+  },
+  // standalone expense categories
+  standalone: [
+    { name: 'pakaian', icon: 'shirt', color: 'slate' },
+    { name: 'pendidikan', icon: 'graduation-cap', color: 'info' },
+    { name: 'asuransi', icon: 'piggy-bank', color: 'danger' },
+    { name: 'hadiah', icon: 'gift', color: 'coral' }
+  ]
+} as const;
+
+// income categories with visual metadata
 const INCOME_CATEGORIES = [
-  'gaji pokok', // base salary
-  'freelance',
-  'investasi',
-  'bonus',
-  'usaha sampingan', // side business
-  'sewa properti',
-  'hadiah',
-  'dividen',
-  'royalti',
-  'komisi',
-  'tunjangan', // allowance
-  'bisnis online',
-] as const satisfies readonly string[];
+  { name: 'gaji pokok', icon: 'briefcase', color: 'success' },
+  { name: 'freelance', icon: 'briefcase', color: 'success-outline' },
+  { name: 'investasi', icon: 'dollar-sign', color: 'info' },
+  { name: 'bonus', icon: 'gift', color: 'warning' },
+  { name: 'usaha sampingan', icon: 'briefcase', color: 'sage' },
+  { name: 'sewa properti', icon: 'home', color: 'mist' },
+  { name: 'hadiah', icon: 'gift', color: 'coral' },
+  { name: 'dividen', icon: 'dollar-sign', color: 'info-outline' },
+  { name: 'royalti', icon: 'dollar-sign', color: 'sage-outline' },
+  { name: 'komisi', icon: 'dollar-sign', color: 'warning-outline' },
+  { name: 'tunjangan', icon: 'briefcase', color: 'success-outline' },
+  { name: 'bisnis online', icon: 'smartphone', color: 'mist-outline' }
+] as const satisfies readonly { name: string; icon: string; color: string }[];
 
 const RECURRENCE_FREQUENCIES = [
   'daily',
@@ -249,43 +328,105 @@ const generateAccountData = (groupId: number) => ({
     const accountType = faker.helpers.arrayElement(ACCOUNT_TYPES);
     const bankName = faker.helpers.arrayElement(INDONESIAN_BANK_NAMES);
     const city = faker.helpers.arrayElement(INDONESIAN_CITIES);
+    
+    // get type-specific configuration
+    const typeConfig = ACCOUNT_TYPE_CONFIG[accountType];
+    
+    // select appropriate icon and color for the account type
+    const selectedIcon = faker.helpers.arrayElement(typeConfig.icons);
+    const selectedColor = faker.helpers.arrayElement(typeConfig.colors);
+    
+    // generate indonesian-context account name
+    const accountName = generateIndonesianAccountName(accountType, bankName, city);
 
     return {
       groupId,
-      name: `${accountType} - ${bankName} ${city}`,
+      name: accountName,
       type: accountType,
-      note: faker.datatype.boolean(0.3) ? `Rekening di ${bankName} cabang ${city}` : null,
-      metadata: faker.datatype.boolean(0.2) ? { institution: bankName, city } : null,
+      note: faker.datatype.boolean(0.4) ? `${typeConfig.description} di ${bankName} cabang ${city}` : null,
+      metadata: {
+        icon: selectedIcon,
+        color: selectedColor,
+      },
     } satisfies NewAccount;
   },
 });
 
+// helper function to generate realistic indonesian account names
+const generateIndonesianAccountName = (type: AccountType, bank: string, city: string): string => {
+  const typeNames = {
+    checking: ['Tabungan', 'Giro', 'Current Account'],
+    savings: ['Tabungan', 'Simpanan', 'Savings'],
+    credit: ['Kartu Kredit', 'Credit Card', 'KK'],
+    investment: ['Investasi', 'RDN', 'Saham'],
+    cash: ['Kas', 'Tunai', 'Cash']
+  };
+  
+  const typeName = faker.helpers.arrayElement(typeNames[type]);
+  
+  // generate realistic indonesian account names
+  if (type === 'cash') {
+    return `${typeName} - Dompet ${city}`;
+  }
+  
+  return `${typeName} ${bank} - ${city}`;
+};
+
+// helper function to generate masked account numbers for privacy
+const generateMaskedAccountNumber = (): string => {
+  const fullNumber = faker.finance.accountNumber(10);
+  // mask middle digits for security (A09: no sensitive data exposure)
+  return `****${fullNumber.slice(-4)}`;
+};
+
 const generateCategoryData = (groupId: number) => ({
-  generateExpenseCategory: (name: string): NewCategory =>
-    ({
-      groupId,
-      parentId: null,
-      name,
-      note: faker.datatype.boolean(0.3) ? `Kategori untuk ${name} sehari-hari` : null,
-      metadata: { type: 'expense' },
-    }) satisfies NewCategory,
-
-  generateIncomeCategory: (name: string): NewCategory =>
-    ({
-      groupId,
-      parentId: null,
-      name,
-      note: faker.datatype.boolean(0.3) ? `Sumber pendapatan dari ${name}` : null,
-      metadata: { type: 'income' },
-    }) satisfies NewCategory,
-
-  generateParentCategory: (name: string): NewCategory =>
+  generateParentCategory: (name: string, icon: string, color: string): NewCategory =>
     ({
       groupId,
       parentId: null,
       name,
       note: `Kategori utama untuk ${name}`,
-      metadata: { type: 'parent' },
+      metadata: { 
+        icon,
+        color
+      },
+    }) satisfies NewCategory,
+
+  generateChildCategory: (name: string, icon: string, color: string, parentId: number): NewCategory =>
+    ({
+      groupId,
+      parentId,
+      name,
+      note: faker.datatype.boolean(0.3) ? `Kategori untuk ${name} sehari-hari` : null,
+      metadata: { 
+        icon,
+        color
+      },
+    }) satisfies NewCategory,
+
+  generateExpenseCategory: (name: string, icon: string, color: string): NewCategory =>
+    ({
+      groupId,
+      parentId: null,
+      name,
+      note: faker.datatype.boolean(0.3) ? `Kategori untuk ${name} sehari-hari` : null,
+      metadata: { 
+        type: 'expense',
+        icon,
+        color
+      },
+    }) satisfies NewCategory,
+
+  generateIncomeCategory: (name: string, icon: string, color: string): NewCategory =>
+    ({
+      groupId,
+      parentId: null,
+      name,
+      note: faker.datatype.boolean(0.3) ? `Sumber pendapatan dari ${name}` : null,
+      metadata: { 
+        icon,
+        color
+      },
     }) satisfies NewCategory,
 });
 
@@ -407,7 +548,7 @@ const seedUsers = async (groupList: { id: number }[]): Promise<{ id: number; gro
 };
 
 const seedAccounts = async (groupList: { id: number }[]): Promise<{ id: number; groupId: number }[]> => {
-  console.log('🏦 seeding accounts...');
+  console.log('🏦 seeding accounts with visual metadata...');
 
   const accountsData: NewAccount[] = [];
 
@@ -425,42 +566,103 @@ const seedAccounts = async (groupList: { id: number }[]): Promise<{ id: number; 
     groupId: accounts.groupId,
   });
 
-  console.log(`✅ created ${insertedAccounts.length} accounts`);
+  console.log(`✅ created ${insertedAccounts.length} accounts with indonesian banking context`);
   return insertedAccounts;
 };
 
-const seedCategories = async (groupList: { id: number }[]): Promise<{ id: number; groupId: number }[]> => {
-  console.log('📂 seeding categories...');
+const seedCategories = async (groupList: { id: number }[]): Promise<{ id: number; groupId: number; parentId: number | null }[]> => {
+  console.log('🏷️  seeding categories with visual metadata...');
 
   const categoriesData: NewCategory[] = [];
 
   for (const group of groupList) {
     const categoryGenerator = generateCategoryData(group.id);
 
-    // create indonesian parent categories first
-    const parentCategories = ['pengeluaran', 'pemasukan', 'transfer'] as const; // indonesian terms
-    for (const parentName of parentCategories) {
-      const parentCategory = categoryGenerator.generateParentCategory(parentName);
+    // create parent categories with their children
+    for (const [parentName, parentConfig] of Object.entries(CATEGORY_STRUCTURE.parents)) {
+      // create parent category
+      const parentCategory = categoryGenerator.generateParentCategory(
+        parentName,
+        parentConfig.icon,
+        parentConfig.color
+      );
       categoriesData.push(parentCategory);
     }
 
-    // create expense subcategories
-    for (const categoryName of EXPENSE_CATEGORIES) {
-      const expenseCategory = categoryGenerator.generateExpenseCategory(categoryName);
+    // create standalone expense categories
+    for (const categoryConfig of CATEGORY_STRUCTURE.standalone) {
+      const expenseCategory = categoryGenerator.generateExpenseCategory(
+        categoryConfig.name,
+        categoryConfig.icon,
+        categoryConfig.color
+      );
       categoriesData.push(expenseCategory);
     }
 
-    // create income subcategories
-    for (const categoryName of INCOME_CATEGORIES) {
-      const incomeCategory = categoryGenerator.generateIncomeCategory(categoryName);
+    // create income categories
+    for (const incomeConfig of INCOME_CATEGORIES) {
+      const incomeCategory = categoryGenerator.generateIncomeCategory(
+        incomeConfig.name,
+        incomeConfig.icon,
+        incomeConfig.color
+      );
       categoriesData.push(incomeCategory);
     }
   }
 
+  // insert all categories first
   const insertedCategories = await db.insert(categories).values(categoriesData).returning({
     id: categories.id,
     groupId: categories.groupId,
+    parentId: categories.parentId,
+    name: categories.name,
   });
+
+  // now create child categories with proper parent references
+  const childCategoriesData: NewCategory[] = [];
+  
+  for (const group of groupList) {
+    const categoryGenerator = generateCategoryData(group.id);
+    
+    // find parent categories for this group
+    const groupParents = insertedCategories.filter(cat => 
+      cat.groupId === group.id && cat.parentId === null
+    );
+
+    for (const [parentName, parentConfig] of Object.entries(CATEGORY_STRUCTURE.parents)) {
+      const parentCategory = groupParents.find(p => p.name === parentName);
+      if (parentCategory && parentConfig.children) {
+        // create child categories
+        for (const childConfig of parentConfig.children) {
+          const childCategory = categoryGenerator.generateChildCategory(
+            childConfig.name,
+            childConfig.icon,
+            childConfig.color,
+            parentCategory.id
+          );
+          childCategoriesData.push(childCategory);
+        }
+      }
+    }
+  }
+
+  // insert child categories
+  if (childCategoriesData.length > 0) {
+    const insertedChildCategories = await db.insert(categories).values(childCategoriesData).returning({
+      id: categories.id,
+      groupId: categories.groupId,
+      parentId: categories.parentId,
+    });
+    
+    // combine parent and child categories
+    const allCategories = [
+      ...insertedCategories,
+      ...insertedChildCategories
+    ];
+
+    console.log(`✅ created ${allCategories.length} categories (${insertedCategories.length} parents + ${insertedChildCategories.length} children)`);
+    return allCategories;
+  }
 
   console.log(`✅ created ${insertedCategories.length} categories`);
   return insertedCategories;
@@ -484,7 +686,7 @@ const seedRecurrences = async (): Promise<{ id: number }[]> => {
 
 const seedTransactions = async (
   accountList: { id: number; groupId: number }[],
-  categoryList: { id: number; groupId: number }[],
+  categoryList: { id: number; groupId: number; parentId: number | null }[],
   userList: { id: number; groupId: number }[],
   recurrenceList: { id: number }[]
 ): Promise<void> => {
