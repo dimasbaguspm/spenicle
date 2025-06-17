@@ -1,6 +1,7 @@
 {
-  "short_name": "TanStack App",
-  "name": "Create TanStack App Sample",
+  "name": "Spenicle - Financial Management",
+  "short_name": "Spenicle",
+  "description": "Modern financial management application for tracking expenses and budgets",
   "icons": [
     {
       "src": "favicon.ico",
@@ -18,8 +19,11 @@
       "sizes": "512x512"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait-primary",
+  "theme_color": "#e07a5f",
+  "background_color": "#f4f1de",
+  "scope": "/",
+  "categories": ["finance", "productivity", "business"]
 }
