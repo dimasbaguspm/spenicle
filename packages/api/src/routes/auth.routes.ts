@@ -17,14 +17,10 @@ const router = Router();
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/RegistrationRequest'
+ *             $ref: '#/components/schemas/RegistrationWithGroup'
  *     responses:
  *       201:
  *         description: User registered successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/AuthResponse'
  *       400:
  *         description: Bad request - validation errors
  *         content:
