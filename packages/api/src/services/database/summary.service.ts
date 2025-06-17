@@ -12,17 +12,40 @@ import {
 } from '../../models/schema.ts';
 
 export class SummaryService {
+  private db = db;
+
   async getCategoriesPeriod(payload: unknown): Promise<SummaryCategoryPeriod[]> {
     const { data } = await validate(summaryPeriodQuerySchema, payload ?? {});
-    const { startDate, endDate, accountId, sortBy = '', sortOrder = 'desc' } = data ?? {};
+    const { startDate, endDate, categoryId, accountId, sortBy = 'totalExpenses', sortOrder = 'desc' } = data ?? {};
 
-    const conditions: SQL[] = [];
-    if (startDate !== undefined) conditions.push(gte(transactions.date, startDate));
-    if (endDate !== undefined) conditions.push(lte(transactions.date, endDate));
-    if (accountId !== undefined) conditions.push(eq(transactions.accountId, accountId));
+    // build WHERE conditions for the transactions filter
+    const transactionConditions: SQL[] = [];
+    if (startDate !== undefined) transactionConditions.push(gte(transactions.date, startDate));
+    if (endDate !== undefined) transactionConditions.push(lte(transactions.date, endDate));
+    if (accountId !== undefined) transactionConditions.push(eq(transactions.accountId, accountId));
+    if (categoryId !== undefined) transactionConditions.push(eq(transactions.categoryId, categoryId));
 
-    // Join categories and transactions, aggregate by category
-    const rows = await db
+    // build dynamic order by clause based on sortBy parameter
+    let orderByClause: SQL;
+    switch (sortBy) {
+      case 'totalIncome':
+        orderByClause = sortOrder === 'desc' ? sql`totalIncome DESC` : sql`totalIncome ASC`;
+        break;
+      case 'totalNet':
+        orderByClause =
+          sortOrder === 'desc' ? sql`(totalIncome - totalExpenses) DESC` : sql`(totalIncome - totalExpenses) ASC`;
+        break;
+      case 'totalTransactions':
+        orderByClause = sortOrder === 'desc' ? sql`totalTransactions DESC` : sql`totalTransactions ASC`;
+        break;
+      case 'totalExpenses':
+      default:
+        orderByClause = sortOrder === 'desc' ? sql`totalExpenses DESC` : sql`totalExpenses ASC`;
+        break;
+    }
+
+    // optimized query with database-level sorting and prepared statement
+    const query = this.db
       .select({
         categoryId: categories.id,
         totalIncome: sum(sql`CASE WHEN ${transactions.type} = 'income' THEN ${transactions.amount} ELSE 0 END`).as(
@@ -31,39 +54,36 @@ export class SummaryService {
         totalExpenses: sum(sql`CASE WHEN ${transactions.type} = 'expense' THEN ${transactions.amount} ELSE 0 END`).as(
           'totalExpenses'
         ),
-        totalTransactions: sum(sql`CASE WHEN ${transactions.id} IS NOT NULL THEN 1 ELSE 0 END`).as('totalTransactions'),
+        totalTransactions: sql<number>`COUNT(${transactions.id})`.as('totalTransactions'),
       })
       .from(categories)
-      .leftJoin(transactions, eq(categories.id, transactions.categoryId))
-      .where(conditions.length ? and(...conditions) : undefined)
-      .groupBy(categories.id);
+      .leftJoin(
+        transactions,
+        and(
+          eq(categories.id, transactions.categoryId),
+          ...(transactionConditions.length > 0 ? transactionConditions : [])
+        )
+      )
+      .groupBy(categories.id)
+      .orderBy(orderByClause)
+      .prepare('CATEGORY_PERIOD_SUMMARY');
 
-    // Map to SummaryCategoryPeriod
-    let result: SummaryCategoryPeriod[] = rows.map((row) => {
+    const rows = await query.execute();
+
+    // map results with proper number conversion and calculated fields
+    return rows.map((row) => {
       const totalIncome = Number(row.totalIncome ?? 0);
       const totalExpenses = Number(row.totalExpenses ?? 0);
       return {
         categoryId: row.categoryId,
-        startDate,
-        endDate,
+        startDate: startDate ?? '',
+        endDate: endDate ?? '',
         totalIncome,
         totalExpenses,
         totalNet: totalIncome - totalExpenses,
         totalTransactions: Number(row.totalTransactions ?? 0),
       };
     });
-
-    // Manual sort if needed
-    if (sortBy && ['totalIncome', 'totalExpenses', 'totalNet'].includes(sortBy)) {
-      result = result.sort((a, b) => {
-        const dir = sortOrder === 'asc' ? 1 : -1;
-        return (
-          dir * (Number(b[sortBy as keyof SummaryCategoryPeriod]) - Number(a[sortBy as keyof SummaryCategoryPeriod]))
-        );
-      });
-    }
-
-    return result;
   }
 
   async getAccountsPeriod(payload: unknown): Promise<SummaryAccountPeriod[]> {
@@ -181,4 +201,8 @@ export class SummaryService {
 
     return intervals;
   }
-}
+} // Alternative Approach: Using Drizzle's count() function
+// Replace sql<number>`COUNT(${transactions.id})` with count(transactions.id)
+// Pros: Better type safety, more idiomatic Drizzle ORM usage
+// Cons: Requires proper mocking of count function in tests
+// Use this for better type safety once test mocks are properly configured

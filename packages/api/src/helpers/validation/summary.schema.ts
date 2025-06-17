@@ -24,9 +24,12 @@ export const summaryPeriodQuerySchema = z
       .string()
       .optional()
       .transform((val) => (val === '' ? undefined : val))
-      .refine((val) => val === undefined || ['totalIncome', 'totalExpenses', 'totalNet'].includes(val), {
-        message: 'sortBy must be one of:  totalIncome, totalExpenses, and totalNet',
-      }),
+      .refine(
+        (val) => val === undefined || ['totalIncome', 'totalExpenses', 'totalNet', 'totalTransactions'].includes(val),
+        {
+          message: 'sortBy must be one of: totalIncome, totalExpenses, totalNet, totalTransactions',
+        }
+      ),
     sortOrder: z
       .string()
       .optional()

@@ -1,4 +1,3 @@
-// Mocks must be hoisted before all imports!
 import { eq, and, gte, lte, sum } from 'drizzle-orm';
 import { Mock, Mocked, vi } from 'vitest';
 
@@ -12,18 +11,47 @@ vi.mock('drizzle-orm', () => {
     and: vi.fn(),
     gte: vi.fn(),
     lte: vi.fn(),
-    sql: vi.fn(),
+    sql: vi.fn(() => ({
+      as: vi.fn(),
+    })),
     sum: vi.fn(() => ({
+      as: vi.fn(),
+    })),
+    count: vi.fn(() => ({
       as: vi.fn(),
     })),
   };
 });
-vi.mock('../../../core/db/config.ts', () => ({
-  db: {
-    select: vi.fn(),
+vi.mock('../../../core/db/config.ts', () => {
+  const mockPrepare = vi.fn().mockReturnValue({
     execute: vi.fn(),
-  },
-}));
+  });
+
+  const mockFrom = vi.fn().mockReturnValue({
+    leftJoin: vi.fn().mockReturnValue({
+      groupBy: vi.fn().mockReturnValue({
+        orderBy: vi.fn().mockReturnThis(),
+        prepare: mockPrepare,
+      }),
+    }),
+  });
+
+  const mockQuery = {
+    from: mockFrom,
+    leftJoin: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    groupBy: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    prepare: mockPrepare,
+  };
+
+  return {
+    db: {
+      select: vi.fn().mockReturnValue(mockQuery),
+      execute: vi.fn(),
+    },
+  };
+});
 vi.mock('../../../helpers/validation/index.ts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../helpers/validation/index.ts')>();
   return {
@@ -78,8 +106,12 @@ describe('SummaryService', () => {
       const mockSelect = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
           leftJoin: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue(mockRows),
+            groupBy: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockReturnValue({
+                prepare: vi.fn().mockReturnValue({
+                  execute: vi.fn().mockResolvedValue(mockRows),
+                }),
+              }),
             }),
           }),
         }),
