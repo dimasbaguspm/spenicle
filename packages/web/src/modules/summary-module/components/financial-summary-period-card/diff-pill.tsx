@@ -31,7 +31,7 @@ export const DiffPill: React.FC<DiffPillProps> = ({ diff, className, isExpense =
   const icon = isPositive ? '▲' : '▼';
   return (
     <span
-      className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold align-middle inline-flex items-center gap-1 ${colorClass} ${className ?? ''}`}
+      className={`px-1 py-0.5 sm:px-1.5 rounded-full text-[9px] sm:text-[10px] font-semibold align-middle inline-flex items-center gap-0.5 sm:gap-1 ${colorClass} ${className ?? ''}`}
       aria-label={
         isExpense
           ? isPositive
@@ -44,7 +44,7 @@ export const DiffPill: React.FC<DiffPillProps> = ({ diff, className, isExpense =
     >
       {isPositive ? '+' : ''}
       {formatNumberCompact(diff)}
-      <span className="text-[10px]">{icon}</span>
+      <span className="text-[8px] sm:text-[10px]">{icon}</span>
     </span>
   );
 };

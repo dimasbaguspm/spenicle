@@ -41,9 +41,9 @@ function AnalyticsComponent() {
         <FinancialSummaryPeriodCardList />
 
         <Tab value={activeTab} onValueChange={handleOnTabChange} type="tabs">
-          <Tab.List className="w-full grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
+          <Tab.List className="w-full grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-lg">
             <Tab.Trigger value="period-breakdown" className="text-center">
-              Period Breakdown
+              Period
             </Tab.Trigger>
             <Tab.Trigger value="categories" className="text-center">
               Categories

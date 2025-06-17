@@ -46,13 +46,13 @@ interface ValueProps extends React.HTMLAttributes<HTMLParagraphElement> {
   variant: FinancialSummaryCardVariant;
 }
 const Value: React.FC<ValueProps> = ({ amount, prefix = '', className, variant, ...props }) => (
-  <p className={cn('text-2xl font-bold', VARIANT_CLASS_MAP[variant], className)} {...props}>
+  <p className={cn('text-lg sm:text-xl md:text-2xl font-bold', VARIANT_CLASS_MAP[variant], className)} {...props}>
     {prefix}
     {formatNumberCompact(amount)}
   </p>
 );
 
-const SUBLABEL_VARIANT_CLASS_MAP = {
+const SUB_LABEL_VARIANT_CLASS_MAP = {
   coral: 'text-coral-500',
   sage: 'text-sage-500',
   mist: 'text-mist-500',
@@ -63,14 +63,14 @@ const SUBLABEL_VARIANT_CLASS_MAP = {
   danger: 'text-danger-500',
 };
 
-type FinancialSummaryCardSubLabelVariant = keyof typeof SUBLABEL_VARIANT_CLASS_MAP;
+type FinancialSummaryCardSubLabelVariant = keyof typeof SUB_LABEL_VARIANT_CLASS_MAP;
 
 interface SubLabelProps extends React.HTMLAttributes<HTMLParagraphElement> {
   children: ReactNode;
   variant?: FinancialSummaryCardSubLabelVariant;
 }
 const SubLabel: React.FC<SubLabelProps> = ({ children, className, variant, ...props }) => (
-  <p className={cn('text-sm mt-1', variant ? SUBLABEL_VARIANT_CLASS_MAP[variant] : '', className)} {...props}>
+  <p className={cn('text-sm mt-1', variant ? SUB_LABEL_VARIANT_CLASS_MAP[variant] : '', className)} {...props}>
     {children}
   </p>
 );

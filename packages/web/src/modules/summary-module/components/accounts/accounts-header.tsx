@@ -67,7 +67,7 @@ export const AccountsHeader: React.FC<AccountsHeaderProps> = ({
           >
             <ChevronLeft className="h-4 w-4" />
           </IconButton>
-          <span className="font-medium text-slate-900 min-w-[120px] text-center">{getPeriodTitle()}</span>
+          <span className="font-medium text-slate-900 text-center">{getPeriodTitle()}</span>
           <IconButton
             variant="ghost"
             size="sm"

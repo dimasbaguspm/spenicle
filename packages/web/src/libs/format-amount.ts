@@ -20,5 +20,8 @@ export const formatAmount = (amount: number, options: FormatAmountOptions = {}):
   const formatted = compact
     ? formatNumberCompact(absAmount)
     : absAmount.toLocaleString('en-US', { minimumFractionDigits: 2 });
-  return `${prefix} ${showCurrency ? currencySymbol : ''}${formatted}`;
+
+  // Build the formatted string with consistent spacing
+  const currencyPart = showCurrency ? currencySymbol : '';
+  return `${prefix}${currencyPart}${formatted}`;
 };

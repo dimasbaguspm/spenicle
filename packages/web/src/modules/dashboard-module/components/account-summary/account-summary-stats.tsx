@@ -35,33 +35,42 @@ export function AccountSummaryStats({
   };
 
   return (
-    <div className="grid grid-cols-3 gap-6 text-center">
-      <div className="space-y-1">
-        <p className={`text-2xl font-bold ${getAmountColor(totalNetWorth)}`}>
+    <div className="grid grid-cols-3 gap-3 sm:gap-6">
+      <div className="space-y-1 text-center">
+        <p
+          className={`text-lg sm:text-xl lg:text-2xl font-bold ${getAmountColor(totalNetWorth)} tabular-nums leading-tight`}
+        >
           {formatAmount(totalNetWorth, {
             type: totalNetWorth >= 0 ? 'income' : 'expense',
             compact: true,
             currencySymbol,
+            showCurrency: true,
           })}
         </p>
         <p className="text-xs text-slate-500 font-medium">Total Net Worth</p>
       </div>
-      <div className="space-y-1">
-        <p className={`text-2xl font-bold ${getAmountColor(thisMonth)}`}>
+      <div className="space-y-1 text-center">
+        <p
+          className={`text-lg sm:text-xl lg:text-2xl font-bold ${getAmountColor(thisMonth)} tabular-nums leading-tight`}
+        >
           {formatAmount(thisMonth, {
             type: thisMonth >= 0 ? 'income' : 'expense',
             compact: true,
             currencySymbol,
+            showCurrency: true,
           })}
         </p>
         <p className="text-xs text-slate-500 font-medium">This Month</p>
       </div>
-      <div className="space-y-1">
-        <p className={`text-2xl font-bold ${getAmountColor(thisWeek)}`}>
+      <div className="space-y-1 text-center">
+        <p
+          className={`text-lg sm:text-xl lg:text-2xl font-bold ${getAmountColor(thisWeek)} tabular-nums leading-tight`}
+        >
           {formatAmount(thisWeek, {
             type: thisWeek >= 0 ? 'income' : 'expense',
             compact: true,
             currencySymbol,
+            showCurrency: true,
           })}
         </p>
         <p className="text-xs text-slate-500 font-medium">This Week</p>

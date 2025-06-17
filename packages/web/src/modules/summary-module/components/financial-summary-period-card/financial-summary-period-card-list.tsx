@@ -37,6 +37,9 @@ export const FinancialSummaryPeriodCardList: React.FC = () => {
   const current = currentPeriods ?? [];
   const prev = prevPeriods ?? [];
 
+  // Get current month name for context
+  const currentMonthName = now.format('MMM YYYY');
+
   const getTotals = (periods: SummaryTransactionsPeriod) => {
     const expenses = periods.reduce((sum, p) => sum + (p.totalExpenses ?? 0), 0);
     const income = periods.reduce((sum, p) => sum + (p.totalIncome ?? 0), 0);
@@ -54,25 +57,25 @@ export const FinancialSummaryPeriodCardList: React.FC = () => {
 
   const summaryCards: FinancialSummaryCardConfig[] = [
     {
-      label: 'Total Income',
+      label: 'Income',
       amount: totalIncome,
       variant: 'sage',
-      subLabel: 'Income for this month',
+      subLabel: currentMonthName,
       diff: diffIncome,
     },
     {
-      label: 'Total Expenses',
+      label: 'Expenses',
       amount: totalExpenses,
       variant: 'coral',
-      subLabel: 'Expenses for this month',
+      subLabel: currentMonthName,
       diff: diffExpenses,
     },
     {
-      label: 'Net Amount',
+      label: 'Net',
       amount: totalNetAmount,
       prefixAmount: totalNetAmount >= 0 ? '+' : '',
       variant: totalNetAmount >= 0 ? 'sage' : 'coral',
-      subLabel: 'Net for this month',
+      subLabel: currentMonthName,
       diff: diffNet,
     },
   ];
