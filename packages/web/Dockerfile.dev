@@ -24,4 +24,4 @@ RUN yarn
 COPY packages/web ./packages/web/
 
 EXPOSE ${WEB_PORT}
-CMD ["sh", "-c", "yarn workspace @spenicle/web dev --host 0.0.0.0 --port ${WEB_PORT}"]
+CMD ["yarn workspace @spenicle/web dev --host 0.0.0.0 --port ${WEB_PORT}"]

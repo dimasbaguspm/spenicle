@@ -236,6 +236,115 @@ case "$1" in
       echo "  💡 Run './scripts/local.sh up' to start all services"
     fi
     ;;
+  exec)
+    SERVICE=${2:-""}
+    COMMAND=${3:-""}
+    
+    # Get list of running services
+    RUNNING_SERVICES=$(docker compose -f $COMPOSE_FILE --env-file $ENV_FILE ps --services --filter "status=running")
+    
+    if [ -z "$RUNNING_SERVICES" ]; then
+      echo "❌ No services are currently running"
+      echo "💡 Run './scripts/local.sh up' to start services first"
+      exit 1
+    fi
+    
+    # If no service specified, show available services and prompt
+    if [ -z "$SERVICE" ]; then
+      echo "🔧 Available running services:"
+      echo "$RUNNING_SERVICES" | while read service; do
+        echo "  📦 $service"
+      done
+      echo ""
+      echo "Usage: $0 exec <service> [command]"
+      echo "Examples:"
+      echo "  $0 exec api                   # Open interactive shell in api container"
+      echo "  $0 exec postgres              # Connect to postgres database"
+      echo "  $0 exec api yarn db:migrate   # Run database migration"
+      echo "  $0 exec api sh -c 'ls -la'    # Execute specific shell command"
+      exit 1
+    fi
+    
+    # Validate service exists and is running
+    if ! echo "$RUNNING_SERVICES" | grep -q "^$SERVICE$"; then
+      echo "❌ Service '$SERVICE' is not running or does not exist"
+      echo "🔧 Available running services:"
+      echo "$RUNNING_SERVICES" | while read service; do
+        echo "  📦 $service"
+      done
+      exit 1
+    fi
+    
+    # If no command specified, provide interactive shell based on service type
+    if [ -z "$COMMAND" ]; then
+      case "$SERVICE" in
+        api)
+          echo "🚀 Opening interactive shell in API container..."
+          # Try to detect available shell in the container
+          if docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T $SERVICE which bash >/dev/null 2>&1; then
+            COMMAND="bash"
+          elif docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T $SERVICE which sh >/dev/null 2>&1; then
+            COMMAND="sh"
+          else
+            echo "❌ No shell found in container"
+            exit 1
+          fi
+          ;;
+        web)
+          echo "🌐 Opening interactive shell in Web container..."
+          # Try to detect available shell in the container
+          if docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T $SERVICE which bash >/dev/null 2>&1; then
+            COMMAND="bash"
+          elif docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T $SERVICE which sh >/dev/null 2>&1; then
+            COMMAND="sh"
+          else
+            echo "❌ No shell found in container"
+            exit 1
+          fi
+          ;;
+        postgres)
+          echo "🗄️  Opening PostgreSQL shell..."
+          COMMAND="psql -U \${POSTGRES_USER:-postgres} \${POSTGRES_DB:-spenicle}"
+          ;;
+        redis)
+          echo "🔴 Opening Redis CLI..."
+          COMMAND="redis-cli"
+          ;;
+        *)
+          echo "🐚 Opening shell in $SERVICE container..."
+          # Try to detect available shell in the container
+          if docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T $SERVICE which bash >/dev/null 2>&1; then
+            COMMAND="bash"
+          elif docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T $SERVICE which sh >/dev/null 2>&1; then
+            COMMAND="sh"
+          else
+            echo "❌ No shell found in container"
+            exit 1
+          fi
+          ;;
+      esac
+      echo "  📡 Using shell: $COMMAND"
+    else
+      echo "🔧 Executing command in $SERVICE container: $COMMAND"
+    fi
+    
+    # Execute the command with proper flags and error handling
+    if [ "$COMMAND" = "bash" ] || [ "$COMMAND" = "sh" ] || echo "$COMMAND" | grep -q "psql\|redis-cli"; then
+      # Interactive commands need -it flags
+      if ! docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec $SERVICE $COMMAND; then
+        echo "❌ Command execution failed"
+        echo "💡 Try running with a different shell or check if the service is properly configured"
+        exit 1
+      fi
+    else
+      # Non-interactive commands can use -T flag to avoid TTY issues
+      if ! docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T $SERVICE $COMMAND; then
+        echo "❌ Command execution failed"
+        echo "💡 Check command syntax and service configuration"
+        exit 1
+      fi
+    fi
+    ;;
   check)
     echo "🔍 Pre-deployment checks (Development):"
     echo ""
@@ -286,7 +395,7 @@ case "$1" in
     echo "  2. Or running services individually without Docker Compose"
     ;;
   *)
-    echo "Usage: $0 {up|down|rebuild [service]|seed|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|clean-cache [service]|check|generate-config}"
+    echo "Usage: $0 {up|down|rebuild [service]|seed|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|exec <service> [command]|clean-cache [service]|check|generate-config}"
     echo ""
     echo "Commands:"
     echo "  up                      - Start all services"
@@ -299,6 +408,7 @@ case "$1" in
     echo "  restore-backup <file>  - Restore database from automated backup"
     echo "  logs [service]         - Show service logs (all services if no service specified)"
     echo "  restart [service]      - Restart service(s)"
+    echo "  exec <service> [cmd]   - Execute command in running container (interactive shell if no command)"
     echo "  clean-cache [service]  - Clean Docker cache, remove containers/images/volumes and rebuild"
     echo "  check                  - Run pre-deployment checks"
     echo "  generate-config        - Info about config generation (dev mode)"
