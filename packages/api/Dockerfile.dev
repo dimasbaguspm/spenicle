@@ -28,9 +28,12 @@ ENV API_JWT_SECRET=${API_JWT_SECRET}
 RUN corepack enable
 WORKDIR /app
 
-COPY package.json yarn.lock ./
+COPY package.json yarn.lock .yarnrc.yml ./
 COPY packages/api/package.json ./packages/api/
+
 RUN yarn install
+
 COPY packages/api ./packages/api/
+
 EXPOSE ${API_PORT}
 CMD ["yarn", "workspace", "@spenicle/api", "dev"]

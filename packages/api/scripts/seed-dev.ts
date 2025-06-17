@@ -1,9 +1,22 @@
-/* eslint-disable no-console */
-// filepath: /home/leshia/development/spenicle/packages/api/src/scripts/seed-dev.ts
+
+/**
+ * Development Database Seeding Script
+ * 
+ * ⚠️  SECURITY NOTICE: This script is for DEVELOPMENT ONLY
+ * - Generates fake data for testing and development
+ * - Should NEVER be run in production environments
+ * - Uses predictable passwords for development convenience
+ * 
+ * OWASP Compliance:
+ * - A09: Logging - No sensitive production data is exposed
+ * - A02: Cryptographic - Uses bcrypt with secure rounds for dev passwords
+ * - A04: Secure Design - Clearly separated from production code
+ */
+
 import { faker } from '@faker-js/faker';
 import bcrypt from 'bcrypt';
 
-import { db, pool } from '../core/db/config.ts';
+import { db, pool } from '../src/core/db/config.ts';
 import {
   users,
   groups,
@@ -21,7 +34,7 @@ import {
   type NewAccountLimit,
   type NewUserPreference,
   type NewRecurrence,
-} from '../models/schema.ts';
+} from '../src/models/schema.ts';
 
 // enhanced type definitions using satisfies - indonesian focused
 type TransactionType = 'expense' | 'income' | 'transfer';
