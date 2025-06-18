@@ -88,28 +88,5 @@ services:
     command: ["sh", "-c", "yarn workspace @spenicle/web dev --host 0.0.0.0 --port $$WEB_PORT"]
     restart: unless-stopped
 
-  db-backup:
-    image: postgres:16
-    container_name: spenicle-dev-db-backup
-    environment:
-      <<: *db-backup-env
-    volumes:
-      - ./backups:/backups
-      - ./scripts/backup-db-cron.sh:/scripts/backup-db-cron.sh:ro
-    command: >
-      sh -c "
-        echo 'Database backup service starting with ${BACKUP_INTERVAL_HOURS}h interval...' &&
-        while true; do
-          echo '$(date): Running scheduled backup...' &&
-          cd /scripts && ./backup-db-cron.sh &&
-          echo '$(date): Backup completed. Sleeping for ${BACKUP_INTERVAL_HOURS} hours...' &&
-          sleep $((${BACKUP_INTERVAL_HOURS} * 3600))
-        done
-      "
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-
 volumes:
   postgres_data:

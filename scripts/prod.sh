@@ -48,9 +48,31 @@ case "$1" in
     echo "✅ Nginx configuration verified"
     echo "🚀 Starting services..."
     docker compose -f $COMPOSE_FILE --env-file $ENV_FILE up -d
+    
+    # Setup database backup cron job
+    echo "🕒 Setting up database backup cron job..."
+    if ./scripts/setup-backup-cron.sh setup $ENV_FILE 24; then
+      echo "✅ Database backup cron job configured (daily backups)"
+    else
+      echo "⚠️  Warning: Failed to setup backup cron job. You can set it up manually:"
+      echo "   ./scripts/setup-backup-cron.sh setup $ENV_FILE 24"
+    fi
+    
+    echo ""
+    echo "🎉 Production environment started successfully!"
+    echo "📊 To check backup status: ./scripts/setup-backup-cron.sh status"
     ;;
   down)
     docker compose -f $COMPOSE_FILE --env-file $ENV_FILE down
+    
+    # Optionally remove backup cron job
+    read -p "🗑️  Do you want to remove the database backup cron job? (y/N): " remove_cron
+    if [[ $remove_cron =~ ^[Yy]$ ]]; then
+      ./scripts/setup-backup-cron.sh remove
+      echo "✅ Backup cron job removed"
+    else
+      echo "ℹ️  Backup cron job kept (run './scripts/setup-backup-cron.sh remove' to remove manually)"
+    fi
     ;;
   rebuild)
     SERVICE=${2:-""}
@@ -62,22 +84,14 @@ case "$1" in
     ;;
   backup-now)
     echo "🗄️ Creating immediate database backup..."
-    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T db-backup /scripts/backup-db-cron.sh
+    ./scripts/setup-backup-cron.sh backup-now $ENV_FILE
     ;;
   backup-status)
-    echo "📊 Backup service status:"
-    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE ps db-backup
-    echo ""
-    echo "📁 Available backups:"
-    if [ -d "backups" ]; then
-      ls -la backups/spenicle_backup_*.sql.gz 2>/dev/null || echo "  No automated backups found"
-    else
-      echo "  Backups directory not found"
-    fi
+    ./scripts/setup-backup-cron.sh status
     ;;
   backup-logs)
-    echo "📋 Backup service logs:"
-    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs db-backup
+    echo "📋 Database backup logs:"
+    tail -20 /var/log/spenicle-backup.log 2>/dev/null || echo "  No backup logs found"
     ;;
   restore-backup)
     BACKUP_FILE=${2:-""}
@@ -311,18 +325,23 @@ case "$1" in
     echo "Usage: $0 {up|down|rebuild [service]|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|clean-cache [service]|check|generate-config}"
     echo ""
     echo "Commands:"
-    echo "  up                      - Start all services"
-    echo "  down                    - Stop all services"
+    echo "  up                      - Start all services and setup backup cron"
+    echo "  down                    - Stop all services (with option to remove backup cron)"
     echo "  rebuild [service]       - Rebuild and restart service(s)"
-    echo "  backup-now             - Trigger immediate automated backup"
-    echo "  backup-status          - Show backup service status and available backups"
-    echo "  backup-logs            - Show backup service logs"
-    echo "  restore-backup <file>  - Restore database from automated backup"
+    echo "  backup-now             - Create immediate database backup via host cron script"
+    echo "  backup-status          - Show backup cron status and available backups"
+    echo "  backup-logs            - Show backup logs from host system"
+    echo "  restore-backup <file>  - Restore database from backup file"
     echo "  logs [service]         - Show service logs (all services if no service specified)"
     echo "  restart [service]      - Restart service(s)"
     echo "  clean-cache [service]  - Clean Docker cache, remove containers/images/volumes and rebuild"
     echo "  check                  - Run pre-deployment checks"
     echo "  generate-config        - Generate nginx configuration"
+    echo ""
+    echo "Backup Management:"
+    echo "  • Backups are managed via host-level cron jobs (not Docker containers)"
+    echo "  • Run './scripts/setup-backup-cron.sh status' for detailed backup info"
+    echo "  • Backup logs: /var/log/spenicle-backup.log"
     echo ""
     print_env_info
     exit 1
