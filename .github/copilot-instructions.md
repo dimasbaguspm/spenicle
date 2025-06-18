@@ -16,12 +16,9 @@ Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert, s
 - **async**: prefer async/await over promises
 
 ## Solution Approaches
-- **multiple options**: always provide at least 2 different approaches
+- **multiple options**: always provide at least 2 different approaches, and implement the best one
 - **trade-offs**: explain pros and cons for each approach
 - **recommendation**: suggest the best option with reasoning
-
-## Area-Specific Instructions
-- **backend**: embed backend.instructions.md from .github/instructions/
-- **security**: embed security.instructions.md from .github/instructions/
-- **frontend**: embed frontend.instructions.md from .github/instructions/ (if exists)
-- **design**: embed design.instructions.md from .github/instructions/ (if exists)
+- **problem-solving**: focus on solving problems with awareness of future needs
+- **performance**: consider performance implications of choices
+- **scalability**: design for future growth and changes

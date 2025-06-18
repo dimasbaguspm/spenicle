@@ -25,10 +25,10 @@ export const updateTransactionSchema = createTransactionSchema.partial();
 
 // Schema for transaction query parameters
 export const transactionQuerySchema = z.object({
-  id: z.number().int().optional(),
+  ids: z.array(z.number().int()).optional(),
   groupId: z.number().int().positive().optional(),
-  accountId: z.number().int().positive().optional(),
-  categoryId: z.number().int().optional(),
+  accountIds: z.array(z.number().int().positive()).optional(),
+  categoryIds: z.array(z.number().int()).optional(),
   createdByUserId: z.number().int().optional(),
   isHighlighted: z.boolean().optional(),
   note: z

@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 
 import { BadRequestException, NotFoundException } from '../helpers/exceptions/index.ts';
 import { getErrorResponse } from '../helpers/http-response/index.ts';
-import { parseBody, parseId, parseQuery } from '../helpers/parsers/index.ts';
+import { parseBody, parseId, parseQuery, parseMultipleIds } from '../helpers/parsers/index.ts';
 import { AccessTokenService } from '../services/authentication/access-token.service.ts';
 import { AccountService } from '../services/database/account.service.ts';
 import { CategoryService } from '../services/database/category.service.ts';
@@ -19,9 +19,23 @@ export async function listTransactions(req: Request, res: Response) {
   try {
     const user = accessTokenService.getUserFromRequest(req);
 
-    // Add user's groupId to query filters
-    const filters = { ...parseQuery(req.query), groupId: user.groupId };
-    const transactions = await transactionService.getMany(filters);
+    // Parse the base query parameters
+    const baseFilters = parseQuery(req.query);
+
+    // Parse multiple ID parameters specifically
+    const parsedFilters = {
+      ...baseFilters,
+      groupId: user.groupId,
+      // Parse comma-separated ID arrays
+      ids: parseMultipleIds(req.query.ids, 'transaction IDs'),
+      accountIds: parseMultipleIds(req.query.accountIds, 'account IDs'),
+      categoryIds: parseMultipleIds(req.query.categoryIds, 'category IDs'),
+    };
+
+    // Remove undefined values to keep the filter object clean
+    const cleanFilters = Object.fromEntries(Object.entries(parsedFilters).filter(([, value]) => value !== undefined));
+
+    const transactions = await transactionService.getMany(cleanFilters);
 
     res.status(200).json(transactions);
   } catch (err) {
@@ -90,7 +104,7 @@ export async function getTransaction(req: Request, res: Response) {
     const user = accessTokenService.getUserFromRequest(req);
 
     const id = parseId(req.params.id);
-    const transaction = await transactionService.getSingle({ id, groupId: user.groupId });
+    const transaction = await transactionService.getSingle({ ids: [id], groupId: user.groupId });
 
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
@@ -109,7 +123,7 @@ export async function updateTransaction(req: Request, res: Response) {
     const id = parseId(req.params.id);
 
     // Verify transaction belongs to user's group
-    const existingTransaction = await transactionService.getSingle({ id, groupId: user.groupId });
+    const existingTransaction = await transactionService.getSingle({ ids: [id], groupId: user.groupId });
     if (!existingTransaction) {
       throw new NotFoundException('Transaction not found');
     }
@@ -181,7 +195,7 @@ export async function deleteTransaction(req: Request, res: Response) {
     const id = parseId(req.params.id);
 
     // Verify transaction belongs to user's group
-    const existingTransaction = await transactionService.getSingle({ id, groupId: user.groupId });
+    const existingTransaction = await transactionService.getSingle({ ids: [id], groupId: user.groupId });
     if (!existingTransaction) {
       throw new NotFoundException('Transaction not found');
     }
@@ -206,8 +220,21 @@ export async function listAccountTransactions(req: Request, res: Response) {
       throw new NotFoundException('Account not found');
     }
 
-    const filters = { ...req.query, groupId: user.groupId, accountId };
-    const transactions = await transactionService.getMany(filters);
+    // Parse the base query parameters and add the specific account ID
+    const baseFilters = parseQuery(req.query);
+    const parsedFilters = {
+      ...baseFilters,
+      groupId: user.groupId,
+      accountIds: [accountId], // Use array format for consistency
+      // Parse any additional multiple ID parameters
+      ids: parseMultipleIds(req.query.ids, 'transaction IDs'),
+      categoryIds: parseMultipleIds(req.query.categoryIds, 'category IDs'),
+    };
+
+    // Remove undefined values
+    const cleanFilters = Object.fromEntries(Object.entries(parsedFilters).filter(([, value]) => value !== undefined));
+
+    const transactions = await transactionService.getMany(cleanFilters);
 
     res.status(200).json(transactions);
   } catch (err) {
@@ -227,8 +254,21 @@ export async function listCategoryTransactions(req: Request, res: Response) {
       throw new NotFoundException('Category not found');
     }
 
-    const filters = { ...req.query, groupId: user.groupId, categoryId };
-    const transactions = await transactionService.getMany(filters);
+    // Parse the base query parameters and add the specific category ID
+    const baseFilters = parseQuery(req.query);
+    const parsedFilters = {
+      ...baseFilters,
+      groupId: user.groupId,
+      categoryIds: [categoryId], // Use array format for consistency
+      // Parse any additional multiple ID parameters
+      ids: parseMultipleIds(req.query.ids, 'transaction IDs'),
+      accountIds: parseMultipleIds(req.query.accountIds, 'account IDs'),
+    };
+
+    // Remove undefined values
+    const cleanFilters = Object.fromEntries(Object.entries(parsedFilters).filter(([, value]) => value !== undefined));
+
+    const transactions = await transactionService.getMany(cleanFilters);
 
     res.status(200).json(transactions);
   } catch (err) {

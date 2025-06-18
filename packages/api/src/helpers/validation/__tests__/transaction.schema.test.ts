@@ -322,10 +322,9 @@ describe('Transaction Schema Validation', () => {
   describe('transactionQuerySchema', () => {
     it('should validate valid query parameters', () => {
       const validData = {
-        id: 1,
         groupId: 2,
-        accountId: 3,
-        categoryId: 4,
+        accountIds: [3],
+        categoryIds: [4],
         createdByUserId: 5,
         isHighlighted: true,
         note: 'search term',
@@ -519,6 +518,93 @@ describe('Transaction Schema Validation', () => {
           }),
         ])
       );
+    });
+
+    it('should validate multiple transaction IDs', () => {
+      const validData = {
+        ids: [1, 2, 3, 4],
+      };
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.ids).toEqual([1, 2, 3, 4]);
+    });
+
+    it('should validate multiple account IDs', () => {
+      const validData = {
+        accountIds: [10, 20, 30],
+      };
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.accountIds).toEqual([10, 20, 30]);
+    });
+
+    it('should validate multiple category IDs', () => {
+      const validData = {
+        categoryIds: [5, 6, 7, 8],
+      };
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.categoryIds).toEqual([5, 6, 7, 8]);
+    });
+
+    it('should reject negative values in ID arrays', () => {
+      const invalidData = {
+        ids: [1, -2, 3],
+        accountIds: [10, -20],
+        categoryIds: [5, 6, -7],
+      };
+
+      const result = transactionQuerySchema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.errors.length).toBeGreaterThan(0);
+    });
+
+    it('should reject non-integer values in ID arrays', () => {
+      const invalidData = {
+        ids: [1, 2.5, 3],
+        accountIds: [10.1, 20],
+      };
+
+      const result = transactionQuerySchema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+    });
+
+    it('should handle empty arrays for multiple IDs', () => {
+      const validData = {
+        ids: [],
+        accountIds: [],
+        categoryIds: [],
+      };
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.ids).toEqual([]);
+      expect(result.data?.accountIds).toEqual([]);
+      expect(result.data?.categoryIds).toEqual([]);
+    });
+
+    it('should validate multiple ID arrays together', () => {
+      const validData = {
+        ids: [2, 3, 4],
+        accountIds: [20, 30],
+        categoryIds: [6, 7],
+      };
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.ids).toEqual([2, 3, 4]);
+      expect(result.data?.accountIds).toEqual([20, 30]);
+      expect(result.data?.categoryIds).toEqual([6, 7]);
     });
   });
 

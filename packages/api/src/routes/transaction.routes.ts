@@ -21,25 +21,37 @@ const router = Router();
  *     tags: [Transactions]
  *     parameters:
  *       - in: query
- *         name: id
+ *         name: ids
  *         schema:
- *           type: integer
- *         description: Filter by transaction ID
+ *           type: array
+ *           items:
+ *             type: integer
+ *         style: form
+ *         explode: false
+ *         description: Filter by multiple transaction IDs (comma-separated)
  *       - in: query
  *         name: groupId
  *         schema:
  *           type: integer
  *         description: Filter by group ID
  *       - in: query
- *         name: accountId
+ *         name: accountIds
  *         schema:
- *           type: integer
- *         description: Filter by account ID
+ *           type: array
+ *           items:
+ *             type: integer
+ *         style: form
+ *         explode: false
+ *         description: Filter by multiple account IDs (comma-separated)
  *       - in: query
- *         name: categoryId
+ *         name: categoryIds
  *         schema:
- *           type: integer
- *         description: Filter by category ID
+ *           type: array
+ *           items:
+ *             type: integer
+ *         style: form
+ *         explode: false
+ *         description: Filter by multiple category IDs (comma-separated)
  *       - in: query
  *         name: createdByUserId
  *         schema:

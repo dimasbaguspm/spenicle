@@ -118,6 +118,52 @@ export function parseBody(obj: unknown): object {
 }
 
 /**
+ * Parses comma-separated IDs into an array of numbers
+ * @param value The value to parse (can be string, array, or undefined)
+ * @param fieldName Optional field name for error messages
+ * @returns Array of parsed number IDs, or undefined if input is empty
+ * @throws BadRequestException if any ID is not a valid number
+ */
+export function parseMultipleIds(value: unknown, fieldName = 'IDs'): number[] | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  let ids: string[] = [];
+
+  if (typeof value === 'string') {
+    // Handle comma-separated string: "1,2,3"
+    ids = value
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id !== '');
+  } else if (Array.isArray(value)) {
+    // Handle array of strings/numbers
+    ids = value.map((item) => String(item).trim()).filter((id) => id !== '');
+  } else if (typeof value === 'number') {
+    // Handle single number value
+    ids = [String(value).trim()];
+  } else {
+    throw new BadRequestException(`Invalid ${fieldName}: must be a string, number, or array`);
+  }
+
+  if (ids.length === 0) {
+    return undefined;
+  }
+
+  const parsedIds: number[] = [];
+  for (const id of ids) {
+    const parsedId = parseInt(id, 10);
+    if (isNaN(parsedId) || parsedId <= 0) {
+      throw new BadRequestException(`Invalid ${fieldName}: "${id}" must be a positive integer`);
+    }
+    parsedIds.push(parsedId);
+  }
+
+  return parsedIds;
+}
+
+/**
  * Checks if a string represents a valid number
  * @param str - The string to check
  * @returns true if the string represents a valid number

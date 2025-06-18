@@ -1,5 +1,5 @@
 // Mock drizzle-orm functions
-import { eq, and, asc, desc, gte, lte, ilike } from 'drizzle-orm';
+import { eq, and, asc, desc, gte, lte, ilike, inArray } from 'drizzle-orm';
 import { Mock, Mocked, vi } from 'vitest';
 
 import { db } from '../../../core/db/config.ts';
@@ -15,6 +15,7 @@ vi.mock('drizzle-orm', () => ({
   gte: vi.fn(),
   lte: vi.fn(),
   ilike: vi.fn(),
+  inArray: vi.fn(),
 }));
 
 // Mock database configuration
@@ -40,6 +41,7 @@ const mockDesc = desc as Mock;
 const mockGte = gte as Mock;
 const mockLte = lte as Mock;
 const mockIlike = ilike as Mock;
+const mockInArray = inArray as Mock;
 const mockDb = db as Mocked<typeof db>;
 const mockValidate = validate as Mock;
 
@@ -113,8 +115,8 @@ describe('TransactionService', () => {
     it('should apply all filters correctly', async () => {
       const filters = {
         groupId: 1,
-        accountId: 2,
-        categoryId: 3,
+        accountIds: [2],
+        categoryIds: [3],
         startDate: '2024-01-01',
         endDate: '2024-12-31',
         note: 'search term',
@@ -132,8 +134,8 @@ describe('TransactionService', () => {
 
       expect(mockValidate).toHaveBeenCalledWith(expect.any(Object), filters);
       expect(mockEq).toHaveBeenCalledWith(transactions.groupId, 1);
-      expect(mockEq).toHaveBeenCalledWith(transactions.accountId, 2);
-      expect(mockEq).toHaveBeenCalledWith(transactions.categoryId, 3);
+      expect(mockInArray).toHaveBeenCalledWith(transactions.accountId, [2]);
+      expect(mockInArray).toHaveBeenCalledWith(transactions.categoryId, [3]);
       expect(mockGte).toHaveBeenCalledWith(transactions.date, '2024-01-01');
       expect(mockLte).toHaveBeenCalledWith(transactions.date, '2024-12-31');
       expect(mockIlike).toHaveBeenCalledWith(transactions.note, '%search term%');
@@ -153,8 +155,22 @@ describe('TransactionService', () => {
       expect(mockAsc).toHaveBeenCalledWith(transactions.date);
     });
 
-    it('should handle string categoryId conversion', async () => {
-      const filters = { categoryId: '3' };
+    it('should handle string categoryIds conversion', async () => {
+      const filters = { categoryIds: ['3'] };
+
+      mockValidate.mockResolvedValue({
+        data: { categoryIds: [3], sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
+      });
+
+      mockDb.select.mockReturnValue(mockSelectMany());
+
+      await transactionService.getMany(filters);
+
+      expect(mockInArray).toHaveBeenCalledWith(transactions.categoryId, [3]);
+    });
+
+    it('should handle multiple transaction IDs filtering', async () => {
+      const filters = { ids: [1, 2, 3] };
 
       mockValidate.mockResolvedValue({
         data: { ...filters, sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
@@ -164,13 +180,75 @@ describe('TransactionService', () => {
 
       await transactionService.getMany(filters);
 
-      expect(mockEq).toHaveBeenCalledWith(transactions.categoryId, 3);
+      expect(mockInArray).toHaveBeenCalledWith(transactions.id, [1, 2, 3]);
+    });
+
+    it('should handle multiple account IDs filtering', async () => {
+      const filters = { accountIds: [10, 20] };
+
+      mockValidate.mockResolvedValue({
+        data: { ...filters, sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
+      });
+
+      mockDb.select.mockReturnValue(mockSelectMany());
+
+      await transactionService.getMany(filters);
+
+      expect(mockInArray).toHaveBeenCalledWith(transactions.accountId, [10, 20]);
+    });
+
+    it('should handle multiple category IDs filtering', async () => {
+      const filters = { categoryIds: [5, 6, 7] };
+
+      mockValidate.mockResolvedValue({
+        data: { ...filters, sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
+      });
+
+      mockDb.select.mockReturnValue(mockSelectMany());
+
+      await transactionService.getMany(filters);
+
+      expect(mockInArray).toHaveBeenCalledWith(transactions.categoryId, [5, 6, 7]);
+    });
+
+    it('should skip multiple ID filters when arrays are empty', async () => {
+      const filters = { ids: [], accountIds: [], categoryIds: [] };
+
+      mockValidate.mockResolvedValue({
+        data: { ...filters, sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
+      });
+
+      mockDb.select.mockReturnValue(mockSelectMany());
+
+      await transactionService.getMany(filters);
+
+      expect(mockInArray).not.toHaveBeenCalled();
+    });
+
+    it('should combine multiple ID filters', async () => {
+      const filters = {
+        ids: [1],
+        accountIds: [10, 20],
+        categoryIds: [5],
+      };
+
+      mockValidate.mockResolvedValue({
+        data: { ...filters, sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
+      });
+
+      mockDb.select.mockReturnValue(mockSelectMany());
+
+      await transactionService.getMany(filters);
+
+      expect(mockInArray).toHaveBeenCalledWith(transactions.id, [1]);
+      expect(mockInArray).toHaveBeenCalledWith(transactions.categoryId, [5]);
+      expect(mockInArray).toHaveBeenCalledWith(transactions.accountId, [10, 20]);
     });
   });
 
   describe('getSingle', () => {
     it('should get a single transaction by conditions', async () => {
-      const filters = { id: 1, groupId: 1 };
+      const filters = { ids: [1], groupId: 1 };
 
       mockValidate.mockResolvedValue({ data: filters });
       const mockSelect = vi.fn().mockReturnValue({

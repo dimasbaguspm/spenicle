@@ -210,21 +210,33 @@ export const transactionSchemas = {
       {
         type: 'object',
         properties: {
-          id: {
-            type: 'integer',
-            description: 'Filter by transaction ID',
+          ids: {
+            type: 'array',
+            items: {
+              type: 'integer',
+            },
+            description: 'Filter by multiple transaction IDs',
+            example: [1, 2, 3],
           },
           groupId: {
             type: 'integer',
             description: 'Filter by group ID',
           },
-          accountId: {
-            type: 'integer',
-            description: 'Filter by account ID',
+          accountIds: {
+            type: 'array',
+            items: {
+              type: 'integer',
+            },
+            description: 'Filter by multiple account IDs',
+            example: [1, 2, 3],
           },
-          categoryId: {
-            type: 'integer',
-            description: 'Filter by category ID',
+          categoryIds: {
+            type: 'array',
+            items: {
+              type: 'integer',
+            },
+            description: 'Filter by multiple category IDs',
+            example: [1, 2, 3],
           },
           createdByUserId: {
             type: 'integer',

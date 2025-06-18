@@ -1,4 +1,4 @@
-import { SQL, and, asc, desc, eq, gte, ilike, lte } from 'drizzle-orm';
+import { SQL, and, asc, desc, eq, gte, ilike, lte, inArray } from 'drizzle-orm';
 
 import { db } from '../../core/db/config.ts';
 import { formatTransactionModel } from '../../helpers/model-formatters/index.ts';
@@ -20,9 +20,10 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
   async getMany(filters?: unknown): Promise<PagedTransactions> {
     const { data } = await validate(transactionQuerySchema, filters ?? {});
     const {
+      ids,
       groupId,
-      accountId,
-      categoryId,
+      accountIds,
+      categoryIds,
       startDate,
       endDate,
       note,
@@ -35,10 +36,17 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
     } = data;
 
     const conditions: SQL[] = [];
+
+    // Group ID filter (kept as single since it's for scoping)
     if (groupId !== undefined) conditions.push(eq(transactions.groupId, groupId));
-    if (accountId !== undefined) conditions.push(eq(transactions.accountId, accountId));
-    if (categoryId !== undefined)
-      conditions.push(eq(transactions.categoryId, typeof categoryId === 'string' ? Number(categoryId) : categoryId));
+
+    // Multiple ID filters
+    if (ids !== undefined && ids.length > 0) conditions.push(inArray(transactions.id, ids));
+    if (accountIds !== undefined && accountIds.length > 0) conditions.push(inArray(transactions.accountId, accountIds));
+    if (categoryIds !== undefined && categoryIds.length > 0)
+      conditions.push(inArray(transactions.categoryId, categoryIds));
+
+    // Other filters
     if (startDate !== undefined) conditions.push(gte(transactions.date, startDate));
     if (endDate !== undefined) conditions.push(lte(transactions.date, endDate));
     if (note !== undefined) conditions.push(ilike(transactions.note, `%${note}%`));
@@ -93,14 +101,16 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
   async getSingle(filters?: unknown) {
     const { data } = await validate(transactionQuerySchema, filters ?? {});
 
-    const { groupId, accountId, categoryId, id } = data;
+    const { groupId, ids, accountIds, categoryIds } = data;
 
     const conditions: SQL[] = [];
 
-    if (id) conditions.push(eq(transactions.id, id));
     if (groupId) conditions.push(eq(transactions.groupId, groupId));
-    if (accountId) conditions.push(eq(transactions.accountId, accountId));
-    if (categoryId) conditions.push(eq(transactions.categoryId, categoryId));
+
+    // For getSingle, we expect exactly one ID in the arrays
+    if (ids && ids.length > 0) conditions.push(eq(transactions.id, ids[0]));
+    if (accountIds && accountIds.length > 0) conditions.push(eq(transactions.accountId, accountIds[0]));
+    if (categoryIds && categoryIds.length > 0) conditions.push(eq(transactions.categoryId, categoryIds[0]));
 
     const [transaction] = await db
       .select()

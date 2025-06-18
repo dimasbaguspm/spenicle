@@ -1,5 +1,5 @@
 ---
-applyTo: '**'
+applyTo: '**/*.{sh,md,yml,yaml}'
 ---
 
 # Security Instructions - OWASP Top 10 2021 Compliance

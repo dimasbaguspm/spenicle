@@ -760,14 +760,14 @@ export interface UpdateTransaction {
 }
 
 export type TransactionQueryParameters = QueryParameters & {
-  /** Filter by transaction ID */
-  id?: number;
+  /** Filter by multiple transaction IDs */
+  ids?: number[];
   /** Filter by group ID */
   groupId?: number;
-  /** Filter by account ID */
-  accountId?: number;
-  /** Filter by category ID */
-  categoryId?: number;
+  /** Filter by multiple account IDs */
+  accountIds?: number[];
+  /** Filter by multiple category IDs */
+  categoryIds?: number[];
   /** Filter by user who created the transaction */
   createdByUserId?: number;
   /**
