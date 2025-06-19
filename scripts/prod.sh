@@ -47,11 +47,11 @@ case "$1" in
     
     echo "✅ Nginx configuration verified"
     echo "🔒 Configuring firewall (ufw) to protect database port..."
-    # block external access to postgres port 5432, allow only from docker bridge network (default 172.17.0.0/16)
+    # block external access to postgres port 5432, allow only from docker bridge network (now 172.18.0.0/16)
     if command -v ufw >/dev/null 2>&1; then
       sudo ufw deny 5432/tcp
-      sudo ufw allow from 172.17.0.0/16 to any port 5432 proto tcp
-      echo "✅ ufw rules updated: 5432/tcp denied externally, allowed for docker bridge"
+      sudo ufw allow from 172.18.0.0/16 to any port 5432 proto tcp
+      echo "✅ ufw rules updated: 5432/tcp denied externally, allowed for docker backend network (172.18.0.0/16)"
     else
       echo "⚠️  ufw not installed, skipping firewall rule for 5432"
     fi
