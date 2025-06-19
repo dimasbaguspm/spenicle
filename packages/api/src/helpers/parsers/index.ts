@@ -164,6 +164,34 @@ export function parseMultipleIds(value: unknown, fieldName = 'IDs'): number[] | 
 }
 
 /**
+ * parses a value into a string array or returns undefined
+ *
+ * - if value is undefined, null, or empty string, returns undefined
+ * - if value is an array, trims and stringifies each item, filters out empty strings, returns array or undefined if empty
+ * - if value is a string, trims and returns as single-element array or undefined if empty
+ * - ignores objects and other types
+ *
+ * @param value value to normalize (string, array, or undefined)
+ * @returns string[] if value exists, otherwise undefined
+ */
+export function parseStringArray(value: unknown): string[] | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    // filter out non-strings and empty strings
+    const arr = value.filter((v) => typeof v === 'string' && v.trim() !== '').map((v) => (v as string).trim());
+    return arr.length > 0 ? arr : undefined;
+  }
+  if (typeof value === 'string') {
+    const str = value.trim();
+    return str !== '' ? [str] : undefined;
+  }
+  // ignore objects and other types
+  return undefined;
+}
+
+/**
  * Checks if a string represents a valid number
  * @param str - The string to check
  * @returns true if the string represents a valid number

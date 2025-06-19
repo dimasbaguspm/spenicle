@@ -1,4 +1,4 @@
-import { SQL, and, asc, desc, eq, ilike } from 'drizzle-orm';
+import { SQL, and, asc, desc, eq, ilike, inArray } from 'drizzle-orm';
 
 import { db } from '../../core/db/config.ts';
 import { formatAccountModel } from '../../helpers/model-formatters/index.ts';
@@ -16,13 +16,13 @@ export class AccountService implements DatabaseServiceSchema<Account> {
   async getMany(filters?: unknown): Promise<PagedAccounts> {
     const { data } = await validate(accountQuerySchema, filters ?? {});
 
-    const { id, groupId, name, type, pageNumber = 1, pageSize = 25, sortBy = 'createdAt', sortOrder = 'asc' } = data;
+    const { ids, groupId, name, types, pageNumber = 1, pageSize = 25, sortBy = 'createdAt', sortOrder = 'asc' } = data;
 
     const conditions: SQL[] = [];
-    if (id) conditions.push(eq(accounts.id, id));
+    if (ids?.length) conditions.push(inArray(accounts.id, ids));
     if (groupId) conditions.push(eq(accounts.groupId, groupId));
     if (name) conditions.push(ilike(accounts.name, `%${name}%`));
-    if (type) conditions.push(eq(accounts.type, type));
+    if (types?.length) conditions.push(inArray(accounts.type, types));
 
     const isAscending = sortOrder === 'asc';
     let order;
@@ -68,13 +68,13 @@ export class AccountService implements DatabaseServiceSchema<Account> {
   async getSingle(filters?: unknown): Promise<Account> {
     const { data } = await validate(accountQuerySchema, filters ?? {});
 
-    const { groupId, name, type, id } = data;
+    const { groupId, name, types, ids } = data;
 
     const conditions: SQL[] = [];
-    if (id) conditions.push(eq(accounts.id, id));
+    if (ids?.length) conditions.push(inArray(accounts.id, ids));
     if (groupId) conditions.push(eq(accounts.groupId, groupId));
     if (name) conditions.push(ilike(accounts.name, `%${name}%`));
-    if (type) conditions.push(eq(accounts.type, type));
+    if (types?.length) conditions.push(inArray(accounts.type, types));
 
     const [account] = await db
       .select()

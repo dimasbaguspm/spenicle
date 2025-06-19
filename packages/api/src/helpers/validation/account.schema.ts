@@ -21,16 +21,13 @@ export const updateAccountSchema = createAccountSchema
 
 // Schema for account query parameters
 export const accountQuerySchema = z.object({
-  id: z.number().int().positive().optional(),
+  ids: z.array(z.number().int().positive()).optional(),
   groupId: z.number().int().positive().optional(),
   name: z
     .string()
     .optional()
     .transform((val) => (val === '' ? undefined : val)),
-  type: z
-    .string()
-    .optional()
-    .transform((val) => (val === '' ? undefined : val)),
+  types: z.array(z.string()).optional(),
   pageNumber: z.coerce.number().min(1).optional().default(1),
   pageSize: z.coerce.number().min(1).optional().default(25),
   sortBy: z

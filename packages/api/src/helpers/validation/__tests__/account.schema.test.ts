@@ -315,10 +315,10 @@ describe('Account Schema Validation', () => {
   describe('accountQuerySchema', () => {
     it('should validate valid query parameters', () => {
       const validData = {
-        id: 1,
+        ids: [1, 2, 3],
         groupId: 2,
         name: 'Test Account',
-        type: 'checking',
+        types: ['checking', 'savings'],
         pageNumber: 1,
         pageSize: 25,
       };
@@ -329,22 +329,20 @@ describe('Account Schema Validation', () => {
       expect(result.data).toEqual(validData);
     });
 
-    it('should transform empty strings to undefined', () => {
-      const data = {
-        name: '',
-        type: '',
-      };
+    it('should reject non-array ids', () => {
+      const invalidData = { ids: 'not-an-array' };
+      const result = accountQuerySchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
+    });
 
-      const result = accountQuerySchema.safeParse(data);
-
-      expect(result.success).toBe(true);
-      expect(result.data?.name).toBeUndefined();
-      expect(result.data?.type).toBeUndefined();
+    it('should reject non-array types', () => {
+      const invalidData = { types: 123 };
+      const result = accountQuerySchema.safeParse(invalidData);
+      expect(result.success).toBe(false);
     });
 
     it('should allow empty object', () => {
       const result = accountQuerySchema.safeParse({});
-
       expect(result.success).toBe(true);
       expect(result.data).toEqual({
         pageNumber: 1,

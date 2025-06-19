@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-19T07:00:59.421Z
+ * Generated on: 2025-06-19T14:28:43.558Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -419,14 +419,20 @@ export interface UpdateAccount {
 }
 
 export type AccountQueryParameters = QueryParameters & {
-  /** Filter by account ID */
-  id?: number;
+  /**
+   * Filter by multiple account IDs
+   * @example [1,2,3]
+   */
+  ids?: number[];
   /** Filter by group ID */
   groupId?: number;
   /** Filter by account name */
   name?: string;
-  /** Filter by account type */
-  type?: string;
+  /**
+   * Filter by multiple account types
+   * @example ["checking","savings"]
+   */
+  types?: string[];
   /** Field to sort by */
   sortBy?: "name" | "type" | "createdAt";
 };

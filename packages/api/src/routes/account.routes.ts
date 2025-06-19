@@ -23,10 +23,25 @@ const router = Router();
  *     tags: [Accounts]
  *     parameters:
  *       - in: query
- *         name: id
+ *         name: ids
  *         schema:
- *           type: integer
- *         description: Filter by account ID
+ *           type: array
+ *           items:
+ *             type: integer
+ *         style: form
+ *         explode: true
+ *         description: >-
+ *           Filter by one or more account IDs. Example: ?ids=1&ids=2&ids=3
+ *       - in: query
+ *         name: types
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *         style: form
+ *         explode: true
+ *         description: >-
+ *           Filter by one or more account types. Example: ?types=checking&types=savings
  *       - in: query
  *         name: groupId
  *         schema:
@@ -37,11 +52,6 @@ const router = Router();
  *         schema:
  *           type: string
  *         description: Filter by account name
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *         description: Filter by account type
  *       - in: query
  *         name: pageNumber
  *         schema:

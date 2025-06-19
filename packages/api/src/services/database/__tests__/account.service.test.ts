@@ -1,5 +1,5 @@
 // Mock drizzle-orm functions
-import { eq, and, asc, desc, ilike } from 'drizzle-orm';
+import { eq, and, asc, desc, ilike, inArray } from 'drizzle-orm';
 import { Mock, Mocked, vi } from 'vitest';
 
 import { db } from '../../../core/db/config.ts';
@@ -13,6 +13,7 @@ vi.mock('drizzle-orm', () => ({
   asc: vi.fn(),
   desc: vi.fn(),
   ilike: vi.fn(),
+  inArray: vi.fn(),
 }));
 
 // Mock database configuration
@@ -36,6 +37,7 @@ const mockAnd = and as Mock;
 const mockAsc = asc as Mock;
 const mockDesc = desc as Mock;
 const mockIlike = ilike as Mock;
+const mockInArray = inArray as Mock;
 const mockDb = db as Mocked<typeof db>;
 const mockValidate = validate as Mock;
 
@@ -103,10 +105,10 @@ describe('AccountService', () => {
 
     it('should apply filters correctly', async () => {
       const filters = {
-        id: 1,
+        ids: [1, 2, 3],
         groupId: 1,
         name: 'Test',
-        type: 'checking',
+        types: ['checking', 'savings'],
         sortBy: 'name',
         sortOrder: 'desc',
         pageSize: 10,
@@ -114,16 +116,15 @@ describe('AccountService', () => {
       };
 
       mockValidate.mockResolvedValue({ data: filters });
-
       mockDb.select.mockReturnValue(mockSelectMany());
 
       const result = await accountService.getMany(filters);
 
       expect(mockValidate).toHaveBeenCalledWith(expect.any(Object), filters);
-      expect(mockEq).toHaveBeenCalledWith(accounts.id, 1);
+      expect(mockInArray).toHaveBeenCalledWith(accounts.id, [1, 2, 3]);
       expect(mockEq).toHaveBeenCalledWith(accounts.groupId, 1);
       expect(mockIlike).toHaveBeenCalledWith(accounts.name, '%Test%');
-      expect(mockEq).toHaveBeenCalledWith(accounts.type, 'checking');
+      expect(mockInArray).toHaveBeenCalledWith(accounts.type, ['checking', 'savings']);
       expect(mockDesc).toHaveBeenCalledWith(accounts.name);
       expect(result).toEqual({ ...mockPagedAccounts, pageSize: 10, pageNumber: 2 });
     });
@@ -142,8 +143,8 @@ describe('AccountService', () => {
   });
 
   describe('getSingle', () => {
-    it('should get a single account by conditions', async () => {
-      const filters = { id: 1, groupId: 1 };
+    it('should get a single account by ids and groupId', async () => {
+      const filters = { ids: [1], groupId: 1 };
 
       mockValidate.mockResolvedValue({ data: filters });
 
@@ -157,14 +158,14 @@ describe('AccountService', () => {
       const result = await accountService.getSingle(filters);
 
       expect(mockValidate).toHaveBeenCalledWith(expect.any(Object), filters);
-      expect(mockEq).toHaveBeenCalledWith(accounts.id, 1);
+      expect(mockInArray).toHaveBeenCalledWith(accounts.id, [1]);
       expect(mockEq).toHaveBeenCalledWith(accounts.groupId, 1);
       expect(mockAnd).toHaveBeenCalled();
       expect(result).toEqual(mockAccount);
     });
 
     it('should return undefined when no account found', async () => {
-      const filters = { id: 999 };
+      const filters = { ids: [999] };
 
       mockValidate.mockResolvedValue({ data: filters });
 

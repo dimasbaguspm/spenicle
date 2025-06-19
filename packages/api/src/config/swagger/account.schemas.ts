@@ -129,9 +129,11 @@ export const accountSchemas = {
       {
         type: 'object',
         properties: {
-          id: {
-            type: 'integer',
-            description: 'Filter by account ID',
+          ids: {
+            type: 'array',
+            items: { type: 'integer' },
+            description: 'Filter by multiple account IDs',
+            example: [1, 2, 3],
           },
           groupId: {
             type: 'integer',
@@ -141,9 +143,11 @@ export const accountSchemas = {
             type: 'string',
             description: 'Filter by account name',
           },
-          type: {
-            type: 'string',
-            description: 'Filter by account type',
+          types: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Filter by multiple account types',
+            example: ['checking', 'savings'],
           },
           sortBy: {
             type: 'string',
