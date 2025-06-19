@@ -106,12 +106,8 @@ describe('SummaryService', () => {
       const mockSelect = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
           leftJoin: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockReturnValue({
-              orderBy: vi.fn().mockReturnValue({
-                prepare: vi.fn().mockReturnValue({
-                  execute: vi.fn().mockResolvedValue(mockRows),
-                }),
-              }),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue(mockRows),
             }),
           }),
         }),
@@ -123,8 +119,8 @@ describe('SummaryService', () => {
       expect(result).toEqual([
         {
           categoryId: 1,
-          startDate: '2024-01-01',
-          endDate: '2024-01-31',
+          startDate: '2023-12-31T17:00:00.000Z',
+          endDate: '2024-01-01T16:59:59.999Z',
           totalIncome: 1000,
           totalExpenses: 500,
           totalNet: 500,
@@ -175,8 +171,8 @@ describe('SummaryService', () => {
       expect(result).toEqual([
         {
           accountId: 1,
-          startDate: '2024-01-01',
-          endDate: '2024-01-31',
+          startDate: '2023-12-31T17:00:00.000Z',
+          endDate: '2024-01-01T16:59:59.999Z',
           totalIncome: 2000,
           totalExpenses: 1500,
           totalNet: 500,
