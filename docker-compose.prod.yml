@@ -33,8 +33,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -51,6 +49,8 @@ services:
         reservations:
           memory: 512m
           cpus: "0.4"
+    networks:
+      - backend
 
   api:
     build:
@@ -74,6 +74,9 @@ services:
         reservations:
           memory: 200M
           cpus: "0.18"
+    networks:
+      - backend
+      - default
 
   web:
     build:
@@ -120,3 +123,10 @@ services:
 
 volumes:
   postgres_data:
+
+networks:
+  backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.17.0.0/16
