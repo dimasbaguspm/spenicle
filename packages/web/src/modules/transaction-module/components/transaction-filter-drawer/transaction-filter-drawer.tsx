@@ -11,6 +11,8 @@ import { CategorySelector } from '../../../category-module';
 import { useTransactionFilters } from '../../hooks';
 import { TransactionTypeSelector } from '../transaction-type-selector';
 
+import type { TransactionFiltersFormSchema } from './types';
+
 const queryKeyParams: string[] = ['categoryId', 'accountId', 'type', 'isHighlighted'];
 
 export const TransactionFilterDrawer = () => {
@@ -29,15 +31,15 @@ export const TransactionFilterDrawer = () => {
   const [accounts] = useApiAccountsQuery();
   const [categories] = useApiCategoriesQuery();
 
-  const form = useForm<Partial<TransactionQueryParameters>>({
+  const form = useForm<Partial<TransactionFiltersFormSchema>>({
     defaultValues: filters,
   });
 
   const onSubmit = form.handleSubmit(async (values) => {
     const queryParams: TransactionQueryParameters = {
       ...values,
-      categoryId: values.categoryId ?? undefined,
-      accountId: values.accountId ?? undefined,
+      categoryIds: values.categoryId ? [values.categoryId] : undefined,
+      accountIds: values.accountId ? [values.accountId] : undefined,
       type: (values?.type ?? '').length >= 1 ? values.type : undefined,
       isHighlighted: values.isHighlighted ?? undefined,
     };

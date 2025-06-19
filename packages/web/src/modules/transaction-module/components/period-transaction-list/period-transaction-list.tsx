@@ -30,8 +30,8 @@ export const PeriodTransactionList: FC<PeriodTransactionListProps> = ({ startDat
   const [transactions] = useApiTransactionsQuery({
     startDate,
     endDate,
-    accountId: filters.accountId,
-    categoryId: filters.categoryId,
+    accountIds: [filters.accountId!],
+    categoryIds: [filters.categoryId!],
     type: filters.type,
   });
 

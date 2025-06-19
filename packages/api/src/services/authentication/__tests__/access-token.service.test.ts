@@ -101,55 +101,6 @@ describe('AccessTokenService', () => {
     });
   });
 
-  describe('verifyAccessToken', () => {
-    it('should verify valid token and return payload', () => {
-      const mockPayload = {
-        sub: '123',
-        email: 'test@example.com',
-        groupId: 1,
-        name: 'Test User',
-        isActive: true,
-      };
-
-      mockVerify.mockReturnValue(mockPayload);
-
-      const result = accessTokenService.verifyAccessToken('valid-token');
-      expect(result).toEqual(mockPayload);
-      expect(mockVerify).toHaveBeenCalledWith('valid-token', mockJwtSecret);
-    });
-
-    it('should throw error when token is invalid', () => {
-      mockVerify.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
-
-      expect(() => accessTokenService.verifyAccessToken('invalid-token')).toThrow('Invalid token');
-    });
-
-    it('should throw error when decoded payload is invalid', () => {
-      mockVerify.mockReturnValue(null);
-
-      expect(() => accessTokenService.verifyAccessToken('invalid-token')).toThrow('Invalid token payload');
-    });
-
-    it('should throw error when decoded payload is not an object', () => {
-      mockVerify.mockReturnValue('string-payload');
-
-      expect(() => accessTokenService.verifyAccessToken('invalid-token')).toThrow('Invalid token payload');
-    });
-
-    it('should throw error when decoded payload has no sub', () => {
-      const mockPayload = {
-        email: 'test@example.com',
-        // missing sub
-      };
-
-      mockVerify.mockReturnValue(mockPayload);
-
-      expect(() => accessTokenService.verifyAccessToken('invalid-token')).toThrow('Invalid token payload');
-    });
-  });
-
   describe('getUserFromToken', () => {
     it('should extract user data from valid token', () => {
       const mockPayload = {
@@ -200,9 +151,7 @@ describe('AccessTokenService', () => {
         throw new Error('Token expired');
       });
 
-      expect(() => accessTokenService.getUserFromToken('expired-token')).toThrow(
-        'Failed to extract user data from token'
-      );
+      expect(() => accessTokenService.getUserFromToken('expired-token')).toThrow('Failed to verify token');
     });
   });
 
@@ -241,60 +190,6 @@ describe('AccessTokenService', () => {
       } as Request;
 
       expect(() => accessTokenService.getUserFromRequest(mockRequest)).toThrow(UnauthorizedException);
-    });
-  });
-
-  describe('tryGetUserFromRequest', () => {
-    it('should return user data from valid request', () => {
-      const mockRequest = {
-        headers: {
-          authorization: 'Bearer valid-token-123',
-        },
-      } as Request;
-
-      const mockPayload = {
-        sub: 999,
-        email: 'tryuser@example.com',
-        groupId: 4,
-        name: 'Try User',
-        isActive: true,
-      };
-
-      mockVerify.mockReturnValue(mockPayload);
-
-      const result = accessTokenService.tryGetUserFromRequest(mockRequest);
-      expect(result).toEqual({
-        id: 999,
-        email: 'tryuser@example.com',
-        groupId: 4,
-        name: 'Try User',
-        isActive: true,
-        sub: 999,
-      });
-    });
-
-    it('should return null when authorization header is missing', () => {
-      const mockRequest = {
-        headers: {},
-      } as Request;
-
-      const result = accessTokenService.tryGetUserFromRequest(mockRequest);
-      expect(result).toBeNull();
-    });
-
-    it('should return null when token is invalid', () => {
-      const mockRequest = {
-        headers: {
-          authorization: 'Bearer invalid-token',
-        },
-      } as Request;
-
-      mockVerify.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
-
-      const result = accessTokenService.tryGetUserFromRequest(mockRequest);
-      expect(result).toBeNull();
     });
   });
 
@@ -340,92 +235,6 @@ describe('AccessTokenService', () => {
 
       expect(result).toBe('generated-token-no-group');
       expect(mockSign).toHaveBeenCalledWith(expectedPayload, mockJwtSecret, { expiresIn: '24h' });
-    });
-  });
-
-  describe('verifyToken', () => {
-    it('should verify and decode token successfully', () => {
-      const mockDecoded = {
-        sub: 123,
-        email: 'verify@example.com',
-        userId: 123,
-        groupId: 5,
-      };
-
-      mockVerify.mockReturnValue(mockDecoded);
-
-      const result = accessTokenService.verifyToken('valid-token');
-
-      expect(result).toEqual({
-        sub: 123,
-        email: 'verify@example.com',
-        userId: 123,
-        groupId: 5,
-      });
-      expect(mockVerify).toHaveBeenCalledWith('valid-token', mockJwtSecret);
-    });
-
-    it('should handle token with userId fallback to sub', () => {
-      const mockDecoded = {
-        sub: 789,
-        email: 'fallback@example.com',
-        // no userId, should fallback to sub
-        groupId: 6,
-      };
-
-      mockVerify.mockReturnValue(mockDecoded);
-
-      const result = accessTokenService.verifyToken('valid-token');
-
-      expect(result).toEqual({
-        sub: 789,
-        email: 'fallback@example.com',
-        userId: 789,
-        groupId: 6,
-      });
-    });
-
-    it('should handle token without groupId', () => {
-      const mockDecoded = {
-        sub: 111,
-        email: 'nogroup@example.com',
-        userId: 111,
-        // no groupId
-      };
-
-      mockVerify.mockReturnValue(mockDecoded);
-
-      const result = accessTokenService.verifyToken('valid-token');
-
-      expect(result).toEqual({
-        sub: 111,
-        email: 'nogroup@example.com',
-        userId: 111,
-        groupId: undefined,
-      });
-    });
-
-    it('should return null when token verification fails', () => {
-      mockVerify.mockImplementation(() => {
-        throw new Error('Token expired');
-      });
-
-      const result = accessTokenService.verifyToken('expired-token');
-      expect(result).toBeNull();
-    });
-
-    it('should return null when decoded is not an object', () => {
-      mockVerify.mockReturnValue('string-decoded');
-
-      const result = accessTokenService.verifyToken('invalid-token');
-      expect(result).toBeNull();
-    });
-
-    it('should return null when decoded is null', () => {
-      mockVerify.mockReturnValue(null);
-
-      const result = accessTokenService.verifyToken('invalid-token');
-      expect(result).toBeNull();
     });
   });
 });

@@ -13,7 +13,7 @@ export function AccountItem({ account, isDeleting = false, onEdit, onDelete }: A
 
   // Fetch transaction count for this specific account
   const [pagedTransactions] = useApiTransactionsQuery({
-    accountId: account.id,
+    accountIds: [account.id!],
     pageSize: 1, // We only need the totalItems count, not the actual data
     sortBy: 'date',
     sortOrder: 'desc',

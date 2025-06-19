@@ -12,7 +12,7 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
   try {
     // Extract and verify token - this will throw if token is missing or invalid
     const token = accessTokenService.extractTokenFromRequest(req);
-    accessTokenService.verifyAccessToken(token);
+    accessTokenService.getUserFromToken(token);
 
     next();
   } catch (error) {
@@ -26,7 +26,7 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
 export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   try {
     const token = accessTokenService.extractTokenFromRequest(req);
-    accessTokenService.verifyAccessToken(token);
+    accessTokenService.getUserFromToken(token);
     // Token is valid, continue
     next();
   } catch {

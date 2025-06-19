@@ -30,42 +30,36 @@ export class AccessTokenService {
     return tokenParts[1];
   }
 
-  verifyAccessToken(token: string): JwtPayload {
-    const decoded = jwt.verify(token, this.jwtSecret) as JwtPayload;
-    if (!decoded || typeof decoded !== 'object' || !decoded.sub) {
-      throw new Error('Invalid token payload');
+  // core verification method - handles both throwing and non-throwing scenarios
+  private verifyTokenInternal(token: string, shouldThrow = true): JwtPayload | null {
+    try {
+      const decoded = jwt.verify(token, this.jwtSecret);
+      if (!decoded || typeof decoded !== 'object' || !decoded.sub) {
+        if (shouldThrow) throw new Error('Invalid token payload');
+        return null;
+      }
+
+      return {
+        id: Number(decoded.sub),
+        email: decoded.email as string,
+        groupId: decoded.groupId ? Number(decoded.groupId) : undefined,
+        name: decoded.name as string,
+        isActive: decoded.isActive as boolean,
+        sub: decoded.sub,
+      } as JwtPayload;
+    } catch {
+      if (shouldThrow) throw new Error('Failed to verify token');
+      return null;
     }
-    return decoded;
   }
 
   getUserFromToken(token: string): JwtPayload {
-    try {
-      const decoded = this.verifyAccessToken(token);
-      return {
-        id: Number(decoded.sub),
-        email: decoded.email,
-        groupId: decoded.groupId,
-        name: decoded.name,
-        isActive: decoded.isActive,
-        sub: decoded.sub,
-      } satisfies JwtPayload;
-    } catch {
-      throw new Error('Failed to extract user data from token');
-    }
+    return this.verifyTokenInternal(token, true)!;
   }
 
   getUserFromRequest(req: Request): JwtPayload {
     const token = this.extractTokenFromRequest(req);
     return this.getUserFromToken(token);
-  }
-
-  tryGetUserFromRequest(req: Request): JwtPayload | null {
-    try {
-      const token = this.extractTokenFromRequest(req);
-      return this.getUserFromToken(token);
-    } catch {
-      return null;
-    }
   }
 
   generateAccessToken(user: { id: number; email: string; groupId?: number }): string {
@@ -76,22 +70,5 @@ export class AccessTokenService {
       groupId: user.groupId,
     };
     return jwt.sign(payload, this.jwtSecret, { expiresIn: '24h' });
-  }
-
-  verifyToken(token: string): { sub: number; email: string; userId: number; groupId?: number } | null {
-    try {
-      const decoded = jwt.verify(token, this.jwtSecret);
-      if (typeof decoded === 'object' && decoded !== null) {
-        return {
-          sub: Number(decoded?.sub),
-          email: decoded?.email as string,
-          userId: Number(decoded?.userId ?? decoded?.sub),
-          groupId: decoded?.groupId ? Number(decoded?.groupId) : undefined,
-        };
-      }
-      return null;
-    } catch {
-      return null;
-    }
   }
 }
