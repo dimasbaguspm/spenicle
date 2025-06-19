@@ -1,5 +1,5 @@
 // Mock drizzle-orm functions
-import { eq, and, asc, desc, ilike } from 'drizzle-orm';
+import { eq, and, asc, desc, ilike, inArray } from 'drizzle-orm';
 import { Mock, Mocked, MockInstance, vi } from 'vitest';
 
 import { db } from '../../../core/db/config.ts';
@@ -13,6 +13,7 @@ vi.mock('drizzle-orm', () => ({
   asc: vi.fn(),
   desc: vi.fn(),
   ilike: vi.fn(),
+  inArray: vi.fn(),
 }));
 
 // Mock database configuration
@@ -36,6 +37,7 @@ const mockAnd = and as Mock;
 const mockAsc = asc as Mock;
 const mockDesc = desc as Mock;
 const mockIlike = ilike as Mock;
+const mockInArray = inArray as Mock;
 const mockDb = db as Mocked<typeof db>;
 const mockValidate = validate as Mock;
 
@@ -110,9 +112,10 @@ describe('CategoryService', () => {
 
     it('should apply filters correctly', async () => {
       const filters = {
+        ids: [1],
         groupId: 1,
         name: 'Test',
-        parentId: 2,
+        parentIds: [2],
         sortBy: 'name',
         sortOrder: 'desc',
         pageSize: 10,
@@ -126,15 +129,16 @@ describe('CategoryService', () => {
       const result = await categoryService.getMany(filters);
 
       expect(mockValidate).toHaveBeenCalledWith(expect.any(Object), filters);
+      expect(mockInArray).toHaveBeenCalledWith(categories.id, [1]);
       expect(mockEq).toHaveBeenCalledWith(categories.groupId, 1);
       expect(mockIlike).toHaveBeenCalledWith(categories.name, '%Test%');
-      expect(mockEq).toHaveBeenCalledWith(categories.parentId, 2);
+      expect(mockInArray).toHaveBeenCalledWith(categories.parentId, [2]);
       expect(mockDesc).toHaveBeenCalledWith(categories.name);
       expect(result).toEqual({ ...mockPagedCategories, pageSize: 10, pageNumber: 2 });
     });
 
-    it('should handle null parentId filter', async () => {
-      const filters = { groupId: 1, parentId: null };
+    it('should handle null parentIds filter', async () => {
+      const filters = { groupId: 1, parentIds: [] };
 
       mockValidate.mockResolvedValue({
         data: { ...filters, sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
@@ -145,13 +149,56 @@ describe('CategoryService', () => {
       await categoryService.getMany(filters);
 
       expect(mockEq).toHaveBeenCalledWith(categories.groupId, 1);
-      // parentId: null should not create a condition
+      // Empty parentIds array should not create a condition
+      expect(mockInArray).not.toHaveBeenCalledWith(categories.parentId, []);
+    });
+
+    it('should handle multiple category IDs filtering', async () => {
+      const filters = { ids: [1, 2, 3] };
+
+      mockValidate.mockResolvedValue({
+        data: { ...filters, sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
+      });
+
+      mockDb.select.mockReturnValue(mockSelectMany());
+
+      await categoryService.getMany(filters);
+
+      expect(mockInArray).toHaveBeenCalledWith(categories.id, [1, 2, 3]);
+    });
+
+    it('should handle multiple parent IDs filtering', async () => {
+      const filters = { parentIds: [5, 6, 7] };
+
+      mockValidate.mockResolvedValue({
+        data: { ...filters, sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
+      });
+
+      mockDb.select.mockReturnValue(mockSelectMany());
+
+      await categoryService.getMany(filters);
+
+      expect(mockInArray).toHaveBeenCalledWith(categories.parentId, [5, 6, 7]);
+    });
+
+    it('should skip array filters when arrays are empty', async () => {
+      const filters = { ids: [], parentIds: [] };
+
+      mockValidate.mockResolvedValue({
+        data: { ...filters, sortBy: 'createdAt', sortOrder: 'asc', pageSize: 25, pageNumber: 1 },
+      });
+
+      mockDb.select.mockReturnValue(mockSelectMany());
+
+      await categoryService.getMany(filters);
+
+      expect(mockInArray).not.toHaveBeenCalled();
     });
   });
 
   describe('getSingle', () => {
     it('should get a single category by conditions', async () => {
-      const filters = { id: 1, groupId: 1 };
+      const filters = { ids: [1], groupId: 1 };
 
       mockValidate.mockResolvedValue({ data: filters });
       const mockSelect = vi.fn().mockReturnValue({
@@ -164,7 +211,7 @@ describe('CategoryService', () => {
       const result = await categoryService.getSingle(filters);
 
       expect(mockValidate).toHaveBeenCalledWith(expect.any(Object), filters);
-      expect(mockEq).toHaveBeenCalledWith(categories.id, 1);
+      expect(mockInArray).toHaveBeenCalledWith(categories.id, [1]);
       expect(mockEq).toHaveBeenCalledWith(categories.groupId, 1);
       expect(mockAnd).toHaveBeenCalled();
       expect(result).toEqual(mockCategory);

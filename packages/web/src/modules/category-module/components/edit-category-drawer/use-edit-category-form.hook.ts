@@ -16,7 +16,7 @@ export const useEditCategoryForm = ({ category, onSuccess, onError }: EditCatego
 
   const [updateCategory, updateCategoryError, { isPending }] = useApiUpdateCategoryMutation();
 
-  const [categoriesData] = useApiCategoriesQuery({ parentId: category.id });
+  const [categoriesData] = useApiCategoriesQuery({ parentIds: [category.id!] });
 
   // Form setup with react-hook-form
   const {

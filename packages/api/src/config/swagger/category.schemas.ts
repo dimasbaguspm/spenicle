@@ -126,18 +126,23 @@ export const categorySchemas = {
       {
         type: 'object',
         properties: {
-          id: {
-            type: 'integer',
-            description: 'Filter by category ID',
+          ids: {
+            type: 'array',
+            items: {
+              type: 'integer',
+            },
+            description: 'Filter by multiple category IDs',
           },
           groupId: {
             type: 'integer',
             description: 'Filter by group ID',
           },
-          parentId: {
-            type: 'integer',
-            nullable: true,
-            description: 'Filter by parent category ID',
+          parentIds: {
+            type: 'array',
+            items: {
+              type: 'integer',
+            },
+            description: 'Filter by multiple parent category IDs',
           },
           name: {
             type: 'string',

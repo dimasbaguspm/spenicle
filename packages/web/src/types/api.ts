@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-07T04:15:33.608Z
+ * Generated on: 2025-06-19T07:00:59.421Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -587,12 +587,12 @@ export interface UpdateCategory {
 }
 
 export type CategoryQueryParameters = QueryParameters & {
-  /** Filter by category ID */
-  id?: number;
+  /** Filter by multiple category IDs */
+  ids?: number[];
   /** Filter by group ID */
   groupId?: number;
-  /** Filter by parent category ID */
-  parentId?: number | null;
+  /** Filter by multiple parent category IDs */
+  parentIds?: number[];
   /** Filter by category name */
   name?: string;
   /** Field to sort by */
@@ -760,13 +760,22 @@ export interface UpdateTransaction {
 }
 
 export type TransactionQueryParameters = QueryParameters & {
-  /** Filter by multiple transaction IDs */
+  /**
+   * Filter by multiple transaction IDs
+   * @example [1,2,3]
+   */
   ids?: number[];
   /** Filter by group ID */
   groupId?: number;
-  /** Filter by multiple account IDs */
+  /**
+   * Filter by multiple account IDs
+   * @example [1,2,3]
+   */
   accountIds?: number[];
-  /** Filter by multiple category IDs */
+  /**
+   * Filter by multiple category IDs
+   * @example [1,2,3]
+   */
   categoryIds?: number[];
   /** Filter by user who created the transaction */
   createdByUserId?: number;

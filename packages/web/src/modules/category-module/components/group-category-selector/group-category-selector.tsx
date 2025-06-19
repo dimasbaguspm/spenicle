@@ -26,7 +26,7 @@ export const GroupCategorySelector = <T extends FieldValues>({
 }: GroupCategorySelectorProps<T>) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [categoriesData] = useApiCategoriesQuery({ parentId: null });
+  const [categoriesData] = useApiCategoriesQuery({ parentIds: undefined });
 
   const topLevelCategories =
     categoriesData?.items

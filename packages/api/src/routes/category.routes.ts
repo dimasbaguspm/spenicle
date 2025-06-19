@@ -20,10 +20,14 @@ const router = Router();
  *     tags: [Categories]
  *     parameters:
  *       - in: query
- *         name: id
+ *         name: ids
  *         schema:
- *           type: integer
- *         description: Filter by category ID
+ *           type: array
+ *           items:
+ *             type: integer
+ *         style: form
+ *         explode: false
+ *         description: Filter by multiple category IDs (comma-separated)
  *       - in: query
  *         name: groupId
  *         schema:
@@ -35,10 +39,14 @@ const router = Router();
  *           type: string
  *         description: Filter by category name
  *       - in: query
- *         name: parentId
+ *         name: parentIds
  *         schema:
- *           type: integer
- *         description: Filter by parent category ID
+ *           type: array
+ *           items:
+ *             type: integer
+ *         style: form
+ *         explode: false
+ *         description: Filter by multiple parent category IDs (comma-separated)
  *       - in: query
  *         name: pageNumber
  *         schema:

@@ -365,9 +365,9 @@ describe('Category Schema Validation', () => {
   describe('categoryQuerySchema', () => {
     it('should validate valid query parameters', () => {
       const validData = {
-        id: 1,
+        ids: [1, 2],
         groupId: 2,
-        parentId: 3,
+        parentIds: [3, 4],
         name: 'Test Category',
         pageNumber: 2,
         pageSize: 10,
@@ -417,15 +417,59 @@ describe('Category Schema Validation', () => {
       expect(result.data?.sortOrder).toBeUndefined();
     });
 
-    it('should allow null parentId', () => {
+    it('should allow null parentIds', () => {
       const data = {
-        parentId: null,
+        parentIds: null,
       };
 
       const result = categoryQuerySchema.safeParse(data);
 
       expect(result.success).toBe(true);
-      expect(result.data?.parentId).toBeNull();
+      expect(result.data?.parentIds).toBeUndefined();
+    });
+
+    it('should validate empty arrays', () => {
+      const data = {
+        ids: [],
+        parentIds: [],
+      };
+
+      const result = categoryQuerySchema.safeParse(data);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.ids).toEqual([]);
+      expect(result.data?.parentIds).toEqual([]);
+    });
+
+    it('should validate arrays of positive numbers', () => {
+      const data = {
+        ids: [1, 2, 3],
+        parentIds: [4, 5],
+      };
+
+      const result = categoryQuerySchema.safeParse(data);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.ids).toEqual([1, 2, 3]);
+      expect(result.data?.parentIds).toEqual([4, 5]);
+    });
+
+    it('should reject arrays with non-positive numbers for ids', () => {
+      const invalidData = {
+        ids: [1, 0, 3],
+      };
+
+      const result = categoryQuerySchema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            message: 'Number must be greater than 0',
+            path: ['ids', 1],
+          }),
+        ])
+      );
     });
 
     it('should reject invalid sortBy values', () => {

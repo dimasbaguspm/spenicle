@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, ilike } from 'drizzle-orm';
+import { eq, and, asc, desc, ilike, inArray } from 'drizzle-orm';
 
 import { db } from '../../core/db/config.ts';
 import { formatCategoryModel } from '../../helpers/model-formatters/index.ts';
@@ -18,12 +18,23 @@ export class CategoryService implements DatabaseServiceSchema<Category> {
    */
   async getMany(filters?: unknown): Promise<PagedCategories> {
     const { data } = await validate(categoryQuerySchema, filters ?? {});
-    const { groupId, name, parentId, sortBy = 'createdAt', sortOrder = 'asc', pageSize = 25, pageNumber = 1 } = data;
+    const {
+      ids,
+      groupId,
+      parentIds,
+      name,
+      sortBy = 'createdAt',
+      sortOrder = 'asc',
+      pageSize = 25,
+      pageNumber = 1,
+    } = data;
 
     const conditions = [];
+    if (ids !== undefined && ids.length > 0) conditions.push(inArray(categories.id, ids));
     if (groupId !== undefined) conditions.push(eq(categories.groupId, groupId));
+    if (parentIds !== undefined && parentIds !== null && parentIds?.length > 0)
+      conditions.push(inArray(categories.parentId, parentIds));
     if (name !== undefined) conditions.push(ilike(categories.name, `%${name}%`));
-    if (parentId !== undefined && parentId !== null) conditions.push(eq(categories.parentId, parentId));
 
     // Sorting
     const isAscending = sortOrder === 'asc';
@@ -70,14 +81,14 @@ export class CategoryService implements DatabaseServiceSchema<Category> {
   async getSingle(filters?: unknown) {
     const { data } = await validate(categoryQuerySchema, filters ?? {});
 
-    const { id, groupId, name, parentId } = data;
+    const { ids, groupId, name, parentIds } = data;
 
     const conditions = [];
 
-    if (id) conditions.push(eq(categories.id, id));
+    if (ids && ids.length > 0) conditions.push(inArray(categories.id, ids));
     if (groupId) conditions.push(eq(categories.groupId, groupId));
     if (name) conditions.push(ilike(categories.name, `%${name}%`));
-    if (parentId) conditions.push(eq(categories.parentId, parentId));
+    if (parentIds && parentIds.length > 0) conditions.push(inArray(categories.parentId, parentIds));
 
     const [category] = await db
       .select()

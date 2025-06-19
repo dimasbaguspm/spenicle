@@ -17,9 +17,13 @@ export const updateCategorySchema = createCategorySchema.partial();
 
 // Schema for category query parameters
 export const categoryQuerySchema = z.object({
-  id: z.number().int().positive().optional(),
+  ids: z.array(z.number().int().positive()).optional(),
   groupId: z.number().int().positive().optional(),
-  parentId: z.number().int().nullable().optional(),
+  parentIds: z
+    .array(z.number().int())
+    .nullable()
+    .optional()
+    .transform((val) => (val === null ? undefined : val)),
   name: z
     .string()
     .optional()

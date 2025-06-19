@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { generateApi } from 'swagger-typescript-api';
 
-const SWAGGER_URL = `${process.env.API_BASE_URL}/docs/swagger.json`;
+const SWAGGER_URL = `${process.env.API_BASE_URL ?? 'http://localhost:3000/api'}/docs/swagger.json`;
 const OUTPUT_DIR = resolve(process.cwd(), 'src/types');
 const OUTPUT_FILE = 'api.ts';
 
