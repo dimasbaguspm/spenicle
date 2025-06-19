@@ -321,8 +321,15 @@ case "$1" in
     fi
     echo "✅ Configuration generated successfully"
     ;;
+  monitor-memory)
+    echo "📊 docker container memory usage (snapshot):"
+    docker stats --no-stream
+    echo ""
+    echo "🖥️  system memory usage (free -h):"
+    free -h
+    ;;
   *)
-    echo "Usage: $0 {up|down|rebuild [service]|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|clean-cache [service]|check|generate-config}"
+    echo "Usage: $0 {up|down|rebuild [service]|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|clean-cache [service]|check|generate-config|monitor-memory}"
     echo ""
     echo "Commands:"
     echo "  up                      - Start all services and setup backup cron"
@@ -337,6 +344,7 @@ case "$1" in
     echo "  clean-cache [service]  - Clean Docker cache, remove containers/images/volumes and rebuild"
     echo "  check                  - Run pre-deployment checks"
     echo "  generate-config        - Generate nginx configuration"
+    echo "  monitor-memory         - Show memory usage for all project containers and system"
     echo ""
     echo "Backup Management:"
     echo "  • Backups are managed via host-level cron jobs (not Docker containers)"

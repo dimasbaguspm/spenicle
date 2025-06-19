@@ -408,8 +408,22 @@ case "$1" in
     echo "  1. Using './scripts/prod.sh generate-config' instead"
     echo "  2. Or running services individually without Docker Compose"
     ;;
+  monitor-memory)
+    echo "📊 docker container resource usage (CPU, memory, network, disk I/O):"
+    # docker stats shows cpu, memory, network, and block io for all containers
+    docker stats --no-stream
+    echo ""
+    echo "🖥️  system memory usage (free -h):"
+    free -h
+    echo ""
+    echo "🖥️  system cpu usage (top 5 processes):"
+    ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head -n 6
+    echo ""
+    echo "💾 system disk usage (df -h):"
+    df -h
+    ;;
   *)
-    echo "Usage: $0 {up|down|rebuild [service]|seed|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|exec <service> [command]|clean-cache [service]|check|generate-config}"
+    echo "Usage: $0 {up|down|rebuild [service]|seed|backup-now|backup-status|backup-logs|restore-backup <file>|logs [service]|restart [service]|exec <service> [command]|clean-cache [service]|check|generate-config|monitor-memory}"
     echo ""
     echo "Commands:"
     echo "  up                      - Start all services and setup backup cron (6-hour intervals)"
@@ -426,6 +440,7 @@ case "$1" in
     echo "  clean-cache [service]  - Clean Docker cache, remove containers/images/volumes and rebuild"
     echo "  check                  - Run pre-deployment checks"
     echo "  generate-config        - Info about config generation (dev mode)"
+    echo "  monitor-memory         - Show memory usage for all project containers and system"
     echo ""
     echo "Backup Management:"
     echo "  • Development backups run every 6 hours via host-level cron"

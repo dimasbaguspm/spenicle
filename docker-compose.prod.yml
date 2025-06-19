@@ -1,4 +1,3 @@
-
 # YAML anchors for environment variables
 x-api-env: &api-env
   NODE_ENV: ${NODE_ENV}
@@ -47,11 +46,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 300M
-          cpus: "0.4"
+          memory: 1g
+          cpus: "0.8"
         reservations:
-          memory: 200M
-          cpus: "0.2"
+          memory: 512m
+          cpus: "0.4"
 
   api:
     build:
