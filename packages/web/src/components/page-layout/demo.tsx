@@ -1,7 +1,7 @@
 import { Button } from '../button';
 import { TopNav } from '../top-nav';
 
-import { PageLayout, PageLayoutHeader, PageLayoutMain, PageLayoutFooter } from './page-layout';
+import { PageLayout, PageLayoutHeader, PageLayoutMain, PageLayoutFooter } from '.';
 
 export function PageLayoutDemo() {
   return (

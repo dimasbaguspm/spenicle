@@ -1,8 +1,13 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import { forwardRef } from 'react';
 
+import { useViewport } from '../../hooks';
 import { cn } from '../../libs/utils';
 import { PageHeader, type PageHeaderProps } from '../page-header';
+
+import { PageLayoutFooter } from './page-layout-footer';
+import { PageLayoutHeader } from './page-layout-header';
+import { PageLayoutMain } from './page-layout-main';
 
 const pageLayoutVariants = cva('w-full flex flex-col', {
   variants: {
@@ -51,92 +56,12 @@ const pageLayoutVariants = cva('w-full flex flex-col', {
   },
 });
 
-const pageLayoutHeaderVariants = cva('w-full flex-shrink-0', {
-  variants: {
-    sticky: {
-      true: 'sticky top-0 z-40',
-      false: '',
-    },
-    shadow: {
-      none: '',
-      sm: 'shadow-sm',
-      md: 'shadow-md',
-      lg: 'shadow-lg',
-    },
-    background: {
-      inherit: '',
-      white: 'bg-white',
-      coral: 'bg-coral-50',
-      sage: 'bg-sage-50',
-      mist: 'bg-mist-50',
-      slate: 'bg-slate-50',
-      cream: 'bg-cream-50',
-    },
-  },
-  defaultVariants: {
-    sticky: false,
-    shadow: 'none',
-    background: 'inherit',
-  },
-});
-
-const pageLayoutMainVariants = cva('relative w-full flex-1 flex flex-col', {
-  variants: {
-    padding: {
-      none: '',
-      sm: 'p-2',
-      md: 'p-4',
-      lg: 'p-6',
-      xl: 'p-8',
-    },
-    overflow: {
-      visible: 'overflow-visible',
-      hidden: 'overflow-hidden',
-      auto: 'overflow-auto',
-      scroll: 'overflow-scroll',
-    },
-  },
-  defaultVariants: {
-    padding: 'none',
-    overflow: 'visible',
-  },
-});
-
-const pageLayoutFooterVariants = cva('w-full flex-shrink-0', {
-  variants: {
-    sticky: {
-      true: 'sticky bottom-0 z-40',
-      false: '',
-    },
-    shadow: {
-      none: '',
-      sm: 'shadow-sm',
-      md: 'shadow-md',
-      lg: 'shadow-lg',
-    },
-    background: {
-      inherit: '',
-      white: 'bg-white',
-      coral: 'bg-coral-50',
-      sage: 'bg-sage-50',
-      mist: 'bg-mist-50',
-      slate: 'bg-slate-50',
-      cream: 'bg-cream-50',
-    },
-  },
-  defaultVariants: {
-    sticky: false,
-    shadow: 'none',
-    background: 'inherit',
-  },
-});
-
 export interface PageLayoutProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof pageLayoutVariants> {
   header?: React.ReactNode;
   footer?: React.ReactNode;
-  headerProps?: PageLayoutHeaderProps;
-  mainProps?: PageLayoutMainProps;
-  footerProps?: PageLayoutFooterProps;
+  headerProps?: React.ComponentProps<typeof PageLayoutHeader>;
+  mainProps?: React.ComponentProps<typeof PageLayoutMain>;
+  footerProps?: React.ComponentProps<typeof PageLayoutFooter>;
   /** Page title - when provided, will show a PageHeader with back button and title */
   title?: string;
   /** Show back button in header */
@@ -147,54 +72,6 @@ export interface PageLayoutProps extends React.HTMLAttributes<HTMLDivElement>, V
   rightContent?: React.ReactNode;
 }
 
-export interface PageLayoutHeaderProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof pageLayoutHeaderVariants> {}
-
-export interface PageLayoutMainProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof pageLayoutMainVariants> {}
-
-export interface PageLayoutFooterProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof pageLayoutFooterVariants> {}
-
-const PageLayoutHeader = forwardRef<HTMLDivElement, PageLayoutHeaderProps>(
-  ({ className, sticky, shadow, background, children, ...props }, ref) => {
-    return (
-      <header ref={ref} className={cn(pageLayoutHeaderVariants({ sticky, shadow, background }), className)} {...props}>
-        {children}
-      </header>
-    );
-  }
-);
-
-PageLayoutHeader.displayName = 'PageLayoutHeader';
-
-const PageLayoutMain = forwardRef<HTMLDivElement, PageLayoutMainProps>(
-  ({ className, padding, overflow, children, ...props }, ref) => {
-    return (
-      <main ref={ref} className={cn(pageLayoutMainVariants({ padding, overflow }), className)} {...props}>
-        {children}
-      </main>
-    );
-  }
-);
-
-PageLayoutMain.displayName = 'PageLayoutMain';
-
-const PageLayoutFooter = forwardRef<HTMLDivElement, PageLayoutFooterProps>(
-  ({ className, sticky, shadow, background, children, ...props }, ref) => {
-    return (
-      <footer ref={ref} className={cn(pageLayoutFooterVariants({ sticky, shadow, background }), className)} {...props}>
-        {children}
-      </footer>
-    );
-  }
-);
-
-PageLayoutFooter.displayName = 'PageLayoutFooter';
-
 export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(
   (
     {
@@ -202,7 +79,6 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(
       minHeight,
       padding,
       background,
-      maxWidth,
       header,
       footer,
       headerProps,
@@ -217,13 +93,16 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(
     },
     ref
   ) => {
-    // Set default padding if title is provided and no mainProps padding is set
+    const { isDesktop } = useViewport();
     const defaultMainProps = title && !mainProps?.padding ? { padding: 'md' as const, ...mainProps } : mainProps;
 
     return (
       <div
         ref={ref}
-        className={cn(pageLayoutVariants({ minHeight, padding, background, maxWidth }), className)}
+        className={cn(
+          pageLayoutVariants({ minHeight, padding, background, maxWidth: isDesktop ? 'none' : 'lg' }),
+          className
+        )}
         {...props}
       >
         {header && <PageLayoutHeader {...headerProps}>{header}</PageLayoutHeader>}
@@ -245,8 +124,3 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(
     );
   }
 );
-
-PageLayout.displayName = 'PageLayout';
-
-// Export sub-components for composable usage
-export { PageLayoutHeader, PageLayoutMain, PageLayoutFooter, pageLayoutVariants };
