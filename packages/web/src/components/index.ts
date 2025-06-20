@@ -52,3 +52,4 @@ export { CategorySelector } from '../modules/category-module/components/category
 export { LineChart } from './line-chart';
 export { BarChart } from './bar-chart';
 export * from './radar-chart';
+export { Brand, type BrandProps } from './brand';
