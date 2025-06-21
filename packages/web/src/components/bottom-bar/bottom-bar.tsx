@@ -28,7 +28,7 @@ const variantClasses = {
   },
   compact: {
     container: 'bottom-0 left-0 right-0',
-    content: 'w-full bg-cream-50/98 backdrop-blur-sm border-t border-mist-200/70 shadow-sm',
+    content: 'w-full bg-white backdrop-blur-sm border-t border-mist-200/70 shadow-sm',
     padding: 'px-2 py-1.5',
   },
 } as const;

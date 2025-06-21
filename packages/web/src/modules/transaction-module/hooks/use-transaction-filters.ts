@@ -1,4 +1,3 @@
-// filepath: packages/web/src/modules/transaction-module/hooks/use-transaction-filters.ts
 import { useLocation } from '@tanstack/react-router';
 
 /**
@@ -8,10 +7,19 @@ import { useLocation } from '@tanstack/react-router';
 export const useTransactionFilters = () => {
   return useLocation({
     select: ({ search }) => ({
-      accountId: search.accountId ? +search.accountId : undefined,
-      categoryId: search.categoryId ? +search.categoryId : undefined,
-      type: search.type ?? undefined,
-      isHighlighted: typeof search.isHighlighted !== 'undefined' ? Boolean(search.isHighlighted) : undefined,
+      accountIds: (search.accountIds
+        ? Array.isArray(search.accountIds)
+          ? search.accountIds
+          : [search.accountIds]
+        : undefined) as number[] | undefined,
+      categoryIds: (search.categoryIds
+        ? Array.isArray(search.categoryIds)
+          ? search.categoryIds
+          : [+search.categoryIds]
+        : undefined) as number[] | undefined,
+      types: (search.types ? (Array.isArray(search.types) ? search.types : [search.types]) : undefined) as
+        | ('expense' | 'income' | 'transfer')[]
+        | undefined,
     }),
   });
 };

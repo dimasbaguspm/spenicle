@@ -1,5 +1,7 @@
+import { Check } from 'lucide-react';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 
+import { Button } from '../../../../components/button/button';
 import { Modal } from '../../../../components/modal';
 import { cn } from '../../../../libs/utils';
 import type { Category } from '../../../../types/api';
@@ -8,10 +10,10 @@ import { CategoryIcon } from '../category-icon';
 interface CategorySelectorModalProps {
   isOpen: boolean;
   categories: Category[];
-  value: Category | null;
-  onSelect: (category: Category) => void;
+  value: Category[] | undefined; // changed from Category | null to Category[]
   onClear: () => void;
   onClose: () => void;
+  onSubmit: (selected: Category[]) => void;
   size?: 'sm' | 'md';
 }
 
@@ -19,15 +21,29 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
   isOpen,
   categories,
   value,
-  onSelect,
   onClear,
   onClose,
+  onSubmit,
   size = 'md',
 }) => {
   const [search, setSearch] = useState('');
-  const [focusedIdx, setFocusedIdx] = useState<number>(-1);
+  // helper to extract selected ids from value
+  function getSelectedIdsFromValue(val: Category[] = []): number[] {
+    return val.filter((v) => typeof v.id === 'number').map((v) => v.id as number);
+  }
+
+  const [selectedIds, setSelectedIds] = useState<number[]>(getSelectedIdsFromValue(value));
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 0);
+      setSelectedIds(getSelectedIdsFromValue(value));
+    } else {
+      setSearch('');
+    }
+  }, [isOpen]); // remove value from deps
 
   const filteredCategories = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -39,43 +55,28 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 0);
-      setFocusedIdx(filteredCategories.findIndex((cat) => cat.id === value?.id));
     } else {
       setSearch('');
-      setFocusedIdx(-1);
     }
   }, [isOpen]);
 
-  // Keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (filteredCategories.length === 0) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setFocusedIdx((idx) => (idx + 1) % filteredCategories.length);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setFocusedIdx((idx) => (idx - 1 + filteredCategories.length) % filteredCategories.length);
-    } else if (e.key === 'Enter' && focusedIdx >= 0) {
-      e.preventDefault();
-      onSelect(filteredCategories[focusedIdx]);
-    } else if (e.key === 'Tab') {
-      // Allow default tab behavior: focus moves to next/prev focusable element
-      setFocusedIdx(-1);
-    }
+  // update selection for multi-select, only allow number id
+  const handleCategoryClick = (category: Category) => {
+    if (typeof category.id !== 'number') return;
+    setSelectedIds((prev) => {
+      const arr = prev.filter((id): id is number => typeof id === 'number' && Number.isFinite(id));
+      if (arr.includes(category.id!)) {
+        return arr.filter((id) => id !== category.id!);
+      } else {
+        return [...arr, category.id!];
+      }
+    });
   };
-
-  useEffect(() => {
-    // Scroll focused item into view
-    if (listRef.current && focusedIdx >= 0) {
-      const item = listRef.current.querySelectorAll('button[role="option"]')[focusedIdx] as HTMLElement;
-      item?.scrollIntoView({ block: 'nearest' });
-    }
-  }, [focusedIdx, filteredCategories]);
 
   if (!isOpen) return null;
 
   return (
-    <Modal onClose={onClose} size="sm" closeOnOverlayClick closeOnEscape>
+    <Modal onClose={onClose} size="lg" closeOnOverlayClick closeOnEscape>
       <Modal.Header>
         <Modal.Title>Select Category</Modal.Title>
         <Modal.CloseButton />
@@ -86,7 +87,6 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={handleKeyDown}
           placeholder="Search categories..."
           className="w-full rounded-md border border-mist-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-coral-400 outline-none transition"
           aria-label="Search categories"
@@ -103,21 +103,18 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
         {filteredCategories.length === 0 ? (
           <div className="p-8 text-center text-slate-500">No categories found</div>
         ) : (
-          filteredCategories.map((category, idx) => (
+          filteredCategories.map((category) => (
             <button
               key={category.id}
               type="button"
               role="option"
-              aria-selected={value?.id === category.id}
+              aria-selected={typeof category.id === 'number' && selectedIds.includes(category.id)}
               className={cn(
                 'w-full flex items-center gap-3 text-left px-4 py-3 transition-colors',
-                value?.id === category.id && 'bg-mist-100 font-semibold',
-                focusedIdx === idx
-                  ? 'bg-coral-50 z-10'
-                  : 'hover:bg-mist-50 active:bg-mist-200 focus:bg-mist-100 focus:outline-none'
+                typeof category.id === 'number' && selectedIds.includes(category.id) && 'bg-mist-100 font-semibold',
+                'hover:bg-mist-50 active:bg-mist-200 focus:bg-mist-100 focus:outline-none'
               )}
-              onClick={() => onSelect(category)}
-              onMouseEnter={() => setFocusedIdx(idx)}
+              onClick={() => handleCategoryClick(category)}
             >
               <CategoryIcon
                 iconValue={category.metadata?.icon}
@@ -125,23 +122,55 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
                 size={size === 'sm' ? 'sm' : 'md'}
               />
               <span className="truncate">{category.name}</span>
+              {typeof category.id === 'number' && selectedIds.includes(category.id) ? (
+                <span className="ml-auto text-coral-600 font-bold flex items-center">
+                  <Check className="w-5 h-5" aria-label="Selected" />
+                </span>
+              ) : null}
             </button>
           ))
         )}
       </div>
       <div className="flex justify-between items-center p-3 border-t border-mist-100 bg-cream-50">
-        {/* Info left: filtered/total count */}
-        <div className="text-xs text-slate-500">
-          {filteredCategories.length} of {categories.length} categories
+        {/* Info left: filtered/total count and selected count with consistent gap and icon */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">
+            {filteredCategories.length} of {categories.length} categories
+          </span>
+          {selectedIds.length > 0 && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-coral-600">
+              <Check className="w-4 h-4" aria-label="Selected count" />
+              {selectedIds.length} selected
+            </span>
+          )}
         </div>
-        {/* Clear right */}
-        <button
-          type="button"
-          className="text-sm text-slate-400 hover:text-danger-500 focus:text-danger-500 focus:outline-none"
-          onClick={onClear}
-        >
-          Clear
-        </button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-slate-400 hover:text-danger-500 focus:text-danger-500 focus:outline-none"
+            onClick={() => {
+              setSelectedIds([]);
+              onClear();
+            }}
+          >
+            Clear
+          </Button>
+          <Button
+            type="button"
+            variant="coral"
+            size="sm"
+            className="ml-2"
+            onClick={() => {
+              // only submit categories with number id in selectedIds
+              const selected = categories.filter((cat) => typeof cat.id === 'number' && selectedIds.includes(cat.id));
+              onSubmit(selected);
+            }}
+          >
+            Submit
+          </Button>
+        </div>
       </div>
     </Modal>
   );

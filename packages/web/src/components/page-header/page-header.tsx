@@ -4,7 +4,7 @@ import { forwardRef } from 'react';
 import { cn } from '../../libs/utils';
 import { BackButton, type BackButtonProps } from '../back-button';
 
-const pageHeaderVariants = cva('flex items-center gap-3 mb-6', {
+const pageHeaderVariants = cva('bg-white flex items-center gap-3 mb-6', {
   variants: {
     variant: {
       default: 'px-0',

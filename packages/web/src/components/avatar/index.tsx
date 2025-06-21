@@ -9,8 +9,7 @@ const avatarVariants = cva('relative flex shrink-0 overflow-hidden rounded-full'
       sm: 'h-8 w-8',
       md: 'h-10 w-10',
       lg: 'h-12 w-12',
-      xl: 'h-16 w-16',
-      '2xl': 'h-20 w-20',
+      xl: 'h-14 w-14',
     },
   },
   defaultVariants: {
@@ -20,33 +19,46 @@ const avatarVariants = cva('relative flex shrink-0 overflow-hidden rounded-full'
 
 const avatarImageVariants = cva('aspect-square h-full w-full object-cover');
 
-const avatarFallbackVariants = cva(
-  'flex h-full w-full items-center justify-center bg-gray-100 text-gray-600 font-medium select-none',
-  {
-    variants: {
-      size: {
-        sm: 'text-xs',
-        md: 'text-sm',
-        lg: 'text-base',
-        xl: 'text-lg',
-        '2xl': 'text-xl',
-      },
+const avatarFallbackVariants = cva('flex h-full w-full items-center justify-center font-medium select-none', {
+  variants: {
+    size: {
+      sm: 'text-xs',
+      md: 'text-sm',
+      lg: 'text-base',
+      xl: 'text-lg',
     },
-    defaultVariants: {
-      size: 'md',
-    },
-  }
-);
+  },
+  defaultVariants: {
+    size: 'md',
+  },
+});
+
+const paletteBgMap = {
+  coral: 'bg-coral-100',
+  sage: 'bg-sage-100',
+  mist: 'bg-mist-100',
+  slate: 'bg-slate-100',
+  cream: 'bg-cream-100',
+};
+
+const paletteTextMap = {
+  coral: 'text-coral-700', // strong contrast for coral bg
+  sage: 'text-sage-700',
+  mist: 'text-mist-700',
+  slate: 'text-slate-700',
+  cream: 'text-slate-700', // slate text for cream bg for best contrast
+};
 
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof avatarVariants> {
   src?: string;
   alt?: string;
   fallback?: string;
   loading?: 'eager' | 'lazy';
+  color?: 'coral' | 'sage' | 'mist' | 'slate' | 'cream';
 }
 
 const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
-  ({ className, size, src, alt, fallback, loading = 'lazy', ...props }, ref) => {
+  ({ className, size, src, alt, fallback, loading = 'lazy', color = 'coral', ...props }, ref) => {
     const getInitials = (name?: string) => {
       if (!name) return '?';
       return name
@@ -73,7 +85,9 @@ const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
             }}
           />
         ) : null}
-        <div className={cn(avatarFallbackVariants({ size }))}>{displayFallback}</div>
+        <div className={cn(avatarFallbackVariants({ size }), paletteBgMap[color], paletteTextMap[color])}>
+          {displayFallback}
+        </div>
       </div>
     );
   }

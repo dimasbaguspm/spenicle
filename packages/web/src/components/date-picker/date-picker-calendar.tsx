@@ -49,7 +49,7 @@ export function DatePickerCalendar({ className }: DatePickerCalendarProps) {
   };
 
   return (
-    <div className={cn('p-3', className)}>
+    <div className={cn('pt-3', className)}>
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-1 mb-2">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (

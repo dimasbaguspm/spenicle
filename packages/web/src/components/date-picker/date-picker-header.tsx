@@ -8,9 +8,10 @@ import { DatePickerContext } from './date-picker-context';
 
 export interface DatePickerHeaderProps {
   className?: string;
+  variant?: 'default' | 'compact'; // add variant prop
 }
 
-export function DatePickerHeader({ className }: DatePickerHeaderProps) {
+export function DatePickerHeader({ className, variant = 'default' }: DatePickerHeaderProps) {
   const context = useContext(DatePickerContext);
 
   if (!context) {
@@ -34,6 +35,35 @@ export function DatePickerHeader({ className }: DatePickerHeaderProps) {
   const handleNextYear = () => {
     onDisplayDateChange(displayDate.add(1, 'year'));
   };
+
+  if (variant === 'compact') {
+    // compact variant: display on left, only prev/next month chevrons on right
+    return (
+      <div className={cn('flex items-center justify-between bg-cream-50', className)}>
+        <span className="text-base font-medium text-slate-900 select-none">{displayDate.format('MMM YYYY')}</span>
+        <div className="flex items-center gap-1">
+          <IconButton
+            variant="ghost"
+            size="sm"
+            onClick={handlePreviousMonth}
+            className="text-slate-600 hover:text-coral-600"
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </IconButton>
+          <IconButton
+            variant="ghost"
+            size="sm"
+            onClick={handleNextMonth}
+            className="text-slate-600 hover:text-coral-600"
+            aria-label="Next month"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </IconButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('flex items-center justify-between p-3 border-b border-mist-200', className)}>

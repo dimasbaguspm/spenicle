@@ -21,3 +21,4 @@ export type { DatePickerProps } from './date-picker';
 export type { DatePickerHeaderProps } from './date-picker-header';
 export type { DatePickerCalendarProps } from './date-picker-calendar';
 export type { DatePickerFooterProps } from './date-picker-footer';
+export { DatePickerInline, type DatePickerInlineProps } from './date-picker-inline';

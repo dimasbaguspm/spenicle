@@ -13,6 +13,9 @@ const textInputVariants = cva(
         tertiary: 'border-mist-300 bg-mist-50 text-slate-700 focus:border-mist-400 focus:ring-mist-300',
         outline: 'border-slate-300 bg-transparent text-slate-700 focus:border-slate-400 focus:ring-slate-300',
         ghost: 'border-transparent bg-slate-50 text-slate-700 focus:border-slate-300 focus:ring-slate-300',
+        checkbox: [
+          'w-4 h-4 align-middle border-mist-300 text-coral-600 focus:ring-coral-300 focus:border-coral-400 bg-white rounded-sm',
+        ],
 
         // Core color variants
         coral: 'border-coral-300 bg-coral-50 text-slate-700 focus:border-coral-400 focus:ring-coral-300',
@@ -87,6 +90,35 @@ const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
     const actualState = disabled ? 'disabled' : errorText ? 'error' : state;
     // Use inputSize if provided, otherwise fall back to size
     const actualSize = inputSize ?? size;
+
+    // checkbox style override
+    if (props.type === 'checkbox') {
+      return (
+        <div className={cn('flex items-center gap-2', wrapperClassName)}>
+          <input
+            ref={ref}
+            type="checkbox"
+            className={cn(textInputVariants({ variant: 'checkbox' }), className)}
+            disabled={disabled}
+            id={props.id}
+            {...props}
+          />
+          {label && (
+            <label
+              htmlFor={props.id}
+              className={cn(
+                'text-sm font-medium select-none cursor-pointer',
+                actualState === 'error' ? 'text-danger-700' : 'text-slate-700',
+                disabled && 'text-slate-400',
+                labelClassName
+              )}
+            >
+              {label}
+            </label>
+          )}
+        </div>
+      );
+    }
 
     return (
       <div className={cn('w-full relative', wrapperClassName)}>

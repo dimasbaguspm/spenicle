@@ -17,7 +17,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     <SnackProvider>
       <DrawerRouterProvider>
         <ModalProvider>
-          <PageLayout minHeight="viewport" background="cream" maxWidth="lg">
+          <PageLayout minHeight="viewport" background="cream">
             <Outlet />
             <TanStackRouterDevtools />
             <ReactQueryDevtools buttonPosition="bottom-right" />
