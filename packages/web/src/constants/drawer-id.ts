@@ -9,3 +9,13 @@ export const DRAWER_IDS = {
 } as const;
 
 export type DrawerId = (typeof DRAWER_IDS)[keyof typeof DRAWER_IDS];
+
+export const DRAWER_METADATA_KEYS = {
+  // for create transaction drawer
+  DATE: 'date',
+
+  DRAWER_ID: 'drawerId',
+  ACCOUNT_ID: 'accountId',
+  CATEGORY_ID: 'categoryId',
+  TRANSACTION_ID: 'transactionId',
+};

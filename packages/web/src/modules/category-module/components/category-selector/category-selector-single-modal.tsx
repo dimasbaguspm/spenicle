@@ -3,47 +3,45 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 
 import { Button } from '../../../../components/button/button';
 import { Modal } from '../../../../components/modal';
+import { useViewport } from '../../../../hooks';
 import { cn } from '../../../../libs/utils';
 import type { Category } from '../../../../types/api';
 import { CategoryIcon } from '../category-icon';
 
-interface CategorySelectorModalProps {
+interface CategorySelectorSingleModalProps {
   isOpen: boolean;
   categories: Category[];
-  value: Category[] | undefined; // changed from Category | null to Category[]
+  value: Category | undefined;
   onClear: () => void;
   onClose: () => void;
-  onSubmit: (selected: Category[]) => void;
-  size?: 'sm' | 'md';
+  onSubmit: (selected: Category) => void;
 }
 
-export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
+export const CategorySelectorSingleModal: React.FC<CategorySelectorSingleModalProps> = ({
   isOpen,
   categories,
   value,
   onClear,
   onClose,
   onSubmit,
-  size = 'md',
 }) => {
   const [search, setSearch] = useState('');
-  // helper to extract selected ids from value
-  function getSelectedIdsFromValue(val: Category[] = []): number[] {
-    return val.filter((v) => typeof v.id === 'number').map((v) => v.id as number);
-  }
+  const [selectedId, setSelectedId] = useState<number | undefined>(
+    typeof value?.id === 'number' ? value.id : undefined
+  );
+  const { isDesktop } = useViewport();
 
-  const [selectedIds, setSelectedIds] = useState<number[]>(getSelectedIdsFromValue(value));
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 0);
-      setSelectedIds(getSelectedIdsFromValue(value));
+      setSelectedId(typeof value?.id === 'number' ? value.id : undefined);
     } else {
       setSearch('');
     }
-  }, [isOpen]); // remove value from deps
+  }, [isOpen]);
 
   const filteredCategories = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -51,32 +49,16 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
     return categories.filter((cat) => (cat.name ?? '').toLowerCase().includes(term));
   }, [categories, search]);
 
-  // Focus input on open
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 0);
-    } else {
-      setSearch('');
-    }
-  }, [isOpen]);
-
-  // update selection for multi-select, only allow number id
   const handleCategoryClick = (category: Category) => {
     if (typeof category.id !== 'number') return;
-    setSelectedIds((prev) => {
-      const arr = prev.filter((id): id is number => typeof id === 'number' && Number.isFinite(id));
-      if (arr.includes(category.id!)) {
-        return arr.filter((id) => id !== category.id!);
-      } else {
-        return [...arr, category.id!];
-      }
-    });
+    setSelectedId((prev) => (prev === category.id ? undefined : category.id));
   };
 
   if (!isOpen) return null;
+  const size = isDesktop ? 'lg' : 'sm';
 
   return (
-    <Modal onClose={onClose} size="lg" closeOnOverlayClick closeOnEscape>
+    <Modal onClose={onClose} size={size} closeOnOverlayClick closeOnEscape>
       <Modal.Header>
         <Modal.Title>Select Category</Modal.Title>
         <Modal.CloseButton />
@@ -108,21 +90,17 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
               key={category.id}
               type="button"
               role="option"
-              aria-selected={typeof category.id === 'number' && selectedIds.includes(category.id)}
+              aria-selected={typeof category.id === 'number' && selectedId === category.id}
               className={cn(
                 'w-full flex items-center gap-3 text-left px-4 py-3 transition-colors',
-                typeof category.id === 'number' && selectedIds.includes(category.id) && 'bg-mist-100 font-semibold',
+                typeof category.id === 'number' && selectedId === category.id && 'bg-mist-100 font-semibold',
                 'hover:bg-mist-50 active:bg-mist-200 focus:bg-mist-100 focus:outline-none'
               )}
               onClick={() => handleCategoryClick(category)}
             >
-              <CategoryIcon
-                iconValue={category.metadata?.icon}
-                colorValue={category.metadata?.color}
-                size={size === 'sm' ? 'sm' : 'md'}
-              />
+              <CategoryIcon iconValue={category.metadata?.icon} colorValue={category.metadata?.color} size={size} />
               <span className="truncate">{category.name}</span>
-              {typeof category.id === 'number' && selectedIds.includes(category.id) ? (
+              {typeof category.id === 'number' && selectedId === category.id ? (
                 <span className="ml-auto text-coral-600 font-bold flex items-center">
                   <Check className="w-5 h-5" aria-label="Selected" />
                 </span>
@@ -132,17 +110,10 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
         )}
       </div>
       <div className="flex justify-between items-center p-3 border-t border-mist-100 bg-cream-50">
-        {/* Info left: filtered/total count and selected count with consistent gap and icon */}
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-500">
             {filteredCategories.length} of {categories.length} categories
           </span>
-          {selectedIds.length > 0 && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-coral-600">
-              <Check className="w-4 h-4" aria-label="Selected count" />
-              {selectedIds.length} selected
-            </span>
-          )}
         </div>
         <div className="flex gap-2">
           <Button
@@ -151,7 +122,7 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
             size="sm"
             className="text-slate-400 hover:text-danger-500 focus:text-danger-500 focus:outline-none"
             onClick={() => {
-              setSelectedIds([]);
+              setSelectedId(undefined);
               onClear();
             }}
           >
@@ -163,9 +134,10 @@ export const CategorySelectorModal: React.FC<CategorySelectorModalProps> = ({
             size="sm"
             className="ml-2"
             onClick={() => {
-              // only submit categories with number id in selectedIds
-              const selected = categories.filter((cat) => typeof cat.id === 'number' && selectedIds.includes(cat.id));
-              onSubmit(selected);
+              // only submit if a category is selected
+              if (selectedId === undefined) return;
+              const selected = categories.find((cat) => typeof cat.id === 'number' && selectedId === cat.id);
+              if (selected) onSubmit(selected);
             }}
           >
             Submit

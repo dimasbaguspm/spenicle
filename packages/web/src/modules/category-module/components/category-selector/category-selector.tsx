@@ -6,7 +6,7 @@ import { cn } from '../../../../libs/utils';
 import type { Category } from '../../../../types/api';
 import { CategoryIcon } from '../category-icon';
 
-import { CategorySelectorModal } from './category-selector-modal';
+import { CategorySelectorSingleModal } from './category-selector-single-modal';
 
 const categorySelectorVariants = cva(
   'w-full rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-slate-400',
@@ -87,7 +87,6 @@ export function CategorySelector({
   id,
   name,
   variant,
-  size,
 }: CategorySelectorProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
 
@@ -118,7 +117,6 @@ export function CategorySelector({
   };
 
   const actualState = disabled ? 'disabled' : errorText ? 'error' : undefined;
-  const actualSize = size;
 
   return (
     <div className={cn('w-full', wrapperClassName)}>
@@ -140,7 +138,7 @@ export function CategorySelector({
         id={id}
         name={name}
         className={cn(
-          categorySelectorVariants({ variant, size: actualSize, state: actualState }),
+          categorySelectorVariants({ variant, size: 'md', state: actualState }),
           'relative flex items-center w-full text-left pl-12 pr-10',
           disabled && 'cursor-not-allowed',
           className
@@ -193,14 +191,13 @@ export function CategorySelector({
         </p>
       )}
       {internalIsOpen && (
-        <CategorySelectorModal
+        <CategorySelectorSingleModal
           isOpen={internalIsOpen}
           categories={categories}
-          value={value ?? null}
-          onSelect={handleSelect}
+          value={value ?? undefined}
+          onSubmit={handleSelect}
           onClear={handleClear}
           onClose={handleClose}
-          size={actualSize === 'sm' ? 'sm' : 'md'}
         />
       )}
     </div>

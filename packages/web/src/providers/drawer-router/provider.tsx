@@ -1,7 +1,7 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useRef, type FC, type PropsWithChildren } from 'react';
 
-import { DRAWER_IDS, type DrawerId } from '../../constants/drawer-id';
+import { DRAWER_IDS, DRAWER_METADATA_KEYS, type DrawerId } from '../../constants/drawer-id';
 import { useApiAccountQuery, useApiCategoryQuery, useApiTransactionQuery } from '../../hooks';
 import { AddAccountDrawer } from '../../modules/account-module';
 import { EditAccountDrawer } from '../../modules/account-module/components';
@@ -57,10 +57,13 @@ export const DrawerRouterProvider: FC<PropsWithChildren> = ({ children }) => {
       // @ts-expect-error is a bug from tanstack/react-router
       search: (prev) => ({
         ...prev,
-        drawerId: undefined,
-        accountId: undefined,
-        categoryId: undefined,
-        transactionId: undefined,
+        ...Object.keys(DRAWER_METADATA_KEYS).reduce(
+          (acc, key) => ({
+            ...acc,
+            [DRAWER_METADATA_KEYS[key as keyof typeof DRAWER_METADATA_KEYS]]: undefined,
+          }),
+          {}
+        ),
       }),
       replace: true,
       resetScroll: false,

@@ -1,33 +1,38 @@
+import { Check } from 'lucide-react';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 
+import { Button } from '../../../../components';
 import { Modal } from '../../../../components/modal';
+import { useViewport } from '../../../../hooks';
 import { cn } from '../../../../libs/utils';
 import type { Account } from '../../../../types/api';
 import { AccountIcon } from '../account-icon';
 
-interface AccountSelectorModalProps {
+interface AccountSelectorMultiModalProps {
   isOpen: boolean;
   accounts: Account[];
-  value: Account | null;
-  onSelect: (account: Account) => void;
+  value: Account[];
+  onSubmit: (accounts: Account[]) => void;
   onClear: () => void;
   onClose: () => void;
-  size?: 'sm' | 'md';
 }
 
-export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({
+export const AccountSelectorMultiModal: React.FC<AccountSelectorMultiModalProps> = ({
   isOpen,
   accounts,
   value,
-  onSelect,
+  onSubmit,
   onClear,
   onClose,
-  size = 'md',
 }) => {
   const [search, setSearch] = useState('');
-  const [focusedIdx, setFocusedIdx] = useState<number>(-1);
+  const [selectedIds, setSelectedIds] = useState<number[]>(
+    value.map((v) => v.id).filter((id): id is number => typeof id === 'number')
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const { isDesktop } = useViewport();
+  const size = isDesktop ? 'lg' : 'sm';
 
   const filteredAccounts = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -38,42 +43,27 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 0);
-      setFocusedIdx(filteredAccounts.findIndex((acc) => acc.id === value?.id));
+      setSelectedIds(value.map((v) => v.id).filter((id): id is number => typeof id === 'number'));
     } else {
       setSearch('');
-      setFocusedIdx(-1);
     }
   }, [isOpen]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (filteredAccounts.length === 0) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setFocusedIdx((idx) => (idx + 1) % filteredAccounts.length);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setFocusedIdx((idx) => (idx - 1 + filteredAccounts.length) % filteredAccounts.length);
-    } else if (e.key === 'Enter' && focusedIdx >= 0) {
-      e.preventDefault();
-      onSelect(filteredAccounts[focusedIdx]);
-    } else if (e.key === 'Tab') {
-      setFocusedIdx(-1);
-    }
+  const handleAccountClick = (account: Account) => {
+    if (typeof account.id !== 'number') return;
+    setSelectedIds((prev) =>
+      prev.includes(account.id as number)
+        ? prev.filter((id) => id !== (account.id as number))
+        : [...prev, account.id as number]
+    );
   };
-
-  useEffect(() => {
-    if (listRef.current && focusedIdx >= 0) {
-      const item = listRef.current.querySelectorAll('button[role="option"]')[focusedIdx] as HTMLElement;
-      item?.scrollIntoView({ block: 'nearest' });
-    }
-  }, [focusedIdx, filteredAccounts]);
 
   if (!isOpen) return null;
 
   return (
-    <Modal onClose={onClose} size="sm" closeOnOverlayClick closeOnEscape>
+    <Modal onClose={onClose} size={size} closeOnOverlayClick closeOnEscape>
       <Modal.Header>
-        <Modal.Title>Select Account</Modal.Title>
+        <Modal.Title>Select Accounts</Modal.Title>
         <Modal.CloseButton />
       </Modal.Header>
       <div className="p-3 border-b border-mist-100 bg-cream-50">
@@ -82,7 +72,6 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={handleKeyDown}
           placeholder="Search accounts..."
           className="w-full rounded-md border border-mist-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-coral-400 outline-none transition"
           aria-label="Search accounts"
@@ -99,21 +88,18 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({
         {filteredAccounts.length === 0 ? (
           <div className="p-8 text-center text-slate-500">No accounts found</div>
         ) : (
-          filteredAccounts.map((account, idx) => (
+          filteredAccounts.map((account) => (
             <button
               key={account.id}
               type="button"
               role="option"
-              aria-selected={value?.id === account.id}
+              aria-selected={typeof account.id === 'number' && selectedIds.includes(account.id)}
               className={cn(
                 'w-full flex items-center gap-3 text-left px-4 py-3 transition-colors',
-                value?.id === account.id && 'bg-mist-100 font-semibold',
-                focusedIdx === idx
-                  ? 'bg-coral-50 z-10'
-                  : 'hover:bg-mist-50 active:bg-mist-200 focus:bg-mist-100 focus:outline-none'
+                typeof account.id === 'number' && selectedIds.includes(account.id) && 'bg-mist-100 font-semibold',
+                'hover:bg-mist-50 active:bg-mist-200 focus:bg-mist-100 focus:outline-none'
               )}
-              onClick={() => onSelect(account)}
-              onMouseEnter={() => setFocusedIdx(idx)}
+              onClick={() => handleAccountClick(account)}
             >
               <AccountIcon
                 iconValue={account.metadata?.icon}
@@ -121,6 +107,11 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({
                 size={size === 'sm' ? 'sm' : 'md'}
               />
               <span className="truncate">{account.name}</span>
+              {typeof account.id === 'number' && selectedIds.includes(account.id) ? (
+                <span className="ml-auto text-coral-600 font-bold flex items-center">
+                  <Check className="w-5 h-5" aria-label="Selected" />
+                </span>
+              ) : null}
             </button>
           ))
         )}
@@ -129,13 +120,33 @@ export const AccountSelectorModal: React.FC<AccountSelectorModalProps> = ({
         <div className="text-xs text-slate-500">
           {filteredAccounts.length} of {accounts.length} accounts
         </div>
-        <button
-          type="button"
-          className="text-sm text-slate-400 hover:text-danger-500 focus:text-danger-500 focus:outline-none"
-          onClick={onClear}
-        >
-          Clear
-        </button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-slate-400 hover:text-danger-500 focus:text-danger-500 focus:outline-none"
+            onClick={() => {
+              setSelectedIds([]);
+              onClear();
+            }}
+          >
+            Clear
+          </Button>
+          <Button
+            type="button"
+            variant="coral"
+            size="sm"
+            className="ml-2"
+            disabled={selectedIds.length === 0}
+            onClick={() => {
+              const selected = accounts.filter((acc) => typeof acc.id === 'number' && selectedIds.includes(acc.id));
+              onSubmit(selected);
+            }}
+          >
+            Submit
+          </Button>
+        </div>
       </div>
     </Modal>
   );

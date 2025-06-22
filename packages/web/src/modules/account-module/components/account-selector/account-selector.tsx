@@ -6,7 +6,8 @@ import { cn } from '../../../../libs/utils';
 import type { Account } from '../../../../types/api';
 import { AccountIcon } from '../account-icon';
 
-import { AccountSelectorModal } from './account-selector-modal';
+import { AccountSelectorMultiModal } from './account-selector-multi-modal';
+import { AccountSelectorSingleModal } from './account-selector-single-modal';
 
 const accountSelectorVariants = cva(
   'w-full rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-slate-400',
@@ -50,9 +51,10 @@ const accountSelectorVariants = cva(
 );
 
 export interface AccountSelectorProps extends VariantProps<typeof accountSelectorVariants> {
-  value?: Account | null;
-  onChange?: (account: Account | null) => void;
+  value?: Account | null | Account[];
+  onChange?: (account: Account | null | Account[]) => void;
   accounts: Account[];
+  multiple?: boolean;
   placeholder?: string;
   label?: string;
   helperText?: string;
@@ -72,6 +74,7 @@ export function AccountSelector({
   value,
   onChange,
   accounts,
+  multiple = false,
   placeholder = 'Select an account...',
   label,
   helperText,
@@ -90,7 +93,16 @@ export function AccountSelector({
 }: AccountSelectorProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
 
-  const displayValue = value?.name ?? '';
+  const displayValue = !multiple
+    ? !Array.isArray(value) && value
+      ? value.name
+      : undefined
+    : Array.isArray(value)
+      ? value.map((v) => v.name).join(', ')
+      : undefined;
+
+  const iconValue = !multiple ? (!Array.isArray(value) && value ? value.metadata?.icon : undefined) : undefined;
+  const colorValue = !multiple ? (!Array.isArray(value) && value ? value.metadata?.color : undefined) : undefined;
 
   const handleButtonClick = () => {
     if (!disabled) setInternalIsOpen(true);
@@ -105,8 +117,8 @@ export function AccountSelector({
 
   const handleClose = () => setInternalIsOpen(false);
 
-  const handleSelect = (account: Account) => {
-    onChange?.(account);
+  const handleSelect = (accountOrAccounts: Account | Account[]) => {
+    onChange?.(accountOrAccounts);
     setInternalIsOpen(false);
   };
 
@@ -151,14 +163,9 @@ export function AccountSelector({
         aria-controls={id ? `${id}-account-modal` : undefined}
       >
         <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <AccountIcon
-            iconValue={value?.metadata?.icon}
-            colorValue={value?.metadata?.color}
-            className="shadow-none h-5 w-5"
-            size="xs"
-          />
+          <AccountIcon iconValue={iconValue} colorValue={colorValue} className="shadow-none h-5 w-5" size="xs" />
         </span>
-        <span className={cn('truncate', !displayValue && 'text-slate-400')}>{displayValue || placeholder}</span>
+        <span className={cn('truncate', !displayValue && 'text-slate-400')}>{displayValue ?? placeholder}</span>
         <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
           <CreditCard className={cn('h-4 w-4 text-slate-400', disabled && 'text-slate-300')} />
         </span>
@@ -188,17 +195,27 @@ export function AccountSelector({
           {errorText}
         </p>
       )}
-      {internalIsOpen && (
-        <AccountSelectorModal
-          isOpen={internalIsOpen}
-          accounts={accounts}
-          value={value ?? null}
-          onSelect={handleSelect}
-          onClear={handleClear}
-          onClose={handleClose}
-          size={actualSize === 'sm' ? 'sm' : 'md'}
-        />
-      )}
+      {internalIsOpen ? (
+        multiple ? (
+          <AccountSelectorMultiModal
+            isOpen={internalIsOpen}
+            accounts={accounts}
+            value={Array.isArray(value) ? value : value ? [value] : []}
+            onSubmit={handleSelect}
+            onClear={handleClear}
+            onClose={handleClose}
+          />
+        ) : (
+          <AccountSelectorSingleModal
+            isOpen={internalIsOpen}
+            accounts={accounts}
+            value={!Array.isArray(value) && value ? value : null}
+            onSubmit={handleSelect}
+            onClear={handleClear}
+            onClose={handleClose}
+          />
+        )
+      ) : null}
     </div>
   );
 }

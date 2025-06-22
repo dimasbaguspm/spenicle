@@ -3,7 +3,7 @@ import { Controller } from 'react-hook-form';
 
 import { Drawer, TextArea, Button, DateTimePicker, AmountField, CategorySelector } from '../../../../components';
 import { AccountSelector } from '../../../../modules/account-module/components/account-selector';
-import type { Account, Category } from '../../../../types/api';
+import type { Category } from '../../../../types/api';
 import { TransactionTypeSelector } from '../transaction-type-selector';
 
 import { useAddTransactionForm } from './use-add-transaction-form.hook';
@@ -109,7 +109,7 @@ export const AddTransactionDrawer: FC = () => {
                   placeholder="Select an account"
                   accounts={accountOptions}
                   value={accountOptions.find((acc) => acc.id === field.value) ?? null}
-                  onChange={(acc: Account | null) => field.onChange(acc?.id ?? null)}
+                  onChange={(acc) => field.onChange(Array.isArray(acc) ? acc[0].id! : (acc?.id ?? null))}
                   errorText={errors.accountId?.message}
                   disabled={isPending}
                 />

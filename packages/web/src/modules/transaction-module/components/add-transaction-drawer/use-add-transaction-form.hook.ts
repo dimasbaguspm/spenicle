@@ -1,3 +1,4 @@
+import { useSearch } from '@tanstack/react-router';
 import dayjs from 'dayjs';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 
@@ -29,6 +30,13 @@ export const useAddTransactionForm = ({
   const { closeDrawer } = useDrawerRouterProvider();
   const { success } = useSnack();
 
+  const { date: parsedDate } = useSearch({
+    select: ({ date }) => ({
+      date: date ? dayjs(date).toISOString() : dayjs().toISOString(),
+    }),
+    strict: false,
+  });
+
   // API queries and mutations
   const { user } = useSession();
   const [accountsData] = useApiAccountsQuery();
@@ -48,7 +56,7 @@ export const useAddTransactionForm = ({
     mode: 'onChange',
     defaultValues: {
       ...DEFAULT_FORM_VALUES,
-      date: dayjs().toISOString(),
+      date: parsedDate,
       groupId: user?.groupId,
       createdByUserId: user?.id,
     },

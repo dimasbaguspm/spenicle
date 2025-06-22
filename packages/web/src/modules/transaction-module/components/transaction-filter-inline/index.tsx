@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router';
 import { Repeat, TrendingDown, TrendingUp } from 'lucide-react';
-import { useEffect, useRef, useState, type FC } from 'react';
+import { useState, type FC } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FormLayout } from '../../../../components';
@@ -8,50 +8,44 @@ import { CheckboxGroup } from '../../../../components/checkbox-input/checkbox-gr
 import { CheckboxInput } from '../../../../components/checkbox-input/checkbox-input';
 import { ChipInput, ChipGroup } from '../../../../components/chip';
 import { useApiAccountsQuery, useApiCategoriesQuery } from '../../../../hooks';
-import { CategorySelectorModal } from '../../../category-module/components/category-selector/category-selector-modal';
+import { useDebouncedDistinctEffect } from '../../../../hooks/use-debounced-distinct-effect';
+import { CategorySelectorMultiModal } from '../../../category-module/components/category-selector/category-selector-multi-modal';
 import { useTransactionFilters } from '../../hooks/use-transaction-filters';
 import type { TransactionFiltersFormSchema } from '../transaction-filter-drawer/types';
 
 export const TransactionFilterInline: FC = () => {
   const filters = useTransactionFilters();
   const navigate = useNavigate();
-
   const [accounts] = useApiAccountsQuery();
   const [categories] = useApiCategoriesQuery();
-
   const form = useForm<Partial<TransactionFiltersFormSchema>>({
     defaultValues: filters,
+    mode: 'onChange',
   });
-
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
   // handle submit
   const onSubmit = form.handleSubmit(async (values) => {
+    console.log('TransactionFilterInline onSubmit', values);
     await navigate({
       // @ts-expect-error is a bug from tanstack/react-router
-      search: values,
+      search: { ...values, test: ['1', '2'], bar: 'foo', foo: [1, 2, 3] },
       replace: true,
       resetScroll: false,
     });
   });
 
-  // auto-submit on any change with debounce
-  useEffect(() => {
-    const subscription = form.watch(() => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        void onSubmit();
-      }, 400); // 400ms debounce
-    });
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      subscription.unsubscribe();
-    };
-  }, [form]);
+  // use the new hook for debounced, distinct auto-submit
+  useDebouncedDistinctEffect(
+    form.watch(),
+    () => {
+      void onSubmit();
+    },
+    300
+  );
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col ">
+    <form className="flex flex-col ">
       <FormLayout columns={1} gap="md">
         <FormLayout.Field>
           {/* type as chip group with icons */}
@@ -198,7 +192,7 @@ export const TransactionFilterInline: FC = () => {
                   </CheckboxGroup>
 
                   {categoryModalOpen && (
-                    <CategorySelectorModal
+                    <CategorySelectorMultiModal
                       isOpen={categoryModalOpen}
                       categories={allCategories}
                       value={allCategories.filter((cat) => field.value?.includes(cat.id!))}
@@ -222,7 +216,6 @@ export const TransactionFilterInline: FC = () => {
                         })
                       }
                       onClose={() => setCategoryModalOpen(false)}
-                      size="md"
                     />
                   )}
                 </>

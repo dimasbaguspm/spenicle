@@ -7,7 +7,7 @@ interface TileProps extends HTMLAttributes<HTMLDivElement> {
 
 export const Tile = forwardRef<HTMLDivElement, TileProps>(({ children, className = '', ...props }, ref) => {
   return (
-    <div ref={ref} className={`bg-white rounded-lg border border-mist-200 overflow-hidden ${className}`} {...props}>
+    <div ref={ref} className={`bg-white rounded-lg border border-mist-200 ${className}`} {...props}>
       {children}
     </div>
   );

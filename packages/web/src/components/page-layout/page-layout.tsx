@@ -13,7 +13,7 @@ const pageLayoutVariants = cva('w-full flex flex-col', {
   variants: {
     minHeight: {
       screen: 'min-h-screen',
-      viewport: 'min-h-[100vh]',
+      viewport: '',
       full: 'h-screen',
       auto: 'min-h-0',
     },
