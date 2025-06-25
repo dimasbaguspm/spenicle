@@ -1,5 +1,4 @@
-import { RouterProvider, createRouter, parseSearchWith, stringifySearchWith } from '@tanstack/react-router';
-import qs from 'query-string';
+import { RouterProvider, createRouter } from '@tanstack/react-router';
 import ReactDOM from 'react-dom/client';
 
 import { App } from './core/app.tsx';
@@ -18,11 +17,6 @@ const router = createRouter({
   scrollRestoration: true,
   defaultStructuralSharing: true,
   defaultPreloadStaleTime: 0,
-  parseSearch: parseSearchWith((value) => qs.parse(value)),
-  stringifySearch: stringifySearchWith((value) => {
-    console.log('stringifySearch', value);
-    return qs.stringify(value);
-  }),
 });
 
 const rootElement = document.getElementById('app');

@@ -26,10 +26,9 @@ export const TransactionFilterInline: FC = () => {
 
   // handle submit
   const onSubmit = form.handleSubmit(async (values) => {
-    console.log('TransactionFilterInline onSubmit', values);
     await navigate({
-      // @ts-expect-error is a bug from tanstack/react-router
-      search: { ...values, test: ['1', '2'], bar: 'foo', foo: [1, 2, 3] },
+      // @ts-expect-error form values can be partial
+      search: values,
       replace: true,
       resetScroll: false,
     });

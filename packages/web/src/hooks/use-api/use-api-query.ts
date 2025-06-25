@@ -5,6 +5,7 @@ import {
   type RefetchOptions,
 } from '@tanstack/react-query';
 import axios from 'axios';
+import querystring from 'query-string';
 
 import { TIME_15_MINUTES } from '../../constants/time';
 import type { Error } from '../../types/api';
@@ -84,8 +85,13 @@ export const useApiQuery = <TData, TQuery, TError = Error>(
             Authorization: accessToken ? `Bearer ${accessToken}` : undefined,
             ...headers,
           },
+          paramsSerializer: (params) => {
+            return querystring.stringify(params, {
+              arrayFormat: 'none',
+              skipEmptyString: true,
+            });
+          },
         });
-
         const data = response.data;
         onSuccess?.(data);
         return data;
