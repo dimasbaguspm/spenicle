@@ -1,64 +1,138 @@
 import { Outlet, useLocation, useNavigate } from '@tanstack/react-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { PageLayout, Tab } from '../../../components';
+import { Badge, PageLayout, Tile } from '../../../components';
+import { QuickInsightsWidget } from '../components/desktop-overview-widgets';
 import { FinancialSummaryPeriodCardList } from '../components/financial-summary-period-card';
 
 export const DesktopSummaryDashboardPageComponent = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Determine active tab from location
-  const getActiveTab = () => {
+  // derive active panel from current route
+  const getActivePanelFromRoute = () => {
     const path = location.pathname;
-    if (path.endsWith('/period-breakdown')) return 'period-breakdown';
-    if (path.endsWith('/categories')) return 'categories';
-    if (path.endsWith('/accounts')) return 'accounts';
-    return 'period-breakdown'; // default
-  };
-  const activeTab = getActiveTab();
-
-  const handleOnTabChange = async (value: string) => {
-    await navigate({
-      to: `/analytics/${value}`,
-    });
+    if (path.includes('/period-breakdown')) return 'period';
+    if (path.includes('/categories')) return 'categories';
+    if (path.includes('/accounts')) return 'accounts';
+    return 'period'; // default fallback
   };
 
+  const [selectedPanel, setSelectedPanel] = useState<'period' | 'categories' | 'accounts'>(getActivePanelFromRoute);
+
+  // sync panel selection with route changes
   useEffect(() => {
-    // If the current path is exactly /analytics, redirect to /analytics/period-breakdown
-    if (location.pathname === '/analytics') {
-      void navigate({ to: '/analytics/period-breakdown', replace: true });
-    }
-  }, [location.pathname, navigate]);
+    const activePanel = getActivePanelFromRoute();
+    setSelectedPanel(activePanel);
+  }, [location.pathname]);
+
+  // shared state for period controls across all panels
+  const [periodType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [periodIndex] = useState(0);
+
+  // panel configuration for desktop layout
+  const panelConfig = useMemo(
+    () => ({
+      period: {
+        title: 'Period Analysis',
+        description: 'Weekly and monthly trends',
+        badge: 'Trending',
+      },
+      categories: {
+        title: 'Category Breakdown',
+        description: 'Spending by category',
+        badge: 'Categories',
+      },
+      accounts: {
+        title: 'Account Overview',
+        description: 'Activity by account',
+        badge: 'Accounts',
+      },
+    }),
+    [periodType, periodIndex]
+  );
+
+  // handle panel navigation with route updates
+  const handlePanelNavigation = async (panel: 'period' | 'categories' | 'accounts') => {
+    const routeMap = {
+      period: '/analytics/period-breakdown',
+      categories: '/analytics/categories',
+      accounts: '/analytics/accounts',
+    };
+
+    setSelectedPanel(panel);
+    await navigate({ to: routeMap[panel] });
+  };
 
   return (
-    <PageLayout background="cream" title="Analytics" showBackButton>
+    <PageLayout background="cream" title="Analytics Dashboard" showBackButton>
+      {/* desktop-specific layout with multiple panels */}
       <div className="space-y-6">
+        {/* summary cards remain at top for key metrics */}
         <FinancialSummaryPeriodCardList />
 
-        <Tab value={activeTab} onValueChange={handleOnTabChange} type="tabs">
-          <Tab.List className="w-full grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-lg">
-            <Tab.Trigger value="period-breakdown" className="text-center">
-              Period
-            </Tab.Trigger>
-            <Tab.Trigger value="categories" className="text-center">
-              Categories
-            </Tab.Trigger>
-            <Tab.Trigger value="accounts" className="text-center">
-              Accounts
-            </Tab.Trigger>
-          </Tab.List>
+        {/* desktop split-panel layout with sticky sidebar */}
+        <div className="grid grid-cols-12 gap-6">
+          {/* left sidebar navigation and insights - sticky */}
+          <div className="col-span-3 space-y-4 sticky top-6 self-start h-fit max-h-[calc(100vh-12rem)] overflow-y-auto">
+            <Tile className="p-4">
+              <div className="space-y-1 mb-6">
+                <h3 className="text-lg font-semibold text-slate-900">Analysis Panels</h3>
+                <p className="text-sm text-slate-500">Select an analysis view</p>
+              </div>
 
-          <Tab.Content value="period-breakdown">
-            <Outlet />
-          </Tab.Content>
-          <Tab.Content value="categories">
-            <Outlet />
-          </Tab.Content>
-          <Tab.Content value="accounts">
-            <Outlet />
-          </Tab.Content>
-        </Tab>
+              <div className="space-y-2">
+                {Object.entries(panelConfig).map(([key, config]) => (
+                  <button
+                    key={key}
+                    onClick={() => handlePanelNavigation(key as typeof selectedPanel)}
+                    className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
+                      selectedPanel === key
+                        ? 'bg-coral-50 border-coral-200 border text-coral-900 shadow-sm'
+                        : 'hover:bg-mist-50 text-slate-700 border border-transparent hover:border-mist-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm">{config.title}</span>
+                      <Badge variant={selectedPanel === key ? 'coral' : 'mist'} size="sm">
+                        {config.badge}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-500">{config.description}</p>
+                  </button>
+                ))}
+              </div>
+            </Tile>
+
+            {/* insights widget - also sticky */}
+            <QuickInsightsWidget />
+          </div>
+
+          {/* main content panel - scrollable */}
+          <div className="col-span-9">
+            <Tile className="p-6 min-h-[600px]">
+              <div className="flex items-center justify-between mb-6 sticky top-0 bg-white pb-4 border-b border-mist-100 z-10">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900">{panelConfig[selectedPanel].title}</h2>
+                  <p className="text-sm text-slate-500 mt-1">{panelConfig[selectedPanel].description}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="sage" size="md">
+                    Desktop View
+                  </Badge>
+                  <Badge variant="info" size="sm">
+                    {selectedPanel.charAt(0).toUpperCase() + selectedPanel.slice(1)}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* render selected panel component */}
+              <div className="pt-2">
+                <Outlet />
+              </div>
+            </Tile>
+          </div>
+        </div>
       </div>
     </PageLayout>
   );

@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
 import { useViewport } from '../../../../hooks';
 import {
@@ -7,12 +7,19 @@ import {
 } from '../../../../modules/summary-module';
 
 export const Route = createFileRoute('/_protected/_experienced-user/analytics')({
-  component: AnalyticsComponent,
+  beforeLoad: (c) => {
+    const location = c.location.pathname;
+    if (location === '/analytics') {
+      throw redirect({
+        to: '/analytics/period-breakdown',
+        replace: true,
+      });
+    }
+  },
+  component: () => {
+    const { isDesktop } = useViewport();
+
+    if (isDesktop) return <DesktopSummaryDashboardPageComponent />;
+    return <MobileSummaryDashboardPageComponent />;
+  },
 });
-
-function AnalyticsComponent() {
-  const { isDesktop } = useViewport();
-
-  if (isDesktop) return <DesktopSummaryDashboardPageComponent />;
-  return <MobileSummaryDashboardPageComponent />;
-}
