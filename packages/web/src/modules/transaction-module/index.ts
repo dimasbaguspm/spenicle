@@ -10,3 +10,5 @@ export * from './components/transaction-filter-inline';
 export * from './components/transaction-calendar';
 export * from './pages/mobile-transaction-page';
 export * from './pages/desktop-transaction-page';
+export * from './pages/mobile-transaction-period-page';
+export * from './pages/desktop-transaction-period-page';
