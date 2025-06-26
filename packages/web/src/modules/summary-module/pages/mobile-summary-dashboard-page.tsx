@@ -2,7 +2,7 @@ import { Outlet, useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 
 import { PageLayout, Tab } from '../../../components';
-import { FinancialSummaryPeriodCardList } from '../components/financial-summary-period-card';
+import { QuickInsightsWidget } from '../components/desktop-overview-widgets';
 
 export const MobileSummaryDashboardPageComponent = () => {
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ export const MobileSummaryDashboardPageComponent = () => {
   return (
     <PageLayout background="cream" title="Analytics" showBackButton>
       <div className="space-y-6">
-        <FinancialSummaryPeriodCardList />
+        <QuickInsightsWidget />
 
         <Tab value={activeTab} onValueChange={handleOnTabChange} type="tabs">
           <Tab.List className="w-full grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-lg">

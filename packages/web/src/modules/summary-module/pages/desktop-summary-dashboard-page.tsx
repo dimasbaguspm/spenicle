@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Badge, PageLayout, Tile } from '../../../components';
 import { QuickInsightsWidget } from '../components/desktop-overview-widgets';
-import { FinancialSummaryPeriodCardList } from '../components/financial-summary-period-card';
 
 export const DesktopSummaryDashboardPageComponent = () => {
   const navigate = useNavigate();
@@ -34,17 +33,17 @@ export const DesktopSummaryDashboardPageComponent = () => {
   const panelConfig = useMemo(
     () => ({
       period: {
-        title: 'Period Analysis',
+        title: 'Period',
         description: 'Weekly and monthly trends',
         badge: 'Trending',
       },
       categories: {
-        title: 'Category Breakdown',
+        title: 'Category',
         description: 'Spending by category',
         badge: 'Categories',
       },
       accounts: {
-        title: 'Account Overview',
+        title: 'Account',
         description: 'Activity by account',
         badge: 'Accounts',
       },
@@ -68,8 +67,8 @@ export const DesktopSummaryDashboardPageComponent = () => {
     <PageLayout background="cream" title="Analytics Dashboard" showBackButton>
       {/* desktop-specific layout with multiple panels */}
       <div className="space-y-6">
-        {/* summary cards remain at top for key metrics */}
-        <FinancialSummaryPeriodCardList />
+        {/* enhanced insights widget at the top for key metrics */}
+        <QuickInsightsWidget />
 
         {/* desktop split-panel layout with sticky sidebar */}
         <div className="grid grid-cols-12 gap-6">
@@ -103,26 +102,15 @@ export const DesktopSummaryDashboardPageComponent = () => {
                 ))}
               </div>
             </Tile>
-
-            {/* insights widget - also sticky */}
-            <QuickInsightsWidget />
           </div>
 
           {/* main content panel - scrollable */}
           <div className="col-span-9">
             <Tile className="p-6 min-h-[600px]">
-              <div className="flex items-center justify-between mb-6 sticky top-0 bg-white pb-4 border-b border-mist-100 z-10">
+              <div className="flex items-center justify-between mb-6 bg-white pb-4 border-b border-mist-100 z-10">
                 <div>
                   <h2 className="text-xl font-semibold text-slate-900">{panelConfig[selectedPanel].title}</h2>
                   <p className="text-sm text-slate-500 mt-1">{panelConfig[selectedPanel].description}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant="sage" size="md">
-                    Desktop View
-                  </Badge>
-                  <Badge variant="info" size="sm">
-                    {selectedPanel.charAt(0).toUpperCase() + selectedPanel.slice(1)}
-                  </Badge>
                 </div>
               </div>
 
