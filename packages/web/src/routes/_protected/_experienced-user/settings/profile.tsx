@@ -40,7 +40,7 @@ function ProfileComponent() {
 
             <div className="flex items-center gap-6">
               <div className="relative">
-                <Avatar size="2xl" src="https://picsum.photos/128/128" />
+                <Avatar size="xl" src="https://picsum.photos/128/128" />
                 <button className="absolute -bottom-2 -right-2 bg-coral-500 hover:bg-coral-600 text-white rounded-full p-2 shadow-lg transition-colors">
                   <Camera className="w-4 h-4" />
                 </button>

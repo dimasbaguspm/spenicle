@@ -24,15 +24,15 @@ export const PeriodTransactionList: FC<PeriodTransactionListProps> = ({ startDat
   const [summary] = useApiSummaryTransactionsQuery({
     startDate,
     endDate,
-    accountId: String(filters.accountId),
-    categoryId: String(filters.categoryId),
+    accountId: String(filters.accountIds?.[0]),
+    categoryId: String(filters.categoryIds?.[0]),
   });
   const [transactions] = useApiTransactionsQuery({
     startDate,
     endDate,
-    accountIds: [filters.accountId!],
-    categoryIds: [filters.categoryId!],
-    type: filters.type,
+    accountIds: filters.accountIds,
+    categoryIds: filters.categoryIds,
+    types: filters.types,
   });
 
   const [accounts] = useApiAccountsQuery({ pageSize: 1000 });

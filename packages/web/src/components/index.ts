@@ -53,6 +53,6 @@ export { AccountSelector } from '../modules/account-module/components/account-se
 export { LineChart } from './line-chart';
 export { BarChart } from './bar-chart';
 export * from './radar-chart';
-export { Brand, type BrandProps } from './brand';
+export { Brand } from './brand';
 export { TopBar } from './top-bar';
 export { CheckboxInput, CheckboxGroup, type CheckboxInputProps } from './checkbox-input';

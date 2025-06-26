@@ -13,6 +13,7 @@ import {
   TextArea,
 } from '../../../../components';
 import { AccountSelector } from '../../../../modules/account-module/components/account-selector';
+import type { Account } from '../../../../types/api';
 import { TransactionTypeSelector } from '../transaction-type-selector/transaction-type-selector';
 
 import type { EditTransactionDrawerProps } from './types';
@@ -135,7 +136,7 @@ export const EditTransactionDrawer: FC<EditTransactionDrawerProps> = ({ transact
                   placeholder="Select an account"
                   accounts={accountOptions}
                   value={accountOptions.find((acc) => acc.id === field.value) ?? null}
-                  onChange={(acc) => field.onChange(acc?.id ?? null)}
+                  onChange={(acc) => field.onChange((acc as Account)?.id ?? null)}
                   errorText={errors.accountId?.message}
                   disabled={isPending}
                 />

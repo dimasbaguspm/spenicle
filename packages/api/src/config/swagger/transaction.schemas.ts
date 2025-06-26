@@ -269,10 +269,13 @@ export const transactionSchemas = {
             maxLength: 3,
             description: 'Filter by currency code',
           },
-          type: {
-            type: 'string',
-            enum: ['expense', 'income', 'transfer'],
+          types: {
+            type: 'array',
+            items: {
+              type: 'string',
+            },
             description: 'Filter by transaction type',
+            example: ['expense', 'income', 'transfer'],
           },
           recurrenceId: {
             type: 'integer',

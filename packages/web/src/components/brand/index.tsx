@@ -1,1 +1,1 @@
-export { Brand, brandVariants, type BrandProps } from './brand';
+export { Brand, brandVariants } from './brand';

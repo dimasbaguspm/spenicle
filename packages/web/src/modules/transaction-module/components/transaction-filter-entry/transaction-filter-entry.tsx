@@ -13,9 +13,7 @@ export const TransactionFilterEntry: React.FC = () => {
   const { openDrawer } = useDrawerRouterProvider();
   const filters = useTransactionFilters();
 
-  const activeFilterCount = Object.entries(filters).filter(
-    ([, value]) => value !== undefined && value !== null && value !== ''
-  ).length;
+  const activeFilterCount = Object.entries(filters).filter(([, value]) => value !== undefined && value !== null).length;
 
   return (
     <div className="sticky w-full bottom-20 left-0 right-0 translate-y-0 flex justify-center items-center z-3 pointer-events-none">

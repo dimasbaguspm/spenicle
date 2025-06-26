@@ -2,10 +2,10 @@ import { useLocation, useNavigate } from '@tanstack/react-router';
 import dayjs from 'dayjs';
 import { useForm, Controller } from 'react-hook-form';
 
-import { Button, Drawer, FormLayout, Switch } from '../../../../components';
+import { Button, Drawer, FormLayout } from '../../../../components';
 import { useApiAccountsQuery, useApiCategoriesQuery } from '../../../../hooks';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router';
-import type { TransactionQueryParameters } from '../../../../types/api';
+import type { Account, TransactionQueryParameters } from '../../../../types/api';
 import { AccountSelector } from '../../../account-module';
 import { CategorySelector } from '../../../category-module';
 import { useTransactionFilters } from '../../hooks';
@@ -38,10 +38,9 @@ export const TransactionFilterDrawer = () => {
   const onSubmit = form.handleSubmit(async (values) => {
     const queryParams: TransactionQueryParameters = {
       ...values,
-      categoryIds: values.categoryId ? [values.categoryId] : undefined,
-      accountIds: values.accountId ? [values.accountId] : undefined,
-      type: (values?.type ?? '').length >= 1 ? values.type : undefined,
-      isHighlighted: values.isHighlighted ?? undefined,
+      categoryIds: values.categoryIds ?? undefined,
+      accountIds: values.accountIds ?? undefined,
+      types: values?.types ?? undefined,
     };
 
     const validQueryParams: TransactionQueryParameters = Object.fromEntries(
@@ -90,7 +89,7 @@ export const TransactionFilterDrawer = () => {
           <FormLayout columns={1}>
             <FormLayout.Field>
               <Controller
-                name="categoryId"
+                name="categoryIds"
                 control={form.control}
                 render={({ field }) => (
                   <CategorySelector
@@ -99,14 +98,14 @@ export const TransactionFilterDrawer = () => {
                     categories={categories?.items ?? []}
                     value={(categories?.items ?? []).find((cat) => cat.id === field.value) ?? null}
                     onChange={(cat) => field.onChange(cat?.id ?? null)}
-                    errorText={form.formState.errors.categoryId?.message}
+                    errorText={form.formState.errors.categoryIds?.message}
                   />
                 )}
               />
             </FormLayout.Field>
             <FormLayout.Field>
               <Controller
-                name="accountId"
+                name="accountIds"
                 control={form.control}
                 render={({ field }) => (
                   <AccountSelector
@@ -114,37 +113,23 @@ export const TransactionFilterDrawer = () => {
                     placeholder="Select an account"
                     accounts={accounts?.items ?? []}
                     value={(accounts?.items ?? []).find((acc) => acc.id === field.value) ?? null}
-                    onChange={(acc) => field.onChange(acc?.id ?? null)}
-                    errorText={form.formState.errors.accountId?.message}
+                    onChange={(acc) => field.onChange((acc as Account)?.id ?? null)}
+                    errorText={form.formState.errors.accountIds?.message}
                   />
                 )}
               />
             </FormLayout.Field>
             <FormLayout.Field>
               <Controller
-                name="type"
+                name="types"
                 control={form.control}
                 render={({ field }) => (
                   <TransactionTypeSelector
-                    value={field.value ?? ''}
+                    value={field.value?.[0] ?? ''}
                     showAllOption
                     onChange={field.onChange}
-                    errorText={form.formState.errors.type?.message}
+                    errorText={form.formState.errors.types?.message}
                     className="w-full"
-                  />
-                )}
-              />
-            </FormLayout.Field>
-            <FormLayout.Field>
-              <Controller
-                name="isHighlighted"
-                control={form.control}
-                render={({ field }) => (
-                  <Switch
-                    id="is-highlighted"
-                    label="Highlighted only"
-                    checked={!!field.value}
-                    onCheckedChange={(checked) => field.onChange(checked ? true : undefined)}
                   />
                 )}
               />

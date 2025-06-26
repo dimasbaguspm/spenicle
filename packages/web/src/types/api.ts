@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-19T14:28:43.558Z
+ * Generated on: 2025-06-26T14:26:33.101Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -810,8 +810,11 @@ export type TransactionQueryParameters = QueryParameters & {
    * @maxLength 3
    */
   currency?: string;
-  /** Filter by transaction type */
-  type?: "expense" | "income" | "transfer";
+  /**
+   * Filter by transaction type
+   * @example ["expense","income","transfer"]
+   */
+  types?: string[];
   /** Filter by recurrence ID */
   recurrenceId?: number;
   /**

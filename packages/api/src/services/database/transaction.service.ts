@@ -32,7 +32,7 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
       startDate,
       endDate,
       note,
-      type,
+      types,
       isHighlighted,
       pageNumber = 1,
       pageSize = 25,
@@ -79,9 +79,9 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
       conditionsForKey.push(createConditionEntry('note', note));
     }
 
-    if (type !== undefined) {
-      conditions.push(eq(transactions.type, type));
-      conditionsForKey.push(createConditionEntry('type', type));
+    if (types !== undefined) {
+      conditions.push(inArray(transactions.type, types));
+      conditionsForKey.push(createConditionEntry('types', types));
     }
 
     if (isHighlighted !== undefined) {

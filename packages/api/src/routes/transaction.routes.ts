@@ -82,11 +82,15 @@ const router = Router();
  *           maxLength: 3
  *         description: Filter by currency code
  *       - in: query
- *         name: type
+ *         name: types
  *         schema:
- *           type: string
+ *           type: array
+ *           items:
+ *             type: string
  *           enum: [expense, income, transfer]
- *         description: Filter by transaction type
+ *         style: form
+ *         explode: false
+ *         description: Filter by transaction types (comma-separated)
  *       - in: query
  *         name: recurrenceId
  *         schema:

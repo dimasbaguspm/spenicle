@@ -2,6 +2,7 @@ import type { Dayjs } from 'dayjs';
 
 import type { Transaction } from '../../../../types/api';
 
+import { TransactionCalendarDailySummary } from './transaction-calendar-daily-summary';
 import { TransactionCalendarDayViewRow } from './transaction-calendar-day-view-row';
 import type { TransactionCalendarItem } from './types';
 
@@ -19,22 +20,24 @@ export const TransactionCalendarDayView = ({
   getItemsForSlot,
   onAddTransaction,
   onTransactionClick,
-}: TransactionCalendarDayViewProps) => (
-  <div className="min-h-full">
-    <div className="sticky top-0 z-10 bg-white border-b border-mist-200 pb-4">
-      <h3 className="text-center text-lg font-medium text-slate-700">{currentDate.format('dddd, MMMM D')}</h3>
+}: TransactionCalendarDayViewProps) => {
+  return (
+    <div className="min-h-full">
+      <div className="sticky top-0 z-10 bg-white border-b border-mist-200 pb-4 px-4 pt-4">
+        <TransactionCalendarDailySummary currentDate={currentDate} hours={hours} getItemsForSlot={getItemsForSlot} />
+      </div>
+      <div className="grid grid-cols-1">
+        {hours.map((hour) => (
+          <TransactionCalendarDayViewRow
+            key={hour}
+            hour={hour}
+            date={currentDate}
+            transactions={getItemsForSlot(currentDate, hour)}
+            onAddTransaction={onAddTransaction}
+            onTransactionClick={onTransactionClick}
+          />
+        ))}
+      </div>
     </div>
-    <div className="grid grid-cols-1">
-      {hours.map((hour) => (
-        <TransactionCalendarDayViewRow
-          key={hour}
-          hour={hour}
-          date={currentDate}
-          transactions={getItemsForSlot(currentDate, hour)}
-          onAddTransaction={onAddTransaction}
-          onTransactionClick={onTransactionClick}
-        />
-      ))}
-    </div>
-  </div>
-);
+  );
+};

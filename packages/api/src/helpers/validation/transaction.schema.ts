@@ -45,11 +45,10 @@ export const transactionQuerySchema = z.object({
     .optional()
     .refine((val) => val === undefined || !isNaN(new Date(val).getTime()), { message: 'Invalid end date format' }),
   currency: z.string().length(3).optional(),
-  type: z
-    .string()
+  types: z
+    .array(z.string())
     .optional()
-    .transform((val) => (val === '' ? undefined : val))
-    .refine((val) => val === undefined || ['expense', 'income', 'transfer'].includes(val), {
+    .refine((val) => val === undefined || val.every((type) => ['expense', 'income', 'transfer'].includes(type)), {
       message: 'Transaction type must be one of: expense, income, transfer',
     }),
   recurrenceId: z.number().int().positive().optional(),

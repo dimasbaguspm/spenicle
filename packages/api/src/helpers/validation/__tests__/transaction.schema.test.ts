@@ -331,6 +331,7 @@ describe('Transaction Schema Validation', () => {
         startDate: '2024-01-01',
         endDate: '2024-12-31',
         currency: 'USD',
+        types: ['expense', 'income'],
         recurrenceId: 6,
         pageNumber: 2,
         pageSize: 10,
@@ -605,6 +606,95 @@ describe('Transaction Schema Validation', () => {
       expect(result.data?.ids).toEqual([2, 3, 4]);
       expect(result.data?.accountIds).toEqual([20, 30]);
       expect(result.data?.categoryIds).toEqual([6, 7]);
+    });
+
+    it('should validate single transaction type', () => {
+      const validData = {
+        types: ['expense'],
+      };
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.types).toEqual(['expense']);
+    });
+
+    it('should validate multiple transaction types', () => {
+      const validData = {
+        types: ['expense', 'income', 'transfer'],
+      };
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.types).toEqual(['expense', 'income', 'transfer']);
+    });
+
+    it('should validate partial transaction types', () => {
+      const validData = {
+        types: ['expense', 'income'],
+      };
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.types).toEqual(['expense', 'income']);
+    });
+
+    it('should reject invalid transaction types', () => {
+      const invalidData = {
+        types: ['expense', 'invalid', 'income'],
+      };
+
+      const result = transactionQuerySchema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            message: 'Transaction type must be one of: expense, income, transfer',
+            path: ['types'],
+          }),
+        ])
+      );
+    });
+
+    it('should reject empty string in transaction types', () => {
+      const invalidData = {
+        types: ['expense', '', 'income'],
+      };
+
+      const result = transactionQuerySchema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            message: 'Transaction type must be one of: expense, income, transfer',
+            path: ['types'],
+          }),
+        ])
+      );
+    });
+
+    it('should handle empty types array', () => {
+      const validData = {
+        types: [],
+      };
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.types).toEqual([]);
+    });
+
+    it('should handle undefined types', () => {
+      const validData = {};
+
+      const result = transactionQuerySchema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.types).toBeUndefined();
     });
   });
 

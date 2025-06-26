@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 
 import { BadRequestException, NotFoundException } from '../helpers/exceptions/index.ts';
 import { getErrorResponse } from '../helpers/http-response/index.ts';
-import { parseBody, parseId, parseQuery, parseMultipleIds } from '../helpers/parsers/index.ts';
+import { parseBody, parseId, parseQuery, parseMultipleIds, parseStringArray } from '../helpers/parsers/index.ts';
 import { AccessTokenService } from '../services/authentication/access-token.service.ts';
 import { AccountService } from '../services/database/account.service.ts';
 import { CategoryService } from '../services/database/category.service.ts';
@@ -28,6 +28,7 @@ export async function listTransactions(req: Request, res: Response) {
       groupId: user.groupId,
       // Parse comma-separated ID arrays
       ids: parseMultipleIds(req.query.ids, 'transaction IDs'),
+      types: parseStringArray(req.query.types),
       accountIds: parseMultipleIds(req.query.accountIds, 'account IDs'),
       categoryIds: parseMultipleIds(req.query.categoryIds, 'category IDs'),
     };

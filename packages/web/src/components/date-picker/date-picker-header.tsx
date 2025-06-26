@@ -37,10 +37,11 @@ export function DatePickerHeader({ className, variant = 'default' }: DatePickerH
   };
 
   if (variant === 'compact') {
-    // compact variant: display on left, only prev/next month chevrons on right
     return (
       <div className={cn('flex items-center justify-between bg-cream-50', className)}>
-        <span className="text-base font-medium text-slate-900 select-none">{displayDate.format('MMM YYYY')}</span>
+        <span className="text-base font-medium text-slate-900 select-none">
+          {displayDate.format('ddd DD MMM YYYY')}
+        </span>
         <div className="flex items-center gap-1">
           <IconButton
             variant="ghost"

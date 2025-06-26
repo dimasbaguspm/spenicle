@@ -58,7 +58,7 @@ export function useSeamlessTransactions({
       endDate: fetchEndDate,
       groupId,
       accountIds: [accountId!],
-      type,
+      types: [type!],
       categoryIds: [categoryId!],
       sortBy: 'date' as const,
       sortOrder: 'desc' as const,

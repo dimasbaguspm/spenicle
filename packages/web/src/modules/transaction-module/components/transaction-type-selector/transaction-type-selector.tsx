@@ -6,7 +6,7 @@ import { Segment } from '../../../../components';
 export type TransactionType = 'expense' | 'income' | 'transfer';
 
 export interface TransactionTypeSelectorProps {
-  value: TransactionType | '';
+  value: string;
   onChange: (value: string) => void;
   errorText?: string;
   disabled?: boolean;

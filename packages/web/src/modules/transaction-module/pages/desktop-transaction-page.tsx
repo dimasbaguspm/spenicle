@@ -1,7 +1,7 @@
 import dayjs, { Dayjs } from 'dayjs';
 import { useState, type FC } from 'react';
 
-import { PageLayout, Skeleton, Tile } from '../../../components';
+import { PageLayout, Tile } from '../../../components';
 import { DatePickerInline } from '../../../components/date-picker';
 import { DRAWER_IDS, DRAWER_METADATA_KEYS } from '../../../constants/drawer-id';
 import { useApiAccountsQuery, useApiCategoriesQuery, useApiTransactionsQuery } from '../../../hooks';
@@ -13,16 +13,17 @@ import { useTransactionFilters } from '../hooks';
 
 export const DesktopTransactionPage: FC = () => {
   const [date, setDate] = useState(dayjs());
-  const { accountIds, categoryIds } = useTransactionFilters();
+  const { accountIds, categoryIds, types } = useTransactionFilters();
   const { openDrawer } = useDrawerRouterProvider();
 
-  const [pagedAccounts, , { isLoading: isAccountsLoading }] = useApiAccountsQuery({ pageSize: 1000 });
-  const [pagedCategories, , { isLoading: isCategoriesLoading }] = useApiCategoriesQuery({ pageSize: 1000 });
-  const [pagedTransactions, , { isLoading: isTransactionsLoading }] = useApiTransactionsQuery({
+  const [pagedAccounts] = useApiAccountsQuery({ pageSize: 1000 });
+  const [pagedCategories] = useApiCategoriesQuery({ pageSize: 1000 });
+  const [pagedTransactions] = useApiTransactionsQuery({
     startDate: date.startOf('day').toISOString(),
     endDate: date.endOf('day').toISOString(),
     accountIds,
     categoryIds,
+    types,
   });
 
   const transactions = pagedTransactions?.items ?? [];
@@ -41,8 +42,6 @@ export const DesktopTransactionPage: FC = () => {
     });
   };
 
-  const isDataLoading = isAccountsLoading || isCategoriesLoading || isTransactionsLoading;
-
   return (
     <PageLayout>
       <Tile className="grid grid-cols-[minmax(250px,30%)_1fr]">
@@ -53,18 +52,14 @@ export const DesktopTransactionPage: FC = () => {
           </div>
         </div>
         <div className="p-4 flex flex-col flex-wrap overflow-y-auto min-h-screen">
-          {isDataLoading ? (
-            <Skeleton className="h-8 w-1/2 mb-4" />
-          ) : (
-            <TransactionCalendar
-              data={transactions}
-              accounts={accounts}
-              categories={categories}
-              selectedDate={date}
-              onAddTransaction={handleOnAddTransaction}
-              onTransactionClick={handleOpenEditTransaction}
-            />
-          )}
+          <TransactionCalendar
+            data={transactions}
+            accounts={accounts}
+            categories={categories}
+            selectedDate={date}
+            onAddTransaction={handleOnAddTransaction}
+            onTransactionClick={handleOpenEditTransaction}
+          />
         </div>
       </Tile>
     </PageLayout>
