@@ -108,7 +108,7 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(
         {header && <PageLayoutHeader {...headerProps}>{header}</PageLayoutHeader>}
 
         <PageLayoutMain {...defaultMainProps}>
-          {title && (
+          {!isDesktop && title && (
             <PageHeader
               title={title}
               showBackButton={showBackButton}
