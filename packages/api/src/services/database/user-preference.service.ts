@@ -1,6 +1,11 @@
 import { eq, and, asc, desc, SQL } from 'drizzle-orm';
 
 import { db } from '../../core/db/config.ts';
+import {
+  generatePrepareStatementKey,
+  createConditionEntry,
+  type ConditionEntry,
+} from '../../helpers/database/index.ts';
 import { formatUserPreferenceModel } from '../../helpers/model-formatters/index.ts';
 import { parseId } from '../../helpers/parsers/index.ts';
 import {
@@ -32,16 +37,41 @@ export class UserPreferenceService implements DatabaseServiceSchema<UserPreferen
       pageNumber = 1,
     } = data;
 
-    // filtering
+    // centralized condition building - build both arrays in one pass
     const conditions: SQL[] = [];
-    if (id !== undefined) conditions.push(eq(userPreferences.id, id));
-    if (userId !== undefined) conditions.push(eq(userPreferences.userId, userId));
-    if (monthlyStartDate !== undefined) conditions.push(eq(userPreferences.monthlyStartDate, monthlyStartDate));
-    if (weeklyStartDay !== undefined) conditions.push(eq(userPreferences.weeklyStartDay, weeklyStartDay));
-    if (limitPeriod !== undefined) conditions.push(eq(userPreferences.limitPeriod, limitPeriod));
-    if (categoryPeriod !== undefined) conditions.push(eq(userPreferences.categoryPeriod, categoryPeriod));
+    const conditionsForKey: ConditionEntry[] = [];
 
-    // sorting
+    if (id !== undefined) {
+      conditions.push(eq(userPreferences.id, id));
+      conditionsForKey.push(createConditionEntry('id', id));
+    }
+
+    if (userId !== undefined) {
+      conditions.push(eq(userPreferences.userId, userId));
+      conditionsForKey.push(createConditionEntry('userId', userId));
+    }
+
+    if (monthlyStartDate !== undefined) {
+      conditions.push(eq(userPreferences.monthlyStartDate, monthlyStartDate));
+      conditionsForKey.push(createConditionEntry('monthlyStartDate', monthlyStartDate));
+    }
+
+    if (weeklyStartDay !== undefined) {
+      conditions.push(eq(userPreferences.weeklyStartDay, weeklyStartDay));
+      conditionsForKey.push(createConditionEntry('weeklyStartDay', weeklyStartDay));
+    }
+
+    if (limitPeriod !== undefined) {
+      conditions.push(eq(userPreferences.limitPeriod, limitPeriod));
+      conditionsForKey.push(createConditionEntry('limitPeriod', limitPeriod));
+    }
+
+    if (categoryPeriod !== undefined) {
+      conditions.push(eq(userPreferences.categoryPeriod, categoryPeriod));
+      conditionsForKey.push(createConditionEntry('categoryPeriod', categoryPeriod));
+    }
+
+    // sorting logic
     const isAscending = sortOrder === 'asc';
     let order;
     switch (sortBy) {
@@ -69,6 +99,20 @@ export class UserPreferenceService implements DatabaseServiceSchema<UserPreferen
         break;
     }
 
+    const pagedQueryKey = generatePrepareStatementKey({
+      prefix: 'USER_PREFERENCE_PAGED',
+      conditions: conditionsForKey,
+      sortBy,
+      sortOrder,
+      pageNumber,
+      pageSize,
+    });
+
+    const totalQueryKey = generatePrepareStatementKey({
+      prefix: 'USER_PREFERENCE_TOTAL',
+      conditions: conditionsForKey,
+    });
+
     const pagedQuery = db
       .select()
       .from(userPreferences)
@@ -76,13 +120,13 @@ export class UserPreferenceService implements DatabaseServiceSchema<UserPreferen
       .orderBy(order)
       .limit(pageSize)
       .offset((pageNumber - 1) * pageSize)
-      .prepare('USER_PREFERENCE_PAGED_QUERY');
+      .prepare(pagedQueryKey);
 
     const totalQuery = db
       .select()
       .from(userPreferences)
       .where(conditions.length ? and(...conditions) : undefined)
-      .prepare('USER_PREFERENCE_TOTAL_QUERY');
+      .prepare(totalQueryKey);
 
     const [pagedData, totalData] = await Promise.all([pagedQuery.execute(), totalQuery.execute()]);
 

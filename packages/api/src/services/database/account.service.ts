@@ -1,6 +1,11 @@
 import { SQL, and, asc, desc, eq, ilike, inArray } from 'drizzle-orm';
 
 import { db } from '../../core/db/config.ts';
+import {
+  generatePrepareStatementKey,
+  createConditionEntry,
+  type ConditionEntry,
+} from '../../helpers/database/index.ts';
 import { formatAccountModel } from '../../helpers/model-formatters/index.ts';
 import { parseId } from '../../helpers/parsers/index.ts';
 import {
@@ -19,11 +24,30 @@ export class AccountService implements DatabaseServiceSchema<Account> {
     const { ids, groupId, name, types, pageNumber = 1, pageSize = 25, sortBy = 'createdAt', sortOrder = 'asc' } = data;
 
     const conditions: SQL[] = [];
-    if (ids?.length) conditions.push(inArray(accounts.id, ids));
-    if (groupId) conditions.push(eq(accounts.groupId, groupId));
-    if (name) conditions.push(ilike(accounts.name, `%${name}%`));
-    if (types?.length) conditions.push(inArray(accounts.type, types));
+    const conditionsForKey: ConditionEntry[] = [];
 
+    // centralized condition building - build both arrays in one pass
+    if (ids?.length) {
+      conditions.push(inArray(accounts.id, ids));
+      conditionsForKey.push(createConditionEntry('ids', ids));
+    }
+
+    if (groupId) {
+      conditions.push(eq(accounts.groupId, groupId));
+      conditionsForKey.push(createConditionEntry('groupId', groupId));
+    }
+
+    if (name) {
+      conditions.push(ilike(accounts.name, `%${name}%`));
+      conditionsForKey.push(createConditionEntry('name', name));
+    }
+
+    if (types?.length) {
+      conditions.push(inArray(accounts.type, types));
+      conditionsForKey.push(createConditionEntry('types', types));
+    }
+
+    // sorting logic
     const isAscending = sortOrder === 'asc';
     let order;
     switch (sortBy) {
@@ -39,6 +63,20 @@ export class AccountService implements DatabaseServiceSchema<Account> {
         break;
     }
 
+    const pagedQueryKey = generatePrepareStatementKey({
+      prefix: 'ACCOUNT_PAGED',
+      conditions: conditionsForKey,
+      sortBy,
+      sortOrder,
+      pageNumber,
+      pageSize,
+    });
+
+    const totalQueryKey = generatePrepareStatementKey({
+      prefix: 'ACCOUNT_TOTAL',
+      conditions: conditionsForKey,
+    });
+
     const pagedQuery = db
       .select()
       .from(accounts)
@@ -46,13 +84,13 @@ export class AccountService implements DatabaseServiceSchema<Account> {
       .orderBy(order)
       .limit(pageSize)
       .offset((pageNumber - 1) * pageSize)
-      .prepare('ACCOUNT_PAGED_QUERY');
+      .prepare(pagedQueryKey);
 
     const totalQuery = db
       .select()
       .from(accounts)
       .where(conditions.length ? and(...conditions) : undefined)
-      .prepare('ACCOUNT_TOTAL_QUERY');
+      .prepare(totalQueryKey);
 
     const [pagedData, totalData] = await Promise.all([pagedQuery.execute(), totalQuery.execute()]);
 

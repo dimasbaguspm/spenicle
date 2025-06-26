@@ -1,6 +1,11 @@
 import { SQL, and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 
 import { db } from '../../core/db/config.ts';
+import {
+  generatePrepareStatementKey,
+  createConditionEntry,
+  type ConditionEntry,
+} from '../../helpers/database/index.ts';
 import { formatRecurrenceModel } from '../../helpers/model-formatters/index.ts';
 import { parseId } from '../../helpers/parsers/index.ts';
 import { validate } from '../../helpers/validation/index.ts';
@@ -29,11 +34,25 @@ export class RecurrenceService implements DatabaseServiceSchema<Recurrence> {
     } = data;
 
     const conditions: SQL[] = [];
-    if (frequency !== undefined) conditions.push(eq(recurrences.frequency, frequency));
-    if (startDate !== undefined) conditions.push(gte(recurrences.nextOccurrenceDate, startDate));
-    if (endDate !== undefined) conditions.push(lte(recurrences.endDate, endDate));
+    const conditionsForKey: ConditionEntry[] = [];
 
-    // Sorting
+    // centralized condition building - build both arrays in one pass
+    if (frequency !== undefined) {
+      conditions.push(eq(recurrences.frequency, frequency));
+      conditionsForKey.push(createConditionEntry('frequency', frequency));
+    }
+
+    if (startDate !== undefined) {
+      conditions.push(gte(recurrences.nextOccurrenceDate, startDate));
+      conditionsForKey.push(createConditionEntry('startDate', startDate));
+    }
+
+    if (endDate !== undefined) {
+      conditions.push(lte(recurrences.endDate, endDate));
+      conditionsForKey.push(createConditionEntry('endDate', endDate));
+    }
+
+    // sorting logic
     const isAscending = sortOrder === 'asc';
     let order;
     switch (sortBy) {
@@ -52,6 +71,20 @@ export class RecurrenceService implements DatabaseServiceSchema<Recurrence> {
         break;
     }
 
+    const pagedQueryKey = generatePrepareStatementKey({
+      prefix: 'RECURRENCE_PAGED',
+      conditions: conditionsForKey,
+      sortBy,
+      sortOrder,
+      pageNumber,
+      pageSize,
+    });
+
+    const totalQueryKey = generatePrepareStatementKey({
+      prefix: 'RECURRENCE_TOTAL',
+      conditions: conditionsForKey,
+    });
+
     const pagedQuery = db
       .select()
       .from(recurrences)
@@ -59,13 +92,13 @@ export class RecurrenceService implements DatabaseServiceSchema<Recurrence> {
       .orderBy(order)
       .limit(pageSize)
       .offset((pageNumber - 1) * pageSize)
-      .prepare('RECURRENCE_PAGED_QUERY');
+      .prepare(pagedQueryKey);
 
     const totalQuery = db
       .select()
       .from(recurrences)
       .where(conditions.length ? and(...conditions) : undefined)
-      .prepare('RECURRENCE_TOTAL_QUERY');
+      .prepare(totalQueryKey);
 
     const [pagedData, totalData] = await Promise.all([pagedQuery.execute(), totalQuery.execute()]);
 

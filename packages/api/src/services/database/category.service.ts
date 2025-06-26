@@ -1,6 +1,11 @@
 import { eq, and, asc, desc, ilike, inArray } from 'drizzle-orm';
 
 import { db } from '../../core/db/config.ts';
+import {
+  generatePrepareStatementKey,
+  createConditionEntry,
+  type ConditionEntry,
+} from '../../helpers/database/index.ts';
 import { formatCategoryModel } from '../../helpers/model-formatters/index.ts';
 import { parseId } from '../../helpers/parsers/index.ts';
 import {
@@ -30,13 +35,30 @@ export class CategoryService implements DatabaseServiceSchema<Category> {
     } = data;
 
     const conditions = [];
-    if (ids !== undefined && ids.length > 0) conditions.push(inArray(categories.id, ids));
-    if (groupId !== undefined) conditions.push(eq(categories.groupId, groupId));
-    if (parentIds !== undefined && parentIds !== null && parentIds?.length > 0)
-      conditions.push(inArray(categories.parentId, parentIds));
-    if (name !== undefined) conditions.push(ilike(categories.name, `%${name}%`));
+    const conditionsForKey: ConditionEntry[] = [];
 
-    // Sorting
+    // centralized condition building - build both arrays in one pass
+    if (ids !== undefined && ids.length > 0) {
+      conditions.push(inArray(categories.id, ids));
+      conditionsForKey.push(createConditionEntry('ids', ids));
+    }
+
+    if (groupId !== undefined) {
+      conditions.push(eq(categories.groupId, groupId));
+      conditionsForKey.push(createConditionEntry('groupId', groupId));
+    }
+
+    if (parentIds !== undefined && parentIds !== null && parentIds?.length > 0) {
+      conditions.push(inArray(categories.parentId, parentIds));
+      conditionsForKey.push(createConditionEntry('parentIds', parentIds));
+    }
+
+    if (name !== undefined) {
+      conditions.push(ilike(categories.name, `%${name}%`));
+      conditionsForKey.push(createConditionEntry('name', name));
+    }
+
+    // sorting logic
     const isAscending = sortOrder === 'asc';
     let order;
     switch (sortBy) {
@@ -49,6 +71,20 @@ export class CategoryService implements DatabaseServiceSchema<Category> {
         break;
     }
 
+    const pagedQueryKey = generatePrepareStatementKey({
+      prefix: 'CATEGORY_PAGED',
+      conditions: conditionsForKey,
+      sortBy,
+      sortOrder,
+      pageNumber,
+      pageSize,
+    });
+
+    const totalQueryKey = generatePrepareStatementKey({
+      prefix: 'CATEGORY_TOTAL',
+      conditions: conditionsForKey,
+    });
+
     const pagedQuery = db
       .select()
       .from(categories)
@@ -56,13 +92,13 @@ export class CategoryService implements DatabaseServiceSchema<Category> {
       .orderBy(order)
       .limit(pageSize)
       .offset((pageNumber - 1) * pageSize)
-      .prepare('CATEGORY_PAGED_QUERY');
+      .prepare(pagedQueryKey);
 
     const totalQuery = db
       .select()
       .from(categories)
       .where(conditions.length ? and(...conditions) : undefined)
-      .prepare('CATEGORY_TOTAL_QUERY');
+      .prepare(totalQueryKey);
 
     const [pagedData, totalData] = await Promise.all([pagedQuery.execute(), totalQuery.execute()]);
 

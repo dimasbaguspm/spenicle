@@ -1,6 +1,11 @@
 import { SQL, and, asc, desc, eq } from 'drizzle-orm';
 
 import { db } from '../../core/db/config.ts';
+import {
+  generatePrepareStatementKey,
+  createConditionEntry,
+  type ConditionEntry,
+} from '../../helpers/database/index.ts';
 import { formatAccountLimitModel } from '../../helpers/model-formatters/index.ts';
 import { parseId } from '../../helpers/parsers/index.ts';
 import {
@@ -24,12 +29,26 @@ export class AccountLimitService implements DatabaseServiceSchema<AccountLimit> 
 
     const { id, accountId, period, sortBy = 'createdAt', sortOrder = 'asc', pageSize = 25, pageNumber = 1 } = data;
 
-    // Filtering
+    // centralized condition building - build both arrays in one pass
     const conditions: SQL[] = [];
-    if (id) conditions.push(eq(accountLimits.id, id));
-    if (accountId) conditions.push(eq(accountLimits.accountId, accountId));
-    if (period) conditions.push(eq(accountLimits.period, period));
+    const conditionsForKey: ConditionEntry[] = [];
 
+    if (id) {
+      conditions.push(eq(accountLimits.id, id));
+      conditionsForKey.push(createConditionEntry('id', id));
+    }
+
+    if (accountId) {
+      conditions.push(eq(accountLimits.accountId, accountId));
+      conditionsForKey.push(createConditionEntry('accountId', accountId));
+    }
+
+    if (period) {
+      conditions.push(eq(accountLimits.period, period));
+      conditionsForKey.push(createConditionEntry('period', period));
+    }
+
+    // sorting logic
     const isAscending = sortOrder === 'asc';
     let order;
     switch (sortBy) {
@@ -45,6 +64,20 @@ export class AccountLimitService implements DatabaseServiceSchema<AccountLimit> 
         break;
     }
 
+    const pagedQueryKey = generatePrepareStatementKey({
+      prefix: 'ACC_LIMIT_PAGED',
+      conditions: conditionsForKey,
+      sortBy,
+      sortOrder,
+      pageNumber,
+      pageSize,
+    });
+
+    const totalQueryKey = generatePrepareStatementKey({
+      prefix: 'ACC_LIMIT_TOTAL',
+      conditions: conditionsForKey,
+    });
+
     const pagedQuery = db
       .select()
       .from(accountLimits)
@@ -52,13 +85,13 @@ export class AccountLimitService implements DatabaseServiceSchema<AccountLimit> 
       .orderBy(order)
       .limit(pageSize)
       .offset((pageNumber - 1) * pageSize)
-      .prepare('ACC_LIMIT_PAGED_QUERY');
+      .prepare(pagedQueryKey);
 
     const totalQuery = db
       .select()
       .from(accountLimits)
       .where(conditions.length ? and(...conditions) : undefined)
-      .prepare('ACC_LIMIT_TOTAL_QUERY');
+      .prepare(totalQueryKey);
 
     const [pagedData, totalData] = await Promise.all([pagedQuery.execute(), totalQuery.execute()]);
 

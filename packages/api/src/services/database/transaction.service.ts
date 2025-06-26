@@ -1,6 +1,11 @@
 import { SQL, and, asc, desc, eq, gte, ilike, lte, inArray } from 'drizzle-orm';
 
 import { db } from '../../core/db/config.ts';
+import {
+  generatePrepareStatementKey,
+  createConditionEntry,
+  type ConditionEntry,
+} from '../../helpers/database/index.ts';
 import { formatTransactionModel } from '../../helpers/model-formatters/index.ts';
 import { parseId } from '../../helpers/parsers/index.ts';
 import { validate } from '../../helpers/validation/index.ts';
@@ -36,24 +41,55 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
     } = data;
 
     const conditions: SQL[] = [];
+    const conditionsForKey: ConditionEntry[] = [];
 
-    // Group ID filter (kept as single since it's for scoping)
-    if (groupId !== undefined) conditions.push(eq(transactions.groupId, groupId));
+    // centralized condition building - build both arrays in one pass
+    if (groupId !== undefined) {
+      conditions.push(eq(transactions.groupId, groupId));
+      conditionsForKey.push(createConditionEntry('groupId', groupId));
+    }
 
-    // Multiple ID filters
-    if (ids !== undefined && ids.length > 0) conditions.push(inArray(transactions.id, ids));
-    if (accountIds !== undefined && accountIds.length > 0) conditions.push(inArray(transactions.accountId, accountIds));
-    if (categoryIds !== undefined && categoryIds.length > 0)
+    if (ids !== undefined && ids.length > 0) {
+      conditions.push(inArray(transactions.id, ids));
+      conditionsForKey.push(createConditionEntry('ids', ids));
+    }
+
+    if (accountIds !== undefined && accountIds.length > 0) {
+      conditions.push(inArray(transactions.accountId, accountIds));
+      conditionsForKey.push(createConditionEntry('accountIds', accountIds));
+    }
+
+    if (categoryIds !== undefined && categoryIds.length > 0) {
       conditions.push(inArray(transactions.categoryId, categoryIds));
+      conditionsForKey.push(createConditionEntry('categoryIds', categoryIds));
+    }
 
-    // Other filters
-    if (startDate !== undefined) conditions.push(gte(transactions.date, startDate));
-    if (endDate !== undefined) conditions.push(lte(transactions.date, endDate));
-    if (note !== undefined) conditions.push(ilike(transactions.note, `%${note}%`));
-    if (type !== undefined) conditions.push(eq(transactions.type, type));
-    if (isHighlighted !== undefined) conditions.push(eq(transactions.isHighlighted, isHighlighted));
+    if (startDate !== undefined) {
+      conditions.push(gte(transactions.date, startDate));
+      conditionsForKey.push(createConditionEntry('startDate', startDate));
+    }
 
-    // Sorting
+    if (endDate !== undefined) {
+      conditions.push(lte(transactions.date, endDate));
+      conditionsForKey.push(createConditionEntry('endDate', endDate));
+    }
+
+    if (note !== undefined) {
+      conditions.push(ilike(transactions.note, `%${note}%`));
+      conditionsForKey.push(createConditionEntry('note', note));
+    }
+
+    if (type !== undefined) {
+      conditions.push(eq(transactions.type, type));
+      conditionsForKey.push(createConditionEntry('type', type));
+    }
+
+    if (isHighlighted !== undefined) {
+      conditions.push(eq(transactions.isHighlighted, isHighlighted));
+      conditionsForKey.push(createConditionEntry('isHighlighted', isHighlighted));
+    }
+
+    // sorting logic
     const isAscending = sortOrder === 'asc';
     let order;
     switch (sortBy) {
@@ -69,6 +105,20 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
         break;
     }
 
+    const pagedQueryKey = generatePrepareStatementKey({
+      prefix: 'TRANSACTION_PAGED',
+      conditions: conditionsForKey,
+      sortBy,
+      sortOrder,
+      pageNumber,
+      pageSize,
+    });
+
+    const totalQueryKey = generatePrepareStatementKey({
+      prefix: 'TRANSACTION_TOTAL',
+      conditions: conditionsForKey,
+    });
+
     const pagedQuery = db
       .select()
       .from(transactions)
@@ -76,13 +126,13 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
       .orderBy(order)
       .limit(pageSize)
       .offset((pageNumber - 1) * pageSize)
-      .prepare('TRANSACTION_PAGED_QUERY');
+      .prepare(pagedQueryKey);
 
     const totalQuery = db
       .select()
       .from(transactions)
       .where(conditions.length ? and(...conditions) : undefined)
-      .prepare('TRANSACTION_TOTAL_QUERY');
+      .prepare(totalQueryKey);
 
     const [pagedData, totalData] = await Promise.all([pagedQuery.execute(), totalQuery.execute()]);
 
