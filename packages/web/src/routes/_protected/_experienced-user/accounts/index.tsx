@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useViewport } from '../../../../hooks';
 import { DesktopAccountDashboardPage, MobileAccountDashboardPage } from '../../../../modules/account-module';
 
-export const Route = createFileRoute('/_protected/_experienced-user/settings/accounts')({
+export const Route = createFileRoute('/_protected/_experienced-user/accounts/')({
   component: AccountsComponent,
 });
 

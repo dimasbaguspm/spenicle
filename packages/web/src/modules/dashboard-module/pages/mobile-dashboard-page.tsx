@@ -27,7 +27,7 @@ export const MobileDashboardPage: FC = () => {
       iconColor: 'text-coral-600',
       iconBgColor: 'bg-coral-100',
       onClick: async () => {
-        await navigate({ to: '/settings/categories' });
+        await navigate({ to: '/categories' });
       },
     },
     {
@@ -37,7 +37,7 @@ export const MobileDashboardPage: FC = () => {
       iconColor: 'text-slate-600',
       iconBgColor: 'bg-slate-100',
       onClick: async () => {
-        await navigate({ to: '/settings/accounts' });
+        await navigate({ to: '/accounts' });
       },
     },
     {

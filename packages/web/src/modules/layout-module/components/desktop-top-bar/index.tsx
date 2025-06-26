@@ -33,14 +33,14 @@ export const DesktopTopBar: FC<Props> = (props) => {
           <IconButton
             variant={pathname.includes('categories') ? 'coral-outline' : 'mist-outline'}
             size="sm"
-            onClick={() => navigateTo('/settings/categories')}
+            onClick={() => navigateTo('/categories')}
           >
             <Tag className="size-4" />
           </IconButton>
           <IconButton
             variant={pathname.includes('accounts') ? 'coral-outline' : 'mist-outline'}
             size="sm"
-            onClick={() => navigateTo('/settings/accounts')}
+            onClick={() => navigateTo('/accounts')}
           >
             <CreditCard className="size-4" />
           </IconButton>

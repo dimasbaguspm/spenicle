@@ -22,6 +22,8 @@ import { Route as ProtectedExperiencedUserAnalyticsRouteImport } from './routes/
 import { Route as ProtectedNewUserOnboardingIndexImport } from './routes/_protected/_new-user/onboarding/index'
 import { Route as ProtectedExperiencedUserTransactionsIndexImport } from './routes/_protected/_experienced-user/transactions/index'
 import { Route as ProtectedExperiencedUserSettingsIndexImport } from './routes/_protected/_experienced-user/settings/index'
+import { Route as ProtectedExperiencedUserCategoriesIndexImport } from './routes/_protected/_experienced-user/categories/index'
+import { Route as ProtectedExperiencedUserAccountsIndexImport } from './routes/_protected/_experienced-user/accounts/index'
 import { Route as ProtectedNewUserOnboardingCompleteImport } from './routes/_protected/_new-user/onboarding/complete'
 import { Route as ProtectedExperiencedUserTransactionsPeriodImport } from './routes/_protected/_experienced-user/transactions/period'
 import { Route as ProtectedExperiencedUserSettingsSecurityImport } from './routes/_protected/_experienced-user/settings/security'
@@ -31,8 +33,6 @@ import { Route as ProtectedExperiencedUserSettingsNotificationsImport } from './
 import { Route as ProtectedExperiencedUserSettingsLegalImport } from './routes/_protected/_experienced-user/settings/legal'
 import { Route as ProtectedExperiencedUserSettingsHelpImport } from './routes/_protected/_experienced-user/settings/help'
 import { Route as ProtectedExperiencedUserSettingsDataExportImport } from './routes/_protected/_experienced-user/settings/data-export'
-import { Route as ProtectedExperiencedUserSettingsCategoriesImport } from './routes/_protected/_experienced-user/settings/categories'
-import { Route as ProtectedExperiencedUserSettingsAccountsImport } from './routes/_protected/_experienced-user/settings/accounts'
 import { Route as ProtectedExperiencedUserAnalyticsPeriodBreakdownImport } from './routes/_protected/_experienced-user/analytics/period-breakdown'
 import { Route as ProtectedExperiencedUserAnalyticsCategoriesImport } from './routes/_protected/_experienced-user/analytics/categories'
 import { Route as ProtectedExperiencedUserAnalyticsAccountsImport } from './routes/_protected/_experienced-user/analytics/accounts'
@@ -109,6 +109,20 @@ const ProtectedExperiencedUserSettingsIndexRoute =
     getParentRoute: () => ProtectedExperiencedUserRouteRoute,
   } as any)
 
+const ProtectedExperiencedUserCategoriesIndexRoute =
+  ProtectedExperiencedUserCategoriesIndexImport.update({
+    id: '/categories/',
+    path: '/categories/',
+    getParentRoute: () => ProtectedExperiencedUserRouteRoute,
+  } as any)
+
+const ProtectedExperiencedUserAccountsIndexRoute =
+  ProtectedExperiencedUserAccountsIndexImport.update({
+    id: '/accounts/',
+    path: '/accounts/',
+    getParentRoute: () => ProtectedExperiencedUserRouteRoute,
+  } as any)
+
 const ProtectedNewUserOnboardingCompleteRoute =
   ProtectedNewUserOnboardingCompleteImport.update({
     id: '/onboarding/complete',
@@ -169,20 +183,6 @@ const ProtectedExperiencedUserSettingsDataExportRoute =
   ProtectedExperiencedUserSettingsDataExportImport.update({
     id: '/settings/data-export',
     path: '/settings/data-export',
-    getParentRoute: () => ProtectedExperiencedUserRouteRoute,
-  } as any)
-
-const ProtectedExperiencedUserSettingsCategoriesRoute =
-  ProtectedExperiencedUserSettingsCategoriesImport.update({
-    id: '/settings/categories',
-    path: '/settings/categories',
-    getParentRoute: () => ProtectedExperiencedUserRouteRoute,
-  } as any)
-
-const ProtectedExperiencedUserSettingsAccountsRoute =
-  ProtectedExperiencedUserSettingsAccountsImport.update({
-    id: '/settings/accounts',
-    path: '/settings/accounts',
     getParentRoute: () => ProtectedExperiencedUserRouteRoute,
   } as any)
 
@@ -302,20 +302,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedExperiencedUserAnalyticsPeriodBreakdownImport
       parentRoute: typeof ProtectedExperiencedUserAnalyticsRouteImport
     }
-    '/_protected/_experienced-user/settings/accounts': {
-      id: '/_protected/_experienced-user/settings/accounts'
-      path: '/settings/accounts'
-      fullPath: '/settings/accounts'
-      preLoaderRoute: typeof ProtectedExperiencedUserSettingsAccountsImport
-      parentRoute: typeof ProtectedExperiencedUserRouteImport
-    }
-    '/_protected/_experienced-user/settings/categories': {
-      id: '/_protected/_experienced-user/settings/categories'
-      path: '/settings/categories'
-      fullPath: '/settings/categories'
-      preLoaderRoute: typeof ProtectedExperiencedUserSettingsCategoriesImport
-      parentRoute: typeof ProtectedExperiencedUserRouteImport
-    }
     '/_protected/_experienced-user/settings/data-export': {
       id: '/_protected/_experienced-user/settings/data-export'
       path: '/settings/data-export'
@@ -378,6 +364,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/complete'
       preLoaderRoute: typeof ProtectedNewUserOnboardingCompleteImport
       parentRoute: typeof ProtectedNewUserRouteImport
+    }
+    '/_protected/_experienced-user/accounts/': {
+      id: '/_protected/_experienced-user/accounts/'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof ProtectedExperiencedUserAccountsIndexImport
+      parentRoute: typeof ProtectedExperiencedUserRouteImport
+    }
+    '/_protected/_experienced-user/categories/': {
+      id: '/_protected/_experienced-user/categories/'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof ProtectedExperiencedUserCategoriesIndexImport
+      parentRoute: typeof ProtectedExperiencedUserRouteImport
     }
     '/_protected/_experienced-user/settings/': {
       id: '/_protected/_experienced-user/settings/'
@@ -457,8 +457,6 @@ const ProtectedExperiencedUserAnalyticsRouteRouteWithChildren =
 interface ProtectedExperiencedUserRouteRouteChildren {
   ProtectedExperiencedUserAnalyticsRouteRoute: typeof ProtectedExperiencedUserAnalyticsRouteRouteWithChildren
   ProtectedExperiencedUserIndexRoute: typeof ProtectedExperiencedUserIndexRoute
-  ProtectedExperiencedUserSettingsAccountsRoute: typeof ProtectedExperiencedUserSettingsAccountsRoute
-  ProtectedExperiencedUserSettingsCategoriesRoute: typeof ProtectedExperiencedUserSettingsCategoriesRoute
   ProtectedExperiencedUserSettingsDataExportRoute: typeof ProtectedExperiencedUserSettingsDataExportRoute
   ProtectedExperiencedUserSettingsHelpRoute: typeof ProtectedExperiencedUserSettingsHelpRoute
   ProtectedExperiencedUserSettingsLegalRoute: typeof ProtectedExperiencedUserSettingsLegalRoute
@@ -467,6 +465,8 @@ interface ProtectedExperiencedUserRouteRouteChildren {
   ProtectedExperiencedUserSettingsProfileRoute: typeof ProtectedExperiencedUserSettingsProfileRoute
   ProtectedExperiencedUserSettingsSecurityRoute: typeof ProtectedExperiencedUserSettingsSecurityRoute
   ProtectedExperiencedUserTransactionsPeriodRoute: typeof ProtectedExperiencedUserTransactionsPeriodRoute
+  ProtectedExperiencedUserAccountsIndexRoute: typeof ProtectedExperiencedUserAccountsIndexRoute
+  ProtectedExperiencedUserCategoriesIndexRoute: typeof ProtectedExperiencedUserCategoriesIndexRoute
   ProtectedExperiencedUserSettingsIndexRoute: typeof ProtectedExperiencedUserSettingsIndexRoute
   ProtectedExperiencedUserTransactionsIndexRoute: typeof ProtectedExperiencedUserTransactionsIndexRoute
 }
@@ -476,10 +476,6 @@ const ProtectedExperiencedUserRouteRouteChildren: ProtectedExperiencedUserRouteR
     ProtectedExperiencedUserAnalyticsRouteRoute:
       ProtectedExperiencedUserAnalyticsRouteRouteWithChildren,
     ProtectedExperiencedUserIndexRoute: ProtectedExperiencedUserIndexRoute,
-    ProtectedExperiencedUserSettingsAccountsRoute:
-      ProtectedExperiencedUserSettingsAccountsRoute,
-    ProtectedExperiencedUserSettingsCategoriesRoute:
-      ProtectedExperiencedUserSettingsCategoriesRoute,
     ProtectedExperiencedUserSettingsDataExportRoute:
       ProtectedExperiencedUserSettingsDataExportRoute,
     ProtectedExperiencedUserSettingsHelpRoute:
@@ -496,6 +492,10 @@ const ProtectedExperiencedUserRouteRouteChildren: ProtectedExperiencedUserRouteR
       ProtectedExperiencedUserSettingsSecurityRoute,
     ProtectedExperiencedUserTransactionsPeriodRoute:
       ProtectedExperiencedUserTransactionsPeriodRoute,
+    ProtectedExperiencedUserAccountsIndexRoute:
+      ProtectedExperiencedUserAccountsIndexRoute,
+    ProtectedExperiencedUserCategoriesIndexRoute:
+      ProtectedExperiencedUserCategoriesIndexRoute,
     ProtectedExperiencedUserSettingsIndexRoute:
       ProtectedExperiencedUserSettingsIndexRoute,
     ProtectedExperiencedUserTransactionsIndexRoute:
@@ -553,8 +553,6 @@ export interface FileRoutesByFullPath {
   '/analytics/accounts': typeof ProtectedExperiencedUserAnalyticsAccountsRoute
   '/analytics/categories': typeof ProtectedExperiencedUserAnalyticsCategoriesRoute
   '/analytics/period-breakdown': typeof ProtectedExperiencedUserAnalyticsPeriodBreakdownRoute
-  '/settings/accounts': typeof ProtectedExperiencedUserSettingsAccountsRoute
-  '/settings/categories': typeof ProtectedExperiencedUserSettingsCategoriesRoute
   '/settings/data-export': typeof ProtectedExperiencedUserSettingsDataExportRoute
   '/settings/help': typeof ProtectedExperiencedUserSettingsHelpRoute
   '/settings/legal': typeof ProtectedExperiencedUserSettingsLegalRoute
@@ -564,6 +562,8 @@ export interface FileRoutesByFullPath {
   '/settings/security': typeof ProtectedExperiencedUserSettingsSecurityRoute
   '/transactions/period': typeof ProtectedExperiencedUserTransactionsPeriodRoute
   '/onboarding/complete': typeof ProtectedNewUserOnboardingCompleteRoute
+  '/accounts': typeof ProtectedExperiencedUserAccountsIndexRoute
+  '/categories': typeof ProtectedExperiencedUserCategoriesIndexRoute
   '/settings': typeof ProtectedExperiencedUserSettingsIndexRoute
   '/transactions': typeof ProtectedExperiencedUserTransactionsIndexRoute
   '/onboarding': typeof ProtectedNewUserOnboardingIndexRoute
@@ -580,8 +580,6 @@ export interface FileRoutesByTo {
   '/analytics/accounts': typeof ProtectedExperiencedUserAnalyticsAccountsRoute
   '/analytics/categories': typeof ProtectedExperiencedUserAnalyticsCategoriesRoute
   '/analytics/period-breakdown': typeof ProtectedExperiencedUserAnalyticsPeriodBreakdownRoute
-  '/settings/accounts': typeof ProtectedExperiencedUserSettingsAccountsRoute
-  '/settings/categories': typeof ProtectedExperiencedUserSettingsCategoriesRoute
   '/settings/data-export': typeof ProtectedExperiencedUserSettingsDataExportRoute
   '/settings/help': typeof ProtectedExperiencedUserSettingsHelpRoute
   '/settings/legal': typeof ProtectedExperiencedUserSettingsLegalRoute
@@ -591,6 +589,8 @@ export interface FileRoutesByTo {
   '/settings/security': typeof ProtectedExperiencedUserSettingsSecurityRoute
   '/transactions/period': typeof ProtectedExperiencedUserTransactionsPeriodRoute
   '/onboarding/complete': typeof ProtectedNewUserOnboardingCompleteRoute
+  '/accounts': typeof ProtectedExperiencedUserAccountsIndexRoute
+  '/categories': typeof ProtectedExperiencedUserCategoriesIndexRoute
   '/settings': typeof ProtectedExperiencedUserSettingsIndexRoute
   '/transactions': typeof ProtectedExperiencedUserTransactionsIndexRoute
   '/onboarding': typeof ProtectedNewUserOnboardingIndexRoute
@@ -611,8 +611,6 @@ export interface FileRoutesById {
   '/_protected/_experienced-user/analytics/accounts': typeof ProtectedExperiencedUserAnalyticsAccountsRoute
   '/_protected/_experienced-user/analytics/categories': typeof ProtectedExperiencedUserAnalyticsCategoriesRoute
   '/_protected/_experienced-user/analytics/period-breakdown': typeof ProtectedExperiencedUserAnalyticsPeriodBreakdownRoute
-  '/_protected/_experienced-user/settings/accounts': typeof ProtectedExperiencedUserSettingsAccountsRoute
-  '/_protected/_experienced-user/settings/categories': typeof ProtectedExperiencedUserSettingsCategoriesRoute
   '/_protected/_experienced-user/settings/data-export': typeof ProtectedExperiencedUserSettingsDataExportRoute
   '/_protected/_experienced-user/settings/help': typeof ProtectedExperiencedUserSettingsHelpRoute
   '/_protected/_experienced-user/settings/legal': typeof ProtectedExperiencedUserSettingsLegalRoute
@@ -622,6 +620,8 @@ export interface FileRoutesById {
   '/_protected/_experienced-user/settings/security': typeof ProtectedExperiencedUserSettingsSecurityRoute
   '/_protected/_experienced-user/transactions/period': typeof ProtectedExperiencedUserTransactionsPeriodRoute
   '/_protected/_new-user/onboarding/complete': typeof ProtectedNewUserOnboardingCompleteRoute
+  '/_protected/_experienced-user/accounts/': typeof ProtectedExperiencedUserAccountsIndexRoute
+  '/_protected/_experienced-user/categories/': typeof ProtectedExperiencedUserCategoriesIndexRoute
   '/_protected/_experienced-user/settings/': typeof ProtectedExperiencedUserSettingsIndexRoute
   '/_protected/_experienced-user/transactions/': typeof ProtectedExperiencedUserTransactionsIndexRoute
   '/_protected/_new-user/onboarding/': typeof ProtectedNewUserOnboardingIndexRoute
@@ -640,8 +640,6 @@ export interface FileRouteTypes {
     | '/analytics/accounts'
     | '/analytics/categories'
     | '/analytics/period-breakdown'
-    | '/settings/accounts'
-    | '/settings/categories'
     | '/settings/data-export'
     | '/settings/help'
     | '/settings/legal'
@@ -651,6 +649,8 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/transactions/period'
     | '/onboarding/complete'
+    | '/accounts'
+    | '/categories'
     | '/settings'
     | '/transactions'
     | '/onboarding'
@@ -666,8 +666,6 @@ export interface FileRouteTypes {
     | '/analytics/accounts'
     | '/analytics/categories'
     | '/analytics/period-breakdown'
-    | '/settings/accounts'
-    | '/settings/categories'
     | '/settings/data-export'
     | '/settings/help'
     | '/settings/legal'
@@ -677,6 +675,8 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/transactions/period'
     | '/onboarding/complete'
+    | '/accounts'
+    | '/categories'
     | '/settings'
     | '/transactions'
     | '/onboarding'
@@ -695,8 +695,6 @@ export interface FileRouteTypes {
     | '/_protected/_experienced-user/analytics/accounts'
     | '/_protected/_experienced-user/analytics/categories'
     | '/_protected/_experienced-user/analytics/period-breakdown'
-    | '/_protected/_experienced-user/settings/accounts'
-    | '/_protected/_experienced-user/settings/categories'
     | '/_protected/_experienced-user/settings/data-export'
     | '/_protected/_experienced-user/settings/help'
     | '/_protected/_experienced-user/settings/legal'
@@ -706,6 +704,8 @@ export interface FileRouteTypes {
     | '/_protected/_experienced-user/settings/security'
     | '/_protected/_experienced-user/transactions/period'
     | '/_protected/_new-user/onboarding/complete'
+    | '/_protected/_experienced-user/accounts/'
+    | '/_protected/_experienced-user/categories/'
     | '/_protected/_experienced-user/settings/'
     | '/_protected/_experienced-user/transactions/'
     | '/_protected/_new-user/onboarding/'
@@ -758,8 +758,6 @@ export const routeTree = rootRoute
       "children": [
         "/_protected/_experienced-user/analytics",
         "/_protected/_experienced-user/",
-        "/_protected/_experienced-user/settings/accounts",
-        "/_protected/_experienced-user/settings/categories",
         "/_protected/_experienced-user/settings/data-export",
         "/_protected/_experienced-user/settings/help",
         "/_protected/_experienced-user/settings/legal",
@@ -768,6 +766,8 @@ export const routeTree = rootRoute
         "/_protected/_experienced-user/settings/profile",
         "/_protected/_experienced-user/settings/security",
         "/_protected/_experienced-user/transactions/period",
+        "/_protected/_experienced-user/accounts/",
+        "/_protected/_experienced-user/categories/",
         "/_protected/_experienced-user/settings/",
         "/_protected/_experienced-user/transactions/"
       ]
@@ -815,14 +815,6 @@ export const routeTree = rootRoute
       "filePath": "_protected/_experienced-user/analytics/period-breakdown.tsx",
       "parent": "/_protected/_experienced-user/analytics"
     },
-    "/_protected/_experienced-user/settings/accounts": {
-      "filePath": "_protected/_experienced-user/settings/accounts.tsx",
-      "parent": "/_protected/_experienced-user"
-    },
-    "/_protected/_experienced-user/settings/categories": {
-      "filePath": "_protected/_experienced-user/settings/categories.tsx",
-      "parent": "/_protected/_experienced-user"
-    },
     "/_protected/_experienced-user/settings/data-export": {
       "filePath": "_protected/_experienced-user/settings/data-export.tsx",
       "parent": "/_protected/_experienced-user"
@@ -858,6 +850,14 @@ export const routeTree = rootRoute
     "/_protected/_new-user/onboarding/complete": {
       "filePath": "_protected/_new-user/onboarding/complete.tsx",
       "parent": "/_protected/_new-user"
+    },
+    "/_protected/_experienced-user/accounts/": {
+      "filePath": "_protected/_experienced-user/accounts/index.tsx",
+      "parent": "/_protected/_experienced-user"
+    },
+    "/_protected/_experienced-user/categories/": {
+      "filePath": "_protected/_experienced-user/categories/index.tsx",
+      "parent": "/_protected/_experienced-user"
     },
     "/_protected/_experienced-user/settings/": {
       "filePath": "_protected/_experienced-user/settings/index.tsx",

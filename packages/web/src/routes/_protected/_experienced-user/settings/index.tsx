@@ -69,14 +69,14 @@ function AccountIndexComponent() {
       title: 'Accounts',
       description: 'Manage your cards, banks, and payment preferences',
       icon: <CreditCard className="w-5 h-5" />,
-      href: '/settings/accounts',
+      href: '/accounts',
     },
     {
       id: 'categories',
       title: 'Categories',
       description: 'Manage transaction categories and organize your spending',
       icon: <Tags className="w-5 h-5" />,
-      href: '/settings/categories',
+      href: '/categories',
     },
     {
       id: 'preferences',

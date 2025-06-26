@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useViewport } from '../../../../hooks';
 import { DesktopCategoryDashboardPage, MobileCategoryDashboardPage } from '../../../../modules/category-module';
 
-export const Route = createFileRoute('/_protected/_experienced-user/settings/categories')({
+export const Route = createFileRoute('/_protected/_experienced-user/categories/')({
   component: CategoriesComponent,
 });
 
