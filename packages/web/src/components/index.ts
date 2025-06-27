@@ -56,3 +56,10 @@ export * from './radar-chart';
 export { Brand } from './brand';
 export { TopBar } from './top-bar';
 export { CheckboxInput, CheckboxGroup, type CheckboxInputProps } from './checkbox-input';
+export {
+  DataTable,
+  type DataTableProps,
+  type ColumnDefinition,
+  type SortConfig,
+  type SortDirection,
+} from './data-table';
