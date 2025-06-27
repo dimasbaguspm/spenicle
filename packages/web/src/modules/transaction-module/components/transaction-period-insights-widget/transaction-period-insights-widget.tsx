@@ -20,12 +20,14 @@ interface TransactionPeriodInsightsWidgetProps {
   startDate: string;
   endDate: string;
   className?: string;
+  showHeader?: boolean;
 }
 
 export const TransactionPeriodInsightsWidget: FC<TransactionPeriodInsightsWidgetProps> = ({
   startDate,
   endDate,
   className,
+  showHeader = true,
 }) => {
   // Determine period type and comparison period
   const { periodType, previousStartDate, previousEndDate, periodDisplay } = useMemo(() => {
@@ -203,18 +205,20 @@ export const TransactionPeriodInsightsWidget: FC<TransactionPeriodInsightsWidget
 
   return (
     <Tile className={`p-4 md:p-6 ${className ?? ''}`}>
-      <div className="space-y-1 mb-4 md:mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-coral-100 rounded-lg">
-            <Calendar className="h-5 w-5 text-coral-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg md:text-xl font-semibold text-slate-900">Period Analysis</h3>
-            <p className="text-sm text-slate-500">{periodDisplay}</p>
-            <p className="text-xs text-slate-400 font-medium">Quick insights compared to previous period</p>
+      {showHeader && (
+        <div className="space-y-1 mb-4 md:mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-coral-100 rounded-lg">
+              <Calendar className="h-5 w-5 text-coral-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg md:text-xl font-semibold text-slate-900">Period Analysis</h3>
+              <p className="text-sm text-slate-500">{periodDisplay}</p>
+              <p className="text-xs text-slate-400 font-medium">Quick insights compared to previous period</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {insights.map((insight, index) => {

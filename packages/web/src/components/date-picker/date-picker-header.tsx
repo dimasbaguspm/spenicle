@@ -39,9 +39,7 @@ export function DatePickerHeader({ className, variant = 'default' }: DatePickerH
   if (variant === 'compact') {
     return (
       <div className={cn('flex items-center justify-between', className)}>
-        <span className="text-base font-medium text-slate-900 select-none">
-          {displayDate.format('ddd DD MMM YYYY')}
-        </span>
+        <span className="font-semibold text-slate-900 select-none">Select Date</span>
         <div className="flex items-center gap-1">
           <IconButton
             variant="ghost"
