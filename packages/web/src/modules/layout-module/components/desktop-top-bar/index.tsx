@@ -24,28 +24,28 @@ export const DesktopTopBar: FC<Props> = (props) => {
       actions={
         <>
           <IconButton
-            variant={pathname.includes('transactions') ? 'coral-outline' : 'mist-outline'}
+            variant={pathname.startsWith('/transactions') ? 'coral-outline' : 'mist-outline'}
             size="sm"
             onClick={() => navigateTo('/transactions')}
           >
             <Calendar className="size-4" />
           </IconButton>
           <IconButton
-            variant={pathname.includes('categories') ? 'coral-outline' : 'mist-outline'}
+            variant={pathname.startsWith('/categories') ? 'coral-outline' : 'mist-outline'}
             size="sm"
             onClick={() => navigateTo('/categories')}
           >
             <Tag className="size-4" />
           </IconButton>
           <IconButton
-            variant={pathname.includes('accounts') ? 'coral-outline' : 'mist-outline'}
+            variant={pathname.startsWith('/accounts') ? 'coral-outline' : 'mist-outline'}
             size="sm"
             onClick={() => navigateTo('/accounts')}
           >
             <CreditCard className="size-4" />
           </IconButton>
           <IconButton
-            variant={pathname.includes('analytics') ? 'coral-outline' : 'mist-outline'}
+            variant={pathname.startsWith('/analytics') ? 'coral-outline' : 'mist-outline'}
             size="sm"
             onClick={() => navigateTo('/analytics')}
           >

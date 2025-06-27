@@ -28,7 +28,10 @@ export const TransactionFilterInline: FC = () => {
   const onSubmit = form.handleSubmit(async (values) => {
     await navigate({
       // @ts-expect-error form values can be partial
-      search: values,
+      search: (prev) => ({
+        ...prev,
+        ...values,
+      }),
       replace: true,
       resetScroll: false,
     });

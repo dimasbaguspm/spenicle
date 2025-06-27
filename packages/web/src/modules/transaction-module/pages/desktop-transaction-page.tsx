@@ -68,52 +68,53 @@ export const DesktopTransactionPage: FC = () => {
   };
 
   return (
-    <PageLayout>
+    <PageLayout background="cream" title="Transaction" showBackButton>
       <div className="flex flex-col gap-6">
-        {/* header with quick actions */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Daily Transactions</h1>
-            <p className="text-slate-500">{date.format('dddd, MMMM D, YYYY')}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="coral" size="sm" onClick={handleOnAddTransaction}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Transaction
-            </Button>
-          </div>
-        </div>
-
         {/* main content grid */}
-        <div className="grid grid-cols-[300px_1fr] gap-6">
+        <div className="grid grid-cols-12 gap-6">
           {/* left sidebar with date picker and filters */}
-          <div className="flex flex-col gap-4">
-            <div className="sticky top-4 flex flex-col gap-4">
-              {/* date picker */}
-              <Tile className="p-4">
-                <DatePickerInline
-                  autoSubmitOnSelect
-                  onChange={(value) => {
-                    setDate(dayjs(value));
-                    setCurrentPage(1); // reset to first page when date changes
-                  }}
-                  value={date.toDate()}
-                />
-              </Tile>
-              <Tile className="p-4">
-                <h3 className="font-semibold text-slate-900 mb-3">Filters</h3>
-                <TransactionFilterInline />
-              </Tile>
-            </div>
+          <div className="col-span-3 space-y-4 sticky top-6 self-start max-h-[calc(100vh-10rem)]">
+            <Tile>
+              <Button
+                size="sm"
+                variant="coral"
+                onClick={handleOnAddTransaction}
+                className="w-full justify-center text-sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Transaction
+              </Button>
+            </Tile>
+
+            {/* date picker */}
+            <Tile className="p-4">
+              <DatePickerInline
+                autoSubmitOnSelect
+                onChange={(value) => {
+                  setDate(dayjs(value));
+                  setCurrentPage(1); // reset to first page when date changes
+                }}
+                value={date.toDate()}
+              />
+            </Tile>
+
+            <Tile className="p-4">
+              <h3 className="font-semibold text-slate-900 mb-3">Filters</h3>
+              <TransactionFilterInline />
+            </Tile>
           </div>
 
           {/* main content area */}
-          <div className="flex flex-col gap-4">
+          <div className="col-span-9 space-y-6">
             {/* daily comparison insights - just the cards */}
             <TransactionPeriodInsightsWidget
               startDate={date.startOf('day').toISOString()}
               endDate={date.endOf('day').toISOString()}
-              showHeader={false}
+              customHeader={{
+                title: 'Daily Financial Summary',
+                subtitle: date.format('MMMM D, YYYY'),
+                description: 'How your finances look compared to yesterday',
+              }}
             />
 
             {/* transactions table */}

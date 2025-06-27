@@ -20,14 +20,20 @@ interface TransactionPeriodInsightsWidgetProps {
   startDate: string;
   endDate: string;
   className?: string;
-  showHeader?: boolean;
+  hideHeader?: boolean;
+  customHeader?: {
+    title: string;
+    subtitle?: string;
+    description?: string;
+  };
 }
 
 export const TransactionPeriodInsightsWidget: FC<TransactionPeriodInsightsWidgetProps> = ({
   startDate,
   endDate,
   className,
-  showHeader = true,
+  hideHeader = false,
+  customHeader,
 }) => {
   // Determine period type and comparison period
   const { periodType, previousStartDate, previousEndDate, periodDisplay } = useMemo(() => {
@@ -161,14 +167,13 @@ export const TransactionPeriodInsightsWidget: FC<TransactionPeriodInsightsWidget
         icon: expenseChange <= 0 ? TrendingDown : TrendingUp,
         iconColor: 'text-coral-600',
       },
-      // ...existing net amount section...
       {
         label: 'Net Amount',
         value: formatAmount(currentNet, {
           compact: true,
           type: currentNet >= 0 ? 'income' : 'expense',
         }),
-        change: `Performance ${netChange >= 0 ? 'improved' : 'declined'} by ${formatAmount(Math.abs(netChange), {
+        change: `${netChange >= 0 ? 'Improved' : 'Declined'} by ${formatAmount(Math.abs(netChange), {
           compact: true,
           type: netChange >= 0 ? 'income' : 'expense',
         })}`,
@@ -199,16 +204,20 @@ export const TransactionPeriodInsightsWidget: FC<TransactionPeriodInsightsWidget
 
   return (
     <Tile className={`p-4 md:p-6 ${className ?? ''}`}>
-      {showHeader && (
+      {!hideHeader && (
         <div className="space-y-1 mb-4 md:mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-coral-100 rounded-lg">
               <Calendar className="h-5 w-5 text-coral-600" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg md:text-xl font-semibold text-slate-900">Period Analysis</h3>
-              <p className="text-sm text-slate-500">{periodDisplay}</p>
-              <p className="text-xs text-slate-400 font-medium">Quick insights compared to previous period</p>
+              <h3 className="text-lg md:text-xl font-semibold text-slate-900">
+                {customHeader?.title ?? 'Period Analysis'}
+              </h3>
+              <p className="text-sm text-slate-500">{customHeader?.subtitle ?? periodDisplay}</p>
+              <p className="text-xs text-slate-400 font-medium">
+                {customHeader?.description ?? 'Quick insights compared to previous period'}
+              </p>
             </div>
           </div>
         </div>
