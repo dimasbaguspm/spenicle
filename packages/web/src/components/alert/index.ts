@@ -1,9 +1,9 @@
 import { Alert as BaseAlert } from './alert';
-import { AlertCloseButton } from './alert-close-button';
-import { AlertContent } from './alert-content';
-import { AlertDescription } from './alert-description';
-import { AlertIcon } from './alert-icon';
-import { AlertTitle } from './alert-title';
+import { AlertCloseButton } from './components/alert-close-button';
+import { AlertContent } from './components/alert-content';
+import { AlertDescription } from './components/alert-description';
+import { AlertIcon } from './components/alert-icon';
+import { AlertTitle } from './components/alert-title';
 
 type AlertCompositionModel = {
   Title: typeof AlertTitle;
@@ -23,9 +23,12 @@ const AlertComposition = {
 
 export const Alert = Object.assign(BaseAlert, AlertComposition);
 
-export type { AlertProps } from './alert';
-export type { AlertTitleProps } from './alert-title';
-export type { AlertDescriptionProps } from './alert-description';
-export type { AlertContentProps } from './alert-content';
-export type { AlertIconProps } from './alert-icon';
-export type { AlertCloseButtonProps } from './alert-close-button';
+// export types from types.ts file
+export type {
+  AlertProps,
+  AlertTitleProps,
+  AlertDescriptionProps,
+  AlertContentProps,
+  AlertIconProps,
+  AlertCloseButtonProps,
+} from './types';

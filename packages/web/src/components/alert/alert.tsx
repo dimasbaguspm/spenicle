@@ -1,10 +1,12 @@
-import { cva, type VariantProps } from 'class-variance-authority';
-import React, { forwardRef } from 'react';
+import { cva } from 'class-variance-authority';
+import { forwardRef } from 'react';
 
 import { cn } from '../../libs/utils';
 
-import { AlertContext } from './alert-context';
+import { AlertContext } from './components/alert-context';
+import type { AlertProps } from './types';
 
+// alert component variants using cva for consistent styling and design system colors
 const alertVariants = cva('relative w-full rounded-lg border p-4 flex items-start gap-3', {
   variants: {
     variant: {
@@ -42,10 +44,7 @@ const alertVariants = cva('relative w-full rounded-lg border p-4 flex items-star
   },
 });
 
-export interface AlertProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof alertVariants> {
-  onClose?: () => void;
-}
-
+// main alert component with compound component pattern support
 const Alert = forwardRef<HTMLDivElement, AlertProps>(
   ({ className, variant, size, onClose, children, ...props }, ref) => {
     return (
