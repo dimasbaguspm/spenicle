@@ -135,12 +135,10 @@ export const TransactionPeriodInsightsWidget: FC<TransactionPeriodInsightsWidget
         label: 'Total Income',
         value: formatAmount(currentTotals.income, {
           compact: true,
-          showCurrency: true,
           type: 'income',
         }),
         change: `Earned ${formatAmount(Math.abs(incomeChange), {
           compact: true,
-          showCurrency: true,
           type: incomeChange >= 0 ? 'income' : 'expense',
         })} ${incomeChange >= 0 ? 'more' : 'less'}`,
         variant: incomeChange >= 0 ? 'success' : 'danger',
@@ -152,12 +150,10 @@ export const TransactionPeriodInsightsWidget: FC<TransactionPeriodInsightsWidget
         label: 'Total Expenses',
         value: formatAmount(currentTotals.expenses, {
           compact: true,
-          showCurrency: true,
           type: currentTotals.expenses >= 0 ? 'expense' : 'income',
         }),
         change: `Spent ${formatAmount(Math.abs(expenseChange), {
           compact: true,
-          showCurrency: true,
           type: expenseChange >= 0 ? 'income' : 'expense',
         })} ${expenseChange >= 0 ? 'more' : 'less'}`,
         variant: expenseChange <= 0 ? 'success' : 'danger',
@@ -170,12 +166,10 @@ export const TransactionPeriodInsightsWidget: FC<TransactionPeriodInsightsWidget
         label: 'Net Amount',
         value: formatAmount(currentNet, {
           compact: true,
-          showCurrency: true,
           type: currentNet >= 0 ? 'income' : 'expense',
         }),
         change: `Performance ${netChange >= 0 ? 'improved' : 'declined'} by ${formatAmount(Math.abs(netChange), {
           compact: true,
-          showCurrency: true,
           type: netChange >= 0 ? 'income' : 'expense',
         })}`,
         variant: netChange >= 0 ? 'success' : 'danger',

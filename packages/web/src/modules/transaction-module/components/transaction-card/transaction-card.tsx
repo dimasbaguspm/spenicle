@@ -41,7 +41,6 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
   const formattedAmount = formatAmountLib(Number(txn.amount ?? 0), {
     type: txn.type,
     compact: false, // set true if you want compact
-    showCurrency: false, // set true if you want currency
   });
 
   return (

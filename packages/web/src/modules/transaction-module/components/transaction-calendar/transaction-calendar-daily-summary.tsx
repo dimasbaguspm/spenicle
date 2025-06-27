@@ -66,7 +66,6 @@ export const TransactionCalendarDailySummary = ({
           {formatAmount(dailyTotals.totalIncome, {
             type: 'income',
             compact: true,
-            showCurrency: false,
           })}
         </p>
       </div>
@@ -76,7 +75,6 @@ export const TransactionCalendarDailySummary = ({
           {formatAmount(dailyTotals.totalExpenses, {
             type: 'expense',
             compact: true,
-            showCurrency: false,
           })}
         </p>
       </div>
@@ -86,7 +84,6 @@ export const TransactionCalendarDailySummary = ({
           {formatAmount(dailyTotals.netAmount, {
             type: dailyTotals.netAmount >= 0 ? 'income' : 'expense',
             compact: true,
-            showCurrency: false,
           })}
         </p>
       </div>

@@ -23,7 +23,7 @@ export const TransactionSlotItem: React.FC<TransactionSlotItemProps> = ({
   const iconTextColor = isOutlineVariant ? 'text-current' : 'text-white';
 
   // fallback to 0 if amount is undefined
-  const amount = formatAmount(transaction.amount ?? 0, { type: transaction.type, compact: false, showCurrency: false });
+  const amount = formatAmount(transaction.amount ?? 0, { type: transaction.type, compact: false });
   const hasNote = Boolean(transaction.note);
   const displayText = hasNote ? `${amount} - ${transaction.note}` : amount;
 

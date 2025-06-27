@@ -199,7 +199,7 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
         const displayValue = Math.abs(netValue); // show positive values without minus sign
         return (
           <p className={`text-sm font-semibold tabular-nums ${netValue >= 0 ? 'text-sage-600' : 'text-coral-600'}`}>
-            {formatAmount(displayValue, { compact: true, showCurrency: true, hidePrefix: true })}
+            {formatAmount(displayValue, { compact: true, hidePrefix: true })}
           </p>
         );
       },

@@ -4,5 +4,5 @@ export function formatLineChartAmount(value: number, options?: FormatAmountOptio
   let type: 'income' | 'expense' | 'transfer' = 'transfer';
   if (value > 0) type = 'income';
   else if (value < 0) type = 'expense';
-  return formatAmount(value, { compact: true, showCurrency: false, ...options, type });
+  return formatAmount(value, { compact: true, ...options, type });
 }

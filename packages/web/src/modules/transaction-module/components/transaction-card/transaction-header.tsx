@@ -38,10 +38,9 @@ export const TransactionHeader = ({ date, totalAmount, transactionCount }: Trans
                 : 'bg-mist-50 text-info-700',
             'tracking-tight'
           )}
-          aria-label={`Total for ${displayDate}: ${formatAmount(totalAmount, { showCurrency: false, type: totalAmount > 0 ? 'income' : totalAmount < 0 ? 'expense' : 'transfer', compact: true })}`}
+          aria-label={`Total for ${displayDate}: ${formatAmount(totalAmount, { type: totalAmount > 0 ? 'income' : totalAmount < 0 ? 'expense' : 'transfer', compact: true })}`}
         >
           {formatAmount(totalAmount, {
-            showCurrency: false,
             type: totalAmount > 0 ? 'income' : totalAmount < 0 ? 'expense' : 'transfer',
             compact: true,
           })}

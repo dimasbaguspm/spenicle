@@ -3,7 +3,6 @@ import { formatNumberCompact } from './utils';
 export interface FormatAmountOptions {
   type?: 'income' | 'expense' | 'transfer';
   compact?: boolean;
-  showCurrency?: boolean;
   hidePrefix?: boolean; // Optional: hide the prefix (+, -, ↔)
 }
 

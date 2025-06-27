@@ -49,7 +49,6 @@ export const TransactionTable: FC<TransactionTableProps> = ({ transactions, onTr
           // Format amount using the same approach as TransactionCard
           const formattedAmount = formatAmount(Number(txn.amount ?? 0), {
             type: txn.type,
-            showCurrency: false,
           });
 
           return (

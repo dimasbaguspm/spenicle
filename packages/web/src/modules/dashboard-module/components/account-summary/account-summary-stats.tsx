@@ -34,7 +34,6 @@ export function AccountSummaryStats({ totalNetWorth, thisMonth, thisWeek }: Acco
           {formatAmount(totalNetWorth, {
             type: totalNetWorth >= 0 ? 'income' : 'expense',
             compact: true,
-            showCurrency: true,
           })}
         </p>
         <p className="text-xs text-slate-500 font-medium">Total Net Worth</p>
@@ -46,7 +45,6 @@ export function AccountSummaryStats({ totalNetWorth, thisMonth, thisWeek }: Acco
           {formatAmount(thisMonth, {
             type: thisMonth >= 0 ? 'income' : 'expense',
             compact: true,
-            showCurrency: true,
           })}
         </p>
         <p className="text-xs text-slate-500 font-medium">This Month</p>
@@ -58,7 +56,6 @@ export function AccountSummaryStats({ totalNetWorth, thisMonth, thisWeek }: Acco
           {formatAmount(thisWeek, {
             type: thisWeek >= 0 ? 'income' : 'expense',
             compact: true,
-            showCurrency: true,
           })}
         </p>
         <p className="text-xs text-slate-500 font-medium">This Week</p>

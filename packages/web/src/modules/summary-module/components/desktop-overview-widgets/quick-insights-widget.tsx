@@ -79,7 +79,7 @@ export const QuickInsightsWidget = () => {
       },
       {
         label: 'Expense Change',
-        value: formatAmount(Math.abs(expenseChange), { compact: true, showCurrency: true }),
+        value: formatAmount(Math.abs(expenseChange), { compact: true }),
         change: expenseChange <= 0 ? 'Decreased' : 'Increased',
         variant: expenseChange <= 0 ? 'success' : 'danger',
         trend: expenseChange <= 0 ? 'up' : 'down',
@@ -88,7 +88,7 @@ export const QuickInsightsWidget = () => {
       },
       {
         label: 'Net Position',
-        value: formatAmount(net, { compact: true, showCurrency: true }),
+        value: formatAmount(net, { compact: true }),
         change: netChange >= 0 ? 'Improved' : 'Declined',
         variant: netChange >= 0 ? 'success' : 'danger',
         trend: netChange >= 0 ? 'up' : 'down',
@@ -97,8 +97,8 @@ export const QuickInsightsWidget = () => {
       },
       {
         label: 'Monthly Income',
-        value: formatAmount(currentTotals.income, { compact: true, showCurrency: true }),
-        change: `${formatAmount(Math.abs(currentTotals.income - previousTotals.income), { compact: true, showCurrency: true })} from last month`,
+        value: formatAmount(currentTotals.income, { compact: true }),
+        change: `${formatAmount(Math.abs(currentTotals.income - previousTotals.income), { compact: true })} from last month`,
         variant: currentTotals.income >= previousTotals.income ? 'success' : 'danger',
         trend: currentTotals.income >= previousTotals.income ? 'up' : 'down',
         icon: Wallet,
