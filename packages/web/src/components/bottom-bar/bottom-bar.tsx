@@ -3,45 +3,13 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { cn } from '../../libs/utils';
 
 import { BottomBarContext } from './bottom-bar-context';
+import { validateBottomBarProps, getVariantConfig, detectScrollDirection, sanitizeAutoHideDuration } from './helpers';
+import type { BottomBarProps } from './types';
 
-export interface BottomBarProps {
-  children: React.ReactNode;
-  className?: string;
-  variant?: 'default' | 'floating' | 'compact';
-  hideOnScroll?: boolean;
-  backdrop?: boolean;
-  autoHide?: number; // Auto-hide after X seconds
-  onVisibilityChange?: (visible: boolean) => void;
-}
+export const BottomBar: React.FC<BottomBarProps> = (props) => {
+  const validatedProps = validateBottomBarProps(props);
+  const { children, className, hideOnScroll = false, backdrop = false, autoHide, onVisibilityChange } = props;
 
-// Variant configurations
-const variantClasses = {
-  default: {
-    container: 'bottom-0 left-0 right-0',
-    content: 'w-full bg-cream-50/95 backdrop-blur-md border-t border-mist-200/80 shadow-sm',
-    padding: 'px-4 py-3',
-  },
-  floating: {
-    container: 'bottom-4 left-4 right-4',
-    content: 'w-full bg-cream-50/90 backdrop-blur-lg border border-mist-200/70 rounded-2xl shadow-md',
-    padding: 'px-6 py-4',
-  },
-  compact: {
-    container: 'bottom-0 left-0 right-0',
-    content: 'w-full bg-white backdrop-blur-sm border-t border-mist-200/70 shadow-sm',
-    padding: 'px-2 py-1.5',
-  },
-} as const;
-
-export function BottomBar({
-  children,
-  className,
-  variant = 'default',
-  hideOnScroll = false,
-  backdrop = false,
-  autoHide,
-  onVisibilityChange,
-}: BottomBarProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [, setIsAnimating] = useState(false);
   const lastScrollY = useRef(0);
@@ -58,26 +26,28 @@ export function BottomBar({
   const handleShow = () => {
     setIsVisible(true);
 
-    // Reset auto-hide timer if enabled
-    if (autoHide) {
+    // reset auto-hide timer if enabled
+    const sanitizedDuration = sanitizeAutoHideDuration(autoHide);
+    if (sanitizedDuration) {
       clearTimeout(hideTimeout?.current);
       hideTimeout.current = setTimeout(() => {
         setIsVisible(false);
-      }, autoHide * 1000);
+      }, sanitizedDuration * 1000);
     }
   };
 
-  // Handle scroll-based hiding
+  // handle scroll-based hiding with improved direction detection
   useEffect(() => {
     if (!hideOnScroll) return;
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      const scrollingDown = currentScrollY > lastScrollY.current;
+      const scrollDirection = detectScrollDirection(currentScrollY, lastScrollY.current);
 
-      if (scrollingDown && currentScrollY > 100) {
+      // only hide when scrolling down significantly
+      if (scrollDirection === 'down' && currentScrollY > 100) {
         setIsVisible(false);
-      } else if (!scrollingDown) {
+      } else if (scrollDirection === 'up') {
         setIsVisible(true);
       }
 
@@ -88,31 +58,32 @@ export function BottomBar({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [hideOnScroll]);
 
-  // Handle auto-hide
+  // handle auto-hide with sanitized duration
   useEffect(() => {
-    if (autoHide && isVisible) {
+    const sanitizedDuration = sanitizeAutoHideDuration(autoHide);
+    if (sanitizedDuration && isVisible) {
       clearTimeout(hideTimeout.current);
       hideTimeout.current = setTimeout(() => {
         setIsVisible(false);
-      }, autoHide * 1000);
+      }, sanitizedDuration * 1000);
     }
 
     return () => clearTimeout(hideTimeout.current);
   }, [autoHide, isVisible]);
 
-  // Handle visibility change callback
+  // handle visibility change callback
   useEffect(() => {
     onVisibilityChange?.(isVisible);
   }, [isVisible, onVisibilityChange]);
 
-  // Handle animation states
+  // handle animation states
   useEffect(() => {
     setIsAnimating(true);
     const timer = setTimeout(() => setIsAnimating(false), 300);
     return () => clearTimeout(timer);
   }, [isVisible]);
 
-  const variantConfig = variantClasses[variant];
+  const variantConfig = getVariantConfig(validatedProps.validatedVariant);
 
   return (
     <div
@@ -122,6 +93,8 @@ export function BottomBar({
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0',
         className
       )}
+      role="banner"
+      aria-hidden={!isVisible}
     >
       {backdrop && (
         <div
@@ -130,6 +103,7 @@ export function BottomBar({
             isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
           )}
           style={{ zIndex: -1 }}
+          aria-hidden="true"
         />
       )}
 
@@ -147,12 +121,12 @@ export function BottomBar({
       </div>
     </div>
   );
-}
+};
 
-export function useBottomBar() {
+export const useBottomBar = () => {
   const context = useContext(BottomBarContext);
   if (!context) {
     throw new Error('useBottomBar must be used within a BottomBar component');
   }
   return context;
-}
+};
