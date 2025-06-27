@@ -1,5 +1,7 @@
 import { FormProvider } from 'react-hook-form';
 
+import { Tile } from '../../../../components';
+
 import {
   PersonalInfoStep,
   SecurityStep,
@@ -28,7 +30,7 @@ export function RegisterForm() {
   } = useRegisterForm();
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
+    <Tile className="max-w-2xl mx-auto p-8">
       <FormHeader title="Create Account" subtitle="Start tracking your expenses with SpendLess" />
       <FormProgress currentStep={currentStep} totalSteps={STEPS.length} progress={progress} />
 
@@ -57,6 +59,6 @@ export function RegisterForm() {
       </FormProvider>
 
       <FormFooter />
-    </div>
+    </Tile>
   );
 }

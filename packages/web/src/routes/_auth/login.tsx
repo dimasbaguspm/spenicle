@@ -1,11 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { LoginForm } from '../../modules/auth-module';
+import { useViewport } from '../../hooks';
+import { DesktopLoginPage, MobileLoginPage } from '../../modules/auth-module';
 
 export const Route = createFileRoute('/_auth/login')({
   component: LoginPage,
 });
 
 function LoginPage() {
-  return <LoginForm />;
+  const { isDesktop } = useViewport();
+
+  if (isDesktop) return <DesktopLoginPage />;
+  return <MobileLoginPage />;
 }

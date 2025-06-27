@@ -1,11 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { RegisterForm } from '../../modules/auth-module';
+import { useViewport } from '../../hooks';
+import { DesktopRegisterPage, MobileRegisterPage } from '../../modules/auth-module';
 
 export const Route = createFileRoute('/_auth/register')({
   component: RegisterPage,
 });
 
 function RegisterPage() {
-  return <RegisterForm />;
+  const { isDesktop } = useViewport();
+
+  if (isDesktop) return <DesktopRegisterPage />;
+  return <MobileRegisterPage />;
 }
