@@ -47,7 +47,7 @@ export { FormLayout, type FormLayoutProps, type FormLayoutFieldProps } from './f
 export { BottomBar, type BottomBarProps } from './bottom-bar';
 export { BackButton, type BackButtonProps } from './back-button';
 export { PageHeader, type PageHeaderProps } from './page-header';
-export { AmountField, type AmountFieldProps } from './amount-field/amount-field';
+export { AmountField, type AmountFieldProps } from './amount-field';
 export { CategorySelector } from '../modules/category-module/components/category-selector';
 export { AccountSelector } from '../modules/account-module/components/account-selector';
 export { LineChart } from './line-chart';

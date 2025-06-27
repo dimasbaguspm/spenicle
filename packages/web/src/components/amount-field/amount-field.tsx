@@ -3,9 +3,11 @@ import { Calculator } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 import { cn } from '../../libs/utils';
-import { TextInput, type TextInputProps } from '../text-input';
+import { TextInput } from '../text-input';
 
-import { CalculatorModal } from './calculator-modal';
+import { AmountFieldCalculatorModal } from './components/amount-field-calculator-modal';
+import { sanitizeNumericInput, formatNumberDisplay, isValidNumber } from './helpers';
+import type { AmountFieldProps } from './types';
 
 const amountFieldVariants = cva('relative', {
   variants: {
@@ -28,18 +30,6 @@ const amountFieldVariants = cva('relative', {
     size: 'md',
   },
 });
-
-// Only allow the intersection of variant/size keys that are shared between amountFieldVariants and textInputVariants
-type AmountFieldVariant = 'default' | 'coral' | 'sage' | 'mist' | 'slate';
-type AmountFieldSize = 'sm' | 'md' | 'lg' | 'xl';
-
-export interface AmountFieldProps extends Omit<TextInputProps, 'type' | 'variant' | 'size' | 'onChange'> {
-  value?: number | string;
-  onChange?: (value: number) => void;
-  iconAriaLabel?: string;
-  variant?: AmountFieldVariant;
-  size?: AmountFieldSize;
-}
 
 export const AmountField = React.forwardRef<HTMLInputElement, AmountFieldProps>(
   (
@@ -70,6 +60,7 @@ export const AmountField = React.forwardRef<HTMLInputElement, AmountFieldProps>(
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
     const [justClosed, setJustClosed] = useState(false);
 
+    // prevent immediate reopening after closing calculator
     useEffect(() => {
       if (justClosed) {
         const timeout = setTimeout(() => setJustClosed(false), 200);
@@ -77,11 +68,44 @@ export const AmountField = React.forwardRef<HTMLInputElement, AmountFieldProps>(
       }
     }, [justClosed]);
 
+    // determine current state for styling and accessibility
     const actualState = disabled ? 'disabled' : errorText ? 'error' : undefined;
+
+    // handle input change with validation and sanitization
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const rawValue = e.target.value;
+      const sanitizedValue = sanitizeNumericInput(rawValue);
+
+      // validate input is a safe number
+      if (sanitizedValue === '' || isValidNumber(sanitizedValue)) {
+        const numericValue = sanitizedValue === '' ? 0 : parseInt(sanitizedValue, 10) || 0;
+        onChange?.(numericValue);
+      }
+    };
+
+    // handle calculator button click
+    const handleCalculatorClick = (): void => {
+      if (!disabled && !justClosed) {
+        setIsCalculatorOpen(true);
+      }
+    };
+
+    // handle calculator submission
+    const handleCalculatorSubmit = (calculatedValue: number): void => {
+      onChange?.(calculatedValue);
+      setIsCalculatorOpen(false);
+      setJustClosed(true);
+    };
+
+    // handle calculator close
+    const handleCalculatorClose = (): void => {
+      setIsCalculatorOpen(false);
+      setJustClosed(true);
+    };
 
     return (
       <div className={cn('w-full', wrapperClassName)}>
-        {/* Label */}
+        {/* label with proper accessibility */}
         {label && showLabel && (
           <label
             htmlFor={id}
@@ -93,31 +117,39 @@ export const AmountField = React.forwardRef<HTMLInputElement, AmountFieldProps>(
             )}
           >
             {label}
+            {required && (
+              <span className="text-danger-600 ml-1" aria-label="required">
+                *
+              </span>
+            )}
           </label>
         )}
-        {/* Input + Icon container */}
+
+        {/* input container with calculator button */}
         <div className={cn('relative', amountFieldVariants({ variant, size }))}>
           <TextInput
             ref={ref}
             id={id}
             name={name}
             type="number"
-            step="1" // Only allow integers
+            step="1" // only allow integers for amount fields
             min="0"
-            value={value?.toString() ?? ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange?.(parseInt(e.target.value, 10) || 0)}
-            placeholder={placeholder ?? '0'}
+            value={formatNumberDisplay(value ?? 0)}
+            onChange={handleInputChange}
+            placeholder={placeholder}
             disabled={disabled}
             required={required}
             variant={variant}
             size={size}
-            state={actualState} // Pass state to match error/invalid scenario
+            state={actualState}
             className={cn('pr-10', className)}
             aria-invalid={actualState === 'error'}
             aria-describedby={errorText ? `${id}-error` : helperText ? `${id}-helper` : undefined}
             showLabel={false}
             {...props}
           />
+
+          {/* calculator button with proper accessibility */}
           <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center">
             <button
               type="button"
@@ -129,9 +161,7 @@ export const AmountField = React.forwardRef<HTMLInputElement, AmountFieldProps>(
                 disabled && 'pointer-events-none'
               )}
               disabled={disabled}
-              onClick={() => {
-                if (!disabled && !justClosed) setIsCalculatorOpen(true);
-              }}
+              onClick={handleCalculatorClick}
             >
               <Calculator
                 className={cn('h-4 w-4 text-slate-400', disabled && 'text-slate-300')}
@@ -141,23 +171,28 @@ export const AmountField = React.forwardRef<HTMLInputElement, AmountFieldProps>(
             </button>
           </span>
         </div>
-        {/* Helper Text */}
+
+        {/* helper text for additional context */}
         {helperText && !errorText && (
           <p id={id ? `${id}-helper` : undefined} className={cn('mt-2 text-xs text-slate-500', helperClassName)}>
             {helperText}
           </p>
         )}
-        {/* Error Text */}
+
+        {/* error message with icon for accessibility */}
         {errorText && (
           <p
             id={id ? `${id}-error` : undefined}
             className={cn('mt-2 text-xs text-danger-600 flex items-center gap-1', errorClassName)}
+            role="alert"
+            aria-live="polite"
           >
             <svg
               className="h-3 w-3 flex-shrink-0"
               fill="currentColor"
               viewBox="0 0 20 20"
               xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
             >
               <path
                 fillRule="evenodd"
@@ -168,20 +203,14 @@ export const AmountField = React.forwardRef<HTMLInputElement, AmountFieldProps>(
             {errorText}
           </p>
         )}
-        {/* Calculator Modal */}
+
+        {/* calculator modal - rendered conditionally for performance */}
         {isCalculatorOpen && (
-          <CalculatorModal
+          <AmountFieldCalculatorModal
             isOpen={isCalculatorOpen}
-            initialValue={value?.toString() ?? ''}
-            onSubmit={(v) => {
-              onChange?.(v);
-              setIsCalculatorOpen(false);
-              setJustClosed(true);
-            }}
-            onClose={() => {
-              setIsCalculatorOpen(false);
-              setJustClosed(true);
-            }}
+            initialValue={formatNumberDisplay(value ?? 0)}
+            onSubmit={handleCalculatorSubmit}
+            onClose={handleCalculatorClose}
           />
         )}
       </div>
