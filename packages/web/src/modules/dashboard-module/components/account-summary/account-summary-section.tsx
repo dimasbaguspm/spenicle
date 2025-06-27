@@ -24,7 +24,6 @@ export interface AccountSummarySectionProps {
     totalNetWorth: number;
     thisMonth: number;
     thisWeek: number;
-    currencySymbol?: string;
   };
   /**
    * List of account summary items with activity information
@@ -163,7 +162,6 @@ export function AccountSummarySection({
       totalNetWorth: Math.round(totalNetWorth),
       thisMonth: Math.round(monthNetChange),
       thisWeek: Math.round(weekNetChange),
-      currencySymbol: '$',
     };
   }, [stats, monthSummaryData, weekSummaryData, allAccounts]);
 
@@ -199,7 +197,6 @@ export function AccountSummarySection({
             totalNetWorth={calculatedStats.totalNetWorth}
             thisMonth={calculatedStats.thisMonth}
             thisWeek={calculatedStats.thisWeek}
-            currencySymbol={calculatedStats.currencySymbol}
           />
           <AccountSummaryList accounts={transformedAccounts} />
         </div>

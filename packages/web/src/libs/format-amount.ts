@@ -4,7 +4,7 @@ export interface FormatAmountOptions {
   type?: 'income' | 'expense' | 'transfer';
   compact?: boolean;
   showCurrency?: boolean;
-  currencySymbol?: string;
+  hidePrefix?: boolean; // Optional: hide the prefix (+, -, ↔)
 }
 
 /**
@@ -14,14 +14,12 @@ export interface FormatAmountOptions {
  * - Optionally shows/hides currency symbol
  */
 export const formatAmount = (amount: number, options: FormatAmountOptions = {}): string => {
-  const { type = 'expense', compact = false, showCurrency = false, currencySymbol = '$' } = options;
+  const { type = 'expense', compact = false, hidePrefix } = options;
   const prefix = type === 'income' ? '+' : type === 'expense' ? '-' : '↔';
   const absAmount = Math.abs(amount);
   const formatted = compact
     ? formatNumberCompact(absAmount)
-    : absAmount.toLocaleString('en-US', { minimumFractionDigits: 2 });
+    : absAmount.toLocaleString('IDR', { minimumFractionDigits: 2 });
 
-  // Build the formatted string with consistent spacing
-  const currencyPart = showCurrency ? currencySymbol : '';
-  return `${prefix}${currencyPart}${formatted}`;
+  return `${!hidePrefix ? prefix : ''}${formatted}`;
 };

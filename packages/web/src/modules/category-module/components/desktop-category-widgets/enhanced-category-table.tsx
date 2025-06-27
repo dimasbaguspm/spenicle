@@ -187,7 +187,7 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
       gridColumn: 'span 2', // Medium span for expenses
       render: (value) => (
         <p className="text-sm font-semibold text-coral-600 tabular-nums">
-          {formatAmount(value as number, { compact: true, showCurrency: true })}
+          {formatAmount(value as number, { compact: true, hidePrefix: true })}
         </p>
       ),
     },
@@ -231,7 +231,7 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
   return (
     <Tile className="p-4 md:p-6">
       <div className="space-y-1 mb-4 md:mb-6">
-        <h3 className="text-lg md:text-xl font-semibold text-slate-900">Category Analytics - {currentMonth}</h3>
+        <h3 className="text-lg md:text-xl font-semibold text-slate-900">Analytics - {currentMonth}</h3>
         <p className="text-sm text-slate-500">
           Detailed view of all categories with spending metrics ({sortedCategories.length} shown)
         </p>

@@ -13,21 +13,12 @@ export interface AccountSummaryStatsProps {
    * This week's net change amount (income - expenses)
    */
   thisWeek: number;
-  /**
-   * Currency symbol to display
-   */
-  currencySymbol?: string;
 }
 
 /**
  * AccountSummaryStats displays the summary statistics in a grid layout.
  */
-export function AccountSummaryStats({
-  totalNetWorth,
-  thisMonth,
-  thisWeek,
-  currencySymbol = '$',
-}: AccountSummaryStatsProps) {
+export function AccountSummaryStats({ totalNetWorth, thisMonth, thisWeek }: AccountSummaryStatsProps) {
   const getAmountColor = (amount: number) => {
     if (amount > 0) return 'text-sage-600'; // Positive - sage
     if (amount < 0) return 'text-coral-600'; // Negative - coral
@@ -43,7 +34,6 @@ export function AccountSummaryStats({
           {formatAmount(totalNetWorth, {
             type: totalNetWorth >= 0 ? 'income' : 'expense',
             compact: true,
-            currencySymbol,
             showCurrency: true,
           })}
         </p>
@@ -56,7 +46,6 @@ export function AccountSummaryStats({
           {formatAmount(thisMonth, {
             type: thisMonth >= 0 ? 'income' : 'expense',
             compact: true,
-            currencySymbol,
             showCurrency: true,
           })}
         </p>
@@ -69,7 +58,6 @@ export function AccountSummaryStats({
           {formatAmount(thisWeek, {
             type: thisWeek >= 0 ? 'income' : 'expense',
             compact: true,
-            currencySymbol,
             showCurrency: true,
           })}
         </p>
