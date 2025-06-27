@@ -48,7 +48,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
     <button
       type="button"
       className={cn(
-        'w-full text-left bg-cream-50 shadow-sm p-4 transition hover:bg-cream-100',
+        'w-full text-left p-4 transition hover:bg-cream-50',
         'min-h-[88px] md:min-h-[96px] flex items-center' // flex-row by default
       )}
       aria-label={`Edit transaction: ${categoryName} ${formattedAmount}`}

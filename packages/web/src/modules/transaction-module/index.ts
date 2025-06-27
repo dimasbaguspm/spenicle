@@ -8,6 +8,7 @@ export * from './components/transaction-filter-entry';
 export * from './components/period-transaction-list';
 export * from './components/transaction-filter-inline';
 export * from './components/transaction-calendar';
+export * from './components/transaction-period-insights-widget';
 export * from './pages/mobile-transaction-page';
 export * from './pages/desktop-transaction-page';
 export * from './pages/mobile-transaction-period-page';

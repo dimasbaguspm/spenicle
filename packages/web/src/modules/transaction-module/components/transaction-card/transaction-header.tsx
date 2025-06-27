@@ -10,21 +10,14 @@ export interface TransactionHeaderProps {
 }
 
 export const TransactionHeader = ({ date, totalAmount, transactionCount }: TransactionHeaderProps) => {
-  const today = date.isSame(new Date(), 'date');
-  const yesterday = date.isSame(new Date(Date.now() - 86400000), 'date');
-
-  const displayDate = today
-    ? 'Today'
-    : yesterday
-      ? 'Yesterday'
-      : date.toDate().toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'short',
-          day: 'numeric',
-        });
+  const displayDate = date.toDate().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
 
   return (
-    <div className="bg-cream-50 border-b border-mist-100 px-4 py-3">
+    <div className="border-b border-mist-100 px-4 py-3">
       <div className="flex gap-1 flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold text-slate-700">{displayDate}</span>

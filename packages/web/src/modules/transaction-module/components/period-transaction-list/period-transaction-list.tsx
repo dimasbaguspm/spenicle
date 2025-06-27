@@ -41,18 +41,40 @@ export const PeriodTransactionList: FC<PeriodTransactionListProps> = ({ startDat
   const allAccounts = accounts?.items ?? [];
   const allCategories = categories?.items ?? [];
 
-  // Prepare bar chart data
-  const barChartData = (summary ?? [])
-    .map((item) => ({
-      date: item.startDate,
-      totalIncome: item.totalIncome ?? 0,
-      totalExpenses: Math.abs(item.totalExpenses ?? 0),
-      totalNet: item.netAmount ?? 0,
-    }))
-    .filter((item) => {
-      const itemDate = dayjs(item.date);
-      return itemDate.isSameOrAfter(dayjs(startDate), 'day') && itemDate.isSameOrBefore(dayjs(endDate), 'day');
-    });
+  // Generate all dates in the period to show even dates with no transactions
+  const generateAllDatesInPeriod = (start: string, end: string): string[] => {
+    const dates: string[] = [];
+    let current = dayjs(start).startOf('day');
+    const endOfPeriod = dayjs(end).startOf('day');
+
+    while (current.isSameOrBefore(endOfPeriod, 'day')) {
+      dates.push(current.toISOString());
+      current = current.add(1, 'day');
+    }
+
+    return dates;
+  };
+
+  // Get all dates in period
+  const allDatesInPeriod = generateAllDatesInPeriod(startDate, endDate);
+
+  // Create a map of summary data by date for quick lookup
+  const summaryByDate = (summary ?? []).reduce<Record<string, NonNullable<typeof summary>[0]>>((acc, item) => {
+    const dateKey = dayjs(item.startDate).startOf('day').toISOString();
+    acc[dateKey] = item;
+    return acc;
+  }, {});
+
+  // Prepare bar chart data including all dates (with 0 values for missing dates)
+  const barChartData = allDatesInPeriod.map((date) => {
+    const summaryItem = summaryByDate[date];
+    return {
+      date,
+      totalIncome: summaryItem?.totalIncome ?? 0,
+      totalExpenses: Math.abs(summaryItem?.totalExpenses ?? 0),
+      totalNet: summaryItem?.netAmount ?? 0,
+    };
+  });
 
   const transactionList: Transaction[] = transactions && Array.isArray(transactions.items) ? transactions.items : [];
 
@@ -63,7 +85,8 @@ export const PeriodTransactionList: FC<PeriodTransactionListProps> = ({ startDat
     transactionsByDate[dateKey].push(tx);
   });
 
-  const sortedDateKeys = Object.keys(transactionsByDate).sort((a, b) => dayjs(b).valueOf() - dayjs(a).valueOf());
+  // Sort dates in descending order (most recent first)
+  const sortedDateKeys = allDatesInPeriod.sort((a, b) => dayjs(b).valueOf() - dayjs(a).valueOf());
 
   const isWeekly = dayjs(endDate).diff(dayjs(startDate), 'day') <= 7;
 
@@ -88,19 +111,22 @@ export const PeriodTransactionList: FC<PeriodTransactionListProps> = ({ startDat
       </div>
       <div className="space-y-4 px-4 pb-[20vh]">
         {sortedDateKeys.length > 0 ? (
-          sortedDateKeys.map((dateKey) => (
-            <TransactionGroup
-              key={dateKey}
-              date={dayjs(dateKey)}
-              selectedDate={dayjs(dateKey)}
-              shouldScroll={false}
-              transactions={transactionsByDate[dateKey].map((tx) => ({
-                transaction: tx,
-                category: allCategories.find((cat) => cat.id === tx.categoryId)!,
-                account: allAccounts.find((acc) => acc.id === tx.accountId)!,
-              }))}
-            />
-          ))
+          sortedDateKeys.map((dateKey) => {
+            const dateTransactions = transactionsByDate[dateKey] || [];
+            return (
+              <TransactionGroup
+                key={dateKey}
+                date={dayjs(dateKey)}
+                selectedDate={dayjs(dateKey)}
+                shouldScroll={false}
+                transactions={dateTransactions.map((tx) => ({
+                  transaction: tx,
+                  category: allCategories.find((cat) => cat.id === tx.categoryId)!,
+                  account: allAccounts.find((acc) => acc.id === tx.accountId)!,
+                }))}
+              />
+            );
+          })
         ) : (
           <NoTransactionsCard message="No transactions found for this period" />
         )}
