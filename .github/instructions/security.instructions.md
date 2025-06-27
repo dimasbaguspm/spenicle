@@ -1,7 +1,3 @@
----
-applyTo: '**/*.{sh,md,yml,yaml}'
----
-
 # Security Instructions - OWASP Top 10 2021 Compliance
 
 This security instruction document follows the OWASP Top 10 2021 vulnerabilities and provides comprehensive security guidelines for AI-assisted development. These instructions ensure code generated follows enterprise-grade security practices.
