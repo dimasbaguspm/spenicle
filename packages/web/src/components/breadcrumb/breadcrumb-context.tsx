@@ -1,12 +1,13 @@
-import React, { createContext, useContext } from 'react';
+import { createContext, useContext } from 'react';
 
-export interface BreadcrumbContextValue {
-  separator?: React.ReactNode;
-  variant?: 'mist' | 'slate' | 'sage';
-}
+import type { BreadcrumbContextValue } from './types';
 
 export const BreadcrumbContext = createContext<BreadcrumbContextValue | undefined>(undefined);
 
+/**
+ * hook to access breadcrumb context values
+ * throws error if used outside breadcrumb provider
+ */
 export function useBreadcrumbContext() {
   const context = useContext(BreadcrumbContext);
   if (!context) {
@@ -14,3 +15,5 @@ export function useBreadcrumbContext() {
   }
   return context;
 }
+
+export type { BreadcrumbContextValue };

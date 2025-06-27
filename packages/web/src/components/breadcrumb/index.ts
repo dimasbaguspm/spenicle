@@ -1,27 +1,34 @@
 import { Breadcrumb as BaseBreadcrumb } from './breadcrumb';
-import { BreadcrumbItem } from './breadcrumb-item';
-import { BreadcrumbLink } from './breadcrumb-link';
-import { BreadcrumbPage } from './breadcrumb-page';
-import { BreadcrumbSeparator } from './breadcrumb-separator';
+import { BreadcrumbItem } from './components/breadcrumb-item';
+import { BreadcrumbLink } from './components/breadcrumb-link';
+import { BreadcrumbPage } from './components/breadcrumb-page';
+import { BreadcrumbSeparator } from './components/breadcrumb-separator';
 
-type BreadcrumbCompositionModel = {
+/**
+ * compound breadcrumb component with subcomponents
+ * usage: <Breadcrumb><Breadcrumb.Item>...</Breadcrumb.Item></Breadcrumb>
+ */
+type BreadcrumbComposition = typeof BaseBreadcrumb & {
   Item: typeof BreadcrumbItem;
   Link: typeof BreadcrumbLink;
   Page: typeof BreadcrumbPage;
   Separator: typeof BreadcrumbSeparator;
 };
 
-const BreadcrumbComposition = {
+const BreadcrumbCompositionObject = {
   Item: BreadcrumbItem,
   Link: BreadcrumbLink,
   Page: BreadcrumbPage,
   Separator: BreadcrumbSeparator,
-} satisfies BreadcrumbCompositionModel;
+};
 
-export const Breadcrumb = Object.assign(BaseBreadcrumb, BreadcrumbComposition);
+export const Breadcrumb = Object.assign(BaseBreadcrumb, BreadcrumbCompositionObject) as BreadcrumbComposition;
 
-export type { BreadcrumbProps } from './breadcrumb';
-export type { BreadcrumbItemProps } from './breadcrumb-item';
-export type { BreadcrumbLinkProps } from './breadcrumb-link';
-export type { BreadcrumbPageProps } from './breadcrumb-page';
-export type { BreadcrumbSeparatorProps } from './breadcrumb-separator';
+// export types for external use
+export type {
+  BreadcrumbProps,
+  BreadcrumbItemProps,
+  BreadcrumbLinkProps,
+  BreadcrumbPageProps,
+  BreadcrumbSeparatorProps,
+} from './types';

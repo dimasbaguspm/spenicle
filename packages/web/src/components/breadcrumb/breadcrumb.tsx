@@ -1,28 +1,20 @@
 import React from 'react';
 
-import { cn } from '../../libs/utils';
+import { BreadcrumbContext } from './breadcrumb-context';
+import { breadcrumbVariants, combineClasses } from './helpers';
+import type { BreadcrumbProps, BreadcrumbContextValue } from './types';
 
-import { BreadcrumbContext, type BreadcrumbContextValue } from './breadcrumb-context';
-
-export interface BreadcrumbProps extends BreadcrumbContextValue {
-  children: React.ReactNode;
-  className?: string;
-  'aria-label'?: string;
-}
-
-const variantClasses = {
-  mist: 'text-mist-600',
-  slate: 'text-slate-600',
-  sage: 'text-sage-600',
-};
-
-export function Breadcrumb({
+/**
+ * breadcrumb navigation component with context provider
+ * supports different visual variants and custom separators
+ */
+export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   children,
   className,
   separator = '/',
   variant = 'mist',
   'aria-label': ariaLabel = 'Breadcrumb navigation',
-}: BreadcrumbProps) {
+}) => {
   const contextValue: BreadcrumbContextValue = {
     separator,
     variant,
@@ -30,9 +22,9 @@ export function Breadcrumb({
 
   return (
     <BreadcrumbContext.Provider value={contextValue}>
-      <nav aria-label={ariaLabel} className={cn('flex items-center space-x-1', variantClasses[variant], className)}>
+      <nav aria-label={ariaLabel} className={combineClasses(breadcrumbVariants({ variant }), className)}>
         <ol className="flex items-center space-x-1">{children}</ol>
       </nav>
     </BreadcrumbContext.Provider>
   );
-}
+};
