@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-# Host-based database backup script
-# This script runs via cron and connects to the dockerized database
+# Docker-based database backup script
+# This script runs via cron and uses docker compose to backup the database
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -31,9 +31,28 @@ set -a
 source "$ENV_FILE"
 set +a
 
-# Configuration - connect to host-exposed database port
-DB_HOST="localhost"
-DB_PORT="${API_PGPORT:-5432}"
+# Determine compose file based on environment
+if [[ "$ENV_FILE" == *".env.dev"* ]]; then
+    COMPOSE_FILE="docker-compose.dev.yml"
+elif [[ "$ENV_FILE" == *".env.prod"* ]]; then
+    COMPOSE_FILE="docker-compose.prod.yml"
+else
+    # Try to auto-detect based on NODE_ENV
+    if [ "$NODE_ENV" = "production" ]; then
+        COMPOSE_FILE="docker-compose.prod.yml"
+    else
+        COMPOSE_FILE="docker-compose.dev.yml"
+    fi
+fi
+
+COMPOSE_PATH="$PROJECT_ROOT/$COMPOSE_FILE"
+
+if [ ! -f "$COMPOSE_PATH" ]; then
+    echo "$(date): ❌ Error: Compose file not found: $COMPOSE_PATH"
+    exit 1
+fi
+
+# Configuration for docker-based backup
 DB_USER="${POSTGRES_USER:-postgres}"
 DB_NAME="${POSTGRES_DB:-spenicle}"
 DB_PASSWORD="${POSTGRES_PASSWORD}"
@@ -53,17 +72,20 @@ BACKUP_FILE="$BACKUP_DIR/spenicle_backup_${TIMESTAMP}.sql"
 # Log backup start
 echo "$(date): 🗄️ Starting database backup to $BACKUP_FILE"
 
-# Set password for pg_dump
-export PGPASSWORD="$DB_PASSWORD"
+# Change to project directory for docker compose commands
+cd "$PROJECT_ROOT"
 
-# Check if database is accessible
-if ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
-    echo "$(date): ❌ Error: Database is not accessible at $DB_HOST:$DB_PORT"
+# Check if postgres service is running
+if ! docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps postgres --format table | grep -q "Up\|running"; then
+    echo "$(date): ❌ Error: Postgres service is not running"
+    echo "$(date): 💡 Run the following to start services:"
+    echo "$(date):    cd $PROJECT_ROOT && docker compose -f $COMPOSE_FILE --env-file $ENV_FILE up -d"
     exit 1
 fi
 
-# Create database backup
-if pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" > "$BACKUP_FILE"; then
+# Create database backup using docker compose exec
+echo "$(date): 📊 Creating backup via docker compose..."
+if docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP_FILE"; then
     echo "$(date): ✅ Database backup completed successfully"
     
     # Compress the backup to save space

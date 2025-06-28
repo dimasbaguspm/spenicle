@@ -73,7 +73,25 @@ case "$1" in
     ;;
   backup-now)
     echo "🗄️ Creating immediate database backup..."
-    ./scripts/setup-backup-cron.sh backup-now $ENV_FILE
+    
+    # Check if postgres service is running
+    if ! docker compose -f $COMPOSE_FILE --env-file $ENV_FILE ps postgres --format table | grep -q "Up\|running"; then
+      echo "❌ Error: Postgres service is not running"
+      echo "💡 Run './scripts/local.sh up' to start services first"
+      exit 1
+    fi
+    
+    # Use the host backup script with better error handling
+    if ./scripts/setup-backup-cron.sh backup-now $ENV_FILE; then
+      echo "✅ Backup completed successfully!"
+      echo "📁 Latest backups:"
+      ls -lt backups/spenicle_backup_*.sql.gz 2>/dev/null | head -3 || echo "  No backups found"
+    else
+      echo "❌ Backup failed!"
+      echo "📋 Check logs for details:"
+      tail -10 /var/log/spenicle-backup.log 2>/dev/null || echo "  No logs available"
+      exit 1
+    fi
     ;;
   backup-status)
     ./scripts/setup-backup-cron.sh status
@@ -124,9 +142,9 @@ case "$1" in
     echo "  🆕 Creating fresh database..."
     docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -c "CREATE DATABASE \"${POSTGRES_DB:-spenicle}\";"
     
-    # Step 2: Restore from backup
+    # Step 2: Restore from backup using docker compose
     echo "  📥 Restoring data from backup..."
-    if gunzip -c "backups/$BACKUP_FILE" | docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T postgres psql -U "${POSTGRES_USER:-postgres}" "${POSTGRES_DB:-spenicle}" > /dev/null; then
+    if gunzip -c "backups/$BACKUP_FILE" | docker compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T postgres psql -U "${POSTGRES_USER:-postgres}" "${POSTGRES_DB:-spenicle}"; then
       echo "  ✅ Database restored successfully!"
       echo ""
       echo "📊 Restore summary:"
@@ -443,7 +461,10 @@ case "$1" in
     echo "  monitor-memory         - Show memory usage for all project containers and system"
     echo ""
     echo "Backup Management:"
+    echo "  • backup-now: Create immediate database backup (for testing and manual backups)"
+    echo "  • backup-status: Show cron status and list available backups"
     echo "  • Development backups run every 6 hours via host-level cron"
+    echo "  • All backups use Docker Compose to access the database securely"
     echo "  • Run './scripts/setup-backup-cron.sh status' for detailed backup info"
     echo "  • Backup logs: /var/log/spenicle-backup.log"
     echo ""
