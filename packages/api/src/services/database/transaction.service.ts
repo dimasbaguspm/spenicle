@@ -15,7 +15,7 @@ import {
   updateTransactionSchema,
   CreateTransactionInput,
 } from '../../helpers/validation/transaction.schema.ts';
-import { PagedTransactions, Transaction, transactions } from '../../models/schema.ts';
+import { PagedTransactions, Transaction, transactions, accounts } from '../../models/schema.ts';
 import { DatabaseServiceSchema } from '../../types/index.ts';
 
 export class TransactionService implements DatabaseServiceSchema<Transaction> {
@@ -170,7 +170,8 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
   }
 
   /**
-   * Create a single transaction
+   * Create a single transaction with automatic account amount update
+   * Uses database transaction for atomicity
    */
   async createSingle(payload: unknown) {
     const { data } = await validate(createTransactionSchema, payload);
@@ -188,33 +189,143 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
       categoryId: data.categoryId,
     } satisfies CreateTransactionInput;
 
-    const [transaction] = await db.insert(transactions).values(insertData).returning();
-    return formatTransactionModel(transaction);
+    // Execute within database transaction for consistency
+    return await db.transaction(async (tx) => {
+      // Create the transaction record
+      const [transaction] = await tx.insert(transactions).values(insertData).returning();
+
+      // Calculate account amount change based on transaction type
+      const amountChange = this.calculateAccountAmountChange(data.type, data.amount);
+
+      // Update account amount if not a transfer (transfers handled separately)
+      if (data.type !== 'transfer') {
+        await this.updateAccountAmount(data.accountId, amountChange, tx);
+      }
+
+      return formatTransactionModel(transaction);
+    });
   }
 
   /**
-   * Update a single transaction by id
+   * Update a single transaction by id with automatic account amount adjustment
+   * Uses database transaction for atomicity
    */
   async updateSingle(id: unknown, payload: unknown) {
     const idNum = parseId(id);
-
     const { data } = await validate(updateTransactionSchema, payload);
 
-    const updateData = {
-      ...data,
-      amount: data.amount,
-      updatedAt: new Date().toISOString(),
-    };
-    const [transaction] = await db.update(transactions).set(updateData).where(eq(transactions.id, idNum)).returning();
-    return formatTransactionModel(transaction);
+    return await db.transaction(async (tx) => {
+      // Get the existing transaction to calculate amount differences
+      const [existingTransaction] = await tx.select().from(transactions).where(eq(transactions.id, idNum));
+
+      if (!existingTransaction) {
+        throw new Error(`Transaction with ID ${idNum} not found`);
+      }
+
+      // Calculate the difference for account amount adjustment
+      const oldAmountChange = this.calculateAccountAmountChange(existingTransaction.type, existingTransaction.amount);
+
+      const newAmount = data.amount ?? existingTransaction.amount;
+      const newType = data.type ?? existingTransaction.type;
+      const newAmountChange = this.calculateAccountAmountChange(newType, newAmount);
+
+      // Net change to apply to account
+      const netAccountChange = newAmountChange - oldAmountChange;
+
+      // Update transaction
+      const updateData = {
+        ...data,
+        amount: data.amount,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const [transaction] = await tx.update(transactions).set(updateData).where(eq(transactions.id, idNum)).returning();
+
+      // Update account amount if there's a net change and not a transfer
+      if (netAccountChange !== 0 && newType !== 'transfer') {
+        await this.updateAccountAmount(existingTransaction.accountId, netAccountChange, tx);
+      }
+
+      return formatTransactionModel(transaction);
+    });
   }
 
   /**
-   * Delete a single transaction by id
+   * Delete a single transaction by id with automatic account amount adjustment
+   * Uses database transaction for atomicity
    */
   async deleteSingle(id: unknown) {
     const idNum = parseId(id);
-    const [transaction] = await db.delete(transactions).where(eq(transactions.id, idNum)).returning();
-    return formatTransactionModel(transaction);
+
+    return await db.transaction(async (tx) => {
+      // Get the existing transaction before deletion
+      const [existingTransaction] = await tx.select().from(transactions).where(eq(transactions.id, idNum));
+
+      if (!existingTransaction) {
+        throw new Error(`Transaction with ID ${idNum} not found`);
+      }
+
+      // Calculate the reverse amount change to revert the account balance
+      const amountChange = this.calculateAccountAmountChange(existingTransaction.type, existingTransaction.amount);
+      const reverseAmountChange = -amountChange;
+
+      // Delete the transaction
+      const [transaction] = await tx.delete(transactions).where(eq(transactions.id, idNum)).returning();
+
+      // Revert account amount if not a transfer
+      if (existingTransaction.type !== 'transfer') {
+        await this.updateAccountAmount(existingTransaction.accountId, reverseAmountChange, tx);
+      }
+
+      return formatTransactionModel(transaction);
+    });
+  }
+
+  /**
+   * Update account amount based on transaction type
+   * - Income: increases account amount
+   * - Expense: decreases account amount
+   * - Transfer: handled by separate transfer logic
+   */
+  private calculateAccountAmountChange(transactionType: string, amount: number): number {
+    switch (transactionType) {
+      case 'income':
+        return amount; // add to account
+      case 'expense':
+        return -amount; // subtract from account
+      case 'transfer':
+        // transfers are handled separately as they affect two accounts
+        return 0;
+      default:
+        throw new Error(`Invalid transaction type: ${transactionType}`);
+    }
+  }
+
+  /**
+   * Update account amount with database locking for consistency
+   * Uses SELECT FOR UPDATE to ensure atomicity
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async updateAccountAmount(accountId: number, amountChange: number, transaction?: any): Promise<void> {
+    const dbInstance = transaction ?? db;
+
+    // Lock the account row for update to prevent race conditions
+    const [lockedAccount] = await dbInstance.select().from(accounts).where(eq(accounts.id, accountId)).for('update');
+
+    if (!lockedAccount) {
+      throw new Error(`Account with ID ${accountId} not found`);
+    }
+
+    // Calculate new amount
+    const newAmount = lockedAccount.amount + amountChange;
+
+    // Update account amount
+    await dbInstance
+      .update(accounts)
+      .set({
+        amount: newAmount,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(accounts.id, accountId));
   }
 }

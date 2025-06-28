@@ -25,6 +25,7 @@ vi.mock('../../../core/db/config.ts', () => ({
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    transaction: vi.fn(),
   },
 }));
 
@@ -293,22 +294,49 @@ describe('TransactionService', () => {
         createdByUserId: 1,
         amount: 150.75,
         currency: 'EUR',
+        type: 'expense',
         date: '2024-05-25',
         note: 'New transaction',
       };
 
       mockValidate.mockResolvedValue({ data: transactionData });
-      const mockInsert = vi.fn().mockReturnValue({
+
+      // Mock transaction builder chain
+      const mockTxInsert = vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([mockTransaction]),
         }),
       });
-      mockDb.insert.mockReturnValue(mockInsert());
+
+      const mockTxSelect = vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi.fn().mockResolvedValue([{ id: 1, amount: 1000 }]),
+          }),
+        }),
+      });
+
+      const mockTxUpdate = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      // Mock transaction callback
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockDb.transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
+        const mockTx = {
+          insert: mockTxInsert,
+          select: mockTxSelect,
+          update: mockTxUpdate,
+        };
+        return await callback(mockTx);
+      });
 
       const result = await transactionService.createSingle(transactionData);
 
       expect(mockValidate).toHaveBeenCalledWith(expect.any(Object), transactionData);
-      expect(mockDb.insert).toHaveBeenCalledWith(transactions);
+      expect(mockDb.transaction).toHaveBeenCalledWith(expect.any(Function));
       expect(result).toEqual(mockTransaction);
     });
 
@@ -352,43 +380,99 @@ describe('TransactionService', () => {
         amount: 200,
         note: 'Updated transaction',
         categoryId: 2,
+        type: 'expense',
       };
 
+      const existingTransaction = { ...mockTransaction, amount: 150 };
+      const updatedTransaction = { ...mockTransaction, ...updateData };
+
       mockValidate.mockResolvedValue({ data: updateData });
-      const mockUpdate = vi.fn().mockReturnValue({
+
+      const mockTxUpdate = vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{ ...mockTransaction, ...updateData }]),
+            returning: vi.fn().mockResolvedValue([updatedTransaction]),
           }),
         }),
       });
-      mockDb.update.mockReturnValue(mockUpdate());
+
+      // Mock transaction callback
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockDb.transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
+        const mockTx = {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                // Mock both the initial transaction select and the account lock select
+                for: vi.fn().mockResolvedValue([{ id: 1, amount: 1000 }]),
+                mockResolvedValue: vi.fn().mockResolvedValue([existingTransaction]),
+              }),
+            }),
+          }),
+          update: mockTxUpdate,
+        };
+        // Mock the first select call differently
+        mockTx.select.mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([existingTransaction]),
+          }),
+        });
+        return await callback(mockTx);
+      });
 
       const result = await transactionService.updateSingle(id, updateData);
 
       expect(mockValidate).toHaveBeenCalledWith(expect.any(Object), updateData);
-      expect(mockDb.update).toHaveBeenCalledWith(transactions);
-      expect(mockEq).toHaveBeenCalledWith(transactions.id, id);
-      expect(result).toEqual({ ...mockTransaction, ...updateData });
+      expect(mockDb.transaction).toHaveBeenCalledWith(expect.any(Function));
+      expect(result).toEqual(updatedTransaction);
     });
   });
 
   describe('deleteSingle', () => {
     it('should delete a transaction by id', async () => {
       const id = 1;
+      const existingTransaction = { ...mockTransaction, amount: 150, type: 'expense' };
 
-      const mockDelete = vi.fn().mockReturnValue({
+      // Mock transaction builder chain for select (get existing)
+      const mockTxDelete = vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([mockTransaction]),
+          returning: vi.fn().mockResolvedValue([existingTransaction]),
         }),
       });
-      mockDb.delete.mockReturnValue(mockDelete());
+
+      const mockTxUpdate = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+
+      // Mock transaction callback
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockDb.transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
+        const mockTx = {
+          select: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                for: vi.fn().mockResolvedValue([{ id: 1, amount: 1000 }]),
+              }),
+            }),
+          }),
+          delete: mockTxDelete,
+          update: mockTxUpdate,
+        };
+        // Mock the first select call for getting existing transaction
+        mockTx.select.mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([existingTransaction]),
+          }),
+        });
+        return await callback(mockTx);
+      });
 
       const result = await transactionService.deleteSingle(id);
 
-      expect(mockDb.delete).toHaveBeenCalledWith(transactions);
-      expect(mockEq).toHaveBeenCalledWith(transactions.id, id);
-      expect(result).toEqual(mockTransaction);
+      expect(mockDb.transaction).toHaveBeenCalledWith(expect.any(Function));
+      expect(result).toEqual(existingTransaction);
     });
   });
 });
