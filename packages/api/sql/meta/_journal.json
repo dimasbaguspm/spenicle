@@ -15,6 +15,13 @@
       "when": 1751118789719,
       "tag": "0001_thin_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1751121712892,
+      "tag": "0002_jazzy_harrier",
+      "breakpoints": true
     }
   ]
 }

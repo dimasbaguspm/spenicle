@@ -7,6 +7,7 @@ describe('Account Schema Validation', () => {
         groupId: 1,
         name: 'Test Account',
         type: 'checking',
+        amount: 15000,
         note: 'Test note',
         metadata: null,
       };
@@ -17,7 +18,7 @@ describe('Account Schema Validation', () => {
       expect(result.data).toEqual(validData);
     });
 
-    it('should validate account with null limit', () => {
+    it('should validate account with default amount', () => {
       const validData = {
         groupId: 1,
         name: 'Test Account',
@@ -28,7 +29,10 @@ describe('Account Schema Validation', () => {
       const result = createAccountSchema.safeParse(validData);
 
       expect(result.success).toBe(true);
-      expect(result.data).toEqual(validData);
+      expect(result.data).toEqual({
+        ...validData,
+        amount: 0,
+      });
     });
 
     it('should reject empty name', () => {
@@ -36,7 +40,7 @@ describe('Account Schema Validation', () => {
         groupId: 1,
         name: '',
         type: 'checking',
-        limit: 1000,
+        amount: 1000,
       };
 
       const result = createAccountSchema.safeParse(invalidData);
@@ -57,7 +61,7 @@ describe('Account Schema Validation', () => {
         groupId: 1,
         name: 'a'.repeat(256),
         type: 'checking',
-        limit: 1000,
+        amount: 1000,
       };
 
       const result = createAccountSchema.safeParse(invalidData);
@@ -78,7 +82,7 @@ describe('Account Schema Validation', () => {
         groupId: 1,
         name: 'Test Account',
         type: '',
-        limit: 1000,
+        amount: 1000,
       };
 
       const result = createAccountSchema.safeParse(invalidData);
@@ -99,7 +103,7 @@ describe('Account Schema Validation', () => {
         groupId: 0,
         name: 'Test Account',
         type: 'checking',
-        limit: 1000,
+        amount: 1000,
       };
 
       const result = createAccountSchema.safeParse(invalidData);
@@ -242,6 +246,105 @@ describe('Account Schema Validation', () => {
 
         expect(result.success).toBe(true);
         expect(result.data?.metadata).toEqual(validData.metadata);
+      });
+    });
+
+    describe('amount field validation', () => {
+      it('should accept valid positive amount', () => {
+        const validData = {
+          groupId: 1,
+          name: 'Test Account',
+          type: 'checking',
+          amount: 15000,
+        };
+
+        const result = createAccountSchema.safeParse(validData);
+
+        expect(result.success).toBe(true);
+        expect(result.data?.amount).toBe(15000);
+      });
+
+      it('should accept zero amount', () => {
+        const validData = {
+          groupId: 1,
+          name: 'Test Account',
+          type: 'checking',
+          amount: 0,
+        };
+
+        const result = createAccountSchema.safeParse(validData);
+
+        expect(result.success).toBe(true);
+        expect(result.data?.amount).toBe(0);
+      });
+
+      it('should accept negative amount for credit accounts', () => {
+        const validData = {
+          groupId: 1,
+          name: 'Credit Account',
+          type: 'credit',
+          amount: -5000,
+        };
+
+        const result = createAccountSchema.safeParse(validData);
+
+        expect(result.success).toBe(true);
+        expect(result.data?.amount).toBe(-5000);
+      });
+
+      it('should default to 0 when amount is not provided', () => {
+        const validData = {
+          groupId: 1,
+          name: 'Test Account',
+          type: 'checking',
+        };
+
+        const result = createAccountSchema.safeParse(validData);
+
+        expect(result.success).toBe(true);
+        expect(result.data?.amount).toBe(0);
+      });
+
+      it('should reject non-integer amount', () => {
+        const invalidData = {
+          groupId: 1,
+          name: 'Test Account',
+          type: 'checking',
+          amount: 150.5,
+        };
+
+        const result = createAccountSchema.safeParse(invalidData);
+
+        expect(result.success).toBe(false);
+        expect(result.error?.errors).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              message: expect.stringContaining('Expected integer'),
+              path: ['amount'],
+            }),
+          ])
+        );
+      });
+
+      it('should reject string amount', () => {
+        const invalidData = {
+          groupId: 1,
+          name: 'Test Account',
+          type: 'checking',
+          amount: '15000',
+        };
+
+        const result = createAccountSchema.safeParse(invalidData);
+
+        expect(result.success).toBe(false);
+        expect(result.error?.errors).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              message: expect.stringContaining('Expected number'),
+              path: ['amount'],
+            }),
+          ])
+        );
       });
     });
   });

@@ -8,6 +8,7 @@ export const createAccountSchema = z.object({
   groupId: z.number().int().positive('Group ID is required'),
   name: z.string().max(255, 'Name must be at most 255 characters').min(1, 'Name is required'),
   type: z.string().max(50, 'Type must be at most 50 characters').min(1, 'Account type is required'),
+  amount: z.number().int().optional().default(0) as unknown as z.ZodOptional<z.ZodNumber>,
   metadata: z.object({}).passthrough().or(z.null()).optional().nullable(),
   note: z.string().optional().nullable(),
 });

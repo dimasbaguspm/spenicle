@@ -24,6 +24,11 @@ export const accountSchemas = {
         description: 'Account type (e.g., checking, savings, credit, cash)',
         example: 'checking',
       },
+      amount: {
+        type: 'integer',
+        description: 'Account balance/amount in smallest currency unit (e.g., cents)',
+        example: 150000,
+      },
       note: {
         type: 'string',
         nullable: true,
@@ -73,6 +78,12 @@ export const accountSchemas = {
         description: 'Account type (e.g., checking, savings, credit, cash)',
         example: 'checking',
       },
+      amount: {
+        type: 'integer',
+        description: 'Initial account balance/amount in smallest currency unit (e.g., cents)',
+        example: 0,
+        default: 0,
+      },
       note: {
         type: 'string',
         nullable: true,
@@ -104,6 +115,11 @@ export const accountSchemas = {
         maxLength: 50,
         description: 'Account type (e.g., checking, savings, credit, cash)',
         example: 'checking',
+      },
+      amount: {
+        type: 'integer',
+        description: 'Account balance/amount in smallest currency unit (e.g., cents)',
+        example: 150000,
       },
       note: {
         type: 'string',

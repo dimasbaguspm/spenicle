@@ -49,6 +49,7 @@ describe('AccountService', () => {
     groupId: 1,
     name: 'Test Account',
     type: 'checking',
+    amount: 15000,
     metadata: null,
     note: 'Test account note',
     createdAt: '2024-01-01T00:00:00.000Z',
@@ -188,7 +189,7 @@ describe('AccountService', () => {
         groupId: 1,
         name: 'New Account',
         type: 'savings',
-        limit: 2000,
+        amount: 2000,
         note: 'New account note',
       };
 
@@ -207,6 +208,58 @@ describe('AccountService', () => {
       expect(mockDb.insert).toHaveBeenCalledWith(accounts);
       expect(result).toEqual(mockAccount);
     });
+
+    it('should create account with default amount when not provided', async () => {
+      const accountData = {
+        groupId: 1,
+        name: 'New Account',
+        type: 'checking',
+        note: 'New account note',
+      };
+
+      const expectedData = {
+        ...accountData,
+        amount: 0,
+      };
+
+      mockValidate.mockResolvedValue({ data: expectedData });
+
+      const mockInsert = vi.fn().mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([mockAccount]),
+        }),
+      });
+      mockDb.insert.mockReturnValue(mockInsert());
+
+      const result = await accountService.createSingle(accountData);
+
+      expect(mockValidate).toHaveBeenCalledWith(expect.any(Object), accountData);
+      expect(result).toEqual(mockAccount);
+    });
+
+    it('should create account with negative amount for credit accounts', async () => {
+      const accountData = {
+        groupId: 1,
+        name: 'Credit Account',
+        type: 'credit',
+        amount: -5000,
+        note: 'Credit account',
+      };
+
+      mockValidate.mockResolvedValue({ data: accountData });
+
+      const mockInsert = vi.fn().mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ ...mockAccount, amount: -5000, type: 'credit' }]),
+        }),
+      });
+      mockDb.insert.mockReturnValue(mockInsert());
+
+      const result = await accountService.createSingle(accountData);
+
+      expect(result.amount).toBe(-5000);
+      expect(result.type).toBe('credit');
+    });
   });
 
   describe('updateSingle', () => {
@@ -215,7 +268,7 @@ describe('AccountService', () => {
       const updateData = {
         name: 'Updated Account',
         type: 'credit',
-        limit: 3000,
+        amount: 3000,
       };
 
       mockValidate.mockResolvedValue({ data: updateData });
