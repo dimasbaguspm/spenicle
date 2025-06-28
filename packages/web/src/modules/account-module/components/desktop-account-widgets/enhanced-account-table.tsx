@@ -258,8 +258,10 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
             columns={columns}
             sortConfig={sortConfig}
             onSort={handleSort}
-            emptyMessage={searchQuery ? 'No accounts found matching your search' : 'No accounts yet'}
-            emptyDescription={searchQuery ? 'Try adjusting your search terms' : 'Add your first account to get started'}
+            emptyMessage={searchQuery ? 'No accounts found matching your search' : 'No payment methods yet'}
+            emptyDescription={
+              searchQuery ? 'Try adjusting your search terms' : 'Add your first payment method to get started'
+            }
             loading={!summaryData}
           />
         </div>

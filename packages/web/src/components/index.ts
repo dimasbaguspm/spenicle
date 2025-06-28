@@ -63,3 +63,4 @@ export {
   type SortConfig,
   type SortDirection,
 } from './data-table';
+export { StepProgress, type StepProgressProps, type StepItem } from './step-progress';

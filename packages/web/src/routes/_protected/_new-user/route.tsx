@@ -71,32 +71,28 @@ function RouteComponent() {
     <SessionGuard>
       <div className="min-h-screen bg-cream-50 flex flex-col">
         <main className="flex-1">
-          <PageLayout background="cream" minHeight="screen" padding="lg">
-            <div className="max-w-2xl mx-auto">
-              {/* Progress Section - Only show for setup steps */}
-              {currentStep.step > 0 && currentStep.step < currentStep.totalSteps && (
-                <div className="mb-8 transition-all duration-200 ease-out">
-                  <div className="flex justify-between items-center mb-4">
-                    <h1 className="text-2xl font-bold text-slate-900 transition-all duration-200">
-                      {currentStep.title}
-                    </h1>
-                    <span className="text-sm text-slate-600 transition-all duration-200">
-                      Step {currentStep.step} of {currentStep.totalSteps - 1}
-                    </span>
-                  </div>
-                  <LineProgress value={progressPercentage} variant="coral" size="sm" animated={true} />
+          <PageLayout background="cream" minHeight="screen">
+            {/* Progress Section - Only show for setup steps */}
+            {currentStep.step > 0 && currentStep.step < currentStep.totalSteps && (
+              <div className="mb-8 transition-all duration-200 ease-out">
+                <div className="flex justify-between items-center mb-4">
+                  <h1 className="text-2xl font-bold text-slate-900 transition-all duration-200">{currentStep.title}</h1>
+                  <span className="text-sm text-slate-600 transition-all duration-200">
+                    Step {currentStep.step} of {currentStep.totalSteps - 1}
+                  </span>
                 </div>
-              )}
-
-              <div
-                className="transition-all duration-200 ease-out transform"
-                style={{
-                  opacity: 1,
-                  transform: 'translateY(0)',
-                }}
-              >
-                <Outlet />
+                <LineProgress value={progressPercentage} variant="coral" size="sm" animated={true} />
               </div>
+            )}
+
+            <div
+              className="transition-all duration-200 ease-out transform"
+              style={{
+                opacity: 1,
+                transform: 'translateY(0)',
+              }}
+            >
+              <Outlet />
             </div>
           </PageLayout>
         </main>

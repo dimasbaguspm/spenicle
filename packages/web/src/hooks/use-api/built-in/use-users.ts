@@ -10,13 +10,6 @@ export const useApiCurrentUserQuery = (): UseApiQueryResult<User, Error> => {
   return useApiQuery<User, never>({
     queryKey: QUERY_KEYS.USERS.current(),
     path: '/users/me',
-    enabled: true,
-    // Keep user session data fresh for a longer period
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    // Cache user data for longer to avoid unnecessary refetches
-    gcTime: 30 * 60 * 1000, // 30 minutes
-    // Enable retries for better reliability
-    retry: true,
   });
 };
 
