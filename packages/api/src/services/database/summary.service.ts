@@ -15,16 +15,22 @@ import {
 export class SummaryService {
   async getCategoriesPeriod(payload: unknown): Promise<SummaryCategoryPeriod[]> {
     const { data } = await validate(summaryPeriodQuerySchema, payload ?? {});
-    const { startDate, endDate, categoryId, accountId, sortBy = '', sortOrder = 'desc' } = data ?? {};
+    const { groupId, startDate, endDate, categoryId, accountId, sortBy = '', sortOrder = 'desc' } = data ?? {};
 
-    // build where conditions
-    const conditions: SQL[] = [];
-    if (startDate !== undefined) conditions.push(gte(transactions.date, startDate));
-    if (endDate !== undefined) conditions.push(lte(transactions.date, endDate));
-    if (accountId !== undefined) conditions.push(eq(transactions.accountId, accountId));
-    if (categoryId !== undefined) conditions.push(eq(transactions.categoryId, categoryId));
+    // build category where conditions - ensure categories belong to the group
+    const categoryConditions: SQL[] = [eq(categories.groupId, groupId)];
+    if (categoryId !== undefined) categoryConditions.push(eq(categories.id, categoryId));
 
-    // join categories and transactions, aggregate by category
+    // build transaction join conditions - ensure transactions belong to the same group
+    const transactionJoinConditions: SQL[] = [
+      eq(categories.id, transactions.categoryId),
+      eq(transactions.groupId, groupId), // critical: ensure transaction groupId matches
+    ];
+    if (startDate !== undefined) transactionJoinConditions.push(gte(transactions.date, startDate));
+    if (endDate !== undefined) transactionJoinConditions.push(lte(transactions.date, endDate));
+    if (accountId !== undefined) transactionJoinConditions.push(eq(transactions.accountId, accountId));
+
+    // join categories and transactions, aggregate by category with double groupId filtering
     const rows = await db
       .select({
         categoryId: categories.id,
@@ -37,8 +43,8 @@ export class SummaryService {
         totalTransactions: sum(sql`CASE WHEN ${transactions.id} IS NOT NULL THEN 1 ELSE 0 END`).as('totalTransactions'),
       })
       .from(categories)
-      .leftJoin(transactions, eq(categories.id, transactions.categoryId))
-      .where(conditions.length ? and(...conditions) : undefined)
+      .leftJoin(transactions, and(...transactionJoinConditions))
+      .where(and(...categoryConditions))
       .groupBy(categories.id);
 
     let result: SummaryCategoryPeriod[] = rows.map((row, idx) => {
@@ -75,14 +81,21 @@ export class SummaryService {
 
   async getAccountsPeriod(payload: unknown): Promise<SummaryAccountPeriod[]> {
     const { data } = await validate(summaryPeriodQuerySchema, payload ?? {});
-    const { startDate, endDate, categoryId, sortBy = '', sortOrder = 'desc' } = data ?? {};
+    const { groupId, startDate, endDate, categoryId, sortBy = '', sortOrder = 'desc' } = data ?? {};
 
-    const conditions: SQL[] = [];
-    if (startDate !== undefined) conditions.push(gte(transactions.date, startDate));
-    if (endDate !== undefined) conditions.push(lte(transactions.date, endDate));
-    if (categoryId !== undefined) conditions.push(eq(transactions.categoryId, categoryId));
+    // build account where conditions - ensure accounts belong to the group
+    const accountConditions: SQL[] = [eq(accounts.groupId, groupId)];
 
-    // Join accounts and transactions, aggregate by account
+    // build transaction join conditions - ensure transactions belong to the same group
+    const transactionJoinConditions: SQL[] = [
+      eq(accounts.id, transactions.accountId),
+      eq(transactions.groupId, groupId), // critical: ensure transaction groupId matches
+    ];
+    if (startDate !== undefined) transactionJoinConditions.push(gte(transactions.date, startDate));
+    if (endDate !== undefined) transactionJoinConditions.push(lte(transactions.date, endDate));
+    if (categoryId !== undefined) transactionJoinConditions.push(eq(transactions.categoryId, categoryId));
+
+    // Join accounts and transactions, aggregate by account with double groupId filtering
     const rows = await db
       .select({
         accountId: accounts.id,
@@ -95,8 +108,8 @@ export class SummaryService {
         totalTransactions: sum(sql`CASE WHEN ${transactions.id} IS NOT NULL THEN 1 ELSE 0 END`).as('totalTransactions'),
       })
       .from(accounts)
-      .leftJoin(transactions, eq(accounts.id, transactions.accountId))
-      .where(conditions.length ? and(...conditions) : undefined)
+      .leftJoin(transactions, and(...transactionJoinConditions))
+      .where(and(...accountConditions))
       .groupBy(accounts.id);
 
     let result: SummaryAccountPeriod[] = rows.map((row, idx) => {
@@ -118,7 +131,7 @@ export class SummaryService {
       };
     });
 
-    if (sortBy && ['totalIncome', 'totalExpenses', 'totalNet'].includes(sortBy)) {
+    if (sortBy && ['totalIncome', 'totalExpenses', 'totalNet', 'totalTransactions'].includes(sortBy)) {
       result = result.sort((a, b) => {
         const dir = sortOrder === 'asc' ? 1 : -1;
         return (
@@ -132,11 +145,16 @@ export class SummaryService {
 
   async getTransactionsPeriod(payload: unknown): Promise<SummaryTransactionPeriod[]> {
     const { data } = await validate(summaryPeriodQuerySchema, payload ?? {});
-    const { startDate, endDate, sortBy = '' } = data ?? {};
+    const { startDate, endDate, groupId, sortBy = '', sortOrder = 'desc' } = data ?? {};
 
     if (!startDate || !endDate) return [];
 
-    // Query all transactions grouped by day in the range
+    // build transaction where conditions - ensure secure groupId filtering
+    const transactionConditions: SQL[] = [eq(transactions.groupId, groupId)];
+    transactionConditions.push(gte(transactions.date, startDate));
+    transactionConditions.push(lte(transactions.date, endDate));
+
+    // Query all transactions grouped by day in the range using drizzle query builder
     const queryResult = await db.execute(sql`
       SELECT
         date_trunc('day', ${transactions.date}) AS period_day,
@@ -144,7 +162,9 @@ export class SummaryService {
         SUM(CASE WHEN ${transactions.type} = 'expense' THEN ${transactions.amount} ELSE 0 END) AS total_expenses,
         COUNT(${transactions.id}) AS total_transactions
       FROM ${transactions}
-      WHERE ${transactions.date} >= ${startDate} AND ${transactions.date} <= ${endDate}
+      WHERE ${transactions.groupId} = ${groupId} 
+        AND ${transactions.date} >= ${startDate} 
+        AND ${transactions.date} <= ${endDate}
       GROUP BY period_day
       ORDER BY period_day ASC
     `);
@@ -185,7 +205,7 @@ export class SummaryService {
     // Manual sort if needed
     if (sortBy && ['totalIncome', 'totalExpenses', 'netAmount', 'totalTransactions'].includes(sortBy)) {
       intervals.sort((a, b) => {
-        const dir = sortBy === 'asc' ? 1 : -1;
+        const dir = sortOrder === 'asc' ? 1 : -1;
         return (
           dir *
           (Number(b[sortBy as keyof SummaryTransactionPeriod]) - Number(a[sortBy as keyof SummaryTransactionPeriod]))
@@ -195,8 +215,4 @@ export class SummaryService {
 
     return intervals;
   }
-} // Alternative Approach: Using Drizzle's count() function
-// Replace sql<number>`COUNT(${transactions.id})` with count(transactions.id)
-// Pros: Better type safety, more idiomatic Drizzle ORM usage
-// Cons: Requires proper mocking of count function in tests
-// Use this for better type safety once test mocks are properly configured
+}

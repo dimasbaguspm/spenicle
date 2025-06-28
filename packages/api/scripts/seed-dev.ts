@@ -1,4 +1,3 @@
-
 /**
  * Development Database Seeding Script
  * 
@@ -6,6 +5,12 @@
  * - Generates fake data for testing and development
  * - Should NEVER be run in production environments
  * - Uses predictable passwords for development convenience
+ * 
+ * 💰 AMOUNT HANDLING:
+ * - All amounts are stored in smallest currency units (e.g., cents for USD, sen for IDR)
+ * - IDR amounts: 1 Rupiah = 1 unit (no fractional currency)
+ * - USD amounts: 1 Dollar = 100 cents
+ * - Transaction amounts and account limits use integer values only
  * 
  * OWASP Compliance:
  * - A09: Logging - No sensitive production data is exposed
@@ -59,11 +64,11 @@ const SEED_CONFIG = {
   bcryptRounds: 12,
 } as const satisfies Record<string, number | string>;
 
-// realistic data generation configurations - indonesian context with varied amounts
+// realistic data generation configurations - indonesian context with varied amounts (in smallest units)
 const AMOUNT_RANGES = {
-  expense: { min: 5_000, max: 5_000_000, fractionDigits: 0 }, // rp 5k - 5m (wider range)
-  income: { min: 1_000_000, max: 50_000_000, fractionDigits: 0 }, // rp 1m - 50m (higher range)
-  transfer: { min: 50_000, max: 20_000_000, fractionDigits: 0 }, // rp 50k - 20m (wider range)
+  expense: { min: 5_000, max: 5_000_000, fractionDigits: 0 }, // rp 5k - 5m (already in smallest units)
+  income: { min: 1_000_000, max: 50_000_000, fractionDigits: 0 }, // rp 1m - 50m (already in smallest units)
+  transfer: { min: 50_000, max: 20_000_000, fractionDigits: 0 }, // rp 50k - 20m (already in smallest units)
 } as const satisfies Record<TransactionType, { min: number; max: number; fractionDigits: number }>;
 
 const CURRENCIES = ['IDR', 'USD', 'EUR', 'SGD', 'MYR'] as const satisfies readonly Currency[];
@@ -275,7 +280,7 @@ const INDONESIAN_TRANSACTION_NOTES = {
 // enhanced utility functions with better type safety
 const generateRealisticAmount = (type: TransactionType): number => {
   const range = AMOUNT_RANGES[type];
-  return faker.number.float(range);
+  return faker.number.int(range); // use int for smallest currency units
 };
 
 const generateDateInRange = (options: { daysBack?: number; maxDaysBack?: number } = {}): string => {
@@ -344,6 +349,7 @@ const generateAccountData = (groupId: number) => ({
       name: accountName,
       type: accountType,
       note: faker.datatype.boolean(0.4) ? `${typeConfig.description} di ${bankName} cabang ${city}` : null,
+      amount: 0, // start with zero balance, transactions will update this
       metadata: {
         icon: selectedIcon,
         color: selectedColor,
@@ -739,7 +745,7 @@ const seedAccountLimits = async (accountList: { id: number; groupId: number }[])
   for (const account of accountList) {
     if (faker.datatype.boolean(SEED_CONFIG.accountLimitsPerAccount)) {
       const period = faker.helpers.arrayElement(LIMIT_PERIODS);
-      const limit = faker.number.float({ min: 500, max: 5000, fractionDigits: 2 });
+      const limit = faker.number.int({ min: 500_000, max: 5_000_000 }); // in smallest currency units (IDR)
 
       limitsData.push({
         accountId: account.id,
@@ -796,6 +802,7 @@ const runSeeder = async (): Promise<void> => {
       () => db.delete(accounts),
       () => db.delete(users),
       () => db.delete(groups),
+      // note: refreshTokens table will be auto-cleared via cascade when users are deleted
     ] as const;
 
     for (const operation of deleteOperations) {
@@ -831,7 +838,10 @@ const runSeeder = async (): Promise<void> => {
     console.log('📧 Email:', GENERATED_EMAIL);
     console.log('🔑 Password:', SEED_CONFIG.defaultPassword);
     console.log('');
-    console.log('💰 primary currency: IDR (Indonesian Rupiah)');
+    console.log('💰 currency details:');
+    console.log('  - Primary currency: IDR (Indonesian Rupiah)');
+    console.log('  - Amount storage: smallest currency units (integers only)');
+    console.log('  - Account limits: in IDR smallest units');
     console.log('🌏 localization: Indonesian context with local banks and transaction patterns');
   } catch (error) {
     console.error('❌ seeding failed:', error);

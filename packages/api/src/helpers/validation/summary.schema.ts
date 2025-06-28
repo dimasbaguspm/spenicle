@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const summaryPeriodQuerySchema = z
   .object({
+    groupId: z.number().int().positive('Group ID is required'),
     accountId: z.number().int().positive('Account ID must be a positive integer').optional(),
     categoryId: z.number().int().positive('Category ID must be a positive integer').optional(),
     interval: z
