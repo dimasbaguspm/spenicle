@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, text, boolean, integer, decimal, json } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, timestamp, text, boolean, integer, json } from 'drizzle-orm/pg-core';
 
 import { PaginatedResponse } from '../types/index.ts';
 
@@ -30,7 +30,7 @@ export const accounts = pgTable('accounts', {
     .notNull()
     .references(() => groups.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
-  type: varchar('type', { length: 50 }).notNull(), // debit, credit, etc.
+  type: varchar('type', { length: 50 }).notNull(),
   note: text('note'),
   metadata: json('metadata').$type<Record<string, any>>(),
   createdAt: timestamp('created_at', { mode: 'string', withTimezone: true }).$type<string>().defaultNow().notNull(),
@@ -43,7 +43,7 @@ export const accountLimits = pgTable('account_limits', {
     .notNull()
     .references(() => accounts.id, { onDelete: 'cascade' }),
   period: varchar('period', { length: 20 }).notNull(), // 'month' or 'week'
-  limit: decimal('limit', { precision: 14, scale: 2 }).$type<number>().notNull(),
+  limit: integer('limit').notNull(), // amount in smallest currency unit (e.g., cents)
   createdAt: timestamp('created_at', { mode: 'string', withTimezone: true }).$type<string>().defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string', withTimezone: true }).$type<string>().defaultNow().notNull(),
 });
@@ -99,7 +99,7 @@ export const transactions = pgTable('transactions', {
   createdByUserId: integer('created_by_user_id')
     .notNull()
     .references(() => users.id),
-  amount: decimal('amount', { precision: 14, scale: 2 }).$type<number>().notNull(),
+  amount: integer('amount').notNull(), // amount in smallest currency unit (e.g., cents, sen)
   currency: varchar('currency', { length: 3 }).notNull(),
   type: varchar('type', { length: 8 }).notNull(), // 'expense', 'income', 'transfer'
   date: timestamp('date', { mode: 'string', withTimezone: true }).$type<string>().notNull(), // date of the transaction
@@ -174,9 +174,9 @@ export type UpdateUserPreference = Partial<NewUserPreference>;
 export interface SummaryTransactionPeriod {
   startDate: string;
   endDate: string;
-  totalIncome: number; // total income for the period
-  totalExpenses: number; // total expenses for the period
-  netAmount: number; // net amount (income - expenses)
+  totalIncome: number; // total income for the period (in smallest currency unit)
+  totalExpenses: number; // total expenses for the period (in smallest currency unit)
+  netAmount: number; // net amount (income - expenses) (in smallest currency unit)
   totalTransactions?: number; // total number of transactions in the period
 }
 
@@ -184,9 +184,9 @@ export interface SummaryAccountPeriod {
   accountId: number; // account ID for which the summary is calculated
   startDate: string;
   endDate: string;
-  totalIncome: number; // total income
-  totalExpenses: number; // total expenses
-  totalNet: number; // total net amount (income - expenses)
+  totalIncome: number; // total income (in smallest currency unit)
+  totalExpenses: number; // total expenses (in smallest currency unit)
+  totalNet: number; // total net amount (income - expenses) (in smallest currency unit)
   totalTransactions: number; // total number of transactions
 }
 
@@ -194,8 +194,8 @@ export interface SummaryCategoryPeriod {
   categoryId: number; // category ID for which the summary is calculated
   startDate: string;
   endDate: string;
-  totalIncome: number; // total income
-  totalExpenses: number; // total expenses
-  totalNet: number; // total net amount (income - expenses)
+  totalIncome: number; // total income (in smallest currency unit)
+  totalExpenses: number; // total expenses (in smallest currency unit)
+  totalNet: number; // total net amount (income - expenses) (in smallest currency unit)
   totalTransactions: number; // total number of transactions
 }

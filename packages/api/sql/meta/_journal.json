@@ -8,6 +8,13 @@
       "when": 1748816487142,
       "tag": "0000_solid_fixer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1751118789719,
+      "tag": "0001_thin_silver_sable",
+      "breakpoints": true
     }
   ]
 }
