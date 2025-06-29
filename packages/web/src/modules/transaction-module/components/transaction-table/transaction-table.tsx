@@ -1,6 +1,8 @@
+import dayjs from 'dayjs';
+import { Edit } from 'lucide-react';
 import { type FC } from 'react';
 
-import { DataTable, type ColumnDefinition } from '../../../../components';
+import { DataTable, IconButton, type ColumnDefinition, type SortConfig } from '../../../../components';
 import { formatAmount } from '../../../../libs/format-amount';
 import { cn } from '../../../../libs/utils';
 import { AccountIcon } from '../../../account-module/components/account-icon/account-icon';
@@ -10,9 +12,18 @@ import type { SeamlessTransaction } from '../../hooks/use-seamless-transactions/
 interface TransactionTableProps {
   transactions: SeamlessTransaction[];
   onTransactionClick: (transaction: SeamlessTransaction) => void;
+  onTransactionEdit?: (transaction: SeamlessTransaction) => void;
+  sortConfig?: SortConfig<SeamlessTransaction>;
+  onSort?: (field: keyof SeamlessTransaction) => void;
 }
 
-export const TransactionTable: FC<TransactionTableProps> = ({ transactions, onTransactionClick }) => {
+export const TransactionTable: FC<TransactionTableProps> = ({
+  transactions,
+  onTransactionClick,
+  onTransactionEdit,
+  sortConfig,
+  onSort,
+}) => {
   const getAmountColor = (type?: string) => {
     switch (type) {
       case 'income':
@@ -39,35 +50,22 @@ export const TransactionTable: FC<TransactionTableProps> = ({ transactions, onTr
     );
   };
 
-  // Define table columns with custom renderers
+  // Define table columns with enhanced desktop layout
   const columns: ColumnDefinition<SeamlessTransaction>[] = [
     {
       key: 'transaction' as keyof SeamlessTransaction,
       label: 'Amount',
-      align: 'left',
-      gridColumn: 'span 3',
+      align: 'right',
+      width: '150px',
+      sortable: true,
       render: createClickableColumn((_, seamlessTransaction) => {
         const { transaction: txn } = seamlessTransaction;
         const formattedAmount = formatAmount(Number(txn.amount ?? 0), {
           type: txn.type,
+          compact: true,
         });
-        return <span className={cn('font-bold text-sm', getAmountColor(txn.type))}>{formattedAmount}</span>;
-      }),
-    },
-    {
-      key: 'transaction' as keyof SeamlessTransaction,
-      label: 'Description',
-      align: 'left',
-      gridColumn: 'span 3',
-      render: createClickableColumn((_, seamlessTransaction) => {
-        const { transaction: txn, category } = seamlessTransaction;
-        const categoryName = category?.name ?? 'Uncategorized';
         return (
-          <div className="flex items-center min-w-0">
-            <span className="text-sm font-medium text-slate-900 truncate" title={txn.note ?? categoryName}>
-              {txn.note ?? categoryName}
-            </span>
-          </div>
+          <span className={cn('font-bold text-sm tabular-nums', getAmountColor(txn.type))}>{formattedAmount}</span>
         );
       }),
     },
@@ -75,7 +73,8 @@ export const TransactionTable: FC<TransactionTableProps> = ({ transactions, onTr
       key: 'category' as keyof SeamlessTransaction,
       label: 'Category',
       align: 'left',
-      gridColumn: 'span 3',
+      width: '250px',
+      sortable: true,
       render: createClickableColumn((_, seamlessTransaction) => {
         const { category } = seamlessTransaction;
         const categoryName = category?.name ?? 'Uncategorized';
@@ -83,11 +82,11 @@ export const TransactionTable: FC<TransactionTableProps> = ({ transactions, onTr
         const categoryColor = category?.metadata?.color ?? undefined;
 
         return (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="flex-shrink-0">
-              <CategoryIcon iconValue={categoryIcon} colorValue={categoryColor} size="xs" aria-label={categoryName} />
+              <CategoryIcon iconValue={categoryIcon} colorValue={categoryColor} size="sm" aria-label={categoryName} />
             </div>
-            <span className="text-sm text-slate-600 truncate" title={categoryName}>
+            <span className="text-sm font-medium text-slate-700 truncate" title={categoryName}>
               {categoryName}
             </span>
           </div>
@@ -98,7 +97,8 @@ export const TransactionTable: FC<TransactionTableProps> = ({ transactions, onTr
       key: 'account' as keyof SeamlessTransaction,
       label: 'Account',
       align: 'left',
-      gridColumn: 'span 3',
+      sortable: true,
+      width: '250px',
       render: createClickableColumn((_, seamlessTransaction) => {
         const { account } = seamlessTransaction;
         const accountName = account?.name ?? 'Unknown Account';
@@ -106,16 +106,62 @@ export const TransactionTable: FC<TransactionTableProps> = ({ transactions, onTr
         const accountColor = account?.metadata?.color ?? undefined;
 
         return (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="flex-shrink-0">
-              <AccountIcon iconValue={accountIcon} colorValue={accountColor} size="xs" aria-label={accountName} />
+              <AccountIcon iconValue={accountIcon} colorValue={accountColor} size="sm" aria-label={accountName} />
             </div>
-            <span className="text-sm text-slate-600 truncate" title={accountName}>
-              {accountName}
-            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-slate-700 truncate" title={accountName}>
+                {accountName}
+              </p>
+              {account?.metadata?.bankName && (
+                <p className="text-xs text-slate-500 truncate" title={account.metadata.bankName as string}>
+                  {account.metadata.bankName as string}
+                </p>
+              )}
+            </div>
           </div>
         );
       }),
+    },
+    {
+      key: 'time' as keyof SeamlessTransaction,
+      label: 'Time',
+      align: 'center',
+      width: '80px',
+      sortable: true,
+      render: createClickableColumn((_, seamlessTransaction) => {
+        const { transaction: txn } = seamlessTransaction;
+        const timeDisplay = txn.date ? dayjs(txn.date).format('HH:mm') : '--:--';
+        return (
+          <span className="text-sm font-medium text-slate-600 tabular-nums" title={txn.date ?? 'No time available'}>
+            {timeDisplay}
+          </span>
+        );
+      }),
+    },
+    {
+      key: 'id' as keyof SeamlessTransaction,
+      label: 'Actions',
+      align: 'center',
+      sortable: false,
+      render: (_, seamlessTransaction) => (
+        <div className="flex items-center justify-center gap-2">
+          {onTransactionEdit && (
+            <IconButton
+              variant="slate-ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTransactionEdit(seamlessTransaction);
+              }}
+              title="Edit transaction"
+            >
+              <Edit className="h-4 w-4" />
+            </IconButton>
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -123,6 +169,8 @@ export const TransactionTable: FC<TransactionTableProps> = ({ transactions, onTr
     <DataTable
       data={transactions}
       columns={columns}
+      sortConfig={sortConfig}
+      onSort={onSort}
       emptyMessage="No transactions found"
       emptyDescription="Start adding transactions to see them here"
       rowClassName={(_row, index) =>

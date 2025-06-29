@@ -1,15 +1,13 @@
 import dayjs from 'dayjs';
-import { Plus, Activity } from 'lucide-react';
 import { useState, useMemo, type FC } from 'react';
 
-import { PageLayout, Tile, Button, Pagination } from '../../../components';
-import { DatePickerInline } from '../../../components/date-picker';
+import { PageLayout } from '../../../components';
 import { DRAWER_IDS, DRAWER_METADATA_KEYS } from '../../../constants/drawer-id';
 import { useApiAccountsQuery, useApiCategoriesQuery, useApiTransactionsQuery } from '../../../hooks';
 import { useDrawerRouterProvider } from '../../../providers/drawer-router';
-import { TransactionFilterInline } from '../components/transaction-filter-inline';
-import { TransactionPeriodInsightsWidget } from '../components/transaction-period-insights-widget';
-import { TransactionTable } from '../components/transaction-table';
+import { DesktopTransactionOverviewWidget } from '../components/desktop-transaction-overview-widget';
+import { DesktopTransactionSidebar } from '../components/desktop-transaction-sidebar';
+import { DesktopTransactionTableSection } from '../components/desktop-transaction-table-section';
 import { useTransactionFilters } from '../hooks';
 import {
   createAccountsMap,
@@ -21,6 +19,8 @@ import type { SeamlessTransaction } from '../hooks/use-seamless-transactions/typ
 export const DesktopTransactionPage: FC = () => {
   const [date, setDate] = useState(dayjs());
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<keyof SeamlessTransaction>('transaction');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const pageSize = 10;
   const { accountIds, categoryIds, types } = useTransactionFilters();
   const { openDrawer } = useDrawerRouterProvider();
@@ -55,6 +55,54 @@ export const DesktopTransactionPage: FC = () => {
     [transactions, accountsMap, categoriesMap]
   );
 
+  // sort seamless transactions
+  const sortedTransactions = useMemo(() => {
+    return [...seamlessTransactions].sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      switch (sortField) {
+        case 'transaction':
+          // For amount sorting
+          aValue = a.transaction.amount ?? 0;
+          bValue = b.transaction.amount ?? 0;
+          break;
+        case 'category':
+          // For category name sorting
+          aValue = a.category?.name?.toLowerCase() ?? 'zzz';
+          bValue = b.category?.name?.toLowerCase() ?? 'zzz';
+          break;
+        case 'account':
+          // For account name sorting
+          aValue = a.account?.name?.toLowerCase() ?? 'zzz';
+          bValue = b.account?.name?.toLowerCase() ?? 'zzz';
+          break;
+        default:
+          // For time/date sorting
+          aValue = a.transaction.date ? new Date(a.transaction.date).getTime() : 0;
+          bValue = b.transaction.date ? new Date(b.transaction.date).getTime() : 0;
+          break;
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      }
+
+      return sortDirection === 'asc'
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number);
+    });
+  }, [seamlessTransactions, sortField, sortDirection]);
+
+  const handleSort = (field: keyof SeamlessTransaction) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
   const handleOnAddTransaction = async () => {
     await openDrawer(DRAWER_IDS.CREATE_TRANSACTION, {
       [DRAWER_METADATA_KEYS.DATE]: date.toISOString(),
@@ -67,90 +115,49 @@ export const DesktopTransactionPage: FC = () => {
     });
   };
 
+  const handleDateChange = (newDate: dayjs.Dayjs) => {
+    setDate(newDate);
+    setCurrentPage(1); // reset to first page when date changes
+  };
+
   return (
     <PageLayout background="cream" title="Transaction" showBackButton>
       <div className="flex flex-col gap-6">
         {/* main content grid */}
         <div className="grid grid-cols-12 gap-6">
           {/* left sidebar with date picker and filters */}
-          <div className="col-span-3 space-y-4 sticky top-6 self-start max-h-[calc(100vh-10rem)]">
-            <Tile>
-              <Button
-                size="sm"
-                variant="coral"
-                onClick={handleOnAddTransaction}
-                className="w-full justify-center text-sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Transaction
-              </Button>
-            </Tile>
-
-            {/* date picker */}
-            <Tile className="p-4">
-              <DatePickerInline
-                autoSubmitOnSelect
-                onChange={(value) => {
-                  setDate(dayjs(value));
-                  setCurrentPage(1); // reset to first page when date changes
-                }}
-                value={date.toDate()}
-              />
-            </Tile>
-
-            <Tile className="p-4">
-              <h3 className="font-semibold text-slate-900 mb-3">Filters</h3>
-              <TransactionFilterInline />
-            </Tile>
-          </div>
+          <DesktopTransactionSidebar
+            date={date}
+            onDateChange={handleDateChange}
+            onAddTransaction={handleOnAddTransaction}
+          />
 
           {/* main content area */}
           <div className="col-span-9 space-y-6">
-            {/* daily comparison insights - just the cards */}
-            <TransactionPeriodInsightsWidget
+            {/* daily transaction insights */}
+            <DesktopTransactionOverviewWidget
               startDate={date.startOf('day').toISOString()}
               endDate={date.endOf('day').toISOString()}
-              customHeader={{
-                title: 'Daily Financial Summary',
-                subtitle: date.format('MMMM D, YYYY'),
-                description: 'How your finances look compared to yesterday',
-              }}
             />
 
             {/* transactions table */}
-            <Tile className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">
-                  Daily Transactions ({pagedTransactions?.totalItems ?? 0})
-                </h3>
-              </div>
-
-              {seamlessTransactions.length === 0 ? (
-                <div className="text-center py-12">
-                  <Activity className="h-12 w-12 text-mist-300 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-slate-600 mb-2">No transactions found</h4>
-                  <p className="text-slate-500 mb-4">{date.format('MMMM D, YYYY')} has no transactions yet.</p>
-                  <Button variant="coral" onClick={handleOnAddTransaction}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add First Transaction
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <TransactionTable
-                    transactions={seamlessTransactions}
-                    onTransactionClick={handleOpenEditTransaction}
-                  />
-
-                  {/* pagination */}
-                  {totalPages > 1 && (
-                    <div className="flex justify-center mt-6">
-                      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                    </div>
-                  )}
-                </>
-              )}
-            </Tile>
+            <DesktopTransactionTableSection
+              date={date}
+              transactions={sortedTransactions}
+              accountIds={accountIds}
+              categoryIds={categoryIds}
+              types={types}
+              accounts={accounts}
+              categories={categories}
+              sortConfig={{ field: sortField, direction: sortDirection }}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onTransactionClick={handleOpenEditTransaction}
+              onTransactionEdit={handleOpenEditTransaction}
+              onSort={handleSort}
+              onPageChange={setCurrentPage}
+              onAddTransaction={handleOnAddTransaction}
+            />
           </div>
         </div>
       </div>
