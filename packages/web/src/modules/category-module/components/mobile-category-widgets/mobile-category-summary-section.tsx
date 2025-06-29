@@ -171,11 +171,7 @@ export const MobileCategorySummarySection: FC<MobileCategorySummarySectionProps>
                 <div
                   key={category.id}
                   onClick={() => onCategoryCardClick(category)}
-                  className={`p-4 rounded-lg border transition-all duration-200 cursor-pointer ${
-                    hasActivity
-                      ? 'bg-white border-mist-200 hover:border-sage-300 hover:shadow-md'
-                      : 'bg-mist-25 border-mist-100 hover:border-mist-200 hover:shadow-sm'
-                  }`}
+                  className={`p-4 rounded-lg border transition-all duration-200 cursor-pointer bg-white border-mist-200 hover:border-sage-300`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -205,39 +201,27 @@ export const MobileCategorySummarySection: FC<MobileCategorySummarySectionProps>
                         <div className="text-right">
                           <p className="text-xs text-slate-500">Total</p>
                           <p className="text-sm font-semibold text-slate-700">
-                            {formatAmount(totalAmount, { compact: true, type: totalAmount > 0 ? 'income' : 'expense' })}
+                            {formatAmount(totalAmount, { compact: true, hidePrefix: totalAmount > 0 })}
                           </p>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Enhanced Current Period Activity Details */}
-                  {hasActivity && (
-                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-mist-100">
-                      <div className="text-center p-2 rounded bg-sage-50 border border-sage-100">
-                        <p className="text-xs text-sage-600 font-medium">Income</p>
-                        <p className="text-sm font-bold text-sage-700">
-                          {formatAmount(category.currentPeriodIncome, { compact: true, hidePrefix: true })}
-                        </p>
-                      </div>
-                      <div className="text-center p-2 rounded bg-coral-50 border border-coral-100">
-                        <p className="text-xs text-coral-600 font-medium">Expenses</p>
-                        <p className="text-sm font-bold text-coral-700">
-                          {formatAmount(category.currentPeriodExpenses, { compact: true, hidePrefix: true })}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Smart empty state for inactive categories */}
-                  {!hasActivity && (
-                    <div className="pt-2 border-t border-mist-100">
-                      <p className="text-xs text-slate-400 text-center">
-                        No transactions {selectedPeriod === 'today' ? 'today' : `this ${selectedPeriod}`}
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-mist-100">
+                    <div className="text-center p-2 rounded bg-sage-50 border border-sage-100">
+                      <p className="text-xs text-sage-600 font-medium">Income</p>
+                      <p className="text-sm font-bold text-sage-700">
+                        {formatAmount(category.currentPeriodIncome, { compact: true, hidePrefix: true })}
                       </p>
                     </div>
-                  )}
+                    <div className="text-center p-2 rounded bg-coral-50 border border-coral-100">
+                      <p className="text-xs text-coral-600 font-medium">Expenses</p>
+                      <p className="text-sm font-bold text-coral-700">
+                        {formatAmount(category.currentPeriodExpenses, { compact: true, hidePrefix: true })}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               );
             })}

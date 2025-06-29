@@ -159,6 +159,7 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
           <div className="space-y-3">
             {sortedAccounts.map((account) => {
               const activityStatus = getActivityStatus(account.currentPeriodTransactions);
+              const hasActivity = account.currentPeriodTransactions > 0;
               const hasBalance = account.amount !== undefined && account.amount !== null;
               const balanceIsPositive = (account.amount ?? 0) >= 0;
 
@@ -166,7 +167,7 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                 <div
                   key={account.id}
                   onClick={() => onAccountCardClick(account)}
-                  className="p-4 bg-white rounded-lg border border-mist-100 hover:border-mist-200 transition-colors cursor-pointer hover:shadow-sm"
+                  className={`p-4 rounded-lg border transition-all duration-200 cursor-pointer bg-white border-mist-200 hover:border-sage-300`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -180,8 +181,8 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                         <h4 className="text-sm font-medium text-slate-900 truncate">{account.name}</h4>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`text-xs font-medium ${activityStatus.color}`}>{activityStatus.text}</span>
-                          {account.currentPeriodTransactions > 0 && <span className="text-xs text-slate-400">•</span>}
-                          {account.currentPeriodTransactions > 0 && (
+                          {hasActivity && <span className="text-xs text-slate-400">•</span>}
+                          {hasActivity && (
                             <span className="text-xs text-slate-500">
                               {account.currentPeriodTransactions} transaction
                               {account.currentPeriodTransactions !== 1 ? 's' : ''}
@@ -191,36 +192,35 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                       </div>
                     </div>
 
-                    {/* Account Balance - Primary Metric */}
-                    {hasBalance && (
-                      <div className="text-right flex-shrink-0">
-                        <div
-                          className={`text-sm font-semibold ${balanceIsPositive ? 'text-slate-900' : 'text-coral-600'}`}
-                        >
-                          {formatAmount(account.amount ?? 0, { compact: true, hidePrefix: true })}
+                    {/* Smart visual indicator for account balance */}
+                    <div className="flex-shrink-0 ml-2">
+                      {hasBalance && (
+                        <div className="text-right">
+                          <p className="text-xs text-slate-500">Balance</p>
+                          <p className={`text-sm font-semibold`}>
+                            {formatAmount(account.amount ?? 0, { compact: true, hidePrefix: balanceIsPositive })}
+                          </p>
                         </div>
-                        <div className="text-xs text-slate-500">Balance</div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
 
-                  {/* Current Period Activity Details */}
-                  {account.currentPeriodTransactions > 0 && (
-                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-mist-100">
-                      <div className="text-center">
-                        <p className="text-xs text-slate-500">{periodLabel} Income</p>
-                        <p className="text-sm font-semibold text-sage-600">
-                          {formatAmount(account.currentPeriodIncome, { compact: true, hidePrefix: true })}
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-slate-500">{periodLabel} Expenses</p>
-                        <p className="text-sm font-semibold text-coral-600">
-                          {formatAmount(account.currentPeriodExpenses, { compact: true, hidePrefix: true })}
-                        </p>
-                      </div>
+                  {/* Enhanced Current Period Activity Details */}
+
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-mist-100">
+                    <div className="text-center p-2 rounded bg-sage-50 border border-sage-100">
+                      <p className="text-xs text-sage-600 font-medium">Income</p>
+                      <p className="text-sm font-bold text-sage-700">
+                        {formatAmount(account.currentPeriodIncome, { compact: true, hidePrefix: true })}
+                      </p>
                     </div>
-                  )}
+                    <div className="text-center p-2 rounded bg-coral-50 border border-coral-100">
+                      <p className="text-xs text-coral-600 font-medium">Expenses</p>
+                      <p className="text-sm font-bold text-coral-700">
+                        {formatAmount(account.currentPeriodExpenses, { compact: true, hidePrefix: true })}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               );
             })}

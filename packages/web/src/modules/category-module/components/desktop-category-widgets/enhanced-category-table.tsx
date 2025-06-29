@@ -139,7 +139,7 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
   const columns: ColumnDefinition<CategoryWithMetrics>[] = [
     {
       key: 'name',
-      label: 'Category Name',
+      label: 'Name',
       sortable: true,
       align: 'left',
       gridColumn: 'span 4', // Larger span for category name
@@ -228,7 +228,7 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
   return (
     <Tile className="p-4 md:p-6">
       <div className="space-y-1 mb-4 md:mb-6">
-        <h3 className="text-lg md:text-xl font-semibold text-slate-900">Analytics - {currentMonth}</h3>
+        <h3 className="text-lg md:text-xl font-semibold text-slate-900">Activities in {currentMonth}</h3>
         <p className="text-sm text-slate-500">
           Detailed view of all categories with spending metrics ({sortedCategories.length} shown)
         </p>

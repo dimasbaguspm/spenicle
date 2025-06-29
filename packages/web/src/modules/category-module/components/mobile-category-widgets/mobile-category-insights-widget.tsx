@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { TrendingUp, TrendingDown, Folder, Activity } from 'lucide-react';
 import { useMemo, type FC } from 'react';
 
 import { Tile, Tab } from '../../../../components';
@@ -10,6 +11,8 @@ interface CategoryInsight {
   label: string;
   value: string;
   trend?: 'positive' | 'negative' | 'neutral';
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor: string;
 }
 
 export type PeriodType = 'today' | 'week' | 'month';
@@ -32,26 +35,23 @@ export const MobileCategoryInsightsWidget: FC<MobileCategoryInsightsWidgetProps>
   const now = dayjs();
 
   // calculate date ranges for different periods
-  const { startDate, endDate, periodLabel } = useMemo(() => {
+  const { startDate, endDate } = useMemo(() => {
     switch (selectedPeriod) {
       case 'today':
         return {
           startDate: now.startOf('day').toISOString(),
           endDate: now.endOf('day').toISOString(),
-          periodLabel: 'Today',
         };
       case 'week':
         return {
           startDate: now.startOf('week').toISOString(),
           endDate: now.endOf('week').toISOString(),
-          periodLabel: 'This Week',
         };
       case 'month':
       default:
         return {
           startDate: now.startOf('month').toISOString(),
           endDate: now.endOf('month').toISOString(),
-          periodLabel: now.format('MMMM YYYY'),
         };
     }
   }, [selectedPeriod, now]);
@@ -72,37 +72,48 @@ export const MobileCategoryInsightsWidget: FC<MobileCategoryInsightsWidgetProps>
       (sum: number, summary) => sum + (summary.totalExpenses ?? 0),
       0
     );
-    const activeCategories = (summaryData ?? []).filter((summary) => (summary.totalTransactions ?? 0) > 0).length;
+    const currentPeriodTransactions = (summaryData ?? []).reduce(
+      (sum: number, summary) => sum + (summary.totalTransactions ?? 0),
+      0
+    );
 
     return [
       {
         label: 'Total Categories',
         value: categories.length.toString(),
         trend: categories.length > 0 ? 'neutral' : 'negative',
+        icon: Folder,
+        iconColor: categories.length > 0 ? 'text-mist-600' : 'text-slate-400',
       },
       {
-        label: `Active ${selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'week' ? 'This Week' : 'This Month'}`,
-        value: activeCategories.toString(),
-        trend: activeCategories > 0 ? 'positive' : 'neutral',
+        label: `Transactions`,
+        value: currentPeriodTransactions.toString(),
+        trend: currentPeriodTransactions > 0 ? 'neutral' : 'neutral',
+        icon: Activity,
+        iconColor: currentPeriodTransactions > 0 ? 'text-mist-600' : 'text-slate-400',
       },
       {
-        label: `${periodLabel} Income`,
+        label: `Income`,
         value: formatAmount(currentPeriodIncome, {
           compact: true,
           hidePrefix: true,
         }),
         trend: currentPeriodIncome > 0 ? 'positive' : 'neutral',
+        icon: TrendingUp,
+        iconColor: 'text-sage-600',
       },
       {
-        label: `${periodLabel} Expenses`,
+        label: `Expenses`,
         value: formatAmount(currentPeriodExpenses, {
           compact: true,
           hidePrefix: true,
         }),
         trend: currentPeriodExpenses > 0 ? 'negative' : 'neutral',
+        icon: TrendingDown,
+        iconColor: 'text-coral-600',
       },
     ];
-  }, [categories, summaryData, selectedPeriod, periodLabel]);
+  }, [categories, summaryData]);
 
   // show skeleton loader while data is loading
   if (state.isLoading && !summaryData) {
@@ -172,6 +183,7 @@ export const MobileCategoryInsightsWidget: FC<MobileCategoryInsightsWidgetProps>
                     <p className={`text-lg font-bold tabular-nums leading-tight ${getValueColor(insight.trend)}`}>
                       {insight.value}
                     </p>
+                    <insight.icon className={`h-4 w-4 ${insight.iconColor}`} />
                   </div>
                   <p className="text-xs text-slate-500 font-medium leading-relaxed">{insight.label}</p>
                 </div>

@@ -41,7 +41,7 @@ export const DesktopAccountDashboardPage: FC = () => {
           {/* main content area */}
           <div className="col-span-9 space-y-6">
             {/* account overview - straightforward financial information */}
-            <DesktopAccountOverviewWidget />
+            <DesktopAccountOverviewWidget accounts={accounts} />
 
             {/* enhanced account table */}
             <EnhancedAccountTable accounts={accounts} searchQuery={searchQuery} onSearchChange={handleSearchChange} />

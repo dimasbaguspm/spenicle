@@ -1,10 +1,11 @@
 import dayjs from 'dayjs';
-import { TrendingUp, TrendingDown, Wallet, Layers } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import { useMemo, useState, type FC } from 'react';
 
 import { Tile, Badge, Tab } from '../../../../components';
-import { useApiAccountsQuery, useApiSummaryAccountsQuery } from '../../../../hooks';
+import { useApiSummaryAccountsQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
+import type { Account } from '../../../../types/api';
 
 export type PeriodType = 'today' | 'week' | 'month';
 
@@ -18,16 +19,17 @@ interface DesktopAccountInsight {
   iconColor: string;
 }
 
+interface Props {
+  accounts: Account[];
+}
 /**
  * DesktopAccountOverviewWidget displays essential financial metrics in a desktop-optimized layout.
  * Shows comprehensive account analytics with period selection and financial summaries.
  * Designed for desktop users who need detailed financial insights at a glance.
  */
-export const DesktopAccountOverviewWidget: FC = () => {
+export const DesktopAccountOverviewWidget: FC<Props> = ({ accounts }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('today');
   const now = dayjs();
-
-  const [accountsData] = useApiAccountsQuery();
 
   // calculate date ranges for different periods
   const { startDate, endDate } = useMemo(() => {
@@ -36,20 +38,17 @@ export const DesktopAccountOverviewWidget: FC = () => {
         return {
           startDate: now.startOf('day').toISOString(),
           endDate: now.endOf('day').toISOString(),
-          periodLabel: 'Today',
         };
       case 'week':
         return {
           startDate: now.startOf('week').toISOString(),
           endDate: now.endOf('week').toISOString(),
-          periodLabel: 'This Week',
         };
       case 'month':
       default:
         return {
           startDate: now.startOf('month').toISOString(),
           endDate: now.endOf('month').toISOString(),
-          periodLabel: now.format('MMMM YYYY'),
         };
     }
   }, [selectedPeriod, now]);
@@ -59,8 +58,6 @@ export const DesktopAccountOverviewWidget: FC = () => {
     endDate,
   });
 
-  const accounts = accountsData?.items ?? [];
-
   // calculate comprehensive financial insights
   const insights = useMemo((): DesktopAccountInsight[] => {
     // calculate total balance across all accounts
@@ -69,14 +66,12 @@ export const DesktopAccountOverviewWidget: FC = () => {
     // current period financial totals
     const currentPeriodIncome = (summaryData ?? []).reduce((sum, summary) => sum + (summary.totalIncome ?? 0), 0);
     const currentPeriodExpenses = (summaryData ?? []).reduce((sum, summary) => sum + (summary.totalExpenses ?? 0), 0);
+    const currentPeriodTransactions = (summaryData ?? []).reduce(
+      (sum, summary) => sum + (summary.totalTransactions ?? 0),
+      0
+    );
 
     return [
-      {
-        label: 'Total Accounts (All Time)',
-        value: accounts.length.toString(),
-        icon: Layers,
-        iconColor: 'text-mist-600',
-      },
       {
         label: 'Total Balance (All Time)',
         value: formatAmount(totalBalance, { compact: true, hidePrefix: totalBalance >= 0 }),
@@ -84,19 +79,25 @@ export const DesktopAccountOverviewWidget: FC = () => {
         iconColor: totalBalance >= 0 ? 'text-sage-600' : 'text-coral-600',
       },
       {
-        label: 'Income',
+        label: `Income`,
         value: formatAmount(currentPeriodIncome, { compact: true, hidePrefix: true }),
         icon: TrendingUp,
         iconColor: 'text-sage-600',
       },
       {
-        label: 'Expenses',
+        label: `Expenses`,
         value: formatAmount(currentPeriodExpenses, { compact: true, hidePrefix: true }),
         icon: TrendingDown,
         iconColor: 'text-coral-600',
       },
+      {
+        label: `Transactions`,
+        value: currentPeriodTransactions.toString(),
+        icon: Activity,
+        iconColor: currentPeriodTransactions > 0 ? 'text-mist-600' : 'text-slate-400',
+      },
     ];
-  }, [accounts, summaryData]);
+  }, [summaryData]);
 
   return (
     <Tile className="p-4 md:p-6">
@@ -135,7 +136,7 @@ export const DesktopAccountOverviewWidget: FC = () => {
         </div>
 
         {/* desktop grid layout for insights */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {insights.map((insight, index) => {
             const IconComponent = insight.icon;
 

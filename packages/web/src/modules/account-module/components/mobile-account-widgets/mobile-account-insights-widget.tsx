@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import { useMemo, type FC } from 'react';
 
 import { Tile, Tab } from '../../../../components';
@@ -6,10 +7,12 @@ import { useApiSummaryAccountsQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
 import type { Account } from '../../../../types/api';
 
-interface AccountInsight {
+interface MobileAccountInsight {
   label: string;
   value: string;
   trend?: 'positive' | 'negative' | 'neutral';
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor: string;
 }
 
 export type PeriodType = 'today' | 'week' | 'month';
@@ -32,26 +35,23 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
   const now = dayjs();
 
   // calculate date ranges for different periods
-  const { startDate, endDate, periodLabel } = useMemo(() => {
+  const { startDate, endDate } = useMemo(() => {
     switch (selectedPeriod) {
       case 'today':
         return {
           startDate: now.startOf('day').toISOString(),
           endDate: now.endOf('day').toISOString(),
-          periodLabel: 'Today',
         };
       case 'week':
         return {
           startDate: now.startOf('week').toISOString(),
           endDate: now.endOf('week').toISOString(),
-          periodLabel: 'This Week',
         };
       case 'month':
       default:
         return {
           startDate: now.startOf('month').toISOString(),
           endDate: now.endOf('month').toISOString(),
-          periodLabel: now.format('MMMM YYYY'),
         };
     }
   }, [selectedPeriod, now]);
@@ -62,7 +62,7 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
   });
 
   // calculate essential financial insights
-  const insights = useMemo((): AccountInsight[] => {
+  const insights = useMemo((): MobileAccountInsight[] => {
     // calculate total balance across all accounts
     const totalBalance = accounts.reduce((sum, account) => sum + (account.amount ?? 0), 0);
 
@@ -75,36 +75,48 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
       (sum: number, summary) => sum + (summary.totalExpenses ?? 0),
       0
     );
+    const currentPeriodTransactions = (currentPeriodSummary ?? []).reduce(
+      (sum: number, summary) => sum + (summary.totalTransactions ?? 0),
+      0
+    );
 
     return [
       {
-        label: 'Total Accounts (All Time)',
-        value: accounts.length.toString(),
-        trend: accounts.length > 0 ? 'neutral' : 'negative',
-      },
-      {
         label: 'Total Balance (All Time)',
-        value: formatAmount(totalBalance, { compact: true, hidePrefix: true }),
+        value: formatAmount(totalBalance, { compact: true, hidePrefix: totalBalance >= 0 }),
         trend: totalBalance >= 0 ? 'positive' : 'negative',
+        icon: Wallet,
+        iconColor: totalBalance >= 0 ? 'text-sage-600' : 'text-coral-600',
       },
       {
-        label: `${periodLabel} Income`,
+        label: `Income`,
         value: formatAmount(currentPeriodIncome, {
           compact: true,
           hidePrefix: true,
         }),
         trend: currentPeriodIncome > 0 ? 'positive' : 'neutral',
+        icon: TrendingUp,
+        iconColor: 'text-sage-600',
       },
       {
-        label: `${periodLabel} Expenses`,
+        label: `Expenses`,
         value: formatAmount(currentPeriodExpenses, {
           compact: true,
           hidePrefix: true,
         }),
         trend: currentPeriodExpenses > 0 ? 'negative' : 'neutral',
+        icon: TrendingDown,
+        iconColor: 'text-coral-600',
+      },
+      {
+        label: `Transactions`,
+        value: currentPeriodTransactions.toString(),
+        trend: currentPeriodTransactions > 0 ? 'neutral' : 'neutral',
+        icon: Activity,
+        iconColor: currentPeriodTransactions > 0 ? 'text-mist-600' : 'text-slate-400',
       },
     ];
-  }, [accounts, currentPeriodSummary, periodLabel]);
+  }, [accounts, currentPeriodSummary]);
 
   // show skeleton loader while data is loading
   if (state.isLoading && !currentPeriodSummary) {
@@ -174,6 +186,7 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
                     <p className={`text-lg font-bold tabular-nums leading-tight ${getValueColor(insight.trend)}`}>
                       {insight.value}
                     </p>
+                    <insight.icon className={`h-4 w-4 ${insight.iconColor}`} />
                   </div>
                   <p className="text-xs text-slate-500 font-medium leading-relaxed">{insight.label}</p>
                 </div>

@@ -154,17 +154,10 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
         </div>
       ),
     },
-    {
-      key: 'totalTransactions',
-      label: 'Transactions',
-      sortable: true,
-      align: 'center',
-      gridColumn: 'span 2', // Medium span for transactions
-      render: (value) => <p className="text-sm font-medium text-slate-600 tabular-nums">{value as number}</p>,
-    },
+
     {
       key: 'amount',
-      label: 'Balance',
+      label: 'Balance (All Time)',
       sortable: true,
       align: 'right',
       gridColumn: 'span 3', // Medium span for account balance
@@ -179,6 +172,14 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
           </p>
         );
       },
+    },
+    {
+      key: 'totalTransactions',
+      label: 'Transactions',
+      sortable: true,
+      align: 'center',
+      gridColumn: 'span 2', // Medium span for transactions
+      render: (value) => <p className="text-sm font-medium text-slate-600 tabular-nums">{value as number}</p>,
     },
     {
       key: 'id',
@@ -214,7 +215,7 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
       <Tile className="p-4 md:p-6">
         <div className="space-y-4 md:space-y-6">
           <div className="space-y-1">
-            <h3 className="text-lg md:text-xl font-semibold text-slate-900">Activity - {currentMonth}</h3>
+            <h3 className="text-lg md:text-xl font-semibold text-slate-900">Activities in {currentMonth}</h3>
             <p className="text-sm text-slate-500">
               Account performance and transaction metrics for the current month (showing {sortedAccounts.length} of{' '}
               {accounts.length} accounts)
