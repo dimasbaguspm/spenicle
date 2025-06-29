@@ -8,23 +8,26 @@ import type { Account } from '../../../../types/api';
 import { useAccountsSearch } from '../../hooks';
 import { AccountIcon } from '../account-icon';
 
+import type { PeriodType } from './mobile-account-insights-widget';
+
 interface MobileAccountSummarySectionProps {
   accounts: Account[];
   searchQuery: string;
   onSearchChange: (value: string) => void;
   onAccountCardClick: (account: Account) => void;
+  selectedPeriod: PeriodType;
 }
 
 interface AccountWithMetrics extends Account {
-  currentMonthExpenses: number;
-  currentMonthIncome: number;
-  currentMonthTransactions: number;
+  currentPeriodExpenses: number;
+  currentPeriodIncome: number;
+  currentPeriodTransactions: number;
 }
 
 /**
  * MobileAccountSummarySection displays accounts in a mobile-optimized list format.
  * Includes integrated search functionality and shows account balances prominently.
- * Displays current month income/expenses for activity context with enhanced visual design.
+ * Displays current period income/expenses for activity context with enhanced visual design.
  * Account cards are clickable and trigger the onAccountCardClick callback for editing.
  */
 export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> = ({
@@ -32,13 +35,39 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
   searchQuery,
   onSearchChange,
   onAccountCardClick,
+  selectedPeriod,
 }) => {
   const now = dayjs();
 
-  // fetch current month summary for metrics
+  // calculate date ranges for the selected period
+  const { startDate, endDate, periodLabel } = useMemo(() => {
+    switch (selectedPeriod) {
+      case 'today':
+        return {
+          startDate: now.startOf('day').toISOString(),
+          endDate: now.endOf('day').toISOString(),
+          periodLabel: 'Today',
+        };
+      case 'week':
+        return {
+          startDate: now.startOf('week').toISOString(),
+          endDate: now.endOf('week').toISOString(),
+          periodLabel: 'This Week',
+        };
+      case 'month':
+      default:
+        return {
+          startDate: now.startOf('month').toISOString(),
+          endDate: now.endOf('month').toISOString(),
+          periodLabel: now.format('MMM YYYY'),
+        };
+    }
+  }, [selectedPeriod, now]);
+
+  // fetch current period summary for metrics
   const [summaryData] = useApiSummaryAccountsQuery({
-    startDate: now.startOf('month').toISOString(),
-    endDate: now.endOf('month').toISOString(),
+    startDate,
+    endDate,
   });
 
   // use the custom hook for search functionality
@@ -55,25 +84,25 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
 
     return filteredAccounts.map((account) => {
       const summary = summaryMap.get(account.id);
-      const currentMonthExpenses = summary?.totalExpenses ?? 0;
-      const currentMonthIncome = summary?.totalIncome ?? 0;
-      const currentMonthTransactions = summary?.totalTransactions ?? 0;
+      const currentPeriodExpenses = summary?.totalExpenses ?? 0;
+      const currentPeriodIncome = summary?.totalIncome ?? 0;
+      const currentPeriodTransactions = summary?.totalTransactions ?? 0;
 
       return {
         ...account,
-        currentMonthExpenses,
-        currentMonthIncome,
-        currentMonthTransactions,
+        currentPeriodExpenses,
+        currentPeriodIncome,
+        currentPeriodTransactions,
       };
     });
   }, [filteredAccounts, summaryData]);
 
-  // sort accounts by current month activity for mobile relevance
+  // sort accounts by current period activity for mobile relevance
   const sortedAccounts = useMemo(() => {
     return [...enhancedAccounts].sort((a, b) => {
       // prioritize accounts with recent activity
-      if (a.currentMonthTransactions !== b.currentMonthTransactions) {
-        return b.currentMonthTransactions - a.currentMonthTransactions;
+      if (a.currentPeriodTransactions !== b.currentPeriodTransactions) {
+        return b.currentPeriodTransactions - a.currentPeriodTransactions;
       }
       // then sort alphabetically
       return (a.name ?? '').localeCompare(b.name ?? '');
@@ -101,7 +130,7 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                   : `${accounts.length} total accounts`}
               </p>
             </div>
-            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{now.format('MMM YYYY')}</span>
+            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{periodLabel}</span>
           </div>
 
           {/* search input */}
@@ -129,7 +158,7 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
         ) : (
           <div className="space-y-3">
             {sortedAccounts.map((account) => {
-              const activityStatus = getActivityStatus(account.currentMonthTransactions);
+              const activityStatus = getActivityStatus(account.currentPeriodTransactions);
               const hasBalance = account.amount !== undefined && account.amount !== null;
               const balanceIsPositive = (account.amount ?? 0) >= 0;
 
@@ -151,11 +180,11 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                         <h4 className="text-sm font-medium text-slate-900 truncate">{account.name}</h4>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`text-xs font-medium ${activityStatus.color}`}>{activityStatus.text}</span>
-                          {account.currentMonthTransactions > 0 && <span className="text-xs text-slate-400">•</span>}
-                          {account.currentMonthTransactions > 0 && (
+                          {account.currentPeriodTransactions > 0 && <span className="text-xs text-slate-400">•</span>}
+                          {account.currentPeriodTransactions > 0 && (
                             <span className="text-xs text-slate-500">
-                              {account.currentMonthTransactions} transaction
-                              {account.currentMonthTransactions !== 1 ? 's' : ''}
+                              {account.currentPeriodTransactions} transaction
+                              {account.currentPeriodTransactions !== 1 ? 's' : ''}
                             </span>
                           )}
                         </div>
@@ -175,19 +204,19 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                     )}
                   </div>
 
-                  {/* Current Month Activity Details */}
-                  {account.currentMonthTransactions > 0 && (
+                  {/* Current Period Activity Details */}
+                  {account.currentPeriodTransactions > 0 && (
                     <div className="grid grid-cols-2 gap-3 pt-3 border-t border-mist-100">
                       <div className="text-center">
-                        <p className="text-xs text-slate-500">This Month Income</p>
+                        <p className="text-xs text-slate-500">{periodLabel} Income</p>
                         <p className="text-sm font-semibold text-sage-600">
-                          {formatAmount(account.currentMonthIncome, { compact: true, hidePrefix: true })}
+                          {formatAmount(account.currentPeriodIncome, { compact: true, hidePrefix: true })}
                         </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-slate-500">This Month Expenses</p>
+                        <p className="text-xs text-slate-500">{periodLabel} Expenses</p>
                         <p className="text-sm font-semibold text-coral-600">
-                          {formatAmount(account.currentMonthExpenses, { compact: true, hidePrefix: true })}
+                          {formatAmount(account.currentPeriodExpenses, { compact: true, hidePrefix: true })}
                         </p>
                       </div>
                     </div>

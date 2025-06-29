@@ -1,18 +1,23 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
-import type { FC } from 'react';
+import { useState, type FC } from 'react';
 
 import { Button, PageLayout } from '../../../components';
 import { useApiAccountsQuery } from '../../../hooks';
 import { useDrawerRouterProvider } from '../../../providers/drawer-router';
 import type { Account } from '../../../types/api';
-import { MobileAccountInsightsWidget, MobileAccountSummarySection } from '../components';
+import {
+  MobileAccountInsightsWidget,
+  MobileAccountSummarySection,
+  type PeriodType,
+} from '../components/mobile-account-widgets';
 
 export const MobileAccountDashboardPage: FC = () => {
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
-  const [accountsData] = useApiAccountsQuery();
+  const [accountsData] = useApiAccountsQuery({ pageSize: 1000 });
   const { openDrawer } = useDrawerRouterProvider();
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('today');
 
   const accounts = accountsData?.items ?? [];
 
@@ -58,7 +63,11 @@ export const MobileAccountDashboardPage: FC = () => {
     >
       <div className="space-y-4">
         {/* financial insights widget - key metrics at a glance */}
-        <MobileAccountInsightsWidget />
+        <MobileAccountInsightsWidget
+          accounts={accounts}
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={setSelectedPeriod}
+        />
 
         {/* enhanced account summary with integrated search and mobile-optimized layout */}
         <MobileAccountSummarySection
@@ -66,6 +75,7 @@ export const MobileAccountDashboardPage: FC = () => {
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
           onAccountCardClick={handleAccountCardClick}
+          selectedPeriod={selectedPeriod}
         />
       </div>
     </PageLayout>
