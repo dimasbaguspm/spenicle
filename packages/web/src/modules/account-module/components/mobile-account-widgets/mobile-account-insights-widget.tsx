@@ -78,12 +78,12 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
 
     return [
       {
-        label: 'Total Accounts',
+        label: 'Total Accounts (All Time)',
         value: accounts.length.toString(),
         trend: accounts.length > 0 ? 'neutral' : 'negative',
       },
       {
-        label: 'Total Balance',
+        label: 'Total Balance (All Time)',
         value: formatAmount(totalBalance, { compact: true, hidePrefix: true }),
         trend: totalBalance >= 0 ? 'positive' : 'negative',
       },

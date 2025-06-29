@@ -1,10 +1,12 @@
 import dayjs from 'dayjs';
-import { DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
-import { useMemo, type FC } from 'react';
+import { TrendingUp, TrendingDown, Wallet, Layers } from 'lucide-react';
+import { useMemo, useState, type FC } from 'react';
 
-import { Tile, Badge } from '../../../../components';
+import { Tile, Badge, Tab } from '../../../../components';
 import { useApiAccountsQuery, useApiSummaryAccountsQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
+
+export type PeriodType = 'today' | 'week' | 'month';
 
 interface DesktopAccountInsight {
   label: string;
@@ -18,76 +20,125 @@ interface DesktopAccountInsight {
 
 /**
  * DesktopAccountOverviewWidget displays essential financial metrics in a desktop-optimized layout.
- * Shows straightforward information: total accounts, combined balance, and current month income/expenses.
- * Designed for desktop users who need quick financial overview at a glance.
+ * Shows comprehensive account analytics with period selection and financial summaries.
+ * Designed for desktop users who need detailed financial insights at a glance.
  */
 export const DesktopAccountOverviewWidget: FC = () => {
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('today');
   const now = dayjs();
-  const currentMonth = now.startOf('month');
 
   const [accountsData] = useApiAccountsQuery();
-  const [currentMonthSummary] = useApiSummaryAccountsQuery({
-    startDate: currentMonth.toISOString(),
-    endDate: currentMonth.endOf('month').toISOString(),
+
+  // calculate date ranges for different periods
+  const { startDate, endDate } = useMemo(() => {
+    switch (selectedPeriod) {
+      case 'today':
+        return {
+          startDate: now.startOf('day').toISOString(),
+          endDate: now.endOf('day').toISOString(),
+          periodLabel: 'Today',
+        };
+      case 'week':
+        return {
+          startDate: now.startOf('week').toISOString(),
+          endDate: now.endOf('week').toISOString(),
+          periodLabel: 'This Week',
+        };
+      case 'month':
+      default:
+        return {
+          startDate: now.startOf('month').toISOString(),
+          endDate: now.endOf('month').toISOString(),
+          periodLabel: now.format('MMMM YYYY'),
+        };
+    }
+  }, [selectedPeriod, now]);
+
+  const [summaryData] = useApiSummaryAccountsQuery({
+    startDate,
+    endDate,
   });
 
   const accounts = accountsData?.items ?? [];
 
-  // calculate essential financial insights with trends
+  // calculate comprehensive financial insights
   const insights = useMemo((): DesktopAccountInsight[] => {
     // calculate total balance across all accounts
     const totalBalance = accounts.reduce((sum, account) => sum + (account.amount ?? 0), 0);
 
-    // current month financial totals
-    const currentMonthIncome = (currentMonthSummary ?? []).reduce(
-      (sum, summary) => sum + (summary.totalIncome ?? 0),
-      0
-    );
-    const currentMonthExpenses = (currentMonthSummary ?? []).reduce(
-      (sum, summary) => sum + (summary.totalExpenses ?? 0),
-      0
-    );
+    // current period financial totals
+    const currentPeriodIncome = (summaryData ?? []).reduce((sum, summary) => sum + (summary.totalIncome ?? 0), 0);
+    const currentPeriodExpenses = (summaryData ?? []).reduce((sum, summary) => sum + (summary.totalExpenses ?? 0), 0);
 
     return [
       {
-        label: 'Total Accounts',
+        label: 'Total Accounts (All Time)',
         value: accounts.length.toString(),
-        icon: DollarSign,
+        icon: Layers,
         iconColor: 'text-mist-600',
       },
       {
-        label: 'Total Balance',
-        value: formatAmount(totalBalance, { compact: true, hidePrefix: true }),
+        label: 'Total Balance (All Time)',
+        value: formatAmount(totalBalance, { compact: true, hidePrefix: totalBalance >= 0 }),
         icon: Wallet,
         iconColor: totalBalance >= 0 ? 'text-sage-600' : 'text-coral-600',
       },
       {
-        label: 'This Month Income',
-        value: formatAmount(currentMonthIncome, { compact: true, hidePrefix: true }),
+        label: 'Income',
+        value: formatAmount(currentPeriodIncome, { compact: true, hidePrefix: true }),
         icon: TrendingUp,
         iconColor: 'text-sage-600',
       },
       {
-        label: 'This Month Expenses',
-        value: formatAmount(currentMonthExpenses, { compact: true, hidePrefix: true }),
+        label: 'Expenses',
+        value: formatAmount(currentPeriodExpenses, { compact: true, hidePrefix: true }),
         icon: TrendingDown,
         iconColor: 'text-coral-600',
       },
     ];
-  }, [accounts, currentMonthSummary]);
+  }, [accounts, summaryData]);
 
   return (
     <Tile className="p-4 md:p-6">
-      <div className="space-y-4 md:space-y-6">
-        <div className="space-y-1">
-          <h3 className="text-lg md:text-xl font-semibold text-slate-900">Overview</h3>
-          <p className="text-sm text-slate-500">Key financial metrics for {now.format('MMMM YYYY')}</p>
+      <div className="space-y-6">
+        {/* header with period selection */}
+        <div className="flex flex-row justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="text-lg md:text-xl font-semibold text-slate-900">Overview</h3>
+            <p className="text-sm text-slate-500">Comprehensive account analytics and financial summary</p>
+          </div>
+
+          <div>
+            <Tab value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as PeriodType)} type="tabs">
+              <Tab.List className="grid grid-cols-3 gap-1 p-1 bg-mist-100 rounded-lg w-fit">
+                <Tab.Trigger
+                  value="today"
+                  className="text-center text-sm font-medium px-4 py-2 rounded-md transition-all whitespace-nowrap"
+                >
+                  Today
+                </Tab.Trigger>
+                <Tab.Trigger
+                  value="week"
+                  className="text-center text-sm font-medium px-4 py-2 rounded-md transition-all whitespace-nowrap"
+                >
+                  This Week
+                </Tab.Trigger>
+                <Tab.Trigger
+                  value="month"
+                  className="text-center text-sm font-medium px-4 py-2 rounded-md transition-all whitespace-nowrap"
+                >
+                  This Month
+                </Tab.Trigger>
+              </Tab.List>
+            </Tab>
+          </div>
         </div>
 
-        {/* desktop-optimized grid: 5 columns on large screens, 3 on medium, 2 on small */}
-        <div className="grid grid-cols-4  gap-4">
+        {/* desktop grid layout for insights */}
+        <div className="grid grid-cols-4 gap-4">
           {insights.map((insight, index) => {
             const IconComponent = insight.icon;
+
             return (
               <div key={index} className="space-y-3 p-4 rounded-lg border border-mist-100 bg-white">
                 <div className="flex items-center justify-between">
