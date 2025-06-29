@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-26T14:26:33.101Z
+ * Generated on: 2025-06-29T00:43:47.265Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -353,6 +353,11 @@ export interface Account {
    * @example "checking"
    */
   type?: string;
+  /**
+   * Account balance/amount in smallest currency unit (e.g., cents)
+   * @example 150000
+   */
+  amount?: number;
   /** Optional account notes */
   note?: string | null;
   /**
@@ -388,6 +393,12 @@ export interface NewAccount {
    * @example "checking"
    */
   type: string;
+  /**
+   * Initial account balance/amount in smallest currency unit (e.g., cents)
+   * @default 0
+   * @example 0
+   */
+  amount?: number;
   /** Optional account notes */
   note?: string | null;
   /**
@@ -409,6 +420,11 @@ export interface UpdateAccount {
    * @example "checking"
    */
   type?: string;
+  /**
+   * Account balance/amount in smallest currency unit (e.g., cents)
+   * @example 150000
+   */
+  amount?: number;
   /** Optional account notes */
   note?: string | null;
   /**

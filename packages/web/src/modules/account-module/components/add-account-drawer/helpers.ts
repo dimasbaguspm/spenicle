@@ -5,6 +5,7 @@ import type { AddAccountFormData } from './types';
 export const DEFAULT_FORM_VALUES: Partial<AddAccountFormData> = {
   name: '',
   type: 'checking',
+  amount: 0,
   note: null,
   enableLimit: false,
   limitPeriod: 'monthly',
@@ -31,6 +32,18 @@ export const VALIDATION_RULES = {
     maxLength: {
       value: 50,
       message: 'Account type must be less than 50 characters',
+    },
+  },
+  amount: {
+    min: {
+      value: 0,
+      message: 'Initial balance cannot be negative',
+    },
+    validate: (value: number | undefined) => {
+      if (value && !Number.isInteger(value)) {
+        return 'Initial balance must be a whole number (in cents)';
+      }
+      return true;
     },
   },
   note: {
@@ -96,6 +109,7 @@ export const transformToAccountData = (data: AddAccountFormData): NewAccount => 
   groupId: data.groupId, // Will be validated before calling this function
   name: data.name,
   type: data.type,
+  amount: data.amount,
   note: data.note,
   metadata: data.metadata,
 });

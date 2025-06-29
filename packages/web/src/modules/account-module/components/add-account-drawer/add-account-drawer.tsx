@@ -39,6 +39,25 @@ export const AddAccountDrawer: FC<AddAccountDrawerProps> = ({ onSuccess, onError
           <AccountTypeSelector control={control} errors={errors} />
 
           <Controller
+            control={control}
+            name="amount"
+            rules={validationRules.amount}
+            render={({ field }) => (
+              <TextInput
+                {...field}
+                value={field.value?.toString() ?? ''}
+                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                label="Initial Balance"
+                type="number"
+                step="1"
+                min="0"
+                placeholder="0"
+                helperText="Enter the starting balance in cents (e.g., 500)"
+                errorText={errors.amount?.message}
+              />
+            )}
+          />
+          <Controller
             name="note"
             control={control}
             rules={validationRules.note}

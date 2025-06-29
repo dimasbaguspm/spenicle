@@ -19,13 +19,12 @@ interface EnhancedAccountTableProps {
   onSearchChange: (query: string) => void;
 }
 
-type SortField = 'name' | 'transactions' | 'netFlow';
+type SortField = 'name' | 'transactions' | 'amount';
 
 interface AccountWithMetrics extends Account {
   totalExpenses: number;
   totalIncome: number;
   totalTransactions: number;
-  netFlow: number;
 }
 
 /**
@@ -45,8 +44,8 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
 
   // fetch current month summary for metrics
   const [summaryData] = useApiSummaryAccountsQuery({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
-    endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).toISOString(),
+    startDate: dayjs().startOf('month').toISOString(),
+    endDate: dayjs().endOf('month').toISOString(),
   });
 
   // use the custom hook for search functionality
@@ -72,7 +71,6 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
         totalExpenses: expenses,
         totalIncome: income,
         totalTransactions: transactions,
-        netFlow: income - expenses,
       };
     });
   }, [filteredAccounts, summaryData]);
@@ -92,9 +90,9 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
           aValue = a.totalTransactions;
           bValue = b.totalTransactions;
           break;
-        case 'netFlow':
-          aValue = a.netFlow;
-          bValue = b.netFlow;
+        case 'amount':
+          aValue = a.amount ?? 0;
+          bValue = b.amount ?? 0;
           break;
         default:
           return 0;
@@ -115,10 +113,10 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
     let sortableField: SortField;
     if (field === 'totalTransactions') {
       sortableField = 'transactions';
-    } else if (field === 'netFlow') {
-      sortableField = 'netFlow';
     } else if (field === 'name') {
       sortableField = 'name';
+    } else if (field === 'amount') {
+      sortableField = 'amount';
     } else {
       return;
     }
@@ -189,16 +187,18 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
       render: (value) => <p className="text-sm font-medium text-slate-600 tabular-nums">{value as number}</p>,
     },
     {
-      key: 'netFlow',
-      label: 'Net Amount',
+      key: 'amount',
+      label: 'Balance',
       sortable: true,
       align: 'right',
-      gridColumn: 'span 3', // Medium span for net amount
+      gridColumn: 'span 3', // Medium span for account balance
       render: (value) => {
-        const netValue = value as number;
-        const displayValue = Math.abs(netValue); // show positive values without minus sign
+        const accountAmount = value as number;
+        const displayValue = Math.abs(accountAmount);
         return (
-          <p className={`text-sm font-semibold tabular-nums ${netValue >= 0 ? 'text-sage-600' : 'text-coral-600'}`}>
+          <p
+            className={`text-sm font-semibold tabular-nums ${accountAmount >= 0 ? 'text-sage-600' : 'text-coral-600'}`}
+          >
             {formatAmount(displayValue, { compact: true, hidePrefix: true })}
           </p>
         );
