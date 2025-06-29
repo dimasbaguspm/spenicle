@@ -20,7 +20,7 @@ export const DesktopDashboardPage: FC = () => {
         }}
         todayTransactions={{
           onClick: async () => {
-            await navigate({ to: '/transactions' });
+            await navigate({ to: '/' });
           },
         }}
       />

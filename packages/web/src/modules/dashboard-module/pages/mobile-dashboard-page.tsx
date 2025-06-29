@@ -17,7 +17,7 @@ export const MobileDashboardPage: FC = () => {
       iconColor: 'text-sage-600',
       iconBgColor: 'bg-sage-100',
       onClick: async () => {
-        await navigate({ to: '/transactions' });
+        await navigate({ to: '/' });
       },
     },
     {
@@ -69,7 +69,7 @@ export const MobileDashboardPage: FC = () => {
           }}
           todayTransactions={{
             onClick: async () => {
-              await navigate({ to: '/transactions' });
+              await navigate({ to: '/' });
             },
           }}
         />

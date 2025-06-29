@@ -1,21 +1,15 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 
 import { useViewport } from '../../../hooks';
-import { DesktopDashboardPage, MobileDashboardPage } from '../../../modules/dashboard-module';
+import { DesktopTransactionPage, MobileTransactionPage } from '../../../modules/transaction-module';
 
 export const Route = createFileRoute('/_protected/_experienced-user/')({
-  component: HomeComponent,
-  beforeLoad: () => {
-    throw redirect({
-      to: '/transactions',
-      replace: true,
-    });
-  },
+  component: TransactionsComponent,
 });
 
-function HomeComponent() {
+function TransactionsComponent() {
   const { isDesktop } = useViewport();
 
-  if (isDesktop) return <DesktopDashboardPage />;
-  return <MobileDashboardPage />;
+  if (isDesktop) return <DesktopTransactionPage />;
+  return <MobileTransactionPage />;
 }

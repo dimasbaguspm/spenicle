@@ -1,5 +1,5 @@
 import { useLocation, useRouter } from '@tanstack/react-router';
-import { Calendar, ChartArea, CreditCard, Tag } from 'lucide-react';
+import { ChartArea, Tags, Wallet2 } from 'lucide-react';
 import type { FC } from 'react';
 
 import { Avatar, Brand, IconButton, TopBar } from '../../../../components';
@@ -24,32 +24,26 @@ export const DesktopTopBar: FC<Props> = (props) => {
       actions={
         <>
           <IconButton
-            variant={pathname.startsWith('/transactions') ? 'coral-outline' : 'mist-outline'}
+            variant={pathname.startsWith('/analytics') ? 'coral-outline' : 'mist-outline'}
             size="sm"
-            onClick={() => navigateTo('/transactions')}
+            onClick={() => navigateTo('/analytics')}
           >
-            <Calendar className="size-4" />
-          </IconButton>
-          <IconButton
-            variant={pathname.startsWith('/categories') ? 'coral-outline' : 'mist-outline'}
-            size="sm"
-            onClick={() => navigateTo('/categories')}
-          >
-            <Tag className="size-4" />
+            <ChartArea className="size-4" />
           </IconButton>
           <IconButton
             variant={pathname.startsWith('/accounts') ? 'coral-outline' : 'mist-outline'}
             size="sm"
             onClick={() => navigateTo('/accounts')}
           >
-            <CreditCard className="size-4" />
+            <Wallet2 className="size-4" />
           </IconButton>
+
           <IconButton
-            variant={pathname.startsWith('/analytics') ? 'coral-outline' : 'mist-outline'}
+            variant={pathname.startsWith('/categories') ? 'coral-outline' : 'mist-outline'}
             size="sm"
-            onClick={() => navigateTo('/analytics')}
+            onClick={() => navigateTo('/categories')}
           >
-            <ChartArea className="size-4" />
+            <Tags className="size-4" />
           </IconButton>
         </>
       }

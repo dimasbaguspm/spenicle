@@ -1,5 +1,5 @@
 import { useLocation, useRouter } from '@tanstack/react-router';
-import { BarChart3, Home, Plus, Receipt, Settings } from 'lucide-react';
+import { ChartArea, Plus, Receipt, Tags, Wallet2 } from 'lucide-react';
 import type { FC } from 'react';
 
 import { BottomBar } from '../../../../components';
@@ -24,16 +24,16 @@ export const MobileBottomBar: FC = () => {
   const navigationItems = [
     {
       href: '/',
-      icon: Home,
-      label: 'Home',
+      icon: Receipt,
+      label: 'Transactions',
       isActive: currentPath === '/',
       isLink: true,
     },
     {
-      href: '/transactions',
-      icon: Receipt,
-      label: 'Transactions',
-      isActive: currentPath.includes('transactions'),
+      href: '/analytics',
+      icon: ChartArea,
+      label: 'Reports',
+      isActive: currentPath.startsWith('/analytics'),
       isLink: true,
     },
     {
@@ -45,17 +45,17 @@ export const MobileBottomBar: FC = () => {
       onClick: handleAddClick,
     },
     {
-      href: '/analytics',
-      icon: BarChart3,
-      label: 'Reports',
-      isActive: currentPath.includes('analytics'),
+      href: '/accounts',
+      icon: Wallet2,
+      label: 'Accounts',
+      isActive: currentPath.startsWith('/accounts'),
       isLink: true,
     },
     {
-      href: '/settings',
-      icon: Settings,
-      label: 'Settings',
-      isActive: currentPath.includes('/settings'),
+      href: '/categories',
+      icon: Tags,
+      label: 'Categories',
+      isActive: currentPath.startsWith('/categories'),
       isLink: true,
     },
   ];
