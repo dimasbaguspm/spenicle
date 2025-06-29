@@ -11,8 +11,8 @@ interface CategoryQuickActionsPanelProps {
 }
 
 /**
- * CategoryQuickActionsPanel provides quick actions and search functionality.
- * Includes category creation, search, and management options.
+ * CategoryQuickActionsPanel provides quick actions, search functionality, and category health indicators.
+ * Enhanced with real-time insights and comprehensive category management options.
  */
 export const CategoryQuickActionsPanel: FC<CategoryQuickActionsPanelProps> = ({ searchValue, onSearchChange }) => {
   const { openDrawer } = useDrawerRouterProvider();
@@ -37,8 +37,7 @@ export const CategoryQuickActionsPanel: FC<CategoryQuickActionsPanelProps> = ({ 
           <TextInput
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search categories..."
-            className="pl-10"
+            placeholder="Search categories name"
           />
         </div>
       </Tile>

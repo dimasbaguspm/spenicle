@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import { useMemo, useState, type FC } from 'react';
 
 import { Tile, DataTable, IconButton, type ColumnDefinition, type SortConfig } from '../../../../components';
@@ -10,7 +10,6 @@ import { useDrawerRouterProvider } from '../../../../providers/drawer-router/con
 import type { Category } from '../../../../types/api';
 import { useCategoriesSearch } from '../../hooks';
 import { CategoryIcon } from '../category-icon';
-import { DeleteCategoryModal } from '../delete-category-modal';
 
 interface EnhancedCategoryTableProps {
   categories: Category[];
@@ -18,10 +17,11 @@ interface EnhancedCategoryTableProps {
   onSearchChange: (query: string) => void;
 }
 
-type SortField = 'name' | 'expenses' | 'transactions';
+type SortField = 'name' | 'expenses' | 'income' | 'transactions';
 
 interface CategoryWithMetrics extends Category {
   totalExpenses: number;
+  totalIncome: number;
   totalTransactions: number;
 }
 
@@ -36,8 +36,6 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
 }) => {
   const [sortField, setSortField] = useState<SortField>('expenses');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { openDrawer } = useDrawerRouterProvider();
 
   // fetch current month summary for metrics
@@ -61,11 +59,13 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
     return filteredParentCategories.map((category) => {
       const summary = summaryMap.get(category.id);
       const expenses = summary?.totalExpenses ?? 0;
+      const income = summary?.totalIncome ?? 0;
       const transactions = summary?.totalTransactions ?? 0;
 
       return {
         ...category,
         totalExpenses: expenses,
+        totalIncome: income,
         totalTransactions: transactions,
       };
     });
@@ -85,6 +85,10 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
         case 'expenses':
           aValue = a.totalExpenses;
           bValue = b.totalExpenses;
+          break;
+        case 'income':
+          aValue = a.totalIncome;
+          bValue = b.totalIncome;
           break;
         case 'transactions':
           aValue = a.totalTransactions;
@@ -109,6 +113,8 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
     let sortableField: SortField;
     if (field === 'totalExpenses') {
       sortableField = 'expenses';
+    } else if (field === 'totalIncome') {
+      sortableField = 'income';
     } else if (field === 'totalTransactions') {
       sortableField = 'transactions';
     } else if (field === 'name') {
@@ -129,26 +135,6 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
     await openDrawer(DRAWER_IDS.EDIT_CATEGORY, { categoryId });
   };
 
-  const handleDeleteCategory = (categoryId: number) => {
-    const category = sortedCategories.find((cat) => cat.id === categoryId);
-    if (!category) return;
-
-    setCategoryToDelete(category);
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteSuccess = () => {
-    // The modal handles the deletion and success message
-    // Just close the modal and reset state
-    setShowDeleteModal(false);
-    setCategoryToDelete(null);
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteModal(false);
-    setCategoryToDelete(null);
-  };
-
   // define table columns with grid layout configuration
   const columns: ColumnDefinition<CategoryWithMetrics>[] = [
     {
@@ -156,7 +142,7 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
       label: 'Category Name',
       sortable: true,
       align: 'left',
-      gridColumn: 'span 3', // Larger span for category name
+      gridColumn: 'span 4', // Larger span for category name
       render: (_, category) => (
         <div className="flex items-center gap-3">
           <CategoryIcon
@@ -176,8 +162,20 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
       label: 'Transactions',
       sortable: true,
       align: 'center',
-      gridColumn: 'span 1', // Smaller span for transactions
+      gridColumn: 'span 2', // Medium span for transactions
       render: (value) => <p className="text-sm font-medium text-slate-600 tabular-nums">{value as number}</p>,
+    },
+    {
+      key: 'totalIncome',
+      label: 'Income',
+      sortable: true,
+      align: 'right',
+      gridColumn: 'span 2', // Medium span for income
+      render: (value) => (
+        <p className="text-sm font-semibold text-sage-600 tabular-nums">
+          {formatAmount(value as number, { compact: true, hidePrefix: true })}
+        </p>
+      ),
     },
     {
       key: 'totalExpenses',
@@ -196,7 +194,7 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
       label: 'Actions',
       sortable: false,
       align: 'center',
-      gridColumn: 'span 1', // Small span for actions
+      gridColumn: 'span 2', // Medium span for actions
       render: (_, category) => (
         <div className="flex items-center justify-center gap-2">
           <IconButton
@@ -207,14 +205,6 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
           >
             <Edit className="h-4 w-4" />
           </IconButton>
-          <IconButton
-            variant="error-ghost"
-            size="sm"
-            onClick={() => handleDeleteCategory(category.id!)}
-            title="Delete category"
-          >
-            <Trash2 className="h-4 w-4" />
-          </IconButton>
         </div>
       ),
     },
@@ -224,7 +214,14 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
   const currentMonth = dayjs().format('MMMM YYYY');
 
   const sortConfig: SortConfig<CategoryWithMetrics> = {
-    field: sortField === 'expenses' ? 'totalExpenses' : sortField === 'transactions' ? 'totalTransactions' : sortField,
+    field:
+      sortField === 'expenses'
+        ? 'totalExpenses'
+        : sortField === 'income'
+          ? 'totalIncome'
+          : sortField === 'transactions'
+            ? 'totalTransactions'
+            : sortField,
     direction: sortDirection,
   };
 
@@ -245,10 +242,6 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
         emptyMessage="No categories found"
         emptyDescription={searchQuery ? 'Try adjusting your search criteria' : 'Start by creating your first category'}
       />
-
-      {showDeleteModal && (
-        <DeleteCategoryModal category={categoryToDelete} onSuccess={handleDeleteSuccess} onCancel={cancelDelete} />
-      )}
     </Tile>
   );
 };
