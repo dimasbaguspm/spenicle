@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import { useMemo, useState, type FC } from 'react';
 
 import { Tile, DataTable, IconButton, type ColumnDefinition, type SortConfig } from '../../../../components';
@@ -10,8 +10,6 @@ import { useDrawerRouterProvider } from '../../../../providers/drawer-router/con
 import type { Account } from '../../../../types/api';
 import { useAccountsSearch } from '../../hooks';
 import { AccountIcon } from '../account-icon';
-
-import { DeleteAccountModal } from './delete-account-modal';
 
 interface EnhancedAccountTableProps {
   accounts: Account[];
@@ -38,8 +36,6 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
 }) => {
   const [sortField, setSortField] = useState<SortField>('transactions');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { openDrawer } = useDrawerRouterProvider();
 
   // fetch current month summary for metrics
@@ -133,26 +129,6 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
     await openDrawer(DRAWER_IDS.EDIT_ACCOUNT, { accountId });
   };
 
-  const handleDeleteAccount = (accountId: number) => {
-    const account = sortedAccounts.find((acc) => acc.id === accountId);
-    if (!account) return;
-
-    setAccountToDelete(account);
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteSuccess = () => {
-    // The modal handles the deletion and success message
-    // Just close the modal and reset state
-    setShowDeleteModal(false);
-    setAccountToDelete(null);
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteModal(false);
-    setAccountToDelete(null);
-  };
-
   // define table columns with grid layout configuration
   const columns: ColumnDefinition<AccountWithMetrics>[] = [
     {
@@ -199,7 +175,7 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
           <p
             className={`text-sm font-semibold tabular-nums ${accountAmount >= 0 ? 'text-sage-600' : 'text-coral-600'}`}
           >
-            {formatAmount(displayValue, { compact: true, hidePrefix: true })}
+            {formatAmount(displayValue, { compact: false, hidePrefix: true })}
           </p>
         );
       },
@@ -219,14 +195,6 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
             title="Edit account"
           >
             <Edit className="h-4 w-4" />
-          </IconButton>
-          <IconButton
-            variant="error-ghost"
-            size="sm"
-            onClick={() => handleDeleteAccount(account.id!)}
-            title="Delete account"
-          >
-            <Trash2 className="h-4 w-4" />
           </IconButton>
         </div>
       ),
@@ -266,17 +234,6 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
           />
         </div>
       </Tile>
-
-      {/* Delete confirmation modal */}
-      {showDeleteModal && (
-        <DeleteAccountModal
-          isOpen={showDeleteModal}
-          onClose={cancelDelete}
-          onConfirm={handleDeleteSuccess}
-          account={accountToDelete}
-          isDeleting={false} // TODO: Connect to actual loading state when API is implemented
-        />
-      )}
     </>
   );
 };

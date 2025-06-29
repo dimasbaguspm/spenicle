@@ -18,7 +18,10 @@ export const formatAmount = (amount: number, options: FormatAmountOptions = {}):
   const absAmount = Math.abs(amount);
   const formatted = compact
     ? formatNumberCompact(absAmount)
-    : absAmount.toLocaleString('IDR', { minimumFractionDigits: 2 });
+    : absAmount.toLocaleString('IDR', {
+        currencyDisplay: 'symbol',
+        currencySign: 'standard',
+      });
 
   return `${!hidePrefix ? prefix : ''}${formatted}`;
 };

@@ -5,7 +5,7 @@ import { PageLayout } from '../../../components';
 import { useApiAccountsQuery } from '../../../hooks';
 import {
   AccountQuickActionsPanel,
-  AccountPerformanceWidget,
+  DesktopAccountOverviewWidget,
   EnhancedAccountTable,
 } from '../components/desktop-account-widgets';
 
@@ -40,8 +40,8 @@ export const DesktopAccountDashboardPage: FC = () => {
 
           {/* main content area */}
           <div className="col-span-9 space-y-6">
-            {/* account performance charts */}
-            <AccountPerformanceWidget />
+            {/* account overview - straightforward financial information */}
+            <DesktopAccountOverviewWidget />
 
             {/* enhanced account table */}
             <EnhancedAccountTable accounts={accounts} searchQuery={searchQuery} onSearchChange={handleSearchChange} />
