@@ -6,25 +6,23 @@ import { useApiSummaryAccountsQuery } from '../../../../hooks/use-api/built-in/u
 import type { Account } from '../../../../types/api';
 
 import { AccountsCardList } from './accounts-card-list';
-import { AccountsHeader } from './accounts-header';
 import { AccountsLoader } from './accounts-loader';
-import { getPeriodRange } from './helpers';
 
 interface AccountsProps {
-  periodType: 'weekly' | 'monthly' | 'yearly';
-  periodIndex: number;
-  setPeriodType: (type: 'weekly' | 'monthly' | 'yearly') => void;
-  setPeriodIndex: (index: number) => void;
+  startDate: Date;
+  endDate: Date;
+  currentPeriodDisplay: string;
+  isCurrentPeriod: boolean;
 }
 
-export const Accounts: React.FC<AccountsProps> = ({ periodType, periodIndex, setPeriodType, setPeriodIndex }) => {
-  // Calculate period range
-  const { startDate, endDate } = useMemo(() => getPeriodRange(periodType, periodIndex), [periodType, periodIndex]);
-
+export const Accounts: React.FC<AccountsProps> = ({ startDate, endDate }) => {
   const [accountsResponse] = useApiAccountsQuery({ pageSize: 1000 });
   const allAccounts = accountsResponse?.items;
   const [accountsData, , queryState] = useApiSummaryAccountsQuery(
-    { startDate, endDate },
+    {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+    },
     {
       staleTime: 60000,
       gcTime: 300000,
@@ -85,12 +83,6 @@ export const Accounts: React.FC<AccountsProps> = ({ periodType, periodIndex, set
 
   return (
     <Tile className="p-6">
-      <AccountsHeader
-        periodType={periodType}
-        periodIndex={periodIndex}
-        setPeriodType={setPeriodType}
-        setPeriodIndex={setPeriodIndex}
-      />
       {queryState.isFetching ? (
         <AccountsLoader count={5} />
       ) : (

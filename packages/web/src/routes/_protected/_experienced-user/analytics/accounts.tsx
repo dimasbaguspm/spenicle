@@ -1,27 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
 
 import { Accounts } from '../../../../modules/summary-module';
+import { useDesktopSummaryFilters } from '../../../../modules/summary-module/hooks';
 
 export const Route = createFileRoute('/_protected/_experienced-user/analytics/accounts')({
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const [accountsPeriodType, setAccountsPeriodType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
-  const [accountsIndex, setAccountsIndex] = useState(0);
-
-  const handleAccountsPeriodType = (type: 'weekly' | 'monthly' | 'yearly') => {
-    setAccountsPeriodType(type);
-    setAccountsIndex(0);
-  };
+  const { state } = useDesktopSummaryFilters();
 
   return (
     <Accounts
-      periodType={accountsPeriodType}
-      periodIndex={accountsIndex}
-      setPeriodType={handleAccountsPeriodType}
-      setPeriodIndex={setAccountsIndex}
+      startDate={state.periodStartDate}
+      endDate={state.periodEndDate}
+      currentPeriodDisplay={state.currentPeriodDisplay}
+      isCurrentPeriod={state.isCurrentPeriod}
     />
   );
 }

@@ -6,22 +6,21 @@ import { useApiSummaryCategoriesQuery } from '../../../../hooks/use-api/built-in
 import type { Category } from '../../../../types/api';
 
 import { CategoryCardList } from './category-card-list';
-import { CategoriesHeader } from './category-header';
 import { CategoriesLoader } from './category-loader';
-import { getPeriodRange } from './helpers';
 
 interface CategoriesProps {
-  periodType: 'weekly' | 'monthly' | 'yearly';
-  periodIndex: number;
-  setPeriodType: (type: 'weekly' | 'monthly' | 'yearly') => void;
-  setPeriodIndex: (index: number) => void;
+  startDate: Date;
+  endDate: Date;
+  currentPeriodDisplay: string;
+  isCurrentPeriod: boolean;
 }
 
-export const Categories: React.FC<CategoriesProps> = ({ periodType, periodIndex, setPeriodType, setPeriodIndex }) => {
-  const { startDate, endDate } = useMemo(() => getPeriodRange(periodType, periodIndex), [periodType, periodIndex]);
-
+export const Categories: React.FC<CategoriesProps> = ({ startDate, endDate }) => {
   const [summaryData, , queryState] = useApiSummaryCategoriesQuery(
-    { startDate, endDate },
+    {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+    },
     {
       staleTime: 60000,
       gcTime: 300000,
@@ -61,13 +60,6 @@ export const Categories: React.FC<CategoriesProps> = ({ periodType, periodIndex,
 
   return (
     <Tile className="p-6">
-      <CategoriesHeader
-        periodType={periodType}
-        periodIndex={periodIndex}
-        setPeriodType={setPeriodType}
-        setPeriodIndex={setPeriodIndex}
-      />
-
       {queryState.isFetching ? (
         <CategoriesLoader count={5} />
       ) : (
