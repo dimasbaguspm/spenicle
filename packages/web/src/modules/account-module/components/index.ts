@@ -5,3 +5,4 @@ export * from './account-type-selector';
 export * from './account-icon';
 export * from './account-selector';
 export * from './desktop-account-widgets';
+export * from './mobile-account-widgets';
