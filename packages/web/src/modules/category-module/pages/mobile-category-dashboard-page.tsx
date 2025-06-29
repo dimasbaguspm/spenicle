@@ -1,31 +1,36 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
-import type { FC } from 'react';
+import { useState, type FC } from 'react';
 
-import { Button, PageLayout, Tile } from '../../../components';
+import { Button, PageLayout } from '../../../components';
 import { useApiCategoriesQuery } from '../../../hooks';
 import { useDrawerRouterProvider } from '../../../providers/drawer-router';
-import { CategoriesList, CategoriesListHeader } from '../components/categories-list';
+import type { Category } from '../../../types/api';
+import {
+  MobileCategoryInsightsWidget,
+  MobileCategorySummarySection,
+  type PeriodType,
+} from '../components/mobile-category-widgets';
 
 export const MobileCategoryDashboardPage: FC = () => {
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
-  const [categoriesData] = useApiCategoriesQuery();
+  const [categoriesData] = useApiCategoriesQuery({ pageSize: 1000 });
   const { openDrawer } = useDrawerRouterProvider();
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('today');
 
   const categories = categoriesData?.items ?? [];
-  const categoryCount = categories.length;
 
-  // Get search query from URL or default to empty string
+  // get search query from URL or default to empty string
   const searchQuery = search.search ?? '';
 
   const handleSearchChange = async (newSearchQuery: string) => {
-    // Update URL with search parameter
+    // update URL with search parameter
     await navigate({
       // @ts-expect-error is a bug from tanstack/react-router - search param typing
       search: (prev: Record<string, unknown>) => ({
         ...prev,
-        search: newSearchQuery || undefined, // Remove param if empty
+        search: newSearchQuery || undefined, // remove param if empty
       }),
       replace: true,
     });
@@ -35,27 +40,44 @@ export const MobileCategoryDashboardPage: FC = () => {
     await openDrawer('add-category');
   };
 
+  const handleCategoryCardClick = async (category: Category) => {
+    await openDrawer('edit-category', { categoryId: category.id });
+  };
+
   return (
     <PageLayout
       background="cream"
       title="Categories"
       showBackButton={true}
       rightContent={
-        <Button variant="coral" size="sm" onClick={handleAddCategory} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add Category</span>
-          <span className="sm:hidden">Add</span>
+        <Button
+          variant="coral"
+          size="sm"
+          onClick={handleAddCategory}
+          className="flex items-center"
+          iconLeft={<Plus className="w-4 h-4" />}
+        >
+          <span className="inline">Add Category</span>
         </Button>
       }
     >
-      <Tile>
-        <CategoriesListHeader
-          categoryCount={categoryCount}
-          searchValue={searchQuery}
-          onSearchChange={handleSearchChange}
+      <div className="space-y-4">
+        {/* category insights widget - key metrics at a glance */}
+        <MobileCategoryInsightsWidget
+          categories={categories}
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={setSelectedPeriod}
         />
-        <CategoriesList searchQuery={searchQuery} onSearchChange={handleSearchChange} />
-      </Tile>
+
+        {/* enhanced category summary with integrated search and mobile-optimized layout */}
+        <MobileCategorySummarySection
+          categories={categories}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          onCategoryCardClick={handleCategoryCardClick}
+          selectedPeriod={selectedPeriod}
+        />
+      </div>
     </PageLayout>
   );
 };

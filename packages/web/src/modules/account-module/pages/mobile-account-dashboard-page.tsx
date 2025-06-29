@@ -45,10 +45,14 @@ export const MobileAccountDashboardPage: FC = () => {
       title="Accounts"
       showBackButton={true}
       rightContent={
-        <Button variant="coral" size="sm" onClick={handleAddAccount} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add Account</span>
-          <span className="sm:hidden">Add</span>
+        <Button
+          variant="coral"
+          size="sm"
+          onClick={handleAddAccount}
+          className="flex items-center"
+          iconLeft={<Plus className="w-4 h-4" />}
+        >
+          <span className="inline">Add Account</span>
         </Button>
       }
     >

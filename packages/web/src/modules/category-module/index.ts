@@ -8,5 +8,6 @@ export * from './components/category-icon';
 export * from './components/category-appearance-selector';
 export * from './components/group-category-selector';
 export * from './components/category-selector';
+export * from './components/mobile-category-widgets';
 export * from './pages/desktop-category-dashboard-page';
 export * from './pages/mobile-category-dashboard-page';
