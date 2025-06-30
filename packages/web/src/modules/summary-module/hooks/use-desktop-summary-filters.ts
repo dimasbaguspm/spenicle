@@ -42,7 +42,9 @@ export interface SummaryFiltersState {
 
   // computed period values (only expose these to consumers)
   currentPeriodDisplay: string;
+  currentPeriodType: PeriodType;
   isCurrentPeriod: boolean;
+  isFuturePeriod: boolean;
   periodStartDate: Date;
   periodEndDate: Date;
 }
@@ -173,6 +175,23 @@ export const useDesktopSummaryFilters = () => {
         return start.isSame(now, 'month');
       case 'yearly':
         return start.isSame(now, 'year');
+      default:
+        return false;
+    }
+  }, [periodStartDate, currentPeriodType]);
+
+  // check if current period is in the future
+  const isFuturePeriod = useMemo(() => {
+    const now = dayjs();
+    const start = dayjs(periodStartDate).startOf('day');
+
+    switch (currentPeriodType) {
+      case 'weekly':
+        return start.isSameOrAfter(now, 'week');
+      case 'monthly':
+        return start.isSameOrAfter(now, 'month');
+      case 'yearly':
+        return start.isSameOrAfter(now, 'year');
       default:
         return false;
     }
@@ -398,10 +417,21 @@ export const useDesktopSummaryFilters = () => {
       searchFilters,
       currentPeriodDisplay,
       isCurrentPeriod,
+      isFuturePeriod,
+      currentPeriodType,
       periodStartDate,
       periodEndDate,
     }),
-    [selectedPanel, searchFilters, currentPeriodDisplay, isCurrentPeriod, periodStartDate, periodEndDate]
+    [
+      selectedPanel,
+      searchFilters,
+      currentPeriodDisplay,
+      isCurrentPeriod,
+      isFuturePeriod,
+      periodStartDate,
+      periodEndDate,
+      currentPeriodType,
+    ]
   );
 
   // actions object - expose clean API
