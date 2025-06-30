@@ -7,7 +7,7 @@ import { useApiSummaryAccountsQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
 import type { Account } from '../../../../types/api';
 
-export type PeriodType = 'today' | 'week' | 'month';
+type PeriodType = 'today' | 'week' | 'month';
 
 interface DesktopAccountInsight {
   label: string;

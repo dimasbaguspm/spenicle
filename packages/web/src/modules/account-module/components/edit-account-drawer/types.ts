@@ -1,6 +1,6 @@
 import type { UpdateAccount, Account } from '../../../../types/api';
 
-export interface EditAccountFormData extends UpdateAccount {
+export interface EditAccountFormData extends Omit<UpdateAccount, 'amount'> {
   enableLimit: boolean;
   limitPeriod: 'daily' | 'weekly' | 'monthly' | 'yearly';
   limitAmount: number;
