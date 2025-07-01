@@ -12,6 +12,7 @@ export interface PieChartDatum {
 
 interface PieChartProps {
   data: PieChartDatum[];
+  height?: number;
 }
 
 // color palette for pie chart segments following our design system
@@ -102,7 +103,7 @@ const renderActiveShape = (props: unknown) => {
  * Uses custom active shapes for enhanced interactivity and center space for totals.
  * Accessible, responsive, and styled with design tokens for financial data.
  */
-export const PieChart: FC<PieChartProps> = ({ data }) => {
+export const PieChart: FC<PieChartProps> = ({ data, height = 400 }) => {
   const [activeIndex, setActiveIndex] = useState<number>(0);
 
   const onPieEnter = (_: unknown, index: number) => {
@@ -110,7 +111,7 @@ export const PieChart: FC<PieChartProps> = ({ data }) => {
   };
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
+    <ResponsiveContainer width="100%" height={height}>
       <RechartsPieChart margin={{ top: 24, right: 80, left: 80, bottom: 24 }}>
         <Pie
           activeIndex={activeIndex}
