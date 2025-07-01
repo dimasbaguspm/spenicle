@@ -5,3 +5,5 @@ export { Categories } from './components/categories';
 export { Accounts } from './components/accounts';
 export { DesktopSummaryDashboardPageComponent } from './pages/desktop-summary-dashboard-page';
 export { MobileSummaryDashboardPageComponent } from './pages/mobile-summary-dashboard-page';
+export { DesktopAccountsPage } from './pages/desktop-accounts-page';
+export { MobileAccountsPage } from './pages/mobile-accounts-page';
