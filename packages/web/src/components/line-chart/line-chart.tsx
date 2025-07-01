@@ -12,7 +12,7 @@ import {
 
 import { formatLineChartAmount } from './helpers';
 
-interface LineChartDatum {
+export interface LineChartDatum {
   [key: string]: string | number | null | undefined;
   totalIncome?: number;
   totalExpenses?: number;

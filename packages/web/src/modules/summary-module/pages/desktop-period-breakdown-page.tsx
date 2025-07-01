@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 
-import { PeriodBreakdownMainContent } from '../components/period-breakdown/period-breakdown-main-content';
+import { DesktopPeriodBreakdown } from '../components/desktop-period-breakdown';
 import { useDesktopSummaryFilters } from '../hooks';
 
 /**
@@ -12,7 +12,7 @@ export const DesktopPeriodBreakdownPage: FC = () => {
   const { state } = useDesktopSummaryFilters();
 
   return (
-    <PeriodBreakdownMainContent
+    <DesktopPeriodBreakdown
       periodType={state.currentPeriodType}
       startDate={state.periodStartDate}
       endDate={state.periodEndDate}

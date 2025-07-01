@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { Button, IconButton, Tile } from '../../../components';
-import { useDesktopSummaryFilters } from '../hooks';
+import { Button, IconButton, Tile } from '../../../../components';
+import { useDesktopSummaryFilters } from '../../hooks';
 
 interface DesktopSummaryPeriodSelectorProps {
   // display props for period information

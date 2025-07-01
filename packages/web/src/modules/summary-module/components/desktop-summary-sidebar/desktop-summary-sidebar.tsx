@@ -1,6 +1,7 @@
 import type { PanelType } from '../../hooks';
-import { DesktopSummaryPanelNavigation } from '../desktop-summary-panel-navigation';
-import { DesktopSummaryPeriodSelector } from '../desktop-summary-period-selector';
+
+import { DesktopSummaryPanelNavigation } from './desktop-summary-panel-navigation';
+import { DesktopSummaryPeriodSelector } from './desktop-summary-period-selector';
 
 interface PanelConfig {
   title: string;
@@ -8,7 +9,7 @@ interface PanelConfig {
   badge: string;
 }
 
-interface PeriodBreakdownSidebarProps {
+interface DesktopSummarySidebarProps {
   // computed period values for display
   currentPeriodDisplay: string;
   isCurrentPeriod: boolean;
@@ -19,17 +20,13 @@ interface PeriodBreakdownSidebarProps {
   onPanelNavigation: (panel: PanelType) => Promise<void>;
 }
 
-/**
- * Sidebar component for period breakdown analytics page.
- * Provides period selection and panel navigation controls consistent with summary dashboard.
- */
-export const PeriodBreakdownSidebar = ({
+export const DesktopSummarySidebar = ({
   currentPeriodDisplay,
   isCurrentPeriod,
   selectedPanel,
   panelConfig,
   onPanelNavigation,
-}: PeriodBreakdownSidebarProps) => {
+}: DesktopSummarySidebarProps) => {
   return (
     <div className="col-span-3 space-y-4 sticky top-6 self-start h-fit max-h-[calc(100vh-12rem)] overflow-y-auto">
       {/* period selection controls - primary control */}

@@ -1,4 +1,4 @@
-import { Badge, Tile } from '../../../components';
+import { Badge, Tile } from '../../../../components';
 
 interface PanelConfig {
   title: string;
