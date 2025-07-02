@@ -1,108 +1,122 @@
 import React from 'react';
 
 import { Tile, DataTable, type ColumnDefinition } from '../../../../../components';
+import { formatAmount } from '../../../../../libs/format-amount';
 import { AccountIcon } from '../../../../account-module/components/account-icon/account-icon';
 import type { EnrichedAccountData } from '../helpers';
 
 /**
  * Column definitions for accounts data table.
- * Displays account information with financial metrics in a structured format.
+ * Simplified to show essential metrics: account name, transactions, selected chart type value, and percentage.
+ * Follows the enhanced account table pattern with grid layout.
  */
-export const createDesktopAccountsColumns = (): ColumnDefinition<EnrichedAccountData>[] => [
-  {
-    key: 'accountName',
-    label: 'Account',
-    width: 'minmax(200px, 1fr)',
-    render: (_, account: EnrichedAccountData) => (
-      <div className="flex items-center gap-3">
-        <AccountIcon iconValue={account.iconValue} colorValue={account.colorValue} size="sm" />
-        <span className="font-medium text-slate-900">{account.accountName}</span>
-      </div>
-    ),
-  },
-  {
-    key: 'totalIncome',
-    label: 'Income',
-    align: 'right',
-    width: 'minmax(100px, 1fr)',
-    render: (_, account: EnrichedAccountData) => (
-      <span className="text-emerald-600 font-medium">
-        ${account.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-      </span>
-    ),
-  },
-  {
-    key: 'totalExpenses',
-    label: 'Expenses',
-    align: 'right',
-    width: 'minmax(100px, 1fr)',
-    render: (_, account: EnrichedAccountData) => (
-      <span className="text-coral-600 font-medium">
-        ${account.totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-      </span>
-    ),
-  },
-  {
-    key: 'totalNet',
-    label: 'Net',
-    align: 'right',
-    width: 'minmax(100px, 1fr)',
-    render: (_, account: EnrichedAccountData) => {
-      const net = account.totalNet;
-      const isPositive = net >= 0;
-      return (
-        <span className={`font-medium ${isPositive ? 'text-emerald-600' : 'text-coral-600'}`}>
-          {isPositive ? '+' : ''}${net.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-        </span>
-      );
+export const createDesktopAccountsColumns = (
+  chartType: 'expenses' | 'income' = 'expenses',
+  data: EnrichedAccountData[] = []
+): ColumnDefinition<EnrichedAccountData>[] => {
+  // calculate total for percentage calculation
+  const total = data.reduce((sum, account) => {
+    return sum + (chartType === 'expenses' ? account.totalExpenses : account.totalIncome);
+  }, 0);
+
+  return [
+    {
+      key: 'accountName',
+      label: 'Account',
+      sortable: false,
+      align: 'left',
+      gridColumn: 'span 5', // Larger span for account name
+      render: (_, account: EnrichedAccountData) => (
+        <div className="flex items-center gap-3">
+          <AccountIcon
+            iconValue={account.iconValue}
+            colorValue={account.colorValue}
+            size="sm"
+            className="flex-shrink-0"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900 truncate">{account.accountName}</p>
+          </div>
+        </div>
+      ),
     },
-  },
-  {
-    key: 'allTimeBalance',
-    label: 'All Time Balance',
-    align: 'right',
-    width: 'minmax(120px, 1fr)',
-    render: (_, account: EnrichedAccountData) => {
-      const balance = account.allTimeBalance ?? 0;
-      const isPositive = balance >= 0;
-      return (
-        <span className={`font-medium ${isPositive ? 'text-mist-600' : 'text-slate-500'}`}>
-          {isPositive ? '+' : ''}${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-        </span>
-      );
+    {
+      key: 'totalTransactions',
+      label: 'Transactions',
+      sortable: false,
+      align: 'center',
+      gridColumn: 'span 2', // Transactions column
+      render: (_, account: EnrichedAccountData) => (
+        <p className="text-sm font-medium text-slate-600 tabular-nums">{account.totalTransactions}</p>
+      ),
     },
-  },
-  {
-    key: 'totalTransactions',
-    label: 'Transactions',
-    align: 'center',
-    width: 'minmax(100px, 1fr)',
-    render: (_, account: EnrichedAccountData) => <span className="text-slate-600">{account.totalTransactions}</span>,
-  },
-];
+    {
+      key: chartType === 'expenses' ? 'totalExpenses' : 'totalIncome',
+      label: chartType === 'expenses' ? 'Expenses' : 'Income',
+      sortable: false,
+      align: 'right',
+      gridColumn: 'span 3', // Selected chart type value
+      render: (_, account: EnrichedAccountData) => {
+        const value = chartType === 'expenses' ? account.totalExpenses : account.totalIncome;
+        const colorClass = chartType === 'expenses' ? 'text-coral-600' : 'text-sage-600';
+
+        return (
+          <p className={`text-sm font-semibold tabular-nums ${colorClass}`}>
+            {formatAmount(value, { compact: false, hidePrefix: true })}
+          </p>
+        );
+      },
+    },
+    {
+      key: 'percentage' as keyof EnrichedAccountData, // Computed percentage column
+      label: '% of Total',
+      sortable: false,
+      align: 'right',
+      gridColumn: 'span 2', // Percentage column
+      render: (_, account: EnrichedAccountData) => {
+        const value = chartType === 'expenses' ? account.totalExpenses : account.totalIncome;
+        const percentage = total > 0 ? (value / total) * 100 : 0;
+        const colorClass = chartType === 'expenses' ? 'text-coral-600' : 'text-sage-600';
+
+        return <p className={`text-sm font-medium tabular-nums ${colorClass}`}>{percentage.toFixed(1)}%</p>;
+      },
+    },
+  ];
+};
 
 interface AccountsTableProps {
   data: EnrichedAccountData[];
-  columns: ColumnDefinition<EnrichedAccountData>[];
+  columns?: ColumnDefinition<EnrichedAccountData>[];
+  chartType?: 'expenses' | 'income';
 }
 
 /**
- * Table section for accounts breakdown showing detailed financial metrics
+ * Table section for accounts breakdown showing essential financial metrics.
+ * Simplified view with account name, transactions, selected chart type value, and percentage.
+ * Follows enhanced account table pattern with grid layout and proper sorting.
  */
-export const AccountsTable: React.FC<AccountsTableProps> = ({ data, columns }) => (
-  <Tile className="p-6">
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold text-slate-900">Account Details</h3>
-        <p className="text-sm text-slate-600">Detailed financial metrics for each account in the selected period</p>
+export const AccountsTable: React.FC<AccountsTableProps> = ({ data, columns: _columns, chartType = 'expenses' }) => {
+  // Generate columns with data for percentage calculation
+  const columns = createDesktopAccountsColumns(chartType, data);
+
+  return (
+    <Tile className="p-4 md:p-6">
+      <div className="space-y-4 md:space-y-6">
+        <div className="space-y-1">
+          <h3 className="text-lg md:text-xl font-semibold text-slate-900">Account Details</h3>
+          <p className="text-sm text-slate-500">
+            Essential account metrics for the selected period (showing {data.length} accounts, sorted by highest{' '}
+            {chartType})
+          </p>
+        </div>
+        <DataTable
+          data={data}
+          columns={columns}
+          emptyMessage="No account data available"
+          emptyDescription="Try selecting a different time period or add some transactions"
+          className="rounded-lg border border-mist-200"
+        />
       </div>
-      <DataTable
-        data={data}
-        columns={columns}
-        emptyMessage="No account data available"
-        emptyDescription="Try selecting a different time period or add some transactions"
-        className="rounded-lg border border-mist-200"
-      />
-    </div>
-  </Tile>
-);
+    </Tile>
+  );
+};

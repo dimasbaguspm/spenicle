@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { Tile } from '../../../../components';
 import { useApiCategoriesQuery } from '../../../../hooks/use-api/built-in/use-categories';
@@ -22,6 +22,9 @@ interface DesktopCategoriesMainContentProps {
  * Follows the same pattern as desktop accounts.
  */
 export const DesktopCategories: React.FC<DesktopCategoriesMainContentProps> = ({ startDate, endDate }) => {
+  // toggle state for chart type selection
+  const [chartType, setChartType] = useState<'expenses' | 'income'>('expenses');
+
   const [categoriesResponse] = useApiCategoriesQuery({ pageSize: 1000 });
   const allCategories = categoriesResponse?.items;
 
@@ -52,19 +55,25 @@ export const DesktopCategories: React.FC<DesktopCategoriesMainContentProps> = ({
     return {};
   }, [allCategories]);
 
-  // enrich category data with metadata
-  const enrichedCategoryData = useMemo(
-    () => mapEnrichedCategoryData({ categoriesData: categoriesData ?? [], categoryMap }),
-    [categoriesData, categoryMap]
-  );
+  // enrich category data with metadata and sort by chart type
+  const enrichedCategoryData = useMemo(() => {
+    const enrichedData = mapEnrichedCategoryData({ categoriesData: categoriesData ?? [], categoryMap });
 
-  // prepare pie chart data (default to expenses view)
+    // sort by the selected chart type (highest first)
+    return enrichedData.sort((a, b) => {
+      const valueA = chartType === 'expenses' ? a.totalExpenses : a.totalIncome;
+      const valueB = chartType === 'expenses' ? b.totalExpenses : b.totalIncome;
+      return valueB - valueA;
+    });
+  }, [categoriesData, categoryMap, chartType]);
+
+  // prepare pie chart data based on selected chart type
   const pieChartData = useMemo(
-    () => mapCategoryPieChartData({ categoryData: enrichedCategoryData, chartType: 'expenses' }),
-    [enrichedCategoryData]
+    () => mapCategoryPieChartData({ categoryData: enrichedCategoryData, chartType }),
+    [enrichedCategoryData, chartType]
   );
 
-  const columns = createDesktopCategoriesColumns();
+  const columns = createDesktopCategoriesColumns(chartType);
 
   if (queryState.isFetching) {
     return (
@@ -78,10 +87,10 @@ export const DesktopCategories: React.FC<DesktopCategoriesMainContentProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* pie chart display */}
-      <CategoriesPieChart chartData={pieChartData} chartType="expenses" />
+      {/* pie chart display with integrated toggle */}
+      <CategoriesPieChart chartData={pieChartData} chartType={chartType} onChartTypeChange={setChartType} />
       {/* data table */}
-      <CategoriesTable data={enrichedCategoryData} columns={columns} />
+      <CategoriesTable data={enrichedCategoryData} columns={columns} chartType={chartType} />
     </div>
   );
 };

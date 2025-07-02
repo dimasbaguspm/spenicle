@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { Tile } from '../../../../components';
 import { useApiAccountsQuery } from '../../../../hooks/use-api/built-in/use-accounts';
@@ -7,7 +7,7 @@ import type { Account } from '../../../../types/api';
 
 import { DesktopAccountsLoader } from './desktop-accounts-loader';
 import { mapEnrichedAccountData, mapAccountPieChartData } from './helpers';
-import { AccountsPieChart, AccountsTable, createDesktopAccountsColumns } from './presentation';
+import { AccountsPieChart, AccountsTable } from './presentation';
 
 interface DesktopAccountsMainContentProps {
   startDate: Date;
@@ -19,9 +19,11 @@ interface DesktopAccountsMainContentProps {
 /**
  * Main content component for desktop accounts analytics.
  * Displays pie chart and data table with account financial data.
- * Follows the same pattern as desktop period breakdown.
+ * Includes toggle for expenses/income view with synchronized chart and table.
  */
 export const DesktopAccounts: React.FC<DesktopAccountsMainContentProps> = ({ startDate, endDate }) => {
+  // state for chart type toggle (expenses vs income)
+  const [chartType, setChartType] = useState<'expenses' | 'income'>('expenses');
   const [accountsResponse] = useApiAccountsQuery({ pageSize: 1000 });
   const allAccounts = accountsResponse?.items;
 
@@ -58,13 +60,20 @@ export const DesktopAccounts: React.FC<DesktopAccountsMainContentProps> = ({ sta
     [accountsData, accountMap]
   );
 
-  // prepare pie chart data (default to expenses view)
-  const pieChartData = useMemo(
-    () => mapAccountPieChartData({ accountData: enrichedAccountData, chartType: 'expenses' }),
-    [enrichedAccountData]
-  );
+  // sort account data by selected chart type (highest first)
+  const sortedAccountData = useMemo(() => {
+    return [...enrichedAccountData].sort((a, b) => {
+      const valueA = chartType === 'expenses' ? a.totalExpenses : a.totalIncome;
+      const valueB = chartType === 'expenses' ? b.totalExpenses : b.totalIncome;
+      return valueB - valueA; // highest first
+    });
+  }, [enrichedAccountData, chartType]);
 
-  const columns = createDesktopAccountsColumns();
+  // prepare pie chart data based on selected chart type
+  const pieChartData = useMemo(
+    () => mapAccountPieChartData({ accountData: enrichedAccountData, chartType }),
+    [enrichedAccountData, chartType]
+  );
 
   if (queryState.isFetching) {
     return (
@@ -78,10 +87,10 @@ export const DesktopAccounts: React.FC<DesktopAccountsMainContentProps> = ({ sta
 
   return (
     <div className="space-y-6">
-      {/* pie chart display */}
-      <AccountsPieChart chartData={pieChartData} chartType="expenses" />
+      {/* pie chart display with toggle */}
+      <AccountsPieChart chartData={pieChartData} chartType={chartType} onChartTypeChange={setChartType} />
       {/* data table */}
-      <AccountsTable data={enrichedAccountData} columns={columns} />
+      <AccountsTable data={sortedAccountData} chartType={chartType} />
     </div>
   );
 };

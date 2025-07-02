@@ -39,6 +39,8 @@ export const DataTable = <T,>({
   const gridTemplateColumns = columns
     .map((col) => {
       // Handle predefined grid column spans
+      if (col.gridColumn?.includes('span 5')) return 'minmax(300px, 5fr)';
+      if (col.gridColumn?.includes('span 4')) return 'minmax(250px, 4fr)';
       if (col.gridColumn?.includes('span 3')) return 'minmax(200px, 3fr)';
       if (col.gridColumn?.includes('span 2')) return 'minmax(150px, 2fr)';
       if (col.gridColumn?.includes('span 1')) return 'minmax(100px, 1fr)';
