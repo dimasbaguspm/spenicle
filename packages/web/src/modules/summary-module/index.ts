@@ -1,5 +1,4 @@
-export { FinancialSummaryCard, FinancialSummaryPeriodCardList } from './components/financial-summary-period-card';
-export { QuickInsightsWidget, FinancialInsightsWidget } from './components/desktop-overview-widgets';
+export { QuickInsightsWidget } from './components/desktop-overview-widgets';
 export { PeriodBreakdown } from './components/period-breakdown';
 export { Categories } from './components/categories';
 export { Accounts } from './components/accounts';
