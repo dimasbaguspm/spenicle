@@ -8,7 +8,7 @@
  * 
  * To regenerate this file, run: npm run generate-types
  * 
- * Generated on: 2025-06-29T00:43:47.265Z
+ * Generated on: 2025-07-02T21:56:18.858Z
  * Source: http://localhost:3000/api/docs/swagger.json
  */
 
@@ -1326,4 +1326,6 @@ export type SummaryTransactionsPeriod = {
   totalExpenses?: number;
   /** @example 800 */
   netAmount?: number;
+  /** @example 30 */
+  totalTransactions?: number;
 }[];

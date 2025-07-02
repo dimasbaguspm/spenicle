@@ -141,7 +141,7 @@ export function mapEnrichedTableData({
     return {
       ...period,
       label,
-      transactionCount: 0, // todo: derive from actual transaction count if available
+      transactionCount: period.totalTransactions ?? 0,
     };
   });
   if (periodType === 'weekly' || periodType === 'monthly' || periodType === 'yearly') {

@@ -25,12 +25,14 @@ export function usePeriodBreakdownData({ data, periodType, startDate }: UsePerio
         const totalIncome = dayData.reduce((sum, item) => sum + (item.totalIncome ?? 0), 0);
         const totalExpenses = dayData.reduce((sum, item) => sum + (item.totalExpenses ?? 0), 0);
         const netAmount = dayData.reduce((sum, item) => sum + (item.netAmount ?? 0), 0);
+        const totalTransactions = dayData.reduce((sum, item) => sum + (item.totalTransactions ?? 0), 0);
         days.push({
           startDate: cursor.format('YYYY-MM-DD'),
           endDate: cursor.format('YYYY-MM-DD'),
           totalIncome,
           totalExpenses,
           netAmount,
+          totalTransactions,
         });
         cursor = cursor.add(1, 'day');
       }
@@ -53,12 +55,14 @@ export function usePeriodBreakdownData({ data, periodType, startDate }: UsePerio
           const totalIncome = weekData.reduce((sum, item) => sum + (item.totalIncome ?? 0), 0);
           const totalExpenses = weekData.reduce((sum, item) => sum + (item.totalExpenses ?? 0), 0);
           const netAmount = weekData.reduce((sum, item) => sum + (item.netAmount ?? 0), 0);
+          const totalTransactions = weekData.reduce((sum, item) => sum + (item.totalTransactions ?? 0), 0);
           weeks.push({
             startDate: weekStart.format('YYYY-MM-DD'),
             endDate: weekEnd.format('YYYY-MM-DD'),
             totalIncome,
             totalExpenses,
             netAmount,
+            totalTransactions,
           });
         }
         cursor = cursor.add(1, 'week');
@@ -79,12 +83,14 @@ export function usePeriodBreakdownData({ data, periodType, startDate }: UsePerio
         const totalIncome = monthData.reduce((sum, item) => sum + (item.totalIncome ?? 0), 0);
         const totalExpenses = monthData.reduce((sum, item) => sum + (item.totalExpenses ?? 0), 0);
         const netAmount = monthData.reduce((sum, item) => sum + (item.netAmount ?? 0), 0);
+        const totalTransactions = monthData.reduce((sum, item) => sum + (item.totalTransactions ?? 0), 0);
         months.push({
           startDate: monthStart.format('YYYY-MM-DD'),
           endDate: monthStart.endOf('month').format('YYYY-MM-DD'),
           totalIncome,
           totalExpenses,
           netAmount,
+          totalTransactions,
         });
       }
       return months;

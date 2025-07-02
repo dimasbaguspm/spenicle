@@ -62,6 +62,7 @@ export const summarySchemas = {
         totalIncome: { type: 'number', example: 2000.0 },
         totalExpenses: { type: 'number', example: 1200.0 },
         netAmount: { type: 'number', example: 800.0 },
+        totalTransactions: { type: 'integer', example: 30 },
       },
     },
   },
