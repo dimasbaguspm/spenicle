@@ -13,26 +13,35 @@ interface AccountsPieChartProps {
  * Includes segment control in the header for chart type selection
  */
 export const AccountsPieChart: React.FC<AccountsPieChartProps> = ({ chartData, chartType, onChartTypeChange }) => (
-  <Tile className="p-4 md:p-6">
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="space-y-1">
-          <h3 className="text-lg md:text-xl font-semibold text-slate-900">
+  <Tile className="p-6">
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-12">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">
             {chartType === 'expenses' ? 'Expenses' : 'Income'} Distribution
           </h3>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-600">
             Percentage breakdown of {chartType} across accounts for the selected period
+            {chartData.length > 0 && (
+              <span className="text-slate-500 ml-1">
+                ({chartData.length} account{chartData.length === 1 ? '' : 's'})
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex-shrink-0">
+        <div className="flex-grow-1">
           <Segment
-            value={chartType}
-            onValueChange={(value) => onChartTypeChange(value as 'expenses' | 'income')}
+            label="Distribution Type"
+            showLabel={false}
+            variant="default"
+            size="sm"
             options={[
               { value: 'expenses', label: 'Expenses' },
               { value: 'income', label: 'Income' },
             ]}
-            size="sm"
+            value={chartType}
+            onValueChange={(value) => onChartTypeChange(value as 'expenses' | 'income')}
+            className="w-full"
           />
         </div>
       </div>
