@@ -79,6 +79,12 @@ export const DesktopAccountOverviewWidget: FC<Props> = ({ accounts }) => {
         iconColor: totalBalance >= 0 ? 'text-sage-600' : 'text-coral-600',
       },
       {
+        label: `Transactions`,
+        value: currentPeriodTransactions.toString(),
+        icon: Activity,
+        iconColor: currentPeriodTransactions > 0 ? 'text-mist-600' : 'text-slate-400',
+      },
+      {
         label: `Income`,
         value: formatAmount(currentPeriodIncome, { compact: true, hidePrefix: true }),
         icon: TrendingUp,
@@ -89,12 +95,6 @@ export const DesktopAccountOverviewWidget: FC<Props> = ({ accounts }) => {
         value: formatAmount(currentPeriodExpenses, { compact: true, hidePrefix: true }),
         icon: TrendingDown,
         iconColor: 'text-coral-600',
-      },
-      {
-        label: `Transactions`,
-        value: currentPeriodTransactions.toString(),
-        icon: Activity,
-        iconColor: currentPeriodTransactions > 0 ? 'text-mist-600' : 'text-slate-400',
       },
     ];
   }, [summaryData]);

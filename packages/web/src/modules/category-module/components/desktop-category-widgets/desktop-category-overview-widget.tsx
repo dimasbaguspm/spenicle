@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { Layers, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { Layers, TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { useMemo, useState, type FC } from 'react';
 
 import { Tile, Tab } from '../../../../components';
@@ -78,7 +78,7 @@ export const DesktopCategoryOverviewWidget: FC = () => {
       {
         label: 'Transactions',
         value: totalTransactions.toString(),
-        icon: DollarSign,
+        icon: Activity,
         iconColor: totalTransactions > 0 ? 'text-sage-600' : 'text-slate-400',
       },
       {
