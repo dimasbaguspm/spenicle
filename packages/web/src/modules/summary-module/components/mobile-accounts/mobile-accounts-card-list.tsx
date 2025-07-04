@@ -2,23 +2,23 @@ import React from 'react';
 
 import type { Account, SummaryAccountsPeriod } from '../../../../types/api';
 
-import { AccountsCard } from './accounts-card';
-import { AccountsCardNotFound } from './accounts-card-not-found';
+import { MobileAccountsCard } from './mobile-accounts-card';
+import { MobileAccountsCardNotFound } from './mobile-accounts-card-not-found';
 
-interface AccountsCardListProps {
+interface MobileAccountsCardListProps {
   accountsData?: SummaryAccountsPeriod;
   accountMap: Record<number, Account>;
 }
 
-export const AccountsCardList: React.FC<AccountsCardListProps> = ({ accountsData, accountMap }) => {
+export const MobileAccountsCardList: React.FC<MobileAccountsCardListProps> = ({ accountsData, accountMap }) => {
   if (!accountsData || accountsData.length === 0) {
-    return <AccountsCardNotFound />;
+    return <MobileAccountsCardNotFound />;
   }
 
   return (
     <div className="space-y-4">
       {accountsData.map((account) => (
-        <AccountsCard
+        <MobileAccountsCard
           key={account.accountId}
           account={account as Required<SummaryAccountsPeriod[number]>}
           accountMap={accountMap}

@@ -1,13 +1,13 @@
 import type { FC } from 'react';
 
-import { PeriodBreakdown } from '../components/period-breakdown';
+import { MobilePeriodBreakdown } from '../components/mobile-period-breakdown';
 import { useDesktopSummaryFilters } from '../hooks';
 
 export const MobilePeriodBreakdownPage: FC = () => {
   const { state } = useDesktopSummaryFilters();
 
   return (
-    <PeriodBreakdown
+    <MobilePeriodBreakdown
       startDate={state.periodStartDate}
       endDate={state.periodEndDate}
       currentPeriodDisplay={state.currentPeriodDisplay}

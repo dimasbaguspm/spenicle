@@ -1,3 +1,4 @@
+// mobile-period-breakdown-card component, renamed from period-breakdown-card.tsx
 import React from 'react';
 
 import { Badge } from '../../../../components';
@@ -6,13 +7,17 @@ import type { SummaryTransactionsPeriod } from '../../../../types/api';
 
 import { formatDateRange } from './helpers';
 
-interface PeriodBreakdownCardProps {
+interface MobilePeriodBreakdownCardProps {
   period: SummaryTransactionsPeriod[number];
   periodType: 'weekly' | 'monthly';
   onClick?: () => void;
 }
 
-export const PeriodBreakdownCard: React.FC<PeriodBreakdownCardProps> = ({ period, periodType, onClick }) => {
+export const MobilePeriodBreakdownCard: React.FC<MobilePeriodBreakdownCardProps> = ({
+  period,
+  periodType,
+  onClick,
+}) => {
   const periodTitle = formatDateRange(period.startDate ?? '', period.endDate ?? '', periodType);
 
   let badgeVariant: 'success' | 'warning' | 'info' | 'mist' = 'warning';

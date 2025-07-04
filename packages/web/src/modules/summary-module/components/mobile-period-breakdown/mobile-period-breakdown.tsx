@@ -8,17 +8,17 @@ import type { SummaryTransactionsPeriod } from '../../../../types/api';
 import { useDesktopSummaryFilters } from '../../hooks';
 
 import { groupPeriods } from './helpers';
-import { PeriodBreakdownCardList } from './period-breakdown-card-list';
-import { PeriodBreakdownLoader } from './period-breakdown-loader';
+import { MobilePeriodBreakdownCardList } from './mobile-period-breakdown-card-list';
+import { MobilePeriodBreakdownLoader } from './mobile-period-breakdown-loader';
 
-export interface PeriodBreakdownProps {
+export interface MobilePeriodBreakdownProps {
   startDate: Date;
   endDate: Date;
   currentPeriodDisplay: string;
   isCurrentPeriod: boolean;
 }
 
-export const PeriodBreakdown: React.FC<PeriodBreakdownProps> = ({ startDate, endDate }) => {
+export const MobilePeriodBreakdown: React.FC<MobilePeriodBreakdownProps> = ({ startDate, endDate }) => {
   const navigate = useNavigate();
   const { actions } = useDesktopSummaryFilters();
 
@@ -158,7 +158,7 @@ export const PeriodBreakdown: React.FC<PeriodBreakdownProps> = ({ startDate, end
   return (
     <Tile className="p-6">
       {queryState.isFetching ? (
-        <PeriodBreakdownLoader count={5} />
+        <MobilePeriodBreakdownLoader count={5} />
       ) : (
         <div className="space-y-6">
           <LineChart
@@ -166,7 +166,7 @@ export const PeriodBreakdown: React.FC<PeriodBreakdownProps> = ({ startDate, end
             xKey="label"
             dataKey={['totalIncome', 'totalExpenses']}
           />
-          <PeriodBreakdownCardList
+          <MobilePeriodBreakdownCardList
             periods={groupedData}
             periodType={filteredPeriodType}
             onPeriodClick={handlePeriodCardClick}

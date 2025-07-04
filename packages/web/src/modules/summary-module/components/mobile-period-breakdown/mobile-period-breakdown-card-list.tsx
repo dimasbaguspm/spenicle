@@ -1,16 +1,17 @@
+// mobile-period-breakdown-card-list component, renamed from period-breakdown-card-list.tsx
 import React from 'react';
 
 import type { SummaryTransactionsPeriod } from '../../../../types/api';
 
-import { PeriodBreakdownCard } from './period-breakdown-card';
+import { MobilePeriodBreakdownCard } from './mobile-period-breakdown-card';
 
-interface PeriodBreakdownCardListProps {
+interface MobilePeriodBreakdownCardListProps {
   periods: SummaryTransactionsPeriod;
   periodType: 'weekly' | 'monthly';
   onPeriodClick?: (period: SummaryTransactionsPeriod[number], idx: number) => void;
 }
 
-export const PeriodBreakdownCardList: React.FC<PeriodBreakdownCardListProps> = ({
+export const MobilePeriodBreakdownCardList: React.FC<MobilePeriodBreakdownCardListProps> = ({
   periods,
   periodType,
   onPeriodClick,
@@ -18,7 +19,7 @@ export const PeriodBreakdownCardList: React.FC<PeriodBreakdownCardListProps> = (
   <div className="space-y-4">
     {periods
       .map((period, idx) => (
-        <PeriodBreakdownCard
+        <MobilePeriodBreakdownCard
           key={idx}
           period={period}
           periodType={periodType}

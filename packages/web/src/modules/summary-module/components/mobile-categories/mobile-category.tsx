@@ -1,3 +1,4 @@
+// mobile-category component, renamed from category.tsx
 import React, { useMemo } from 'react';
 
 import { Tile, RadarChart } from '../../../../components';
@@ -5,17 +6,17 @@ import { useApiCategoriesQuery } from '../../../../hooks/use-api/built-in/use-ca
 import { useApiSummaryCategoriesQuery } from '../../../../hooks/use-api/built-in/use-summary';
 import type { Category } from '../../../../types/api';
 
-import { CategoryCardList } from './category-card-list';
-import { CategoriesLoader } from './category-loader';
+import { MobileCategoryCardList } from './mobile-category-card-list';
+import { MobileCategoryLoader } from './mobile-category-loader';
 
-interface CategoriesProps {
+interface MobileCategoriesProps {
   startDate: Date;
   endDate: Date;
   currentPeriodDisplay: string;
   isCurrentPeriod: boolean;
 }
 
-export const Categories: React.FC<CategoriesProps> = ({ startDate, endDate }) => {
+export const MobileCategories: React.FC<MobileCategoriesProps> = ({ startDate, endDate }) => {
   const [summaryData, , queryState] = useApiSummaryCategoriesQuery(
     {
       startDate: startDate.toISOString().split('T')[0],
@@ -30,7 +31,7 @@ export const Categories: React.FC<CategoriesProps> = ({ startDate, endDate }) =>
   const allCategories =
     categoriesResponse && 'items' in categoriesResponse ? (categoriesResponse.items as Category[]) : [];
 
-  // Build a map of categoryId to summary object
+  // build a map of categoryId to summary object
   const summaryMap = useMemo(() => {
     const map = new Map<number, Record<string, unknown>>();
     if (summaryData && Array.isArray(summaryData)) {
@@ -41,7 +42,7 @@ export const Categories: React.FC<CategoriesProps> = ({ startDate, endDate }) =>
     return map;
   }, [summaryData]);
 
-  // Merge all categories with summary data, so all categories are shown even if no transactions
+  // merge all categories with summary data, so all categories are shown even if no transactions
   const mergedCategoriesData = useMemo(() => {
     if (!allCategories) return [];
     return allCategories.map((category) => {
@@ -61,7 +62,7 @@ export const Categories: React.FC<CategoriesProps> = ({ startDate, endDate }) =>
   return (
     <Tile className="p-6">
       {queryState.isFetching ? (
-        <CategoriesLoader count={5} />
+        <MobileCategoryLoader count={5} />
       ) : (
         <div className="space-y-6">
           <RadarChart
@@ -72,7 +73,7 @@ export const Categories: React.FC<CategoriesProps> = ({ startDate, endDate }) =>
             dataKey={['totalIncome', 'totalExpenses']}
             legendAlign="center"
           />
-          <CategoryCardList periods={mergedCategoriesData} categories={allCategories} />
+          <MobileCategoryCardList periods={mergedCategoriesData} categories={allCategories} />
         </div>
       )}
     </Tile>

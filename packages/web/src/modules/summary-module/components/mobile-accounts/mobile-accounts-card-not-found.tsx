@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const AccountsCardNotFound: React.FC = () => (
+export const MobileAccountsCardNotFound: React.FC = () => (
   <div className="flex items-center justify-between opacity-60">
     <div className="flex items-center gap-3">
       <div className="w-4 h-4 rounded bg-slate-200" />

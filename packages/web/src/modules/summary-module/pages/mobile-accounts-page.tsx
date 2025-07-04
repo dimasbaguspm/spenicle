@@ -1,13 +1,13 @@
 import type { FC } from 'react';
 
-import { Accounts } from '../components/accounts';
+import { MobileAccounts } from '../components/mobile-accounts';
 import { useDesktopSummaryFilters } from '../hooks';
 
 export const MobileAccountsPage: FC = () => {
   const { state } = useDesktopSummaryFilters();
 
   return (
-    <Accounts
+    <MobileAccounts
       startDate={state.periodStartDate}
       endDate={state.periodEndDate}
       currentPeriodDisplay={state.currentPeriodDisplay}

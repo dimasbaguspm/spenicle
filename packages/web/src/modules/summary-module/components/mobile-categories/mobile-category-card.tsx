@@ -4,12 +4,12 @@ import { formatNumberCompact } from '../../../../libs/utils';
 import type { Category, SummaryCategoriesPeriod } from '../../../../types/api';
 import { CategoryIcon } from '../../../category-module/components/category-icon/category-icon';
 
-export interface CategoryCardProps {
+export interface MobileCategoryCardProps {
   category?: Category;
   categoryPeriod: SummaryCategoriesPeriod[number];
 }
 
-export const CategoryCard: React.FC<CategoryCardProps> = ({ category, categoryPeriod }) => {
+export const MobileCategoryCard: React.FC<MobileCategoryCardProps> = ({ category, categoryPeriod }) => {
   const name = category?.name ?? 'Unknown Category';
   const color = (category?.metadata?.color as string | undefined) ?? 'bg-slate-500';
   const iconValue = (category?.metadata?.icon as string | undefined) ?? undefined;

@@ -2,11 +2,11 @@ import React from 'react';
 
 import { Skeleton } from '../../../../components/skeleton';
 
-interface AccountsLoaderProps {
+interface MobileAccountsLoaderProps {
   count?: number;
 }
 
-export const AccountsLoader: React.FC<AccountsLoaderProps> = ({ count = 5 }) => {
+export const MobileAccountsLoader: React.FC<MobileAccountsLoaderProps> = ({ count = 5 }) => {
   return (
     <div className="space-y-4" aria-busy="true" aria-label="Loading accounts summary">
       {Array.from({ length: count }).map((_, i) => (

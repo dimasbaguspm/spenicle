@@ -5,17 +5,17 @@ import { useApiAccountsQuery } from '../../../../hooks/use-api/built-in/use-acco
 import { useApiSummaryAccountsQuery } from '../../../../hooks/use-api/built-in/use-summary';
 import type { Account } from '../../../../types/api';
 
-import { AccountsCardList } from './accounts-card-list';
-import { AccountsLoader } from './accounts-loader';
+import { MobileAccountsCardList } from './mobile-accounts-card-list';
+import { MobileAccountsLoader } from './mobile-accounts-loader';
 
-interface AccountsProps {
+interface MobileAccountsProps {
   startDate: Date;
   endDate: Date;
   currentPeriodDisplay: string;
   isCurrentPeriod: boolean;
 }
 
-export const Accounts: React.FC<AccountsProps> = ({ startDate, endDate }) => {
+export const MobileAccounts: React.FC<MobileAccountsProps> = ({ startDate, endDate }) => {
   const [accountsResponse] = useApiAccountsQuery({ pageSize: 1000 });
   const allAccounts = accountsResponse?.items;
   const [accountsData, , queryState] = useApiSummaryAccountsQuery(
@@ -84,11 +84,11 @@ export const Accounts: React.FC<AccountsProps> = ({ startDate, endDate }) => {
   return (
     <Tile className="p-6">
       {queryState.isFetching ? (
-        <AccountsLoader count={5} />
+        <MobileAccountsLoader count={5} />
       ) : (
         <div className="space-y-6">
           <RadarChart data={radarChartData} dataKey={['totalIncome', 'totalExpenses']} legendAlign="center" />
-          <AccountsCardList accountsData={mergedAccountsData} accountMap={accountMap} />
+          <MobileAccountsCardList accountsData={mergedAccountsData} accountMap={accountMap} />
         </div>
       )}
     </Tile>

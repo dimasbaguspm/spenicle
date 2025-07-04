@@ -2,14 +2,14 @@ import React from 'react';
 
 import type { SummaryCategoriesPeriod, Category } from '../../../../types/api';
 
-import { CategoryCard } from './category-card';
+import { MobileCategoryCard } from './mobile-category-card';
 
-export interface CategoryCardListProps {
+export interface MobileCategoryCardListProps {
   periods: SummaryCategoriesPeriod;
   categories?: Category[];
 }
 
-export const CategoryCardList: React.FC<CategoryCardListProps> = ({ periods, categories }) => {
+export const MobileCategoryCardList: React.FC<MobileCategoryCardListProps> = ({ periods, categories }) => {
   const allCategoryIds = categories?.map((cat) => cat.id) ?? [];
   const periodsMap = new Map((periods ?? []).map((p) => [p.categoryId, p]));
   const merged = allCategoryIds.map((categoryId) => {
@@ -28,7 +28,9 @@ export const CategoryCardList: React.FC<CategoryCardListProps> = ({ periods, cat
     <div className="space-y-4">
       {sorted.map((categoryPeriod: SummaryCategoriesPeriod[number]) => {
         const category = categories?.find((cat) => cat.id === categoryPeriod.categoryId);
-        return <CategoryCard key={categoryPeriod.categoryId} category={category} categoryPeriod={categoryPeriod} />;
+        return (
+          <MobileCategoryCard key={categoryPeriod.categoryId} category={category} categoryPeriod={categoryPeriod} />
+        );
       })}
     </div>
   );

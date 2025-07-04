@@ -4,7 +4,7 @@ import { Badge } from '../../../../components';
 import type { Account, SummaryAccountsPeriod } from '../../../../types/api';
 import { AccountIcon } from '../../../account-module/components/account-icon/account-icon';
 
-interface AccountsCardProps {
+interface MobileAccountsCardProps {
   account: Required<SummaryAccountsPeriod[number]>;
   accountMap: Record<number, Account>;
 }
@@ -20,7 +20,7 @@ function getAccountIconAndColor(accountObj?: Account): { iconValue?: string; col
   return { iconValue: undefined, colorValue: undefined };
 }
 
-export const AccountsCard: React.FC<AccountsCardProps> = ({ account, accountMap }) => {
+export const MobileAccountsCard: React.FC<MobileAccountsCardProps> = ({ account, accountMap }) => {
   const accountObj = accountMap[account.accountId];
   const accountName = accountObj?.name ?? `Account #${account.accountId}`;
 
