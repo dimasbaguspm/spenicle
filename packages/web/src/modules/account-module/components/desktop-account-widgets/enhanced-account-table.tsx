@@ -1,15 +1,17 @@
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { Edit } from 'lucide-react';
 import { useMemo, useState, type FC } from 'react';
 
 import { Tile, DataTable, IconButton, type ColumnDefinition, type SortConfig } from '../../../../components';
 import { DRAWER_IDS } from '../../../../constants/drawer-id';
-import { useApiSummaryAccountsQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router/context';
 import type { Account } from '../../../../types/api';
 import { useAccountsSearch } from '../../hooks';
 import { AccountIcon } from '../account-icon';
+
+dayjs.extend(relativeTime);
 
 interface EnhancedAccountTableProps {
   accounts: Account[];
@@ -17,111 +19,64 @@ interface EnhancedAccountTableProps {
   onSearchChange: (query: string) => void;
 }
 
-type SortField = 'name' | 'transactions' | 'amount';
-
-interface AccountWithMetrics extends Account {
-  totalExpenses: number;
-  totalIncome: number;
-  totalTransactions: number;
-}
+type SortField = 'name' | 'amount' | 'updatedAt';
 
 /**
- * EnhancedAccountTable displays accounts with enhanced analytics and sorting.
- * Includes transaction metrics, cash flow, and action buttons.
+ * EnhancedAccountTable (simplified): lists account name, balance, last usage, and actions only
  */
 export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
   accounts,
   searchQuery,
   onSearchChange: _onSearchChange,
 }) => {
-  const [sortField, setSortField] = useState<SortField>('transactions');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { openDrawer } = useDrawerRouterProvider();
 
-  // fetch current month summary for metrics
-  const [summaryData] = useApiSummaryAccountsQuery({
-    startDate: dayjs().startOf('month').toISOString(),
-    endDate: dayjs().endOf('month').toISOString(),
-  });
+  // filter accounts by search query
+  const { filteredAccounts } = useAccountsSearch({ accounts, searchQuery });
 
-  // use the custom hook for search functionality
-  const { filteredAccounts } = useAccountsSearch({
-    accounts,
-    searchQuery,
-  });
-
-  // enhance accounts with metrics
-  const enhancedAccounts = useMemo((): AccountWithMetrics[] => {
-    if (!summaryData) return [];
-
-    const summaryMap = new Map(summaryData.map((s) => [s.accountId, s]));
-
-    return filteredAccounts.map((account) => {
-      const summary = summaryMap.get(account.id);
-      const expenses = summary?.totalExpenses ?? 0;
-      const income = summary?.totalIncome ?? 0;
-      const transactions = summary?.totalTransactions ?? 0;
-
-      return {
-        ...account,
-        totalExpenses: expenses,
-        totalIncome: income,
-        totalTransactions: transactions,
-      };
-    });
-  }, [filteredAccounts, summaryData]);
-
-  // sort accounts
+  // sort filtered accounts
   const sortedAccounts = useMemo(() => {
-    return [...enhancedAccounts].sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
-
+    return [...filteredAccounts].sort((a, b) => {
+      let aValue: string | number = '';
+      let bValue: string | number = '';
       switch (sortField) {
         case 'name':
           aValue = a.name?.toLowerCase() ?? '';
           bValue = b.name?.toLowerCase() ?? '';
           break;
-        case 'transactions':
-          aValue = a.totalTransactions;
-          bValue = b.totalTransactions;
-          break;
         case 'amount':
           aValue = a.amount ?? 0;
           bValue = b.amount ?? 0;
           break;
+        case 'updatedAt':
+          aValue = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          bValue = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          break;
         default:
-          return 0;
+          break;
       }
-
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       }
-
       return sortDirection === 'asc'
         ? (aValue as number) - (bValue as number)
         : (bValue as number) - (aValue as number);
     });
-  }, [enhancedAccounts, sortField, sortDirection]);
+  }, [filteredAccounts, sortField, sortDirection]);
 
-  const handleSort = (field: keyof AccountWithMetrics) => {
-    // Map field names to actual AccountWithMetrics fields
+  const handleSort = (field: keyof Account) => {
     let sortableField: SortField;
-    if (field === 'totalTransactions') {
-      sortableField = 'transactions';
-    } else if (field === 'name') {
-      sortableField = 'name';
-    } else if (field === 'amount') {
-      sortableField = 'amount';
-    } else {
-      return;
-    }
-
+    if (field === 'name') sortableField = 'name';
+    else if (field === 'amount') sortableField = 'amount';
+    else if (field === 'updatedAt') sortableField = 'updatedAt';
+    else return;
     if (sortField === sortableField) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(sortableField);
-      setSortDirection('desc');
+      setSortDirection('asc');
     }
   };
 
@@ -129,14 +84,14 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
     await openDrawer(DRAWER_IDS.EDIT_ACCOUNT, { accountId });
   };
 
-  // define table columns with grid layout configuration
-  const columns: ColumnDefinition<AccountWithMetrics>[] = [
+  // define table columns
+  const columns: ColumnDefinition<Account>[] = [
     {
       key: 'name',
       label: 'Account Name',
       sortable: true,
       align: 'left',
-      gridColumn: 'span 4', // Larger span for account name
+      gridColumn: 'span 4',
       render: (_, account) => (
         <div className="flex items-center gap-3">
           <AccountIcon
@@ -154,13 +109,12 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
         </div>
       ),
     },
-
     {
       key: 'amount',
-      label: 'Balance (All Time)',
+      label: 'Balance',
       sortable: true,
       align: 'right',
-      gridColumn: 'span 3', // Medium span for account balance
+      gridColumn: 'span 3',
       render: (value) => {
         const accountAmount = value as number;
         const displayValue = Math.abs(accountAmount);
@@ -174,19 +128,21 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
       },
     },
     {
-      key: 'totalTransactions',
-      label: 'Transactions',
+      key: 'updatedAt',
+      label: 'Last Usage',
       sortable: true,
       align: 'center',
-      gridColumn: 'span 2', // Medium span for transactions
-      render: (value) => <p className="text-sm font-medium text-slate-600 tabular-nums">{value as number}</p>,
+      gridColumn: 'span 3',
+      render: (value) => (
+        <p className="text-sm text-slate-600 tabular-nums">{value ? dayjs(value as string).fromNow() : '—'}</p>
+      ),
     },
     {
       key: 'id',
       label: 'Actions',
       sortable: false,
       align: 'center',
-      gridColumn: 'span 1', // Small span for actions
+      gridColumn: 'span 2',
       render: (_, account) => (
         <div className="flex items-center justify-center gap-2">
           <IconButton
@@ -202,39 +158,32 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
     },
   ];
 
-  // Generate dynamic title with current month
-  const currentMonth = dayjs().format('MMMM YYYY');
-
-  const sortConfig: SortConfig<AccountWithMetrics> = {
-    field: sortField === 'transactions' ? 'totalTransactions' : (sortField as keyof AccountWithMetrics),
+  const sortConfig: SortConfig<Account> = {
+    field: sortField,
     direction: sortDirection,
   };
 
   return (
-    <>
-      <Tile className="p-4 md:p-6">
-        <div className="space-y-4 md:space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-lg md:text-xl font-semibold text-slate-900">Activities in {currentMonth}</h3>
-            <p className="text-sm text-slate-500">
-              Account performance and transaction metrics for the current month (showing {sortedAccounts.length} of{' '}
-              {accounts.length} accounts)
-            </p>
-          </div>
-
-          <DataTable
-            data={sortedAccounts}
-            columns={columns}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-            emptyMessage={searchQuery ? 'No accounts found matching your search' : 'No payment methods yet'}
-            emptyDescription={
-              searchQuery ? 'Try adjusting your search terms' : 'Add your first payment method to get started'
-            }
-            loading={!summaryData}
-          />
+    <Tile className="p-4 md:p-6">
+      <div className="space-y-4 md:space-y-6">
+        <div className="space-y-1">
+          <h3 className="text-lg md:text-xl font-semibold text-slate-900">Accounts</h3>
+          <p className="text-sm text-slate-500">
+            Showing {sortedAccounts.length} of {accounts.length} accounts
+          </p>
         </div>
-      </Tile>
-    </>
+        <DataTable
+          data={sortedAccounts}
+          columns={columns}
+          sortConfig={sortConfig}
+          onSort={handleSort}
+          emptyMessage={searchQuery ? 'No accounts found matching your search' : 'No payment methods yet'}
+          emptyDescription={
+            searchQuery ? 'Try adjusting your search terms' : 'Add your first payment method to get started'
+          }
+          loading={false}
+        />
+      </div>
+    </Tile>
   );
 };

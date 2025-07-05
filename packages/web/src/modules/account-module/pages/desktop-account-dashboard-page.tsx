@@ -3,11 +3,7 @@ import type { FC } from 'react';
 
 import { PageLayout } from '../../../components';
 import { useApiAccountsQuery } from '../../../hooks';
-import {
-  AccountQuickActionsPanel,
-  DesktopAccountOverviewWidget,
-  EnhancedAccountTable,
-} from '../components/desktop-account-widgets';
+import { AccountQuickActionsPanel, EnhancedAccountTable } from '../components/desktop-account-widgets';
 
 export const DesktopAccountDashboardPage: FC = () => {
   const navigate = useNavigate();
@@ -40,10 +36,6 @@ export const DesktopAccountDashboardPage: FC = () => {
 
           {/* main content area */}
           <div className="col-span-9 space-y-6">
-            {/* account overview - straightforward financial information */}
-            <DesktopAccountOverviewWidget accounts={accounts} />
-
-            {/* enhanced account table */}
             <EnhancedAccountTable accounts={accounts} searchQuery={searchQuery} onSearchChange={handleSearchChange} />
           </div>
         </div>
