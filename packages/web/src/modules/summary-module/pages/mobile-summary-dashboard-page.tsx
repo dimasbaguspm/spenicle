@@ -29,6 +29,7 @@ export const MobileSummaryDashboardPageComponent = () => {
   const handleOnTabChange = async (value: string) => {
     await navigate({
       to: `/analytics/${value}`,
+      search: location.search,
     });
   };
 

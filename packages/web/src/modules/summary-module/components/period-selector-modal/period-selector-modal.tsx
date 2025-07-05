@@ -46,8 +46,8 @@ export const PeriodSelectorModal: React.FC<PeriodSelectorModalProps> = ({ isOpen
   } = usePeriodSelectorForm({
     defaultValues: {
       periodType: state.currentPeriodType,
-      startDate: null,
-      endDate: null,
+      startDate: state.periodStartDate,
+      endDate: state.periodEndDate,
     },
     onConfirm,
   });
