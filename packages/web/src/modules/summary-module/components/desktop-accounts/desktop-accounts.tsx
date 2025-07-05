@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import React, { useCallback, useMemo, useState } from 'react';
 
 import { Tile } from '../../../../components';
 import { useApiAccountsQuery } from '../../../../hooks/use-api/built-in/use-accounts';
@@ -22,6 +23,8 @@ interface DesktopAccountsMainContentProps {
  * Includes toggle for expenses/income view with synchronized chart and table.
  */
 export const DesktopAccounts: React.FC<DesktopAccountsMainContentProps> = ({ startDate, endDate }) => {
+  const navigate = useNavigate();
+
   // state for chart type toggle (expenses vs income)
   const [chartType, setChartType] = useState<'expenses' | 'income'>('expenses');
   const [accountsResponse] = useApiAccountsQuery({ pageSize: 1000 });
@@ -75,6 +78,16 @@ export const DesktopAccounts: React.FC<DesktopAccountsMainContentProps> = ({ sta
     [enrichedAccountData, chartType]
   );
 
+  const handleOnMoreClick = useCallback(async () => {
+    await navigate({
+      to: '/transactions/period',
+      search: {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      },
+    });
+  }, [startDate, endDate, navigate]);
+
   if (queryState.isFetching) {
     return (
       <div className="space-y-6">
@@ -90,7 +103,7 @@ export const DesktopAccounts: React.FC<DesktopAccountsMainContentProps> = ({ sta
       {/* pie chart display with toggle */}
       <AccountsPieChart chartData={pieChartData} chartType={chartType} onChartTypeChange={setChartType} />
       {/* data table */}
-      <AccountsTable data={sortedAccountData} chartType={chartType} />
+      <AccountsTable data={sortedAccountData} chartType={chartType} onMoreClick={handleOnMoreClick} />
     </div>
   );
 };

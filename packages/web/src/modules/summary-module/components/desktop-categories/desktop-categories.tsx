@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import React, { useCallback, useMemo, useState } from 'react';
 
 import { Tile } from '../../../../components';
 import { useApiCategoriesQuery } from '../../../../hooks/use-api/built-in/use-categories';
@@ -22,6 +23,8 @@ interface DesktopCategoriesMainContentProps {
  * Follows the same pattern as desktop accounts.
  */
 export const DesktopCategories: React.FC<DesktopCategoriesMainContentProps> = ({ startDate, endDate }) => {
+  const navigate = useNavigate();
+
   // toggle state for chart type selection
   const [chartType, setChartType] = useState<'expenses' | 'income'>('expenses');
 
@@ -73,6 +76,16 @@ export const DesktopCategories: React.FC<DesktopCategoriesMainContentProps> = ({
     [enrichedCategoryData, chartType]
   );
 
+  const handleMoreClick = useCallback(async () => {
+    await navigate({
+      to: '/transactions/period',
+      search: {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      },
+    });
+  }, [startDate, endDate, navigate]);
+
   const columns = createDesktopCategoriesColumns(chartType);
 
   if (queryState.isFetching) {
@@ -90,7 +103,12 @@ export const DesktopCategories: React.FC<DesktopCategoriesMainContentProps> = ({
       {/* pie chart display with integrated toggle */}
       <CategoriesPieChart chartData={pieChartData} chartType={chartType} onChartTypeChange={setChartType} />
       {/* data table */}
-      <CategoriesTable data={enrichedCategoryData} columns={columns} chartType={chartType} />
+      <CategoriesTable
+        data={enrichedCategoryData}
+        columns={columns}
+        chartType={chartType}
+        onMoreClick={handleMoreClick}
+      />
     </div>
   );
 };

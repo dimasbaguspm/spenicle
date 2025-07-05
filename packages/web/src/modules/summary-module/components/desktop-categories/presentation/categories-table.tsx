@@ -1,6 +1,7 @@
+import { NotebookTabs } from 'lucide-react';
 import React from 'react';
 
-import { Tile, DataTable, type ColumnDefinition } from '../../../../../components';
+import { Tile, DataTable, type ColumnDefinition, IconButton } from '../../../../../components';
 import { formatAmount } from '../../../../../libs/format-amount';
 import { CategoryIcon } from '../../../../category-module/components/category-icon/category-icon';
 import type { EnrichedCategoryData } from '../helpers';
@@ -87,6 +88,7 @@ export const createDesktopCategoriesColumns = (
 interface CategoriesTableProps {
   data: EnrichedCategoryData[];
   columns: ColumnDefinition<EnrichedCategoryData>[];
+  onMoreClick: () => void;
   chartType?: 'expenses' | 'income';
 }
 
@@ -99,6 +101,7 @@ export const CategoriesTable: React.FC<CategoriesTableProps> = ({
   data,
   columns: _columns,
   chartType = 'expenses',
+  onMoreClick,
 }) => {
   // Generate columns with data for percentage calculation
   const columns = createDesktopCategoriesColumns(chartType, data);
@@ -106,12 +109,17 @@ export const CategoriesTable: React.FC<CategoriesTableProps> = ({
   return (
     <Tile className="p-4 md:p-6">
       <div className="space-y-4 md:space-y-6">
-        <div className="space-y-1">
-          <h3 className="text-lg md:text-xl font-semibold text-slate-900">Category Details</h3>
-          <p className="text-sm text-slate-500">
-            Essential category metrics for the selected period (showing {data.length} categories, sorted by highest{' '}
-            {chartType})
-          </p>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h3 className="text-lg md:text-xl font-semibold text-slate-900">Category Details</h3>
+            <p className="text-sm text-slate-500">
+              Essential category metrics for the selected period (showing {data.length} categories, sorted by highest{' '}
+              {chartType})
+            </p>
+          </div>
+          <IconButton onClick={onMoreClick} variant="mist-ghost" size="sm" title="View more details">
+            <NotebookTabs className="h-4 w-4" />
+          </IconButton>
         </div>
         <DataTable
           data={data}

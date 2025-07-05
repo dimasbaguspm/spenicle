@@ -1,6 +1,7 @@
+import { NotebookTabs } from 'lucide-react';
 import React from 'react';
 
-import { Tile, DataTable, type ColumnDefinition } from '../../../../../components';
+import { Tile, DataTable, type ColumnDefinition, IconButton } from '../../../../../components';
 import { formatAmount } from '../../../../../libs/format-amount';
 import { AccountIcon } from '../../../../account-module/components/account-icon/account-icon';
 import type { EnrichedAccountData } from '../helpers';
@@ -87,6 +88,7 @@ export const createDesktopAccountsColumns = (
 interface AccountsTableProps {
   data: EnrichedAccountData[];
   columns?: ColumnDefinition<EnrichedAccountData>[];
+  onMoreClick: () => void;
   chartType?: 'expenses' | 'income';
 }
 
@@ -95,19 +97,29 @@ interface AccountsTableProps {
  * Simplified view with account name, transactions, selected chart type value, and percentage.
  * Follows enhanced account table pattern with grid layout and proper sorting.
  */
-export const AccountsTable: React.FC<AccountsTableProps> = ({ data, columns: _columns, chartType = 'expenses' }) => {
+export const AccountsTable: React.FC<AccountsTableProps> = ({
+  data,
+  columns: _columns,
+  chartType = 'expenses',
+  onMoreClick,
+}) => {
   // Generate columns with data for percentage calculation
   const columns = createDesktopAccountsColumns(chartType, data);
 
   return (
     <Tile className="p-4 md:p-6">
       <div className="space-y-4 md:space-y-6">
-        <div className="space-y-1">
-          <h3 className="text-lg md:text-xl font-semibold text-slate-900">Account Details</h3>
-          <p className="text-sm text-slate-500">
-            Essential account metrics for the selected period (showing {data.length} accounts, sorted by highest{' '}
-            {chartType})
-          </p>
+        <div className="flex justify-between items-center">
+          <div className="space-y-1">
+            <h3 className="text-lg md:text-xl font-semibold text-slate-900">Account Details</h3>
+            <p className="text-sm text-slate-500">
+              Essential account metrics for the selected period (showing {data.length} accounts, sorted by highest{' '}
+              {chartType})
+            </p>
+          </div>
+          <IconButton onClick={onMoreClick} variant="mist-ghost" size="sm" title="View more details">
+            <NotebookTabs className="h-4 w-4" />
+          </IconButton>
         </div>
         <DataTable
           data={data}

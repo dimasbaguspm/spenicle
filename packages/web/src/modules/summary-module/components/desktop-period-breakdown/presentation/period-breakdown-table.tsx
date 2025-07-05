@@ -1,6 +1,7 @@
+import { NotebookTabs } from 'lucide-react';
 import React from 'react';
 
-import { Tile, DataTable, type ColumnDefinition } from '../../../../../components';
+import { Tile, DataTable, type ColumnDefinition, IconButton } from '../../../../../components';
 import { formatAmount } from '../../../../../libs/format-amount';
 import type { PeriodType } from '../../../hooks';
 
@@ -11,10 +12,7 @@ import type { EnrichedPeriodData } from './types';
  * Simplified to show essential metrics: period name, transactions, income, and expenses.
  * Follows the enhanced account table pattern with grid layout.
  */
-export const createDesktopPeriodBreakdownColumns = (
-  periodType: PeriodType,
-  onPeriodClick: (period: EnrichedPeriodData) => Promise<void>
-): ColumnDefinition<EnrichedPeriodData>[] => [
+export const createDesktopPeriodBreakdownColumns = (periodType: PeriodType): ColumnDefinition<EnrichedPeriodData>[] => [
   {
     key: 'startDate',
     label: periodType === 'weekly' ? 'Day' : periodType === 'monthly' ? 'Week' : 'Month',
@@ -22,10 +20,7 @@ export const createDesktopPeriodBreakdownColumns = (
     align: 'left',
     gridColumn: 'span 4', // Larger span for period name
     render: (_, period: EnrichedPeriodData) => (
-      <button
-        onClick={() => onPeriodClick(period)}
-        className="text-left font-medium text-coral-600 hover:text-coral-700 transition-colors"
-      >
+      <button className="text-left font-medium text-coral-600 hover:text-coral-700 transition-colors">
         {period.label ?? 'Unknown Period'}
       </button>
     ),
@@ -76,18 +71,29 @@ interface PeriodBreakdownTableProps {
   data: Array<Record<string, unknown>>;
   columns: ColumnDefinition<Record<string, unknown>>[];
   periodType: string;
+  onMoreClick: () => void;
 }
 
 // table section for period breakdown showing essential financial metrics
-export const PeriodBreakdownTable: React.FC<PeriodBreakdownTableProps> = ({ data, columns, periodType }) => (
+export const PeriodBreakdownTable: React.FC<PeriodBreakdownTableProps> = ({
+  data,
+  columns,
+  periodType,
+  onMoreClick,
+}) => (
   <Tile className="p-4 md:p-6">
     <div className="space-y-4 md:space-y-6">
-      <div className="space-y-1">
-        <h3 className="text-lg md:text-xl font-semibold text-slate-900">Period Breakdown Details</h3>
-        <p className="text-sm text-slate-500">
-          Essential period metrics for the selected timeframe (showing {data.length}{' '}
-          {periodType === 'weekly' ? 'days' : periodType === 'monthly' ? 'weeks' : 'months'})
-        </p>
+      <div className="flex justify-between align-center">
+        <div className="space-y-1">
+          <h3 className="text-lg md:text-xl font-semibold text-slate-900">Period Breakdown Details</h3>
+          <p className="text-sm text-slate-500">
+            Essential period metrics for the selected timeframe (showing {data.length}{' '}
+            {periodType === 'weekly' ? 'days' : periodType === 'monthly' ? 'weeks' : 'months'})
+          </p>
+        </div>
+        <IconButton variant="mist-ghost" size="sm" title="View more details" onClick={onMoreClick}>
+          <NotebookTabs className="h-4 w-4" />
+        </IconButton>
       </div>
       <DataTable
         data={data}

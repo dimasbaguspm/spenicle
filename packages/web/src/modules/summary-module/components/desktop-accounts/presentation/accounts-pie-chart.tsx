@@ -45,7 +45,7 @@ export const AccountsPieChart: React.FC<AccountsPieChartProps> = ({ chartData, c
           />
         </div>
       </div>
-      <PieChart data={chartData} />
+      <PieChart data={chartData} showLegend={false} height={300} />
     </div>
   </Tile>
 );

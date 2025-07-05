@@ -12,16 +12,6 @@ interface CategoriesPieChartProps {
  * Pie chart section for categories breakdown showing distribution by usage
  */
 export const CategoriesPieChart: React.FC<CategoriesPieChartProps> = ({ chartData, chartType, onChartTypeChange }) => {
-  // calculate dynamic height based on number of categories
-  // more categories need more space for legend and better readability
-  const getDynamicHeight = () => {
-    const categoryCount = chartData.length;
-    if (categoryCount <= 5) return 320; // 320px for few categories
-    if (categoryCount <= 10) return 384; // 384px for medium amount
-    if (categoryCount <= 15) return 448; // 448px for many categories
-    return 512; // 512px for lots of categories
-  };
-
   return (
     <Tile className="p-6">
       <div className="space-y-4">
@@ -59,7 +49,7 @@ export const CategoriesPieChart: React.FC<CategoriesPieChartProps> = ({ chartDat
           </div>
         </div>
         {chartData.length > 0 ? (
-          <PieChart data={chartData} height={getDynamicHeight()} />
+          <PieChart data={chartData} height={300} showLegend={false} />
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="text-slate-400 mb-2">

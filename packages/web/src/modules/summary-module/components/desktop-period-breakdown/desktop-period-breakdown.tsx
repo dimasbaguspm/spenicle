@@ -1,10 +1,8 @@
 import { useNavigate } from '@tanstack/react-router';
-import dayjs from 'dayjs';
 import React from 'react';
 
 import { Tile } from '../../../../components';
 import { useApiSummaryTransactionsQuery } from '../../../../hooks';
-import type { SummaryTransactionsPeriod } from '../../../../types/api';
 import type { PeriodType } from '../../hooks';
 
 import { DesktopPeriodBreakdownLoader } from './desktop-period-breakdown-loader';
@@ -56,26 +54,17 @@ export const DesktopPeriodBreakdown: React.FC<DesktopPeriodBreakdownMainContentP
     [groupedData, periodType]
   );
 
-  const handlePeriodCardClick = React.useCallback(
-    async (period: SummaryTransactionsPeriod[number]) => {
-      if (periodType === 'monthly' && period.startDate) {
-        // navigate to weekly view for the clicked month - handled by filters hook
-        return;
-      } else if (periodType === 'weekly' && period.startDate && period.endDate) {
-        // navigate to transactions for the specific day
-        await navigate({
-          to: '/transactions/period',
-          search: {
-            startDate: dayjs(period.startDate).toISOString(),
-            endDate: dayjs(period.endDate).toISOString(),
-          },
-        });
-      }
-    },
-    [periodType, navigate]
-  );
+  const handleMoreClick = React.useCallback(async () => {
+    await navigate({
+      to: '/transactions/period',
+      search: {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      },
+    });
+  }, [startDate, endDate, navigate]);
 
-  const columns = createDesktopPeriodBreakdownColumns(periodType, handlePeriodCardClick);
+  const columns = createDesktopPeriodBreakdownColumns(periodType);
 
   if (queryState.isFetching) {
     return (
@@ -92,7 +81,12 @@ export const DesktopPeriodBreakdown: React.FC<DesktopPeriodBreakdownMainContentP
       {/* enhanced chart display */}
       <PeriodBreakdownChart periodType={periodType} chartData={chartData} />
       {/* enhanced data table */}
-      <PeriodBreakdownTable data={enrichedTableData} columns={columns} periodType={periodType} />
+      <PeriodBreakdownTable
+        data={enrichedTableData}
+        columns={columns}
+        periodType={periodType}
+        onMoreClick={handleMoreClick}
+      />
     </div>
   );
 };
