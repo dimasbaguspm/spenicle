@@ -4,12 +4,13 @@ import React from 'react';
 import { Badge } from '../../../../components';
 import { formatNumberCompact } from '../../../../libs/utils';
 import type { SummaryTransactionsPeriod } from '../../../../types/api';
+import type { PeriodType } from '../../hooks';
 
 import { formatDateRange } from './helpers';
 
 interface MobilePeriodBreakdownCardProps {
   period: SummaryTransactionsPeriod[number];
-  periodType: 'weekly' | 'monthly';
+  periodType: PeriodType;
   onClick?: () => void;
 }
 
@@ -18,7 +19,11 @@ export const MobilePeriodBreakdownCard: React.FC<MobilePeriodBreakdownCardProps>
   periodType,
   onClick,
 }) => {
-  const periodTitle = formatDateRange(period.startDate ?? '', period.endDate ?? '', periodType);
+  const periodTitle = formatDateRange(
+    period.startDate ?? '',
+    period.endDate ?? '',
+    periodType as 'weekly' | 'monthly' | 'yearly'
+  );
 
   let badgeVariant: 'success' | 'warning' | 'info' | 'mist' = 'warning';
   let badgeLabel = 'Negative';

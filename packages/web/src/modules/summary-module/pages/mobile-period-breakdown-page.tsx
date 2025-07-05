@@ -8,6 +8,7 @@ export const MobilePeriodBreakdownPage: FC = () => {
 
   return (
     <MobilePeriodBreakdown
+      periodType={state.currentPeriodType}
       startDate={state.periodStartDate}
       endDate={state.periodEndDate}
       currentPeriodDisplay={state.currentPeriodDisplay}

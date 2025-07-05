@@ -1,7 +1,11 @@
+// legacy helper functions - keeping for compatibility
+// these will be gradually replaced by the new helpers in ./helpers/ directory
+
 import dayjs from 'dayjs';
 
 import type { SummaryTransactionsPeriod } from '../../../../types/api';
 
+// Legacy groupPeriods function - consider migrating to new structure
 export function groupPeriods(
   data: SummaryTransactionsPeriod,
   periodType: 'weekly' | 'monthly',
@@ -130,14 +134,17 @@ export const getPeriodRange = (type: 'weekly' | 'monthly', index: number) => {
   }
 };
 
-export function formatDateRange(startDate: string, endDate: string, type: 'weekly' | 'monthly') {
+export function formatDateRange(startDate: string, endDate: string, type: 'weekly' | 'monthly' | 'yearly') {
   const start = dayjs(startDate);
   const end = dayjs(endDate);
   if (type === 'weekly') {
+    return start.format('dddd, MMM D');
+  } else if (type === 'monthly') {
     if (start.month() === end.month()) {
       return `${start.format('D')} - ${end.format('D MMM')}`;
     }
     return `${start.format('D MMM')} - ${end.format('D MMM')}`;
+  } else {
+    return start.format('MMMM YYYY');
   }
-  return start.format('MMMM YYYY');
 }

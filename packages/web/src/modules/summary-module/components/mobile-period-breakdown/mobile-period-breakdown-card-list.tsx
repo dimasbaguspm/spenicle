@@ -2,12 +2,13 @@
 import React from 'react';
 
 import type { SummaryTransactionsPeriod } from '../../../../types/api';
+import type { PeriodType } from '../../hooks';
 
 import { MobilePeriodBreakdownCard } from './mobile-period-breakdown-card';
 
 interface MobilePeriodBreakdownCardListProps {
   periods: SummaryTransactionsPeriod;
-  periodType: 'weekly' | 'monthly';
+  periodType: PeriodType;
   onPeriodClick?: (period: SummaryTransactionsPeriod[number], idx: number) => void;
 }
 
@@ -17,15 +18,13 @@ export const MobilePeriodBreakdownCardList: React.FC<MobilePeriodBreakdownCardLi
   onPeriodClick,
 }) => (
   <div className="space-y-4">
-    {periods
-      .map((period, idx) => (
-        <MobilePeriodBreakdownCard
-          key={idx}
-          period={period}
-          periodType={periodType}
-          onClick={onPeriodClick ? () => onPeriodClick(period, idx) : undefined}
-        />
-      ))
-      .reverse()}
+    {periods.map((period, idx) => (
+      <MobilePeriodBreakdownCard
+        key={idx}
+        period={period}
+        periodType={periodType}
+        onClick={onPeriodClick ? () => onPeriodClick(period, idx) : undefined}
+      />
+    ))}
   </div>
 );
