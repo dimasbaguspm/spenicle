@@ -13,6 +13,7 @@ export interface PieChartDatum {
 interface PieChartProps {
   data: PieChartDatum[];
   height?: number;
+  showLegend?: boolean;
 }
 
 // color palette for pie chart segments following our design system
@@ -103,7 +104,7 @@ const renderActiveShape = (props: unknown) => {
  * Uses custom active shapes for enhanced interactivity and center space for totals.
  * Accessible, responsive, and styled with design tokens for financial data.
  */
-export const PieChart: FC<PieChartProps> = ({ data, height = 400 }) => {
+export const PieChart: FC<PieChartProps> = ({ data, height = 400, showLegend = true }) => {
   const [activeIndex, setActiveIndex] = useState<number>(0);
 
   const onPieEnter = (_: unknown, index: number) => {
@@ -160,17 +161,19 @@ export const PieChart: FC<PieChartProps> = ({ data, height = 400 }) => {
             return [`${formatLineChartAmount(Number(value), { compact: false })} (${percentage.toFixed(1)}%)`, name];
           }}
         />
-        <Legend
-          wrapperStyle={{ fontSize: 13, color: '#3d405b', fontWeight: 500 }}
-          iconType="circle"
-          align="center"
-          verticalAlign="bottom"
-          formatter={(value, entry) => {
-            const pieData = entry.payload as unknown as PieChartDatum;
-            const percentage = pieData?.percentage ?? 0;
-            return `${value} (${percentage.toFixed(1)}%)`;
-          }}
-        />
+        {showLegend && (
+          <Legend
+            wrapperStyle={{ fontSize: 13, color: '#3d405b', fontWeight: 500 }}
+            iconType="circle"
+            align="center"
+            verticalAlign="bottom"
+            formatter={(value, entry) => {
+              const pieData = entry.payload as unknown as PieChartDatum;
+              const percentage = pieData?.percentage ?? 0;
+              return `${value} (${percentage.toFixed(1)}%)`;
+            }}
+          />
+        )}
       </RechartsPieChart>
     </ResponsiveContainer>
   );
