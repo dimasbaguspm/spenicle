@@ -1,5 +1,7 @@
+import { X } from 'lucide-react';
 import { type FC } from 'react';
 
+import { Button } from '../../../../components';
 import { ChipInput } from '../../../../components/chip';
 import type { Account, Category } from '../../../../types/api';
 
@@ -9,6 +11,7 @@ interface TransactionFilterChipsProps {
   types?: ('income' | 'expense' | 'transfer')[];
   accounts: Account[];
   categories: Category[];
+  onClearAllFilters?: () => void;
 }
 
 export const TransactionFilterChips: FC<TransactionFilterChipsProps> = ({
@@ -17,6 +20,7 @@ export const TransactionFilterChips: FC<TransactionFilterChipsProps> = ({
   types,
   accounts,
   categories,
+  onClearAllFilters,
 }) => {
   // generate filter chips based on applied filters
   const generateFilterChips = (): React.ReactElement[] => {
@@ -72,7 +76,19 @@ export const TransactionFilterChips: FC<TransactionFilterChipsProps> = ({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs text-slate-500 font-medium">Filters:</span>
-      {filterChips.length > 0 ? filterChips : <span className="text-xs text-slate-400 italic">No filters applied</span>}
+      {filterChips.length > 0 ? (
+        <>
+          {filterChips}
+          {onClearAllFilters && (
+            <Button variant="ghost" size="sm" onClick={onClearAllFilters} className="text-xs h-6 px-2">
+              <X className="h-3 w-3 mr-1" />
+              Clear All
+            </Button>
+          )}
+        </>
+      ) : (
+        <span className="text-xs text-slate-400 italic">No filters applied</span>
+      )}
     </div>
   );
 };

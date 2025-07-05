@@ -1,8 +1,8 @@
 import dayjs from 'dayjs';
-import { Plus, Activity } from 'lucide-react';
+import { Plus, Activity, FilterIcon } from 'lucide-react';
 import { type FC } from 'react';
 
-import { Tile, Button, Pagination, type SortConfig } from '../../../../components';
+import { Tile, Button, Pagination, type SortConfig, IconButton, Badge } from '../../../../components';
 import type { Account, Category } from '../../../../types/api';
 import type { SeamlessTransaction } from '../../hooks/use-seamless-transactions/types';
 import { TransactionFilterChips } from '../transaction-filter-chips';
@@ -21,6 +21,8 @@ interface DesktopTransactionTableSectionProps {
   totalPages: number;
   onTransactionClick: (transaction: SeamlessTransaction) => void;
   onTransactionEdit: (transaction: SeamlessTransaction) => void;
+  onFilterClick?: () => void;
+  onClearAllFilters?: () => void;
   onSort?: (field: keyof SeamlessTransaction) => void;
   onPageChange: (page: number) => void;
   onAddTransaction: () => void;
@@ -42,13 +44,30 @@ export const DesktopTransactionTableSection: FC<DesktopTransactionTableSectionPr
   onSort,
   onPageChange,
   onAddTransaction,
+  onFilterClick,
+  onClearAllFilters,
 }) => {
+  // count active filters
+  const activeFiltersCount = (accountIds?.length ?? 0) + (categoryIds?.length ?? 0) + (types?.length ?? 0);
+
   return (
     <Tile className="p-6">
       {/* transaction table header */}
       <div className="flex items-start justify-between mb-4">
         <div className="space-y-3 flex-1">
-          <h3 className="text-lg font-semibold text-slate-900">Transactions {date.format('D MMMM YYYY')}</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-slate-900">Transactions {date.format('D MMMM YYYY')}</h3>
+            <div className="relative">
+              <IconButton variant="slate-ghost" size="sm" onClick={onFilterClick} title="Filter transactions">
+                <FilterIcon className="h-4 w-4" />
+              </IconButton>
+              {activeFiltersCount > 0 && (
+                <Badge variant="coral" size="sm" className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 text-xs">
+                  {activeFiltersCount}
+                </Badge>
+              )}
+            </div>
+          </div>
 
           {/* filter chips */}
           <TransactionFilterChips
@@ -57,6 +76,7 @@ export const DesktopTransactionTableSection: FC<DesktopTransactionTableSectionPr
             types={types}
             accounts={accounts}
             categories={categories}
+            onClearAllFilters={onClearAllFilters}
           />
         </div>
       </div>

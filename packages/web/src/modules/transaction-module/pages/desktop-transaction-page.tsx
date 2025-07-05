@@ -1,3 +1,4 @@
+import { useRouter } from '@tanstack/react-router';
 import dayjs from 'dayjs';
 import { useState, useMemo, type FC } from 'react';
 
@@ -22,6 +23,7 @@ export const DesktopTransactionPage: FC = () => {
   const [sortField, setSortField] = useState<keyof SeamlessTransaction>('transaction');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const pageSize = 10;
+  const router = useRouter();
   const { accountIds, categoryIds, types } = useTransactionFilters();
   const { openDrawer } = useDrawerRouterProvider();
 
@@ -115,9 +117,19 @@ export const DesktopTransactionPage: FC = () => {
     });
   };
 
+  const handleOpenFilterDrawer = async () => {
+    await openDrawer(DRAWER_IDS.FILTER_TRANSACTION);
+  };
+
   const handleDateChange = (newDate: dayjs.Dayjs) => {
     setDate(newDate);
     setCurrentPage(1); // reset to first page when date changes
+  };
+
+  const handleClearAllFilters = async () => {
+    // Clear search params by navigating to the same route without search params
+    await router.navigate({ to: '/', search: {}, replace: true });
+    setCurrentPage(1); // reset to first page when filters are cleared
   };
 
   return (
@@ -153,6 +165,8 @@ export const DesktopTransactionPage: FC = () => {
               currentPage={currentPage}
               totalPages={totalPages}
               onTransactionClick={handleOpenEditTransaction}
+              onFilterClick={handleOpenFilterDrawer}
+              onClearAllFilters={handleClearAllFilters}
               onTransactionEdit={handleOpenEditTransaction}
               onSort={handleSort}
               onPageChange={setCurrentPage}

@@ -4,7 +4,6 @@ import { type FC } from 'react';
 
 import { Tile, Button } from '../../../../components';
 import { DatePickerInline } from '../../../../components/date-picker';
-import { TransactionFilterInline } from '../transaction-filter-inline';
 
 interface DesktopTransactionSidebarProps {
   date: dayjs.Dayjs;
@@ -19,14 +18,6 @@ export const DesktopTransactionSidebar: FC<DesktopTransactionSidebarProps> = ({
 }) => {
   return (
     <div className="col-span-3 space-y-4 sticky top-6 self-start max-h-[calc(100vh-10rem)]">
-      {/* add transaction button */}
-      <Tile>
-        <Button size="sm" variant="coral" onClick={onAddTransaction} className="w-full justify-center text-sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Transaction
-        </Button>
-      </Tile>
-
       {/* date picker */}
       <Tile className="p-4">
         <DatePickerInline
@@ -38,10 +29,14 @@ export const DesktopTransactionSidebar: FC<DesktopTransactionSidebarProps> = ({
         />
       </Tile>
 
-      {/* filters */}
-      <Tile className="p-4">
-        <h3 className="font-semibold text-slate-900 mb-3">Filters</h3>
-        <TransactionFilterInline />
+      {/* quick actions */}
+      <Tile className="p-4 space-y-3">
+        <h3 className="text-sm font-medium text-slate-700 mb-3">Quick Actions</h3>
+
+        <Button size="sm" variant="coral" onClick={onAddTransaction} className="w-full justify-center text-sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Transaction
+        </Button>
       </Tile>
     </div>
   );
