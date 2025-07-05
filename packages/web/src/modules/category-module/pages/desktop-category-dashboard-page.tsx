@@ -3,11 +3,7 @@ import type { FC } from 'react';
 
 import { PageLayout } from '../../../components';
 import { useApiCategoriesQuery } from '../../../hooks';
-import {
-  CategoryQuickActionsPanel,
-  DesktopCategoryOverviewWidget,
-  EnhancedCategoryTable,
-} from '../components/desktop-category-widgets';
+import { CategoryQuickActionsPanel, EnhancedCategoryTable } from '../components/desktop-category-widgets';
 
 /**
  * DesktopCategoryDashboardPage - Enhanced category analytics dashboard for desktop users.
@@ -52,8 +48,6 @@ export const DesktopCategoryDashboardPage: FC = () => {
 
           {/* main content area with comprehensive analytics */}
           <div className="col-span-9 space-y-6">
-            <DesktopCategoryOverviewWidget />
-
             <EnhancedCategoryTable
               categories={categories}
               searchQuery={searchQuery}
