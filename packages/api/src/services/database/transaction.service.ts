@@ -209,6 +209,7 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
   /**
    * Update a single transaction by id with automatic account amount adjustment
    * Uses database transaction for atomicity
+   * Handles account changes by reverting old account and applying to new account
    */
   async updateSingle(id: unknown, payload: unknown) {
     const idNum = parseId(id);
@@ -222,28 +223,47 @@ export class TransactionService implements DatabaseServiceSchema<Transaction> {
         throw new Error(`Transaction with ID ${idNum} not found`);
       }
 
-      // Calculate the difference for account amount adjustment
-      const oldAmountChange = this.calculateAccountAmountChange(existingTransaction.type, existingTransaction.amount);
+      const oldAmount = existingTransaction.amount;
+      const oldType = existingTransaction.type;
+      const oldAccountId = existingTransaction.accountId;
 
-      const newAmount = data.amount ?? existingTransaction.amount;
-      const newType = data.type ?? existingTransaction.type;
+      const newAmount = data.amount ?? oldAmount;
+      const newType = data.type ?? oldType;
+      const newAccountId = data.accountId ?? oldAccountId;
+
+      // Calculate amount changes for both old and new states
+      const oldAmountChange = this.calculateAccountAmountChange(oldType, oldAmount);
       const newAmountChange = this.calculateAccountAmountChange(newType, newAmount);
-
-      // Net change to apply to account
-      const netAccountChange = newAmountChange - oldAmountChange;
 
       // Update transaction
       const updateData = {
         ...data,
-        amount: data.amount,
         updatedAt: new Date().toISOString(),
       };
 
       const [transaction] = await tx.update(transactions).set(updateData).where(eq(transactions.id, idNum)).returning();
 
-      // Update account amount if there's a net change and not a transfer
-      if (netAccountChange !== 0 && newType !== 'transfer') {
-        await this.updateAccountAmount(existingTransaction.accountId, netAccountChange, tx);
+      // Handle account amount updates based on whether account changed
+      const accountChanged = oldAccountId !== newAccountId;
+
+      if (accountChanged) {
+        // Account changed: revert old account and apply to new account
+        if (oldType !== 'transfer') {
+          // Revert the old account amount (reverse the original change)
+          await this.updateAccountAmount(oldAccountId, -oldAmountChange, tx);
+        }
+
+        if (newType !== 'transfer') {
+          // Apply new amount to the new account
+          await this.updateAccountAmount(newAccountId, newAmountChange, tx);
+        }
+      } else {
+        // Same account: calculate net change and apply
+        const netAccountChange = newAmountChange - oldAmountChange;
+
+        if (netAccountChange !== 0) {
+          await this.updateAccountAmount(oldAccountId, netAccountChange, tx);
+        }
       }
 
       return formatTransactionModel(transaction);

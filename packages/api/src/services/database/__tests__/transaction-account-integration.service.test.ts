@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Mock, vi } from 'vitest';
 
 import { db } from '../../../core/db/config.ts';
@@ -33,7 +34,6 @@ vi.mock('../../../helpers/validation/index.ts', () => ({
   validate: vi.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockDb = db as any;
 const mockValidate = validate as Mock;
 
@@ -359,6 +359,369 @@ describe('TransactionService - Account Integration', () => {
       expect(mockAccountUpdateBuilder.set).toHaveBeenCalledWith(
         expect.objectContaining({
           amount: 130000, // 100000 + 30000
+          updatedAt: expect.any(String),
+        })
+      );
+    });
+
+    it('should handle account change from Account A to Account B correctly', async () => {
+      const updateData = {
+        accountId: 2, // Change from account 1 to account 2
+        amount: 15000, // Same amount, same type (expense)
+      };
+
+      const mockAccount2 = {
+        id: 2,
+        groupId: 1,
+        name: 'Account B',
+        type: 'savings',
+        amount: 50000, // $500.00 in cents
+        note: null,
+        metadata: null,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      const existingTransactionBuilder = {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([mockTransaction]), // Original: accountId=1, 15000 expense
+        }),
+      };
+
+      const updatedTransactionBuilder = {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ ...mockTransaction, accountId: 2 }]),
+          }),
+        }),
+      };
+
+      // Mock account selects for both old and new accounts
+      const mockOldAccountSelectBuilder = {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi.fn().mockResolvedValue([mockAccount]), // Account 1: 100000
+          }),
+        }),
+      };
+
+      const mockNewAccountSelectBuilder = {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi.fn().mockResolvedValue([mockAccount2]), // Account 2: 50000
+          }),
+        }),
+      };
+
+      // Mock account updates for both accounts
+      const mockOldAccountUpdateBuilder = {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ ...mockAccount, amount: 115000 }]), // Revert expense: +15000
+        }),
+      };
+
+      const mockNewAccountUpdateBuilder = {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ ...mockAccount2, amount: 35000 }]), // Apply expense: -15000
+        }),
+      };
+
+      mockValidate.mockResolvedValue({ data: updateData });
+
+      const mockTx = {
+        select: vi
+          .fn()
+          .mockReturnValueOnce(existingTransactionBuilder) // Get existing transaction
+          .mockReturnValueOnce(mockOldAccountSelectBuilder) // Lock old account (Account 1)
+          .mockReturnValueOnce(mockNewAccountSelectBuilder), // Lock new account (Account 2)
+        update: vi
+          .fn()
+          .mockReturnValueOnce(updatedTransactionBuilder) // Update transaction
+          .mockReturnValueOnce(mockOldAccountUpdateBuilder) // Update old account
+          .mockReturnValueOnce(mockNewAccountUpdateBuilder), // Update new account
+      };
+
+      mockDb.transaction.mockImplementation(async (callback: any) => {
+        return await callback(mockTx);
+      });
+
+      const result = await transactionService.updateSingle(1, updateData);
+
+      // Verify transaction update
+      expect(updatedTransactionBuilder.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: 2,
+          amount: 15000,
+          updatedAt: expect.any(String),
+        })
+      );
+
+      // Verify old account gets reverted (add back the expense: +15000)
+      expect(mockOldAccountUpdateBuilder.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 115000, // 100000 + 15000 (revert expense)
+          updatedAt: expect.any(String),
+        })
+      );
+
+      // Verify new account gets the expense applied (-15000)
+      expect(mockNewAccountUpdateBuilder.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 35000, // 50000 - 15000 (apply expense)
+          updatedAt: expect.any(String),
+        })
+      );
+
+      expect(result).toEqual(expect.objectContaining({ accountId: 2 }));
+    });
+
+    it('should handle account change with amount and type change simultaneously', async () => {
+      const updateData = {
+        accountId: 2, // Change from account 1 to account 2
+        amount: 25000, // Change amount from 15000 to 25000
+        type: 'income', // Change type from expense to income
+      };
+
+      const mockAccount2 = {
+        id: 2,
+        groupId: 1,
+        name: 'Account B',
+        type: 'savings',
+        amount: 75000, // $750.00 in cents
+        note: null,
+        metadata: null,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      const existingTransactionBuilder = {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([mockTransaction]), // Original: accountId=1, 15000 expense
+        }),
+      };
+
+      const updatedTransactionBuilder = {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ ...mockTransaction, accountId: 2, amount: 25000, type: 'income' }]),
+          }),
+        }),
+      };
+
+      const mockOldAccountSelectBuilder = {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi.fn().mockResolvedValue([mockAccount]), // Account 1: 100000
+          }),
+        }),
+      };
+
+      const mockNewAccountSelectBuilder = {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi.fn().mockResolvedValue([mockAccount2]), // Account 2: 75000
+          }),
+        }),
+      };
+
+      const mockOldAccountUpdateBuilder = {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ ...mockAccount, amount: 115000 }]), // Revert old expense: +15000
+        }),
+      };
+
+      const mockNewAccountUpdateBuilder = {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ ...mockAccount2, amount: 100000 }]), // Apply new income: +25000
+        }),
+      };
+
+      mockValidate.mockResolvedValue({ data: updateData });
+
+      const mockTx = {
+        select: vi
+          .fn()
+          .mockReturnValueOnce(existingTransactionBuilder)
+          .mockReturnValueOnce(mockOldAccountSelectBuilder)
+          .mockReturnValueOnce(mockNewAccountSelectBuilder),
+        update: vi
+          .fn()
+          .mockReturnValueOnce(updatedTransactionBuilder)
+          .mockReturnValueOnce(mockOldAccountUpdateBuilder)
+          .mockReturnValueOnce(mockNewAccountUpdateBuilder),
+      };
+
+      mockDb.transaction.mockImplementation(async (callback: any) => {
+        return await callback(mockTx);
+      });
+
+      const result = await transactionService.updateSingle(1, updateData);
+
+      // Verify old account reverts the original expense (+15000)
+      expect(mockOldAccountUpdateBuilder.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 115000, // 100000 + 15000 (revert expense)
+          updatedAt: expect.any(String),
+        })
+      );
+
+      // Verify new account gets the new income (+25000)
+      expect(mockNewAccountUpdateBuilder.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 100000, // 75000 + 25000 (apply income)
+          updatedAt: expect.any(String),
+        })
+      );
+
+      expect(result).toEqual(expect.objectContaining({ accountId: 2, amount: 25000, type: 'income' }));
+    });
+
+    it('should not update accounts when changing between transfer types', async () => {
+      const transferTransaction = {
+        ...mockTransaction,
+        type: 'transfer',
+        amount: 20000,
+      };
+
+      const updateData = {
+        accountId: 2, // Change account
+        amount: 30000, // Change amount
+        type: 'transfer', // Keep as transfer
+      };
+
+      const existingTransactionBuilder = {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([transferTransaction]), // Original: transfer
+        }),
+      };
+
+      const updatedTransactionBuilder = {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ ...transferTransaction, accountId: 2, amount: 30000 }]),
+          }),
+        }),
+      };
+
+      mockValidate.mockResolvedValue({ data: updateData });
+
+      const mockTx = {
+        select: vi.fn().mockReturnValueOnce(existingTransactionBuilder),
+        update: vi.fn().mockReturnValueOnce(updatedTransactionBuilder),
+      };
+
+      mockDb.transaction.mockImplementation(async (callback: any) => {
+        return await callback(mockTx);
+      });
+
+      await transactionService.updateSingle(1, updateData);
+
+      // Verify transaction was updated
+      expect(updatedTransactionBuilder.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: 2,
+          amount: 30000,
+          type: 'transfer',
+          updatedAt: expect.any(String),
+        })
+      );
+
+      // Verify no account updates occurred (transfers handled separately)
+      expect(mockTx.update).toHaveBeenCalledTimes(1); // Only transaction update, no account updates
+    });
+
+    it('should handle changing from transfer to regular transaction type', async () => {
+      const transferTransaction = {
+        ...mockTransaction,
+        type: 'transfer',
+        accountId: 1,
+        amount: 20000,
+      };
+
+      const updateData = {
+        type: 'expense', // Change from transfer to expense
+        amount: 20000, // Same amount
+      };
+
+      const existingTransactionBuilder = {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([transferTransaction]), // Original: transfer
+        }),
+      };
+
+      const updatedTransactionBuilder = {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ ...transferTransaction, type: 'expense' }]),
+          }),
+        }),
+      };
+
+      mockValidate.mockResolvedValue({ data: updateData });
+
+      const mockTx = {
+        select: vi.fn().mockReturnValueOnce(existingTransactionBuilder).mockReturnValueOnce(mockAccountSelectBuilder),
+        update: vi.fn().mockReturnValueOnce(updatedTransactionBuilder).mockReturnValueOnce(mockAccountUpdateBuilder),
+      };
+
+      mockDb.transaction.mockImplementation(async (callback: any) => {
+        return await callback(mockTx);
+      });
+
+      await transactionService.updateSingle(1, updateData);
+
+      // Verify account gets updated for the new expense type
+      // Old transfer: no account impact (0)
+      // New expense: -20000 to account
+      // Net change: -20000
+      expect(mockAccountUpdateBuilder.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 80000, // 100000 - 20000 (apply expense)
+          updatedAt: expect.any(String),
+        })
+      );
+    });
+
+    it('should handle changing from regular transaction to transfer type', async () => {
+      const updateData = {
+        type: 'transfer', // Change from expense to transfer
+        amount: 15000, // Same amount
+      };
+
+      const existingTransactionBuilder = {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([mockTransaction]), // Original: 15000 expense
+        }),
+      };
+
+      const updatedTransactionBuilder = {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ ...mockTransaction, type: 'transfer' }]),
+          }),
+        }),
+      };
+
+      mockValidate.mockResolvedValue({ data: updateData });
+
+      const mockTx = {
+        select: vi.fn().mockReturnValueOnce(existingTransactionBuilder).mockReturnValueOnce(mockAccountSelectBuilder),
+        update: vi.fn().mockReturnValueOnce(updatedTransactionBuilder).mockReturnValueOnce(mockAccountUpdateBuilder),
+      };
+
+      mockDb.transaction.mockImplementation(async (callback: any) => {
+        return await callback(mockTx);
+      });
+
+      await transactionService.updateSingle(1, updateData);
+
+      // Verify account gets reverted for the removed expense
+      // Old expense: -15000 to account
+      // New transfer: no account impact (0)
+      // Net change: +15000 (revert the expense)
+      expect(mockAccountUpdateBuilder.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 115000, // 100000 + 15000 (revert expense)
           updatedAt: expect.any(String),
         })
       );
