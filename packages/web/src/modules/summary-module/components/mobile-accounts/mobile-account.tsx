@@ -9,7 +9,7 @@ import { useAccountData } from './hooks';
 import { MobileAccountsLoader } from './mobile-accounts-loader';
 import { MobileAccountsPieChart, MobileAccountsTable } from './presentation';
 
-export interface MobileAccountsProps {
+interface MobileAccountProps {
   startDate: Date;
   endDate: Date;
   currentPeriodDisplay: string;
@@ -17,11 +17,10 @@ export interface MobileAccountsProps {
 }
 
 /**
- * Main content component for mobile accounts analytics.
- * Displays pie chart and card-based table with account financial data.
- * Follows the same pattern as mobile period breakdown.
+ * Alternative naming component for mobile account analytics.
+ * Provides the same functionality as MobileAccounts for consistency with naming patterns.
  */
-export const MobileAccounts: React.FC<MobileAccountsProps> = ({ startDate, endDate }) => {
+export const MobileAccount: React.FC<MobileAccountProps> = ({ startDate, endDate }) => {
   // toggle state for chart type selection
   const [chartType, setChartType] = useState<'expenses' | 'income'>('expenses');
 
