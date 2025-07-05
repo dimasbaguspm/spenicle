@@ -144,14 +144,46 @@ echo "\$(date): 🗄️ Starting database backup to \$BACKUP_FILE"
 # Set password for pg_dump
 export PGPASSWORD="\$DB_PASSWORD"
 
-# Check if database is accessible
-if ! pg_isready -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" >/dev/null 2>&1; then
-    echo "\$(date): ❌ Error: Database is not accessible at \$DB_HOST:\$DB_PORT"
-    exit 1
+# Check if database is accessible (try both host and docker methods)
+DB_ACCESSIBLE=false
+
+# Method 1: Try direct host connection
+if pg_isready -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" >/dev/null 2>&1; then
+    echo "\$(date): ✅ Database accessible via host connection"
+    DB_ACCESSIBLE=true
+    BACKUP_METHOD="host"
+else
+    echo "\$(date): ⚠️ Database not accessible via host, trying Docker exec method..."
+    
+    # Method 2: Try Docker exec method
+    if docker compose -f "\$PROJECT_ROOT/docker-compose.prod.yml" --env-file "\$ENV_FILE" exec -T postgres pg_isready -U "\$DB_USER" -d "\$DB_NAME" >/dev/null 2>&1; then
+        echo "\$(date): ✅ Database accessible via Docker exec"
+        DB_ACCESSIBLE=true
+        BACKUP_METHOD="docker"
+    else
+        echo "\$(date): ❌ Error: Database is not accessible via any method"
+        exit 1
+    fi
 fi
 
-# Create database backup
-if pg_dump -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" > "\$BACKUP_FILE"; then
+# Create database backup using the appropriate method
+if [ "\$BACKUP_METHOD" = "host" ]; then
+    # Direct host connection
+    if pg_dump -h "\$DB_HOST" -p "\$DB_PORT" -U "\$DB_USER" -d "\$DB_NAME" > "\$BACKUP_FILE"; then
+        BACKUP_SUCCESS=true
+    else
+        BACKUP_SUCCESS=false
+    fi
+elif [ "\$BACKUP_METHOD" = "docker" ]; then
+    # Docker exec method
+    if docker compose -f "\$PROJECT_ROOT/docker-compose.prod.yml" --env-file "\$ENV_FILE" exec -T postgres pg_dump -U "\$DB_USER" -d "\$DB_NAME" > "\$BACKUP_FILE"; then
+        BACKUP_SUCCESS=true
+    else
+        BACKUP_SUCCESS=false
+    fi
+fi
+
+if [ "\$BACKUP_SUCCESS" = true ]; then
     echo "\$(date): ✅ Database backup completed successfully"
     
     # Compress the backup to save space
