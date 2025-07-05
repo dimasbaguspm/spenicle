@@ -68,7 +68,7 @@ export const QuickInsightsWidget = () => {
   }, [currentData]);
 
   return (
-    <Tile className="p-4">
+    <Tile className="p-6">
       <div className="space-y-1 mb-4">
         <h3 className="text-lg font-semibold text-slate-900">Quick Insights</h3>
         <p className="text-sm text-slate-500">Key financial indicators for {state.currentPeriodDisplay}</p>
