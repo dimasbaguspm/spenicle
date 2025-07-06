@@ -2,10 +2,10 @@ import { useSearch } from '@tanstack/react-router';
 import dayjs from 'dayjs';
 import { type FC } from 'react';
 
-import { PageLayout, Tile } from '../../../components';
+import { PageLayout } from '../../../components';
+import { DesktopTransactionOverviewWidget } from '../components/desktop-transaction-overview-widget';
+import { DesktopTransactionPeriodSidebar } from '../components/desktop-transaction-period-sidebar';
 import { PeriodTransactionList } from '../components/period-transaction-list';
-import { TransactionFilterInline } from '../components/transaction-filter-inline';
-import { TransactionPeriodInsightsWidget } from '../components/transaction-period-insights-widget';
 
 export const DesktopTransactionPeriodPage: FC = () => {
   const { startDate, endDate } = useSearch({
@@ -28,28 +28,25 @@ export const DesktopTransactionPeriodPage: FC = () => {
 
   return (
     <PageLayout background="cream" title="Transaction Period Analysis" showBackButton>
-      <div className="space-y-6">
-        {/* Period Header with Key Stats */}
-        <TransactionPeriodInsightsWidget startDate={startDate} endDate={endDate} />
-
-        {/* Desktop Grid Layout */}
+      <div className="flex flex-col gap-6">
+        {/* main content grid */}
         <div className="grid grid-cols-12 gap-6">
-          {/* Left Panel: Filters and Controls - Sticky */}
-          <div className="col-span-3">
-            <div className="sticky top-6 space-y-4">
-              <Tile className="p-4">
-                <div className="space-y-1 mb-4">
-                  <h3 className="text-lg font-semibold text-slate-900">Quick Filters</h3>
-                  <p className="text-sm text-slate-500">Fast access filters</p>
-                </div>
-                <TransactionFilterInline />
-              </Tile>
-            </div>
-          </div>
+          {/* left sidebar with filters only */}
+          <DesktopTransactionPeriodSidebar />
 
-          {/* Right Panel: Transaction Data and Visualization */}
-          <div className="col-span-9">
-            <Tile className="p-6 min-h-[600px]">
+          {/* main content area */}
+          <div className="col-span-9 space-y-6">
+            {/* period transaction insights */}
+            <DesktopTransactionOverviewWidget
+              startDate={startDate}
+              endDate={endDate}
+              title="Period Overview"
+              subtitle={`${dayjs(startDate).format('MMM D')} - ${dayjs(endDate).format('MMM D, YYYY')}`}
+              description="Financial metrics and transaction summary for the selected period"
+            />
+
+            {/* transactions chart and list */}
+            <div className="bg-white rounded-lg border border-mist-200 p-6 min-h-[600px]">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-semibold text-slate-900">Transaction Analysis</h2>
@@ -57,9 +54,9 @@ export const DesktopTransactionPeriodPage: FC = () => {
                 </div>
               </div>
 
-              {/* Main transaction list with charts */}
+              {/* main transaction list with charts */}
               <PeriodTransactionList startDate={startDate} endDate={endDate} />
-            </Tile>
+            </div>
           </div>
         </div>
       </div>

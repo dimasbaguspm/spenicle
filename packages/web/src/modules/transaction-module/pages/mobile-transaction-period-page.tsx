@@ -3,9 +3,8 @@ import dayjs from 'dayjs';
 import type { FC } from 'react';
 
 import { PageLayout } from '../../../components';
+import { DesktopTransactionOverviewWidget } from '../components/desktop-transaction-overview-widget';
 import { PeriodTransactionList } from '../components/period-transaction-list';
-import { TransactionFilterEntry } from '../components/transaction-filter-entry';
-import { TransactionPeriodInsightsWidget } from '../components/transaction-period-insights-widget';
 
 export const MobileTransactionPeriodPage: FC = () => {
   const { startDate, endDate } = useSearch({
@@ -29,10 +28,16 @@ export const MobileTransactionPeriodPage: FC = () => {
   return (
     <PageLayout title="Period Analysis" showBackButton>
       <div className="space-y-4 p-4">
-        <TransactionPeriodInsightsWidget startDate={startDate} endDate={endDate} className="mb-4" />
+        <DesktopTransactionOverviewWidget
+          startDate={startDate}
+          endDate={endDate}
+          title="Period Overview"
+          subtitle={`${dayjs(startDate).format('MMM D')} - ${dayjs(endDate).format('MMM D, YYYY')}`}
+          description="Financial metrics and transaction summary for the selected period"
+          className="mb-4"
+        />
       </div>
       <PeriodTransactionList startDate={startDate} endDate={endDate} />
-      <TransactionFilterEntry />
     </PageLayout>
   );
 };

@@ -1,4 +1,4 @@
-import { DollarSign, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, PercentDiamondIcon } from 'lucide-react';
 import { useMemo, type FC } from 'react';
 
 import { Tile } from '../../../../components';
@@ -45,7 +45,16 @@ export const DesktopTransactionOverviewWidget: FC<DesktopTransactionOverviewWidg
     const netAmount = totalIncome - totalExpenses;
     const totalTransactions = transactionsData?.totalItems ?? 0;
 
+    // calculate savings rate
+    const savingsRate = totalIncome > 0 ? (netAmount / totalIncome) * 100 : 0;
+
     return [
+      {
+        label: 'Savings Rate',
+        value: `${savingsRate.toFixed(1)}%`,
+        icon: PercentDiamondIcon,
+        iconColor: savingsRate >= 20 ? 'text-sage-600' : savingsRate >= 10 ? 'text-mist-600' : 'text-coral-600',
+      },
       {
         label: 'Total Transactions',
         value: totalTransactions.toString(),
@@ -64,12 +73,6 @@ export const DesktopTransactionOverviewWidget: FC<DesktopTransactionOverviewWidg
         icon: TrendingDown,
         iconColor: 'text-coral-600',
       },
-      {
-        label: 'Net Amount',
-        value: formatAmount(netAmount, { compact: true, hidePrefix: netAmount >= 0 }),
-        icon: DollarSign,
-        iconColor: netAmount >= 0 ? 'text-sage-600' : 'text-coral-600',
-      },
     ];
   }, [summaryData, transactionsData]);
 
@@ -83,8 +86,8 @@ export const DesktopTransactionOverviewWidget: FC<DesktopTransactionOverviewWidg
           <p className="text-sm text-slate-500">{description}</p>
         </div>
 
-        {/* desktop grid layout for insights */}
-        <div className="grid grid-cols-4 gap-4">
+        {/* responsive grid layout for insights */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {insights.map((insight, index) => {
             const IconComponent = insight.icon;
 
