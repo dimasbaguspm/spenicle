@@ -87,7 +87,7 @@ export const DesktopTransactionOverviewWidget: FC<DesktopTransactionOverviewWidg
         </div>
 
         {/* responsive grid layout for insights */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {insights.map((insight, index) => {
             const IconComponent = insight.icon;
 
