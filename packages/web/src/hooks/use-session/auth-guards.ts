@@ -8,22 +8,6 @@ import { TokenManager } from './use-session';
  *
  * @param redirectTo - The path to redirect to if user is not authenticated (default: '/auth/login')
  * @returns A redirect object if user is not authenticated, otherwise undefined
- *
- * @example
- * ```ts
- * export const Route = createFileRoute('/dashboard')({
- *   component: Dashboard,
- *   beforeLoad: requireAuth,
- * });
- * ```
- *
- * @example
- * ```ts
- * export const Route = createFileRoute('/profile')({
- *   component: Profile,
- *   beforeLoad: () => requireAuth('/auth/login'),
- * });
- * ```
  */
 export const requireAuth = (redirectTo: string = '/auth/login') => {
   // Check if user has authentication tokens
@@ -41,16 +25,6 @@ export const requireAuth = (redirectTo: string = '/auth/login') => {
 /**
  * Helper function to redirect authenticated users away from auth pages
  * This function should be used in the beforeLoad function of auth routes (login, register, etc.)
- *
- * @param redirectTo - The path to redirect to if user is authenticated (default: '/')
- * @returns A redirect object if user is authenticated, otherwise undefined
- *
- * @example
- * ```ts
- * export const Route = createFileRoute('/auth/login')({
- *   component: LoginPage,
- *   beforeLoad: redirectIfAuthenticated,
- * });
  * ```
  */
 export const redirectIfAuthenticated = (redirectTo: string = '/') => {

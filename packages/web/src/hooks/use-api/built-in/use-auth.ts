@@ -1,9 +1,9 @@
-import type { User, Error, RegistrationWithGroup, LoginRequest } from '../../../types/api';
+import type { User, Error, RegistrationWithGroup, LoginRequest, RefreshTokenRequest } from '../../../types/api';
 import { useApiMutate, type UseApiMutateResult } from '../use-api-mutate';
 
 // Register user
 export const useApiRegisterMutation = (): UseApiMutateResult<
-  { message: string; user: User; token: string },
+  { refreshToken: string; user: User; token: string },
   RegistrationWithGroup,
   Error
 > => {
@@ -16,9 +16,24 @@ export const useApiRegisterMutation = (): UseApiMutateResult<
   });
 };
 
+export const useApiRefreshTokenMutation = (): UseApiMutateResult<
+  {
+    token: string;
+    refreshToken: string;
+    user: User;
+  },
+  RefreshTokenRequest,
+  Error
+> => {
+  return useApiMutate({
+    path: '/auth/refresh-token',
+    method: 'POST',
+  });
+};
+
 // Login user
 export const useApiLoginMutation = (): UseApiMutateResult<
-  { message: string; user: User; token: string },
+  { refreshToken: string; user: User; token: string },
   LoginRequest,
   Error
 > => {

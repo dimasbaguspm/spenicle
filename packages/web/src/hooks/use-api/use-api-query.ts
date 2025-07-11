@@ -92,11 +92,12 @@ export const useApiQuery = <TData, TQuery, TError = Error>(
             });
           },
         });
-        const data = response.data;
+        const data = response?.data;
         onSuccess?.(data);
         return data;
       } catch (error) {
-        onError?.(error as TError);
+        // eslint-disable-next-line
+        onError?.(((error as any)?.response?.data ?? error) as TError);
         return undefined;
       }
     },

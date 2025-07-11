@@ -2,6 +2,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+import { TokenManager } from '../../../../hooks';
 import { useApiRegisterMutation } from '../../../../hooks/use-api/built-in';
 import { useSnack } from '../../../../providers/snack';
 
@@ -14,7 +15,6 @@ import {
   getCurrentStepData,
   validateFinalSubmission,
   transformFormDataForApi,
-  handleTokenStorage,
 } from './register-form.helpers';
 import type { RegisterFormData } from './types';
 
@@ -105,7 +105,10 @@ export const useRegisterForm = () => {
       const response = await registerMutation(apiData);
 
       // Store tokens
-      handleTokenStorage(response.token);
+      TokenManager.setTokens({
+        accessToken: response.token,
+        refreshToken: response.refreshToken,
+      });
 
       success('Account created successfully! Welcome to SpendLess.');
       await navigate({ to: '/' });

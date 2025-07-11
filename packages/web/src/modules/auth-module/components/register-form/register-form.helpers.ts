@@ -1,5 +1,3 @@
-import { TokenManager } from '../../../../hooks/use-session/use-session';
-
 import type { RegisterFormData, RegisterStep } from './types';
 
 // Step configuration for the registration process
@@ -126,11 +124,3 @@ export const transformFormDataForApi = (data: RegisterFormData) => ({
     defaultCurrency: data.defaultCurrency,
   },
 });
-
-/**
- * Handles token storage after successful registration
- * @deprecated Use TokenManager.setTokens instead
- */
-export const handleTokenStorage = (accessToken: string) => {
-  TokenManager.setTokens({ accessToken });
-};

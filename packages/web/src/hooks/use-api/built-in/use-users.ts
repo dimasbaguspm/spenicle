@@ -3,11 +3,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { User, Error, UpdateUser } from '../../../types/api';
 import { QUERY_KEYS } from '../constants';
 import { useApiMutate, type UseApiMutateResult } from '../use-api-mutate';
-import { useApiQuery, type UseApiQueryResult } from '../use-api-query';
+import { useApiQuery, type UseApiQueryOptions, type UseApiQueryResult } from '../use-api-query';
 
 // Get current user profile
-export const useApiCurrentUserQuery = (): UseApiQueryResult<User, Error> => {
+export const useApiCurrentUserQuery = (
+  options?: Partial<UseApiQueryOptions<User, undefined, Error>>
+): UseApiQueryResult<User, Error> => {
   return useApiQuery<User, never>({
+    ...options,
     queryKey: QUERY_KEYS.USERS.current(),
     path: '/users/me',
   });

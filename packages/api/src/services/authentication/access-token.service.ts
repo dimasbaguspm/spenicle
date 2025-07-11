@@ -54,7 +54,11 @@ export class AccessTokenService {
   }
 
   getUserFromToken(token: string): JwtPayload {
-    return this.verifyTokenInternal(token, true)!;
+    try {
+      return this.verifyTokenInternal(token, true)!;
+    } catch {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
   }
 
   getUserFromRequest(req: Request): JwtPayload {

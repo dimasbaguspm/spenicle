@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 
 import { useSnack } from '../../providers/snack';
 import type { User } from '../../types/api';
-import { useApiCurrentUserQuery } from '../use-api/built-in';
+import { useApiCurrentUserQuery, useApiRefreshTokenMutation } from '../use-api/built-in';
 
 /**
  * Authentication states for the session
@@ -99,11 +99,25 @@ export const useSession = (): UseSessionReturn => {
   const navigate = useNavigate();
   const { success } = useSnack();
 
-  // Check if tokens exist to determine if we should attempt to fetch user data
   const hasTokens = TokenManager.hasTokens();
 
+  const [generateNewRefreshToken, , refreshTokenState] = useApiRefreshTokenMutation();
+
   // Fetch current user data
-  const [userData, userError, userState, refetchUser] = useApiCurrentUserQuery();
+  const [userData, userError, userState, refetchUser] = useApiCurrentUserQuery({
+    onError: async (error) => {
+      const currentRefreshToken = TokenManager.getRefreshToken();
+
+      if (error?.message.includes('expired') && currentRefreshToken) {
+        const resp = await generateNewRefreshToken({ refreshToken: currentRefreshToken });
+
+        TokenManager.setTokens({
+          accessToken: resp?.token,
+          refreshToken: resp?.refreshToken,
+        });
+      }
+    },
+  });
 
   // Extract user from the API response
   const user = userData;
@@ -116,7 +130,7 @@ export const useSession = (): UseSessionReturn => {
       return 'unauthenticated';
     }
 
-    if (userState.isLoading || userState.isPending) {
+    if (userState.isLoading || userState.isPending || refreshTokenState.isPending) {
       return 'loading';
     }
 
@@ -129,7 +143,7 @@ export const useSession = (): UseSessionReturn => {
     }
 
     return 'unauthenticated';
-  }, [hasTokens, userState, userError, user]);
+  }, [hasTokens, userState, userError, user, refreshTokenState]);
 
   /**
    * Derived authentication state helpers

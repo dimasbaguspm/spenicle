@@ -1,10 +1,11 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 
+import { TokenManager } from '../../../../hooks';
 import { useApiLoginMutation } from '../../../../hooks/use-api/built-in';
 import { useSnack } from '../../../../providers/snack';
 
-import { DEFAULT_FORM_VALUES, VALIDATION_RULES, handleTokenStorage } from './login-form.helpers';
+import { DEFAULT_FORM_VALUES, VALIDATION_RULES } from './login-form.helpers';
 import type { LoginFormValues, LoginFormProps } from './types';
 
 /**
@@ -29,9 +30,10 @@ export const useLoginForm = ({ onSuccess }: Pick<LoginFormProps, 'onSuccess'> = 
     try {
       const response = await loginMutation(payload);
 
-      if (response.token) {
-        handleTokenStorage(response.token);
-      }
+      TokenManager.setTokens({
+        accessToken: response.token,
+        refreshToken: response.refreshToken,
+      });
 
       success('Login successful! Welcome back.');
 
