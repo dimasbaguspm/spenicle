@@ -2643,7 +2643,7 @@ __metadata:
     dayjs: "npm:1.11.13"
     dotenv: "npm:16.5.0"
     drizzle-kit: "npm:0.31.1"
-    drizzle-orm: "npm:0.43.1"
+    drizzle-orm: "npm:0.44.2"
     eslint: "npm:9.27.0"
     eslint-config-prettier: "npm:10.1.5"
     eslint-plugin-import: "npm:2.31.0"
@@ -5894,9 +5894,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"drizzle-orm@npm:0.43.1":
-  version: 0.43.1
-  resolution: "drizzle-orm@npm:0.43.1"
+"drizzle-orm@npm:0.44.2":
+  version: 0.44.2
+  resolution: "drizzle-orm@npm:0.44.2"
   peerDependencies:
     "@aws-sdk/client-rds-data": ">=3"
     "@cloudflare/workers-types": ">=4"
@@ -5912,6 +5912,7 @@ __metadata:
     "@types/better-sqlite3": "*"
     "@types/pg": "*"
     "@types/sql.js": "*"
+    "@upstash/redis": ">=1.34.7"
     "@vercel/postgres": ">=0.8.0"
     "@xata.io/client": "*"
     better-sqlite3: ">=7"
@@ -5954,6 +5955,8 @@ __metadata:
       optional: true
     "@types/sql.js":
       optional: true
+    "@upstash/redis":
+      optional: true
     "@vercel/postgres":
       optional: true
     "@xata.io/client":
@@ -5982,7 +5985,7 @@ __metadata:
       optional: true
     sqlite3:
       optional: true
-  checksum: 10/ba33711157fd8a5893e6d180ff963dfc248c135e5c9b8fabb770e85b22c431ec561a8c156ff080c3ab1e1b19736ddfbc01b27c36a03efc7e9eba9201b24adcf7
+  checksum: 10/75cd5351a3e94358f8cb4fc7da6ad6f7d6e78d1648f37040d8471be6b60ad8cc388094907079735d7d5e9671fe8477f9d3285d5b148a67f56dc83c18b6761aff
   languageName: node
   linkType: hard
 
