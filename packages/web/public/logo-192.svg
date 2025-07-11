@@ -1,0 +1,12 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Spenicle PWA Icon 192px</title>
+  <desc>Spenicle lightning bolt logo for PWA app icon 192px</desc>
+  
+  <!-- Background with rounded corners for PWA -->
+  <rect width="192" height="192" rx="32" fill="#e07a5f"/>
+  
+  <!-- Lightning bolt centered and scaled for 192px -->
+  <g transform="translate(96, 96) scale(4) translate(-12, -12)">
+    <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" fill="white"/>
+  </g>
+</svg>
