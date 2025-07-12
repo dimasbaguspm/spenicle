@@ -8,7 +8,7 @@ import { DrawerContext } from './drawer-context';
 
 export interface DrawerProps {
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full' | '3/4' | 'viewport';
   position?: 'left' | 'right' | 'top' | 'bottom';
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
@@ -24,6 +24,8 @@ const sizeClasses = {
   lg: 'max-w-lg',
   xl: 'max-w-xl',
   full: 'max-w-full',
+  '3/4': 'max-w-[75vw]', // 75% of viewport width
+  viewport: 'max-w-[100vw]', // full viewport width
 };
 
 // Position configurations with initial states
@@ -129,6 +131,7 @@ export function Drawer({
 
   const positionConfig = positionClasses[position];
   const isVertical = position === 'top' || position === 'bottom';
+  const isViewportWidth = size === '3/4' || size === 'viewport' || size === 'full';
 
   return createPortal(
     <DrawerContext.Provider value={{ onClose }}>
@@ -151,7 +154,8 @@ export function Drawer({
             positionConfig.content,
             isVertical ? sizeClasses[size] : sizeClasses[size],
             isVertical ? 'max-h-[80vh]' : 'w-full h-full',
-            !isVertical && 'max-w-md',
+            // apply viewport-aware width constraints for horizontal drawers
+            !isVertical && !isViewportWidth && 'max-w-md',
             isAnimatingOut
               ? positionConfig.animation.exit
               : isVisible

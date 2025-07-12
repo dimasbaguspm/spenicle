@@ -3,12 +3,14 @@ import { User, LogOut, Shield, BrushCleaning, File } from 'lucide-react';
 import { type FC } from 'react';
 
 import { Drawer, Avatar, Button } from '../../../../components';
+import { useViewport } from '../../../../hooks';
 import { useAppVersion } from '../../../../hooks/use-app-version';
 import { useSession } from '../../../../hooks/use-session';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router';
 
 export const ProfileDrawer: FC = () => {
   const { closeDrawer } = useDrawerRouterProvider();
+  const { isDesktop } = useViewport();
   const { user, logout } = useSession();
   const navigate = useNavigate();
   const { formattedVersion } = useAppVersion();
@@ -56,7 +58,7 @@ export const ProfileDrawer: FC = () => {
   ];
 
   return (
-    <Drawer onClose={closeDrawer} size="sm" position="left">
+    <Drawer onClose={closeDrawer} size={isDesktop ? 'md' : '3/4'} position="left">
       <Drawer.Content>
         <div className="flex items-center gap-4 pb-6 border-b border-mist-200">
           <Avatar size="lg" fallback={user?.name} />
