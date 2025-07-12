@@ -10,6 +10,26 @@ CRON_SCRIPT="$SCRIPT_DIR/backup-db-host.sh"
 CRON_IDENTIFIER="# spenicle-db-backup"
 LOG_FILE="/var/log/spenicle-backup.log"
 
+# Function to validate if backup script exists and is executable
+validate_backup_script() {
+    # Check if script exists and is executable
+    if [ ! -f "$CRON_SCRIPT" ] || [ ! -x "$CRON_SCRIPT" ]; then
+        return 1
+    fi
+    
+    # Check if script contains essential components
+    if ! grep -q "pg_dump" "$CRON_SCRIPT" 2>/dev/null; then
+        return 1
+    fi
+    
+    # Check if script has proper shebang
+    if ! head -n 1 "$CRON_SCRIPT" | grep -q "#!/usr/bin/env bash" 2>/dev/null; then
+        return 1
+    fi
+    
+    return 0
+}
+
 # Function to setup cron job with duplicate prevention
 setup_cron() {
     local env_file="$1"
@@ -26,8 +46,14 @@ setup_cron() {
         exit 1
     fi
     
-    # Create the host backup script
-    create_host_backup_script "$env_file"
+    # Create the host backup script only if it doesn't exist or is invalid
+    if [ ! -f "$CRON_SCRIPT" ] || ! validate_backup_script; then
+        echo "📝 Creating/updating backup script..."
+        create_host_backup_script "$env_file"
+        echo "✅ Backup script created/updated"
+    else
+        echo "✅ Backup script already exists and is valid"
+    fi
     
     # Make script executable
     chmod +x "$CRON_SCRIPT"
