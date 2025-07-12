@@ -6,6 +6,7 @@ import { useApiAccountQuery, useApiCategoryQuery, useApiTransactionQuery } from 
 import { AddAccountDrawer } from '../../modules/account-module';
 import { EditAccountDrawer } from '../../modules/account-module/components';
 import { AddCategoryDrawer, EditCategoryDrawer } from '../../modules/category-module';
+import { ProfileDrawer } from '../../modules/profile-module';
 import { AddTransactionDrawer, EditTransactionDrawer, TransactionFilterDrawer } from '../../modules/transaction-module';
 
 import { DrawerRouterContextProvider } from './context';
@@ -104,6 +105,7 @@ export const DrawerRouterProvider: FC<PropsWithChildren> = ({ children }) => {
       {is(DRAWER_IDS.EDIT_ACCOUNT) && account && <EditAccountDrawer account={account} />}
       {is(DRAWER_IDS.ADD_CATEGORY) && <AddCategoryDrawer />}
       {is(DRAWER_IDS.EDIT_CATEGORY) && category && <EditCategoryDrawer category={category} />}
+      {is(DRAWER_IDS.PROFILE) && <ProfileDrawer />}
     </DrawerRouterContextProvider>
   );
 };

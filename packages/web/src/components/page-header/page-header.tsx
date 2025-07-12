@@ -37,11 +37,13 @@ const pageTitleVariants = cva('font-bold text-slate-900 leading-tight', {
 
 export interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof pageHeaderVariants> {
   /** Page title to display */
-  title: string;
+  title?: string;
   /** Show/hide back button */
   showBackButton?: boolean;
   /** Back button configuration */
   backButton?: Partial<BackButtonProps>;
+  /** Additional content to show on the left side */
+  children?: React.ReactNode;
   /** Additional content to show on the right side */
   rightContent?: React.ReactNode;
   /** Custom title size override */
@@ -49,16 +51,37 @@ export interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement>, V
 }
 
 export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
-  ({ className, title, showBackButton = false, backButton, rightContent, variant, size, titleSize, ...props }, ref) => {
+  (
+    {
+      className,
+      title,
+      showBackButton = false,
+      backButton,
+      children,
+      rightContent,
+      variant,
+      size,
+      titleSize,
+      ...props
+    },
+    ref
+  ) => {
     const actualTitleSize = titleSize ?? size;
 
+    if (children) {
+      return (
+        <div ref={ref} className={cn(pageHeaderVariants({ variant, size }), className)} {...props}>
+          {children}
+        </div>
+      );
+    }
     return (
       <div ref={ref} className={cn(pageHeaderVariants({ variant, size }), className)} {...props}>
         {/* Back Button */}
         {showBackButton && <BackButton variant="ghost" size="md" {...backButton} />}
 
         {/* Title */}
-        <h1 className={cn(pageTitleVariants({ size: actualTitleSize }), 'flex-1')}>{title}</h1>
+        {title && <h1 className={cn(pageTitleVariants({ size: actualTitleSize }), 'flex-1')}>{title}</h1>}
 
         {/* Right Content */}
         {rightContent && <div className="flex items-center gap-2 flex-shrink-0">{rightContent}</div>}

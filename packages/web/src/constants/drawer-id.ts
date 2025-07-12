@@ -6,6 +6,7 @@ export const DRAWER_IDS = {
   EDIT_ACCOUNT: 'edit-account',
   ADD_CATEGORY: 'add-category',
   EDIT_CATEGORY: 'edit-category',
+  PROFILE: 'profile',
 } as const;
 
 export type DrawerId = (typeof DRAWER_IDS)[keyof typeof DRAWER_IDS];

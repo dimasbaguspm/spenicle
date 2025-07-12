@@ -2,13 +2,18 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { Calendar } from 'lucide-react';
 import { useRef, useState, type FC } from 'react';
 
-import { DatePicker, IconButton, PageHeader, PageLayout } from '../../../components';
+import { Avatar, Brand, DatePicker, IconButton, PageHeader, PageLayout } from '../../../components';
+import { DRAWER_IDS } from '../../../constants/drawer-id';
+import { useSession } from '../../../hooks';
+import { useDrawerRouterProvider } from '../../../providers/drawer-router';
 import { SeamlessTransactionList, type SeamlessTransactionListRef } from '../components/seamless-transaction-list';
 import { TransactionFilterEntry } from '../components/transaction-filter-entry';
 import { WeeklyDateRibbon } from '../components/weekly-date-ribbon';
 
 export const MobileTransactionPage: FC = () => {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const { openDrawer } = useDrawerRouterProvider();
+  const { user } = useSession();
 
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [shouldScroll, setShouldScroll] = useState(false);
@@ -32,35 +37,22 @@ export const MobileTransactionPage: FC = () => {
     setShouldScroll(false);
   };
 
+  const handleOpenProfileDrawer = async () => {
+    await openDrawer(DRAWER_IDS.PROFILE);
+  };
+
   return (
     <PageLayout
       background="cream"
       mainProps={{ padding: 'none' }}
       header={
-        <div>
-          <PageHeader
-            title="Transactions"
-            showBackButton={true}
-            rightContent={
-              <div className="flex items-center gap-2">
-                <IconButton variant="ghost" size="md" onClick={handleOpenAddTransactionDrawer} title="Select Date">
-                  <Calendar className="h-5 w-5" />
-                </IconButton>
-              </div>
-            }
-            className="p-4 pb-0 mb-2"
-          />
-          <DatePicker
-            variant="coral"
-            showInput={false}
-            isOpen={isDatePickerOpen}
-            onOpenChange={setIsDatePickerOpen}
-            value={selectedDate.toDate()}
-            onChange={(data) => {
-              if (data) handleDateSelect(dayjs(data).startOf('day'));
-            }}
-          />
-        </div>
+        <PageHeader className="p-4 pb-0 mb-2 justify-between">
+          <Avatar size="sm" fallback={user?.name} onClick={handleOpenProfileDrawer} />
+          <Brand size="sm" showTitle={false} />
+          <IconButton variant="ghost" size="sm" onClick={handleOpenAddTransactionDrawer} title="Select Date">
+            <Calendar className="h-5 w-5" />
+          </IconButton>
+        </PageHeader>
       }
     >
       <WeeklyDateRibbon
@@ -82,6 +74,16 @@ export const MobileTransactionPage: FC = () => {
       </div>
 
       <TransactionFilterEntry />
+      <DatePicker
+        variant="coral"
+        showInput={false}
+        isOpen={isDatePickerOpen}
+        onOpenChange={setIsDatePickerOpen}
+        value={selectedDate.toDate()}
+        onChange={(data) => {
+          if (data) handleDateSelect(dayjs(data).startOf('day'));
+        }}
+      />
     </PageLayout>
   );
 };
