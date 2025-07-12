@@ -43,6 +43,7 @@ export const TransactionHeader = ({ date, totalAmount, transactionCount }: Trans
           {formatAmount(totalAmount, {
             type: totalAmount > 0 ? 'income' : totalAmount < 0 ? 'expense' : 'transfer',
             compact: true,
+            hidePrefix: true,
           })}
         </span>
       </div>

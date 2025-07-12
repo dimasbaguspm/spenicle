@@ -40,7 +40,8 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
   // Use new formatAmount helper
   const formattedAmount = formatAmountLib(Number(txn.amount ?? 0), {
     type: txn.type,
-    compact: false, // set true if you want compact
+    compact: false,
+    hidePrefix: true,
   });
 
   return (
