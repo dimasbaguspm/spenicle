@@ -13,7 +13,6 @@ A modern expense tracking and financial management application built with TypeSc
 - [⚙️ Configuration](#️-configuration)
 - [🚀 Production Deployment](#-production-deployment)
 - [💾 Database Backup System](#-database-backup-system)
-- [🌐 Advanced: Custom Domains](#-advanced-custom-domains)
 - [🆘 Troubleshooting](#-troubleshooting)
 - [📄 License](#-license)
 
@@ -94,7 +93,17 @@ All development is managed through simple scripts:
 
 > 🔒 **Security**: Never commit `.env.dev` or `.env.prod` files to git
 
+
 ## 🚀 Production Deployment
+
+### ⚠️ Deployment & SSL Notice
+
+Port forwarding (80/443) and SSL termination are **not handled within this project**. You must use an external reverse proxy (e.g., Nginx, Traefik, Caddy, cloud load balancer) for:
+- Routing traffic to your containers
+- Handling HTTPS/SSL certificates
+- Exposing public ports
+
+This project only exposes internal service ports (e.g., 8080 for web, 3000 for API). All public access and SSL must be managed outside the Spenicle codebase.
 
 ### Quick Production Setup
 
@@ -104,28 +113,10 @@ All development is managed through simple scripts:
    # Edit .env.prod with your domain and secure secrets
    ```
 
-2. **Setup SSL certificates:**
-   ```bash
-   ./scripts/generate-ssl.sh
-   # Choose option 1 (Let's Encrypt) for free SSL
-   ```
-
-3. **Deploy:**
+2. **Deploy:**
    ```bash
    ./scripts/prod.sh up
    ```
-
-### Domain Configuration
-
-Your production setup will create:
-- **Web App**: `https://spenicle.yourdomain.com`
-- **API**: `https://spenicle-api.yourdomain.com`
-
-**DNS Setup:**
-```
-spenicle.yourdomain.com      A    YOUR_SERVER_IP
-spenicle-api.yourdomain.com  A    YOUR_SERVER_IP
-```
 
 ### Production Commands
 
@@ -298,45 +289,6 @@ sudo journalctl -u cron
 ```
 
 > 📁 Backups are stored in the `backups/` directory
-
-## 🌐 Advanced: Custom Domains
-
-<details>
-<summary>Click to expand domain customization options</summary>
-
-### Domain Variables
-Configure in your `.env.prod`:
-```bash
-DOMAIN_BASE=yourdomain.com              # Your main domain
-DOMAIN_APP_SUBDOMAIN=spenicle           # App subdomain 
-DOMAIN_API_SUBDOMAIN=spenicle-api       # API subdomain
-```
-
-### Examples
-
-**Default setup:**
-```bash
-DOMAIN_BASE=mycompany.com
-DOMAIN_APP_SUBDOMAIN=spenicle
-DOMAIN_API_SUBDOMAIN=spenicle-api
-```
-Results: `spenicle.mycompany.com`, `spenicle-api.mycompany.com`
-
-**Custom subdomains:**
-```bash
-DOMAIN_BASE=example.org
-DOMAIN_APP_SUBDOMAIN=expenses
-DOMAIN_API_SUBDOMAIN=api
-```
-Results: `expenses.example.org`, `api.example.org`
-
-### Important Notes
-- This nginx setup only handles subdomains
-- Your main domain can be hosted anywhere else
-- DNS: Only point the subdomains to your server
-- SSL certificates are generated for subdomains only
-
-</details>
 
 ## 🆘 Troubleshooting
 

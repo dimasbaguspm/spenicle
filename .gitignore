@@ -59,9 +59,6 @@ coverage
 .env.dev
 .env.prod
 
-# Generated nginx configuration (created from template)
-nginx/nginx.prod.conf
-
 # Database backups
 backups/
 backup.sql

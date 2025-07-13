@@ -32,28 +32,6 @@ fi
 
 case "$1" in
   up)
-    # Generate nginx configuration from template with environment variables
-    echo "🔧 Generating nginx configuration..."
-    if ! ./scripts/generate-nginx-config.sh; then
-      echo "❌ Failed to generate nginx configuration!"
-      exit 1
-    fi
-    
-    # Verify nginx configuration file exists and is readable
-    if [ ! -f "nginx/nginx.prod.conf" ]; then
-      echo "❌ Error: nginx/nginx.prod.conf was not generated!"
-      exit 1
-    fi
-    
-    echo "✅ Nginx configuration verified"
-    echo "🔒 Configuring firewall (ufw) to protect database port..."
-    # block external access to postgres port 5432, allow only from docker backend network (default docker bridge subnet)
-    if command -v ufw >/dev/null 2>&1; then
-      sudo ufw deny 5432/tcp
-      echo "✅ ufw rule updated: 5432/tcp denied externally (docker backend network only)"
-    else
-      echo "⚠️  ufw not installed, skipping firewall rule for 5432"
-    fi
     echo "🚀 Starting services..."
     docker compose -f $COMPOSE_FILE --env-file $ENV_FILE up -d
     
@@ -291,42 +269,6 @@ case "$1" in
     echo "🔍 Pre-deployment checks:"
     echo ""
     
-    # Check if required files exist
-    echo "📁 Checking required files..."
-    for file in "$COMPOSE_FILE" "$ENV_FILE" "nginx/nginx.prod.conf.template"; do
-      if [ -f "$file" ]; then
-        echo "  ✅ $file ($(du -h "$file" | cut -f1))"
-      else
-        echo "  ❌ $file (missing)"
-      fi
-    done
-    echo ""
-    
-    # Check nginx configuration
-    echo "🔧 Checking nginx configuration..."
-    if [ -f "nginx/nginx.prod.conf" ]; then
-      echo "  ✅ nginx/nginx.prod.conf exists ($(du -h nginx/nginx.prod.conf | cut -f1))"
-      echo "  📋 Last modified: $(stat -c %y nginx/nginx.prod.conf)"
-    else
-      echo "  ⚠️  nginx/nginx.prod.conf does not exist"
-      echo "  💡 Run './scripts/prod.sh generate-config' to create it"
-    fi
-    echo ""
-    
-    # Check SSL certificates
-    echo "🔐 Checking SSL certificates..."
-    if [ -d "nginx/ssl" ]; then
-      if [ -f "nginx/ssl/fullchain.pem" ] && [ -f "nginx/ssl/privkey.pem" ]; then
-        echo "  ✅ SSL certificates found"
-      else
-        echo "  ⚠️  SSL certificates missing"
-        echo "  💡 Run './scripts/generate-ssl.sh' to create them"
-      fi
-    else
-      echo "  ❌ SSL directory missing"
-    fi
-    echo ""
-    
     # Check environment variables
     echo "🌍 Checking environment variables..."
     if [ -f "$ENV_FILE" ]; then
@@ -338,14 +280,6 @@ case "$1" in
     else
       echo "  ❌ Environment file missing"
     fi
-    ;;
-  generate-config)
-    echo "🔧 Generating nginx configuration..."
-    if ! ./scripts/generate-nginx-config.sh; then
-      echo "❌ Failed to generate nginx configuration!"
-      exit 1
-    fi
-    echo "✅ Configuration generated successfully"
     ;;
   monitor-memory)
     echo "📊 docker container memory usage (snapshot):"
@@ -369,7 +303,6 @@ case "$1" in
     echo "  restart [service]      - Restart service(s)"
     echo "  clean-cache [service]  - Clean Docker cache, remove containers/images/volumes and rebuild"
     echo "  check                  - Run pre-deployment checks"
-    echo "  generate-config        - Generate nginx configuration"
     echo "  monitor-memory         - Show memory usage for all project containers and system"
     echo ""
     echo "Backup Management:"

@@ -99,27 +99,6 @@ services:
           memory: 60M
           cpus: "0.08"
 
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: spenicle-staging-nginx
-    volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - web
-      - api
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 50M
-          cpus: "0.1"
-        reservations:
-          memory: 25M
-          cpus: "0.05"
 
 volumes:
   postgres_data:

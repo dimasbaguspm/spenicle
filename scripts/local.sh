@@ -418,14 +418,6 @@ case "$1" in
       echo "  ❌ Docker is not installed"
     fi
     ;;
-  generate-config)
-    echo "ℹ️  Note: Config generation is typically not needed for local development."
-    echo "🔧 For development, services usually run without nginx proxy."
-    echo ""
-    echo "If you need to test production-like setup locally, consider:"
-    echo "  1. Using './scripts/prod.sh generate-config' instead"
-    echo "  2. Or running services individually without Docker Compose"
-    ;;
   monitor-memory)
     echo "📊 docker container resource usage (CPU, memory, network, disk I/O):"
     # docker stats shows cpu, memory, network, and block io for all containers
@@ -457,7 +449,6 @@ case "$1" in
     echo "  exec <service> [cmd]   - Execute command in running container (interactive shell if no command)"
     echo "  clean-cache [service]  - Clean Docker cache, remove containers/images/volumes and rebuild"
     echo "  check                  - Run pre-deployment checks"
-    echo "  generate-config        - Info about config generation (dev mode)"
     echo "  monitor-memory         - Show memory usage for all project containers and system"
     echo ""
     echo "Backup Management:"
