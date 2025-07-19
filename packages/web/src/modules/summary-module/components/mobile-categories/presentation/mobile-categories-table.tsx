@@ -1,7 +1,7 @@
-import { List, Grid3X3, Search, X } from 'lucide-react';
+import { ButtonIcon, Icon, Text, TextInput, Tile } from '@dimasbaguspm/versaur';
+import { Search, X } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { Tile, IconButton, TextInput } from '../../../../../components';
 import { formatAmount } from '../../../../../libs/format-amount';
 import type { Category } from '../../../../../types/api';
 import { CategoryIcon } from '../../../../category-module/components/category-icon/category-icon';
@@ -24,7 +24,6 @@ export const MobileCategoriesTable: React.FC<MobileCategoriesTableProps> = ({
   chartType,
   onCategoryClick,
 }) => {
-  const [isCompactView, setIsCompactView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // build category map for quick lookup
@@ -57,35 +56,17 @@ export const MobileCategoriesTable: React.FC<MobileCategoriesTableProps> = ({
   }, [filteredData, chartType]);
 
   return (
-    <Tile className="p-4 md:p-6">
+    <Tile>
       <div className="space-y-4">
         {/* header with view toggle */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-semibold text-slate-900">Category Details</h3>
-            <p className="text-sm text-slate-500">
+            <Text as="h3" fontSize="lg" fontWeight="semibold">
+              Category Details
+            </Text>
+            <Text fontSize="sm">
               Financial metrics for {filteredData.length} categories, sorted by highest {chartType}
-            </p>
-          </div>
-
-          {/* view toggle for mobile */}
-          <div className="flex items-center gap-1 bg-mist-100 rounded-lg p-1 flex-shrink-0">
-            <IconButton
-              variant={isCompactView ? 'mist-ghost' : 'mist'}
-              size="sm"
-              onClick={() => setIsCompactView(false)}
-              aria-label="Detailed view"
-            >
-              <List className="h-4 w-4" />
-            </IconButton>
-            <IconButton
-              variant={isCompactView ? 'mist' : 'mist-ghost'}
-              size="sm"
-              onClick={() => setIsCompactView(true)}
-              aria-label="Compact view"
-            >
-              <Grid3X3 className="h-4 w-4" />
-            </IconButton>
+            </Text>
           </div>
         </div>
 
@@ -96,98 +77,56 @@ export const MobileCategoriesTable: React.FC<MobileCategoriesTableProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
-            size="sm"
           />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Icon
+            as={Search}
+            size="sm"
+            color={searchQuery ? 'primary' : 'ghost'}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2"
+          />
           {searchQuery && (
-            <button
+            <ButtonIcon
+              as={X}
+              variant="ghost"
+              size="sm"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            />
           )}
         </div>
 
         {sortedData.length === 0 ? (
           <div className="text-center py-8">
             {searchQuery ? (
-              <div>
-                <Search className="h-8 w-8 text-slate-300 mx-auto mb-3" />
-                <p className="text-sm text-slate-500 mb-1">No categories match "{searchQuery}"</p>
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="text-xs text-blue-600 hover:text-blue-700 underline"
-                >
-                  Clear search to see all categories
-                </button>
-              </div>
+              <>
+                <Text as="p" fontSize="sm" fontWeight="medium" align="center">
+                  No categories found
+                </Text>
+                <Text as="p" fontSize="xs" align="center">
+                  Try adjusting your search terms
+                </Text>
+              </>
             ) : (
-              <div>
-                <div className="text-slate-400 mb-2">
-                  <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
-                  </svg>
-                </div>
-                <p className="text-sm text-slate-500">No category data available</p>
-                <p className="text-xs text-slate-400">Try selecting a different time period</p>
-              </div>
+              <>
+                <Text as="p" fontSize="sm" fontWeight="medium" align="center">
+                  No category data available
+                </Text>
+                <Text as="p" fontSize="xs" align="center">
+                  Add some transactions to see category metrics
+                </Text>
+              </>
             )}
           </div>
         ) : (
-          <div className={isCompactView ? 'grid grid-cols-2 gap-3 sm:grid-cols-3' : 'space-y-3'}>
+          <div className="space-y-3">
             {sortedData.map((categoryData) => {
               const category = categoryMap[categoryData.categoryId];
               const primaryValue = chartType === 'expenses' ? categoryData.totalExpenses : categoryData.totalIncome;
-              const primaryColorClass = chartType === 'expenses' ? 'text-coral-600' : 'text-sage-600';
+              const color = chartType === 'expenses' ? 'primary' : 'secondary';
 
-              if (isCompactView) {
-                // compact card view - smaller cards in grid
-                return (
-                  <div
-                    key={categoryData.categoryId}
-                    className={`p-3 rounded-xl border border-mist-200 bg-white transition-all duration-200 ${
-                      onCategoryClick ? 'cursor-pointer hover:border-mist-300 hover:bg-mist-25 hover:shadow-sm' : ''
-                    }`}
-                    onClick={() => onCategoryClick?.(categoryData.categoryId)}
-                  >
-                    <div className="flex flex-col items-center text-center space-y-2.5">
-                      <CategoryIcon
-                        iconValue={category?.metadata?.icon}
-                        colorValue={category?.metadata?.color}
-                        size="sm"
-                      />
-                      <div className="min-w-0 w-full">
-                        <p className="text-xs font-medium text-slate-900 truncate leading-tight">
-                          {categoryData.categoryName}
-                        </p>
-                        <p className={`text-sm font-semibold tabular-nums ${primaryColorClass} mt-1`}>
-                          {formatAmount(primaryValue, { compact: true, hidePrefix: true })}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {categoryData.totalTransactions} txn{categoryData.totalTransactions === 1 ? '' : 's'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              // detailed card view - full width cards with better spacing
               return (
-                <div
-                  key={categoryData.categoryId}
-                  className={`p-4 rounded-xl border border-mist-200 bg-white transition-all duration-200 ${
-                    onCategoryClick ? 'cursor-pointer hover:border-mist-300 hover:bg-mist-25 hover:shadow-sm' : ''
-                  }`}
-                  onClick={() => onCategoryClick?.(categoryData.categoryId)}
-                >
+                <Tile key={categoryData.categoryId} onClick={() => onCategoryClick?.(categoryData.categoryId)}>
                   <div className="flex items-center justify-between">
                     {/* category info */}
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -198,23 +137,20 @@ export const MobileCategoriesTable: React.FC<MobileCategoriesTableProps> = ({
                         className="flex-shrink-0"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-slate-900 truncate leading-tight">
+                        <Text as="p" fontSize="sm" fontWeight="medium" ellipsis clamp={1}>
                           {categoryData.categoryName}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-0.5">
+                        </Text>
+                        <Text fontSize="xs">
                           {categoryData.totalTransactions} transaction{categoryData.totalTransactions === 1 ? '' : 's'}
-                        </p>
+                        </Text>
                       </div>
                     </div>
 
-                    {/* primary value */}
-                    <div className="text-right flex-shrink-0">
-                      <p className={`text-sm font-semibold tabular-nums ${primaryColorClass}`}>
-                        {formatAmount(primaryValue, { compact: false, hidePrefix: true })}
-                      </p>
-                    </div>
+                    <Text as="p" fontSize="sm" fontWeight="semibold" align="right" color={color}>
+                      {formatAmount(primaryValue, { compact: false, hidePrefix: true })}
+                    </Text>
                   </div>
-                </div>
+                </Tile>
               );
             })}
           </div>

@@ -1,7 +1,7 @@
 // mobile-period-breakdown-card component, renamed from period-breakdown-card.tsx
+import { Badge, Text, Tile, type BadgeProps } from '@dimasbaguspm/versaur';
 import React from 'react';
 
-import { Badge } from '../../../../components';
 import { formatNumberCompact } from '../../../../libs/utils';
 import type { SummaryTransactionsPeriod } from '../../../../types/api';
 import type { PeriodType } from '../../hooks';
@@ -25,61 +25,62 @@ export const MobilePeriodBreakdownCard: React.FC<MobilePeriodBreakdownCardProps>
     periodType as 'weekly' | 'monthly' | 'yearly'
   );
 
-  let badgeVariant: 'success' | 'warning' | 'info' | 'mist' = 'warning';
+  let badgeColor: BadgeProps['color'] = 'warning';
   let badgeLabel = 'Negative';
   if ((period.totalIncome ?? 0) === 0 && (period.totalExpenses ?? 0) === 0) {
-    badgeVariant = 'info';
+    badgeColor = 'info';
     badgeLabel = 'No activity';
   } else if ((period.netAmount ?? 0) > 0) {
-    badgeVariant = 'success';
+    badgeColor = 'success';
     badgeLabel = 'Surplus';
   } else if ((period.netAmount ?? 0) === 0) {
-    badgeVariant = 'mist';
+    badgeColor = 'tertiary';
     badgeLabel = 'Break even';
   } else {
-    badgeVariant = 'warning';
+    badgeColor = 'warning';
     badgeLabel = 'Deficit';
   }
 
   return (
-    <div
-      className="bg-cream-50 rounded-lg p-4 border border-mist-200 cursor-pointer hover:bg-cream-100 transition"
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyPress={
-        onClick
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') onClick();
-            }
-          : undefined
-      }
-    >
+    <Tile onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined}>
       <div className="flex items-center justify-between mb-2">
-        <h4 className="font-medium text-slate-900">{periodTitle}</h4>
-        <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+        <Text as="h4" fontWeight="medium" fontSize="base">
+          {periodTitle}
+        </Text>
+        <Badge color={badgeColor}>{badgeLabel}</Badge>
       </div>
       <div className="grid grid-cols-3 gap-4 text-sm">
         <div>
-          <p className="text-slate-500">Income</p>
-          <p className="font-semibold text-sage-600">{formatNumberCompact(period.totalIncome ?? 0)}</p>
+          <Text as="p" fontSize="sm" fontWeight="normal">
+            Income
+          </Text>
+          <Text as="p" fontSize="base" fontWeight="semibold" color="secondary">
+            {formatNumberCompact(period.totalIncome ?? 0)}
+          </Text>
         </div>
         <div>
-          <p className="text-slate-500">Expenses</p>
-          <p className="font-semibold text-coral-600">{formatNumberCompact(period.totalExpenses ?? 0)}</p>
+          <Text as="p" fontSize="sm" fontWeight="normal">
+            Expenses
+          </Text>
+          <Text as="p" fontSize="base" fontWeight="semibold" color="primary">
+            {formatNumberCompact(period.totalExpenses ?? 0)}
+          </Text>
         </div>
         <div>
-          <p className="text-slate-500">Net</p>
-          <p
-            className={`font-semibold ${
-              period.netAmount && period.netAmount >= 0 ? 'text-sage-600' : 'text-coral-600'
-            }`}
+          <Text as="p" fontSize="sm" fontWeight="normal">
+            Net
+          </Text>
+          <Text
+            as="p"
+            fontSize="base"
+            fontWeight="semibold"
+            color={period.netAmount && period.netAmount >= 0 ? 'secondary' : 'primary'}
           >
             {period.netAmount && period.netAmount >= 0 ? '+' : ''}
             {formatNumberCompact(period.netAmount ?? 0)}
-          </p>
+          </Text>
         </div>
       </div>
-    </div>
+    </Tile>
   );
 };

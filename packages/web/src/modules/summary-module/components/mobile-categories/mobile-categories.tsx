@@ -1,3 +1,4 @@
+import { Text } from '@dimasbaguspm/versaur';
 import React, { useMemo, useState } from 'react';
 
 import { useApiCategoriesQuery } from '../../../../hooks/use-api/built-in/use-categories';
@@ -56,7 +57,7 @@ export const MobileCategories: React.FC<MobileCategoriesProps> = ({ startDate, e
   }, [allCategories]);
 
   // use custom hook for enriched data processing
-  const { enrichedData } = useCategoryData({ data: categoriesData ?? [], categoryMap });
+  const { enrichedData, hasData } = useCategoryData({ data: categoriesData ?? [], categoryMap });
 
   // sort enriched data by chart type for display
   const sortedEnrichedData = useMemo(() => {
@@ -75,6 +76,19 @@ export const MobileCategories: React.FC<MobileCategoriesProps> = ({ startDate, e
 
   if (queryState.isFetching) {
     return <MobileCategoriesLoader count={5} />;
+  }
+
+  if (!hasData) {
+    return (
+      <div className="text-center py-8 space-y-2">
+        <Text as="h3" fontSize="lg" fontWeight="medium">
+          No category data available
+        </Text>
+        <Text as="p" fontSize="sm">
+          No transactions found for the selected period
+        </Text>
+      </div>
+    );
   }
 
   return (

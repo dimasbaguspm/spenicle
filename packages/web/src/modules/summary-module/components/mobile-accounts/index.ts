@@ -1,5 +1,4 @@
 export * from './mobile-accounts';
-export * from './mobile-account';
 export * from './mobile-accounts-loader';
 
 // Export new modular components
