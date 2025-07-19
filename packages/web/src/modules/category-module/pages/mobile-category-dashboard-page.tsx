@@ -1,8 +1,9 @@
+import { AppBar, ButtonFloat, Icon, Text } from '@dimasbaguspm/versaur';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useState, type FC } from 'react';
 
-import { Button, PageLayout } from '../../../components';
+import { BackButton } from '../../../components';
 import { useApiCategoriesQuery } from '../../../hooks';
 import { useDrawerRouterProvider } from '../../../providers/drawer-router';
 import type { Category } from '../../../types/api';
@@ -45,22 +46,20 @@ export const MobileCategoryDashboardPage: FC = () => {
   };
 
   return (
-    <PageLayout
-      background="cream"
-      title="Categories"
-      showBackButton={true}
-      rightContent={
-        <Button
-          variant="coral"
-          size="sm"
-          onClick={handleAddCategory}
-          className="flex items-center"
-          iconLeft={<Plus className="w-4 h-4" />}
-        >
-          <span className="inline">Add Category</span>
-        </Button>
-      }
-    >
+    <div className="relative mx-4">
+      <AppBar>
+        <AppBar.Trailing>
+          <BackButton />
+        </AppBar.Trailing>
+        <AppBar.Center>
+          <AppBar.Headline>
+            <Text as="h1" fontSize="lg" fontWeight="bold">
+              Categories
+            </Text>
+          </AppBar.Headline>
+        </AppBar.Center>
+      </AppBar>
+
       <div className="space-y-4">
         {/* category insights widget - key metrics at a glance */}
         <MobileCategoryInsightsWidget
@@ -78,6 +77,10 @@ export const MobileCategoryDashboardPage: FC = () => {
           selectedPeriod={selectedPeriod}
         />
       </div>
-    </PageLayout>
+
+      <ButtonFloat offset="5rem" size="sm" onClick={handleAddCategory}>
+        <Icon as={Plus} size="lg" color="neutral" />
+      </ButtonFloat>
+    </div>
   );
 };

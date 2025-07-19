@@ -1,7 +1,7 @@
-import { Plus, Search } from 'lucide-react';
+import { Button, Icon, Text, TextInput, Tile } from '@dimasbaguspm/versaur';
+import { Plus } from 'lucide-react';
 import { type FC } from 'react';
 
-import { Button, TextInput, Tile } from '../../../../components';
 import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router/context';
 
@@ -24,42 +24,34 @@ export const CategoryQuickActionsPanel: FC<CategoryQuickActionsPanelProps> = ({ 
   return (
     <div className="space-y-4">
       {/* search panel */}
-      <Tile className="p-4">
-        <div className="space-y-1 mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Search</h3>
-          <p className="text-sm text-slate-500">Find categories quickly</p>
-        </div>
+      <Tile className="space-y-2">
+        <Text as="h3" fontSize="lg" fontWeight="semibold">
+          Search
+        </Text>
 
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-slate-400" />
-          </div>
-          <TextInput
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search categories name"
-          />
-        </div>
+        <TextInput
+          label="Find categories"
+          variant="ghost"
+          value={searchValue}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search categories name"
+        />
       </Tile>
 
       {/* quick actions panel */}
-      <Tile className="p-4">
-        <div className="space-y-1 mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Quick Actions</h3>
-          <p className="text-sm text-slate-500">Manage your categories</p>
+      <Tile className="space-y-4">
+        <div>
+          <Text as="h3" fontSize="lg" fontWeight="semibold">
+            Quick Actions
+          </Text>
+          <Text as="p" fontSize="sm">
+            Manage your categories efficiently
+          </Text>
         </div>
-
-        <div className="space-y-3">
-          <Button
-            variant="coral"
-            size="sm"
-            onClick={handleAddCategory}
-            className="w-full justify-start"
-            iconLeft={<Plus className="h-4 w-4" />}
-          >
-            Add Category
-          </Button>
-        </div>
+        <Button variant="primary" size="sm" onClick={handleAddCategory}>
+          <Icon as={Plus} size="sm" color="neutral" />
+          Add Category
+        </Button>
       </Tile>
     </div>
   );

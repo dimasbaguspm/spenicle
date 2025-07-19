@@ -1,7 +1,7 @@
+import { Badge, Text, TextInput, Tile } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
 import { useMemo, type FC } from 'react';
 
-import { Tile, TextInput } from '../../../../components';
 import { useApiSummaryCategoriesQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
 import type { Category } from '../../../../types/api';
@@ -122,24 +122,27 @@ export const MobileCategorySummarySection: FC<MobileCategorySummarySectionProps>
   }
 
   return (
-    <Tile className="p-4">
+    <Tile>
       <div className="space-y-4">
-        {/* integrated header with search */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">Management</h3>
-              <p className="text-sm text-slate-500">
+              <Text as="h3" fontSize="lg" fontWeight="semibold">
+                Management
+              </Text>
+              <Text as="p" fontSize="sm">
                 {searchQuery
                   ? `${sortedCategories.length} of ${categories.length} categories`
                   : `${categories.length} total categories`}
-              </p>
+              </Text>
             </div>
-            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{periodLabel}</span>
+            <Badge color="neutral" size="sm" shape="rounded" className="px-2">
+              {periodLabel}
+            </Badge>
           </div>
 
-          {/* search input */}
           <TextInput
+            variant="ghost"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search categories by name or notes..."
@@ -147,17 +150,25 @@ export const MobileCategorySummarySection: FC<MobileCategorySummarySectionProps>
         </div>
 
         {sortedCategories.length === 0 ? (
-          <div className="text-center py-8">
+          <div className="py-8">
             {searchQuery ? (
-              <div>
-                <p className="text-sm font-medium text-slate-600">No categories found</p>
-                <p className="text-xs text-slate-500">Try adjusting your search terms</p>
-              </div>
+              <>
+                <Text as="p" fontSize="sm" fontWeight="medium" align="center">
+                  No categories found
+                </Text>
+                <Text as="p" fontSize="xs" align="center" className="text-xs text-slate-500">
+                  Try adjusting your search terms
+                </Text>
+              </>
             ) : (
-              <div>
-                <p className="text-sm font-medium text-slate-600">No categories yet</p>
-                <p className="text-xs text-slate-500">Add your first category to get started</p>
-              </div>
+              <>
+                <Text as="p" fontSize="sm" fontWeight="medium" align="center">
+                  No categories yet
+                </Text>
+                <Text as="p" fontSize="xs">
+                  Add your first category to get started
+                </Text>
+              </>
             )}
           </div>
         ) : (
@@ -168,11 +179,7 @@ export const MobileCategorySummarySection: FC<MobileCategorySummarySectionProps>
               const totalAmount = category.currentPeriodIncome - category.currentPeriodExpenses;
 
               return (
-                <div
-                  key={category.id}
-                  onClick={() => onCategoryCardClick(category)}
-                  className={`p-4 rounded-lg border transition-all duration-200 cursor-pointer bg-white border-mist-200 hover:border-sage-300`}
-                >
+                <Tile key={category.id} onClick={() => onCategoryCardClick(category)}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <CategoryIcon
@@ -182,15 +189,25 @@ export const MobileCategorySummarySection: FC<MobileCategorySummarySectionProps>
                         className="flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-slate-900 truncate">{category.name}</h4>
+                        <Text as="h4" fontSize="sm" fontWeight="medium" clamp={1} ellipsis>
+                          {category.name}
+                        </Text>
+
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-xs font-medium ${activityStatus.color}`}>{activityStatus.text}</span>
-                          {hasActivity && <span className="text-xs text-slate-400">•</span>}
+                          <Badge color="ghost" size="sm" className="px-2">
+                            {activityStatus.text}
+                          </Badge>
+
                           {hasActivity && (
-                            <span className="text-xs text-slate-500">
+                            <Text as="span" fontSize="xs">
+                              •
+                            </Text>
+                          )}
+                          {hasActivity && (
+                            <Text as="span" fontSize="xs">
                               {category.currentPeriodTransactions} transaction
                               {category.currentPeriodTransactions !== 1 ? 's' : ''}
-                            </span>
+                            </Text>
                           )}
                         </div>
                       </div>
@@ -198,31 +215,37 @@ export const MobileCategorySummarySection: FC<MobileCategorySummarySectionProps>
                     {/* Smart visual indicator for activity level */}
                     <div className="flex-shrink-0 ml-2">
                       {hasActivity && (
-                        <div className="text-right">
-                          <p className="text-xs text-slate-500">Total</p>
-                          <p className="text-sm font-semibold text-slate-700">
+                        <>
+                          <Text as="p" fontSize="xs">
+                            Total
+                          </Text>
+                          <Text as="p" fontSize="sm" fontWeight="semibold">
                             {formatAmount(totalAmount, { compact: true, hidePrefix: totalAmount > 0 })}
-                          </p>
-                        </div>
+                          </Text>
+                        </>
                       )}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-mist-100">
-                    <div className="text-center p-2 rounded bg-sage-50 border border-sage-100">
-                      <p className="text-xs text-sage-600 font-medium">Income</p>
-                      <p className="text-sm font-bold text-sage-700">
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                    <Tile variant="secondary" size="xs">
+                      <Text as="p" fontSize="xs" color="secondary" fontWeight="medium" align="center">
+                        Income
+                      </Text>
+                      <Text as="p" fontSize="lg" fontWeight="bold" align="center" color="secondary">
                         {formatAmount(category.currentPeriodIncome, { compact: true, hidePrefix: true })}
-                      </p>
-                    </div>
-                    <div className="text-center p-2 rounded bg-coral-50 border border-coral-100">
-                      <p className="text-xs text-coral-600 font-medium">Expenses</p>
-                      <p className="text-sm font-bold text-coral-700">
+                      </Text>
+                    </Tile>
+                    <Tile variant="primary" size="xs">
+                      <Text as="p" fontSize="xs" color="primary" fontWeight="medium" align="center">
+                        Expenses
+                      </Text>
+                      <Text as="p" fontSize="lg" fontWeight="bold" color="primary" align="center">
                         {formatAmount(category.currentPeriodExpenses, { compact: true, hidePrefix: true })}
-                      </p>
-                    </div>
+                      </Text>
+                    </Tile>
                   </div>
-                </div>
+                </Tile>
               );
             })}
           </div>

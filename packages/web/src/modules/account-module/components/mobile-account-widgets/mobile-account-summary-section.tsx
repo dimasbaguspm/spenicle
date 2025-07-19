@@ -228,7 +228,7 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
 
                   <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
                     <Tile size="xs" variant="secondary">
-                      <Text as="p" fontSize="xs" color="secondary" align="center" fontWeight="bold">
+                      <Text as="p" fontSize="xs" color="secondary" align="center" fontWeight="medium">
                         Income
                       </Text>
                       <Text as="p" fontSize="lg" fontWeight="bold" color="secondary" align="center">
@@ -236,7 +236,7 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                       </Text>
                     </Tile>
                     <Tile variant="primary" size="xs">
-                      <Text as="p" fontSize="xs" color="primary" align="center" fontWeight="bold">
+                      <Text as="p" fontSize="xs" color="primary" align="center" fontWeight="medium">
                         Expenses
                       </Text>
                       <Text as="p" fontSize="lg" fontWeight="bold" color="primary" align="center">

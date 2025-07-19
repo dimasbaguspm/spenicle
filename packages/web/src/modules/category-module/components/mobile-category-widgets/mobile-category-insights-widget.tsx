@@ -1,8 +1,8 @@
+import { Icon, Tabs, Text, Tile, type IconProps } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
 import { TrendingUp, TrendingDown, Folder, Activity } from 'lucide-react';
 import { useMemo, type FC } from 'react';
 
-import { Tile, Tab } from '../../../../components';
 import { useApiSummaryCategoriesQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
 import type { Category } from '../../../../types/api';
@@ -83,14 +83,14 @@ export const MobileCategoryInsightsWidget: FC<MobileCategoryInsightsWidgetProps>
         value: categories.length.toString(),
         trend: categories.length > 0 ? 'neutral' : 'negative',
         icon: Folder,
-        iconColor: categories.length > 0 ? 'text-mist-600' : 'text-slate-400',
+        iconColor: 'tertiary',
       },
       {
         label: `Transactions`,
         value: currentPeriodTransactions.toString(),
         trend: currentPeriodTransactions > 0 ? 'neutral' : 'neutral',
         icon: Activity,
-        iconColor: currentPeriodTransactions > 0 ? 'text-mist-600' : 'text-slate-400',
+        iconColor: 'tertiary',
       },
       {
         label: `Income`,
@@ -100,7 +100,7 @@ export const MobileCategoryInsightsWidget: FC<MobileCategoryInsightsWidgetProps>
         }),
         trend: currentPeriodIncome > 0 ? 'positive' : 'neutral',
         icon: TrendingUp,
-        iconColor: 'text-sage-600',
+        iconColor: 'secondary',
       },
       {
         label: `Expenses`,
@@ -110,7 +110,7 @@ export const MobileCategoryInsightsWidget: FC<MobileCategoryInsightsWidgetProps>
         }),
         trend: currentPeriodExpenses > 0 ? 'negative' : 'neutral',
         icon: TrendingDown,
-        iconColor: 'text-coral-600',
+        iconColor: 'primary',
       },
     ];
   }, [categories, summaryData]);
@@ -121,73 +121,42 @@ export const MobileCategoryInsightsWidget: FC<MobileCategoryInsightsWidgetProps>
   }
 
   return (
-    <Tile className="p-4">
+    <Tile>
       <div className="space-y-4">
         <div className="space-y-3">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-slate-900">Overview</h3>
-            <p className="text-sm text-slate-500">Key metrics with period selection</p>
+            <Text as="h3" fontSize="lg" fontWeight="semibold">
+              Overview
+            </Text>
+            <Text as="p" fontSize="sm">
+              Key metrics with period selection
+            </Text>
           </div>
 
           {/* enhanced period selector with better mobile UX */}
-          <Tab value={selectedPeriod} onValueChange={(value) => onPeriodChange(value as PeriodType)} type="tabs">
-            <Tab.List className="w-full grid grid-cols-3 gap-1 p-1 bg-mist-100 rounded-xl">
-              <Tab.Trigger
-                value="today"
-                className="text-center text-xs font-medium px-3 py-2 rounded-lg transition-all"
-              >
-                Today
-              </Tab.Trigger>
-              <Tab.Trigger value="week" className="text-center text-xs font-medium px-3 py-2 rounded-lg transition-all">
-                This Week
-              </Tab.Trigger>
-              <Tab.Trigger
-                value="month"
-                className="text-center text-xs font-medium px-3 py-2 rounded-lg transition-all"
-              >
-                This Month
-              </Tab.Trigger>
-            </Tab.List>
-          </Tab>
+          <Tabs value={selectedPeriod} onValueChange={(value) => onPeriodChange(value as PeriodType)}>
+            <Tabs.Trigger value="today">Today</Tabs.Trigger>
+            <Tabs.Trigger value="week">This Week</Tabs.Trigger>
+            <Tabs.Trigger value="month">This Month</Tabs.Trigger>
+          </Tabs>
         </div>
 
-        {/* mobile-optimized 2x2 grid with smart visual indicators */}
         <div className="grid grid-cols-2 gap-3">
           {insights.map((insight, index) => {
-            const getTrendStyles = (trend?: string) => {
-              switch (trend) {
-                case 'positive':
-                  return 'border-sage-200 bg-sage-50';
-                case 'negative':
-                  return 'border-coral-200 bg-coral-50';
-                default:
-                  return 'border-mist-200 bg-white';
-              }
-            };
-
-            const getValueColor = (trend?: string) => {
-              switch (trend) {
-                case 'positive':
-                  return 'text-sage-700';
-                case 'negative':
-                  return 'text-coral-700';
-                default:
-                  return 'text-slate-900';
-              }
-            };
-
             return (
-              <div key={index} className={`p-3 rounded-lg border transition-colors ${getTrendStyles(insight.trend)}`}>
+              <Tile key={index}>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <p className={`text-lg font-bold tabular-nums leading-tight ${getValueColor(insight.trend)}`}>
+                    <Text as="p" fontSize="lg" fontWeight="bold">
                       {insight.value}
-                    </p>
-                    <insight.icon className={`h-4 w-4 ${insight.iconColor}`} />
+                    </Text>
+                    <Icon as={insight.icon} size="sm" color={insight.iconColor as IconProps['color']} />
                   </div>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed">{insight.label}</p>
+                  <Text as="p" fontSize="xs" color="ghost">
+                    {insight.label}
+                  </Text>
                 </div>
-              </div>
+              </Tile>
             );
           })}
         </div>

@@ -89,6 +89,13 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
         iconColor: totalBalance >= 0 ? 'secondary' : 'primary',
       },
       {
+        label: `Transactions`,
+        value: currentPeriodTransactions.toString(),
+        trend: currentPeriodTransactions > 0 ? 'neutral' : 'neutral',
+        icon: Activity,
+        iconColor: 'tertiary',
+      },
+      {
         label: `Income`,
         value: formatAmount(currentPeriodIncome, {
           compact: true,
@@ -107,13 +114,6 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
         trend: currentPeriodExpenses > 0 ? 'negative' : 'neutral',
         icon: TrendingDown,
         iconColor: 'primary',
-      },
-      {
-        label: `Transactions`,
-        value: currentPeriodTransactions.toString(),
-        trend: currentPeriodTransactions > 0 ? 'neutral' : 'neutral',
-        icon: Activity,
-        iconColor: 'tertiary',
       },
     ];
   }, [accounts, currentPeriodSummary]);
@@ -155,7 +155,9 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
                     </Text>
                     <Icon as={insight.icon} size="sm" color={insight.iconColor as IconProps['color']} />
                   </div>
-                  <p className="text-xs text-slate-500 font-medium leading-relaxed">{insight.label}</p>
+                  <Text as="p" fontSize="xs" fontWeight="medium">
+                    {insight.label}
+                  </Text>
                 </div>
               </Tile>
             );

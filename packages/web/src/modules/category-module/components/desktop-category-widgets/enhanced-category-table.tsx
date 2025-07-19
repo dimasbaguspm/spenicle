@@ -1,9 +1,10 @@
+import { ButtonIcon, Text, Tile } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { Edit } from 'lucide-react';
 import { useMemo, useState, type FC } from 'react';
 
-import { Tile, DataTable, IconButton, type ColumnDefinition, type SortConfig } from '../../../../components';
+import { DataTable, type ColumnDefinition, type SortConfig } from '../../../../components';
 import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router/context';
 import type { Category } from '../../../../types/api';
@@ -88,7 +89,9 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
             className="flex-shrink-0"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-900 truncate">{category.name}</p>
+            <Text as="p" fontSize="sm" fontWeight="medium" clamp={1} ellipsis>
+              {category.name}
+            </Text>
           </div>
         </div>
       ),
@@ -100,16 +103,13 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
       align: 'center',
       gridColumn: 'span 2',
       render: (_, category) => (
-        <div className="flex items-center justify-center gap-2">
-          <IconButton
-            variant="slate-ghost"
-            size="sm"
-            onClick={() => handleEditCategory(category.id!)}
-            title="Edit category"
-          >
-            <Edit className="h-4 w-4" />
-          </IconButton>
-        </div>
+        <ButtonIcon
+          as={Edit}
+          variant="ghost"
+          size="sm"
+          aria-label="Edit category"
+          onClick={() => handleEditCategory(category.id!)}
+        />
       ),
     },
   ];
@@ -120,13 +120,15 @@ export const EnhancedCategoryTable: FC<EnhancedCategoryTableProps> = ({
   };
 
   return (
-    <Tile className="p-4 md:p-6">
-      <div className="space-y-4 md:space-y-6">
+    <Tile>
+      <div className="space-y-6">
         <div className="space-y-1">
-          <h3 className="text-lg md:text-xl font-semibold text-slate-900">Categories</h3>
-          <p className="text-sm text-slate-500">
+          <Text as="h3" fontSize="lg" fontWeight="semibold">
+            Categories
+          </Text>
+          <Text as="p" fontSize="sm">
             Showing {sortedCategories.length} of {categories.length} categories
-          </p>
+          </Text>
         </div>
         <DataTable
           data={sortedCategories}

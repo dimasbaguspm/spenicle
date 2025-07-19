@@ -38,11 +38,15 @@ export const AccountQuickActionsPanel: FC<AccountQuickActionsPanelProps> = ({ se
       </Tile>
 
       {/* quick actions panel */}
-      <Tile className="space-y-2">
-        <Text as="h3" fontSize="lg" fontWeight="semibold">
-          Quick Actions
-        </Text>
-        <Text as="p">Manage your accounts</Text>
+      <Tile className="space-y-4">
+        <div>
+          <Text as="h3" fontSize="lg" fontWeight="semibold">
+            Quick Actions
+          </Text>
+          <Text as="p" fontSize="sm">
+            Manage your accounts
+          </Text>
+        </div>
 
         <Button variant="primary" size="sm" onClick={handleAddAccount}>
           <Icon as={Plus} size="sm" className="mr-2" color="neutral" />
