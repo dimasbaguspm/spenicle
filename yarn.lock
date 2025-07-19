@@ -1590,6 +1590,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@dimasbaguspm/versaur@npm:0.0.1":
+  version: 0.0.1
+  resolution: "@dimasbaguspm/versaur@npm:0.0.1"
+  peerDependencies:
+    lucide-react: ">=0.525.0"
+    react: ">=18.0.0"
+    react-dom: ">=18.0.0"
+  checksum: 10/4ac8bf4292db138b26c3fe2acf4f4b5a5d9ee1f5c30d7a456429ad7797ff79cca045a866844e587615146ee7d2b2e77aec47a78edcb59399903e358a7307d0d3
+  languageName: node
+  linkType: hard
+
 "@drizzle-team/brocli@npm:^0.10.2":
   version: 0.10.2
   resolution: "@drizzle-team/brocli@npm:0.10.2"
@@ -2676,6 +2687,7 @@ __metadata:
   dependencies:
     "@commitlint/cli": "npm:19.8.1"
     "@commitlint/config-conventional": "npm:19.8.1"
+    "@dimasbaguspm/versaur": "npm:0.0.1"
     "@eslint/eslintrc": "npm:3.3.1"
     "@eslint/js": "npm:9.29.0"
     "@tailwindcss/vite": "npm:4.1.7"
