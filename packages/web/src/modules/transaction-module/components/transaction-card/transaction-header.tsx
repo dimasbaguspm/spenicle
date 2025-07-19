@@ -18,7 +18,7 @@ export const TransactionHeader = ({ date, totalAmount, transactionCount }: Trans
   });
 
   return (
-    <div className="border-b border-neutral px-4 py-3">
+    <div className="border-b border-border px-4 py-3">
       <div className="flex gap-1 flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <Text as="span" fontSize="lg" fontWeight="semibold">

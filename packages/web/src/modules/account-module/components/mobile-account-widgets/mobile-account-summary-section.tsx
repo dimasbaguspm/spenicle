@@ -1,7 +1,7 @@
+import { Badge, Text, TextInput, Tile, type BadgeProps } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
 import { useMemo, type FC } from 'react';
 
-import { Tile, TextInput } from '../../../../components';
 import { useApiSummaryAccountsQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
 import type { Account } from '../../../../types/api';
@@ -109,28 +109,32 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
     });
   }, [enhancedAccounts]);
 
-  const getActivityStatus = (transactions: number) => {
-    if (transactions > 10) return { text: 'Very Active', color: 'text-sage-600' };
-    if (transactions > 5) return { text: 'Active', color: 'text-mist-600' };
-    if (transactions > 0) return { text: 'Some Activity', color: 'text-warning-600' };
-    return { text: 'No Activity', color: 'text-slate-400' };
+  const getActivityStatus = (transactions: number): { text: string; color: BadgeProps['color'] } => {
+    if (transactions > 10) return { text: 'Very Active', color: 'success' };
+    if (transactions > 5) return { text: 'Active', color: 'success' };
+    if (transactions > 0) return { text: 'Some Activity', color: 'warning' };
+    return { text: 'No Activity', color: 'neutral' };
   };
 
   return (
-    <Tile className="p-4">
+    <Tile>
       <div className="space-y-4">
         {/* integrated header with search */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">Management</h3>
-              <p className="text-sm text-slate-500">
+              <Text as="h3" fontSize="lg" fontWeight="semibold">
+                Management
+              </Text>
+              <Text as="p" fontSize="sm">
                 {searchQuery
                   ? `${sortedAccounts.length} of ${accounts.length} accounts`
                   : `${accounts.length} total accounts`}
-              </p>
+              </Text>
             </div>
-            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{periodLabel}</span>
+            <Badge color="neutral" size="sm" shape="rounded" className="px-2">
+              {periodLabel}
+            </Badge>
           </div>
 
           {/* search input */}
@@ -142,16 +146,24 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
         </div>
 
         {sortedAccounts.length === 0 ? (
-          <div className="text-center py-8">
+          <div className="py-8">
             {searchQuery ? (
               <div>
-                <p className="text-sm font-medium text-slate-600">No accounts found</p>
-                <p className="text-xs text-slate-500">Try adjusting your search terms</p>
+                <Text as="p" fontSize="sm" fontWeight="medium" align="center">
+                  No accounts found
+                </Text>
+                <Text as="p" fontSize="xs" align="center">
+                  Try adjusting your search terms
+                </Text>
               </div>
             ) : (
               <div>
-                <p className="text-sm font-medium text-slate-600">No accounts yet</p>
-                <p className="text-xs text-slate-500">Add your first account to get started</p>
+                <Text fontSize="sm" fontWeight="medium" align="center">
+                  No accounts yet
+                </Text>
+                <Text fontSize="xs" align="center">
+                  Add your first account to get started
+                </Text>
               </div>
             )}
           </div>
@@ -164,11 +176,7 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
               const balanceIsPositive = (account.amount ?? 0) >= 0;
 
               return (
-                <div
-                  key={account.id}
-                  onClick={() => onAccountCardClick(account)}
-                  className={`p-4 rounded-lg border transition-all duration-200 cursor-pointer bg-white border-mist-200 hover:border-sage-300`}
-                >
+                <Tile key={account.id} onClick={() => onAccountCardClick(account)}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <AccountIcon
@@ -178,15 +186,23 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                         className="flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-slate-900 truncate">{account.name}</h4>
+                        <Text as="h4" fontSize="sm" fontWeight="medium" ellipsis clamp={1}>
+                          {account.name}
+                        </Text>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-xs font-medium ${activityStatus.color}`}>{activityStatus.text}</span>
-                          {hasActivity && <span className="text-xs text-slate-400">•</span>}
+                          <Badge size="sm" color={activityStatus.color}>
+                            {activityStatus.text}
+                          </Badge>
                           {hasActivity && (
-                            <span className="text-xs text-slate-500">
+                            <Text as="span" fontSize="xs">
+                              •
+                            </Text>
+                          )}
+                          {hasActivity && (
+                            <Text as="span" fontSize="xs">
                               {account.currentPeriodTransactions} transaction
                               {account.currentPeriodTransactions !== 1 ? 's' : ''}
-                            </span>
+                            </Text>
                           )}
                         </div>
                       </div>
@@ -195,33 +211,39 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                     {/* Smart visual indicator for account balance */}
                     <div className="flex-shrink-0 ml-2">
                       {hasBalance && (
-                        <div className="text-right">
-                          <p className="text-xs text-slate-500">Balance</p>
-                          <p className={`text-sm font-semibold`}>
+                        <>
+                          <Text as="p" fontSize="xs" align="right">
+                            Balance
+                          </Text>
+                          <Text as="p" fontSize="sm" fontWeight="semibold" align="right">
                             {formatAmount(account.amount ?? 0, { compact: true, hidePrefix: balanceIsPositive })}
-                          </p>
-                        </div>
+                          </Text>
+                        </>
                       )}
                     </div>
                   </div>
 
                   {/* Enhanced Current Period Activity Details */}
 
-                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-mist-100">
-                    <div className="text-center p-2 rounded bg-sage-50 border border-sage-100">
-                      <p className="text-xs text-sage-600 font-medium">Income</p>
-                      <p className="text-sm font-bold text-sage-700">
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                    <Tile size="sm">
+                      <Text as="p" fontSize="xs" color="secondary" align="center">
+                        Income
+                      </Text>
+                      <Text as="p" fontSize="lg" fontWeight="bold" color="secondary" align="center">
                         {formatAmount(account.currentPeriodIncome, { compact: true, hidePrefix: true })}
-                      </p>
-                    </div>
-                    <div className="text-center p-2 rounded bg-coral-50 border border-coral-100">
-                      <p className="text-xs text-coral-600 font-medium">Expenses</p>
-                      <p className="text-sm font-bold text-coral-700">
+                      </Text>
+                    </Tile>
+                    <Tile>
+                      <Text as="p" fontSize="xs" color="primary" align="center">
+                        Expenses
+                      </Text>
+                      <Text as="p" fontSize="lg" fontWeight="bold" color="primary" align="center">
                         {formatAmount(account.currentPeriodExpenses, { compact: true, hidePrefix: true })}
-                      </p>
-                    </div>
+                      </Text>
+                    </Tile>
                   </div>
-                </div>
+                </Tile>
               );
             })}
           </div>

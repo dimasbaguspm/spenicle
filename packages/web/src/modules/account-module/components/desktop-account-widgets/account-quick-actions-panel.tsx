@@ -1,7 +1,7 @@
+import { Button, Icon, Text, TextInput, Tile } from '@dimasbaguspm/versaur';
 import { Plus } from 'lucide-react';
 import { type FC } from 'react';
 
-import { Button, TextInput, Tile } from '../../../../components';
 import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router/context';
 
@@ -22,15 +22,14 @@ export const AccountQuickActionsPanel: FC<AccountQuickActionsPanelProps> = ({ se
   };
 
   return (
-    <div className="space-y-4">
-      {/* search panel */}
-      <Tile className="p-4">
-        <div className="space-y-1 mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Search</h3>
-          <p className="text-sm text-slate-500">Find accounts quickly</p>
-        </div>
+    <div className="flex flex-col space-y-4">
+      <Tile className="space-y-2">
+        <Text as="h3" fontSize="lg" fontWeight="semibold">
+          Search
+        </Text>
 
         <TextInput
+          label="Find accounts"
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search accounts..."
@@ -38,23 +37,16 @@ export const AccountQuickActionsPanel: FC<AccountQuickActionsPanelProps> = ({ se
       </Tile>
 
       {/* quick actions panel */}
-      <Tile className="p-4">
-        <div className="space-y-1 mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Quick Actions</h3>
-          <p className="text-sm text-slate-500">Manage your accounts</p>
-        </div>
+      <Tile className="space-y-2">
+        <Text as="h3" fontSize="lg" fontWeight="semibold">
+          Quick Actions
+        </Text>
+        <Text as="p">Manage your accounts</Text>
 
-        <div className="space-y-3">
-          <Button
-            variant="coral"
-            size="sm"
-            onClick={handleAddAccount}
-            className="w-full justify-start"
-            iconLeft={<Plus className="h-4 w-4" />}
-          >
-            Add Account
-          </Button>
-        </div>
+        <Button variant="primary" size="sm" onClick={handleAddAccount}>
+          <Icon as={Plus} size="sm" className="mr-2" color="neutral" />
+          Add Account
+        </Button>
       </Tile>
     </div>
   );

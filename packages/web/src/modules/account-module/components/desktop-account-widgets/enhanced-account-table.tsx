@@ -1,9 +1,10 @@
+import { ButtonIcon, Text, Tile } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { Edit } from 'lucide-react';
 import { useMemo, useState, type FC } from 'react';
 
-import { Tile, DataTable, IconButton, type ColumnDefinition, type SortConfig } from '../../../../components';
+import { DataTable, type ColumnDefinition, type SortConfig } from '../../../../components';
 import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { formatAmount } from '../../../../libs/format-amount';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router/context';
@@ -100,12 +101,9 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
             size="sm"
             className="flex-shrink-0"
           />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-900 truncate">{account.name}</p>
-            {account.metadata?.bankName && (
-              <p className="text-xs text-slate-500 truncate">{account.metadata.bankName as string}</p>
-            )}
-          </div>
+          <Text fontSize="sm" fontWeight="medium" ellipsis clamp={1}>
+            {account.name}
+          </Text>
         </div>
       ),
     },
@@ -119,11 +117,9 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
         const accountAmount = value as number;
         const displayValue = Math.abs(accountAmount);
         return (
-          <p
-            className={`text-sm font-semibold tabular-nums ${accountAmount >= 0 ? 'text-sage-600' : 'text-coral-600'}`}
-          >
+          <Text fontSize="sm" fontWeight="semibold" color={accountAmount > 0 ? 'secondary' : 'primary'}>
             {formatAmount(displayValue, { compact: false, hidePrefix: true })}
-          </p>
+          </Text>
         );
       },
     },
@@ -133,9 +129,7 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
       sortable: true,
       align: 'center',
       gridColumn: 'span 3',
-      render: (value) => (
-        <p className="text-sm text-slate-600 tabular-nums">{value ? dayjs(value as string).fromNow() : '—'}</p>
-      ),
+      render: (value) => <Text fontSize="sm">{value ? dayjs(value as string).fromNow() : '—'}</Text>,
     },
     {
       key: 'id',
@@ -144,16 +138,13 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
       align: 'center',
       gridColumn: 'span 2',
       render: (_, account) => (
-        <div className="flex items-center justify-center gap-2">
-          <IconButton
-            variant="slate-ghost"
-            size="sm"
-            onClick={() => handleEditAccount(account.id!)}
-            title="Edit account"
-          >
-            <Edit className="h-4 w-4" />
-          </IconButton>
-        </div>
+        <ButtonIcon
+          as={Edit}
+          variant="ghost"
+          size="sm"
+          onClick={() => handleEditAccount(account.id!)}
+          aria-label="Edit account"
+        />
       ),
     },
   ];
@@ -164,7 +155,7 @@ export const EnhancedAccountTable: FC<EnhancedAccountTableProps> = ({
   };
 
   return (
-    <Tile className="p-4 md:p-6">
+    <Tile>
       <div className="space-y-4 md:space-y-6">
         <div className="space-y-1">
           <h3 className="text-lg md:text-xl font-semibold text-slate-900">Accounts</h3>

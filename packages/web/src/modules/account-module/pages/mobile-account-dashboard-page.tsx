@@ -1,8 +1,9 @@
+import { AppBar, ButtonFloat, Icon, Text } from '@dimasbaguspm/versaur';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useState, type FC } from 'react';
 
-import { Button, PageLayout } from '../../../components';
+import { BackButton } from '../../../components';
 import { useApiAccountsQuery } from '../../../hooks';
 import { useDrawerRouterProvider } from '../../../providers/drawer-router';
 import type { Account } from '../../../types/api';
@@ -45,22 +46,20 @@ export const MobileAccountDashboardPage: FC = () => {
   };
 
   return (
-    <PageLayout
-      background="cream"
-      title="Accounts"
-      showBackButton={true}
-      rightContent={
-        <Button
-          variant="coral"
-          size="sm"
-          onClick={handleAddAccount}
-          className="flex items-center"
-          iconLeft={<Plus className="w-4 h-4" />}
-        >
-          <span className="inline">Add Account</span>
-        </Button>
-      }
-    >
+    <div className="mx-4">
+      <AppBar>
+        <AppBar.Leading>
+          <BackButton />
+        </AppBar.Leading>
+        <AppBar.Center>
+          <AppBar.Headline>
+            <Text as="h1" fontWeight="bold" fontSize="lg">
+              Accounts
+            </Text>
+          </AppBar.Headline>
+        </AppBar.Center>
+      </AppBar>
+
       <div className="space-y-4">
         {/* financial insights widget - key metrics at a glance */}
         <MobileAccountInsightsWidget
@@ -78,6 +77,10 @@ export const MobileAccountDashboardPage: FC = () => {
           selectedPeriod={selectedPeriod}
         />
       </div>
-    </PageLayout>
+
+      <ButtonFloat offset="5rem" size="sm" onClick={handleAddAccount}>
+        <Icon as={Plus} size="lg" color="neutral" />
+      </ButtonFloat>
+    </div>
   );
 };

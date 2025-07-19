@@ -1,7 +1,6 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import type { FC } from 'react';
 
-import { PageLayout } from '../../../components';
 import { useApiAccountsQuery } from '../../../hooks';
 import { AccountQuickActionsPanel, EnhancedAccountTable } from '../components/desktop-account-widgets';
 
@@ -25,21 +24,19 @@ export const DesktopAccountDashboardPage: FC = () => {
   };
 
   return (
-    <PageLayout background="cream" title="Account Management" showBackButton>
-      <div className="space-y-6">
-        {/* desktop grid layout */}
-        <div className="grid grid-cols-12 gap-6">
-          {/* left sidebar: quick actions and search */}
-          <div className="col-span-3 space-y-4 sticky top-6 self-start h-fit max-h-[calc(100vh-12rem)] overflow-y-auto">
-            <AccountQuickActionsPanel onSearchChange={handleSearchChange} searchValue={searchQuery} />
-          </div>
+    <div className="space-y-6">
+      {/* desktop grid layout */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* left sidebar: quick actions and search */}
+        <div className="col-span-3 space-y-4 sticky top-6 self-start h-fit max-h-[calc(100vh-12rem)] overflow-y-auto">
+          <AccountQuickActionsPanel onSearchChange={handleSearchChange} searchValue={searchQuery} />
+        </div>
 
-          {/* main content area */}
-          <div className="col-span-9 space-y-6">
-            <EnhancedAccountTable accounts={accounts} searchQuery={searchQuery} onSearchChange={handleSearchChange} />
-          </div>
+        {/* main content area */}
+        <div className="col-span-9 space-y-6">
+          <EnhancedAccountTable accounts={accounts} searchQuery={searchQuery} onSearchChange={handleSearchChange} />
         </div>
       </div>
-    </PageLayout>
+    </div>
   );
 };

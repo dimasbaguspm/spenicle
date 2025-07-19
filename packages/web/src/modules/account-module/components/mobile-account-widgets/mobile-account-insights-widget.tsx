@@ -1,8 +1,8 @@
+import { Tile, Tabs, Text, type TileProps, type TextProps, Icon, type IconProps } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
 import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import { useMemo, type FC } from 'react';
 
-import { Tile, Tab } from '../../../../components';
 import { useApiSummaryAccountsQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
 import type { Account } from '../../../../types/api';
@@ -86,7 +86,7 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
         value: formatAmount(totalBalance, { compact: true, hidePrefix: totalBalance >= 0 }),
         trend: totalBalance >= 0 ? 'positive' : 'negative',
         icon: Wallet,
-        iconColor: totalBalance >= 0 ? 'text-sage-600' : 'text-coral-600',
+        iconColor: totalBalance >= 0 ? 'secondary' : 'primary',
       },
       {
         label: `Income`,
@@ -96,7 +96,7 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
         }),
         trend: currentPeriodIncome > 0 ? 'positive' : 'neutral',
         icon: TrendingUp,
-        iconColor: 'text-sage-600',
+        iconColor: 'secondary',
       },
       {
         label: `Expenses`,
@@ -106,14 +106,14 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
         }),
         trend: currentPeriodExpenses > 0 ? 'negative' : 'neutral',
         icon: TrendingDown,
-        iconColor: 'text-coral-600',
+        iconColor: 'primary',
       },
       {
         label: `Transactions`,
         value: currentPeriodTransactions.toString(),
         trend: currentPeriodTransactions > 0 ? 'neutral' : 'neutral',
         icon: Activity,
-        iconColor: currentPeriodTransactions > 0 ? 'text-mist-600' : 'text-slate-400',
+        iconColor: 'tertiary',
       },
     ];
   }, [accounts, currentPeriodSummary]);
@@ -124,73 +124,64 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
   }
 
   return (
-    <Tile className="p-4">
+    <Tile>
       <div className="space-y-4">
         <div className="space-y-3">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-slate-900">Overview</h3>
-            <p className="text-sm text-slate-500">Key metrics with period selection</p>
+            <Text as="h3" fontSize="lg" fontWeight="semibold">
+              Overview
+            </Text>
+            <Text as="p" fontSize="sm">
+              Key metrics with period selection
+            </Text>
           </div>
 
-          {/* enhanced period selector with better mobile UX */}
-          <Tab value={selectedPeriod} onValueChange={(value) => onPeriodChange(value as PeriodType)} type="tabs">
-            <Tab.List className="w-full grid grid-cols-3 gap-1 p-1 bg-mist-100 rounded-xl">
-              <Tab.Trigger
-                value="today"
-                className="text-center text-xs font-medium px-3 py-2 rounded-lg transition-all"
-              >
-                Today
-              </Tab.Trigger>
-              <Tab.Trigger value="week" className="text-center text-xs font-medium px-3 py-2 rounded-lg transition-all">
-                This Week
-              </Tab.Trigger>
-              <Tab.Trigger
-                value="month"
-                className="text-center text-xs font-medium px-3 py-2 rounded-lg transition-all"
-              >
-                This Month
-              </Tab.Trigger>
-            </Tab.List>
-          </Tab>
+          <Tabs value={selectedPeriod} onValueChange={(value) => onPeriodChange(value as PeriodType)}>
+            <Tabs.Trigger value="today">Today</Tabs.Trigger>
+            <Tabs.Trigger value="week">This Week</Tabs.Trigger>
+            <Tabs.Trigger value="month">This Month</Tabs.Trigger>
+          </Tabs>
         </div>
 
         {/* mobile-optimized 2x2 grid with smart visual indicators */}
         <div className="grid grid-cols-2 gap-3">
           {insights.map((insight, index) => {
-            const getTrendStyles = (trend?: string) => {
-              switch (trend) {
+            const tileVariant: TileProps['variant'] = (() => {
+              switch (insight.trend) {
                 case 'positive':
-                  return 'border-sage-200 bg-sage-50';
+                  return 'secondary';
                 case 'negative':
-                  return 'border-coral-200 bg-coral-50';
+                  return 'primary';
+                case 'neutral':
                 default:
-                  return 'border-mist-200 bg-white';
+                  return 'tertiary';
               }
-            };
+            })();
 
-            const getValueColor = (trend?: string) => {
-              switch (trend) {
+            const textColor: TextProps['color'] = (() => {
+              switch (insight.trend) {
                 case 'positive':
-                  return 'text-sage-700';
+                  return 'secondary';
                 case 'negative':
-                  return 'text-coral-700';
+                  return 'primary';
+                case 'neutral':
                 default:
-                  return 'text-slate-900';
+                  return 'tertiary';
               }
-            };
+            })();
 
             return (
-              <div key={index} className={`p-3 rounded-lg border transition-colors ${getTrendStyles(insight.trend)}`}>
+              <Tile variant={tileVariant} key={index}>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <p className={`text-lg font-bold tabular-nums leading-tight ${getValueColor(insight.trend)}`}>
+                    <Text as="p" fontWeight="bold" fontSize="lg" color={textColor}>
                       {insight.value}
-                    </p>
-                    <insight.icon className={`h-4 w-4 ${insight.iconColor}`} />
+                    </Text>
+                    <Icon as={insight.icon} size="sm" color={insight.iconColor as IconProps['color']} />
                   </div>
                   <p className="text-xs text-slate-500 font-medium leading-relaxed">{insight.label}</p>
                 </div>
-              </div>
+              </Tile>
             );
           })}
         </div>

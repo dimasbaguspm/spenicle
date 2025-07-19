@@ -70,7 +70,7 @@ export function TransactionGroup({
       {transactions.length === 0 ? (
         <NoTransactionsCard />
       ) : (
-        <div className="divide-y divide-neutral">
+        <div className="divide-y divide-border">
           {transactions.map((seamlessTransaction) => (
             <TransactionCard key={seamlessTransaction.transaction.id} transaction={seamlessTransaction} />
           ))}
