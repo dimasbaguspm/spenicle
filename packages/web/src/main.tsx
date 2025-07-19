@@ -7,7 +7,6 @@ import { routeTree } from './routeTree.gen';
 
 import './styles.css';
 
-// Create a new router instance
 const router = createRouter({
   routeTree,
   context: {
@@ -20,8 +19,10 @@ const router = createRouter({
 });
 
 const rootElement = document.getElementById('app');
+
 if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
+
   root.render(
     <App>
       <RouterProvider router={router} />

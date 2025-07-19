@@ -1,3 +1,4 @@
+import { Text } from '@dimasbaguspm/versaur';
 import { Link } from '@tanstack/react-router';
 import { BarChart3, Shield, TrendingUp } from 'lucide-react';
 import type { FC } from 'react';
@@ -10,6 +11,8 @@ export const DesktopLoginPage: FC = () => {
 
   return (
     <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+      <Text color="success">hm</Text>
+      <p>asd</p>
       <div className="w-full max-w-md">
         <Tile className="p-8">
           {/* Header */}
