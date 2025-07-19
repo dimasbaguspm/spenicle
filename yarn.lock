@@ -1590,14 +1590,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@dimasbaguspm/versaur@npm:0.0.1":
-  version: 0.0.1
-  resolution: "@dimasbaguspm/versaur@npm:0.0.1"
+"@dimasbaguspm/versaur@npm:0.0.4":
+  version: 0.0.4
+  resolution: "@dimasbaguspm/versaur@npm:0.0.4"
   peerDependencies:
     lucide-react: ">=0.525.0"
     react: ">=18.0.0"
     react-dom: ">=18.0.0"
-  checksum: 10/4ac8bf4292db138b26c3fe2acf4f4b5a5d9ee1f5c30d7a456429ad7797ff79cca045a866844e587615146ee7d2b2e77aec47a78edcb59399903e358a7307d0d3
+  checksum: 10/eb827d0ec23fe3e538c562df49eeb17dfbd265d7d488cfae38b9f8fcee517b2dd5f68049447c6d0989d10db9f9297f3bc0627c0de8a93bc6674317aa91e1f208
   languageName: node
   linkType: hard
 
@@ -2687,7 +2687,7 @@ __metadata:
   dependencies:
     "@commitlint/cli": "npm:19.8.1"
     "@commitlint/config-conventional": "npm:19.8.1"
-    "@dimasbaguspm/versaur": "npm:0.0.1"
+    "@dimasbaguspm/versaur": "npm:0.0.4"
     "@eslint/eslintrc": "npm:3.3.1"
     "@eslint/js": "npm:9.29.0"
     "@tailwindcss/vite": "npm:4.1.7"

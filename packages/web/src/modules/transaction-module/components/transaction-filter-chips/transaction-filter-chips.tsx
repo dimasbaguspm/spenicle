@@ -1,8 +1,6 @@
-import { X } from 'lucide-react';
+import { ChipInput, Text } from '@dimasbaguspm/versaur';
 import { type FC } from 'react';
 
-import { Button } from '../../../../components';
-import { ChipInput } from '../../../../components/chip';
 import type { Account, Category } from '../../../../types/api';
 
 interface TransactionFilterChipsProps {
@@ -20,7 +18,6 @@ export const TransactionFilterChips: FC<TransactionFilterChipsProps> = ({
   types,
   accounts,
   categories,
-  onClearAllFilters,
 }) => {
   // generate filter chips based on applied filters
   const generateFilterChips = (): React.ReactElement[] => {
@@ -32,9 +29,9 @@ export const TransactionFilterChips: FC<TransactionFilterChipsProps> = ({
         const account = accounts.find((acc) => acc.id === accountId);
         if (account) {
           chips.push(
-            <ChipInput key={`account-${accountId}`} variant="mist" size="sm">
+            <ChipInput.Option key={`account-${accountId}`} value={`${accountId}`}>
               {account.name}
-            </ChipInput>
+            </ChipInput.Option>
           );
         }
       });
@@ -46,9 +43,9 @@ export const TransactionFilterChips: FC<TransactionFilterChipsProps> = ({
         const category = categories.find((cat) => cat.id === categoryId);
         if (category) {
           chips.push(
-            <ChipInput key={`category-${categoryId}`} variant="slate" size="sm">
+            <ChipInput.Option key={`category-${categoryId}`} value={`${categoryId}`}>
               {category.name}
-            </ChipInput>
+            </ChipInput.Option>
           );
         }
       });
@@ -58,12 +55,11 @@ export const TransactionFilterChips: FC<TransactionFilterChipsProps> = ({
     if (types && types.length > 0) {
       types.forEach((type) => {
         const typeLabel = type === 'income' ? 'Income' : type === 'expense' ? 'Expense' : 'Transfer';
-        const typeVariant: 'success' | 'danger' | 'default' =
-          type === 'income' ? 'success' : type === 'expense' ? 'danger' : 'default';
+
         chips.push(
-          <ChipInput key={`type-${type}`} variant={typeVariant} size="sm">
+          <ChipInput.Option key={`type-${type}`} value={type}>
             {typeLabel}
-          </ChipInput>
+          </ChipInput.Option>
         );
       });
     }
@@ -74,20 +70,22 @@ export const TransactionFilterChips: FC<TransactionFilterChipsProps> = ({
   const filterChips = generateFilterChips();
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs text-slate-500 font-medium">Filters:</span>
+    <div className="flex items-center gap-2 w-full">
+      <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Filters:</span>
       {filterChips.length > 0 ? (
-        <>
+        <ChipInput
+          variant="primary"
+          name="filters"
+          value={filterChips.map((chip) => (chip.props as { value: string }).value)}
+          onChange={() => {}}
+          className="flex-1 min-w-0"
+        >
           {filterChips}
-          {onClearAllFilters && (
-            <Button variant="ghost" size="sm" onClick={onClearAllFilters} className="text-xs h-6 px-2">
-              <X className="h-3 w-3 mr-1" />
-              Clear All
-            </Button>
-          )}
-        </>
+        </ChipInput>
       ) : (
-        <span className="text-xs text-slate-400 italic">No filters applied</span>
+        <Text as="span" fontSize="xs">
+          No filters applied
+        </Text>
       )}
     </div>
   );

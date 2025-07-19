@@ -1,10 +1,10 @@
+import { Text, type TextProps } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
 import { Edit } from 'lucide-react';
 import { type FC } from 'react';
 
 import { DataTable, IconButton, type ColumnDefinition, type SortConfig } from '../../../../components';
 import { formatAmount } from '../../../../libs/format-amount';
-import { cn } from '../../../../libs/utils';
 import { AccountIcon } from '../../../account-module/components/account-icon/account-icon';
 import { CategoryIcon } from '../../../category-module/components/category-icon/category-icon';
 import type { SeamlessTransaction } from '../../hooks/use-seamless-transactions/types';
@@ -24,14 +24,14 @@ export const TransactionTable: FC<TransactionTableProps> = ({
   sortConfig,
   onSort,
 }) => {
-  const getAmountColor = (type?: string) => {
+  const getAmountColor = (type?: string): TextProps['color'] => {
     switch (type) {
       case 'income':
-        return 'text-success-600';
+        return 'secondary';
       case 'expense':
-        return 'text-danger-600';
+        return 'primary';
       default:
-        return 'text-info-600';
+        return 'tertiary';
     }
   };
 
@@ -63,9 +63,13 @@ export const TransactionTable: FC<TransactionTableProps> = ({
         const formattedAmount = formatAmount(Number(txn.amount ?? 0), {
           type: txn.type,
           compact: true,
+          hidePrefix: true,
         });
+
         return (
-          <span className={cn('font-bold text-sm tabular-nums', getAmountColor(txn.type))}>{formattedAmount}</span>
+          <Text fontWeight="bold" fontSize="sm" color={getAmountColor(txn.type)}>
+            {formattedAmount}
+          </Text>
         );
       }),
     },
@@ -86,9 +90,9 @@ export const TransactionTable: FC<TransactionTableProps> = ({
             <div className="flex-shrink-0">
               <CategoryIcon iconValue={categoryIcon} colorValue={categoryColor} size="sm" aria-label={categoryName} />
             </div>
-            <span className="text-sm font-medium text-slate-700 truncate" title={categoryName}>
+            <Text as="span" fontSize="sm" fontWeight="medium">
               {categoryName}
-            </span>
+            </Text>
           </div>
         );
       }),
@@ -111,14 +115,9 @@ export const TransactionTable: FC<TransactionTableProps> = ({
               <AccountIcon iconValue={accountIcon} colorValue={accountColor} size="sm" aria-label={accountName} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-slate-700 truncate" title={accountName}>
+              <Text as="span" fontSize="sm" fontWeight="medium">
                 {accountName}
-              </p>
-              {account?.metadata?.bankName && (
-                <p className="text-xs text-slate-500 truncate" title={account.metadata.bankName as string}>
-                  {account.metadata.bankName as string}
-                </p>
-              )}
+              </Text>
             </div>
           </div>
         );
@@ -134,9 +133,9 @@ export const TransactionTable: FC<TransactionTableProps> = ({
         const { transaction: txn } = seamlessTransaction;
         const timeDisplay = txn.date ? dayjs(txn.date).format('HH:mm') : '--:--';
         return (
-          <span className="text-sm font-medium text-slate-600 tabular-nums" title={txn.date ?? 'No time available'}>
+          <Text fontSize="sm" fontWeight="medium">
             {timeDisplay}
-          </span>
+          </Text>
         );
       }),
     },
@@ -146,21 +145,17 @@ export const TransactionTable: FC<TransactionTableProps> = ({
       align: 'center',
       sortable: false,
       render: (_, seamlessTransaction) => (
-        <div className="flex items-center justify-center gap-2">
-          {onTransactionEdit && (
-            <IconButton
-              variant="slate-ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onTransactionEdit(seamlessTransaction);
-              }}
-              title="Edit transaction"
-            >
-              <Edit className="h-4 w-4" />
-            </IconButton>
-          )}
-        </div>
+        <IconButton
+          variant="slate-ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTransactionEdit?.(seamlessTransaction);
+          }}
+          title="Edit transaction"
+        >
+          <Edit className="h-4 w-4" />
+        </IconButton>
       ),
     },
   ];

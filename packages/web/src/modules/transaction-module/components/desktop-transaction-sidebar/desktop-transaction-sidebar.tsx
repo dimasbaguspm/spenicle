@@ -1,9 +1,6 @@
+import { Button, Calendar, Text, Tile } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
-import { Plus } from 'lucide-react';
 import { type FC } from 'react';
-
-import { Tile, Button } from '../../../../components';
-import { DatePickerInline } from '../../../../components/date-picker';
 
 interface DesktopTransactionSidebarProps {
   date: dayjs.Dayjs;
@@ -17,24 +14,15 @@ export const DesktopTransactionSidebar: FC<DesktopTransactionSidebarProps> = ({
   onAddTransaction,
 }) => {
   return (
-    <div className="col-span-3 space-y-4 sticky top-6 self-start max-h-[calc(100vh-10rem)]">
+    <div className="col-span-3 space-y-4 sticky top-6 self-start ">
       {/* date picker */}
-      <Tile className="p-4">
-        <DatePickerInline
-          autoSubmitOnSelect
-          onChange={(value) => {
-            onDateChange(dayjs(value));
-          }}
-          value={date.toDate()}
-        />
+      <Tile size="xs">
+        <Calendar value={date.toDate()} onChange={(value) => onDateChange(dayjs(value))} />
       </Tile>
 
-      {/* quick actions */}
-      <Tile className="p-4 space-y-3">
-        <h3 className="text-sm font-medium text-slate-700 mb-3">Quick Actions</h3>
-
-        <Button size="sm" variant="coral" onClick={onAddTransaction} className="w-full justify-center text-sm">
-          <Plus className="h-4 w-4 mr-2" />
+      <Tile className="gap-2 flex flex-col">
+        <Text as="h6">Quick Actions</Text>
+        <Button variant="primary" onClick={onAddTransaction} className="w-full">
           Add Transaction
         </Button>
       </Tile>

@@ -27,60 +27,52 @@ export const MobileBottomBar: FC = () => {
         onClick={() => handleNavigationClick('/')}
         icon={
           <ButtonIcon
+            as={Home}
             aria-label="Navigate to Home"
             variant={currentPath === '/' ? 'primary-ghost' : 'ghost'}
             shape="circle"
             size="md"
-          >
-            <Home className="h-5 w-5" />
-          </ButtonIcon>
+          />
         }
       />
       <BottomBar.Item
         onClick={() => handleNavigationClick('/analytics')}
         icon={
           <ButtonIcon
+            as={ChartArea}
             aria-label="Navigate To Analytics"
             variant={currentPath.startsWith('/analytics') ? 'primary-ghost' : 'ghost'}
             shape="circle"
             size="md"
-          >
-            <ChartArea className="h-5 w-5" />
-          </ButtonIcon>
+          />
         }
       />
       <BottomBar.Item
         onClick={handleAddClick}
-        icon={
-          <ButtonIcon aria-label="Add Transaction" variant="primary" shape="circle">
-            <Plus />
-          </ButtonIcon>
-        }
+        icon={<ButtonIcon as={Plus} aria-label="Add Transaction" variant="primary" shape="circle" />}
       />
       <BottomBar.Item
         onClick={() => handleNavigationClick('/accounts')}
         icon={
           <ButtonIcon
+            as={Wallet2}
             aria-label="Navigate to Accounts"
             variant={currentPath.startsWith('/accounts') ? 'primary-ghost' : 'ghost'}
             shape="circle"
             size="md"
-          >
-            <Wallet2 className="h-5 w-5" />
-          </ButtonIcon>
+          />
         }
       />
       <BottomBar.Item
         onClick={() => handleNavigationClick('/categories')}
         icon={
           <ButtonIcon
+            as={Tags}
             aria-label="Navigate to Categories"
             variant={currentPath.startsWith('/categories') ? 'primary-ghost' : 'ghost'}
             shape="circle"
             size="md"
-          >
-            <Tags className="h-5 w-5" />
-          </ButtonIcon>
+          />
         }
       />
     </BottomBar>

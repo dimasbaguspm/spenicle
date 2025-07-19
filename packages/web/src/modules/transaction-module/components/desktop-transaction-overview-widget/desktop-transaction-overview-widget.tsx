@@ -1,7 +1,7 @@
+import { Icon, Text, Tile, type IconProps } from '@dimasbaguspm/versaur';
 import { TrendingUp, TrendingDown, Activity, PercentDiamondIcon } from 'lucide-react';
 import { useMemo, type FC } from 'react';
 
-import { Tile } from '../../../../components';
 import { useApiSummaryTransactionsQuery, useApiTransactionsQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
 
@@ -9,7 +9,7 @@ interface DesktopTransactionInsight {
   label: string;
   value: string;
   icon: React.ComponentType<{ className?: string }>;
-  iconColor: string;
+  iconColor: IconProps['color'];
 }
 
 export interface DesktopTransactionOverviewWidgetProps {
@@ -53,25 +53,25 @@ export const DesktopTransactionOverviewWidget: FC<DesktopTransactionOverviewWidg
         label: 'Savings Rate',
         value: `${savingsRate.toFixed(1)}%`,
         icon: PercentDiamondIcon,
-        iconColor: savingsRate >= 20 ? 'text-sage-600' : savingsRate >= 10 ? 'text-mist-600' : 'text-coral-600',
+        iconColor: savingsRate >= 20 ? 'secondary' : savingsRate >= 10 ? 'tertiary' : 'primary',
       },
       {
         label: 'Total Transactions',
         value: totalTransactions.toString(),
         icon: Activity,
-        iconColor: totalTransactions > 0 ? 'text-mist-600' : 'text-slate-400',
+        iconColor: totalTransactions > 0 ? 'secondary' : 'tertiary',
       },
       {
         label: 'Income',
         value: formatAmount(totalIncome, { compact: true, hidePrefix: true }),
         icon: TrendingUp,
-        iconColor: 'text-sage-600',
+        iconColor: totalIncome > 0 ? 'secondary' : 'primary',
       },
       {
         label: 'Expenses',
         value: formatAmount(totalExpenses, { compact: true, hidePrefix: true }),
         icon: TrendingDown,
-        iconColor: 'text-coral-600',
+        iconColor: totalExpenses > 0 ? 'primary' : 'secondary',
       },
     ];
   }, [summaryData, transactionsData]);
@@ -79,11 +79,11 @@ export const DesktopTransactionOverviewWidget: FC<DesktopTransactionOverviewWidg
   return (
     <Tile className={`p-4 md:p-6 ${className ?? ''}`}>
       <div className="space-y-6">
-        {/* header */}
         <div className="space-y-1">
-          <h3 className="text-lg md:text-xl font-semibold text-slate-900">{title}</h3>
+          <Text as="h4">{title}</Text>
+          {subtitle && <Text as="h6">{subtitle}</Text>}
           {subtitle && <p className="text-base font-medium text-slate-700">{subtitle}</p>}
-          <p className="text-sm text-slate-500">{description}</p>
+          <Text as="p">{description}</Text>
         </div>
 
         {/* responsive grid layout for insights */}
@@ -92,17 +92,21 @@ export const DesktopTransactionOverviewWidget: FC<DesktopTransactionOverviewWidg
             const IconComponent = insight.icon;
 
             return (
-              <div key={index} className="space-y-3 p-4 rounded-lg border border-mist-100 bg-white">
+              <Tile key={index} className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <IconComponent className={`h-4 w-4 ${insight.iconColor}`} />
-                    <span className="text-xs font-medium text-slate-600 truncate">{insight.label}</span>
+                    <Icon as={IconComponent} color={insight.iconColor} size="sm" />
+                    <Text as="span" ellipsis fontSize="xs" fontWeight="medium">
+                      {insight.label}
+                    </Text>
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-lg font-bold text-slate-900 tabular-nums leading-tight">{insight.value}</div>
+                  <Text as="span" fontSize="lg" fontWeight="bold">
+                    {insight.value}
+                  </Text>
                 </div>
-              </div>
+              </Tile>
             );
           })}
         </div>

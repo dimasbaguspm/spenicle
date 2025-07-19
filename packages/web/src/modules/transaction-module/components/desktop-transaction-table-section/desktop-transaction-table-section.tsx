@@ -1,8 +1,9 @@
+import { Tile, Button, Text, ButtonIcon, Icon, Badge } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
 import { Plus, Activity, FilterIcon } from 'lucide-react';
 import { type FC } from 'react';
 
-import { Tile, Button, Pagination, type SortConfig, IconButton, Badge } from '../../../../components';
+import { Pagination, type SortConfig } from '../../../../components';
 import type { Account, Category } from '../../../../types/api';
 import type { SeamlessTransaction } from '../../hooks/use-seamless-transactions/types';
 import { TransactionFilterChips } from '../transaction-filter-chips';
@@ -56,13 +57,21 @@ export const DesktopTransactionTableSection: FC<DesktopTransactionTableSectionPr
       <div className="flex items-start justify-between mb-4">
         <div className="space-y-3 flex-1">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900">Transactions {date.format('D MMMM YYYY')}</h3>
+            <Text as="h3" fontWeight="semibold" fontSize="lg">
+              Transactions for {date.format('MMMM YYYY')}
+            </Text>
+
             <div className="relative">
-              <IconButton variant="slate-ghost" size="sm" onClick={onFilterClick} title="Filter transactions">
-                <FilterIcon className="h-4 w-4" />
-              </IconButton>
+              <ButtonIcon
+                as={FilterIcon}
+                aria-label="Filter transactions"
+                variant="tertiary-ghost"
+                size="sm"
+                onClick={onFilterClick}
+              />
+
               {activeFiltersCount > 0 && (
-                <Badge variant="coral" size="sm" className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 text-xs">
+                <Badge color="primary" shape="rounded" className="absolute -top-1 -right-1">
                   {activeFiltersCount}
                 </Badge>
               )}
@@ -83,10 +92,15 @@ export const DesktopTransactionTableSection: FC<DesktopTransactionTableSectionPr
 
       {transactions.length === 0 ? (
         <div className="text-center py-12">
-          <Activity className="h-12 w-12 text-mist-300 mx-auto mb-4" />
-          <h4 className="text-lg font-medium text-slate-600 mb-2">No transactions found</h4>
-          <p className="text-slate-500 mb-4">{date.format('MMMM D, YYYY')} has no transactions yet.</p>
-          <Button variant="coral" onClick={onAddTransaction}>
+          <Icon as={Activity} size="xl" color="tertiary" className="mx-auto mb-4" />
+          <Text as="h4" fontSize="lg" fontWeight="medium" className="mb-2" align="center">
+            No Transactions Found
+          </Text>
+          <Text as="p" className="mb-4" align="center">
+            It looks like you haven't added any transactions for {date.format('MMMM D, YYYY')}
+          </Text>
+
+          <Button variant="primary" onClick={onAddTransaction}>
             <Plus className="h-4 w-4 mr-2" />
             Add First Transaction
           </Button>
