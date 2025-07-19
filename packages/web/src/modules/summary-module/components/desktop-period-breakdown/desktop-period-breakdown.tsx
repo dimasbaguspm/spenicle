@@ -1,7 +1,7 @@
+import { Tile } from '@dimasbaguspm/versaur';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 
-import { Tile } from '../../../../components';
 import { useApiSummaryTransactionsQuery } from '../../../../hooks';
 import type { PeriodType } from '../../hooks';
 
@@ -68,11 +68,9 @@ export const DesktopPeriodBreakdown: React.FC<DesktopPeriodBreakdownMainContentP
 
   if (queryState.isFetching) {
     return (
-      <div className="space-y-6">
-        <Tile className="p-6">
-          <DesktopPeriodBreakdownLoader count={5} />
-        </Tile>
-      </div>
+      <Tile className="space-y-6">
+        <DesktopPeriodBreakdownLoader count={5} />
+      </Tile>
     );
   }
 

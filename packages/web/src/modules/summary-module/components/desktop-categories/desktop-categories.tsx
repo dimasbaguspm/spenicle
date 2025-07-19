@@ -1,7 +1,7 @@
+import { Tile } from '@dimasbaguspm/versaur';
 import { useNavigate } from '@tanstack/react-router';
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { Tile } from '../../../../components';
 import { useApiCategoriesQuery } from '../../../../hooks/use-api/built-in/use-categories';
 import { useApiSummaryCategoriesQuery } from '../../../../hooks/use-api/built-in/use-summary';
 import type { Category } from '../../../../types/api';
@@ -90,11 +90,9 @@ export const DesktopCategories: React.FC<DesktopCategoriesMainContentProps> = ({
 
   if (queryState.isFetching) {
     return (
-      <div className="space-y-6">
-        <Tile className="p-6">
-          <DesktopCategoriesLoader count={5} />
-        </Tile>
-      </div>
+      <Tile className="space-y-6">
+        <DesktopCategoriesLoader count={5} />
+      </Tile>
     );
   }
 

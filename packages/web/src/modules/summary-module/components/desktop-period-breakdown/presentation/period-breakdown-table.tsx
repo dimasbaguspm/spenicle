@@ -1,7 +1,8 @@
+import { ButtonIcon, Text, Tile } from '@dimasbaguspm/versaur';
 import { NotebookTabs } from 'lucide-react';
 import React from 'react';
 
-import { Tile, DataTable, type ColumnDefinition, IconButton } from '../../../../../components';
+import { DataTable, type ColumnDefinition } from '../../../../../components';
 import { formatAmount } from '../../../../../libs/format-amount';
 import type { PeriodType } from '../../../hooks';
 
@@ -20,9 +21,9 @@ export const createDesktopPeriodBreakdownColumns = (periodType: PeriodType): Col
     align: 'left',
     gridColumn: 'span 4', // Larger span for period name
     render: (_, period: EnrichedPeriodData) => (
-      <button className="text-left font-medium text-coral-600 hover:text-coral-700 transition-colors">
-        {period.label ?? 'Unknown Period'}
-      </button>
+      <Text as="span" fontSize="base" fontWeight="medium">
+        {period.label}
+      </Text>
     ),
   },
   {
@@ -32,7 +33,9 @@ export const createDesktopPeriodBreakdownColumns = (periodType: PeriodType): Col
     align: 'center',
     gridColumn: 'span 2', // Transactions column
     render: (_, period: EnrichedPeriodData) => (
-      <p className="text-sm font-medium text-slate-600 tabular-nums">{period.transactionCount ?? 0}</p>
+      <Text as="p" fontSize="sm" fontWeight="medium" align="center">
+        {period.transactionCount ?? 0}
+      </Text>
     ),
   },
   {
@@ -42,12 +45,12 @@ export const createDesktopPeriodBreakdownColumns = (periodType: PeriodType): Col
     align: 'right',
     gridColumn: 'span 3', // Income column
     render: (_, period: EnrichedPeriodData) => (
-      <p className="text-sm font-semibold text-sage-600 tabular-nums">
+      <Text as="p" fontSize="sm" fontWeight="semibold" color="secondary" align="right">
         {formatAmount(period.totalIncome ?? 0, {
           type: 'income',
           hidePrefix: true,
         })}
-      </p>
+      </Text>
     ),
   },
   {
@@ -57,12 +60,12 @@ export const createDesktopPeriodBreakdownColumns = (periodType: PeriodType): Col
     align: 'right',
     gridColumn: 'span 3', // Expenses column
     render: (_, period: EnrichedPeriodData) => (
-      <p className="text-sm font-semibold text-coral-600 tabular-nums">
+      <Text as="p" fontSize="sm" fontWeight="semibold" color="primary" align="right">
         {formatAmount(period.totalExpenses ?? 0, {
           type: 'expense',
           hidePrefix: true,
         })}
-      </p>
+      </Text>
     ),
   },
 ];
@@ -81,27 +84,25 @@ export const PeriodBreakdownTable: React.FC<PeriodBreakdownTableProps> = ({
   periodType,
   onMoreClick,
 }) => (
-  <Tile className="p-4 md:p-6">
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex justify-between align-center">
-        <div className="space-y-1">
-          <h3 className="text-lg md:text-xl font-semibold text-slate-900">Period Breakdown Details</h3>
-          <p className="text-sm text-slate-500">
-            Essential period metrics for the selected timeframe (showing {data.length}{' '}
-            {periodType === 'weekly' ? 'days' : periodType === 'monthly' ? 'weeks' : 'months'})
-          </p>
-        </div>
-        <IconButton variant="mist-ghost" size="sm" title="View more details" onClick={onMoreClick}>
-          <NotebookTabs className="h-4 w-4" />
-        </IconButton>
+  <Tile className="space-y-6">
+    <div className="flex justify-between align-center">
+      <div className="space-y-1">
+        <Text as="h3" fontSize="xl" fontWeight="semibold">
+          Period Breakdown Details
+        </Text>
+        <Text as="p" fontSize="sm">
+          Essential period metrics for the selected timeframe (showing {data.length}{' '}
+          {periodType === 'weekly' ? 'days' : periodType === 'monthly' ? 'weeks' : 'months'})
+        </Text>
       </div>
-      <DataTable
-        data={data}
-        columns={columns}
-        emptyMessage="No period data available"
-        emptyDescription="Try selecting a different time period or add some transactions"
-        className="rounded-lg border border-mist-200"
-      />
+      <ButtonIcon as={NotebookTabs} variant="ghost" size="sm" aria-label="View more details" onClick={onMoreClick} />
     </div>
+    <DataTable
+      data={data}
+      columns={columns}
+      emptyMessage="No period data available"
+      emptyDescription="Try selecting a different time period or add some transactions"
+      className="rounded-lg border border-mist-200"
+    />
   </Tile>
 );

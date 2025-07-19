@@ -1,122 +1,68 @@
+import { ButtonIcon, SegmentSingleInput, Text, Tile } from '@dimasbaguspm/versaur';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { Button, IconButton, Tile } from '../../../../components';
 import { useDesktopSummaryFilters } from '../../hooks';
 
 interface DesktopSummaryPeriodSelectorProps {
-  // display props for period information
   currentPeriodDisplay: string;
-  isCurrentPeriod: boolean;
 }
 
-export const DesktopSummaryPeriodSelector = ({
-  currentPeriodDisplay,
-  isCurrentPeriod,
-}: DesktopSummaryPeriodSelectorProps) => {
-  // consume hook for internal state management
+export const DesktopSummaryPeriodSelector = ({ currentPeriodDisplay }: DesktopSummaryPeriodSelectorProps) => {
   const { _internal, state } = useDesktopSummaryFilters();
 
-  const { currentPeriodType, setPeriodType, navigatePeriod, goToCurrentPeriod } = _internal;
-
-  // get contextual labels for quick select based on period type
-  const getQuickSelectLabels = (type: typeof currentPeriodType) => {
-    switch (type) {
-      case 'weekly':
-        return {
-          previous: 'Last Week',
-          current: 'This Week',
-        };
-      case 'monthly':
-        return {
-          previous: 'Last Month',
-          current: 'This Month',
-        };
-      case 'yearly':
-        return {
-          previous: 'Last Year',
-          current: 'This Year',
-        };
-      default:
-        return {
-          previous: 'Previous',
-          current: 'Current',
-        };
-    }
-  };
-
-  const handlePreviousPeriod = () => {
-    navigatePeriod('prev');
-  };
-
-  const handleCurrentPeriod = () => {
-    goToCurrentPeriod();
-  };
+  const { currentPeriodType, setPeriodType, navigatePeriod } = _internal;
 
   return (
-    <Tile className="p-4">
+    <Tile>
       <div className="space-y-1 mb-6">
-        <h3 className="text-lg font-semibold text-slate-900">Time Period</h3>
-        <p className="text-sm text-slate-500">Select analysis timeframe</p>
+        <Text as="h3" fontSize="lg" fontWeight="semibold">
+          Time Period
+        </Text>
+        <Text as="p" fontSize="sm">
+          Select analysis timeframe
+        </Text>
       </div>
 
       {/* period type selector */}
       <div className="space-y-4">
         <div className="flex gap-1 bg-mist-50 p-1 rounded-lg">
-          {(['weekly', 'monthly', 'yearly'] as const).map((type) => (
-            <Button
-              key={type}
-              onClick={() => setPeriodType(type)}
-              variant={currentPeriodType === type ? 'coral' : 'ghost'}
-              size="sm"
-              className="flex-1 text-xs"
-            >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </Button>
-          ))}
+          <SegmentSingleInput
+            className="w-full flex items-center justify-center"
+            name="period-type"
+            value={currentPeriodType}
+            onChange={(value) => setPeriodType(value as 'weekly' | 'monthly' | 'yearly')}
+            size="sm"
+            variant="primary"
+          >
+            <SegmentSingleInput.Option value="weekly">Weekly</SegmentSingleInput.Option>
+            <SegmentSingleInput.Option value="monthly">Monthly</SegmentSingleInput.Option>
+            <SegmentSingleInput.Option value="yearly">Yearly</SegmentSingleInput.Option>
+          </SegmentSingleInput>
         </div>
 
         {/* dynamic period navigation */}
-        <div className="bg-mist-25 rounded-lg p-3">
-          <div className="flex items-center justify-between">
-            <IconButton variant="mist-outline" size="sm" onClick={() => navigatePeriod('prev')} className="h-8 w-8">
-              <ChevronLeft className="h-4 w-4" />
-            </IconButton>
+        <div className="flex items-center justify-between">
+          <ButtonIcon
+            as={ChevronLeft}
+            variant="ghost"
+            size="sm"
+            onClick={() => navigatePeriod('prev')}
+            aria-label="Back to previous period"
+          />
 
-            <div className="text-center flex-1 px-3">
-              <div className="text-sm font-medium text-slate-900">{currentPeriodDisplay}</div>
-            </div>
+          <Text as="span" fontSize="sm" fontWeight="medium" align="center">
+            {currentPeriodDisplay}
+          </Text>
 
-            <IconButton
-              variant="mist-outline"
-              size="sm"
-              onClick={() => navigatePeriod('next')}
-              className="h-8 w-8"
-              disabled={state.isFuturePeriod}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </IconButton>
-          </div>
-        </div>
-
-        {/* quick period shortcuts */}
-        <div className="space-y-1">
-          <p className="text-xs text-slate-500 mb-2">Quick select</p>
-          <div className="grid grid-cols-2 gap-1">
-            <button
-              onClick={handlePreviousPeriod}
-              className="px-2 py-1 rounded text-xs transition-all duration-200 hover:bg-mist-50 text-slate-600"
-            >
-              {getQuickSelectLabels(currentPeriodType).previous}
-            </button>
-            <button
-              onClick={handleCurrentPeriod}
-              className={`px-2 py-1 rounded text-xs transition-all duration-200 ${
-                isCurrentPeriod ? 'bg-sage-100 text-sage-900 font-medium' : 'hover:bg-mist-50 text-slate-600'
-              }`}
-            >
-              {getQuickSelectLabels(currentPeriodType).current}
-            </button>
-          </div>
+          <ButtonIcon
+            as={ChevronRight}
+            variant="ghost"
+            size="sm"
+            onClick={() => navigatePeriod('next')}
+            className="h-8 w-8"
+            disabled={state.isFuturePeriod}
+            aria-label="Go to next period"
+          />
         </div>
       </div>
     </Tile>

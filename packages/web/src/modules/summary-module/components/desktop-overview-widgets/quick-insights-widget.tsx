@@ -1,7 +1,7 @@
+import { Icon, Text, Tile, type IconProps } from '@dimasbaguspm/versaur';
 import { TrendingUp, TrendingDown, PercentDiamondIcon, Activity } from 'lucide-react';
 import { useMemo } from 'react';
 
-import { Tile } from '../../../../components';
 import { useApiSummaryTransactionsQuery } from '../../../../hooks';
 import { formatAmount } from '../../../../libs/format-amount';
 import { useDesktopSummaryFilters } from '../../hooks';
@@ -44,34 +44,38 @@ export const QuickInsightsWidget = () => {
         label: 'Savings Rate',
         value: `${savingsRate.toFixed(1)}%`,
         icon: PercentDiamondIcon,
-        iconColor: savingsRate >= 20 ? 'text-sage-600' : savingsRate >= 10 ? 'text-mist-600' : 'text-coral-600',
+        iconColor: savingsRate >= 20 ? 'secondary' : savingsRate >= 10 ? 'tertiary' : 'primary',
       },
       {
         label: 'Transactions',
         value: currentTotals.transactionCount.toString(),
         icon: Activity,
-        iconColor: 'text-mist-600',
+        iconColor: 'tertiary',
       },
       {
         label: 'Income',
         value: formatAmount(currentTotals.income, { compact: true, hidePrefix: true }),
         icon: TrendingUp,
-        iconColor: 'text-sage-600',
+        iconColor: 'secondary',
       },
       {
         label: 'Expenses',
         value: formatAmount(currentTotals.expenses, { compact: true, hidePrefix: true }),
         icon: TrendingDown,
-        iconColor: 'text-coral-600',
+        iconColor: 'primary',
       },
     ];
   }, [currentData]);
 
   return (
-    <Tile className="p-6">
+    <Tile>
       <div className="space-y-1 mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Quick Insights</h3>
-        <p className="text-sm text-slate-500">Key financial indicators for {state.currentPeriodDisplay}</p>
+        <Text as="h3" fontSize="lg" fontWeight="semibold">
+          Quick Insights
+        </Text>
+        <Text as="p" fontSize="sm">
+          Key financial indicators for {state.currentPeriodDisplay}
+        </Text>
       </div>
 
       {/* desktop grid layout for insights */}
@@ -79,17 +83,17 @@ export const QuickInsightsWidget = () => {
         {insights.map((insight, index) => {
           const IconComponent = insight.icon;
           return (
-            <div key={index} className="space-y-3 p-4 rounded-lg border border-mist-100 bg-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <IconComponent className={`h-4 w-4 ${insight.iconColor}`} />
-                  <span className="text-xs font-medium text-slate-600 truncate">{insight.label}</span>
-                </div>
+            <Tile key={index} className="space-y-3">
+              <div className="flex gap-2">
+                <Icon as={IconComponent} size="sm" color={insight.iconColor as IconProps['color']} />
+                <Text as="span" fontSize="xs" fontWeight="medium" ellipsis clamp={1}>
+                  {insight.label}
+                </Text>
               </div>
-              <div className="space-y-1">
-                <div className="text-lg font-bold text-slate-900 tabular-nums leading-tight">{insight.value}</div>
-              </div>
-            </div>
+              <Text fontSize="lg" fontWeight="bold">
+                {insight.value}
+              </Text>
+            </Tile>
           );
         })}
       </div>

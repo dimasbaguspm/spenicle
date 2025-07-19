@@ -1,7 +1,8 @@
+import { ButtonIcon, Text, Tile } from '@dimasbaguspm/versaur';
 import { NotebookTabs } from 'lucide-react';
 import React from 'react';
 
-import { Tile, DataTable, type ColumnDefinition, IconButton } from '../../../../../components';
+import { DataTable, type ColumnDefinition } from '../../../../../components';
 import { formatAmount } from '../../../../../libs/format-amount';
 import { AccountIcon } from '../../../../account-module/components/account-icon/account-icon';
 import type { EnrichedAccountData } from '../helpers';
@@ -36,7 +37,9 @@ export const createDesktopAccountsColumns = (
             className="flex-shrink-0"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-900 truncate">{account.accountName}</p>
+            <Text as="p" fontSize="sm" fontWeight="medium" ellipsis clamp={1}>
+              {account.accountName}
+            </Text>
           </div>
         </div>
       ),
@@ -48,7 +51,9 @@ export const createDesktopAccountsColumns = (
       align: 'center',
       gridColumn: 'span 2', // Transactions column
       render: (_, account: EnrichedAccountData) => (
-        <p className="text-sm font-medium text-slate-600 tabular-nums">{account.totalTransactions}</p>
+        <Text as="p" fontSize="sm" fontWeight="medium" align="center">
+          {account.totalTransactions}
+        </Text>
       ),
     },
     {
@@ -59,12 +64,12 @@ export const createDesktopAccountsColumns = (
       gridColumn: 'span 3', // Selected chart type value
       render: (_, account: EnrichedAccountData) => {
         const value = chartType === 'expenses' ? account.totalExpenses : account.totalIncome;
-        const colorClass = chartType === 'expenses' ? 'text-coral-600' : 'text-sage-600';
+        const colorClass = chartType === 'expenses' ? 'primary' : 'secondary';
 
         return (
-          <p className={`text-sm font-semibold tabular-nums ${colorClass}`}>
+          <Text as="p" fontSize="sm" fontWeight="semibold" color={colorClass} align="right">
             {formatAmount(value, { compact: false, hidePrefix: true })}
-          </p>
+          </Text>
         );
       },
     },
@@ -77,9 +82,12 @@ export const createDesktopAccountsColumns = (
       render: (_, account: EnrichedAccountData) => {
         const value = chartType === 'expenses' ? account.totalExpenses : account.totalIncome;
         const percentage = total > 0 ? (value / total) * 100 : 0;
-        const colorClass = chartType === 'expenses' ? 'text-coral-600' : 'text-sage-600';
 
-        return <p className={`text-sm font-medium tabular-nums ${colorClass}`}>{percentage.toFixed(1)}%</p>;
+        return (
+          <Text as="p" fontSize="sm" fontWeight="medium" align="right">
+            {percentage.toFixed(1)}%
+          </Text>
+        );
       },
     },
   ];
@@ -107,28 +115,26 @@ export const AccountsTable: React.FC<AccountsTableProps> = ({
   const columns = createDesktopAccountsColumns(chartType, data);
 
   return (
-    <Tile className="p-4 md:p-6">
-      <div className="space-y-4 md:space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="space-y-1">
-            <h3 className="text-lg md:text-xl font-semibold text-slate-900">Account Details</h3>
-            <p className="text-sm text-slate-500">
-              Essential account metrics for the selected period (showing {data.length} accounts, sorted by highest{' '}
-              {chartType})
-            </p>
-          </div>
-          <IconButton onClick={onMoreClick} variant="mist-ghost" size="sm" title="View more details">
-            <NotebookTabs className="h-4 w-4" />
-          </IconButton>
+    <Tile className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="space-y-1">
+          <Text as="h3" fontSize="xl" fontWeight="semibold">
+            Account Details
+          </Text>
+          <Text as="p" fontSize="sm">
+            Essential account metrics for the selected period (showing {data.length} accounts, sorted by highest{' '}
+            {chartType})
+          </Text>
         </div>
-        <DataTable
-          data={data}
-          columns={columns}
-          emptyMessage="No account data available"
-          emptyDescription="Try selecting a different time period or add some transactions"
-          className="rounded-lg border border-mist-200"
-        />
+        <ButtonIcon as={NotebookTabs} onClick={onMoreClick} aria-label="View more details" variant="ghost" />
       </div>
+      <DataTable
+        data={data}
+        columns={columns}
+        emptyMessage="No account data available"
+        emptyDescription="Try selecting a different time period or add some transactions"
+        className="rounded-lg border border-mist-200"
+      />
     </Tile>
   );
 };

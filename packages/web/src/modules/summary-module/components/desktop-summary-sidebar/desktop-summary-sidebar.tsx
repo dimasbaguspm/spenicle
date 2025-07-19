@@ -12,7 +12,6 @@ interface PanelConfig {
 interface DesktopSummarySidebarProps {
   // computed period values for display
   currentPeriodDisplay: string;
-  isCurrentPeriod: boolean;
 
   // panel navigation props
   selectedPanel: PanelType;
@@ -22,7 +21,6 @@ interface DesktopSummarySidebarProps {
 
 export const DesktopSummarySidebar = ({
   currentPeriodDisplay,
-  isCurrentPeriod,
   selectedPanel,
   panelConfig,
   onPanelNavigation,
@@ -30,7 +28,7 @@ export const DesktopSummarySidebar = ({
   return (
     <div className="col-span-3 space-y-4 sticky top-6 self-start h-fit max-h-[calc(100vh-12rem)] overflow-y-auto">
       {/* period selection controls - primary control */}
-      <DesktopSummaryPeriodSelector currentPeriodDisplay={currentPeriodDisplay} isCurrentPeriod={isCurrentPeriod} />
+      <DesktopSummaryPeriodSelector currentPeriodDisplay={currentPeriodDisplay} />
 
       {/* analysis panel navigation - secondary control */}
       <DesktopSummaryPanelNavigation

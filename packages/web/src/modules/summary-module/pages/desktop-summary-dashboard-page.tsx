@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 
-import { PageLayout } from '../../../components';
 import { DesktopSummaryContent } from '../components/desktop-summary-content';
 import { DesktopSummarySidebar } from '../components/desktop-summary-sidebar';
 import { useDesktopSummaryFilters } from '../hooks';
@@ -31,12 +30,11 @@ export const DesktopSummaryDashboardPageComponent = () => {
   );
 
   return (
-    <PageLayout background="cream" title="Analytics Dashboard" showBackButton>
+    <>
       <div className="space-y-6">
         <div className="grid grid-cols-12 gap-6">
           <DesktopSummarySidebar
             currentPeriodDisplay={state.currentPeriodDisplay}
-            isCurrentPeriod={state.isCurrentPeriod}
             selectedPanel={state.selectedPanel}
             panelConfig={panelConfig}
             onPanelNavigation={actions.navigateToPanel}
@@ -45,6 +43,6 @@ export const DesktopSummaryDashboardPageComponent = () => {
           <DesktopSummaryContent />
         </div>
       </div>
-    </PageLayout>
+    </>
   );
 };
