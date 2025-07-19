@@ -1,3 +1,4 @@
+import { Badge, ButtonFloat, Icon } from '@dimasbaguspm/versaur';
 import { Filter } from 'lucide-react';
 import React from 'react';
 
@@ -16,22 +17,15 @@ export const TransactionFilterEntry: React.FC = () => {
   const activeFilterCount = Object.entries(filters).filter(([, value]) => value !== undefined && value !== null).length;
 
   return (
-    <div className="sticky w-full bottom-20 left-0 right-0 translate-y-0 flex justify-center items-center z-3 pointer-events-none">
-      <div className="pointer-events-auto flex gap-1">
-        <button
-          className="flex items-center gap-2 rounded-full bg-white shadow-md border border-coral-200 px-5 py-2 text-coral-700 font-semibold focus:outline-none focus:ring-2 focus:ring-coral-400"
-          aria-label={`Open filter options${activeFilterCount ? `, ${activeFilterCount} filters applied` : ''}`}
-          onClick={() => openDrawer(DRAWER_IDS.FILTER_TRANSACTION)}
-        >
-          <Filter className="h-5 w-5" />
-          Filter
-          {activeFilterCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-coral-100 text-coral-700 text-xs font-bold">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+    <ButtonFloat offset="5rem" size="sm" variant="outline" onClick={() => openDrawer(DRAWER_IDS.FILTER_TRANSACTION)}>
+      <div className="relative ">
+        <Icon as={Filter} size="md" color="ghost" />
+        {activeFilterCount > 0 && (
+          <Badge className="absolute top-[-0.5rem] right-[-0.5rem]" shape="rounded" size="sm">
+            {activeFilterCount}
+          </Badge>
+        )}
       </div>
-    </div>
+    </ButtonFloat>
   );
 };

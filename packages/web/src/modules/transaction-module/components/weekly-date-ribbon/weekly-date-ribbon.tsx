@@ -1,3 +1,4 @@
+import { Text } from '@dimasbaguspm/versaur';
 import { cva, type VariantProps } from 'class-variance-authority';
 import dayjs, { Dayjs } from 'dayjs';
 import { forwardRef, useCallback, useMemo } from 'react';
@@ -6,43 +7,10 @@ import { cn } from '../../../../libs/utils';
 
 import { generateWeekDays, formatDate, isSameDay, isToday } from './helpers';
 
-const weeklyDateRibbonVariants = cva('sticky top-0 z-20 border-b border-slate-200 bg-white', {
-  variants: {
-    variant: {
-      default: '',
-      coral: 'bg-coral-50 border-coral-200',
-      sage: 'bg-sage-50 border-sage-200',
-      mist: 'bg-mist-50 border-mist-200',
-      cream: 'bg-cream-50 border-cream-200',
-    },
-  },
-  defaultVariants: {
-    variant: 'default',
-  },
-});
+const weeklyDateRibbonVariants = cva('sticky top-0 z-20 border-b border-slate-200 bg-white');
 
 const dayItemVariants = cva(
-  'relative flex-shrink-0 cursor-pointer px-2 py-3 transition-all duration-200 border-b-2 border-transparent select-none text-center',
-  {
-    variants: {
-      variant: {
-        default: 'hover:bg-slate-50 data-[selected=true]:bg-coral-50 data-[selected=true]:border-coral-500',
-        coral: 'hover:bg-coral-100 data-[selected=true]:bg-coral-100 data-[selected=true]:border-coral-500',
-        sage: 'hover:bg-sage-100 data-[selected=true]:bg-sage-100 data-[selected=true]:border-sage-500',
-        mist: 'hover:bg-mist-100 data-[selected=true]:bg-mist-100 data-[selected=true]:border-mist-500',
-        cream: 'hover:bg-cream-100 data-[selected=true]:bg-cream-100 data-[selected=true]:border-cream-500',
-      },
-      size: {
-        sm: '',
-        md: '',
-        lg: '',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-      size: 'md',
-    },
-  }
+  'relative flex-shrink-0 cursor-pointer px-2 py-3 transition-all duration-200 border-b-2 border-transparent select-none text-center hover:bg-slate-50 data-[selected=true]:bg-primary/10 data-[selected=true]:border-primary'
 );
 
 export interface WeeklyDateRibbonProps
@@ -52,13 +20,10 @@ export interface WeeklyDateRibbonProps
   selectedDate?: Dayjs;
   /** Callback when a date is selected */
   onDateSelect?: (date: Dayjs) => void;
-
-  /** Size variant for day items */
-  size?: 'sm' | 'md' | 'lg';
 }
 
 const WeeklyDateRibbon = forwardRef<HTMLDivElement, WeeklyDateRibbonProps>(
-  ({ className, variant, selectedDate = dayjs(), onDateSelect, size = 'md', ...props }, ref) => {
+  ({ className, selectedDate = dayjs(), onDateSelect, ...props }, ref) => {
     const days = useMemo(() => {
       return generateWeekDays(dayjs(selectedDate));
     }, [selectedDate]);
@@ -67,7 +32,7 @@ const WeeklyDateRibbon = forwardRef<HTMLDivElement, WeeklyDateRibbonProps>(
     const handleDateSelect = useCallback((date: Dayjs) => onDateSelect?.(date), [onDateSelect]);
 
     return (
-      <div ref={ref} className={cn(weeklyDateRibbonVariants({ variant }), className)} {...props}>
+      <div ref={ref} className={cn(weeklyDateRibbonVariants(), className)} {...props}>
         <div className="flex w-full">
           {days.map((date) => {
             const isSelected = isSameDay(date, selectedDate);
@@ -78,21 +43,22 @@ const WeeklyDateRibbon = forwardRef<HTMLDivElement, WeeklyDateRibbonProps>(
                 key={date.toISOString()}
                 data-date={date.toISOString()}
                 data-selected={isSelected}
-                className={cn('flex-1', dayItemVariants({ variant, size }))}
+                className={cn('flex-1', dayItemVariants())}
                 onClick={() => handleDateSelect(date)}
               >
                 <div className="flex flex-col items-center">
-                  <div className="text-xs text-slate-500 mb-1">{formatDate(date, 'day')}</div>
-                  <div
-                    className={cn(
-                      'text-lg font-medium transition-all duration-200',
-                      dayIsToday && !isSelected && 'text-coral-600 font-bold',
-                      isSelected && 'text-coral-600 font-bold',
-                      !isSelected && !dayIsToday && 'text-slate-900'
-                    )}
+                  <Text fontSize="xs" className="mb-1">
+                    {formatDate(date, 'day')}
+                  </Text>
+
+                  <Text
+                    fontSize="lg"
+                    fontWeight={isSelected || (dayIsToday && !isSelected) ? 'bold' : 'normal'}
+                    className="duration-200 transition-all"
+                    color={isSelected ? 'primary' : 'ghost'}
                   >
                     {formatDate(date, 'dayNum')}
-                  </div>
+                  </Text>
                 </div>
               </div>
             );

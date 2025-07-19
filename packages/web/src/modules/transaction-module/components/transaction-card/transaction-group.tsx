@@ -1,8 +1,8 @@
+import { Tile } from '@dimasbaguspm/versaur';
 import { type Dayjs } from 'dayjs';
 import { debounce } from 'lodash';
 import { useEffect, useRef } from 'react';
 
-import { Tile } from '../../../../components/tile/tile';
 import type { SeamlessTransaction } from '../../hooks/use-seamless-transactions/types';
 
 import { NoTransactionsCard } from './no-transactions-card';
@@ -70,7 +70,7 @@ export function TransactionGroup({
       {transactions.length === 0 ? (
         <NoTransactionsCard />
       ) : (
-        <div className="divide-y divide-mist-200">
+        <div className="divide-y divide-neutral">
           {transactions.map((seamlessTransaction) => (
             <TransactionCard key={seamlessTransaction.transaction.id} transaction={seamlessTransaction} />
           ))}

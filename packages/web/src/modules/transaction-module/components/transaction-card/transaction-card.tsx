@@ -1,3 +1,5 @@
+import { Text, type TextProps } from '@dimasbaguspm/versaur';
+
 import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { formatAmount as formatAmountLib } from '../../../../libs/format-amount';
 import { cn } from '../../../../libs/utils';
@@ -31,8 +33,8 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
   };
 
   // Color for amount
-  const amountColor =
-    txn.type === 'income' ? 'text-success-600' : txn.type === 'expense' ? 'text-danger-600' : 'text-info-600';
+  const amountColor: TextProps['color'] =
+    txn.type === 'income' ? 'secondary' : txn.type === 'expense' ? 'primary' : 'tertiary';
 
   // Format date for display, fallback to empty string if missing
   const formattedTime = txn.date ? formatTime(new Date(txn.date)) : '';
@@ -49,7 +51,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
       type="button"
       className={cn(
         'w-full text-left p-4 transition hover:bg-cream-50',
-        'min-h-[88px] md:min-h-[96px] flex items-center' // flex-row by default
+        'min-h-[88px] md:min-h-[96px] flex items-center'
       )}
       aria-label={`Edit transaction: ${categoryName} ${formattedAmount}`}
       onClick={handleOnClick}
@@ -72,30 +74,50 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
           <div className="flex flex-col">
             {txn.note ? (
               <>
-                <span
-                  className="text-base font-medium text-slate-900 truncate max-w-full whitespace-nowrap"
+                <Text
+                  as="span"
+                  fontWeight="medium"
+                  fontSize="base"
+                  color="neutral"
+                  className="truncate max-w-full whitespace-nowrap"
                   title={txn.note.length > 50 ? txn.note : undefined}
                 >
                   {txn.note.length > 50 ? `${txn.note.slice(0, 50)}...` : txn.note}
-                </span>
-                <span className="text-xs text-slate-500 truncate whitespace-nowrap" title={categoryName}>
+                </Text>
+                <Text
+                  as="span"
+                  fontSize="xs"
+                  color="neutral"
+                  className="truncate whitespace-nowrap"
+                  title={categoryName}
+                >
                   {categoryName}
-                </span>
+                </Text>
               </>
             ) : (
-              <span className="text-base font-medium text-slate-900 truncate whitespace-nowrap" title={categoryName}>
+              <Text
+                as="span"
+                fontWeight="medium"
+                fontSize="base"
+                color="neutral"
+                className="truncate whitespace-nowrap"
+                title={categoryName}
+              >
                 {categoryName}
-              </span>
+              </Text>
             )}
           </div>
-          <span className="text-sm text-slate-500 truncate mb-1 whitespace-nowrap" title={accountName}>
+          <Text as="span" fontSize="sm" color="neutral" className="mb-1 truncate whitespace-nowrap" title={accountName}>
             {accountName}
-          </span>
+          </Text>
         </div>
-        {/* Right column: amount (top), time (bottom) */}
         <div className="col-span-4 flex flex-col items-end justify-between h-full">
-          <span className={cn('font-bold text-lg', amountColor)}>{formattedAmount}</span>
-          <span className="text-sm text-slate-400 mb-1">{formattedTime}</span>
+          <Text as="span" fontWeight="bold" fontSize="lg" color={amountColor}>
+            {formattedAmount}
+          </Text>
+          <Text as="span" fontSize="sm" color="neutral" className="mb-1">
+            {formattedTime}
+          </Text>
         </div>
       </div>
     </button>

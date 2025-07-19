@@ -1,7 +1,8 @@
+import { Alert, Button, Icon, Skeleton, Text } from '@dimasbaguspm/versaur';
 import dayjs, { type Dayjs } from 'dayjs';
+import { AlertCircleIcon } from 'lucide-react';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
-import { Button, Loader } from '../../../../components';
 import { cn } from '../../../../libs/utils';
 import { useSeamlessTransactions, useDateIntersectionObserver, useTransactionFilters } from '../../hooks';
 import { TransactionGroup } from '../transaction-card';
@@ -52,16 +53,23 @@ export const SeamlessTransactionList = forwardRef<SeamlessTransactionListRef, Se
 
     if (isLoading) {
       return (
-        <div className={cn('flex justify-center items-center min-h-[10vh]')}>
-          <Loader />
+        <div className="flex flex-col gap-4">
+          <Skeleton shape="rounded" height={200} />
+          <Skeleton shape="rounded" height={200} />
+          <Skeleton shape="rounded" height={200} />
+          <Skeleton shape="rounded" height={200} />
         </div>
       );
     }
 
-    if (isError || error) {
+    if (error || isError) {
       return (
-        <div className={cn('bg-red-50 border border-red-200 rounded-lg p-4')}>
-          <p className="text-red-600 text-sm">Failed to load transactions. Please try again.</p>
+        <div className="flex flex-col gap-4 h-[80vh]">
+          <div className="grow">
+            <Alert icon={<Icon as={AlertCircleIcon} size="md" />} variant="default" color="danger">
+              <Text>Failed to load transactions. Please try again later</Text>
+            </Alert>
+          </div>
         </div>
       );
     }
@@ -92,8 +100,8 @@ export const SeamlessTransactionList = forwardRef<SeamlessTransactionListRef, Se
           })}
         </div>
         <div className={cn('flex justify-center pb-[60vh]')}>
-          <Button variant="outline" onClick={fetchMore}>
-            Load More Transactions
+          <Button variant="outline" onClick={fetchMore} disabled={isLoading}>
+            Load More
           </Button>
         </div>
       </>
