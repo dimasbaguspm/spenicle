@@ -1,4 +1,4 @@
-import { Tile, Tabs, Text, type TileProps, type TextProps, Icon, type IconProps } from '@dimasbaguspm/versaur';
+import { Tile, Tabs, Text, Icon, type IconProps } from '@dimasbaguspm/versaur';
 import dayjs from 'dayjs';
 import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import { useMemo, type FC } from 'react';
@@ -146,35 +146,11 @@ export const MobileAccountInsightsWidget: FC<MobileAccountInsightsWidgetProps> =
         {/* mobile-optimized 2x2 grid with smart visual indicators */}
         <div className="grid grid-cols-2 gap-3">
           {insights.map((insight, index) => {
-            const tileVariant: TileProps['variant'] = (() => {
-              switch (insight.trend) {
-                case 'positive':
-                  return 'secondary';
-                case 'negative':
-                  return 'primary';
-                case 'neutral':
-                default:
-                  return 'tertiary';
-              }
-            })();
-
-            const textColor: TextProps['color'] = (() => {
-              switch (insight.trend) {
-                case 'positive':
-                  return 'secondary';
-                case 'negative':
-                  return 'primary';
-                case 'neutral':
-                default:
-                  return 'tertiary';
-              }
-            })();
-
             return (
-              <Tile variant={tileVariant} key={index}>
+              <Tile key={index}>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <Text as="p" fontWeight="bold" fontSize="lg" color={textColor}>
+                    <Text as="p" fontWeight="bold" fontSize="lg">
                       {insight.value}
                     </Text>
                     <Icon as={insight.icon} size="sm" color={insight.iconColor as IconProps['color']} />

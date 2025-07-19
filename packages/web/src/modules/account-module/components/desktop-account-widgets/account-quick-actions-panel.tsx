@@ -30,6 +30,7 @@ export const AccountQuickActionsPanel: FC<AccountQuickActionsPanelProps> = ({ se
 
         <TextInput
           label="Find accounts"
+          variant="ghost"
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search accounts..."

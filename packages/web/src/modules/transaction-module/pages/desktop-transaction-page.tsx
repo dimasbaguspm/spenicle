@@ -2,7 +2,6 @@ import { useRouter } from '@tanstack/react-router';
 import dayjs from 'dayjs';
 import { useState, useMemo, type FC } from 'react';
 
-import { PageLayout } from '../../../components';
 import { DRAWER_IDS, DRAWER_METADATA_KEYS } from '../../../constants/drawer-id';
 import { useApiAccountsQuery, useApiCategoriesQuery, useApiTransactionsQuery } from '../../../hooks';
 import { useDrawerRouterProvider } from '../../../providers/drawer-router';
@@ -133,7 +132,7 @@ export const DesktopTransactionPage: FC = () => {
   };
 
   return (
-    <PageLayout background="cream" title="Transaction" showBackButton>
+    <>
       <div className="flex flex-col gap-6">
         {/* main content grid */}
         <div className="grid grid-cols-12 gap-6">
@@ -175,6 +174,6 @@ export const DesktopTransactionPage: FC = () => {
           </div>
         </div>
       </div>
-    </PageLayout>
+    </>
   );
 };

@@ -139,6 +139,7 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
 
           {/* search input */}
           <TextInput
+            variant="ghost"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search accounts by name or type..."
@@ -226,16 +227,16 @@ export const MobileAccountSummarySection: FC<MobileAccountSummarySectionProps> =
                   {/* Enhanced Current Period Activity Details */}
 
                   <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
-                    <Tile size="sm">
-                      <Text as="p" fontSize="xs" color="secondary" align="center">
+                    <Tile size="xs" variant="secondary">
+                      <Text as="p" fontSize="xs" color="secondary" align="center" fontWeight="bold">
                         Income
                       </Text>
                       <Text as="p" fontSize="lg" fontWeight="bold" color="secondary" align="center">
                         {formatAmount(account.currentPeriodIncome, { compact: true, hidePrefix: true })}
                       </Text>
                     </Tile>
-                    <Tile>
-                      <Text as="p" fontSize="xs" color="primary" align="center">
+                    <Tile variant="primary" size="xs">
+                      <Text as="p" fontSize="xs" color="primary" align="center" fontWeight="bold">
                         Expenses
                       </Text>
                       <Text as="p" fontSize="lg" fontWeight="bold" color="primary" align="center">
