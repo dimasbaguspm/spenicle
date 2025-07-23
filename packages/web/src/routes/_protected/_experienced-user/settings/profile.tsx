@@ -1,8 +1,9 @@
+import { Avatar } from '@dimasbaguspm/versaur/primitive';
 import { createFileRoute } from '@tanstack/react-router';
 import { Camera } from 'lucide-react';
 import { useState } from 'react';
 
-import { PageLayout, TextInput, Button, Avatar, Tile } from '../../../../components';
+import { PageLayout, TextInput, Button, Tile } from '../../../../components';
 
 export const Route = createFileRoute('/_protected/_experienced-user/settings/profile')({
   component: ProfileComponent,
@@ -40,7 +41,7 @@ function ProfileComponent() {
 
             <div className="flex items-center gap-6">
               <div className="relative">
-                <Avatar size="xl" src="https://picsum.photos/128/128" />
+                <Avatar size="xl">DM</Avatar>
                 <button className="absolute -bottom-2 -right-2 bg-coral-500 hover:bg-coral-600 text-white rounded-full p-2 shadow-lg transition-colors">
                   <Camera className="w-4 h-4" />
                 </button>

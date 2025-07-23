@@ -1,6 +1,5 @@
+import { Button, Icon } from '@dimasbaguspm/versaur/primitive';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-import { Button } from '../../../../../components';
 
 interface FormNavigationProps {
   currentStep: number;
@@ -23,31 +22,20 @@ export function FormNavigation({
     <div className="flex justify-between pt-6">
       <div>
         {currentStep > 1 && (
-          <Button type="button" variant="outline" size="lg" onClick={onPrevStep} iconLeft={<ChevronLeft size={20} />}>
+          <Button type="button" variant="outline" size="md" onClick={onPrevStep}>
+            <Icon as={ChevronLeft} size="md" color="ghost" />
             Previous
           </Button>
         )}
       </div>
       <div>
         {currentStep < totalSteps ? (
-          <Button
-            type="button"
-            variant="coral"
-            size="lg"
-            onClick={onNextStep}
-            disabled={!isCurrentStepValid()}
-            iconRight={<ChevronRight size={20} />}
-          >
+          <Button type="button" size="md" onClick={onNextStep} disabled={!isCurrentStepValid()}>
             Next Step
+            <Icon as={ChevronRight} size="md" color="neutral" />
           </Button>
         ) : (
-          <Button
-            type="submit"
-            variant="coral"
-            size="lg"
-            disabled={!isCurrentStepValid() || isPending}
-            busy={isPending}
-          >
+          <Button type="submit" size="md" disabled={!isCurrentStepValid() || isPending}>
             {isPending ? 'Creating Account...' : 'Create Account'}
           </Button>
         )}

@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { versaurEnforceSubpathImport } from '@dimasbaguspm/versaur/eslint-subpath-import';
 import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
 
@@ -13,15 +14,13 @@ const compat = new FlatCompat({
 
 export default [
   js.configs.recommended,
-
   ...compat.extends(
     'plugin:@typescript-eslint/recommended',
     'plugin:@typescript-eslint/recommended-requiring-type-checking'
   ),
-
   ...compat.extends('plugin:import/errors', 'plugin:import/warnings', 'plugin:import/typescript'),
   ...compat.extends('plugin:prettier/recommended'),
-
+  ...versaurEnforceSubpathImport,
   {
     ignores: ['node_modules/**', 'dist/**', 'coverage/**', '.yarn/**', 'build/**'],
     languageOptions: {
@@ -87,8 +86,7 @@ export default [
       },
     },
   },
-
-  // Override to allow console.log in main.tsx and specific files
+  // override to allow console.log in main.tsx and specific files
   {
     files: ['**/main.tsx', '**/index.tsx'],
     rules: {

@@ -1,7 +1,7 @@
+import { Brand, Icon, Text } from '@dimasbaguspm/versaur/primitive';
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 import { BarChart3, Shield, TrendingUp } from 'lucide-react';
 
-import { Brand } from '../../components';
 import { redirectIfAuthenticated, useViewport } from '../../hooks';
 
 export const Route = createFileRoute('/_auth')({
@@ -18,7 +18,7 @@ function RouteComponent() {
     return (
       <div className="min-h-screen bg-cream-50 flex">
         {/* Left Hero Section */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-coral-500 to-coral-600 relative overflow-hidden">
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-primary/90 relative overflow-hidden">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-20 left-20 w-32 h-32 bg-white rounded-full"></div>
@@ -31,53 +31,58 @@ function RouteComponent() {
             {/* Logo/Brand */}
             <div className="mb-12">
               {/* Brand with background for better contrast */}
-              <div className="mb-6 bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <Brand
-                  as="div"
-                  size="lg"
-                  className="[&_span:first-child]:text-white [&_span:last-child]:text-white/90"
-                />
+              <div className="flex flex-row gap-4 items-center mb-4 bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
+                <Brand size="lg" name="spenicle" />
+                <Text as="h2" fontSize="3xl" fontWeight="bold" className="text-white">
+                  Spenicle
+                </Text>
               </div>
-              <p className="text-white/90 text-lg font-medium">
+              <Text as="p" fontSize="lg" fontWeight="medium" className="text-white">
                 Take control of your financial future with intelligent expense tracking
-              </p>
+              </Text>
             </div>
 
             {/* Features */}
             <div className="space-y-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <BarChart3 className="w-6 h-6" />
+                  <Icon as={BarChart3} size="md" color="neutral" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">Smart Analytics</h3>
-                  <p className="text-coral-100">
+                  <Text as="h3" fontSize="lg" fontWeight="semibold" className="text-white">
+                    Smart Analytics
+                  </Text>
+                  <Text className="text-white">
                     Discover spending patterns with intelligent insights and beautiful visualizations
-                  </p>
+                  </Text>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="w-6 h-6" />
+                  <Icon as={TrendingUp} size="md" color="neutral" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">Goal Tracking</h3>
-                  <p className="text-coral-100">
+                  <Text as="h3" fontSize="lg" fontWeight="semibold" className="text-white">
+                    Goal Tracking
+                  </Text>
+                  <Text className="text-white">
                     Set meaningful budgets and watch your progress toward financial freedom
-                  </p>
+                  </Text>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-6 h-6" />
+                  <Icon as={Shield} size="md" color="neutral" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">Self-Hosted Privacy</h3>
-                  <p className="text-coral-100">
+                  <Text as="h3" fontSize="lg" fontWeight="semibold" className="text-white">
+                    Self-Hosted Privacy
+                  </Text>
+                  <Text className="text-white">
                     Your financial data stays on your server - complete control and privacy guaranteed
-                  </p>
+                  </Text>
                 </div>
               </div>
             </div>
@@ -89,7 +94,7 @@ function RouteComponent() {
   }
 
   return (
-    <div className="min-h-screen bg-cream-50 flex items-center justify-center p-4">
+    <div className="flex justify-center p-4 items-start mt-[10vh]">
       <div className="w-full max-w-md space-y-6">
         <Outlet />
       </div>

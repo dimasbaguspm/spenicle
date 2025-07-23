@@ -1,7 +1,9 @@
-import { type FC } from 'react';
+import { Button, ButtonIcon, Drawer, Text } from '@dimasbaguspm/versaur';
+import { X } from 'lucide-react';
+import { useEffect, useState, type FC } from 'react';
 import { Controller } from 'react-hook-form';
 
-import { Drawer, TextArea, Button, DateTimePicker, AmountField, CategorySelector } from '../../../../components';
+import { TextArea, DateTimePicker, AmountField, CategorySelector } from '../../../../components';
 import { AccountSelector } from '../../../../modules/account-module/components/account-selector';
 import type { Category } from '../../../../types/api';
 import { TransactionTypeSelector } from '../transaction-type-selector';
@@ -9,6 +11,8 @@ import { TransactionTypeSelector } from '../transaction-type-selector';
 import { useAddTransactionForm } from './use-add-transaction-form.hook';
 
 export const AddTransactionDrawer: FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
   const {
     handleSubmit,
     control,
@@ -21,14 +25,30 @@ export const AddTransactionDrawer: FC = () => {
     categoryOptions,
   } = useAddTransactionForm();
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsOpen(true);
+    }, 0); // Open drawer after component mounts
+
+    return () => clearTimeout(timer); // Cleanup timer on unmount
+  }, []);
+
+  const handleCloseDrawer = async () => {
+    setIsOpen(false);
+    await new Promise((resolve) => setTimeout(resolve, 501)); // Allow drawer to close before resetting form
+    closeDrawer();
+  };
+
   return (
-    <Drawer onClose={closeDrawer} size="md">
-      <Drawer.Header>
-        <Drawer.Title>Add Transaction</Drawer.Title>
-        <Drawer.CloseButton />
+    <Drawer isOpen={isOpen} onClose={handleCloseDrawer} size="md">
+      <Drawer.Header className="flex items-center justify-between">
+        <Text as="h3" fontSize="lg" fontWeight="semibold">
+          Add Transaction
+        </Text>
+        <ButtonIcon as={X} variant="ghost" onClick={handleCloseDrawer} aria-label="Close drawer" />
       </Drawer.Header>
 
-      <Drawer.Content>
+      <Drawer.Body>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-6">
             <Controller
@@ -147,16 +167,14 @@ export const AddTransactionDrawer: FC = () => {
             </div>
           )}
         </form>
-      </Drawer.Content>
+      </Drawer.Body>
       <Drawer.Footer>
-        <div className="flex gap-3 justify-end">
-          <Button type="button" variant="secondary" onClick={closeDrawer}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="default" onClick={handleSubmit(onSubmit)} disabled={isPending}>
-            {isPending ? 'Creating...' : 'Create Transaction'}
-          </Button>
-        </div>
+        <Button type="button" variant="ghost" onClick={closeDrawer}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" onClick={handleSubmit(onSubmit)} disabled={isPending}>
+          {isPending ? 'Creating...' : 'Create'}
+        </Button>
       </Drawer.Footer>
     </Drawer>
   );

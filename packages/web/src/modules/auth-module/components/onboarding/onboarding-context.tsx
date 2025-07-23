@@ -1,3 +1,4 @@
+import { Icon, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import {
   AlertTriangle,
   BarChart3,
@@ -13,7 +14,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-import { Tile } from '../../../../components';
 import type { OnboardingStep } from '../../hooks/use-onboarding-flow';
 
 export interface OnboardingContextProps {
@@ -68,15 +68,17 @@ export function OnboardingContext({ currentStep }: OnboardingContextProps) {
   const current = content[currentStep];
 
   return (
-    <Tile className="p-6">
-      <h3 className="mb-4 text-lg font-semibold text-slate-900">{current.title}</h3>
+    <Tile>
+      <Text as="h3" fontSize="base" fontWeight="semibold" className="mb-2">
+        {current.title}
+      </Text>
       <ul className="space-y-3">
         {current.items.map((item, index) => (
-          <li key={index} className="flex items-center gap-3 text-slate-700">
-            <div className="flex h-5 w-5 items-center justify-center">
-              <item.icon className="h-4 w-4 text-coral-600" />
-            </div>
-            <span className="text-sm">{item.text}</span>
+          <li key={index} className="flex items-center gap-3">
+            <Icon as={item.icon} size="md" color="primary" />
+            <Text as="span" fontSize="sm">
+              {item.text}
+            </Text>
           </li>
         ))}
       </ul>
@@ -115,13 +117,15 @@ export function QuickTips({ currentStep }: QuickTipsProps) {
   const currentTip = tips[currentStep];
 
   return (
-    <div className="rounded-xl border border-coral-200 bg-coral-50 p-6">
+    <Tile>
       <div className="flex items-start gap-3">
         <div className="flex h-5 w-5 items-center justify-center flex-shrink-0 mt-0.5">
-          <currentTip.icon className="h-4 w-4 text-coral-600" />
+          <Icon as={currentTip.icon} size="sm" color="warning" />
         </div>
-        <p className="text-sm text-slate-700">{currentTip.text}</p>
+        <Text as="p" fontSize="sm">
+          {currentTip.text}
+        </Text>
       </div>
-    </div>
+    </Tile>
   );
 }

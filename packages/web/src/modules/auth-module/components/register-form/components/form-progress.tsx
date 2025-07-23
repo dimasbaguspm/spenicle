@@ -1,4 +1,5 @@
-import { LineProgress } from '../../../../../components';
+import { ProgressIndicator } from '@dimasbaguspm/versaur/feedbacks';
+import { Text } from '@dimasbaguspm/versaur/primitive';
 
 interface FormProgressProps {
   currentStep: number;
@@ -10,12 +11,14 @@ export function FormProgress({ currentStep, totalSteps, progress }: FormProgress
   return (
     <div className="mb-8">
       <div className="flex justify-between items-center mb-4">
-        <span className="text-sm font-medium text-slate-600">
+        <Text as="span" color="tertiary" fontSize="sm" fontWeight="medium">
           Step {currentStep} of {totalSteps}
-        </span>
-        <span className="text-sm text-slate-500">{Math.round(progress)}% Complete</span>
+        </Text>
+        <Text as="span" color="tertiary" fontSize="sm" fontWeight="medium">
+          {Math.round(progress)}% Complete
+        </Text>
       </div>
-      <LineProgress value={progress} variant="coral" size="md" />
+      <ProgressIndicator value={progress} color="primary" />
     </div>
   );
 }

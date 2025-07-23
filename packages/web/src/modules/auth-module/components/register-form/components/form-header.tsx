@@ -1,13 +1,14 @@
-interface FormHeaderProps {
-  title: string;
-  subtitle: string;
-}
+import { Text } from '@dimasbaguspm/versaur/primitive';
 
-export function FormHeader({ title, subtitle }: FormHeaderProps) {
+export function FormHeader() {
   return (
     <div className="text-center mb-8">
-      <h1 className="text-3xl font-bold text-slate-700 mb-2">{title}</h1>
-      <p className="text-slate-500">{subtitle}</p>
+      <Text as="h2" fontSize="xl" fontWeight="bold" align="center">
+        Create Account
+      </Text>
+      <Text as="p" align="center">
+        Start tracking your expenses with Spenicle
+      </Text>
     </div>
   );
 }

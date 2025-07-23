@@ -1,6 +1,8 @@
+import { TextInput } from '@dimasbaguspm/versaur/forms';
+import { FormLayout } from '@dimasbaguspm/versaur/layouts';
+import { Text } from '@dimasbaguspm/versaur/primitive';
 import { Controller, useFormContext, type RegisterOptions } from 'react-hook-form';
 
-import { TextInput, FormLayout } from '../../../../../components';
 import type { RegisterFormData } from '../types';
 
 interface SecurityStepProps {
@@ -15,9 +17,13 @@ export function SecurityStep({ watchedPassword, getFieldValidationRules }: Secur
   } = useFormContext<RegisterFormData>();
 
   return (
-    <FormLayout columns={1} gap="md">
-      <FormLayout.Title title="Security Setup" />
-      <FormLayout.Field span="full">
+    <FormLayout>
+      <FormLayout.Column span={12}>
+        <Text as="h2" fontSize="lg" fontWeight="semibold">
+          Security Setup
+        </Text>
+      </FormLayout.Column>
+      <FormLayout.Column span={12}>
         <Controller
           name="password"
           control={control}
@@ -29,16 +35,15 @@ export function SecurityStep({ watchedPassword, getFieldValidationRules }: Secur
               type="password"
               label="Password"
               placeholder="Create a password (min 8 characters)"
-              variant="default"
-              size="lg"
               required
-              errorText={errors.password?.message}
+              autoFocus
+              error={errors.password?.message}
             />
           )}
         />
-      </FormLayout.Field>
+      </FormLayout.Column>
 
-      <FormLayout.Field span="full">
+      <FormLayout.Column span={12}>
         <Controller
           name="confirmPassword"
           control={control}
@@ -50,14 +55,13 @@ export function SecurityStep({ watchedPassword, getFieldValidationRules }: Secur
               type="password"
               label="Confirm Password"
               placeholder="Confirm your password"
-              variant={field.value && watchedPassword !== field.value ? 'error' : 'default'}
-              size="lg"
+              variant={field.value && watchedPassword !== field.value ? 'danger' : 'primary'}
               required
-              errorText={errors.confirmPassword?.message}
+              error={errors.confirmPassword?.message}
             />
           )}
         />
-      </FormLayout.Field>
+      </FormLayout.Column>
     </FormLayout>
   );
 }

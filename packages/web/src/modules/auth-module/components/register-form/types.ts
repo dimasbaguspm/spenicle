@@ -3,8 +3,6 @@ export interface RegisterFormData {
   email: string;
   password: string;
   confirmPassword: string;
-  groupName: string;
-  defaultCurrency: string;
 }
 
 export interface RegisterStep {

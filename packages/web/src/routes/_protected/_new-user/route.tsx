@@ -1,7 +1,8 @@
+import { ProgressIndicator } from '@dimasbaguspm/versaur';
+import { Text } from '@dimasbaguspm/versaur/primitive';
 import { createFileRoute, Navigate, Outlet, useLocation, useRouter } from '@tanstack/react-router';
 import { useEffect, useMemo } from 'react';
 
-import { LineProgress, PageLayout } from '../../../components';
 import { requireAuth, useSession } from '../../../hooks';
 import { SessionGuard } from '../../../modules/auth-module';
 
@@ -69,33 +70,28 @@ function RouteComponent() {
 
   return (
     <SessionGuard>
-      <div className="min-h-screen bg-cream-50 flex flex-col">
-        <main className="flex-1">
-          <PageLayout background="cream" minHeight="screen">
-            {/* Progress Section - Only show for setup steps */}
-            {currentStep.step > 0 && currentStep.step < currentStep.totalSteps && (
-              <div className="mb-8 transition-all duration-200 ease-out">
-                <div className="flex justify-between items-center mb-4">
-                  <h1 className="text-2xl font-bold text-slate-900 transition-all duration-200">{currentStep.title}</h1>
-                  <span className="text-sm text-slate-600 transition-all duration-200">
-                    Step {currentStep.step} of {currentStep.totalSteps - 1}
-                  </span>
-                </div>
-                <LineProgress value={progressPercentage} variant="coral" size="sm" animated={true} />
-              </div>
-            )}
+      {currentStep.step > 0 && currentStep.step < currentStep.totalSteps && (
+        <div className="mb-8 transition-all duration-200 ease-out">
+          <div className="flex justify-between items-center mb-4">
+            <Text as="h1" fontSize="2xl" fontWeight="bold" color="tertiary">
+              {currentStep.title}
+            </Text>
+            <Text as="p" fontSize="sm" color="tertiary">
+              Step {currentStep.step} of {currentStep.totalSteps - 1}
+            </Text>
+          </div>
+          <ProgressIndicator value={progressPercentage} color="primary" />
+        </div>
+      )}
 
-            <div
-              className="transition-all duration-200 ease-out transform"
-              style={{
-                opacity: 1,
-                transform: 'translateY(0)',
-              }}
-            >
-              <Outlet />
-            </div>
-          </PageLayout>
-        </main>
+      <div
+        className="transition-all duration-200 ease-out transform"
+        style={{
+          opacity: 1,
+          transform: 'translateY(0)',
+        }}
+      >
+        <Outlet />
       </div>
     </SessionGuard>
   );

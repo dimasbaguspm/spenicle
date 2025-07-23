@@ -1,9 +1,10 @@
-import { AppBar, Avatar, ButtonIcon } from '@dimasbaguspm/versaur';
+import { AppBar } from '@dimasbaguspm/versaur/layouts';
+import { Avatar, Brand, ButtonIcon } from '@dimasbaguspm/versaur/primitive';
 import dayjs, { type Dayjs } from 'dayjs';
 import { Calendar } from 'lucide-react';
 import { useRef, useState, type FC } from 'react';
 
-import { Brand, DatePicker } from '../../../components';
+import { DatePicker } from '../../../components';
 import { DRAWER_IDS } from '../../../constants/drawer-id';
 import { useDrawerRouterProvider } from '../../../providers/drawer-router';
 import { SeamlessTransactionList, type SeamlessTransactionListRef } from '../components/seamless-transaction-list';
@@ -49,7 +50,7 @@ export const MobileTransactionPage: FC = () => {
           </Avatar>
         </AppBar.Leading>
         <AppBar.Center placement="center">
-          <Brand size="sm" showTitle={false} />
+          <Brand size="md" shape="rounded" name="spenicle" />
         </AppBar.Center>
         <AppBar.Trailing>
           <ButtonIcon

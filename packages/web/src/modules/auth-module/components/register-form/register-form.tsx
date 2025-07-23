@@ -1,16 +1,7 @@
+import { Tile } from '@dimasbaguspm/versaur/primitive';
 import { FormProvider } from 'react-hook-form';
 
-import { Tile } from '../../../../components';
-
-import {
-  PersonalInfoStep,
-  SecurityStep,
-  GroupSetupStep,
-  FormProgress,
-  FormHeader,
-  FormNavigation,
-  FormFooter,
-} from './components';
+import { PersonalInfoStep, SecurityStep, FormProgress, FormHeader, FormNavigation, FormFooter } from './components';
 import { useRegisterForm } from './use-register-form.hook';
 
 export function RegisterForm() {
@@ -30,35 +21,34 @@ export function RegisterForm() {
   } = useRegisterForm();
 
   return (
-    <Tile className="max-w-2xl mx-auto p-8">
-      <FormHeader title="Create Account" subtitle="Start tracking your expenses with SpendLess" />
-      <FormProgress currentStep={currentStep} totalSteps={STEPS.length} progress={progress} />
+    <div className="max-w-2xl mx-auto">
+      <Tile size="lg">
+        <FormHeader />
+        <FormProgress currentStep={currentStep} totalSteps={STEPS.length} progress={progress} />
 
-      <FormProvider {...methods}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Step 1: Personal Information */}
-          {currentStep === 1 && <PersonalInfoStep getFieldValidationRules={getFieldValidationRules} />}
+        <FormProvider {...methods}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Step 1: Personal Information */}
+            {currentStep === 1 && <PersonalInfoStep getFieldValidationRules={getFieldValidationRules} />}
 
-          {/* Step 2: Security Setup */}
-          {currentStep === 2 && (
-            <SecurityStep watchedPassword={watchedPassword} getFieldValidationRules={getFieldValidationRules} />
-          )}
+            {/* Step 2: Security Setup */}
+            {currentStep === 2 && (
+              <SecurityStep watchedPassword={watchedPassword} getFieldValidationRules={getFieldValidationRules} />
+            )}
 
-          {/* Step 3: Group Setup */}
-          {currentStep === 3 && <GroupSetupStep getFieldValidationRules={getFieldValidationRules} />}
+            <FormNavigation
+              currentStep={currentStep}
+              totalSteps={STEPS.length}
+              isCurrentStepValid={isCurrentStepValid}
+              isPending={isPending}
+              onPrevStep={prevStep}
+              onNextStep={nextStep}
+            />
+          </form>
+        </FormProvider>
 
-          <FormNavigation
-            currentStep={currentStep}
-            totalSteps={STEPS.length}
-            isCurrentStepValid={isCurrentStepValid}
-            isPending={isPending}
-            onPrevStep={prevStep}
-            onNextStep={nextStep}
-          />
-        </form>
-      </FormProvider>
-
-      <FormFooter />
-    </Tile>
+        <FormFooter />
+      </Tile>
+    </div>
   );
 }

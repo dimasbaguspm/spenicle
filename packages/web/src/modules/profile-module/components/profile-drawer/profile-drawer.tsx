@@ -1,14 +1,17 @@
+import { Drawer } from '@dimasbaguspm/versaur/overlays';
+import { Avatar, Button, Icon, Text } from '@dimasbaguspm/versaur/primitive';
 import { useNavigate } from '@tanstack/react-router';
 import { User, LogOut, Shield, BrushCleaning, File } from 'lucide-react';
-import { type FC } from 'react';
+import { useEffect, useState, type FC } from 'react';
 
-import { Drawer, Avatar, Button } from '../../../../components';
 import { useViewport } from '../../../../hooks';
 import { useAppVersion } from '../../../../hooks/use-app-version';
 import { useSession } from '../../../../hooks/use-session';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router';
 
 export const ProfileDrawer: FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
   const { closeDrawer } = useDrawerRouterProvider();
   const { isDesktop } = useViewport();
   const { user, logout } = useSession();
@@ -25,6 +28,10 @@ export const ProfileDrawer: FC = () => {
       to: path,
     });
   };
+
+  useEffect(() => {
+    setIsOpen(true);
+  }, []);
 
   const profileActions = [
     {
@@ -58,18 +65,20 @@ export const ProfileDrawer: FC = () => {
   ];
 
   return (
-    <Drawer onClose={closeDrawer} size={isDesktop ? 'md' : '3/4'} position="left">
-      <Drawer.Content>
-        <div className="flex items-center gap-4 pb-6 border-b border-mist-200">
-          <Avatar size="lg" fallback={user?.name} />
+    <Drawer isOpen={isOpen} onClose={closeDrawer} size={isDesktop ? 'md' : '3/4'} position="left">
+      <Drawer.Body>
+        <div className="flex items-center gap-4 pb-6 border-b border-border">
+          <Avatar size="lg">{user?.name}</Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-slate-900 truncate">{user?.name ?? 'User'}</h3>
-            <p className="text-sm text-slate-500 truncate">{user?.email ?? 'user@example.com'}</p>
+            <Text as="h3" fontWeight="semibold" ellipsis clamp={2}>
+              {user?.name ?? 'User'}
+            </Text>
+            <Text as="p" fontSize="sm" ellipsis clamp={1}>
+              {user?.email ?? 'user@example.com'}
+            </Text>
           </div>
         </div>
         <div className="pt-4">
-          {/* User Profile Section */}
-
           {/* Quick Actions */}
           <div className="space-y-1">
             {profileActions.map((action) => (
@@ -80,20 +89,25 @@ export const ProfileDrawer: FC = () => {
               >
                 <div className="text-slate-600 flex-shrink-0">{action.icon}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-900">{action.label}</p>
-                  <p className="text-sm text-slate-500">{action.description}</p>
+                  <Text as="p" fontWeight="medium">
+                    {action.label}
+                  </Text>
+                  <Text fontSize="sm" color="tertiary">
+                    {action.description}
+                  </Text>
                 </div>
               </button>
             ))}
           </div>
         </div>
-      </Drawer.Content>
+      </Drawer.Body>
       <Drawer.Footer>
         <div className="flex justify-between items-center w-full">
-          <div className="px-6 py-4 text-sm text-slate-500">
-            <p>{formattedVersion}</p>
-          </div>
-          <Button variant="error-ghost" onClick={handleLogout} iconLeft={<LogOut className="w-5 h-5" />}>
+          <Text as="p" fontSize="sm" color="neutral">
+            {formattedVersion}
+          </Text>
+          <Button variant="danger-ghost" onClick={handleLogout}>
+            <Icon as={LogOut} size="sm" className="mr-2" />
             Sign Out
           </Button>
         </div>

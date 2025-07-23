@@ -14,12 +14,6 @@ export const REGISTER_STEPS: readonly RegisterStep[] = [
     description: 'Secure your account',
     fields: ['password', 'confirmPassword'],
   },
-  {
-    id: 3,
-    title: 'Group Setup',
-    description: 'Create your expense group',
-    fields: ['groupName', 'defaultCurrency'],
-  },
 ] as const;
 
 // Default form values
@@ -28,8 +22,6 @@ export const DEFAULT_FORM_VALUES: RegisterFormData = {
   email: '',
   password: '',
   confirmPassword: '',
-  groupName: '',
-  defaultCurrency: 'USD',
 };
 
 // Form validation rules
@@ -120,7 +112,7 @@ export const transformFormDataForApi = (data: RegisterFormData) => ({
     password: data.password,
   },
   group: {
-    name: data.groupName,
-    defaultCurrency: data.defaultCurrency,
+    name: 'My Group', // Default group name, can be customized later
+    defaultCurrency: 'IDR',
   },
 });

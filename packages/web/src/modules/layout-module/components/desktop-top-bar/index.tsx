@@ -1,8 +1,7 @@
-import { Avatar, TopBar } from '@dimasbaguspm/versaur';
+import { TopBar } from '@dimasbaguspm/versaur/layouts';
+import { Avatar, Brand } from '@dimasbaguspm/versaur/primitive';
 import { useLocation, useRouter } from '@tanstack/react-router';
 import type { FC } from 'react';
-
-import { Brand } from '../../../../components';
 
 interface Props {
   onAvatarClick?: () => void;
@@ -20,7 +19,7 @@ export const DesktopTopBar: FC<Props> = (props) => {
   return (
     <TopBar>
       <TopBar.Leading>
-        <Brand size="sm" subtitle="" onClick={() => navigateTo('/')} />
+        <Brand size="md" shape="rounded" name="spenicle" onClick={() => navigateTo('/')} />
         <TopBar.Nav>
           <TopBar.NavItem onClick={() => navigateTo('/analytics')} active={pathname.startsWith('/analytics')}>
             Analytics

@@ -1,6 +1,7 @@
+import { Button, ButtonIcon, Icon, ProgressIndicator, Text } from '@dimasbaguspm/versaur';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 
-import { Button } from '../../../../components';
+import { cn } from '../../../../libs/utils';
 import type { UseOnboardingFlowReturn, OnboardingStep, StepProgress } from '../../hooks/use-onboarding-flow';
 
 import { MobileOnboardingStep } from './mobile-onboarding-step';
@@ -42,46 +43,37 @@ export function OnboardingMobile({ onboardingFlow }: OnboardingMobileProps) {
   };
 
   return (
-    <div className="min-h-screen bg-cream-50 flex flex-col">
-      <div className="sticky top-0 z-10 bg-white border-b border-mist-200 px-4 py-3 safe-area-top">
-        <div className="flex items-center justify-between mb-3">
-          <button
+    <div className="min-h-screen  flex flex-col">
+      <div className="sticky top-0 z-10 bg-white border-b border-border safe-area-top">
+        <div className="flex items-center justify-between px-4 py-4">
+          <ButtonIcon
+            as={ArrowLeft}
+            size="md"
             onClick={handleBack}
             disabled={!canGoBack}
-            className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-              canGoBack
-                ? 'bg-mist-100 text-slate-700 hover:bg-mist-200 active:bg-mist-300'
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-            }`}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+            aria-label="Go Back"
+            variant="ghost"
+          />
 
-          <div className="flex items-center gap-2 text-sm">
-            <Sparkles className="h-4 w-4 text-coral-600" />
-            <span className="font-medium text-slate-700">
+          <div className="flex items-center gap-4">
+            <Icon as={Sparkles} size="sm" />
+            <Text as="span">
               Step {currentStepIndex + 1} of {totalSteps}
-            </span>
+            </Text>
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="h-1 bg-mist-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-coral-600 rounded-full transition-all duration-300 ease-out"
-            style={{ width: `${((currentStepIndex + 1) / totalSteps) * 100}%` }}
-          />
-        </div>
+        <ProgressIndicator value={((currentStepIndex + 1) / totalSteps) * 100} />
       </div>
 
       <div className="flex-1 flex flex-col">
         <MobileOnboardingStep currentStep={currentStep} progress={progress} />
       </div>
 
-      <div className="sticky bottom-0 bg-white border-t border-mist-200 p-4 safe-area-bottom">
-        <div className="flex gap-3">
+      <div className="sticky bottom-0 bg-white border-t border-border p-4 safe-area-bottom">
+        <div className={cn('flex gap-3', canGoBack ? 'justify-between' : 'justify-end')}>
           {canGoBack && (
-            <Button variant="mist-outline" size="lg" onClick={handleBack} className="flex-1 min-h-12">
+            <Button variant="neutral-outline" size="md" onClick={handleBack}>
               Back
             </Button>
           )}
@@ -173,14 +165,13 @@ function ContinueButton({
 
   return (
     <Button
-      iconRight={<ArrowRight className="h-4 w-4" />}
-      variant="coral"
-      size="lg"
+      variant="primary"
+      size="md"
       onClick={handleContinue}
-      busy={currentStep === 'complete' && isCompletingOnboarding}
-      className="flex-1 min-h-12 gap-2"
+      disabled={currentStep === 'complete' && isCompletingOnboarding}
     >
       {getButtonText()}
+      <Icon as={ArrowRight} size="md" color="neutral" />
     </Button>
   );
 }

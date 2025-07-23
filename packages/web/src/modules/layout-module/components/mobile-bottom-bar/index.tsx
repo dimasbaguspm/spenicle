@@ -1,4 +1,5 @@
-import { BottomBar, ButtonIcon } from '@dimasbaguspm/versaur';
+import { BottomBar } from '@dimasbaguspm/versaur/layouts';
+import { ButtonIcon } from '@dimasbaguspm/versaur/primitive';
 import { useLocation, useRouter } from '@tanstack/react-router';
 import { ChartArea, Home, Plus, Tags, Wallet2 } from 'lucide-react';
 import type { FC } from 'react';

@@ -1,6 +1,8 @@
+import { TextInput } from '@dimasbaguspm/versaur/forms';
+import { FormLayout } from '@dimasbaguspm/versaur/layouts';
+import { Text } from '@dimasbaguspm/versaur/primitive';
 import { Controller, useFormContext, type RegisterOptions } from 'react-hook-form';
 
-import { TextInput, FormLayout } from '../../../../../components';
 import type { RegisterFormData } from '../types';
 
 interface PersonalInfoStepProps {
@@ -15,8 +17,12 @@ export function PersonalInfoStep({ getFieldValidationRules }: PersonalInfoStepPr
 
   return (
     <FormLayout>
-      <FormLayout.Title title="Personal Information" />
-      <FormLayout.Field span="full">
+      <FormLayout.Column span={12}>
+        <Text as="h2" fontSize="lg" fontWeight="semibold">
+          Personal Information
+        </Text>
+      </FormLayout.Column>
+      <FormLayout.Column span={12}>
         <Controller
           name="name"
           control={control}
@@ -28,16 +34,15 @@ export function PersonalInfoStep({ getFieldValidationRules }: PersonalInfoStepPr
               type="text"
               label="Full Name"
               placeholder="Enter your full name"
-              variant="default"
-              size="lg"
               required
-              errorText={errors.name?.message}
+              autoFocus
+              error={errors.name?.message}
             />
           )}
         />
-      </FormLayout.Field>
+      </FormLayout.Column>
 
-      <FormLayout.Field span="full">
+      <FormLayout.Column span={12}>
         <Controller
           name="email"
           control={control}
@@ -49,14 +54,12 @@ export function PersonalInfoStep({ getFieldValidationRules }: PersonalInfoStepPr
               type="email"
               label="Email Address"
               placeholder="Enter your email"
-              variant="default"
-              size="lg"
               required
-              errorText={errors.email?.message}
+              error={errors.email?.message}
             />
           )}
         />
-      </FormLayout.Field>
+      </FormLayout.Column>
     </FormLayout>
   );
 }

@@ -1,3 +1,4 @@
+import { Icon } from '@dimasbaguspm/versaur';
 import {
   Building2,
   Car,
@@ -48,12 +49,12 @@ function MobileWelcomeStep() {
     <div className="flex flex-col justify-center h-full px-6 py-8">
       {/* Content */}
       <div className="flex-1 flex flex-col justify-center text-center">
-        <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-coral-100">
-          <DollarSign className="h-12 w-12 text-coral-600" />
+        <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
+          <Icon as={DollarSign} size="xl" color="neutral" />
         </div>
 
         <h1 className="mb-4 text-3xl font-bold text-slate-900">
-          Welcome to <span className="text-coral-600">SpendLess</span>
+          Welcome to <span className="text-coral-600">Spenicle</span>
         </h1>
 
         <p className="mb-8 text-lg leading-relaxed text-slate-600 max-w-sm mx-auto">
