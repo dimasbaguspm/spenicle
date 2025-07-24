@@ -1,6 +1,5 @@
 export { OnboardingDashboard, type OnboardingDashboardProps } from './onboarding-dashboard';
 export { OnboardingMobile, type OnboardingMobileProps } from './onboarding-mobile';
-export { OnboardingProgress, type OnboardingProgressProps } from './onboarding-progress';
 export { OnboardingContext, QuickTips, type OnboardingContextProps, type QuickTipsProps } from './onboarding-context';
 export {
   WelcomeStep,

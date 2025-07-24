@@ -53,9 +53,9 @@ export function AccountStep({ onOpenDrawer, isCompleted }: AccountStepProps) {
   }
 
   return (
-    <div className="flex flex-col justify-center h-full">
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
-        <Icon as={Building2} size="xl" color="neutral" />
+    <div className="flex flex-col justify-center h-full gap-6">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft">
+        <Icon as={Building2} size="xl" color="primary" />
       </div>
 
       <div>
@@ -108,8 +108,8 @@ export function CategoriesStep({ onOpenDrawer, isCompleted }: CategoriesStepProp
 
   return (
     <div className="flex flex-col justify-center h-full gap-6">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary">
-        <Icon as={FolderOpen} size="xl" color="neutral" />
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft">
+        <Icon as={FolderOpen} size="xl" color="primary" />
       </div>
 
       <div>
@@ -149,8 +149,8 @@ export interface CompleteStepProps {
 export function CompleteStep({ onFinish, isLoading }: CompleteStepProps) {
   return (
     <div className="flex flex-col justify-center h-full space-y-6">
-      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary">
-        <Icon as={PartyPopper} size="xl" color="neutral" />
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft">
+        <Icon as={PartyPopper} size="xl" color="primary" />
       </div>
       <div>
         <Text as="h2" fontSize="2xl" fontWeight="bold" className="mb-4" align="center">

@@ -3,7 +3,6 @@ import { Brand, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import type { UseOnboardingFlowReturn } from '../../hooks/use-onboarding-flow';
 
 import { OnboardingContext, QuickTips } from './onboarding-context';
-import { OnboardingProgress } from './onboarding-progress';
 import { AccountStep, CategoriesStep, CompleteStep, WelcomeStep } from './onboarding-steps';
 
 export interface OnboardingDashboardProps {
@@ -27,7 +26,6 @@ export function OnboardingDashboard({ onboardingFlow }: OnboardingDashboardProps
     currentStep,
     progress,
     stepMetadata,
-    currentStepIndex,
     isCompletingOnboarding,
     startOnboarding,
     openAccountDrawer,
@@ -51,13 +49,9 @@ export function OnboardingDashboard({ onboardingFlow }: OnboardingDashboardProps
           </div>
         </div>
 
-        <OnboardingProgress
-          currentStep={currentStep}
-          progress={progress}
-          currentStepIndex={currentStepIndex}
-          stepMetadata={stepMetadata}
-          variant="compact"
-        />
+        <Text as="span" fontSize="sm" fontWeight="medium">
+          Step {stepMetadata.findIndex((step) => step.key === currentStep) + 1} of {stepMetadata.length}
+        </Text>
       </div>
 
       {/* Main Content Area - Full Width Focus */}

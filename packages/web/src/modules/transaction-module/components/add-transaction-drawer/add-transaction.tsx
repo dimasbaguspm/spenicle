@@ -1,46 +1,31 @@
-import { Button, ButtonIcon, Drawer, Text } from '@dimasbaguspm/versaur';
+import { TimePickerInput, DateSinglePickerInput, CalculatorInput, TextAreaInput } from '@dimasbaguspm/versaur/forms';
+import { Drawer } from '@dimasbaguspm/versaur/overlays';
+import { Button, ButtonIcon, Text } from '@dimasbaguspm/versaur/primitive';
+import dayjs from 'dayjs';
 import { X } from 'lucide-react';
-import { useEffect, useState, type FC } from 'react';
+import { type FC } from 'react';
 import { Controller } from 'react-hook-form';
 
-import { TextArea, DateTimePicker, AmountField, CategorySelector } from '../../../../components';
+import { CategorySelector } from '../../../../components';
+import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { AccountSelector } from '../../../../modules/account-module/components/account-selector';
+import { useDrawerRouterProvider } from '../../../../providers/drawer-router';
 import type { Category } from '../../../../types/api';
 import { TransactionTypeSelector } from '../transaction-type-selector';
 
 import { useAddTransactionForm } from './use-add-transaction-form.hook';
 
 export const AddTransactionDrawer: FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const { closeDrawer, drawerId } = useDrawerRouterProvider();
+  const { handleSubmit, control, errors, onSubmit, isPending, accountOptions, categoryOptions } =
+    useAddTransactionForm();
 
-  const {
-    handleSubmit,
-    control,
-    errors,
-    onSubmit,
-    isPending,
-    createError,
-    closeDrawer,
-    accountOptions,
-    categoryOptions,
-  } = useAddTransactionForm();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsOpen(true);
-    }, 0); // Open drawer after component mounts
-
-    return () => clearTimeout(timer); // Cleanup timer on unmount
-  }, []);
-
-  const handleCloseDrawer = async () => {
-    setIsOpen(false);
-    await new Promise((resolve) => setTimeout(resolve, 501)); // Allow drawer to close before resetting form
+  const handleCloseDrawer = () => {
     closeDrawer();
   };
 
   return (
-    <Drawer isOpen={isOpen} onClose={handleCloseDrawer} size="md">
+    <Drawer isOpen={drawerId === DRAWER_IDS.CREATE_TRANSACTION} onClose={handleCloseDrawer} size="md">
       <Drawer.Header className="flex items-center justify-between">
         <Text as="h3" fontSize="lg" fontWeight="semibold">
           Add Transaction
@@ -56,11 +41,26 @@ export const AddTransactionDrawer: FC = () => {
               control={control}
               rules={{ required: 'Date is required' }}
               render={({ field }) => (
-                <DateTimePicker
-                  label="Date & Time"
+                <DateSinglePickerInput
+                  label="Date"
+                  type="modal"
                   value={field.value ? new Date(field.value) : undefined}
                   onChange={(date) => field.onChange(date?.toISOString())}
-                  errorText={errors.date?.message}
+                  error={errors.date?.message}
+                />
+              )}
+            />
+
+            <Controller
+              name="time"
+              control={control}
+              rules={{ required: 'Time is required' }}
+              render={({ field }) => (
+                <TimePickerInput
+                  label="Time"
+                  value={field.value ? field.value : dayjs().format('HH:mm A')}
+                  onChange={(date) => field.onChange(date)}
+                  error={errors.time?.message}
                 />
               )}
             />
@@ -91,13 +91,13 @@ export const AddTransactionDrawer: FC = () => {
                 },
               }}
               render={({ field }) => (
-                <AmountField
+                <CalculatorInput
                   label="Amount"
-                  value={field.value}
+                  placeholder="Enter amount"
+                  value={field.value ?? ''}
                   onChange={field.onChange}
-                  errorText={errors.amount?.message}
+                  error={errors.amount?.message}
                   disabled={isPending}
-                  required
                 />
               )}
             />
@@ -146,26 +146,18 @@ export const AddTransactionDrawer: FC = () => {
                 },
               }}
               render={({ field }) => (
-                <TextArea
+                <TextAreaInput
                   label="Notes"
                   placeholder="Add any notes about this transaction..."
                   value={field.value ?? ''}
                   onChange={field.onChange}
                   helperText="Optional description for this transaction"
-                  rows={3}
-                  errorText={errors.note?.message}
+                  fieldSizing="content"
+                  error={errors.note?.message}
                 />
               )}
             />
           </div>
-
-          {createError && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">
-                {createError?.message ?? 'Failed to create transaction. Please try again.'}
-              </p>
-            </div>
-          )}
         </form>
       </Drawer.Body>
       <Drawer.Footer>

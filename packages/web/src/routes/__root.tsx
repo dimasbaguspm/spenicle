@@ -3,7 +3,6 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 
-import { PageLayout } from '../components';
 import { DrawerRouterProvider } from '../providers/drawer-router';
 import { ModalProvider } from '../providers/modal';
 import { SnackProvider } from '../providers/snack';
@@ -17,11 +16,9 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     <SnackProvider>
       <DrawerRouterProvider>
         <ModalProvider>
-          <PageLayout minHeight="viewport" background="cream">
-            <Outlet />
-            <TanStackRouterDevtools />
-            <ReactQueryDevtools buttonPosition="bottom-right" />
-          </PageLayout>
+          <Outlet />
+          <TanStackRouterDevtools />
+          <ReactQueryDevtools buttonPosition="bottom-right" />
         </ModalProvider>
       </DrawerRouterProvider>
     </SnackProvider>

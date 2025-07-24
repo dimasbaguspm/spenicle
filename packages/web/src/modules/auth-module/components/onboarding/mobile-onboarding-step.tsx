@@ -1,10 +1,9 @@
-import { Icon } from '@dimasbaguspm/versaur';
+import { Brand } from '@dimasbaguspm/versaur/primitive';
 import {
   Building2,
   Car,
   CheckCircle,
   CreditCard,
-  DollarSign,
   Film,
   FolderOpen,
   Heart,
@@ -49,10 +48,9 @@ function MobileWelcomeStep() {
     <div className="flex flex-col justify-center h-full px-6 py-8">
       {/* Content */}
       <div className="flex-1 flex flex-col justify-center text-center">
-        <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
-          <Icon as={DollarSign} size="xl" color="neutral" />
+        <div className="flex items-center justify-center mb-6">
+          <Brand name="spenicle" size="xl" shape="rounded" />
         </div>
-
         <h1 className="mb-4 text-3xl font-bold text-slate-900">
           Welcome to <span className="text-coral-600">Spenicle</span>
         </h1>

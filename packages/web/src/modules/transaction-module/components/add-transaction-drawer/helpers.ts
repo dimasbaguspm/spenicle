@@ -36,6 +36,9 @@ export const VALIDATION_RULES = {
   date: {
     required: 'Date is required',
   },
+  time: {
+    required: 'Time is required',
+  },
   note: {
     maxLength: {
       value: 500,

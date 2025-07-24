@@ -1,13 +1,13 @@
+import { SegmentSingleInput } from '@dimasbaguspm/versaur/forms';
+import { Icon } from '@dimasbaguspm/versaur/primitive';
 import { Repeat, TrendingDown, TrendingUp } from 'lucide-react';
 import React from 'react';
-
-import { Segment } from '../../../../components';
 
 export type TransactionType = 'expense' | 'income' | 'transfer';
 
 export interface TransactionTypeSelectorProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string | null) => void;
   errorText?: string;
   disabled?: boolean;
   className?: string;
@@ -18,17 +18,17 @@ const BASE_TRANSACTION_TYPE_OPTIONS = [
   {
     label: 'Expense',
     value: 'expense',
-    icon: <TrendingDown className="h-4 w-4" />,
+    icon: TrendingDown,
   },
   {
     label: 'Income',
     value: 'income',
-    icon: <TrendingUp className="h-4 w-4" />,
+    icon: TrendingUp,
   },
   {
     label: 'Transfer',
     value: 'transfer',
-    icon: <Repeat className="h-4 w-4" />,
+    icon: Repeat,
   },
 ];
 
@@ -45,14 +45,24 @@ export const TransactionTypeSelector: React.FC<TransactionTypeSelectorProps> = (
     : BASE_TRANSACTION_TYPE_OPTIONS;
 
   return (
-    <Segment
+    <SegmentSingleInput
+      name="transactionType"
       label="Transaction Type"
-      options={options}
       value={value ?? ''}
-      onValueChange={onChange}
-      errorText={errorText}
+      onChange={onChange}
+      fullWidth
+      error={errorText}
       className={className}
       disabled={disabled}
-    />
+    >
+      {options.map((option) => (
+        <SegmentSingleInput.Option key={option.value} value={option.value} className="flex flex-row text-center">
+          {option.icon && (
+            <Icon as={option.icon} size="sm" className="mr-2" color={value === option.value ? 'neutral' : 'ghost'} />
+          )}
+          {option.label}
+        </SegmentSingleInput.Option>
+      ))}
+    </SegmentSingleInput>
   );
 };

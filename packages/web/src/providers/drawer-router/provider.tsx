@@ -98,14 +98,14 @@ export const DrawerRouterProvider: FC<PropsWithChildren> = ({ children }) => {
       <div ref={dispatchEl} />
       {children}
 
-      {is(DRAWER_IDS.CREATE_TRANSACTION) && <AddTransactionDrawer />}
+      <AddTransactionDrawer />
       {is(DRAWER_IDS.EDIT_TRANSACTION) && transaction && <EditTransactionDrawer transaction={transaction} />}
       {is(DRAWER_IDS.FILTER_TRANSACTION) && <TransactionFilterDrawer />}
       {is(DRAWER_IDS.ADD_ACCOUNT) && <AddAccountDrawer />}
       {is(DRAWER_IDS.EDIT_ACCOUNT) && account && <EditAccountDrawer account={account} />}
       {is(DRAWER_IDS.ADD_CATEGORY) && <AddCategoryDrawer />}
       {is(DRAWER_IDS.EDIT_CATEGORY) && category && <EditCategoryDrawer category={category} />}
-      {is(DRAWER_IDS.PROFILE) && <ProfileDrawer />}
+      <ProfileDrawer />
     </DrawerRouterContextProvider>
   );
 };

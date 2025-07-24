@@ -2,17 +2,16 @@ import { Drawer } from '@dimasbaguspm/versaur/overlays';
 import { Avatar, Button, Icon, Text } from '@dimasbaguspm/versaur/primitive';
 import { useNavigate } from '@tanstack/react-router';
 import { User, LogOut, Shield, BrushCleaning, File } from 'lucide-react';
-import { useEffect, useState, type FC } from 'react';
+import { type FC } from 'react';
 
+import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { useViewport } from '../../../../hooks';
 import { useAppVersion } from '../../../../hooks/use-app-version';
 import { useSession } from '../../../../hooks/use-session';
 import { useDrawerRouterProvider } from '../../../../providers/drawer-router';
 
 export const ProfileDrawer: FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const { closeDrawer } = useDrawerRouterProvider();
+  const { closeDrawer, drawerId } = useDrawerRouterProvider();
   const { isDesktop } = useViewport();
   const { user, logout } = useSession();
   const navigate = useNavigate();
@@ -28,10 +27,6 @@ export const ProfileDrawer: FC = () => {
       to: path,
     });
   };
-
-  useEffect(() => {
-    setIsOpen(true);
-  }, []);
 
   const profileActions = [
     {
@@ -65,7 +60,12 @@ export const ProfileDrawer: FC = () => {
   ];
 
   return (
-    <Drawer isOpen={isOpen} onClose={closeDrawer} size={isDesktop ? 'md' : '3/4'} position="left">
+    <Drawer
+      isOpen={drawerId === DRAWER_IDS.PROFILE}
+      onClose={closeDrawer}
+      size={isDesktop ? 'md' : '3/4'}
+      position="left"
+    >
       <Drawer.Body>
         <div className="flex items-center gap-4 pb-6 border-b border-border">
           <Avatar size="lg">{user?.name}</Avatar>
@@ -92,7 +92,7 @@ export const ProfileDrawer: FC = () => {
                   <Text as="p" fontWeight="medium">
                     {action.label}
                   </Text>
-                  <Text fontSize="sm" color="tertiary">
+                  <Text fontSize="sm" color="gray">
                     {action.description}
                   </Text>
                 </div>

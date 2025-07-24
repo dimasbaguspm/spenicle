@@ -21,6 +21,9 @@ export const DesktopTopBar: FC<Props> = (props) => {
       <TopBar.Leading>
         <Brand size="md" shape="rounded" name="spenicle" onClick={() => navigateTo('/')} />
         <TopBar.Nav>
+          <TopBar.NavItem onClick={() => navigateTo('/')} active={pathname === '/'}>
+            Home
+          </TopBar.NavItem>
           <TopBar.NavItem onClick={() => navigateTo('/analytics')} active={pathname.startsWith('/analytics')}>
             Analytics
           </TopBar.NavItem>

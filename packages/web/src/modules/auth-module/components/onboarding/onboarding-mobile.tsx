@@ -1,4 +1,5 @@
-import { Button, ButtonIcon, Icon, ProgressIndicator, Text } from '@dimasbaguspm/versaur';
+import { ProgressIndicator } from '@dimasbaguspm/versaur/feedbacks';
+import { Button, ButtonIcon, Icon, Text } from '@dimasbaguspm/versaur/primitive';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 
 import { cn } from '../../../../libs/utils';
