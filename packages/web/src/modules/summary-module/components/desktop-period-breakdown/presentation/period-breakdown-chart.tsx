@@ -1,4 +1,4 @@
-import { Text, Tile } from '@dimasbaguspm/versaur';
+import { Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import React from 'react';
 
 import { LineChart } from '../../../../../components';

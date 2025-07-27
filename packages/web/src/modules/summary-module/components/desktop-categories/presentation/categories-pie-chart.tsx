@@ -1,4 +1,5 @@
-import { SegmentSingleInput, Text, Tile } from '@dimasbaguspm/versaur';
+import { SegmentSingleInput } from '@dimasbaguspm/versaur/forms';
+import { Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import React from 'react';
 
 import { PieChart, type PieChartDatum } from '../../../../../components';

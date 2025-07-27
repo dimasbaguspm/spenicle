@@ -1,4 +1,4 @@
-import { Badge, ButtonFloat, Icon } from '@dimasbaguspm/versaur';
+import { Badge, ButtonFloat, Icon } from '@dimasbaguspm/versaur/primitive';
 import { Filter } from 'lucide-react';
 import React from 'react';
 

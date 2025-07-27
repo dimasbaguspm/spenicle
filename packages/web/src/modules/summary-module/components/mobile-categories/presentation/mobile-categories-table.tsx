@@ -1,4 +1,5 @@
-import { ButtonIcon, Icon, Text, TextInput, Tile } from '@dimasbaguspm/versaur';
+import { TextInput } from '@dimasbaguspm/versaur/forms';
+import { ButtonIcon, Icon, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import { Search, X } from 'lucide-react';
 import React, { useState } from 'react';
 

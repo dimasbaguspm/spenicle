@@ -1,4 +1,4 @@
-import { Tile, Button, Text, ButtonIcon, Icon, Badge } from '@dimasbaguspm/versaur';
+import { Tile, Button, Text, ButtonIcon, Icon, Badge } from '@dimasbaguspm/versaur/primitive';
 import dayjs from 'dayjs';
 import { Plus, Activity, FilterIcon } from 'lucide-react';
 import { type FC } from 'react';

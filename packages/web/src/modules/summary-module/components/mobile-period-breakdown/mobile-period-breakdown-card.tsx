@@ -1,5 +1,5 @@
 // mobile-period-breakdown-card component, renamed from period-breakdown-card.tsx
-import { Badge, Text, Tile, type BadgeProps } from '@dimasbaguspm/versaur';
+import { Badge, Text, Tile, type BadgeProps } from '@dimasbaguspm/versaur/primitive';
 import React from 'react';
 
 import { formatNumberCompact } from '../../../../libs/utils';

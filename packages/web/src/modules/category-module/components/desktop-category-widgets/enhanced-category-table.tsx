@@ -1,4 +1,4 @@
-import { ButtonIcon, Text, Tile } from '@dimasbaguspm/versaur';
+import { ButtonIcon, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { Edit } from 'lucide-react';

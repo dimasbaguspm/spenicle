@@ -1,4 +1,5 @@
-import { Badge, Text, TextInput, Tile } from '@dimasbaguspm/versaur';
+import { TextInput } from '@dimasbaguspm/versaur/forms';
+import { Badge, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import dayjs from 'dayjs';
 import { useMemo, type FC } from 'react';
 

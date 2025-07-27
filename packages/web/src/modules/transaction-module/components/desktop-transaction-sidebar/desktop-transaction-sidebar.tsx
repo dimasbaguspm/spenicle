@@ -1,4 +1,4 @@
-import { Button, Calendar, Text, Tile } from '@dimasbaguspm/versaur';
+import { Button, Calendar, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import dayjs from 'dayjs';
 import { type FC } from 'react';
 

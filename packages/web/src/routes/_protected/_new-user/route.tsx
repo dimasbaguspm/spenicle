@@ -1,4 +1,4 @@
-import { ProgressIndicator } from '@dimasbaguspm/versaur';
+import { ProgressIndicator } from '@dimasbaguspm/versaur/feedbacks';
 import { Text } from '@dimasbaguspm/versaur/primitive';
 import { createFileRoute, Navigate, Outlet, useLocation, useRouter } from '@tanstack/react-router';
 import { useEffect, useMemo } from 'react';

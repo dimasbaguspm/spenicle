@@ -1,4 +1,4 @@
-import { Icon, Text, Tile, type IconProps } from '@dimasbaguspm/versaur';
+import { Icon, Text, Tile, type IconProps } from '@dimasbaguspm/versaur/primitive';
 import { TrendingUp, TrendingDown, Activity, PercentDiamondIcon } from 'lucide-react';
 import { useMemo, type FC } from 'react';
 

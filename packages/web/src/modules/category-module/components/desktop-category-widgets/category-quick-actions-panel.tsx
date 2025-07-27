@@ -1,4 +1,5 @@
-import { Button, Icon, Text, TextInput, Tile } from '@dimasbaguspm/versaur';
+import { TextInput } from '@dimasbaguspm/versaur/forms';
+import { Button, Icon, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import { Plus } from 'lucide-react';
 import { type FC } from 'react';
 

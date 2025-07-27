@@ -1,4 +1,4 @@
-import { Text, type TextProps } from '@dimasbaguspm/versaur';
+import { Text, type TextProps } from '@dimasbaguspm/versaur/primitive';
 
 import { DRAWER_IDS } from '../../../../constants/drawer-id';
 import { formatAmount as formatAmountLib } from '../../../../libs/format-amount';

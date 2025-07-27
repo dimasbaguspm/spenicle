@@ -1,4 +1,5 @@
-import { Tile, Tabs, Text, Icon, type IconProps } from '@dimasbaguspm/versaur';
+import { Tabs } from '@dimasbaguspm/versaur/navigation';
+import { Tile, Text, Icon, type IconProps } from '@dimasbaguspm/versaur/primitive';
 import dayjs from 'dayjs';
 import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import { useMemo, type FC } from 'react';

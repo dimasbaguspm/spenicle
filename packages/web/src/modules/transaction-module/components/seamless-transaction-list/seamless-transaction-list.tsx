@@ -1,4 +1,5 @@
-import { Alert, Button, Icon, Skeleton, Text } from '@dimasbaguspm/versaur';
+import { Skeleton } from '@dimasbaguspm/versaur/feedbacks';
+import { Alert, Button, Icon, Text } from '@dimasbaguspm/versaur/primitive';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AlertCircleIcon } from 'lucide-react';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';

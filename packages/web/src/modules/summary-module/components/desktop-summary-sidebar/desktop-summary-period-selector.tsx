@@ -1,4 +1,5 @@
-import { ButtonIcon, SegmentSingleInput, Text, Tile } from '@dimasbaguspm/versaur';
+import { SegmentSingleInput } from '@dimasbaguspm/versaur/forms';
+import { ButtonIcon, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useDesktopSummaryFilters } from '../../hooks';

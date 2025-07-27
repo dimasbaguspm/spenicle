@@ -1,4 +1,4 @@
-import { Text, Tile } from '@dimasbaguspm/versaur';
+import { Text, Tile } from '@dimasbaguspm/versaur/primitive';
 
 interface PanelConfig {
   title: string;

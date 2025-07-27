@@ -1,4 +1,4 @@
-import { Tile } from '@dimasbaguspm/versaur';
+import { Tile } from '@dimasbaguspm/versaur/primitive';
 import { type Dayjs } from 'dayjs';
 import { debounce } from 'lodash';
 import { useEffect, useRef } from 'react';

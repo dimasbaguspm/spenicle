@@ -1,4 +1,4 @@
-import { Text } from '@dimasbaguspm/versaur';
+import { Text } from '@dimasbaguspm/versaur/primitive';
 import React, { useMemo, useState } from 'react';
 
 import { useApiAccountsQuery } from '../../../../hooks/use-api/built-in/use-accounts';

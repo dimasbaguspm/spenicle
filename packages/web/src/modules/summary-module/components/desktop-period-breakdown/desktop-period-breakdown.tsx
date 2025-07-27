@@ -1,4 +1,4 @@
-import { Tile } from '@dimasbaguspm/versaur';
+import { Tile } from '@dimasbaguspm/versaur/primitive';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 

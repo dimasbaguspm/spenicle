@@ -96,6 +96,8 @@ export const MobileCategories: React.FC<MobileCategoriesProps> = ({ startDate, e
     <div>
       <ChipInput
         name="chartType"
+        size="md"
+        shape="rounded"
         value={[chartType]}
         onChange={(value) => {
           const selected = value?.[1];
@@ -110,7 +112,7 @@ export const MobileCategories: React.FC<MobileCategoriesProps> = ({ startDate, e
       </ChipInput>
       <div className="mx-4 space-y-6">
         {/* pie chart display with mobile-optimized toggle */}
-        <MobileCategoriesPieChart chartData={pieChartData} chartType={chartType} onChartTypeChange={setChartType} />
+        <MobileCategoriesPieChart chartData={pieChartData} chartType={chartType} />
         {/* mobile-optimized card table */}
         <MobileCategoriesTable data={sortedEnrichedData} categories={allCategories} chartType={chartType} />
       </div>

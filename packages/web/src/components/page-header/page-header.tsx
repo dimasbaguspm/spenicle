@@ -78,7 +78,7 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
     return (
       <div ref={ref} className={cn(pageHeaderVariants({ variant, size }), className)} {...props}>
         {/* Back Button */}
-        {showBackButton && <BackButton variant="ghost" size="md" {...backButton} />}
+        {showBackButton && <BackButton {...backButton} />}
 
         {/* Title */}
         {title && <h1 className={cn(pageTitleVariants({ size: actualTitleSize }), 'flex-1')}>{title}</h1>}

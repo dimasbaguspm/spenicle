@@ -1,4 +1,5 @@
-import { AppBar, ButtonFloat, Icon, Text } from '@dimasbaguspm/versaur';
+import { AppBar } from '@dimasbaguspm/versaur/layouts';
+import { ButtonFloat, Icon, Text } from '@dimasbaguspm/versaur/primitive';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useState, type FC } from 'react';
@@ -7,18 +8,14 @@ import { BackButton } from '../../../components';
 import { useApiAccountsQuery } from '../../../hooks';
 import { useDrawerRouterProvider } from '../../../providers/drawer-router';
 import type { Account } from '../../../types/api';
-import {
-  MobileAccountInsightsWidget,
-  MobileAccountSummarySection,
-  type PeriodType,
-} from '../components/mobile-account-widgets';
+import { MobileAccountSummarySection, type PeriodType } from '../components/mobile-account-widgets';
 
 export const MobileAccountDashboardPage: FC = () => {
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
   const [accountsData] = useApiAccountsQuery({ pageSize: 1000 });
   const { openDrawer } = useDrawerRouterProvider();
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('today');
+  const [selectedPeriod] = useState<PeriodType>('today');
 
   const accounts = accountsData?.items ?? [];
 
@@ -46,7 +43,7 @@ export const MobileAccountDashboardPage: FC = () => {
   };
 
   return (
-    <div className="mx-4">
+    <>
       <AppBar>
         <AppBar.Leading>
           <BackButton />
@@ -60,14 +57,7 @@ export const MobileAccountDashboardPage: FC = () => {
         </AppBar.Center>
       </AppBar>
 
-      <div className="space-y-4">
-        {/* financial insights widget - key metrics at a glance */}
-        <MobileAccountInsightsWidget
-          accounts={accounts}
-          selectedPeriod={selectedPeriod}
-          onPeriodChange={setSelectedPeriod}
-        />
-
+      <div className="space-y-4 mx-2 mt-4">
         {/* enhanced account summary with integrated search and mobile-optimized layout */}
         <MobileAccountSummarySection
           accounts={accounts}
@@ -81,6 +71,6 @@ export const MobileAccountDashboardPage: FC = () => {
       <ButtonFloat offset="5rem" size="sm" onClick={handleAddAccount}>
         <Icon as={Plus} size="lg" color="neutral" />
       </ButtonFloat>
-    </div>
+    </>
   );
 };

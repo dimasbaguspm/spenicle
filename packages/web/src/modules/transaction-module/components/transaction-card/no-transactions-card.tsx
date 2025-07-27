@@ -1,4 +1,4 @@
-import { Icon, Text } from '@dimasbaguspm/versaur';
+import { Icon, Text } from '@dimasbaguspm/versaur/primitive';
 import { Clipboard } from 'lucide-react';
 import React from 'react';
 

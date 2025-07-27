@@ -1,4 +1,4 @@
-import { Badge, Text } from '@dimasbaguspm/versaur';
+import { Badge, Text } from '@dimasbaguspm/versaur/primitive';
 import { Dayjs } from 'dayjs';
 
 import { formatAmount } from '../../../../libs/format-amount';

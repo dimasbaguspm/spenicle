@@ -1,4 +1,5 @@
-import { ChipInput, Text } from '@dimasbaguspm/versaur';
+import { ChipInput } from '@dimasbaguspm/versaur/forms';
+import { Text } from '@dimasbaguspm/versaur/primitive';
 import { type FC } from 'react';
 
 import type { Account, Category } from '../../../../types/api';

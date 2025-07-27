@@ -1,4 +1,4 @@
-import { Text, type TextProps } from '@dimasbaguspm/versaur';
+import { Text, type TextProps } from '@dimasbaguspm/versaur/primitive';
 import dayjs from 'dayjs';
 import { Edit } from 'lucide-react';
 import { type FC } from 'react';

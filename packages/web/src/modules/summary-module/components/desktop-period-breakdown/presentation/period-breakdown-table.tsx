@@ -1,4 +1,4 @@
-import { ButtonIcon, Text, Tile } from '@dimasbaguspm/versaur';
+import { ButtonIcon, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import { NotebookTabs } from 'lucide-react';
 import React from 'react';
 

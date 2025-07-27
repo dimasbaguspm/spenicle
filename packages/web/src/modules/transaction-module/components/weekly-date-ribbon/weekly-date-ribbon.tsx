@@ -1,4 +1,4 @@
-import { Text } from '@dimasbaguspm/versaur';
+import { Text } from '@dimasbaguspm/versaur/primitive';
 import { cva, type VariantProps } from 'class-variance-authority';
 import dayjs, { Dayjs } from 'dayjs';
 import { forwardRef, useCallback, useMemo } from 'react';

@@ -1,7 +1,8 @@
 import { AppBar } from '@dimasbaguspm/versaur/layouts';
 import { Tabs } from '@dimasbaguspm/versaur/navigation';
-import { Text } from '@dimasbaguspm/versaur/primitive';
+import { ButtonFloat, Icon, Text } from '@dimasbaguspm/versaur/primitive';
 import { Outlet, useLocation, useNavigate } from '@tanstack/react-router';
+import { FilterIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { BackButton } from '../../../components';
@@ -14,7 +15,7 @@ export const MobileSummaryDashboardPageComponent = () => {
 
   const [periodModalOpen, setPeriodModalOpen] = useState(false);
 
-  const { actions } = useDesktopSummaryFilters();
+  const { actions, state } = useDesktopSummaryFilters();
 
   // Determine active tab from location
   const getActiveTab = () => {
@@ -59,6 +60,11 @@ export const MobileSummaryDashboardPageComponent = () => {
               Analytics
             </Text>
           </AppBar.Headline>
+          <AppBar.Subtitle>
+            <Text as="p" fontSize="sm" color="gray">
+              Period {state.currentPeriodDisplay}
+            </Text>
+          </AppBar.Subtitle>
         </AppBar.Center>
         <AppBar.Bottom>
           <Tabs value={activeTab} onValueChange={handleOnTabChange}>
@@ -77,6 +83,10 @@ export const MobileSummaryDashboardPageComponent = () => {
       />
 
       <Outlet />
+
+      <ButtonFloat onClick={() => setPeriodModalOpen(true)} size="sm" offset="5rem" variant="primary-outline">
+        <Icon as={FilterIcon} size="md" color="inherit" />
+      </ButtonFloat>
     </>
   );
 };
