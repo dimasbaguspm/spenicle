@@ -1,9 +1,10 @@
-import { AppBar, Tabs, Text } from '@dimasbaguspm/versaur';
+import { AppBar } from '@dimasbaguspm/versaur/layouts';
+import { Tabs } from '@dimasbaguspm/versaur/navigation';
+import { Text } from '@dimasbaguspm/versaur/primitive';
 import { Outlet, useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 import { BackButton } from '../../../components';
-import { QuickInsightsWidget } from '../components/desktop-overview-widgets';
 import { PeriodSelectorModal, type PeriodSelectorFormData } from '../components/period-selector-modal';
 import { useDesktopSummaryFilters } from '../hooks';
 
@@ -47,7 +48,7 @@ export const MobileSummaryDashboardPageComponent = () => {
   };
 
   return (
-    <div className="mx-4">
+    <>
       <AppBar>
         <AppBar.Leading>
           <BackButton />
@@ -59,6 +60,13 @@ export const MobileSummaryDashboardPageComponent = () => {
             </Text>
           </AppBar.Headline>
         </AppBar.Center>
+        <AppBar.Bottom>
+          <Tabs value={activeTab} onValueChange={handleOnTabChange}>
+            <Tabs.Trigger value="period-breakdown">Period</Tabs.Trigger>
+            <Tabs.Trigger value="categories">Categories</Tabs.Trigger>
+            <Tabs.Trigger value="accounts">Accounts</Tabs.Trigger>
+          </Tabs>
+        </AppBar.Bottom>
       </AppBar>
 
       {/* period selector modal */}
@@ -68,17 +76,7 @@ export const MobileSummaryDashboardPageComponent = () => {
         onConfirm={handleModalConfirm}
       />
 
-      <div className="space-y-6">
-        <QuickInsightsWidget />
-
-        <Tabs value={activeTab} onValueChange={handleOnTabChange} className="w-full">
-          <Tabs.Trigger value="period-breakdown">Period</Tabs.Trigger>
-          <Tabs.Trigger value="categories">Categories</Tabs.Trigger>
-          <Tabs.Trigger value="accounts">Accounts</Tabs.Trigger>
-        </Tabs>
-
-        <Outlet />
-      </div>
-    </div>
+      <Outlet />
+    </>
   );
 };

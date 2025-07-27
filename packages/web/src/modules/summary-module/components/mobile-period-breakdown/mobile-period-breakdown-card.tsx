@@ -28,7 +28,7 @@ export const MobilePeriodBreakdownCard: React.FC<MobilePeriodBreakdownCardProps>
   let badgeColor: BadgeProps['color'] = 'warning';
   let badgeLabel = 'Negative';
   if ((period.totalIncome ?? 0) === 0 && (period.totalExpenses ?? 0) === 0) {
-    badgeColor = 'info';
+    badgeColor = 'neutral';
     badgeLabel = 'No activity';
   } else if ((period.netAmount ?? 0) > 0) {
     badgeColor = 'success';

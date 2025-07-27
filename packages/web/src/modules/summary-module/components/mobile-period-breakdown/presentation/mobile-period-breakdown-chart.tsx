@@ -1,4 +1,4 @@
-import { Text, Tile } from '@dimasbaguspm/versaur';
+import { Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import React from 'react';
 
 import { LineChart } from '../../../../../components';
@@ -17,7 +17,7 @@ export const MobilePeriodBreakdownChart: React.FC<MobilePeriodBreakdownChartProp
       <Text as="h3" fontSize="lg" fontWeight="semibold">
         {periodType === 'weekly' ? 'Daily' : periodType === 'monthly' ? 'Weekly' : 'Monthly'} Financial Overview
       </Text>
-      <Text as="p" fontSize="sm">
+      <Text as="p" fontSize="sm" color="gray">
         Income and expenses breakdown for the selected period
       </Text>
     </div>

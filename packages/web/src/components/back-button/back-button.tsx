@@ -1,4 +1,4 @@
-import { ButtonIcon } from '@dimasbaguspm/versaur';
+import { ButtonIcon } from '@dimasbaguspm/versaur/primitive';
 import { useRouter } from '@tanstack/react-router';
 import { ChevronLeft } from 'lucide-react';
 import { forwardRef } from 'react';

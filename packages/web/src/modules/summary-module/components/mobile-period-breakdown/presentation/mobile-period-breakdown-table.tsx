@@ -1,4 +1,4 @@
-import { Text, Tile } from '@dimasbaguspm/versaur';
+import { Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import React from 'react';
 
 import type { SummaryTransactionsPeriod } from '../../../../../types/api';
@@ -27,9 +27,8 @@ export const MobilePeriodBreakdownTable: React.FC<MobilePeriodBreakdownTableProp
       <Text as="h3" fontSize="lg" fontWeight="semibold">
         Period Breakdown Details
       </Text>
-      <Text as="p" fontSize="sm">
-        Essential period metrics for the selected timeframe (showing {data.length}{' '}
-        {periodType === 'weekly' ? 'days' : periodType === 'monthly' ? 'weeks' : 'months'})
+      <Text as="p" fontSize="sm" color="gray">
+        Essential period metrics for the selected timeframe
       </Text>
     </div>
     <MobilePeriodBreakdownCardList

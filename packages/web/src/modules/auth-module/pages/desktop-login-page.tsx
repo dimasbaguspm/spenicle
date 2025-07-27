@@ -1,6 +1,6 @@
 import { TextInput } from '@dimasbaguspm/versaur/forms';
 import { FormLayout } from '@dimasbaguspm/versaur/layouts';
-import { Button, Text, Tile } from '@dimasbaguspm/versaur/primitive';
+import { Anchor, Button, Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import { Link } from '@tanstack/react-router';
 import type { FC } from 'react';
 
@@ -54,9 +54,15 @@ export const DesktopLoginPage: FC = () => {
           </form>
 
           {/* Footer Links */}
-          <div className="flex flex-row gap-2 justify-center mt-6">
-            <Text as="p">Don't have an account?</Text>
-            <Link to="/register">Create one here</Link>
+          <div className="flex flex-row gap-2 justify-center items-center mt-6">
+            <Text as="p" fontSize="sm" color="gray">
+              Don't have an account?
+            </Text>
+            <Link to={'/register'}>
+              <Anchor href="/register" fontSize="sm">
+                Create one here
+              </Anchor>
+            </Link>
           </div>
         </Tile>
 

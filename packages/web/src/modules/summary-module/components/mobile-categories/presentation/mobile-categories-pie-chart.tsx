@@ -1,4 +1,5 @@
-import { Tabs, Text, Tile } from '@dimasbaguspm/versaur';
+import { Tabs } from '@dimasbaguspm/versaur/navigation';
+import { Text, Tile } from '@dimasbaguspm/versaur/primitive';
 import React from 'react';
 
 import { PieChart, type PieChartDatum } from '../../../../../components';

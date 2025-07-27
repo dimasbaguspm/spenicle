@@ -1,4 +1,5 @@
-import { Text } from '@dimasbaguspm/versaur';
+import { ChipInput } from '@dimasbaguspm/versaur/forms';
+import { Text } from '@dimasbaguspm/versaur/primitive';
 import React, { useMemo, useState } from 'react';
 
 import { useApiCategoriesQuery } from '../../../../hooks/use-api/built-in/use-categories';
@@ -92,11 +93,27 @@ export const MobileCategories: React.FC<MobileCategoriesProps> = ({ startDate, e
   }
 
   return (
-    <div className="space-y-6">
-      {/* pie chart display with mobile-optimized toggle */}
-      <MobileCategoriesPieChart chartData={pieChartData} chartType={chartType} onChartTypeChange={setChartType} />
-      {/* mobile-optimized card table */}
-      <MobileCategoriesTable data={sortedEnrichedData} categories={allCategories} chartType={chartType} />
+    <div>
+      <ChipInput
+        name="chartType"
+        value={[chartType]}
+        onChange={(value) => {
+          const selected = value?.[1];
+          if (selected !== chartType && (selected === 'expenses' || selected === 'income')) {
+            setChartType(selected);
+          }
+        }}
+        className="pb-2 px-4 "
+      >
+        <ChipInput.Option value="expenses">Expenses</ChipInput.Option>
+        <ChipInput.Option value="income">Income</ChipInput.Option>
+      </ChipInput>
+      <div className="mx-4 space-y-6">
+        {/* pie chart display with mobile-optimized toggle */}
+        <MobileCategoriesPieChart chartData={pieChartData} chartType={chartType} onChartTypeChange={setChartType} />
+        {/* mobile-optimized card table */}
+        <MobileCategoriesTable data={sortedEnrichedData} categories={allCategories} chartType={chartType} />
+      </div>
     </div>
   );
 };

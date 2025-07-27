@@ -77,6 +77,9 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    target: 'esnext',
+  },
   server: {
     port: process.env.WEB_PORT,
   },

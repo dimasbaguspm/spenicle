@@ -19,7 +19,7 @@ function RouteComponent() {
   return (
     <>
       {isDesktop && <DesktopTopBar />}
-      <PageLayout type={isDesktop ? 'desktop' : 'mobile'} className="mx-auto">
+      <PageLayout type={isDesktop ? 'desktop' : 'mobile'} className="mx-auto grow-1 pb-6">
         <Outlet />
       </PageLayout>
       {!isDesktop && <MobileBottomBar />}
