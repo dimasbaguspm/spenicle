@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/dimasbaguspm/spenicle-api/config"
+	"github.com/dimasbaguspm/spenicle-api/internal/database"
+	"github.com/dimasbaguspm/spenicle-api/internal/database/repositories"
 	"github.com/dimasbaguspm/spenicle-api/resource"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -23,10 +26,13 @@ func (rc *RoutesConfig) Setup() {
 	rc.Router.Use(middleware.Logger)
 	rc.Router.Use(middleware.Heartbeat("/"))
 
-	// Mount resource routes
-	rc.Router.Mount("/accounts", resource.AccountResource{
-		Env: rc.Environment,
-	}.Routes())
+	pool, err := database.NewPool(context.Background(), rc.Environment.DatabaseURL)
+	if err != nil {
+		panic("failed to connect to database: " + err.Error())
+	}
+
+	accountRepo := repositories.NewAccountRepository(pool)
+	rc.Router.Mount("/accounts", resource.NewAccountResource(accountRepo).Routes())
 
 	rc.Router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		encoded, err := json.Marshal(map[string]string{"error": "Resource not found"})
