@@ -16,7 +16,7 @@ func TestPaginatedAccountSchema_ToJSON(t *testing.T) {
 			{ID: 1, Name: "A", Type: "expense", Amount: 10, CreatedAt: time.Now().UTC()},
 		},
 	}
-	if _, err := pas.ToJSON(); err != nil {
+	if _, err := json.Marshal(pas); err != nil {
 		t.Fatalf("ToJSON failed: %v", err)
 	}
 }
@@ -31,7 +31,7 @@ func TestPaginatedAccountSchema_JSONContainsFields(t *testing.T) {
 			{ID: 1, Name: "A", Type: "expense", Amount: 10, CreatedAt: time.Now().UTC()},
 		},
 	}
-	b, err := pas.ToJSON()
+	b, err := json.Marshal(pas)
 	if err != nil {
 		t.Fatalf("ToJSON failed: %v", err)
 	}

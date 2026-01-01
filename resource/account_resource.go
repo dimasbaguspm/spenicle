@@ -1,156 +1,187 @@
 package resource
 
 import (
-	"encoding/json"
+	"context"
+	"log"
 	"net/http"
-	"strconv"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/database/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schema"
-	"github.com/go-chi/chi/v5"
 )
 
+// Add interface (doesn't break existing code)
+type AccountStore interface {
+	List(ctx context.Context, params schema.SearchParamAccountSchema) (schema.PaginatedAccountSchema, error)
+	Get(ctx context.Context, id int64) (schema.AccountSchema, error)
+	Create(ctx context.Context, data schema.CreateAccountSchema) (schema.AccountSchema, error)
+	Update(ctx context.Context, id int64, data schema.UpdateAccountSchema) (schema.AccountSchema, error)
+	Delete(ctx context.Context, id int64) error
+}
+
 type AccountResource struct {
-	Store *repositories.AccountRepository
+	store AccountStore
 }
 
-// NewAccountResource constructs an AccountResource using the provided repository.
-func NewAccountResource(store *repositories.AccountRepository) AccountResource {
-	return AccountResource{Store: store}
+func NewAccountResource(store *repositories.AccountRepository) *AccountResource {
+	return &AccountResource{store: store}
 }
 
-func (ar AccountResource) Routes() chi.Router {
-	r := chi.NewRouter()
-
-	r.Get("/", ar.GetPaginated)
-	r.Post("/", ar.Create)
-	r.Route("/{id}", func(r chi.Router) {
-		r.Get("/", ar.GetDetail)
-		r.Patch("/", ar.Update)
-		r.Delete("/", ar.Delete)
-	})
-
-	return r
+type AccountPathParam struct {
+	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
 }
 
-func (ar *AccountResource) GetPaginated(w http.ResponseWriter, r *http.Request) {
-	searchParams := schema.SearchParamAccountSchema{}
-	searchParams.ParseFromQuery(r.URL.Query())
-
-	parsedResult, err := ar.Store.List(r.Context(), searchParams)
-	if err != nil {
-		http.Error(w, "Failed to list accounts", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	jsonData, err := parsedResult.ToJSON()
-	if err != nil {
-		http.Error(w, "Failed to encode accounts to JSON", http.StatusInternalServerError)
-		return
-	}
-	w.Write(jsonData)
+type getPaginatedAccountsRequest struct {
+	schema.SearchParamAccountSchema
 }
 
-func (ar *AccountResource) GetDetail(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid account id", http.StatusBadRequest)
-		return
-	}
-
-	account, err := ar.Store.Get(r.Context(), id)
-	if err != nil {
-		http.Error(w, "Account not found", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	data, err := account.ToJSON()
-	if err != nil {
-		http.Error(w, "Failed to encode account", http.StatusInternalServerError)
-		return
-	}
-	w.Write(data)
+type getPaginatedAccountsResponse struct {
+	Status int `json:"-"`
+	Body   schema.PaginatedAccountSchema
 }
 
-func (ar *AccountResource) Create(w http.ResponseWriter, r *http.Request) {
-	var payload schema.CreateAccountSchema
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	if !payload.IsValid() {
-		http.Error(w, "Invalid account data", http.StatusBadRequest)
-		return
-	}
-
-	account, err := ar.Store.Create(r.Context(), payload)
-	if err != nil {
-		http.Error(w, "Failed to create account", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	data, err := account.ToJSON()
-	if err != nil {
-		http.Error(w, "Failed to encode account", http.StatusInternalServerError)
-		return
-	}
-	w.Write(data)
+type getAccountRequest struct {
+	AccountPathParam
 }
 
-func (ar *AccountResource) Update(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid account id", http.StatusBadRequest)
-		return
-	}
-
-	var payload schema.UpdateAccountSchema
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-	if !payload.IsValid() {
-		http.Error(w, "Invalid account data", http.StatusBadRequest)
-		return
-	}
-	if !payload.IsChanged(payload) {
-		http.Error(w, "No changes provided", http.StatusBadRequest)
-		return
-	}
-
-	account, err := ar.Store.Update(r.Context(), id, payload)
-	if err != nil {
-		http.Error(w, "Failed to update account", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	data, err := account.ToJSON()
-	if err != nil {
-		http.Error(w, "Failed to encode account", http.StatusInternalServerError)
-		return
-	}
-	w.Write(data)
+type getAccountResponse struct {
+	Status int `json:"-"`
+	Body   schema.AccountSchema
 }
 
-func (ar *AccountResource) Delete(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+type createAccountRequest struct {
+	Body schema.CreateAccountSchema
+}
+
+type createAccountResponse struct {
+	Status int `json:"-"`
+	Body   schema.AccountSchema
+}
+
+type updateAccountRequest struct {
+	AccountPathParam
+	Body schema.UpdateAccountSchema
+}
+
+type updateAccountResponse struct {
+	Status int `json:"-"`
+	Body   schema.AccountSchema
+}
+
+type deleteAccountRequest struct {
+	AccountPathParam
+}
+
+type deleteAccountResponse struct {
+	Status int `json:"-"`
+}
+
+// RegisterRoutes configures all account-related HTTP endpoints.
+// It registers CRUD operations for account management with the Huma API.
+func (ar *AccountResource) RegisterRoutes(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "list-accounts",
+		Method:      http.MethodGet,
+		Path:        "/accounts",
+		Summary:     "List accounts",
+		Description: "Get a paginated list of accounts with optional search",
+		Tags:        []string{"Accounts"},
+	}, ar.GetPaginated)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "create-account",
+		Method:      http.MethodPost,
+		Path:        "/accounts",
+		Summary:     "Create account",
+		Description: "Create a new account",
+		Tags:        []string{"Accounts"},
+	}, ar.Create)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-account",
+		Method:      http.MethodGet,
+		Path:        "/accounts/{id}",
+		Summary:     "Get account",
+		Description: "Get a single account by ID",
+		Tags:        []string{"Accounts"},
+	}, ar.Get)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "update-account",
+		Method:      http.MethodPatch,
+		Path:        "/accounts/{id}",
+		Summary:     "Update account",
+		Description: "Update an existing account",
+		Tags:        []string{"Accounts"},
+	}, ar.Update)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "delete-account",
+		Method:      http.MethodDelete,
+		Path:        "/accounts/{id}",
+		Summary:     "Delete account",
+		Description: "Delete an account",
+		Tags:        []string{"Accounts"},
+	}, ar.Delete)
+}
+
+func (ar *AccountResource) GetPaginated(ctx context.Context, input *getPaginatedAccountsRequest) (*getPaginatedAccountsResponse, error) {
+	searchParams := input.SearchParamAccountSchema
+
+	parsedResult, err := ar.store.List(ctx, searchParams)
 	if err != nil {
-		http.Error(w, "Invalid account id", http.StatusBadRequest)
-		return
+		log.Printf("Failed to list accounts: %v", err)
+		return nil, huma.Error500InternalServerError("Failed to list accounts", err)
 	}
 
-	if err := ar.Store.Delete(r.Context(), id); err != nil {
-		http.Error(w, "Failed to delete account", http.StatusInternalServerError)
-		return
+	return &getPaginatedAccountsResponse{Status: http.StatusOK, Body: parsedResult}, nil
+}
+
+func (ar *AccountResource) Get(ctx context.Context, input *getAccountRequest) (*getAccountResponse, error) {
+	accountSchema, err := ar.store.Get(ctx, input.ID)
+
+	if err != nil {
+		log.Printf("Failed to get account %d: %v", input.ID, err)
+		return nil, huma.Error404NotFound("Account not found", err)
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	return &getAccountResponse{Status: http.StatusOK, Body: accountSchema}, nil
+}
+
+func (ar *AccountResource) Create(ctx context.Context, input *createAccountRequest) (*createAccountResponse, error) {
+	createSchema := input.Body
+
+	accountSchema, err := ar.store.Create(ctx, createSchema)
+	if err != nil {
+		log.Printf("Failed to create account: %v", err)
+		return nil, huma.Error500InternalServerError("Failed to create account", err)
+	}
+
+	return &createAccountResponse{Status: http.StatusCreated, Body: accountSchema}, nil
+}
+
+func (ar *AccountResource) Update(ctx context.Context, input *updateAccountRequest) (*updateAccountResponse, error) {
+	updateSchema := input.Body
+
+	// Validate at least one field is provided for update
+	if updateSchema.Name == nil && updateSchema.Type == nil && updateSchema.Note == nil && updateSchema.Amount == nil {
+		return nil, huma.Error400BadRequest("At least one field must be provided to update")
+	}
+
+	accountSchema, err := ar.store.Update(ctx, input.ID, updateSchema)
+	if err != nil {
+		log.Printf("Failed to update account %d: %v", input.ID, err)
+		return nil, huma.Error500InternalServerError("Failed to update account", err)
+	}
+
+	return &updateAccountResponse{Status: http.StatusOK, Body: accountSchema}, nil
+}
+
+func (ar *AccountResource) Delete(ctx context.Context, input *deleteAccountRequest) (*deleteAccountResponse, error) {
+	if err := ar.store.Delete(ctx, input.ID); err != nil {
+		log.Printf("Failed to delete account %d: %v", input.ID, err)
+		return nil, huma.Error500InternalServerError("Failed to delete account", err)
+	}
+
+	return &deleteAccountResponse{Status: http.StatusNoContent}, nil
 }

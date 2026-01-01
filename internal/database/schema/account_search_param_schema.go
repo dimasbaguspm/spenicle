@@ -7,12 +7,12 @@ import (
 
 // SearchParamAccountSchema represents the search parameters for querying accounts
 type SearchParamAccountSchema struct {
-	Name           string `json:"name"`
-	Type           string `json:"type" validate:"omitempty,oneof=expense income"`
-	OrderBy        string `json:"orderBy" validate:"omitempty,oneof=name type amount createdAt updatedAt"`
-	OrderDirection string `json:"orderDirection" validate:"omitempty,oneof=asc desc"`
-	PageNumber     int    `json:"pageNumber" validate:"gte=1"`
-	PageSize       int    `json:"pageSize" validate:"gte=1,lte=100"`
+	Name           string `query:"name"`
+	Type           string `query:"type" enum:"expense,income"`
+	OrderBy        string `query:"orderBy" enum:"name,type,amount,createdAt,updatedAt"`
+	OrderDirection string `query:"orderDirection" enum:"asc,desc"`
+	PageNumber     int    `query:"pageNumber" minimum:"1" default:"1"`
+	PageSize       int    `query:"pageSize" minimum:"1" maximum:"100" default:"10"`
 }
 
 // ParseFromQuery populates SearchParamAccountSchema from URL query parameters.

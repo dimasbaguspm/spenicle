@@ -1,45 +1,25 @@
 package schema
 
-import (
-	"encoding/json"
-)
-
-// UpdateAccountSchema represents the schema for updating an account
+// UpdateAccountSchema represents the schema for updating an account.
+// All fields are optional pointers to distinguish between not provided and explicit zero values.
 type UpdateAccountSchema struct {
-	Name   *string `json:"name"`
-	Type   *string `json:"type" validate:"omitempty,oneof=expense income"`
-	Note   *string `json:"note"`
-	Amount *int64  `json:"amount" validate:"omitempty,gte=0"`
+	Name   *string `json:"name,omitempty" doc:"Name of the account" example:"Salary" minLength:"1" maxLength:"255"`
+	Type   *string `json:"type,omitempty" enum:"expense,income" doc:"Type of account" example:"income"`
+	Note   *string `json:"note,omitempty" doc:"Note for the account" example:"Updated note" maxLength:"1000"`
+	Amount *int64  `json:"amount,omitempty" minimum:"0" doc:"Account amount" example:"5000"`
 }
 
-func (uas *UpdateAccountSchema) FromJSON(data []byte) error {
-	return json.Unmarshal(data, uas)
-}
-
-func (uas *UpdateAccountSchema) IsValid() bool {
-	if uas.Name != nil && *uas.Name == "" {
-		return false
-	}
-	if uas.Type != nil && *uas.Type != "expense" && *uas.Type != "income" {
-		return false
-	}
-	if uas.Amount != nil && *uas.Amount < 0 {
-		return false
-	}
-	return true
-}
-
-func (uas *UpdateAccountSchema) IsChanged(updateData UpdateAccountSchema) bool {
-	if updateData.Name != nil {
+func (uas *UpdateAccountSchema) HasChanges(payload AccountSchema) bool {
+	if uas.Name != nil && payload.Name != *uas.Name {
 		return true
 	}
-	if updateData.Type != nil {
+	if uas.Type != nil && payload.Type != *uas.Type {
 		return true
 	}
-	if updateData.Note != nil {
+	if uas.Note != nil && payload.Note != *uas.Note {
 		return true
 	}
-	if updateData.Amount != nil {
+	if uas.Amount != nil && payload.Amount != *uas.Amount {
 		return true
 	}
 	return false

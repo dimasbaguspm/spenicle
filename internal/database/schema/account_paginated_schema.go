@@ -1,18 +1,16 @@
 package schema
 
 import (
-	"encoding/json"
-
 	"github.com/jackc/pgx/v5"
 )
 
 // PaginatedAccountSchema represents a paginated list of accounts
 type PaginatedAccountSchema struct {
-	PageTotal  int             `json:"pageTotal"`
-	PageNumber int             `json:"pageNumber"`
-	PageSize   int             `json:"pageSize"`
-	TotalCount int             `json:"totalCount"`
-	Items      []AccountSchema `json:"items"`
+	PageTotal  int             `json:"pageTotal" doc:"Total number of pages" example:"5"`
+	PageNumber int             `json:"pageNumber" doc:"Current page number" example:"1"`
+	PageSize   int             `json:"pageSize" doc:"Number of items per page" example:"10"`
+	TotalCount int             `json:"totalCount" doc:"Total number of items" example:"50"`
+	Items      []AccountSchema `json:"items" doc:"List of accounts in current page"`
 }
 
 func (pas *PaginatedAccountSchema) FromRows(rows pgx.Rows, totalItems int, search SearchParamAccountSchema) (PaginatedAccountSchema, error) {
@@ -45,9 +43,4 @@ func (pas *PaginatedAccountSchema) FromRows(rows pgx.Rows, totalItems int, searc
 		return PaginatedAccountSchema{}, err
 	}
 	return *pas, nil
-}
-
-// ToJSON converts PaginatedAccountSchema to a JSON-compatible map
-func (pas *PaginatedAccountSchema) ToJSON() ([]byte, error) {
-	return json.Marshal(pas)
 }

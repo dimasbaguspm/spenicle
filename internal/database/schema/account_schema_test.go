@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -15,7 +16,7 @@ func TestAccountSchema_ToJSON(t *testing.T) {
 		Amount:    50,
 		CreatedAt: now,
 	}
-	if _, err := as.ToJSON(); err != nil {
+	if _, err := json.Marshal(as); err != nil {
 		t.Fatalf("ToJSON failed: %v", err)
 	}
 }
@@ -30,12 +31,12 @@ func TestAccountSchema_FromJSON(t *testing.T) {
 		Amount:    50,
 		CreatedAt: now,
 	}
-	b, err := as.ToJSON()
+	b, err := json.Marshal(as)
 	if err != nil {
 		t.Fatalf("ToJSON failed: %v", err)
 	}
 	var as2 AccountSchema
-	if err := as2.FromJSON(b); err != nil {
+	if err := json.Unmarshal(b, &as2); err != nil {
 		t.Fatalf("FromJSON failed: %v", err)
 	}
 	if as2.ID != as.ID || as2.Name != as.Name || as2.Type != as.Type || as2.Amount != as.Amount {
