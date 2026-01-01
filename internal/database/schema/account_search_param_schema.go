@@ -28,24 +28,14 @@ func (spas *SearchParamAccountSchema) ParseFromQuery(payload url.Values) SearchP
 	// support camelCase first, fall back to snake_case
 	if v := payload.Get("orderBy"); v != "" {
 		spas.OrderBy = v
-	} else if v := payload.Get("order_by"); v != "" {
-		spas.OrderBy = v
 	}
 
 	if v := payload.Get("orderDirection"); v != "" {
-		spas.OrderDirection = v
-	} else if v := payload.Get("order_direction"); v != "" {
 		spas.OrderDirection = v
 	}
 
 	// page number
 	if v := payload.Get("pageNumber"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			spas.PageNumber = n
-		} else {
-			spas.PageNumber = 1
-		}
-	} else if v := payload.Get("page_number"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			spas.PageNumber = n
 		} else {
@@ -57,12 +47,6 @@ func (spas *SearchParamAccountSchema) ParseFromQuery(payload url.Values) SearchP
 
 	// page size
 	if v := payload.Get("pageSize"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			spas.PageSize = n
-		} else {
-			spas.PageSize = 10
-		}
-	} else if v := payload.Get("page_size"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			spas.PageSize = n
 		} else {

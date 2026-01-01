@@ -5,14 +5,23 @@ import (
 	"fmt"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schema"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type AccountRepository struct {
-	db *pgxpool.Pool
+// DB is a subset of the pgx pool API used by the repository. It is
+// implemented by *pgxpool.Pool in production and by pgxmock in tests.
+type DB interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
-func NewAccountRepository(db *pgxpool.Pool) *AccountRepository {
+type AccountRepository struct {
+	db DB
+}
+
+func NewAccountRepository(db DB) *AccountRepository {
 	return &AccountRepository{db: db}
 }
 

@@ -5,9 +5,6 @@ import (
 	"time"
 )
 
-// AccountTableName is the name of the accounts table in the database
-var AccountTableName = "accounts"
-
 // AccountSchema represents the schema for an account
 type AccountSchema struct {
 	ID        int64      `json:"id"`
