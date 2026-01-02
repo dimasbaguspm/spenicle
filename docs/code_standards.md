@@ -38,20 +38,29 @@ This document describes the code patterns, design choices, file structure, and a
 
 ## Middleware
 
-- **Recovery**: Catches panics and logs stack traces.
-- **Request Logging**: Logs all HTTP requests with duration, status code, and request ID.
-- **Authentication**: JWT-based authentication using `internal/middleware/auth.go`.
-  - Login endpoint: `POST /auth/login` (username/password from .env)
-  - Returns JWT token valid for 1 week
-  - Protected routes require `Authorization: Bearer <token>` header
+Middleware pattern follows Chi conventions: `func(http.Handler) http.Handler`.
+
+Standard middleware used:
+
+- **Recovery**: Catches panics and logs stack traces (Chi's `middleware.Recoverer`)
+- **Request Logging**: Logs HTTP requests with duration and status (Chi's `middleware.Logger`)
+- **Request ID**: Generates unique request IDs (Chi's `middleware.RequestID`)
+- **Real IP**: Extracts client's real IP from headers (Chi's `middleware.RealIP`)
+- **Heartbeat**: Simple health endpoint (Chi's `middleware.Heartbeat("/health")`)
+
+For authentication middleware and JWT patterns, see [authentication_guide.md](authentication_guide.md).
 
 ## Authentication
 
-- Single admin user configured via environment variables (`ADMIN_USERNAME`, `ADMIN_PASSWORD`).
-- JWT tokens signed with `JWT_SECRET` from environment.
-- Token expiration: 1 week (168 hours).
-- All `/accounts` endpoints require authentication.
-- Login endpoint (`/auth/login`) is public.
+JWT-based authentication with access tokens (7 days) and refresh tokens (30 days).
+
+**Quick reference:**
+
+- Public routes: `/auth/login`, `/auth/refresh`, `/docs`, `/health`
+- Protected routes: All `/accounts` endpoints require `Authorization: Bearer <token>`
+- Single admin user from environment variables (`ADMIN_USERNAME`, `ADMIN_PASSWORD`)
+
+For complete authentication implementation details, token flows, and security patterns, see [authentication_guide.md](authentication_guide.md).
 
 ## Code Patterns & Conventions
 
@@ -84,7 +93,11 @@ This document describes the code patterns, design choices, file structure, and a
 - `internal/health/` — Health check endpoints for monitoring and orchestration.
 - `internal/database/schemas/` — DTOs with validation tags: `account_schema.go`, `account_create_schema.go`, `account_update_schema.go`, etc.
 - `internal/database/migrations/` — SQL migrations (up/down).
-- `docs/` — project documentation (this file, `account_service.md`, and `testing_standards.md`).
+- `docs/` — Project documentation:
+  - `code_standards.md` - Architecture patterns and coding conventions (this file)
+  - `authentication_guide.md` - JWT authentication, public/protected routes, security patterns
+  - `account_service.md` - Account API endpoint documentation
+  - `testing_standards.md` - Testing patterns and guidelines
 
 ## How to Add an Endpoint — Step-by-step
 
@@ -109,6 +122,7 @@ This document describes the code patterns, design choices, file structure, and a
 5. Register the operation
    - In the resource's `RegisterRoutes` function, call `huma.Register` with a `huma.Operation{OperationID, Method, Path, Summary, Tags}` and the handler method.
 6. Wire dependencies
+
    - In `handlers.go`, wire Repository → Service → Resource:
      ```go
      repo := repositories.NewAccountRepository(pool)
@@ -116,6 +130,12 @@ This document describes the code patterns, design choices, file structure, and a
      resource := resources.NewAccountResource(service)
      resource.RegisterRoutes(humaApi)
      ```
+   - For authentication-based resources (like auth), pass environment:
+     ```go
+     resources.NewAuthResource(env).RegisterRoutes(publicApi)
+     ```
+   - For protected routes, see [authentication_guide.md](authentication_guide.md) for Chi route grouping patterns with `RequireAuth` middleware.
+
 7. Tests
    - Repository tests: add `pgxmock` tests verifying SQL and mapping to DTOs.
    - Service tests: create a mock store and test business logic, error translation, and validation rules.
@@ -156,7 +176,7 @@ This document describes the code patterns, design choices, file structure, and a
 - Add service method with **business-level validation** and unit tests (mocked store).
 - Add resource handler with error translation and endpoint tests (`humatest` with mocked service).
 - Wire dependencies in `handlers.go` (Repository → Service → Resource).
-- Add authentication if endpoint needs protection (pass `authMiddleware` to `RegisterRoutes`).
+- Add authentication if endpoint needs protection - see [authentication_guide.md](authentication_guide.md) for public vs protected route patterns.
 - Add migrations (up/down) if altering DB schema.
 - Run `go test ./...` and ensure all tests pass.
 

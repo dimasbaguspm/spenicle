@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/dimasbaguspm/spenicle-api/internal/configs"
+	internalmiddleware "github.com/dimasbaguspm/spenicle-api/internal/middleware"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/resources"
@@ -32,25 +32,38 @@ func (rc *RoutesConfig) Setup(ctx context.Context) error {
 	env := configs.LoadEnvironment()
 
 	config := huma.DefaultConfig("Spenicle API", "1.0.0")
-	config.Servers = []*huma.Server{
-		{URL: "http://localhost:" + env.AppPort, Description: "Development server"},
-	}
+	config.Servers = []*huma.Server{{URL: "http://localhost:" + env.AppPort, Description: "Development server"}}
 	// exclude the default "$schema" property from all responses
 	config.CreateHooks = []func(huma.Config) huma.Config{}
 
-	humaApi := humachi.New(rc.router, config)
+	// Define security schemes at the top level for OpenAPI documentation
+	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"bearer": {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
+	}
+
+	// Create main API for public routes and docs
+	publicApi := humachi.New(rc.router, config)
 
 	pool, err := (&configs.Database{}).Connect(ctx, env.DatabaseURL)
 	if err != nil {
 		logger.Log().Info("failed to connect to database", "error", err)
-		return errors.New("failed to connect to database")
+		return err
 	}
 
 	rc.dbPool = pool
 
-	// Initialize repositories, services, and resources
+	// services
 	accountService := services.NewAccountService(repositories.NewAccountRepository(pool))
-	resources.NewAccountResource(accountService).RegisterRoutes(humaApi)
+
+	// public routes
+	resources.NewAuthResource(env).RegisterRoutes(publicApi)
+
+	// protected routes with "/" path, each resources have their own subrouter
+	rc.router.Route("/", func(r chi.Router) {
+		r.Use(func(h http.Handler) http.Handler { return internalmiddleware.RequireAuth(env, h) })
+		protectedApi := humachi.New(r, config)
+		resources.NewAccountResource(accountService).RegisterRoutes(protectedApi)
+	})
 
 	return nil
 }

@@ -88,6 +88,9 @@ func (ar *AccountResource) RegisterRoutes(api huma.API) {
 		Summary:     "List accounts",
 		Description: "Get a paginated list of accounts with optional search",
 		Tags:        []string{"Accounts"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, ar.GetPaginated)
 
 	huma.Register(api, huma.Operation{
@@ -97,6 +100,9 @@ func (ar *AccountResource) RegisterRoutes(api huma.API) {
 		Summary:     "Create account",
 		Description: "Create a new account",
 		Tags:        []string{"Accounts"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, ar.Create)
 
 	huma.Register(api, huma.Operation{
@@ -106,6 +112,9 @@ func (ar *AccountResource) RegisterRoutes(api huma.API) {
 		Summary:     "Get account",
 		Description: "Get a single account by ID",
 		Tags:        []string{"Accounts"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, ar.Get)
 
 	huma.Register(api, huma.Operation{
@@ -115,6 +124,9 @@ func (ar *AccountResource) RegisterRoutes(api huma.API) {
 		Summary:     "Update account",
 		Description: "Update an existing account",
 		Tags:        []string{"Accounts"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, ar.Update)
 
 	huma.Register(api, huma.Operation{
@@ -124,6 +136,9 @@ func (ar *AccountResource) RegisterRoutes(api huma.API) {
 		Summary:     "Delete account",
 		Description: "Delete an account",
 		Tags:        []string{"Accounts"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, ar.Delete)
 }
 
