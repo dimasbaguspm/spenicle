@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schema"
+	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
 	pgxmock "github.com/pashagolub/pgxmock/v2"
 )
 
@@ -27,7 +27,7 @@ func TestAccountRepository_List(t *testing.T) {
 		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(1), "A", "expense", "", int64(10), now, nil, nil))
 
 	repo := NewAccountRepository(mock)
-	out, err := repo.List(context.Background(), schema.SearchParamAccountSchema{PageNumber: 1, PageSize: 10})
+	out, err := repo.List(context.Background(), schemas.SearchParamAccountSchema{PageNumber: 1, PageSize: 10})
 	if err != nil {
 		t.Fatalf("List failed: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestAccountRepository_Create(t *testing.T) {
 		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(3), "C", "expense", "", int64(30), now, nil, nil))
 
 	repo := NewAccountRepository(mock)
-	created, err := repo.Create(context.Background(), schema.CreateAccountSchema{Name: "C", Type: "expense", Amount: 30})
+	created, err := repo.Create(context.Background(), schemas.CreateAccountSchema{Name: "C", Type: "expense", Amount: 30})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestAccountRepository_Update(t *testing.T) {
 	name := "C-upd"
 	amount := int64(35)
 
-	updated, err := repo.Update(context.Background(), 3, schema.UpdateAccountSchema{Name: &name, Amount: &amount})
+	updated, err := repo.Update(context.Background(), 3, schemas.UpdateAccountSchema{Name: &name, Amount: &amount})
 	if err != nil {
 		t.Fatalf("Update failed: %v", err)
 	}

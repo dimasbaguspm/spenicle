@@ -8,10 +8,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
-	"github.com/dimasbaguspm/spenicle-api/config"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/database"
-	"github.com/dimasbaguspm/spenicle-api/internal/database/repositories"
-	"github.com/dimasbaguspm/spenicle-api/resource"
+	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
+	"github.com/dimasbaguspm/spenicle-api/internal/resources"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,43 +20,33 @@ import (
 // RoutesConfig configures HTTP routes and holds long-lived resources
 // such as the database pool and environment used by handlers.
 type RoutesConfig struct {
-	router      *chi.Mux
-	humaAPI     huma.API
-	dbPool      *pgxpool.Pool
-	Environment *config.Environment
+	router *chi.Mux
+	dbPool *pgxpool.Pool
 }
 
 // Setup initializes the router, registers middleware, connects to the
 // database, and mounts application routes. It returns an error on failure.
 func (rc *RoutesConfig) Setup(ctx context.Context) error {
-	rc.router = chi.NewRouter()
+	rc.router = chi.NewMux()
 	rc.addMiddleware()
 
-	// Create Huma API with Chi adapter
 	config := huma.DefaultConfig("Spenicle API", "1.0.0")
 	config.Servers = []*huma.Server{
-		{URL: "http://localhost:3000", Description: "Development server"},
+		{URL: "http://localhost:" + constants.APP_PORT, Description: "Development server"},
 	}
 	// exclude the default "$schema" property from all responses
 	config.CreateHooks = []func(huma.Config) huma.Config{}
 
-	// register Chi adapter
-	rc.humaAPI = humachi.New(rc.router, config)
+	humaApi := humachi.New(rc.router, config)
 
-	// Connect to the database
-	db := &database.Database{Env: rc.Environment}
-	pool, err := db.Connect(ctx)
-
+	pool, err := (&database.Database{}).Connect(ctx, constants.DATABASE_URL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// assign the pool to the struct
 	rc.dbPool = pool
 
-	// Initialize repositories and resources
-	accountResource := resource.NewAccountResource(repositories.NewAccountRepository(pool))
-	accountResource.RegisterRoutes(rc.humaAPI)
+	resources.NewAccountResource(repositories.NewAccountRepository(pool)).RegisterRoutes(humaApi)
 
 	return nil
 }
@@ -72,9 +62,9 @@ func (rc *RoutesConfig) addMiddleware() {
 
 // Run starts the HTTP server on the given port and returns the server
 // instance so the caller can manage its lifecycle (shutdown, etc.).
-func (rc *RoutesConfig) Run(port string) *http.Server {
+func (rc *RoutesConfig) Run() *http.Server {
 	srv := &http.Server{
-		Addr:    port,
+		Addr:    ":" + constants.APP_PORT,
 		Handler: rc.router,
 	}
 
@@ -83,6 +73,8 @@ func (rc *RoutesConfig) Run(port string) *http.Server {
 			log.Printf("server error: %v", err)
 		}
 	}()
+
+	log.Printf("Server is running on %s", constants.APP_PORT)
 
 	return srv
 }

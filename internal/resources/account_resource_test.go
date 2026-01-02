@@ -1,4 +1,4 @@
-package resource
+package resources
 
 import (
 	"context"
@@ -7,44 +7,44 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schema"
+	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
 )
 
 // MockAccountStore implements AccountStore for testing
 type MockAccountStore struct {
-	ListFunc   func(ctx context.Context, params schema.SearchParamAccountSchema) (schema.PaginatedAccountSchema, error)
-	GetFunc    func(ctx context.Context, id int64) (schema.AccountSchema, error)
-	CreateFunc func(ctx context.Context, data schema.CreateAccountSchema) (schema.AccountSchema, error)
-	UpdateFunc func(ctx context.Context, id int64, data schema.UpdateAccountSchema) (schema.AccountSchema, error)
+	ListFunc   func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error)
+	GetFunc    func(ctx context.Context, id int64) (schemas.AccountSchema, error)
+	CreateFunc func(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
+	UpdateFunc func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error)
 	DeleteFunc func(ctx context.Context, id int64) error
 }
 
-func (m *MockAccountStore) List(ctx context.Context, params schema.SearchParamAccountSchema) (schema.PaginatedAccountSchema, error) {
+func (m *MockAccountStore) List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx, params)
 	}
-	return schema.PaginatedAccountSchema{}, nil
+	return schemas.PaginatedAccountSchema{}, nil
 }
 
-func (m *MockAccountStore) Get(ctx context.Context, id int64) (schema.AccountSchema, error) {
+func (m *MockAccountStore) Get(ctx context.Context, id int64) (schemas.AccountSchema, error) {
 	if m.GetFunc != nil {
 		return m.GetFunc(ctx, id)
 	}
-	return schema.AccountSchema{}, nil
+	return schemas.AccountSchema{}, nil
 }
 
-func (m *MockAccountStore) Create(ctx context.Context, data schema.CreateAccountSchema) (schema.AccountSchema, error) {
+func (m *MockAccountStore) Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
 	if m.CreateFunc != nil {
 		return m.CreateFunc(ctx, data)
 	}
-	return schema.AccountSchema{}, nil
+	return schemas.AccountSchema{}, nil
 }
 
-func (m *MockAccountStore) Update(ctx context.Context, id int64, data schema.UpdateAccountSchema) (schema.AccountSchema, error) {
+func (m *MockAccountStore) Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
 	if m.UpdateFunc != nil {
 		return m.UpdateFunc(ctx, id, data)
 	}
-	return schema.AccountSchema{}, nil
+	return schemas.AccountSchema{}, nil
 }
 
 func (m *MockAccountStore) Delete(ctx context.Context, id int64) error {
@@ -64,13 +64,13 @@ func setupTestAPI(t *testing.T, store AccountStore) (humatest.TestAPI, *AccountR
 
 func TestAccountResource_GetPaginated_Success(t *testing.T) {
 	mockStore := &MockAccountStore{
-		ListFunc: func(ctx context.Context, params schema.SearchParamAccountSchema) (schema.PaginatedAccountSchema, error) {
-			return schema.PaginatedAccountSchema{
+		ListFunc: func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
+			return schemas.PaginatedAccountSchema{
 				PageTotal:  1,
 				PageNumber: 1,
 				PageSize:   10,
 				TotalCount: 2,
-				Items: []schema.AccountSchema{
+				Items: []schemas.AccountSchema{
 					{ID: 1, Name: "Account 1", Type: "income", Amount: 1000},
 					{ID: 2, Name: "Account 2", Type: "expense", Amount: 500},
 				},
@@ -121,8 +121,8 @@ func TestAccountResource_GetPaginated_ValidationErrors(t *testing.T) {
 func TestAccountResource_GetDetail_Success(t *testing.T) {
 	now := time.Now()
 	mockStore := &MockAccountStore{
-		GetFunc: func(ctx context.Context, id int64) (schema.AccountSchema, error) {
-			return schema.AccountSchema{
+		GetFunc: func(ctx context.Context, id int64) (schemas.AccountSchema, error) {
+			return schemas.AccountSchema{
 				ID:        id,
 				Name:      "Test Account",
 				Type:      "income",
@@ -169,8 +169,8 @@ func TestAccountResource_GetDetail_InvalidID(t *testing.T) {
 func TestAccountResource_Create_Success(t *testing.T) {
 	now := time.Now()
 	mockStore := &MockAccountStore{
-		CreateFunc: func(ctx context.Context, data schema.CreateAccountSchema) (schema.AccountSchema, error) {
-			return schema.AccountSchema{
+		CreateFunc: func(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
+			return schemas.AccountSchema{
 				ID:        1,
 				Name:      data.Name,
 				Type:      data.Type,
@@ -260,8 +260,8 @@ func TestAccountResource_Create_ValidationErrors(t *testing.T) {
 func TestAccountResource_Update_Success(t *testing.T) {
 	now := time.Now()
 	mockStore := &MockAccountStore{
-		UpdateFunc: func(ctx context.Context, id int64, data schema.UpdateAccountSchema) (schema.AccountSchema, error) {
-			return schema.AccountSchema{
+		UpdateFunc: func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
+			return schemas.AccountSchema{
 				ID:        id,
 				Name:      *data.Name,
 				Type:      "income",
@@ -417,17 +417,17 @@ func TestAccountResource_MethodValidation(t *testing.T) {
 
 func TestAccountResource_AllEndpointsRegistered(t *testing.T) {
 	mockStore := &MockAccountStore{
-		ListFunc: func(ctx context.Context, params schema.SearchParamAccountSchema) (schema.PaginatedAccountSchema, error) {
-			return schema.PaginatedAccountSchema{}, nil
+		ListFunc: func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
+			return schemas.PaginatedAccountSchema{}, nil
 		},
-		GetFunc: func(ctx context.Context, id int64) (schema.AccountSchema, error) {
-			return schema.AccountSchema{ID: id}, nil
+		GetFunc: func(ctx context.Context, id int64) (schemas.AccountSchema, error) {
+			return schemas.AccountSchema{ID: id}, nil
 		},
-		CreateFunc: func(ctx context.Context, data schema.CreateAccountSchema) (schema.AccountSchema, error) {
-			return schema.AccountSchema{Name: data.Name}, nil
+		CreateFunc: func(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
+			return schemas.AccountSchema{Name: data.Name}, nil
 		},
-		UpdateFunc: func(ctx context.Context, id int64, data schema.UpdateAccountSchema) (schema.AccountSchema, error) {
-			return schema.AccountSchema{ID: id}, nil
+		UpdateFunc: func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
+			return schemas.AccountSchema{ID: id}, nil
 		},
 		DeleteFunc: func(ctx context.Context, id int64) error {
 			return nil

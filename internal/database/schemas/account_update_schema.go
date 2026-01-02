@@ -1,4 +1,4 @@
-package schema
+package schemas
 
 // UpdateAccountSchema represents the schema for updating an account.
 // All fields are optional pointers to distinguish between not provided and explicit zero values.

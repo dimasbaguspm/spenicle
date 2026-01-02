@@ -1,4 +1,4 @@
-package schema
+package schemas
 
 // CreateAccountSchema represents the schema for creating a new account
 type CreateAccountSchema struct {

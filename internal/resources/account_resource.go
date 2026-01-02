@@ -1,4 +1,4 @@
-package resource
+package resources
 
 import (
 	"context"
@@ -6,16 +6,16 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/database/repositories"
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schema"
+	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 )
 
 // Add interface (doesn't break existing code)
 type AccountStore interface {
-	List(ctx context.Context, params schema.SearchParamAccountSchema) (schema.PaginatedAccountSchema, error)
-	Get(ctx context.Context, id int64) (schema.AccountSchema, error)
-	Create(ctx context.Context, data schema.CreateAccountSchema) (schema.AccountSchema, error)
-	Update(ctx context.Context, id int64, data schema.UpdateAccountSchema) (schema.AccountSchema, error)
+	List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error)
+	Get(ctx context.Context, id int64) (schemas.AccountSchema, error)
+	Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
+	Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error)
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -32,12 +32,12 @@ type AccountPathParam struct {
 }
 
 type getPaginatedAccountsRequest struct {
-	schema.SearchParamAccountSchema
+	schemas.SearchParamAccountSchema
 }
 
 type getPaginatedAccountsResponse struct {
 	Status int `json:"-"`
-	Body   schema.PaginatedAccountSchema
+	Body   schemas.PaginatedAccountSchema
 }
 
 type getAccountRequest struct {
@@ -46,26 +46,26 @@ type getAccountRequest struct {
 
 type getAccountResponse struct {
 	Status int `json:"-"`
-	Body   schema.AccountSchema
+	Body   schemas.AccountSchema
 }
 
 type createAccountRequest struct {
-	Body schema.CreateAccountSchema
+	Body schemas.CreateAccountSchema
 }
 
 type createAccountResponse struct {
 	Status int `json:"-"`
-	Body   schema.AccountSchema
+	Body   schemas.AccountSchema
 }
 
 type updateAccountRequest struct {
 	AccountPathParam
-	Body schema.UpdateAccountSchema
+	Body schemas.UpdateAccountSchema
 }
 
 type updateAccountResponse struct {
 	Status int `json:"-"`
-	Body   schema.AccountSchema
+	Body   schemas.AccountSchema
 }
 
 type deleteAccountRequest struct {

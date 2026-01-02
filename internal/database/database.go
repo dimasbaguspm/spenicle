@@ -4,17 +4,15 @@ import (
 	"context"
 	"log"
 
-	"github.com/dimasbaguspm/spenicle-api/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Database struct {
-	Env *config.Environment
 }
 
 // Connect establishes a connection to the database
-func (dbConfig *Database) Connect(ctx context.Context) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(context.Background(), dbConfig.Env.DatabaseURL)
+func (dbConfig *Database) Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
+	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
 		log.Fatalf("Unable to create connection pool: %v\n", err)
 		return nil, err
