@@ -55,7 +55,7 @@ func TestTransactionRepositoryList(t *testing.T) {
 
 	t.Run("successfully lists transactions with type filter", func(t *testing.T) {
 		params := schemas.SearchParamTransactionSchema{
-			Type:           "expense",
+			Type:           []string{"expense"},
 			Page:           1,
 			Limit:          10,
 			OrderBy:        "date",
@@ -89,8 +89,8 @@ func TestTransactionRepositoryList(t *testing.T) {
 
 	t.Run("successfully lists transactions with account and category filters", func(t *testing.T) {
 		params := schemas.SearchParamTransactionSchema{
-			AccountID:      1,
-			CategoryID:     1,
+			AccountIDs:     []int{1},
+			CategoryIDs:    []int{1},
 			Page:           1,
 			Limit:          10,
 			OrderBy:        "created_at",

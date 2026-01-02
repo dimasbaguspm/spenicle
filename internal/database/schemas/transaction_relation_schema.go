@@ -9,9 +9,3 @@ type TransactionRelationSchema struct {
 	RelatedTransactionID int       `json:"relatedTransactionId"`
 	CreatedAt            time.Time `json:"createdAt"`
 }
-
-// TransactionWithRelationsSchema extends TransactionSchema with related transactions
-type TransactionWithRelationsSchema struct {
-	TransactionSchema
-	RelatedTransactions []TransactionSchema `json:"relatedTransactions"`
-}

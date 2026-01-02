@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+	"github.com/dimasbaguspm/spenicle-api/internal/utils"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -30,48 +31,40 @@ func NewTransactionRepository(db DB) *TransactionRepository {
 // List returns a paginated list of transactions based on search params.
 // Only returns non-deleted transactions (soft delete filter).
 func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchParamTransactionSchema) (schemas.PaginatedTransactionSchema, error) {
-	// Build WHERE clause for filters
-	where := "WHERE deleted_at IS NULL"
-	args := []any{}
-	argIndex := 1
+	qb := utils.QueryBuilder("deleted_at IS NULL")
+	qb.AddInFilter("id", params.ID)
+	qb.AddInFilterString("type", params.Type)
+	qb.AddInFilter("account_id", params.AccountIDs)
+	qb.AddInFilter("category_id", params.CategoryIDs)
 
-	if params.Type != "" {
-		where += fmt.Sprintf(" AND type = $%d", argIndex)
-		args = append(args, params.Type)
-		argIndex++
-	}
-
-	if params.AccountID > 0 {
-		where += fmt.Sprintf(" AND account_id = $%d", argIndex)
-		args = append(args, params.AccountID)
-		argIndex++
-	}
-
-	if params.CategoryID > 0 {
-		where += fmt.Sprintf(" AND category_id = $%d", argIndex)
-		args = append(args, params.CategoryID)
-		argIndex++
-	}
-
-	// Count total items
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM transactions %s", where)
+	// Count total items with filters
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM transactions %s", qb.ToWhereClause())
 	var totalCount int
-	if err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
+	if err := r.db.QueryRow(ctx, countSQL, qb.GetArgs()...).Scan(&totalCount); err != nil {
 		return schemas.PaginatedTransactionSchema{}, fmt.Errorf("count transactions: %w", err)
 	}
 
-	// Build ORDER BY clause based on params
-	orderBy := r.buildOrderByClause(params.OrderBy, params.OrderDirection)
+	// Build ORDER BY clause and calculate pagination
+	validColumns := map[string]string{
+		"id":        "id",
+		"type":      "type",
+		"date":      "date",
+		"amount":    "amount",
+		"createdAt": "created_at",
+		"updatedAt": "updated_at",
+	}
+	orderBy := qb.BuildOrderBy(params.OrderBy, params.OrderDirection, validColumns)
+	offset := (params.Page - 1) * params.Limit
+	limitIdx := qb.NextArgIndex()
 
 	// Query with pagination
-	offset := (params.Page - 1) * params.Limit
 	sql := fmt.Sprintf(`SELECT id, type, date, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at 
 	        FROM transactions 
 	        %s 
 	        ORDER BY %s 
-	        LIMIT $%d OFFSET $%d`, where, orderBy, argIndex, argIndex+1)
+	        LIMIT $%d OFFSET $%d`, qb.ToWhereClause(), orderBy, limitIdx, limitIdx+1)
 
-	args = append(args, params.Limit, offset)
+	args := append(qb.GetArgs(), params.Limit, offset)
 	rows, err := r.db.Query(ctx, sql, args...)
 	if err != nil {
 		return schemas.PaginatedTransactionSchema{}, fmt.Errorf("query transactions: %w", err)
@@ -91,24 +84,6 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 	}
 
 	return result, nil
-}
-
-func (r *TransactionRepository) buildOrderByClause(orderBy, orderDirection string) string {
-	validColumns := map[string]bool{
-		"id":         true,
-		"type":       true,
-		"date":       true,
-		"amount":     true,
-		"created_at": true,
-		"updated_at": true,
-	}
-	if !validColumns[orderBy] {
-		orderBy = "created_at"
-	}
-	if orderDirection != "asc" && orderDirection != "desc" {
-		orderDirection = "desc"
-	}
-	return fmt.Sprintf("%s %s", orderBy, orderDirection)
 }
 
 // Get retrieves a single transaction by ID.

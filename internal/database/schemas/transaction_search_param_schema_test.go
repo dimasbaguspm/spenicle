@@ -4,25 +4,25 @@ import "testing"
 
 func TestSearchParamTransactionSchema(t *testing.T) {
 	schema := SearchParamTransactionSchema{
-		Type:           "expense",
-		AccountID:      1,
-		CategoryID:     1,
+		Type:           []string{"expense"},
+		AccountIDs:     []int{1},
+		CategoryIDs:    []int{1},
 		Page:           1,
 		Limit:          10,
 		OrderBy:        "date",
 		OrderDirection: "desc",
 	}
 
-	if schema.Type != "expense" {
-		t.Errorf("expected Type to be 'expense', got %v", schema.Type)
+	if len(schema.Type) == 0 || schema.Type[0] != "expense" {
+		t.Errorf("expected Type to be ['expense'], got %v", schema.Type)
 	}
 
-	if schema.AccountID != 1 {
-		t.Errorf("expected AccountID to be 1, got %v", schema.AccountID)
+	if len(schema.AccountIDs) == 0 || schema.AccountIDs[0] != 1 {
+		t.Errorf("expected AccountIDs to be [1], got %v", schema.AccountIDs)
 	}
 
-	if schema.CategoryID != 1 {
-		t.Errorf("expected CategoryID to be 1, got %v", schema.CategoryID)
+	if len(schema.CategoryIDs) == 0 || schema.CategoryIDs[0] != 1 {
+		t.Errorf("expected CategoryIDs to be [1], got %v", schema.CategoryIDs)
 	}
 
 	if schema.Page != 1 {
@@ -50,15 +50,15 @@ func TestSearchParamTransactionSchema_OptionalFilters(t *testing.T) {
 		OrderDirection: "asc",
 	}
 
-	if schema.Type != "" {
-		t.Errorf("expected Type to be empty, got %s", schema.Type)
+	if len(schema.Type) != 0 {
+		t.Errorf("expected Type to be empty, got %v", schema.Type)
 	}
 
-	if schema.AccountID != 0 {
-		t.Errorf("expected AccountID to be 0, got %d", schema.AccountID)
+	if len(schema.AccountIDs) != 0 {
+		t.Errorf("expected AccountIDs to be empty, got %v", schema.AccountIDs)
 	}
 
-	if schema.CategoryID != 0 {
-		t.Errorf("expected CategoryID to be 0, got %d", schema.CategoryID)
+	if len(schema.CategoryIDs) != 0 {
+		t.Errorf("expected CategoryIDs to be empty, got %v", schema.CategoryIDs)
 	}
 }

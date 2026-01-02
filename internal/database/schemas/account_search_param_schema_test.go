@@ -8,7 +8,7 @@ import (
 func TestSearchParamAccountSchema_ParseFromQuery(t *testing.T) {
 	vals := url.Values{}
 	vals.Set("name", "cash")
-	vals.Set("type", "income")
+	vals.Add("type", "income")
 	vals.Set("orderBy", "name")
 	vals.Set("orderDirection", "asc")
 	vals.Set("pageNumber", "2")
@@ -16,7 +16,7 @@ func TestSearchParamAccountSchema_ParseFromQuery(t *testing.T) {
 
 	var sp SearchParamAccountSchema
 	out := sp.ParseFromQuery(vals)
-	if out.Name != "cash" || out.Type != "income" {
+	if out.Name != "cash" || len(out.Type) == 0 || out.Type[0] != "income" {
 		t.Fatalf("unexpected parsed values: %+v", out)
 	}
 	if out.PageNumber != 2 || out.PageSize != 20 {

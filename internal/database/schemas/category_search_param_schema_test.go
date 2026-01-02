@@ -31,7 +31,7 @@ func TestSearchParamCategorySchema_ParseFromQuery(t *testing.T) {
 			},
 			expect: SearchParamCategorySchema{
 				Name:           "Food",
-				Type:           "expense",
+				Type:           []string{"expense"},
 				OrderBy:        "name",
 				OrderDirection: "asc",
 				PageNumber:     2,
@@ -68,8 +68,15 @@ func TestSearchParamCategorySchema_ParseFromQuery(t *testing.T) {
 			if got.Name != tt.expect.Name {
 				t.Errorf("Name = %v, want %v", got.Name, tt.expect.Name)
 			}
-			if got.Type != tt.expect.Type {
-				t.Errorf("Type = %v, want %v", got.Type, tt.expect.Type)
+			// Compare Type slices by length and values
+			if len(got.Type) != len(tt.expect.Type) {
+				t.Errorf("Type length = %v, want %v", len(got.Type), len(tt.expect.Type))
+			} else {
+				for i := range got.Type {
+					if got.Type[i] != tt.expect.Type[i] {
+						t.Errorf("Type[%d] = %v, want %v", i, got.Type[i], tt.expect.Type[i])
+					}
+				}
 			}
 			if got.OrderBy != tt.expect.OrderBy {
 				t.Errorf("OrderBy = %v, want %v", got.OrderBy, tt.expect.OrderBy)

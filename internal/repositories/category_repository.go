@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+	"github.com/dimasbaguspm/spenicle-api/internal/utils"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -29,24 +30,38 @@ func NewCategoryRepository(db DB) *CategoryRepository {
 // List returns a paginated list of categories based on search params.
 // Only returns non-deleted categories (soft delete filter).
 func (r *CategoryRepository) List(ctx context.Context, params schemas.SearchParamCategorySchema) (schemas.PaginatedCategorySchema, error) {
-	countSQL := "SELECT COUNT(*) FROM categories WHERE deleted_at IS NULL"
+	qb := utils.QueryBuilder("deleted_at IS NULL")
+	qb.AddInFilter("id", params.ID)
+	qb.AddLikeFilter("name", params.Name)
+	qb.AddInFilterString("type", params.Type)
+
+	// Count total items with filters
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM categories %s", qb.ToWhereClause())
 	var totalCount int
-	if err := r.db.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
+	if err := r.db.QueryRow(ctx, countSQL, qb.GetArgs()...).Scan(&totalCount); err != nil {
 		return schemas.PaginatedCategorySchema{}, fmt.Errorf("count categories: %w", err)
 	}
 
-	// Build ORDER BY clause based on params
-	orderBy := r.buildOrderByClause(params.OrderBy, params.OrderDirection)
+	// Build ORDER BY clause and calculate pagination
+	validColumns := map[string]string{
+		"name":      "name",
+		"type":      "type",
+		"createdAt": "created_at",
+		"updatedAt": "updated_at",
+	}
+	orderBy := qb.BuildOrderBy(params.OrderBy, params.OrderDirection, validColumns)
+	offset := (params.PageNumber - 1) * params.PageSize
+	limitIdx := qb.NextArgIndex()
 
-	// Query only non-deleted categories with pagination
-	// Performance: Select specific columns, use WHERE for soft delete filter
+	// Query with pagination
 	sql := fmt.Sprintf(`SELECT id, name, type, note, created_at, updated_at, deleted_at 
 	        FROM categories 
-	        WHERE deleted_at IS NULL 
+	        %s 
 	        %s
-	        LIMIT $1 OFFSET $2`, orderBy)
-	offset := (params.PageNumber - 1) * params.PageSize
-	rows, err := r.db.Query(ctx, sql, params.PageSize, offset)
+	        LIMIT $%d OFFSET $%d`, qb.ToWhereClause(), orderBy, limitIdx, limitIdx+1)
+
+	args := append(qb.GetArgs(), params.PageSize, offset)
+	rows, err := r.db.Query(ctx, sql, args...)
 	if err != nil {
 		return schemas.PaginatedCategorySchema{}, fmt.Errorf("query categories: %w", err)
 	}
@@ -54,33 +69,6 @@ func (r *CategoryRepository) List(ctx context.Context, params schemas.SearchPara
 
 	pcs := schemas.PaginatedCategorySchema{}
 	return pcs.FromRows(rows, totalCount, params)
-}
-
-// buildOrderByClause constructs a safe ORDER BY clause from user input.
-// Maps camelCase field names to database column names and validates direction.
-// Returns a safe SQL ORDER BY clause or defaults to "ORDER BY created_at DESC".
-func (r *CategoryRepository) buildOrderByClause(orderBy, orderDirection string) string {
-	// Map camelCase to database column names
-	columnMap := map[string]string{
-		"name":      "name",
-		"type":      "type",
-		"createdAt": "created_at",
-		"updatedAt": "updated_at",
-	}
-
-	// Get the database column name, default to created_at if invalid
-	column, ok := columnMap[orderBy]
-	if !ok || column == "" {
-		column = "created_at"
-	}
-
-	// Validate direction, default to DESC if invalid
-	direction := "DESC"
-	if orderDirection == "asc" || orderDirection == "ASC" {
-		direction = "ASC"
-	}
-
-	return fmt.Sprintf("ORDER BY %s %s", column, direction)
 }
 
 // Get returns a single category by id.
