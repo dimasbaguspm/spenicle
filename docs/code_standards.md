@@ -1,153 +1,52 @@
 # Code Standards — Account API
 
-## Overview
+This file captures the essential architecture and development conventions for the project. For examples and test patterns, see the other docs in this folder.
 
-This document describes the code patterns, design choices, file structure, and a step-by-step recipe for adding an endpoint in this codebase.
+Key principles
 
-## Design Pattern
+- Architecture: Resource → Service → Repository. Keep responsibilities separated:
+  - `resources`: HTTP concerns, Huma operations, error → HTTP translation.
+  - `services`: business validation, sanitization, domain rules.
+  - `repositories`: DB access and mapping to schema DTOs (no business validation).
+- Validation: use Huma/schema tags for data-level checks; enforce cross-field and business rules in services.
+- Schemas: keep DTOs in `internal/database/schemas/`. Use pointer fields for update DTOs to allow partial updates.
 
-- Resource + Service + Repository pattern:
-  - `internal/resources/*` implements HTTP handlers (Huma operations), handles HTTP concerns, and translates service errors to HTTP status codes.
-  - `internal/services/*` implements business logic, business-level validation, and domain rules. Services use a store interface (e.g., `AccountStore`) to interact with repositories.
-  - `internal/repositories/*` implements DB access (SQL) and returns schema DTOs.
-- Single responsibility:
-  - Resource: HTTP protocol, request/response mapping, HTTP status codes.
-  - Service: Business validation, domain rules, error translation from DB to domain errors, input sanitization (e.g., pagination limits, default values).
-  - Repository: SQL queries, row scanning, database-specific concerns. **Trust the service layer** — repositories should not validate or modify input parameters.
-  - Schema package: DTOs with Huma validation tags for data-level constraints.
-- Validation layers:
-  - **Schema validation** (data-level): Individual field constraints via struct tags (minLength, enum, minimum, etc.). Enforces data integrity and format.
-  - **Service validation** (business-level): Cross-field rules, domain invariants, business constraints (e.g., "at least one field for update", "unique name per user", "savings accounts need minimum balance", pagination limits).
-- **Repository Trust Principle**: Repositories focus purely on database operations and trust that the service layer provides valid inputs. All validation logic (min/max values, defaults, business rules) belongs in the service layer.
-- Adapter usage:
-  - Huma + Chi adapter is used to register routes and auto-generate OpenAPI.
-- Architecture flow:
-  ```
-  HTTP Request → Resource → Service → Repository → Database
-                    ↓          ↓          ↓
-                HTTP layer  Business  Data layer
-                          (validation)  (pure DB ops)
-  ```
+Observability & middleware
 
-## Observability
+- Use `internal/observability/logger` for structured logs and follow tracing setup (OpenTelemetry).
+- Standard middleware (Chi): recovery, request logging, request ID, real IP, and heartbeat endpoints (`/health`, `/health/ready`, `/health/live`).
 
-- **Structured Logging**: Use `logger.Log()` from `internal/observability/logger` for JSON-formatted logs.
-- **Tracing**: OpenTelemetry tracing initialized in handlers.go (currently stdout exporter for development).
-- **Health Checks**:
-  - `/health` - Overall health with database check
-  - `/health/ready` - Kubernetes readiness probe
-  - `/health/live` - Kubernetes liveness probe
+Authentication
 
-## Middleware
+- JWT-based patterns. Public routes include `/auth/login`, `/auth/refresh`, `/docs`, `/health`. Protect `/accounts` endpoints; see `authentication_guide.md`.
 
-Middleware pattern follows Chi conventions: `func(http.Handler) http.Handler`.
+DB & queries
 
-Standard middleware used:
+- Repositories accept a small `DB` interface (QueryRow/Query/Exec) for easier testing with `pgxmock`.
+- Use `RETURNING` for create/update and `COALESCE` for optional update fields.
 
-- **Recovery**: Catches panics and logs stack traces (Chi's `middleware.Recoverer`)
-- **Request Logging**: Logs HTTP requests with duration and status (Chi's `middleware.Logger`)
-- **Request ID**: Generates unique request IDs (Chi's `middleware.RequestID`)
-- **Real IP**: Extracts client's real IP from headers (Chi's `middleware.RealIP`)
-- **Heartbeat**: Simple health endpoint (Chi's `middleware.Heartbeat("/health")`)
+Sanitization
 
-For authentication middleware and JWT patterns, see [authentication_guide.md](authentication_guide.md).
+- Sanitize user text inputs in the service layer using `internal/services/sanitize.go` (trim, strip HTML, normalize entities, collapse spaces). Do not sanitize enums, numeric types, or timestamps.
 
-## Authentication
+Testing
 
-JWT-based authentication with access tokens (7 days) and refresh tokens (30 days).
+- Repository tests: `pgxmock`.
+- Service tests: mock store interfaces and validate business rules and error translation.
+- Resource tests: `humatest` with mocked services.
+- Run tests with `go test ./... -v`.
 
-**Quick reference:**
+Quick checklist before PR
 
-- Public routes: `/auth/login`, `/auth/refresh`, `/docs`, `/health`
-- Protected routes: All `/accounts` endpoints require `Authorization: Bearer <token>`
-- Single admin user from environment variables (`ADMIN_USERNAME`, `ADMIN_PASSWORD`)
+- Update schema tags for data-level validation.
+- Add repository method + `pgxmock` tests.
+- Add service method + unit tests (mock store).
+- Add resource handler + `humatest` endpoint tests.
+- Wire dependencies in `handlers.go` and add migrations when schema changes.
 
-For complete authentication implementation details, token flows, and security patterns, see [authentication_guide.md](authentication_guide.md).
+References
 
-## Code Patterns & Conventions
-
-- Schemas are the source of truth. Place request/response types under `internal/database/schema` with Huma/validation tags (enum, minimum, maximum, doc, example).
-- Use pointer fields in update DTOs to allow partial updates.
-- Validation and OpenAPI metadata live in struct tags — prefer Huma-native tags (e.g., `enum:"..."`, `minimum:"1"`) for better schema generation.
-- Avoid custom JSON marshal/unmarshal methods on schema types; Huma needs plain structs to generate OpenAPI properly.
-- Error handling:
-  - Resources return typed Huma errors (e.g., `huma.Error400BadRequest`, `huma.Error404NotFound`, `huma.Error500InternalServerError`).
-  - Use structured logging with `logger.Log()` for diagnostics; avoid leaking sensitive data.
-- DB queries:
-  - Repositories accept a small `DB` interface for easier mocking in tests.
-  - Use `RETURNING` to fetch created/updated rows.
-  - Use `COALESCE` for update statements to preserve existing values when fields are absent.
-- Tests:
-  - Repository unit tests: use `pgxmock` to assert SQL and return rows.
-  - Service unit tests: use function-based mocks to test business logic and validation.
-  - Resource tests: use `humatest` and a mock service implementing the resource interface.
-  - See [testing_standards.md](testing_standards.md) for comprehensive testing guidelines.
-
-## Project Structure (important files)
-
-- `main.go` — app bootstrap and graceful shutdown.
-- `handlers.go` — router setup, Huma adapter registration, and dependency wiring.
-- `internal/resources/` — HTTP resources and route registration (e.g., `account_resource.go`, `auth_resource.go`).
-- `internal/services/` — Business logic and domain rules (e.g., `account_service.go`).
-- `internal/repositories/` — DB repositories (e.g., `account_repository.go`).
-- `internal/middleware/` — HTTP middleware (auth, logging, recovery).
-- `internal/observability/` — Logging and tracing utilities.
-- `internal/health/` — Health check endpoints for monitoring and orchestration.
-- `internal/database/schemas/` — DTOs with validation tags: `account_schema.go`, `account_create_schema.go`, `account_update_schema.go`, etc.
-- `internal/database/migrations/` — SQL migrations (up/down).
-- `docs/` — Project documentation:
-  - `code_standards.md` - Architecture patterns and coding conventions (this file)
-  - `authentication_guide.md` - JWT authentication, public/protected routes, security patterns
-  - `performance.md` - Performance optimization, caching, DB pooling, query patterns
-  - `account_service.md` - Account API endpoint documentation
-  - `testing_standards.md` - Testing patterns and guidelines
-
-## How to Add an Endpoint — Step-by-step
-
-1. Add/Update schema types
-   - Define request/response DTOs in `internal/database/schemas/`.
-   - Add Huma validation metadata in struct tags for **data-level constraints** (`doc`, `example`, `enum`, `minimum`, `maximum`, `minLength`, `maxLength`).
-   - For updates, use pointer fields so absent fields are distinguished from zero values.
-2. Add repository method
-   - Implement DB logic in `internal/repositories/<repo>.go`.
-   - Use the repository's `DB` interface methods: `QueryRow`, `Query`, `Exec`.
-   - Return schema DTOs and wrap errors with context (e.g., `fmt.Errorf("get account: %w", err)`).
-3. Add service method
-   - Implement business logic in `internal/services/<name>_service.go`.
-   - Add **business-level validation** (cross-field rules, domain constraints, input sanitization).
-   - Handle domain errors from repository (e.g., `repositories.ErrAccountNotFound`).
-   - Service layer consumes domain errors defined in repository package.
-4. Add resource handler
-   - Define request/response wrapper types in `internal/resources/<name>_resource.go` (embedding path/query/body types).
-   - Implement the handler method (context, input pointer) calling the service layer.
-   - Translate domain errors to HTTP errors using `errors.Is()` checks (e.g., `repositories.ErrAccountNotFound` → `huma.Error404NotFound`).
-   - Use Huma error helpers for consistent HTTP error responses.
-5. Register the operation
-   - In the resource's `RegisterRoutes` function, call `huma.Register` with a `huma.Operation{OperationID, Method, Path, Summary, Tags}` and the handler method.
-6. Wire dependencies
-
-   - In `handlers.go`, wire Repository → Service → Resource:
-     ```go
-     repo := repositories.NewAccountRepository(pool)
-     service := services.NewAccountService(repo)
-     resource := resources.NewAccountResource(service)
-     resource.RegisterRoutes(humaApi)
-     ```
-   - For authentication-based resources (like auth), pass environment:
-     ```go
-     resources.NewAuthResource(env).RegisterRoutes(publicApi)
-     ```
-   - For protected routes, see [authentication_guide.md](authentication_guide.md) for Chi route grouping patterns with `RequireAuth` middleware.
-
-7. Tests
-   - Repository tests: add `pgxmock` tests verifying SQL and mapping to DTOs.
-   - Service tests: create a mock store and test business logic, error translation, and validation rules.
-   - Resource tests: create a mock service and use `humatest.New(t)` to register routes and exercise endpoints. Test HTTP status codes and error responses.
-   - Verify both successful and validation/error paths for all layers.
-   - See [testing_standards.md](testing_standards.md) for detailed patterns.
-8. Migration (if DB change)
-   - Add SQL files under `internal/database/migrations/` (up/down).
-   - Follow existing migration formatting and naming conventions.
+- See `authentication_guide.md`, `testing_standards.md`, and `performance.md` for deeper guidance.
 
 ## Testing Guidance
 
