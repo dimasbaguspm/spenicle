@@ -1,0 +1,37 @@
+# Git
+.git
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Documentation
+README.md
+docs/
+
+# Tests
+*_test.go
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+Dockerfile
+docker-compose.yaml
+.dockerignore
+
+# Build artifacts
+spenicle-api
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Temporary files
+*.swp
+*.swo
+*~
+.DS_Store

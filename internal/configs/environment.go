@@ -11,7 +11,11 @@ import (
 
 const (
 	APP_PORT_ENV       = "APP_PORT"
-	DATABASE_URL_ENV   = "DATABASE_URL"
+	DB_HOST_ENV        = "DB_HOST"
+	DB_PORT_ENV        = "DB_PORT"
+	DB_USER_ENV        = "DB_USER"
+	DB_PASSWORD_ENV    = "DB_PASSWORD"
+	DB_NAME_ENV        = "DB_NAME"
 	JWT_SECRET_ENV     = "JWT_SECRET"
 	ADMIN_USERNAME_ENV = "ADMIN_USERNAME"
 	ADMIN_PASSWORD_ENV = "ADMIN_PASSWORD"
@@ -28,7 +32,12 @@ var _ = godotenv.Load()
 
 type Environment struct {
 	AppPort       string
-	DatabaseURL   string
+	DBHost        string
+	DBPort        string
+	DBUser        string
+	DBPassword    string
+	DBName        string
+	DatabaseURL   string // Built from individual DB fields
 	JWTSecret     string
 	AdminUsername string
 	AdminPassword string
@@ -36,9 +45,27 @@ type Environment struct {
 
 // LoadEnvironment loads and returns environment configuration
 func LoadEnvironment() *Environment {
+	dbHost := os.Getenv(DB_HOST_ENV)
+	dbPort := os.Getenv(DB_PORT_ENV)
+	dbUser := os.Getenv(DB_USER_ENV)
+	dbPassword := os.Getenv(DB_PASSWORD_ENV)
+	dbName := os.Getenv(DB_NAME_ENV)
+
+	// Build DATABASE_URL from individual components
+	var databaseURL string
+	if dbHost != "" && dbPort != "" && dbUser != "" && dbPassword != "" && dbName != "" {
+		databaseURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+			dbUser, dbPassword, dbHost, dbPort, dbName)
+	}
+
 	return &Environment{
 		AppPort:       os.Getenv(APP_PORT_ENV),
-		DatabaseURL:   os.Getenv(DATABASE_URL_ENV),
+		DBHost:        dbHost,
+		DBPort:        dbPort,
+		DBUser:        dbUser,
+		DBPassword:    dbPassword,
+		DBName:        dbName,
+		DatabaseURL:   databaseURL,
 		JWTSecret:     os.Getenv(JWT_SECRET_ENV),
 		AdminUsername: os.Getenv(ADMIN_USERNAME_ENV),
 		AdminPassword: os.Getenv(ADMIN_PASSWORD_ENV),
@@ -56,8 +83,25 @@ func (e *Environment) Validate() error {
 		missingVars = append(missingVars, APP_PORT_ENV)
 	}
 
-	if e.DatabaseURL == "" {
-		missingVars = append(missingVars, DATABASE_URL_ENV)
+	// Check individual database configuration variables
+	if e.DBHost == "" {
+		missingVars = append(missingVars, DB_HOST_ENV)
+	}
+
+	if e.DBPort == "" {
+		missingVars = append(missingVars, DB_PORT_ENV)
+	}
+
+	if e.DBUser == "" {
+		missingVars = append(missingVars, DB_USER_ENV)
+	}
+
+	if e.DBPassword == "" {
+		missingVars = append(missingVars, DB_PASSWORD_ENV)
+	}
+
+	if e.DBName == "" {
+		missingVars = append(missingVars, DB_NAME_ENV)
 	}
 
 	if e.JWTSecret == "" {
