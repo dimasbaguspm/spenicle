@@ -27,8 +27,6 @@ var (
 	AccountIncomeType  = "income"
 )
 
-var ()
-
 type AccountRepository struct {
 	db DB
 }

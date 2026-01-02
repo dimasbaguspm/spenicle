@@ -100,7 +100,7 @@ func TestCategoryUpdate_BusinessValidation_WithFields(t *testing.T) {
 		{
 			name: "only type provided",
 			update: schemas.UpdateCategorySchema{
-				Type: stringPtrCat("expense"),
+				Type: stringPtrCat(repositories.CategoryTypeExpense),
 			},
 		},
 		{
@@ -113,7 +113,7 @@ func TestCategoryUpdate_BusinessValidation_WithFields(t *testing.T) {
 			name: "multiple fields provided",
 			update: schemas.UpdateCategorySchema{
 				Name: stringPtrCat("New Name"),
-				Type: stringPtrCat("income"),
+				Type: stringPtrCat(repositories.CategoryTypeIncome),
 			},
 		},
 	}

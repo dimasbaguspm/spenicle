@@ -72,8 +72,8 @@ func TestCategoryResource_GetPaginated_Success(t *testing.T) {
 				PageSize:   10,
 				TotalCount: 2,
 				Items: []schemas.CategorySchema{
-					{ID: 1, Name: "Food", Type: "expense"},
-					{ID: 2, Name: "Salary", Type: "income"},
+					{ID: 1, Name: "Food", Type: repositories.CategoryTypeExpense},
+					{ID: 2, Name: "Salary", Type: repositories.CategoryTypeIncome},
 				},
 			}, nil
 		},
@@ -94,7 +94,7 @@ func TestCategoryResource_Get_Success(t *testing.T) {
 			return schemas.CategorySchema{
 				ID:        1,
 				Name:      "Food",
-				Type:      "expense",
+				Type:      repositories.CategoryTypeExpense,
 				Note:      "Dining and groceries",
 				CreatedAt: now,
 			}, nil
@@ -141,7 +141,7 @@ func TestCategoryResource_Create_Success(t *testing.T) {
 	api, _ := setupTestCategoryAPI(t, mockService)
 	resp := api.Post("/categories", map[string]any{
 		"name": "Food",
-		"type": "expense",
+		"type": repositories.CategoryTypeExpense,
 		"note": "Groceries",
 	})
 
@@ -157,7 +157,7 @@ func TestCategoryResource_Update_Success(t *testing.T) {
 			return schemas.CategorySchema{
 				ID:        id,
 				Name:      *data.Name,
-				Type:      "expense",
+				Type:      repositories.CategoryTypeExpense,
 				CreatedAt: now,
 			}, nil
 		},

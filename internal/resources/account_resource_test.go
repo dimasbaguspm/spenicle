@@ -72,8 +72,8 @@ func TestAccountResource_GetPaginated_Success(t *testing.T) {
 				PageSize:   10,
 				TotalCount: 2,
 				Items: []schemas.AccountSchema{
-					{ID: 1, Name: "Account 1", Type: "income", Amount: 1000},
-					{ID: 2, Name: "Account 2", Type: "expense", Amount: 500},
+					{ID: 1, Name: "Account 1", Type: repositories.AccountIncomeType, Amount: 1000},
+					{ID: 2, Name: "Account 2", Type: repositories.AccountExpenseType, Amount: 500},
 				},
 			}, nil
 		},
@@ -126,7 +126,7 @@ func TestAccountResource_GetDetail_Success(t *testing.T) {
 			return schemas.AccountSchema{
 				ID:        id,
 				Name:      "Test Account",
-				Type:      "income",
+				Type:      repositories.AccountIncomeType,
 				Note:      "Test note",
 				Amount:    5000,
 				CreatedAt: now,
@@ -199,7 +199,7 @@ func TestAccountResource_Create_Success(t *testing.T) {
 
 	resp := api.Post("/accounts", map[string]interface{}{
 		"name":   "New Account",
-		"type":   "income",
+		"type":   repositories.AccountIncomeType,
 		"note":   "Test note",
 		"amount": 1000,
 	})
@@ -220,7 +220,7 @@ func TestAccountResource_Create_ValidationErrors(t *testing.T) {
 		{
 			name: "missing name",
 			body: map[string]interface{}{
-				"type":   "income",
+				"type":   repositories.AccountIncomeType,
 				"amount": 1000,
 			},
 			expectCode: http.StatusUnprocessableEntity,
@@ -246,7 +246,7 @@ func TestAccountResource_Create_ValidationErrors(t *testing.T) {
 			name: "negative amount",
 			body: map[string]interface{}{
 				"name":   "Test",
-				"type":   "income",
+				"type":   repositories.AccountIncomeType,
 				"amount": -100,
 			},
 			expectCode: http.StatusUnprocessableEntity,
@@ -255,7 +255,7 @@ func TestAccountResource_Create_ValidationErrors(t *testing.T) {
 			name: "name too long - exceeds maxLength",
 			body: map[string]interface{}{
 				"name":   string(make([]byte, 256)), // 256 chars, max is 255
-				"type":   "income",
+				"type":   repositories.AccountIncomeType,
 				"amount": 1000,
 			},
 			expectCode: http.StatusUnprocessableEntity,
@@ -279,7 +279,7 @@ func TestAccountResource_Update_Success(t *testing.T) {
 			return schemas.AccountSchema{
 				ID:        id,
 				Name:      *data.Name,
-				Type:      "income",
+				Type:      repositories.AccountIncomeType,
 				Note:      *data.Note,
 				Amount:    5000,
 				CreatedAt: now,
@@ -480,7 +480,7 @@ func TestAccountResource_AllEndpointsRegistered(t *testing.T) {
 		body   interface{}
 	}{
 		{method: "GET", path: "/accounts", body: nil},
-		{method: "POST", path: "/accounts", body: map[string]interface{}{"name": "Test", "type": "income", "amount": 100}},
+		{method: "POST", path: "/accounts", body: map[string]interface{}{"name": "Test", "type": repositories.AccountIncomeType, "amount": 100}},
 		{method: "GET", path: "/accounts/1", body: nil},
 		{method: "PATCH", path: "/accounts/1", body: map[string]interface{}{"name": "Updated"}},
 		{method: "DELETE", path: "/accounts/1", body: nil},

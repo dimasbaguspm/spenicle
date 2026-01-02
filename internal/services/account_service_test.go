@@ -100,7 +100,7 @@ func TestUpdate_BusinessValidation_WithFields(t *testing.T) {
 		{
 			name: "only type provided",
 			update: schemas.UpdateAccountSchema{
-				Type: stringPtr("expense"),
+				Type: stringPtr(repositories.AccountExpenseType),
 			},
 		},
 		{
