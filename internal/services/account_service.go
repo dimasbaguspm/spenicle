@@ -7,6 +7,7 @@ import (
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
+	"github.com/dimasbaguspm/spenicle-api/internal/utils"
 )
 
 type AccountStore interface {
@@ -56,6 +57,14 @@ func (s *AccountService) Get(ctx context.Context, id int64) (schemas.AccountSche
 
 // Create validates and creates a new account.
 func (s *AccountService) Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
+	data.Name = utils.SanitizeString(data.Name)
+	data.Note = utils.SanitizeString(data.Note)
+
+	// Validate sanitized name is not empty after sanitization
+	if data.Name == "" {
+		return schemas.AccountSchema{}, errors.New("name cannot be empty after sanitization")
+	}
+
 	account, err := s.store.Create(ctx, data)
 	if err != nil {
 		return schemas.AccountSchema{}, fmt.Errorf("failed to create account: %w", err)
@@ -67,6 +76,14 @@ func (s *AccountService) Create(ctx context.Context, data schemas.CreateAccountS
 func (s *AccountService) Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
 	if data.Name == nil && data.Type == nil && data.Note == nil && data.Amount == nil {
 		return schemas.AccountSchema{}, repositories.ErrNoFieldsToUpdate
+	}
+
+	data.Name = utils.SanitizeStringPtr(data.Name)
+	data.Note = utils.SanitizeStringPtr(data.Note)
+
+	// Validate name is not empty after sanitization (if provided)
+	if data.Name != nil && *data.Name == "" {
+		return schemas.AccountSchema{}, errors.New("name cannot be empty after sanitization")
 	}
 
 	account, err := s.store.Update(ctx, id, data)

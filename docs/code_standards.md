@@ -172,6 +172,67 @@ For complete authentication implementation details, token flows, and security pa
 - Logging: use structured logging via `logger.Log()` from `internal/observability/logger`; avoid leaking sensitive data.
 - Keep resource logic thin — heavy business rules belong in a service layer.
 
+## Input Sanitization
+
+All user-provided string inputs must be sanitized at the **service layer** to prevent XSS attacks and normalize data.
+
+**Sanitization utilities** are provided in `internal/services/sanitize.go`:
+
+- `SanitizeString(input string) string` - Sanitizes regular strings
+- `SanitizeStringPtr(input *string) *string` - Sanitizes pointer strings (for updates)
+
+**What sanitization does:**
+
+1. Trims leading/trailing whitespace
+2. Removes all HTML tags (e.g., `<script>`, `<img>`)
+3. Normalizes HTML entities (escape dangerous characters)
+4. Collapses multiple spaces into single space
+
+**When to sanitize:**
+
+- All text inputs from users (names, notes, descriptions)
+- Apply in service layer before calling repository
+- Apply for both Create and Update operations
+
+**Example usage:**
+
+```go
+func (s *AccountService) Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
+    // Sanitize string inputs
+    data.Name = SanitizeString(data.Name)
+    data.Note = SanitizeString(data.Note)
+
+    // Validate after sanitization
+    if data.Name == "" {
+        return schemas.AccountSchema{}, errors.New("name cannot be empty after sanitization")
+    }
+
+    return s.store.Create(ctx, data)
+}
+
+func (s *AccountService) Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
+    // Sanitize pointer fields
+    data.Name = SanitizeStringPtr(data.Name)
+    data.Note = SanitizeStringPtr(data.Note)
+
+    // Validate after sanitization (if provided)
+    if data.Name != nil && *data.Name == "" {
+        return schemas.AccountSchema{}, errors.New("name cannot be empty")
+    }
+
+    return s.store.Update(ctx, id, data)
+}
+```
+
+**What NOT to sanitize:**
+
+- Enum values (already validated by schema tags)
+- Numeric values (type-safe)
+- Timestamps (system-generated)
+- Email addresses (use specific email validation instead)
+
+**Security note:** Sanitization is a defense-in-depth measure. Always rely on schema validation tags as the first line of defense (`minLength`, `maxLength`, `enum`, etc.).
+
 ## Quick Checklist before PR
 
 - Add/adjust schema tags for **data-level validation** (Huma validation + doc + example).

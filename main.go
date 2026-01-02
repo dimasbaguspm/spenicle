@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle-api/internal"
 	"github.com/dimasbaguspm/spenicle-api/internal/configs"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
 )
@@ -25,7 +26,16 @@ func main() {
 		panic(err)
 	}
 
-	routes := &RoutesConfig{}
+	// Run database migrations
+	logger.Log().Info("Running database migrations...")
+	migration := configs.New(env.DatabaseURL)
+	if err := migration.Up(); err != nil {
+		logger.Log().Error("failed to run migrations", "error", err)
+		panic(err)
+	}
+	logger.Log().Info("Database migrations completed successfully")
+
+	routes := &internal.RoutesConfig{}
 	if err := routes.Setup(setupCtx, env); err != nil {
 		logger.Log().Error("failed to set up routes", "error", err)
 		panic(err)
