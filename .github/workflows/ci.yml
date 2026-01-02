@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,22 +31,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Show Go version
-        run: go version
+      - name: Install Dependencies
+        run: go mod download
 
       - name: Check formatting (gofmt)
         run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "gofmt found files that need formatting:";
-            gofmt -l .;
-            exit 1;
+          fmt_out=$(gofmt -l .) || true
+          if [ -n "$fmt_out" ]; then
+            echo "Files must be gofmt'ed:"; echo "$fmt_out"; exit 1
           fi
 
-      - name: Vet
+      - name: Run go vet
         run: go vet ./...
 
       - name: Run tests
-        run: go test ./...
+        run: go test ./... -v
 
       - name: Build
         run: go build ./...

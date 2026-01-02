@@ -9,6 +9,7 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/configs"
 	internalmiddleware "github.com/dimasbaguspm/spenicle-api/internal/middleware"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability/tracing"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/resources"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
@@ -69,10 +70,9 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 // addMiddleware registers common middlewares used by the router.
 func (rc *RoutesConfig) addMiddleware() {
 	rc.router.Use(middleware.Recoverer)
-	rc.router.Use(middleware.RequestID)
-	rc.router.Use(middleware.RealIP)
+	// ensure every request has a trace id (uses X-Request-Id if available)
+	rc.router.Use(tracing.Middleware)
 	rc.router.Use(middleware.Logger)
-	rc.router.Use(middleware.Heartbeat("/health"))
 }
 
 // Run starts the HTTP server on the given port and returns the server

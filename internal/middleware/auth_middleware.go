@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"crypto/subtle"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -40,10 +41,11 @@ func GenerateToken(env *configs.Environment, loginRequest LoginRequestModel) (ac
 	}
 
 	// Access token: 7 days
-	accessClaims := jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		Subject:   "access",
+	accessClaims := jwt.MapClaims{
+		"exp":      jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+		"iat":      jwt.NewNumericDate(time.Now()),
+		"sub":      "access",
+		"username": loginRequest.Username,
 	}
 	accessTokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	accessToken, err = accessTokenObj.SignedString([]byte(env.JWTSecret))
@@ -52,10 +54,11 @@ func GenerateToken(env *configs.Environment, loginRequest LoginRequestModel) (ac
 	}
 
 	// Refresh token: 30 days
-	refreshClaims := jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * 24 * time.Hour)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		Subject:   "refresh",
+	refreshClaims := jwt.MapClaims{
+		"exp":      jwt.NewNumericDate(time.Now().Add(30 * 24 * time.Hour)),
+		"iat":      jwt.NewNumericDate(time.Now()),
+		"sub":      "refresh",
+		"username": loginRequest.Username,
 	}
 	refreshTokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
 	refreshToken, err = refreshTokenObj.SignedString([]byte(env.JWTSecret))
@@ -99,20 +102,32 @@ func RequireAuth(env *configs.Environment, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Authorization header missing or invalid"})
 			return
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		jwt, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, errors.New("invalid signing method")
 			}
 			return []byte(env.JWTSecret), nil
 		})
 
+		if err != nil || !jwt.Valid {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+
+		err = jwt.Method.Verify(tokenString, jwt.Signature, []byte(env.JWTSecret))
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
 			return
 		}
 
