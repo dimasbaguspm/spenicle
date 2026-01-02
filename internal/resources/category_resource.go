@@ -22,12 +22,22 @@ type CategoryService interface {
 	Delete(ctx context.Context, id int64) error
 }
 
-type CategoryResource struct {
-	service CategoryService
+// BudgetService interface for budget operations in nested routes
+type BudgetServiceForCategory interface {
+	GetByCategoryID(ctx context.Context, categoryID int, params schemas.SearchParamBudgetSchema) (*schemas.PaginatedBudgetSchema, error)
+	Get(ctx context.Context, id int) (*schemas.BudgetSchema, error)
 }
 
-func NewCategoryResource(service *services.CategoryService) *CategoryResource {
-	return &CategoryResource{service: service}
+type CategoryResource struct {
+	service       CategoryService
+	budgetService BudgetServiceForCategory
+}
+
+func NewCategoryResource(service *services.CategoryService, budgetService *services.BudgetService) *CategoryResource {
+	return &CategoryResource{
+		service:       service,
+		budgetService: budgetService,
+	}
 }
 
 type CategoryPathParam struct {
@@ -77,6 +87,27 @@ type deleteCategoryRequest struct {
 
 type deleteCategoryResponse struct {
 	Status int `json:"-"`
+}
+
+// Category budgets nested routes
+type listCategoryBudgetsRequest struct {
+	CategoryPathParam
+	schemas.SearchParamBudgetSchema
+}
+
+type listCategoryBudgetsResponse struct {
+	Status int `json:"-"`
+	Body   schemas.PaginatedBudgetSchema
+}
+
+type getCategoryBudgetRequest struct {
+	CategoryID int64 `path:"id" minimum:"1" doc:"Category ID" example:"1"`
+	BudgetID   int64 `path:"budgetId" minimum:"1" doc:"Budget ID" example:"1"`
+}
+
+type getCategoryBudgetResponse struct {
+	Status int `json:"-"`
+	Body   schemas.BudgetSchema
 }
 
 // RegisterRoutes configures all category-related HTTP endpoints.
@@ -141,6 +172,31 @@ func (cr *CategoryResource) RegisterRoutes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, cr.Delete)
+
+	// Nested budget routes
+	huma.Register(api, huma.Operation{
+		OperationID: "list-category-budgets",
+		Method:      http.MethodGet,
+		Path:        "/categories/{id}/budgets",
+		Summary:     "List category budgets",
+		Description: "Get all budgets related to this category",
+		Tags:        []string{"Categories"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, cr.ListBudgets)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-category-budget",
+		Method:      http.MethodGet,
+		Path:        "/categories/{id}/budgets/{budgetId}",
+		Summary:     "Get category budget",
+		Description: "Get a specific budget related to this category",
+		Tags:        []string{"Categories"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, cr.GetBudget)
 }
 
 func (cr *CategoryResource) GetPaginated(ctx context.Context, input *getPaginatedCategoriesRequest) (*getPaginatedCategoriesResponse, error) {
@@ -208,4 +264,47 @@ func (cr *CategoryResource) Delete(ctx context.Context, input *deleteCategoryReq
 	}
 
 	return &deleteCategoryResponse{Status: http.StatusNoContent}, nil
+}
+
+func (cr *CategoryResource) ListBudgets(ctx context.Context, input *listCategoryBudgetsRequest) (*listCategoryBudgetsResponse, error) {
+	// Verify category exists
+	_, err := cr.service.Get(ctx, input.CategoryPathParam.ID)
+	if err != nil {
+		if errors.Is(err, repositories.ErrCategoryNotFound) {
+			return nil, huma.Error404NotFound("Category not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to verify category", err)
+	}
+
+	result, err := cr.budgetService.GetByCategoryID(ctx, int(input.CategoryPathParam.ID), input.SearchParamBudgetSchema)
+	if err != nil {
+		logger.Log().Error("Failed to list category budgets", "categoryId", input.CategoryPathParam.ID, "error", err)
+		return nil, huma.Error500InternalServerError("Failed to list budgets", err)
+	}
+
+	return &listCategoryBudgetsResponse{Status: http.StatusOK, Body: *result}, nil
+}
+
+func (cr *CategoryResource) GetBudget(ctx context.Context, input *getCategoryBudgetRequest) (*getCategoryBudgetResponse, error) {
+	// Verify category exists
+	_, err := cr.service.Get(ctx, input.CategoryID)
+	if err != nil {
+		if errors.Is(err, repositories.ErrCategoryNotFound) {
+			return nil, huma.Error404NotFound("Category not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to verify category", err)
+	}
+
+	// Get the budget
+	budget, err := cr.budgetService.Get(ctx, int(input.BudgetID))
+	if err != nil {
+		return nil, huma.Error404NotFound("Budget not found")
+	}
+
+	// Verify budget belongs to this category
+	if budget.CategoryID == nil || *budget.CategoryID != input.CategoryID {
+		return nil, huma.Error404NotFound("Budget not found for this category")
+	}
+
+	return &getCategoryBudgetResponse{Status: http.StatusOK, Body: *budget}, nil
 }

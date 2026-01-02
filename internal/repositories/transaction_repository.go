@@ -31,16 +31,18 @@ func NewTransactionRepository(db DB) *TransactionRepository {
 // List returns a paginated list of transactions based on search params.
 // Only returns non-deleted transactions (soft delete filter).
 func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchParamTransactionSchema) (schemas.PaginatedTransactionSchema, error) {
-	qb := utils.QueryBuilder("deleted_at IS NULL")
+	qb := utils.QueryBuilder()
+	qb.Add("deleted_at IS NULL")
 	qb.AddInFilter("id", params.ID)
 	qb.AddInFilterString("type", params.Type)
 	qb.AddInFilter("account_id", params.AccountIDs)
 	qb.AddInFilter("category_id", params.CategoryIDs)
 
 	// Count total items with filters
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM transactions %s", qb.ToWhereClause())
+	whereClause, args := qb.ToWhereClause()
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM transactions %s", whereClause)
 	var totalCount int
-	if err := r.db.QueryRow(ctx, countSQL, qb.GetArgs()...).Scan(&totalCount); err != nil {
+	if err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
 		return schemas.PaginatedTransactionSchema{}, fmt.Errorf("count transactions: %w", err)
 	}
 
@@ -62,9 +64,9 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 	        FROM transactions 
 	        %s 
 	        ORDER BY %s 
-	        LIMIT $%d OFFSET $%d`, qb.ToWhereClause(), orderBy, limitIdx, limitIdx+1)
+	        LIMIT $%d OFFSET $%d`, whereClause, orderBy, limitIdx, limitIdx+1)
 
-	args := append(qb.GetArgs(), params.Limit, offset)
+	args = append(args, params.Limit, offset)
 	rows, err := r.db.Query(ctx, sql, args...)
 	if err != nil {
 		return schemas.PaginatedTransactionSchema{}, fmt.Errorf("query transactions: %w", err)

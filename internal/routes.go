@@ -13,6 +13,7 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/resources"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
+	"github.com/dimasbaguspm/spenicle-api/internal/worker"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,6 +24,7 @@ import (
 type RoutesConfig struct {
 	router *chi.Mux
 	dbPool *pgxpool.Pool
+	worker *worker.Worker
 }
 
 // Setup initializes the router, registers middleware, connects to the
@@ -51,18 +53,23 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 
 	rc.dbPool = pool
 
-	// services
+	// repositories
 	accountRepo := repositories.NewAccountRepository(pool)
 	categoryRepo := repositories.NewCategoryRepository(pool)
 	transactionRepo := repositories.NewTransactionRepository(pool)
 	summaryRepo := repositories.NewSummaryRepository(pool)
 	transactionRelationRepo := repositories.NewTransactionRelationRepository(pool)
+	budgetTemplateRepo := repositories.NewBudgetTemplateRepository(pool)
+	budgetRepo := repositories.NewBudgetRepository(pool)
 
+	// services
 	accountService := services.NewAccountService(accountRepo)
 	categoryService := services.NewCategoryService(categoryRepo)
 	transactionService := services.NewTransactionService(transactionRepo, accountRepo, categoryRepo)
 	summaryService := services.NewSummaryService(summaryRepo)
 	transactionRelationService := services.NewTransactionRelationService(transactionRelationRepo, transactionRepo)
+	budgetTemplateService := services.NewBudgetTemplateService(budgetTemplateRepo)
+	budgetService := services.NewBudgetService(budgetRepo)
 
 	// public routes
 	resources.NewAuthResource(env).RegisterRoutes(publicApi)
@@ -71,12 +78,18 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 	rc.router.Route("/", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler { return internalmiddleware.RequireAuth(env, h) })
 		protectedApi := humachi.New(r, config)
-		resources.NewAccountResource(accountService).RegisterRoutes(protectedApi)
-		resources.NewCategoryResource(categoryService).RegisterRoutes(protectedApi)
-		resources.NewTransactionResource(transactionService).RegisterRoutes(protectedApi, "")
+		resources.NewAccountResource(accountService, budgetService).RegisterRoutes(protectedApi)
+		resources.NewCategoryResource(categoryService, budgetService).RegisterRoutes(protectedApi)
+		resources.NewTransactionResource(transactionService).RegisterRoutes(protectedApi)
 		resources.NewSummaryResource(summaryService).RegisterRoutes(protectedApi)
 		resources.NewTransactionRelationResource(transactionRelationService).RegisterRoutes(protectedApi)
+		resources.NewBudgetResource(budgetService, budgetTemplateService).RegisterRoutes(protectedApi)
 	})
+
+	// Initialize worker
+	rc.worker = worker.New()
+	budgetGenerationJob := worker.NewBudgetGenerationJob(budgetTemplateRepo, budgetRepo)
+	rc.worker.Register(budgetGenerationJob)
 
 	return nil
 }
@@ -112,7 +125,15 @@ func (rc *RoutesConfig) Run() *http.Server {
 // Close releases long-lived resources held by RoutesConfig (for now the
 // database pool). Close is safe to call multiple times.
 func (rc *RoutesConfig) Close() {
+	if rc.worker != nil {
+		rc.worker.Stop()
+	}
 	if rc.dbPool != nil {
 		rc.dbPool.Close()
 	}
+}
+
+// GetWorker returns the worker instance for external management
+func (rc *RoutesConfig) GetWorker() *worker.Worker {
+	return rc.worker
 }

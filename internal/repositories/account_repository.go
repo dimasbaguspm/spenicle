@@ -41,15 +41,17 @@ func NewAccountRepository(db DB) *AccountRepository {
 // Only returns non-deleted accounts (soft delete filter).
 func (r *AccountRepository) List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
 	// Build query filters using queryBuilder for cleaner code
-	qb := utils.QueryBuilder("deleted_at IS NULL")
+	qb := utils.QueryBuilder()
+	qb.Add("deleted_at IS NULL")
 	qb.AddInFilter("id", params.ID)
 	qb.AddLikeFilter("name", params.Name)
 	qb.AddInFilterString("type", params.Type)
 
 	// Count total items with filters
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM accounts %s", qb.ToWhereClause())
+	whereClause, args := qb.ToWhereClause()
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM accounts %s", whereClause)
 	var totalCount int
-	if err := r.db.QueryRow(ctx, countSQL, qb.GetArgs()...).Scan(&totalCount); err != nil {
+	if err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
 		return schemas.PaginatedAccountSchema{}, fmt.Errorf("count accounts: %w", err)
 	}
 
@@ -70,9 +72,9 @@ func (r *AccountRepository) List(ctx context.Context, params schemas.SearchParam
 	        FROM accounts 
 	        %s 
 	        %s
-	        LIMIT $%d OFFSET $%d`, qb.ToWhereClause(), orderBy, limitIdx, limitIdx+1)
+	        LIMIT $%d OFFSET $%d`, whereClause, orderBy, limitIdx, limitIdx+1)
 
-	args := append(qb.GetArgs(), params.PageSize, offset)
+	args = append(args, params.PageSize, offset)
 	rows, err := r.db.Query(ctx, sql, args...)
 	if err != nil {
 		return schemas.PaginatedAccountSchema{}, fmt.Errorf("query accounts: %w", err)

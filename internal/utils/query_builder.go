@@ -13,10 +13,10 @@ type queryBuilder struct {
 	argIndex   int
 }
 
-// newQueryBuilder creates a queryBuilder with an initial WHERE condition.
-func QueryBuilder(initialCondition string) *queryBuilder {
+// newQueryBuilder creates a queryBuilder.
+func QueryBuilder() *queryBuilder {
 	return &queryBuilder{
-		conditions: []string{initialCondition},
+		conditions: []string{},
 		args:       []any{},
 		argIndex:   1,
 	}
@@ -66,9 +66,12 @@ func (qb *queryBuilder) BuildPlaceholders(count int) string {
 	return strings.Join(placeholders, ",")
 }
 
-// ToWhereClause returns the complete WHERE clause string.
-func (qb *queryBuilder) ToWhereClause() string {
-	return "WHERE " + strings.Join(qb.conditions, " AND ")
+// ToWhereClause returns the complete WHERE clause string and arguments.
+func (qb *queryBuilder) ToWhereClause() (string, []any) {
+	if len(qb.conditions) == 0 {
+		return "", qb.args
+	}
+	return "WHERE " + strings.Join(qb.conditions, " AND "), qb.args
 }
 
 // GetArgs returns the slice of query arguments.
@@ -98,4 +101,22 @@ func (qb *queryBuilder) BuildOrderBy(orderBy, orderDirection string, validColumn
 	}
 
 	return fmt.Sprintf("ORDER BY %s %s", column, direction)
+}
+
+// Add adds a condition to the query builder.
+func (qb *queryBuilder) Add(condition string) {
+	qb.conditions = append(qb.conditions, condition)
+}
+
+// AddArg adds an argument to the query builder and returns the parameter index.
+func (qb *queryBuilder) AddArg(arg any) int {
+	qb.args = append(qb.args, arg)
+	idx := qb.argIndex
+	qb.argIndex++
+	return idx
+}
+
+// JoinStrings joins strings with a separator.
+func JoinStrings(strs []string, sep string) string {
+	return strings.Join(strs, sep)
 }

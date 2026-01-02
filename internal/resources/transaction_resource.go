@@ -29,11 +29,11 @@ func NewTransactionResource(service TransactionService) *TransactionResource {
 }
 
 // RegisterRoutes registers all transaction routes
-func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
+func (r *TransactionResource) RegisterRoutes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "list-transactions",
 		Method:      http.MethodGet,
-		Path:        prefix + "/transactions",
+		Path:        "/transactions",
 		Summary:     "List transactions",
 		Description: "Returns a paginated list of transactions",
 		Tags:        []string{"Transactions"},
@@ -45,7 +45,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
 	huma.Register(api, huma.Operation{
 		OperationID: "create-transaction",
 		Method:      http.MethodPost,
-		Path:        prefix + "/transactions",
+		Path:        "/transactions",
 		Summary:     "Create a new transaction",
 		Description: "Creates a new transaction and updates account balance",
 		Tags:        []string{"Transactions"},
@@ -57,7 +57,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
 	huma.Register(api, huma.Operation{
 		OperationID: "get-transaction",
 		Method:      http.MethodGet,
-		Path:        prefix + "/transactions/{id}",
+		Path:        "/transactions/{id}",
 		Summary:     "Get a transaction",
 		Description: "Returns a transaction by ID",
 		Tags:        []string{"Transactions"},
@@ -69,7 +69,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
 	huma.Register(api, huma.Operation{
 		OperationID: "update-transaction",
 		Method:      http.MethodPatch,
-		Path:        prefix + "/transactions/{id}",
+		Path:        "/transactions/{id}",
 		Summary:     "Update a transaction",
 		Description: "Updates a transaction by ID and syncs account balance",
 		Tags:        []string{"Transactions"},
@@ -81,7 +81,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-transaction",
 		Method:      http.MethodDelete,
-		Path:        prefix + "/transactions/{id}",
+		Path:        "/transactions/{id}",
 		Summary:     "Delete a transaction",
 		Description: "Soft deletes a transaction by ID and reverts account balance",
 		Tags:        []string{"Transactions"},

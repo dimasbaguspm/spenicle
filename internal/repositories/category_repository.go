@@ -30,15 +30,17 @@ func NewCategoryRepository(db DB) *CategoryRepository {
 // List returns a paginated list of categories based on search params.
 // Only returns non-deleted categories (soft delete filter).
 func (r *CategoryRepository) List(ctx context.Context, params schemas.SearchParamCategorySchema) (schemas.PaginatedCategorySchema, error) {
-	qb := utils.QueryBuilder("deleted_at IS NULL")
+	qb := utils.QueryBuilder()
+	qb.Add("deleted_at IS NULL")
 	qb.AddInFilter("id", params.ID)
 	qb.AddLikeFilter("name", params.Name)
 	qb.AddInFilterString("type", params.Type)
 
 	// Count total items with filters
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM categories %s", qb.ToWhereClause())
+	whereClause, args := qb.ToWhereClause()
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM categories %s", whereClause)
 	var totalCount int
-	if err := r.db.QueryRow(ctx, countSQL, qb.GetArgs()...).Scan(&totalCount); err != nil {
+	if err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
 		return schemas.PaginatedCategorySchema{}, fmt.Errorf("count categories: %w", err)
 	}
 
@@ -58,9 +60,9 @@ func (r *CategoryRepository) List(ctx context.Context, params schemas.SearchPara
 	        FROM categories 
 	        %s 
 	        %s
-	        LIMIT $%d OFFSET $%d`, qb.ToWhereClause(), orderBy, limitIdx, limitIdx+1)
+	        LIMIT $%d OFFSET $%d`, whereClause, orderBy, limitIdx, limitIdx+1)
 
-	args := append(qb.GetArgs(), params.PageSize, offset)
+	args = append(args, params.PageSize, offset)
 	rows, err := r.db.Query(ctx, sql, args...)
 	if err != nil {
 		return schemas.PaginatedCategorySchema{}, fmt.Errorf("query categories: %w", err)

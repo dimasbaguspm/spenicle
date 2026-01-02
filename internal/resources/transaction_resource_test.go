@@ -73,7 +73,7 @@ func TestTransactionResourceList(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions")
 		if resp.Code != http.StatusOK {
@@ -91,7 +91,7 @@ func TestTransactionResourceList(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions")
 		if resp.Code != http.StatusInternalServerError {
@@ -120,7 +120,7 @@ func TestTransactionResourceGet(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions/1")
 		if resp.Code != http.StatusOK {
@@ -137,7 +137,7 @@ func TestTransactionResourceGet(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions/999")
 		if resp.Code != http.StatusNotFound {
@@ -166,7 +166,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
 			"type":       repositories.TransactionExpenseType,
@@ -188,7 +188,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
 			"type":       repositories.TransactionExpenseType,
@@ -210,7 +210,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
 			"type":       repositories.TransactionExpenseType,
@@ -232,7 +232,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
 			"type":       repositories.TransactionExpenseType,
@@ -254,7 +254,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
 			"type":       repositories.TransactionExpenseType,
@@ -288,7 +288,7 @@ func TestTransactionResourceUpdate(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/1", map[string]any{
 			"amount": 75000,
@@ -307,7 +307,7 @@ func TestTransactionResourceUpdate(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/1", map[string]any{})
 		if resp.Code != http.StatusBadRequest {
@@ -324,7 +324,7 @@ func TestTransactionResourceUpdate(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/999", map[string]any{
 			"amount": 75000,
@@ -343,7 +343,7 @@ func TestTransactionResourceUpdate(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/1", map[string]any{
 			"type": repositories.TransactionExpenseType,
@@ -364,7 +364,7 @@ func TestTransactionResourceDelete(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Delete("/transactions/1")
 		if resp.Code != http.StatusNoContent {
@@ -381,7 +381,7 @@ func TestTransactionResourceDelete(t *testing.T) {
 		}
 
 		resource := NewTransactionResource(service)
-		resource.RegisterRoutes(api, "")
+		resource.RegisterRoutes(api)
 
 		resp := api.Delete("/transactions/999")
 		if resp.Code != http.StatusNotFound {

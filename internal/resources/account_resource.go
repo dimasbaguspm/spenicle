@@ -22,12 +22,22 @@ type AccountService interface {
 	Delete(ctx context.Context, id int64) error
 }
 
-type AccountResource struct {
-	service AccountService
+// BudgetService interface for budget operations in nested routes
+type BudgetServiceForAccount interface {
+	GetByAccountID(ctx context.Context, accountID int, params schemas.SearchParamBudgetSchema) (*schemas.PaginatedBudgetSchema, error)
+	Get(ctx context.Context, id int) (*schemas.BudgetSchema, error)
 }
 
-func NewAccountResource(service *services.AccountService) *AccountResource {
-	return &AccountResource{service: service}
+type AccountResource struct {
+	service       AccountService
+	budgetService BudgetServiceForAccount
+}
+
+func NewAccountResource(service *services.AccountService, budgetService *services.BudgetService) *AccountResource {
+	return &AccountResource{
+		service:       service,
+		budgetService: budgetService,
+	}
 }
 
 type AccountPathParam struct {
@@ -77,6 +87,27 @@ type deleteAccountRequest struct {
 
 type deleteAccountResponse struct {
 	Status int `json:"-"`
+}
+
+// Account budgets nested routes
+type listAccountBudgetsRequest struct {
+	AccountPathParam
+	schemas.SearchParamBudgetSchema
+}
+
+type listAccountBudgetsResponse struct {
+	Status int `json:"-"`
+	Body   schemas.PaginatedBudgetSchema
+}
+
+type getAccountBudgetRequest struct {
+	AccountID int64 `path:"id" minimum:"1" doc:"Account ID" example:"1"`
+	BudgetID  int64 `path:"budgetId" minimum:"1" doc:"Budget ID" example:"1"`
+}
+
+type getAccountBudgetResponse struct {
+	Status int `json:"-"`
+	Body   schemas.BudgetSchema
 }
 
 // RegisterRoutes configures all account-related HTTP endpoints.
@@ -141,6 +172,31 @@ func (ar *AccountResource) RegisterRoutes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, ar.Delete)
+
+	// Nested budget routes
+	huma.Register(api, huma.Operation{
+		OperationID: "list-account-budgets",
+		Method:      http.MethodGet,
+		Path:        "/accounts/{id}/budgets",
+		Summary:     "List account budgets",
+		Description: "Get all budgets related to this account",
+		Tags:        []string{"Accounts"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, ar.ListBudgets)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-account-budget",
+		Method:      http.MethodGet,
+		Path:        "/accounts/{id}/budgets/{budgetId}",
+		Summary:     "Get account budget",
+		Description: "Get a specific budget related to this account",
+		Tags:        []string{"Accounts"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, ar.GetBudget)
 }
 
 func (ar *AccountResource) GetPaginated(ctx context.Context, input *getPaginatedAccountsRequest) (*getPaginatedAccountsResponse, error) {
@@ -208,4 +264,47 @@ func (ar *AccountResource) Delete(ctx context.Context, input *deleteAccountReque
 	}
 
 	return &deleteAccountResponse{Status: http.StatusNoContent}, nil
+}
+
+func (ar *AccountResource) ListBudgets(ctx context.Context, input *listAccountBudgetsRequest) (*listAccountBudgetsResponse, error) {
+	// Verify account exists
+	_, err := ar.service.Get(ctx, input.AccountPathParam.ID)
+	if err != nil {
+		if errors.Is(err, repositories.ErrAccountNotFound) {
+			return nil, huma.Error404NotFound("Account not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to verify account", err)
+	}
+
+	result, err := ar.budgetService.GetByAccountID(ctx, int(input.AccountPathParam.ID), input.SearchParamBudgetSchema)
+	if err != nil {
+		logger.Log().Error("Failed to list account budgets", "accountId", input.AccountPathParam.ID, "error", err)
+		return nil, huma.Error500InternalServerError("Failed to list budgets", err)
+	}
+
+	return &listAccountBudgetsResponse{Status: http.StatusOK, Body: *result}, nil
+}
+
+func (ar *AccountResource) GetBudget(ctx context.Context, input *getAccountBudgetRequest) (*getAccountBudgetResponse, error) {
+	// Verify account exists
+	_, err := ar.service.Get(ctx, input.AccountID)
+	if err != nil {
+		if errors.Is(err, repositories.ErrAccountNotFound) {
+			return nil, huma.Error404NotFound("Account not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to verify account", err)
+	}
+
+	// Get the budget
+	budget, err := ar.budgetService.Get(ctx, int(input.BudgetID))
+	if err != nil {
+		return nil, huma.Error404NotFound("Budget not found")
+	}
+
+	// Verify budget belongs to this account
+	if budget.AccountID == nil || *budget.AccountID != input.AccountID {
+		return nil, huma.Error404NotFound("Budget not found for this account")
+	}
+
+	return &getAccountBudgetResponse{Status: http.StatusOK, Body: *budget}, nil
 }

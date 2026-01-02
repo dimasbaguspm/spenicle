@@ -43,6 +43,13 @@ func main() {
 
 	srv := routes.Run()
 
+	// Start background worker
+	worker := routes.GetWorker()
+	if worker != nil {
+		worker.Start(ctx)
+		logger.Log().Info("Worker started")
+	}
+
 	// clean up on shutdown
 	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
