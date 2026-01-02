@@ -12,6 +12,10 @@ import (
 var (
 	ErrCategoryNotFound    = errors.New("category not found")
 	ErrInvalidCategoryData = errors.New("invalid category data")
+
+	CategoryTypeExpense  = "expense"
+	CategoryTypeIncome   = "income"
+	CategoryTypeTransfer = "transfer"
 )
 
 type CategoryRepository struct {

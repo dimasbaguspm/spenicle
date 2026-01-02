@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	pgxmock "github.com/pashagolub/pgxmock/v2"
+	pgxmock "github.com/pashagolub/pgxmock/v4"
 )
 
 func TestCategoryRepository_List(t *testing.T) {

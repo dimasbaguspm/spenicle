@@ -52,8 +52,13 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 	rc.dbPool = pool
 
 	// services
-	accountService := services.NewAccountService(repositories.NewAccountRepository(pool))
-	categoryService := services.NewCategoryService(repositories.NewCategoryRepository(pool))
+	accountRepo := repositories.NewAccountRepository(pool)
+	categoryRepo := repositories.NewCategoryRepository(pool)
+	transactionRepo := repositories.NewTransactionRepository(pool)
+
+	accountService := services.NewAccountService(accountRepo)
+	categoryService := services.NewCategoryService(categoryRepo)
+	transactionService := services.NewTransactionService(transactionRepo, accountRepo, categoryRepo)
 
 	// public routes
 	resources.NewAuthResource(env).RegisterRoutes(publicApi)
@@ -64,6 +69,7 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 		protectedApi := humachi.New(r, config)
 		resources.NewAccountResource(accountService).RegisterRoutes(protectedApi)
 		resources.NewCategoryResource(categoryService).RegisterRoutes(protectedApi)
+		resources.NewTransactionResource(transactionService).RegisterRoutes(protectedApi, "")
 	})
 
 	return nil

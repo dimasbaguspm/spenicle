@@ -22,7 +22,12 @@ var (
 	ErrAccountNotFound    = errors.New("account not found")
 	ErrNoFieldsToUpdate   = errors.New("at least one field must be provided to update")
 	ErrInvalidAccountData = errors.New("invalid account data")
+
+	AccountExpenseType = "expense"
+	AccountIncomeType  = "income"
 )
+
+var ()
 
 type AccountRepository struct {
 	db DB
