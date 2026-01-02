@@ -2,8 +2,8 @@ package configs
 
 import (
 	"context"
-	"log"
 
+	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -14,7 +14,7 @@ type Database struct {
 func (dbConfig *Database) Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
-		log.Fatalf("Unable to create connection pool: %v\n", err)
+		logger.Log().Error("Unable to create connection pool", "error", err)
 		return nil, err
 	}
 

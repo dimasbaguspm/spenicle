@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 
 	routes := &RoutesConfig{}
 	if err := routes.Setup(setupCtx); err != nil {
-		log.Fatalf("Failed to set up routes: %v", err)
+		logger.Log().Error("failed to set up routes", "error", err)
 	}
 
 	srv := routes.Run()
@@ -29,7 +30,7 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("server shutdown error: %v", err)
+		logger.Log().Error("failed to shut down server", "error", err)
 	}
 	routes.Close()
 }

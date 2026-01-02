@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"errors"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/dimasbaguspm/spenicle-api/internal/configs"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/resources"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
@@ -42,7 +42,8 @@ func (rc *RoutesConfig) Setup(ctx context.Context) error {
 
 	pool, err := (&configs.Database{}).Connect(ctx, env.DatabaseURL)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		logger.Log().Info("failed to connect to database", "error", err)
+		return errors.New("failed to connect to database")
 	}
 
 	rc.dbPool = pool
@@ -75,12 +76,11 @@ func (rc *RoutesConfig) Run() *http.Server {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("server error: %v", err)
+			logger.Log().Error("failed to start server", "error", err)
 		}
 	}()
 
-	log.Printf("Server is running on %s", env.AppPort)
-
+	logger.Log().Info("Server is running on " + env.AppPort)
 	return srv
 }
 

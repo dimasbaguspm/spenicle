@@ -3,11 +3,11 @@ package resources
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
@@ -132,7 +132,7 @@ func (ar *AccountResource) GetPaginated(ctx context.Context, input *getPaginated
 
 	parsedResult, err := ar.service.List(ctx, searchParams)
 	if err != nil {
-		log.Printf("Failed to list accounts: %v", err)
+		logger.Log().Error("Failed to list accounts", "error", err)
 		return nil, huma.Error500InternalServerError("Failed to list accounts", err)
 	}
 
@@ -145,7 +145,7 @@ func (ar *AccountResource) Get(ctx context.Context, input *getAccountRequest) (*
 		if errors.Is(err, services.ErrAccountNotFound) {
 			return nil, huma.Error404NotFound(services.ErrAccountNotFound.Error())
 		}
-		log.Printf("Failed to get account %d: %v", input.ID, err)
+		logger.Log().Error("Failed to get account", "id", input.ID, "error", err)
 		return nil, huma.Error500InternalServerError("Failed to get account", err)
 	}
 
@@ -157,7 +157,7 @@ func (ar *AccountResource) Create(ctx context.Context, input *createAccountReque
 
 	accountSchema, err := ar.service.Create(ctx, createSchema)
 	if err != nil {
-		log.Printf("Failed to create account: %v", err)
+		logger.Log().Error("Failed to create account", "error", err)
 		return nil, huma.Error500InternalServerError("Failed to create account", err)
 	}
 
@@ -175,7 +175,7 @@ func (ar *AccountResource) Update(ctx context.Context, input *updateAccountReque
 		if errors.Is(err, services.ErrAccountNotFound) {
 			return nil, huma.Error404NotFound(services.ErrAccountNotFound.Error())
 		}
-		log.Printf("Failed to update account %d: %v", input.ID, err)
+		logger.Log().Error("Failed to update account", "id", input.ID, "error", err)
 		return nil, huma.Error500InternalServerError("Failed to update account", err)
 	}
 
@@ -184,7 +184,7 @@ func (ar *AccountResource) Update(ctx context.Context, input *updateAccountReque
 
 func (ar *AccountResource) Delete(ctx context.Context, input *deleteAccountRequest) (*deleteAccountResponse, error) {
 	if err := ar.service.Delete(ctx, input.ID); err != nil {
-		log.Printf("Failed to delete account %d: %v", input.ID, err)
+		logger.Log().Error("Failed to delete account", "id", input.ID, "error", err)
 		return nil, huma.Error500InternalServerError("Failed to delete account", err)
 	}
 

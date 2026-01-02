@@ -28,35 +28,55 @@ HTTP Request → Resource → Service → Repository → Database
 
 ## Endpoints
 
-All endpoints are registered in `resource/account_resource.go` with Huma operations. Summary below:
+All endpoints are registered in `resource/account_resource.go` with Huma operations. **All endpoints require JWT authentication** via `Authorization: Bearer <token>` header.
 
 - GET /accounts
 
   - Description: List accounts (paginated) with optional filters.
   - Request: Query parameters documented in `SearchParamAccountSchema` ([internal/database/schema/account_search_param_schema.go](../internal/database/schema/account_search_param_schema.go)).
   - Response: 200 OK with paginated list (`PaginatedAccountSchema`).
+  - Auth: Required
 
 - POST /accounts
 
   - Description: Create a new account.
   - Request body: `CreateAccountSchema` ([internal/database/schema/account_create_schema.go](../internal/database/schema/account_create_schema.go)).
   - Response: 201 Created with created `AccountSchema`.
+  - Auth: Required
 
 - GET /accounts/{id}
 
   - Description: Get account by ID.
   - Path: `id` must be an integer; Huma validates path type and configured minimum (see `AccountPathParam` in resource).
   - Response: 200 OK with `AccountSchema` or 404 Not Found if not present.
+  - Auth: Required
 
 - PATCH /accounts/{id}
 
   - Description: Partial update of account. At least one updatable field must be provided.
   - Request body: `UpdateAccountSchema` ([internal/database/schema/account_update_schema.go](../internal/database/schema/account_update_schema.go)).
   - Response: 200 OK with updated `AccountSchema`.
+  - Auth: Required
 
 - DELETE /accounts/{id}
   - Description: Soft-delete an account (sets `deleted_at`).
   - Response: 204 No Content.
+  - Auth: Required
+
+## Authentication
+
+To access account endpoints:
+
+1. Login via `POST /auth/login` with credentials from `.env`:
+   ```json
+   {
+     "username": "your-admin-username",
+     "password": "your-admin-password"
+   }
+   ```
+2. Receive JWT token valid for 1 week
+3. Include token in requests: `Authorization: Bearer <token>`
+4. Token validation happens in middleware before reaching resources
 
 ## Validation
 
@@ -124,6 +144,7 @@ The service layer uses an `AccountStore` interface for testability, allowing rep
 Huma returns structured problem responses (application/problem+json):
 
 - **422** - Schema validation failures
+- **401** - Unauthorized (missing or invalid JWT token)
 - **400** - Business rule violations (no fields provided)
 - **404** - Entity not found
 - **500** - Internal server errors
