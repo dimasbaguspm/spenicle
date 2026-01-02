@@ -56,11 +56,13 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 	categoryRepo := repositories.NewCategoryRepository(pool)
 	transactionRepo := repositories.NewTransactionRepository(pool)
 	summaryRepo := repositories.NewSummaryRepository(pool)
+	transactionRelationRepo := repositories.NewTransactionRelationRepository(pool)
 
 	accountService := services.NewAccountService(accountRepo)
 	categoryService := services.NewCategoryService(categoryRepo)
 	transactionService := services.NewTransactionService(transactionRepo, accountRepo, categoryRepo)
 	summaryService := services.NewSummaryService(summaryRepo)
+	transactionRelationService := services.NewTransactionRelationService(transactionRelationRepo, transactionRepo)
 
 	// public routes
 	resources.NewAuthResource(env).RegisterRoutes(publicApi)
@@ -73,6 +75,7 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 		resources.NewCategoryResource(categoryService).RegisterRoutes(protectedApi)
 		resources.NewTransactionResource(transactionService).RegisterRoutes(protectedApi, "")
 		resources.NewSummaryResource(summaryService).RegisterRoutes(protectedApi)
+		resources.NewTransactionRelationResource(transactionRelationService).RegisterRoutes(protectedApi)
 	})
 
 	return nil
