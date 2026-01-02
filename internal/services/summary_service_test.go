@@ -135,7 +135,7 @@ func TestSummaryServiceGetAccountSummary(t *testing.T) {
 		}
 
 		if result.Data[0].AccountID != 1 {
-			t.Errorf("expected account_id 1, got %d", result.Data[0].AccountID)
+			t.Errorf("expected accountId 1, got %d", result.Data[0].AccountID)
 		}
 	})
 
@@ -184,7 +184,7 @@ func TestSummaryServiceGetCategorySummary(t *testing.T) {
 		}
 
 		if result.Data[0].CategoryID != 1 {
-			t.Errorf("expected category_id 1, got %d", result.Data[0].CategoryID)
+			t.Errorf("expected categoryId 1, got %d", result.Data[0].CategoryID)
 		}
 	})
 

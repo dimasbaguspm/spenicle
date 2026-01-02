@@ -7,10 +7,10 @@ type TransactionSchema struct {
 	Type       string     `json:"type"`
 	Date       time.Time  `json:"date"`
 	Amount     int        `json:"amount"`
-	AccountID  int        `json:"account_id"`
-	CategoryID int        `json:"category_id"`
+	AccountID  int        `json:"accountId"`
+	CategoryID int        `json:"categoryId"`
 	Note       *string    `json:"note"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
-	DeletedAt  *time.Time `json:"deleted_at,omitempty"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
+	DeletedAt  *time.Time `json:"deletedAt,omitempty"`
 }

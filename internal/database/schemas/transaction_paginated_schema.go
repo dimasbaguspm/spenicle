@@ -8,8 +8,8 @@ type PaginatedTransactionSchema struct {
 	Data       []TransactionSchema `json:"data"`
 	Page       int                 `json:"page"`
 	Limit      int                 `json:"limit"`
-	TotalItems int                 `json:"total_items"`
-	TotalPages int                 `json:"total_pages"`
+	TotalItems int                 `json:"totalItems"`
+	TotalPages int                 `json:"totalPages"`
 }
 
 func (p *PaginatedTransactionSchema) FromRows(rows pgx.Rows) error {

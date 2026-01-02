@@ -169,10 +169,10 @@ func TestTransactionResourceCreate(t *testing.T) {
 		resource.RegisterRoutes(api, "")
 
 		resp := api.Post("/transactions", map[string]any{
-			"type":        repositories.TransactionExpenseType,
-			"amount":      50000,
-			"account_id":  1,
-			"category_id": 1,
+			"type":       repositories.TransactionExpenseType,
+			"amount":     50000,
+			"accountId":  1,
+			"categoryId": 1,
 		})
 		if resp.Code != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.Code)
@@ -191,10 +191,10 @@ func TestTransactionResourceCreate(t *testing.T) {
 		resource.RegisterRoutes(api, "")
 
 		resp := api.Post("/transactions", map[string]any{
-			"type":        repositories.TransactionExpenseType,
-			"amount":      50000,
-			"account_id":  1,
-			"category_id": 1,
+			"type":       repositories.TransactionExpenseType,
+			"amount":     50000,
+			"accountId":  1,
+			"categoryId": 1,
 		})
 		if resp.Code != http.StatusUnprocessableEntity {
 			t.Errorf("expected status 422, got %d", resp.Code)
@@ -213,10 +213,10 @@ func TestTransactionResourceCreate(t *testing.T) {
 		resource.RegisterRoutes(api, "")
 
 		resp := api.Post("/transactions", map[string]any{
-			"type":        repositories.TransactionExpenseType,
-			"amount":      50000,
-			"account_id":  1,
-			"category_id": 1,
+			"type":       repositories.TransactionExpenseType,
+			"amount":     50000,
+			"accountId":  1,
+			"categoryId": 1,
 		})
 		if resp.Code != http.StatusUnprocessableEntity {
 			t.Errorf("expected status 422, got %d", resp.Code)
@@ -235,10 +235,10 @@ func TestTransactionResourceCreate(t *testing.T) {
 		resource.RegisterRoutes(api, "")
 
 		resp := api.Post("/transactions", map[string]any{
-			"type":        repositories.TransactionExpenseType,
-			"amount":      50000,
-			"account_id":  999,
-			"category_id": 1,
+			"type":       repositories.TransactionExpenseType,
+			"amount":     50000,
+			"accountId":  999,
+			"categoryId": 1,
 		})
 		if resp.Code != http.StatusNotFound {
 			t.Errorf("expected status 404, got %d", resp.Code)
@@ -257,10 +257,10 @@ func TestTransactionResourceCreate(t *testing.T) {
 		resource.RegisterRoutes(api, "")
 
 		resp := api.Post("/transactions", map[string]any{
-			"type":        repositories.TransactionExpenseType,
-			"amount":      50000,
-			"account_id":  1,
-			"category_id": 999,
+			"type":       repositories.TransactionExpenseType,
+			"amount":     50000,
+			"accountId":  1,
+			"categoryId": 999,
 		})
 		if resp.Code != http.StatusNotFound {
 			t.Errorf("expected status 404, got %d", resp.Code)
