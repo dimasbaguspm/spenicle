@@ -61,6 +61,7 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 	transactionRelationRepo := repositories.NewTransactionRelationRepository(pool)
 	budgetTemplateRepo := repositories.NewBudgetTemplateRepository(pool)
 	budgetRepo := repositories.NewBudgetRepository(pool)
+	transactionTemplateRepo := repositories.NewTransactionTemplateRepository(pool)
 
 	// services
 	accountService := services.NewAccountService(accountRepo)
@@ -70,6 +71,7 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 	transactionRelationService := services.NewTransactionRelationService(transactionRelationRepo, transactionRepo)
 	budgetTemplateService := services.NewBudgetTemplateService(budgetTemplateRepo)
 	budgetService := services.NewBudgetService(budgetRepo)
+	transactionTemplateService := services.NewTransactionTemplateService(transactionTemplateRepo, accountRepo, categoryRepo)
 
 	// public routes
 	resources.NewAuthResource(env).RegisterRoutes(publicApi)
@@ -80,7 +82,7 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 		protectedApi := humachi.New(r, config)
 		resources.NewAccountResource(accountService, budgetService).RegisterRoutes(protectedApi)
 		resources.NewCategoryResource(categoryService, budgetService).RegisterRoutes(protectedApi)
-		resources.NewTransactionResource(transactionService).RegisterRoutes(protectedApi)
+		resources.NewTransactionResource(transactionService, transactionTemplateService).RegisterRoutes(protectedApi)
 		resources.NewSummaryResource(summaryService).RegisterRoutes(protectedApi)
 		resources.NewTransactionRelationResource(transactionRelationService).RegisterRoutes(protectedApi)
 		resources.NewBudgetResource(budgetService, budgetTemplateService).RegisterRoutes(protectedApi)
@@ -90,6 +92,8 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 	rc.worker = worker.New()
 	budgetGenerationJob := worker.NewBudgetGenerationJob(budgetTemplateRepo, budgetRepo)
 	rc.worker.Register(budgetGenerationJob)
+	transactionGenerationJob := worker.NewTransactionGenerationJob(transactionTemplateRepo, transactionRepo)
+	rc.worker.Register(transactionGenerationJob)
 
 	return nil
 }

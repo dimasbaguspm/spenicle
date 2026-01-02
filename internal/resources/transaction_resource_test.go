@@ -21,6 +21,15 @@ type MockTransactionService struct {
 	DeleteFunc func(ctx context.Context, id int) error
 }
 
+// MockTransactionTemplateService is a mock implementation for testing template operations
+type MockTransactionTemplateService struct {
+	ListFunc   func(ctx context.Context, params schemas.SearchParamTransactionTemplateSchema) (*schemas.PaginatedTransactionTemplateSchema, error)
+	GetFunc    func(ctx context.Context, id int) (*schemas.TransactionTemplateSchema, error)
+	CreateFunc func(ctx context.Context, input schemas.CreateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error)
+	UpdateFunc func(ctx context.Context, id int, input schemas.UpdateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error)
+	DeleteFunc func(ctx context.Context, id int) error
+}
+
 func (m *MockTransactionService) List(ctx context.Context, params schemas.SearchParamTransactionSchema) (schemas.PaginatedTransactionSchema, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx, params)
@@ -56,6 +65,41 @@ func (m *MockTransactionService) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
+func (m *MockTransactionTemplateService) List(ctx context.Context, params schemas.SearchParamTransactionTemplateSchema) (*schemas.PaginatedTransactionTemplateSchema, error) {
+	if m.ListFunc != nil {
+		return m.ListFunc(ctx, params)
+	}
+	return &schemas.PaginatedTransactionTemplateSchema{}, nil
+}
+
+func (m *MockTransactionTemplateService) Get(ctx context.Context, id int) (*schemas.TransactionTemplateSchema, error) {
+	if m.GetFunc != nil {
+		return m.GetFunc(ctx, id)
+	}
+	return &schemas.TransactionTemplateSchema{}, nil
+}
+
+func (m *MockTransactionTemplateService) Create(ctx context.Context, input schemas.CreateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+	if m.CreateFunc != nil {
+		return m.CreateFunc(ctx, input)
+	}
+	return &schemas.TransactionTemplateSchema{}, nil
+}
+
+func (m *MockTransactionTemplateService) Update(ctx context.Context, id int, input schemas.UpdateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, id, input)
+	}
+	return &schemas.TransactionTemplateSchema{}, nil
+}
+
+func (m *MockTransactionTemplateService) Delete(ctx context.Context, id int) error {
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
+
 func TestTransactionResourceList(t *testing.T) {
 	t.Run("successfully lists transactions", func(t *testing.T) {
 		_, api := humatest.New(t)
@@ -72,7 +116,8 @@ func TestTransactionResourceList(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions")
@@ -90,7 +135,8 @@ func TestTransactionResourceList(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions")
@@ -119,7 +165,8 @@ func TestTransactionResourceGet(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions/1")
@@ -136,7 +183,8 @@ func TestTransactionResourceGet(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions/999")
@@ -165,7 +213,8 @@ func TestTransactionResourceCreate(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -187,7 +236,8 @@ func TestTransactionResourceCreate(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -209,7 +259,8 @@ func TestTransactionResourceCreate(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -231,7 +282,8 @@ func TestTransactionResourceCreate(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -253,7 +305,8 @@ func TestTransactionResourceCreate(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -287,7 +340,8 @@ func TestTransactionResourceUpdate(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/1", map[string]any{
@@ -306,7 +360,8 @@ func TestTransactionResourceUpdate(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/1", map[string]any{})
@@ -323,7 +378,8 @@ func TestTransactionResourceUpdate(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/999", map[string]any{
@@ -342,7 +398,8 @@ func TestTransactionResourceUpdate(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/1", map[string]any{
@@ -363,7 +420,8 @@ func TestTransactionResourceDelete(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Delete("/transactions/1")
@@ -380,12 +438,233 @@ func TestTransactionResourceDelete(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(service)
+		templateService := &MockTransactionTemplateService{}
+		resource := NewTransactionResource(service, templateService)
 		resource.RegisterRoutes(api)
 
 		resp := api.Delete("/transactions/999")
 		if resp.Code != http.StatusNotFound {
 			t.Errorf("expected status 404, got %d", resp.Code)
+		}
+	})
+}
+
+// TestTransactionTemplateErrorHandling tests that the resource layer properly handles
+// validation errors from the service layer
+func TestTransactionTemplateErrorHandling(t *testing.T) {
+	t.Run("CreateTemplate returns 404 when account not found", func(t *testing.T) {
+		_, api := humatest.New(t)
+
+		mockService := &MockTransactionService{}
+		mockTemplateService := &MockTransactionTemplateService{
+			CreateFunc: func(ctx context.Context, input schemas.CreateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+				return nil, repositories.ErrAccountNotFound
+			},
+		}
+
+		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource.RegisterRoutes(api)
+
+		resp := api.Post("/transactions/templates", map[string]any{
+			"type":       "expense",
+			"accountId":  999,
+			"categoryId": 1,
+			"amount":     50000,
+			"recurrence": "monthly",
+			"startDate":  time.Now().Format(time.RFC3339),
+		})
+
+		if resp.Code != 404 {
+			t.Errorf("expected status 404, got %d", resp.Code)
+		}
+	})
+
+	t.Run("CreateTemplate returns 404 when category not found", func(t *testing.T) {
+		_, api := humatest.New(t)
+
+		mockService := &MockTransactionService{}
+		mockTemplateService := &MockTransactionTemplateService{
+			CreateFunc: func(ctx context.Context, input schemas.CreateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+				return nil, repositories.ErrCategoryNotFound
+			},
+		}
+
+		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource.RegisterRoutes(api)
+
+		resp := api.Post("/transactions/templates", map[string]any{
+			"type":       "expense",
+			"accountId":  1,
+			"categoryId": 999,
+			"amount":     50000,
+			"recurrence": "monthly",
+			"startDate":  time.Now().Format(time.RFC3339),
+		})
+
+		if resp.Code != 404 {
+			t.Errorf("expected status 404, got %d", resp.Code)
+		}
+	})
+
+	t.Run("CreateTemplate returns 422 when type doesn't match category", func(t *testing.T) {
+		_, api := humatest.New(t)
+
+		mockService := &MockTransactionService{}
+		mockTemplateService := &MockTransactionTemplateService{
+			CreateFunc: func(ctx context.Context, input schemas.CreateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+				return nil, repositories.ErrTransactionTypeCategoryMismatch
+			},
+		}
+
+		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource.RegisterRoutes(api)
+
+		resp := api.Post("/transactions/templates", map[string]any{
+			"type":       "expense",
+			"accountId":  1,
+			"categoryId": 1,
+			"amount":     50000,
+			"recurrence": "monthly",
+			"startDate":  time.Now().Format(time.RFC3339),
+		})
+
+		if resp.Code != 422 {
+			t.Errorf("expected status 422, got %d", resp.Code)
+		}
+	})
+
+	t.Run("CreateTemplate returns 422 when invalid account type for expense", func(t *testing.T) {
+		_, api := humatest.New(t)
+
+		mockService := &MockTransactionService{}
+		mockTemplateService := &MockTransactionTemplateService{
+			CreateFunc: func(ctx context.Context, input schemas.CreateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+				return nil, repositories.ErrInvalidAccountTypeForExpense
+			},
+		}
+
+		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource.RegisterRoutes(api)
+
+		resp := api.Post("/transactions/templates", map[string]any{
+			"type":       "expense",
+			"accountId":  1,
+			"categoryId": 1,
+			"amount":     50000,
+			"recurrence": "monthly",
+			"startDate":  time.Now().Format(time.RFC3339),
+		})
+
+		if resp.Code != 422 {
+			t.Errorf("expected status 422, got %d", resp.Code)
+		}
+	})
+
+	t.Run("UpdateTemplate returns 404 when account not found", func(t *testing.T) {
+		_, api := humatest.New(t)
+
+		mockService := &MockTransactionService{}
+		mockTemplateService := &MockTransactionTemplateService{
+			UpdateFunc: func(ctx context.Context, id int, input schemas.UpdateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+				return nil, repositories.ErrAccountNotFound
+			},
+		}
+
+		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource.RegisterRoutes(api)
+
+		resp := api.Patch("/transactions/templates/1", map[string]any{
+			"accountId": 999,
+		})
+
+		if resp.Code != 404 {
+			t.Errorf("expected status 404, got %d", resp.Code)
+		}
+	})
+
+	t.Run("UpdateTemplate returns 404 when category not found", func(t *testing.T) {
+		_, api := humatest.New(t)
+
+		mockService := &MockTransactionService{}
+		mockTemplateService := &MockTransactionTemplateService{
+			UpdateFunc: func(ctx context.Context, id int, input schemas.UpdateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+				return nil, repositories.ErrCategoryNotFound
+			},
+		}
+
+		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource.RegisterRoutes(api)
+
+		resp := api.Patch("/transactions/templates/1", map[string]any{
+			"categoryId": 999,
+		})
+
+		if resp.Code != 404 {
+			t.Errorf("expected status 404, got %d", resp.Code)
+		}
+	})
+
+	t.Run("UpdateTemplate returns 422 when type doesn't match category", func(t *testing.T) {
+		_, api := humatest.New(t)
+
+		mockService := &MockTransactionService{}
+		mockTemplateService := &MockTransactionTemplateService{
+			UpdateFunc: func(ctx context.Context, id int, input schemas.UpdateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+				return nil, repositories.ErrTransactionTypeCategoryMismatch
+			},
+		}
+
+		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource.RegisterRoutes(api)
+
+		resp := api.Patch("/transactions/templates/1", map[string]any{
+			"type": "income",
+		})
+
+		if resp.Code != 422 {
+			t.Errorf("expected status 422, got %d", resp.Code)
+		}
+	})
+
+	t.Run("UpdateTemplate returns 400 when no fields to update", func(t *testing.T) {
+		_, api := humatest.New(t)
+
+		mockService := &MockTransactionService{}
+		mockTemplateService := &MockTransactionTemplateService{
+			UpdateFunc: func(ctx context.Context, id int, input schemas.UpdateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+				return nil, repositories.ErrNoFieldsToUpdate
+			},
+		}
+
+		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource.RegisterRoutes(api)
+
+		resp := api.Patch("/transactions/templates/1", map[string]any{})
+
+		if resp.Code != 400 {
+			t.Errorf("expected status 400, got %d", resp.Code)
+		}
+	})
+
+	t.Run("UpdateTemplate returns 500 for unexpected errors", func(t *testing.T) {
+		_, api := humatest.New(t)
+
+		mockService := &MockTransactionService{}
+		mockTemplateService := &MockTransactionTemplateService{
+			UpdateFunc: func(ctx context.Context, id int, input schemas.UpdateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
+				return nil, errors.New("unexpected database error")
+			},
+		}
+
+		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource.RegisterRoutes(api)
+
+		resp := api.Patch("/transactions/templates/1", map[string]any{
+			"amount": 75000,
+		})
+
+		if resp.Code != 500 {
+			t.Errorf("expected status 500, got %d", resp.Code)
 		}
 	})
 }
