@@ -8,7 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/services"
+	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 )
 
 // MockAccountService is a mock implementation of AccountService for testing HTTP layer
@@ -170,7 +170,7 @@ func TestAccountResource_GetDetail_InvalidID(t *testing.T) {
 func TestAccountResource_GetDetail_NotFound(t *testing.T) {
 	mockService := &MockAccountService{
 		GetFunc: func(ctx context.Context, id int64) (schemas.AccountSchema, error) {
-			return schemas.AccountSchema{}, services.ErrAccountNotFound
+			return schemas.AccountSchema{}, repositories.ErrAccountNotFound
 		},
 	}
 	api, _ := setupTestAPI(t, mockService)
@@ -303,7 +303,7 @@ func TestAccountResource_Update_ValidationErrors(t *testing.T) {
 		UpdateFunc: func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
 			// Simulate business validation from service layer
 			if data.Name == nil && data.Type == nil && data.Note == nil && data.Amount == nil {
-				return schemas.AccountSchema{}, services.ErrNoFieldsToUpdate
+				return schemas.AccountSchema{}, repositories.ErrNoFieldsToUpdate
 			}
 			return schemas.AccountSchema{ID: id}, nil
 		},
@@ -353,7 +353,7 @@ func TestAccountResource_Update_ValidationErrors(t *testing.T) {
 func TestAccountResource_Update_NotFound(t *testing.T) {
 	mockService := &MockAccountService{
 		UpdateFunc: func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
-			return schemas.AccountSchema{}, services.ErrAccountNotFound
+			return schemas.AccountSchema{}, repositories.ErrAccountNotFound
 		},
 	}
 	api, _ := setupTestAPI(t, mockService)

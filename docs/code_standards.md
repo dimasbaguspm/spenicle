@@ -12,12 +12,13 @@ This document describes the code patterns, design choices, file structure, and a
   - `internal/repositories/*` implements DB access (SQL) and returns schema DTOs.
 - Single responsibility:
   - Resource: HTTP protocol, request/response mapping, HTTP status codes.
-  - Service: Business validation, domain rules, error translation from DB to domain errors.
-  - Repository: SQL queries, row scanning, database-specific concerns.
+  - Service: Business validation, domain rules, error translation from DB to domain errors, input sanitization (e.g., pagination limits, default values).
+  - Repository: SQL queries, row scanning, database-specific concerns. **Trust the service layer** — repositories should not validate or modify input parameters.
   - Schema package: DTOs with Huma validation tags for data-level constraints.
 - Validation layers:
   - **Schema validation** (data-level): Individual field constraints via struct tags (minLength, enum, minimum, etc.). Enforces data integrity and format.
-  - **Service validation** (business-level): Cross-field rules, domain invariants, business constraints (e.g., "at least one field for update", "unique name per user", "savings accounts need minimum balance").
+  - **Service validation** (business-level): Cross-field rules, domain invariants, business constraints (e.g., "at least one field for update", "unique name per user", "savings accounts need minimum balance", pagination limits).
+- **Repository Trust Principle**: Repositories focus purely on database operations and trust that the service layer provides valid inputs. All validation logic (min/max values, defaults, business rules) belongs in the service layer.
 - Adapter usage:
   - Huma + Chi adapter is used to register routes and auto-generate OpenAPI.
 - Architecture flow:
@@ -25,6 +26,7 @@ This document describes the code patterns, design choices, file structure, and a
   HTTP Request → Resource → Service → Repository → Database
                     ↓          ↓          ↓
                 HTTP layer  Business  Data layer
+                          (validation)  (pure DB ops)
   ```
 
 ## Observability
@@ -112,13 +114,13 @@ For complete authentication implementation details, token flows, and security pa
    - Return schema DTOs and wrap errors with context (e.g., `fmt.Errorf("get account: %w", err)`).
 3. Add service method
    - Implement business logic in `internal/services/<name>_service.go`.
-   - Add **business-level validation** (cross-field rules, domain constraints).
-   - Translate repository errors to domain errors (e.g., `pgx.ErrNoRows` → `ErrAccountNotFound`).
-   - Define domain errors as package-level variables (e.g., `var ErrAccountNotFound = errors.New("account not found")`).
+   - Add **business-level validation** (cross-field rules, domain constraints, input sanitization).
+   - Handle domain errors from repository (e.g., `repositories.ErrAccountNotFound`).
+   - Service layer consumes domain errors defined in repository package.
 4. Add resource handler
    - Define request/response wrapper types in `internal/resources/<name>_resource.go` (embedding path/query/body types).
    - Implement the handler method (context, input pointer) calling the service layer.
-   - Translate domain errors to HTTP errors using `errors.Is()` checks (e.g., `ErrAccountNotFound` → `huma.Error404NotFound`).
+   - Translate domain errors to HTTP errors using `errors.Is()` checks (e.g., `repositories.ErrAccountNotFound` → `huma.Error404NotFound`).
    - Use Huma error helpers for consistent HTTP error responses.
 5. Register the operation
    - In the resource's `RegisterRoutes` function, call `huma.Register` with a `huma.Operation{OperationID, Method, Path, Summary, Tags}` and the handler method.

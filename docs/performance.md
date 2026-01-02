@@ -16,12 +16,44 @@ This document defines performance patterns, constraints, and best practices for 
 
 ### Implementation Pattern
 
+**Service Layer** (handles validation and defaults):
+
 ```go
-type SearchParamSchema struct {
-    Page     int `query:"page" minimum:"1" default:"1" doc:"Page number"`
-    PageSize int `query:"page_size" minimum:"1" maximum:"100" default:"30" doc:"Items per page"`
+func (s *AccountService) List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
+    maxPageSize     = 100
+    defaultPageSize = 25
+
+    // Enforce maximum page size
+    if params.PageSize > maxPageSize {
+        params.PageSize = maxPageSize
+    }
+    if params.PageSize <= 0 {
+        params.PageSize = defaultPageSize
+    }
+
+    // Ensure valid page number
+    if params.PageNumber <= 0 {
+        params.PageNumber = 1
+    }
+
+    return s.store.List(ctx, params)
 }
 ```
+
+**Repository Layer** (trusts service layer inputs):
+
+```go
+// List returns paginated accounts
+// Trust the service layer to validate pageSize and pageNumber
+func (r *AccountRepository) List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
+    // No validation here - trust service layer
+    offset := (params.PageNumber - 1) * params.PageSize
+    rows, _ := r.db.Query(ctx, sql, params.PageSize, offset)
+    // ...
+}
+```
+
+**Architectural Note**: Validation belongs in the service layer. Repositories should focus purely on database operations and trust their inputs. This maintains clear separation of concerns.
 
 ### Response Format
 

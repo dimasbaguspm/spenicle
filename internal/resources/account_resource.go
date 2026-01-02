@@ -8,6 +8,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
+	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
@@ -157,8 +158,8 @@ func (ar *AccountResource) GetPaginated(ctx context.Context, input *getPaginated
 func (ar *AccountResource) Get(ctx context.Context, input *getAccountRequest) (*getAccountResponse, error) {
 	accountSchema, err := ar.service.Get(ctx, input.ID)
 	if err != nil {
-		if errors.Is(err, services.ErrAccountNotFound) {
-			return nil, huma.Error404NotFound(services.ErrAccountNotFound.Error())
+		if errors.Is(err, repositories.ErrAccountNotFound) {
+			return nil, huma.Error404NotFound(repositories.ErrAccountNotFound.Error())
 		}
 		logger.Log().Error("Failed to get account", "id", input.ID, "error", err)
 		return nil, huma.Error500InternalServerError("Failed to get account", err)
@@ -184,11 +185,11 @@ func (ar *AccountResource) Update(ctx context.Context, input *updateAccountReque
 
 	accountSchema, err := ar.service.Update(ctx, input.ID, updateSchema)
 	if err != nil {
-		if errors.Is(err, services.ErrNoFieldsToUpdate) {
-			return nil, huma.Error400BadRequest(services.ErrNoFieldsToUpdate.Error())
+		if errors.Is(err, repositories.ErrNoFieldsToUpdate) {
+			return nil, huma.Error400BadRequest(repositories.ErrNoFieldsToUpdate.Error())
 		}
-		if errors.Is(err, services.ErrAccountNotFound) {
-			return nil, huma.Error404NotFound(services.ErrAccountNotFound.Error())
+		if errors.Is(err, repositories.ErrAccountNotFound) {
+			return nil, huma.Error404NotFound(repositories.ErrAccountNotFound.Error())
 		}
 		logger.Log().Error("Failed to update account", "id", input.ID, "error", err)
 		return nil, huma.Error500InternalServerError("Failed to update account", err)
@@ -199,6 +200,9 @@ func (ar *AccountResource) Update(ctx context.Context, input *updateAccountReque
 
 func (ar *AccountResource) Delete(ctx context.Context, input *deleteAccountRequest) (*deleteAccountResponse, error) {
 	if err := ar.service.Delete(ctx, input.ID); err != nil {
+		if errors.Is(err, repositories.ErrAccountNotFound) {
+			return nil, huma.Error404NotFound(repositories.ErrAccountNotFound.Error())
+		}
 		logger.Log().Error("Failed to delete account", "id", input.ID, "error", err)
 		return nil, huma.Error500InternalServerError("Failed to delete account", err)
 	}

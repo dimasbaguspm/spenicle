@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/jackc/pgx/v5"
+	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 )
 
 // MockAccountStore is a simple mock for testing business logic
@@ -77,7 +77,7 @@ func TestUpdate_BusinessValidation_NoFieldsProvided(t *testing.T) {
 
 	_, err := service.Update(context.Background(), 1, emptyUpdate)
 
-	if err != ErrNoFieldsToUpdate {
+	if err != repositories.ErrNoFieldsToUpdate {
 		t.Errorf("expected ErrNoFieldsToUpdate, got %v", err)
 	}
 
@@ -149,14 +149,14 @@ func TestUpdate_ErrorTranslation_NotFound(t *testing.T) {
 
 	mockStore = &MockAccountStore{
 		UpdateFunc: func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
-			return schemas.AccountSchema{}, pgx.ErrNoRows
+			return schemas.AccountSchema{}, repositories.ErrAccountNotFound
 		},
 	}
 	service := NewAccountService(mockStore)
 	_, err := service.Update(context.Background(), 999, updateData)
 
 	// Service should translate to ErrAccountNotFound (domain error)
-	if err != ErrAccountNotFound {
+	if err != repositories.ErrAccountNotFound {
 		t.Errorf("expected ErrAccountNotFound, got %v", err)
 	}
 }

@@ -6,13 +6,7 @@ import (
 	"fmt"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/jackc/pgx/v5"
-)
-
-var (
-	ErrAccountNotFound    = errors.New("account not found")
-	ErrNoFieldsToUpdate   = errors.New("at least one field must be provided to update")
-	ErrInvalidAccountData = errors.New("invalid account data")
+	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 )
 
 type AccountStore interface {
@@ -32,24 +26,36 @@ func NewAccountService(store AccountStore) *AccountService {
 }
 
 func (s *AccountService) List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
+	maxPageSize := 100
+	defaultPageSize := 10
+
+	// Enforce maximum page size (performance constraint)
+	if params.PageSize > maxPageSize {
+		params.PageSize = maxPageSize
+	}
+	if params.PageSize <= 0 {
+		params.PageSize = defaultPageSize
+	}
+
+	// Ensure valid page number
+	if params.PageNumber <= 0 {
+		params.PageNumber = 1
+	}
+
 	return s.store.List(ctx, params)
 }
 
+// Get retrieves a single account by ID.
 func (s *AccountService) Get(ctx context.Context, id int64) (schemas.AccountSchema, error) {
 	account, err := s.store.Get(ctx, id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return schemas.AccountSchema{}, ErrAccountNotFound
-		}
 		return schemas.AccountSchema{}, fmt.Errorf("failed to get account: %w", err)
 	}
 	return account, nil
 }
 
+// Create validates and creates a new account.
 func (s *AccountService) Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
-	// Add business validation here if needed
-	// Example: validate account type-specific rules, amount limits, etc.
-
 	account, err := s.store.Create(ctx, data)
 	if err != nil {
 		return schemas.AccountSchema{}, fmt.Errorf("failed to create account: %w", err)
@@ -59,15 +65,14 @@ func (s *AccountService) Create(ctx context.Context, data schemas.CreateAccountS
 
 // Update validates and updates an existing account.
 func (s *AccountService) Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
-	// Business validation: at least one field must be provided
 	if data.Name == nil && data.Type == nil && data.Note == nil && data.Amount == nil {
-		return schemas.AccountSchema{}, ErrNoFieldsToUpdate
+		return schemas.AccountSchema{}, repositories.ErrNoFieldsToUpdate
 	}
 
 	account, err := s.store.Update(ctx, id, data)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return schemas.AccountSchema{}, ErrAccountNotFound
+		if errors.Is(err, repositories.ErrAccountNotFound) {
+			return schemas.AccountSchema{}, repositories.ErrAccountNotFound
 		}
 		return schemas.AccountSchema{}, fmt.Errorf("failed to update account: %w", err)
 	}

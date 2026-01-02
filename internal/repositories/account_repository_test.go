@@ -17,13 +17,13 @@ func TestAccountRepository_List(t *testing.T) {
 	}
 	defer mock.Close()
 
-	// Expect count query
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM accounts")).WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(1))
+	// Expect count query with soft delete filter
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM accounts WHERE deleted_at IS NULL")).WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(1))
 
-	// Expect select rows
+	// Expect select rows with soft delete filter and ORDER BY
 	cols := []string{"id", "name", "type", "note", "amount", "created_at", "updated_at", "deleted_at"}
 	now := time.Now().UTC()
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, type, note, amount, created_at, updated_at, deleted_at FROM accounts LIMIT $1 OFFSET $2")).WithArgs(10, 0).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, type, note, amount, created_at, updated_at, deleted_at FROM accounts WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2")).WithArgs(10, 0).
 		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(1), "A", "expense", "", int64(10), now, nil, nil))
 
 	repo := NewAccountRepository(mock)
@@ -53,7 +53,7 @@ func TestAccountRepository_Get(t *testing.T) {
 	cols := []string{"id", "name", "type", "note", "amount", "created_at", "updated_at", "deleted_at"}
 	now := time.Now().UTC()
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, type, note, amount, created_at, updated_at, deleted_at FROM accounts WHERE id = $1")).WithArgs(int64(2)).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, type, note, amount, created_at, updated_at, deleted_at FROM accounts WHERE id = $1 AND deleted_at IS NULL")).WithArgs(int64(2)).
 		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(2), "B", "income", "note", int64(20), now, nil, nil))
 
 	repo := NewAccountRepository(mock)
@@ -107,7 +107,7 @@ func TestAccountRepository_Update(t *testing.T) {
 	cols := []string{"id", "name", "type", "note", "amount", "created_at", "updated_at", "deleted_at"}
 	now := time.Now().UTC()
 
-	mock.ExpectQuery(regexp.QuoteMeta("UPDATE accounts SET name = COALESCE($2, name), type = COALESCE($3, type), note = COALESCE($4, note), amount = COALESCE($5, amount), updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, name, type, note, amount, created_at, updated_at, deleted_at")).WithArgs(int64(3), pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg()).
+	mock.ExpectQuery(regexp.QuoteMeta("UPDATE accounts SET name = COALESCE($2, name), type = COALESCE($3, type), note = COALESCE($4, note), amount = COALESCE($5, amount), updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL RETURNING id, name, type, note, amount, created_at, updated_at, deleted_at")).WithArgs(int64(3), pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg()).
 		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(3), "C-upd", "expense", "", int64(35), now, nil, nil))
 
 	repo := NewAccountRepository(mock)
@@ -135,7 +135,7 @@ func TestAccountRepository_Delete(t *testing.T) {
 	}
 	defer mock.Close()
 
-	mock.ExpectExec(regexp.QuoteMeta("UPDATE accounts SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1")).WithArgs(int64(3)).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE accounts SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL")).WithArgs(int64(3)).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 	repo := NewAccountRepository(mock)
 	if err := repo.Delete(context.Background(), 3); err != nil {

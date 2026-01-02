@@ -119,12 +119,12 @@ The service layer ([account_service.go](../internal/services/account_service.go)
 
 **Responsibilities:**
 
-- Business-level validation (cross-field rules, domain constraints)
-- Error translation (DB errors → domain errors)
+- Business-level validation (cross-field rules, domain constraints, input sanitization)
 - Business rules enforcement
 - Domain logic implementation
+- Consume and propagate domain errors from repository
 
-**Domain Errors:**
+**Domain Errors (defined in `repositories` package):**
 
 ```go
 var (
@@ -134,11 +134,12 @@ var (
 )
 ```
 
-**Error Translation:**
+**Error Handling Pattern:**
 
-- `pgx.ErrNoRows` → `ErrAccountNotFound` (404)
-- No update fields → `ErrNoFieldsToUpdate` (400)
-- Other DB errors → wrapped with context (500)
+- Repository returns `repositories.ErrAccountNotFound` directly (not `pgx.ErrNoRows`)
+- Service validates business rules and returns `repositories.ErrNoFieldsToUpdate` when applicable
+- Service wraps unexpected errors with context for debugging
+- Resource layer translates domain errors to HTTP status codes
 
 The service layer uses an `AccountStore` interface for testability, allowing repository mocking in tests
 Huma returns structured problem responses (application/problem+json):
