@@ -12,6 +12,8 @@ type mockSummaryStore struct {
 	getTransactionSummaryFunc func(ctx context.Context, params schemas.SummaryTransactionParamModel) (schemas.SummaryTransactionSchema, error)
 	getAccountSummaryFunc     func(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryAccountSchema, error)
 	getCategorySummaryFunc    func(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryCategorySchema, error)
+	getAccountTrendFunc       func(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error)
+	getCategoryTrendFunc      func(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error)
 }
 
 func (m *mockSummaryStore) GetTransactionSummary(ctx context.Context, params schemas.SummaryTransactionParamModel) (schemas.SummaryTransactionSchema, error) {
@@ -33,6 +35,20 @@ func (m *mockSummaryStore) GetCategorySummary(ctx context.Context, params schema
 		return m.getCategorySummaryFunc(ctx, params)
 	}
 	return schemas.SummaryCategorySchema{}, nil
+}
+
+func (m *mockSummaryStore) GetAccountTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error) {
+	if m.getAccountTrendFunc != nil {
+		return m.getAccountTrendFunc(ctx, params)
+	}
+	return schemas.AccountTrendSchema{}, nil
+}
+
+func (m *mockSummaryStore) GetCategoryTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error) {
+	if m.getCategoryTrendFunc != nil {
+		return m.getCategoryTrendFunc(ctx, params)
+	}
+	return schemas.CategoryTrendSchema{}, nil
 }
 
 func TestSummaryServiceGetTransactionSummary(t *testing.T) {
@@ -322,6 +338,185 @@ func TestSummaryServiceGetAllSummaries(t *testing.T) {
 		categoryParams := schemas.SummaryParamModel{}
 
 		_, _, _, err := service.GetAllSummaries(context.Background(), transactionParams, accountParams, categoryParams)
+		if err != expectedErr {
+			t.Errorf("expected error %v, got %v", expectedErr, err)
+		}
+	})
+}
+
+func TestSummaryServiceGetAccountTrend(t *testing.T) {
+	t.Run("successfully gets account trend", func(t *testing.T) {
+		expectedData := schemas.AccountTrendSchema{
+			Frequency: "monthly",
+			Data: []schemas.AccountTrendItem{
+				{
+					AccountID:   1,
+					AccountName: "Cash",
+					TrendStatus: "increasing",
+					AvgChange:   10.5,
+				},
+			},
+		}
+
+		store := &mockSummaryStore{
+			getAccountTrendFunc: func(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error) {
+				return expectedData, nil
+			},
+		}
+
+		service := NewSummaryService(store)
+		params := schemas.TrendParamSchema{
+			Frequency: "monthly",
+		}
+
+		result, err := service.GetAccountTrend(context.Background(), params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if result.Frequency != "monthly" {
+			t.Errorf("expected frequency 'monthly', got %s", result.Frequency)
+		}
+
+		if len(result.Data) != 1 {
+			t.Errorf("expected 1 item, got %d", len(result.Data))
+		}
+
+		if result.Data[0].AccountID != 1 {
+			t.Errorf("expected account ID 1, got %d", result.Data[0].AccountID)
+		}
+	})
+
+	t.Run("sets default frequency when not provided", func(t *testing.T) {
+		var capturedParams schemas.TrendParamSchema
+		store := &mockSummaryStore{
+			getAccountTrendFunc: func(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error) {
+				capturedParams = params
+				return schemas.AccountTrendSchema{Frequency: params.Frequency}, nil
+			},
+		}
+
+		service := NewSummaryService(store)
+		params := schemas.TrendParamSchema{} // No frequency provided
+
+		result, err := service.GetAccountTrend(context.Background(), params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if capturedParams.Frequency != "monthly" {
+			t.Errorf("expected default frequency 'monthly', got %s", capturedParams.Frequency)
+		}
+
+		if result.Frequency != "monthly" {
+			t.Errorf("expected frequency 'monthly', got %s", result.Frequency)
+		}
+	})
+
+	t.Run("returns error from store", func(t *testing.T) {
+		expectedErr := errors.New("database error")
+		store := &mockSummaryStore{
+			getAccountTrendFunc: func(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error) {
+				return schemas.AccountTrendSchema{}, expectedErr
+			},
+		}
+
+		service := NewSummaryService(store)
+		params := schemas.TrendParamSchema{Frequency: "monthly"}
+
+		_, err := service.GetAccountTrend(context.Background(), params)
+		if err != expectedErr {
+			t.Errorf("expected error %v, got %v", expectedErr, err)
+		}
+	})
+}
+
+func TestSummaryServiceGetCategoryTrend(t *testing.T) {
+	t.Run("successfully gets category trend", func(t *testing.T) {
+		expectedData := schemas.CategoryTrendSchema{
+			Frequency: "weekly",
+			Data: []schemas.CategoryTrendItem{
+				{
+					CategoryID:   1,
+					CategoryName: "Food",
+					CategoryType: "expense",
+					TrendStatus:  "decreasing",
+					AvgChange:    -5.2,
+				},
+			},
+		}
+
+		store := &mockSummaryStore{
+			getCategoryTrendFunc: func(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error) {
+				return expectedData, nil
+			},
+		}
+
+		service := NewSummaryService(store)
+		params := schemas.TrendParamSchema{
+			Frequency: "weekly",
+		}
+
+		result, err := service.GetCategoryTrend(context.Background(), params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if result.Frequency != "weekly" {
+			t.Errorf("expected frequency 'weekly', got %s", result.Frequency)
+		}
+
+		if len(result.Data) != 1 {
+			t.Errorf("expected 1 item, got %d", len(result.Data))
+		}
+
+		if result.Data[0].CategoryID != 1 {
+			t.Errorf("expected category ID 1, got %d", result.Data[0].CategoryID)
+		}
+
+		if result.Data[0].CategoryType != "expense" {
+			t.Errorf("expected category type 'expense', got %s", result.Data[0].CategoryType)
+		}
+	})
+
+	t.Run("sets default frequency when not provided", func(t *testing.T) {
+		var capturedParams schemas.TrendParamSchema
+		store := &mockSummaryStore{
+			getCategoryTrendFunc: func(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error) {
+				capturedParams = params
+				return schemas.CategoryTrendSchema{Frequency: params.Frequency}, nil
+			},
+		}
+
+		service := NewSummaryService(store)
+		params := schemas.TrendParamSchema{} // No frequency provided
+
+		result, err := service.GetCategoryTrend(context.Background(), params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if capturedParams.Frequency != "monthly" {
+			t.Errorf("expected default frequency 'monthly', got %s", capturedParams.Frequency)
+		}
+
+		if result.Frequency != "monthly" {
+			t.Errorf("expected frequency 'monthly', got %s", result.Frequency)
+		}
+	})
+
+	t.Run("returns error from store", func(t *testing.T) {
+		expectedErr := errors.New("database error")
+		store := &mockSummaryStore{
+			getCategoryTrendFunc: func(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error) {
+				return schemas.CategoryTrendSchema{}, expectedErr
+			},
+		}
+
+		service := NewSummaryService(store)
+		params := schemas.TrendParamSchema{Frequency: "weekly"}
+
+		_, err := service.GetCategoryTrend(context.Background(), params)
 		if err != expectedErr {
 			t.Errorf("expected error %v, got %v", expectedErr, err)
 		}

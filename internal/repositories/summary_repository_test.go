@@ -340,3 +340,352 @@ func TestSummaryRepositoryGetCategorySummary(t *testing.T) {
 		}
 	})
 }
+
+func TestSummaryRepositoryGetAccountTrend(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
+
+	repo := NewSummaryRepository(mock)
+	ctx := context.Background()
+
+	t.Run("successfully gets monthly account trends", func(t *testing.T) {
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 3, 31, 23, 59, 59, 0, time.UTC)
+		params := schemas.TrendParamSchema{
+			StartDate: start,
+			EndDate:   end,
+			Frequency: "monthly",
+		}
+
+		rows := pgxmock.NewRows([]string{
+			"account_id", "account_name", "period", "total_amount",
+			"income_amount", "expense_amount", "transfer_amount", "net", "count",
+		}).
+			AddRow(1, "Cash", "2024-01", 1000000, 500000, 300000, 200000, 200000, 10).
+			AddRow(1, "Cash", "2024-02", 1200000, 600000, 350000, 250000, 250000, 12).
+			AddRow(1, "Cash", "2024-03", 900000, 450000, 300000, 150000, 150000, 8).
+			AddRow(2, "Bank", "2024-01", 2000000, 1500000, 400000, 100000, 1100000, 15)
+
+		mock.ExpectQuery("SELECT.*TO_CHAR\\(date, 'YYYY-MM'\\).*FROM transactions t.*JOIN accounts a").
+			WithArgs(start, end).
+			WillReturnRows(rows)
+
+		result, err := repo.GetAccountTrend(ctx, params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if result.Frequency != "monthly" {
+			t.Errorf("expected frequency 'monthly', got %s", result.Frequency)
+		}
+
+		if len(result.Data) != 2 {
+			t.Errorf("expected 2 accounts, got %d", len(result.Data))
+		}
+
+		// Check first account (Cash) with 3 periods
+		account1 := result.Data[0]
+		if account1.AccountID != 1 {
+			t.Errorf("expected account ID 1, got %d", account1.AccountID)
+		}
+		if account1.AccountName != "Cash" {
+			t.Errorf("expected account name 'Cash', got %s", account1.AccountName)
+		}
+		if len(account1.Periods) != 3 {
+			t.Errorf("expected 3 periods for account 1, got %d", len(account1.Periods))
+		}
+
+		// First period should have no change
+		if account1.Periods[0].ChangePercent != 0 {
+			t.Errorf("expected first period change to be 0, got %.2f", account1.Periods[0].ChangePercent)
+		}
+		if account1.Periods[0].Trend != "stable" {
+			t.Errorf("expected first period trend 'stable', got %s", account1.Periods[0].Trend)
+		}
+
+		// Second period should show increase (1000000 -> 1200000 = 20% increase)
+		if account1.Periods[1].ChangePercent != 20.0 {
+			t.Errorf("expected second period change 20%%, got %.2f%%", account1.Periods[1].ChangePercent)
+		}
+		if account1.Periods[1].Trend != "increasing" {
+			t.Errorf("expected second period trend 'increasing', got %s", account1.Periods[1].Trend)
+		}
+
+		// Third period should show decrease (1200000 -> 900000 = -25% decrease)
+		if account1.Periods[2].ChangePercent != -25.0 {
+			t.Errorf("expected third period change -25%%, got %.2f%%", account1.Periods[2].ChangePercent)
+		}
+		if account1.Periods[2].Trend != "decreasing" {
+			t.Errorf("expected third period trend 'decreasing', got %s", account1.Periods[2].Trend)
+		}
+
+		// Check trend status (volatile since both increasing and decreasing)
+		if account1.TrendStatus != "volatile" {
+			t.Errorf("expected trend status 'volatile', got %s", account1.TrendStatus)
+		}
+
+		// Check second account (Bank) with 1 period
+		account2 := result.Data[1]
+		if account2.AccountID != 2 {
+			t.Errorf("expected account ID 2, got %d", account2.AccountID)
+		}
+		if len(account2.Periods) != 1 {
+			t.Errorf("expected 1 period for account 2, got %d", len(account2.Periods))
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("unfulfilled expectations: %v", err)
+		}
+	})
+
+	t.Run("successfully gets weekly account trends", func(t *testing.T) {
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+		params := schemas.TrendParamSchema{
+			StartDate: start,
+			EndDate:   end,
+			Frequency: "weekly",
+		}
+
+		rows := pgxmock.NewRows([]string{
+			"account_id", "account_name", "period", "total_amount",
+			"income_amount", "expense_amount", "transfer_amount", "net", "count",
+		}).
+			AddRow(1, "Cash", "2024-W01", 500000, 300000, 200000, 0, 100000, 5).
+			AddRow(1, "Cash", "2024-W02", 550000, 350000, 200000, 0, 150000, 6)
+
+		mock.ExpectQuery("SELECT.*TO_CHAR\\(date, 'IYYY-\"W\"IW'\\).*FROM transactions t.*JOIN accounts a").
+			WithArgs(start, end).
+			WillReturnRows(rows)
+
+		result, err := repo.GetAccountTrend(ctx, params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if result.Frequency != "weekly" {
+			t.Errorf("expected frequency 'weekly', got %s", result.Frequency)
+		}
+
+		if len(result.Data) != 1 {
+			t.Errorf("expected 1 account, got %d", len(result.Data))
+		}
+
+		account := result.Data[0]
+		if len(account.Periods) != 2 {
+			t.Errorf("expected 2 periods, got %d", len(account.Periods))
+		}
+
+		if account.Periods[0].Period != "2024-W01" {
+			t.Errorf("expected period '2024-W01', got %s", account.Periods[0].Period)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("unfulfilled expectations: %v", err)
+		}
+	})
+
+	t.Run("returns empty array when no data", func(t *testing.T) {
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+		params := schemas.TrendParamSchema{
+			StartDate: start,
+			EndDate:   end,
+			Frequency: "monthly",
+		}
+
+		rows := pgxmock.NewRows([]string{
+			"account_id", "account_name", "period", "total_amount",
+			"income_amount", "expense_amount", "transfer_amount", "net", "count",
+		})
+
+		mock.ExpectQuery("SELECT.*FROM transactions t.*JOIN accounts a").
+			WithArgs(start, end).
+			WillReturnRows(rows)
+
+		result, err := repo.GetAccountTrend(ctx, params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if len(result.Data) != 0 {
+			t.Errorf("expected empty array, got %d items", len(result.Data))
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("unfulfilled expectations: %v", err)
+		}
+	})
+}
+
+func TestSummaryRepositoryGetCategoryTrend(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
+
+	repo := NewSummaryRepository(mock)
+	ctx := context.Background()
+
+	t.Run("successfully gets monthly category trends", func(t *testing.T) {
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 3, 31, 23, 59, 59, 0, time.UTC)
+		params := schemas.TrendParamSchema{
+			StartDate: start,
+			EndDate:   end,
+			Frequency: "monthly",
+		}
+
+		rows := pgxmock.NewRows([]string{
+			"category_id", "category_name", "category_type", "period", "total_amount",
+			"income_amount", "expense_amount", "transfer_amount", "net", "count",
+		}).
+			AddRow(1, "Food", "expense", "2024-01", 1000000, 0, 1000000, 0, -1000000, 20).
+			AddRow(1, "Food", "expense", "2024-02", 1100000, 0, 1100000, 0, -1100000, 22).
+			AddRow(1, "Food", "expense", "2024-03", 950000, 0, 950000, 0, -950000, 18).
+			AddRow(2, "Salary", "income", "2024-01", 5000000, 5000000, 0, 0, 5000000, 1)
+
+		mock.ExpectQuery("SELECT.*TO_CHAR\\(date, 'YYYY-MM'\\).*FROM transactions t.*JOIN categories c").
+			WithArgs(start, end).
+			WillReturnRows(rows)
+
+		result, err := repo.GetCategoryTrend(ctx, params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if result.Frequency != "monthly" {
+			t.Errorf("expected frequency 'monthly', got %s", result.Frequency)
+		}
+
+		if len(result.Data) != 2 {
+			t.Errorf("expected 2 categories, got %d", len(result.Data))
+		}
+
+		// Check expense category (Food)
+		category1 := result.Data[0]
+		if category1.CategoryID != 1 {
+			t.Errorf("expected category ID 1, got %d", category1.CategoryID)
+		}
+		if category1.CategoryName != "Food" {
+			t.Errorf("expected category name 'Food', got %s", category1.CategoryName)
+		}
+		if category1.CategoryType != "expense" {
+			t.Errorf("expected category type 'expense', got %s", category1.CategoryType)
+		}
+		if len(category1.Periods) != 3 {
+			t.Errorf("expected 3 periods for category 1, got %d", len(category1.Periods))
+		}
+
+		// Check increasing trend detection (1000000 -> 1100000 = 10% increase)
+		if category1.Periods[1].ChangePercent != 10.0 {
+			t.Errorf("expected second period change 10%%, got %.2f%%", category1.Periods[1].ChangePercent)
+		}
+		if category1.Periods[1].Trend != "increasing" {
+			t.Errorf("expected second period trend 'increasing', got %s", category1.Periods[1].Trend)
+		}
+
+		// Check income category (Salary) with single period
+		category2 := result.Data[1]
+		if category2.CategoryID != 2 {
+			t.Errorf("expected category ID 2, got %d", category2.CategoryID)
+		}
+		if category2.CategoryType != "income" {
+			t.Errorf("expected category type 'income', got %s", category2.CategoryType)
+		}
+		if len(category2.Periods) != 1 {
+			t.Errorf("expected 1 period for category 2, got %d", len(category2.Periods))
+		}
+		if category2.TrendStatus != "stable" {
+			t.Errorf("expected trend status 'stable' for single period, got %s", category2.TrendStatus)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("unfulfilled expectations: %v", err)
+		}
+	})
+
+	t.Run("successfully gets weekly category trends", func(t *testing.T) {
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+		params := schemas.TrendParamSchema{
+			StartDate: start,
+			EndDate:   end,
+			Frequency: "weekly",
+		}
+
+		rows := pgxmock.NewRows([]string{
+			"category_id", "category_name", "category_type", "period", "total_amount",
+			"income_amount", "expense_amount", "transfer_amount", "net", "count",
+		}).
+			AddRow(1, "Food", "expense", "2024-W01", 250000, 0, 250000, 0, -250000, 5).
+			AddRow(1, "Food", "expense", "2024-W02", 300000, 0, 300000, 0, -300000, 6)
+
+		mock.ExpectQuery("SELECT.*TO_CHAR\\(date, 'IYYY-\"W\"IW'\\).*FROM transactions t.*JOIN categories c").
+			WithArgs(start, end).
+			WillReturnRows(rows)
+
+		result, err := repo.GetCategoryTrend(ctx, params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if result.Frequency != "weekly" {
+			t.Errorf("expected frequency 'weekly', got %s", result.Frequency)
+		}
+
+		if len(result.Data) != 1 {
+			t.Errorf("expected 1 category, got %d", len(result.Data))
+		}
+
+		category := result.Data[0]
+		if len(category.Periods) != 2 {
+			t.Errorf("expected 2 periods, got %d", len(category.Periods))
+		}
+
+		// Check change calculation (250000 -> 300000 = 20% increase)
+		if category.Periods[1].ChangePercent != 20.0 {
+			t.Errorf("expected change 20%%, got %.2f%%", category.Periods[1].ChangePercent)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("unfulfilled expectations: %v", err)
+		}
+	})
+
+	t.Run("returns empty array when no data", func(t *testing.T) {
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+		params := schemas.TrendParamSchema{
+			StartDate: start,
+			EndDate:   end,
+			Frequency: "monthly",
+		}
+
+		rows := pgxmock.NewRows([]string{
+			"category_id", "category_name", "category_type", "period", "total_amount",
+			"income_amount", "expense_amount", "transfer_amount", "net", "count",
+		})
+
+		mock.ExpectQuery("SELECT.*FROM transactions t.*JOIN categories c").
+			WithArgs(start, end).
+			WillReturnRows(rows)
+
+		result, err := repo.GetCategoryTrend(ctx, params)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if len(result.Data) != 0 {
+			t.Errorf("expected empty array, got %d items", len(result.Data))
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("unfulfilled expectations: %v", err)
+		}
+	})
+}

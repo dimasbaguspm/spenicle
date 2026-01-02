@@ -14,6 +14,8 @@ type SummaryService interface {
 	GetTransactionSummary(ctx context.Context, params schemas.SummaryTransactionParamModel) (schemas.SummaryTransactionSchema, error)
 	GetAccountSummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryAccountSchema, error)
 	GetCategorySummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryCategorySchema, error)
+	GetAccountTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error)
+	GetCategoryTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error)
 }
 
 type SummaryResource struct {
@@ -61,6 +63,30 @@ func (r *SummaryResource) RegisterRoutes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, r.GetCategorySummary)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-account-trends",
+		Method:      http.MethodGet,
+		Path:        "/summary/accounts/trends",
+		Summary:     "Get account spending trends",
+		Description: "Returns trend analysis for accounts showing if spending is increasing or decreasing over time, grouped by frequency (weekly, monthly)",
+		Tags:        []string{"Summary"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.GetAccountTrends)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-category-trends",
+		Method:      http.MethodGet,
+		Path:        "/summary/categories/trends",
+		Summary:     "Get category spending trends",
+		Description: "Returns trend analysis for categories showing if spending is increasing or decreasing over time, grouped by frequency (weekly, monthly)",
+		Tags:        []string{"Summary"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.GetCategoryTrends)
 }
 
 type GetTransactionSummaryInput struct {
@@ -112,4 +138,38 @@ func (r *SummaryResource) GetCategorySummary(ctx context.Context, input *GetCate
 	}
 
 	return &GetCategorySummaryOutput{Body: result}, nil
+}
+
+type GetAccountTrendsInput struct {
+	schemas.TrendParamSchema
+}
+
+type GetAccountTrendsOutput struct {
+	Body schemas.AccountTrendSchema
+}
+
+func (r *SummaryResource) GetAccountTrends(ctx context.Context, input *GetAccountTrendsInput) (*GetAccountTrendsOutput, error) {
+	result, err := r.service.GetAccountTrend(ctx, input.TrendParamSchema)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to get account trends", err)
+	}
+
+	return &GetAccountTrendsOutput{Body: result}, nil
+}
+
+type GetCategoryTrendsInput struct {
+	schemas.TrendParamSchema
+}
+
+type GetCategoryTrendsOutput struct {
+	Body schemas.CategoryTrendSchema
+}
+
+func (r *SummaryResource) GetCategoryTrends(ctx context.Context, input *GetCategoryTrendsInput) (*GetCategoryTrendsOutput, error) {
+	result, err := r.service.GetCategoryTrend(ctx, input.TrendParamSchema)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to get category trends", err)
+	}
+
+	return &GetCategoryTrendsOutput{Body: result}, nil
 }

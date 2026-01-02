@@ -11,6 +11,8 @@ type SummaryStore interface {
 	GetTransactionSummary(ctx context.Context, params schemas.SummaryTransactionParamModel) (schemas.SummaryTransactionSchema, error)
 	GetAccountSummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryAccountSchema, error)
 	GetCategorySummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryCategorySchema, error)
+	GetAccountTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error)
+	GetCategoryTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error)
 }
 
 type SummaryService struct {
@@ -98,4 +100,24 @@ func (s *SummaryService) GetAllSummaries(ctx context.Context, transactionParams 
 	}
 
 	return transactionRes.data, accountRes.data, categoryRes.data, nil
+}
+
+// GetAccountTrend returns trend analysis for accounts
+func (s *SummaryService) GetAccountTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error) {
+	// Set default frequency if not provided
+	if params.Frequency == "" {
+		params.Frequency = "monthly"
+	}
+
+	return s.summaryStore.GetAccountTrend(ctx, params)
+}
+
+// GetCategoryTrend returns trend analysis for categories
+func (s *SummaryService) GetCategoryTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error) {
+	// Set default frequency if not provided
+	if params.Frequency == "" {
+		params.Frequency = "monthly"
+	}
+
+	return s.summaryStore.GetCategoryTrend(ctx, params)
 }
