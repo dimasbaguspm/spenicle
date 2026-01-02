@@ -16,6 +16,9 @@ type TransactionStore interface {
 	Update(ctx context.Context, id int, input schemas.UpdateTransactionSchema) (schemas.TransactionSchema, error)
 	Delete(ctx context.Context, id int) error
 	UpdateAccountBalance(ctx context.Context, accountID int, deltaAmount int) error
+	CreateTransfer(ctx context.Context, input schemas.CreateTransactionSchema, sourceAccountID, destinationAccountID int) (schemas.TransactionSchema, error)
+	UpdateTransfer(ctx context.Context, id int, oldTransaction schemas.TransactionSchema, input schemas.UpdateTransactionSchema, newSourceAccountID, newDestinationAccountID int) (schemas.TransactionSchema, error)
+	DeleteTransfer(ctx context.Context, transaction schemas.TransactionSchema) error
 }
 
 type TransactionService struct {
@@ -52,7 +55,9 @@ func (s *TransactionService) Get(ctx context.Context, id int) (schemas.Transacti
 // - Account exists and is not deleted
 // - Category exists and is not deleted
 // - For expense transactions: account type must be 'expense' or 'income'
+// - For transfer transactions: destination account is required and exists
 // Updates account balance after successful creation.
+// For transfer transactions, deducts from source account and adds to destination account.
 // Uses goroutines to fetch account and category concurrently for better performance.
 func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTransactionSchema) (schemas.TransactionSchema, error) {
 	// Sanitize note
@@ -61,7 +66,17 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 		input.Note = &sanitized
 	}
 
-	// Fetch account and category concurrently
+	// Validate transfer transaction has destination account
+	if input.Type == repositories.TransactionTransferType {
+		if input.DestinationAccountID == nil {
+			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
+		}
+		if input.AccountID == *input.DestinationAccountID {
+			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
+		}
+	}
+
+	// Fetch account, destination account (if transfer), and category concurrently
 	type accountResult struct {
 		account schemas.AccountSchema
 		err     error
@@ -72,9 +87,10 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 	}
 
 	accountCh := make(chan accountResult, 1)
+	destAccountCh := make(chan accountResult, 1)
 	categoryCh := make(chan categoryResult, 1)
 
-	// Validate account exists (concurrent)
+	// Validate source account exists (concurrent)
 	go func() {
 		account, err := s.accountStore.Get(ctx, int64(input.AccountID))
 		if err != nil {
@@ -83,6 +99,18 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 		}
 		accountCh <- accountResult{account: account}
 	}()
+
+	// Validate destination account exists for transfer (concurrent)
+	if input.Type == repositories.TransactionTransferType && input.DestinationAccountID != nil {
+		go func() {
+			destAccount, err := s.accountStore.Get(ctx, int64(*input.DestinationAccountID))
+			if err != nil {
+				destAccountCh <- accountResult{err: err}
+				return
+			}
+			destAccountCh <- accountResult{account: destAccount}
+		}()
+	}
 
 	// Validate category exists (concurrent)
 	go func() {
@@ -94,9 +122,14 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 		categoryCh <- categoryResult{category: category}
 	}()
 
-	// Wait for both results
+	// Wait for results
 	accountRes := <-accountCh
 	categoryRes := <-categoryCh
+
+	var destAccountRes accountResult
+	if input.Type == repositories.TransactionTransferType && input.DestinationAccountID != nil {
+		destAccountRes = <-destAccountCh
+	}
 
 	// Check for errors (early return on first error)
 	if accountRes.err != nil {
@@ -104,6 +137,9 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 	}
 	if categoryRes.err != nil {
 		return schemas.TransactionSchema{}, categoryRes.err
+	}
+	if input.Type == repositories.TransactionTransferType && destAccountRes.err != nil {
+		return schemas.TransactionSchema{}, destAccountRes.err
 	}
 
 	// Validate transaction type matches category type
@@ -119,16 +155,20 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 		}
 	}
 
-	// Create transaction
+	// For transfer transactions, use atomic repository method
+	if input.Type == repositories.TransactionTransferType {
+		return s.transactionStore.CreateTransfer(ctx, input, input.AccountID, *input.DestinationAccountID)
+	}
+
+	// Create transaction (for income/expense)
 	transaction, err := s.transactionStore.Create(ctx, input)
 	if err != nil {
 		return schemas.TransactionSchema{}, err
 	}
 
-	// Update account balance based on transaction type
+	// Update account balance using standard delta calculation
 	deltaAmount := s.calculateDeltaAmount(input.Type, input.Amount)
 	if err := s.transactionStore.UpdateAccountBalance(ctx, input.AccountID, deltaAmount); err != nil {
-		// Note: In production, this should be wrapped in a database transaction
 		return schemas.TransactionSchema{}, fmt.Errorf("update account balance: %w", err)
 	}
 
@@ -136,7 +176,7 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 }
 
 // Update updates a transaction with validation.
-// If amount or account changes, synchronizes account balances.
+// If amount, account, or destination account changes, synchronizes account balances.
 // Uses goroutines to fetch account and category concurrently when both are being updated.
 func (s *TransactionService) Update(ctx context.Context, id int, input schemas.UpdateTransactionSchema) (schemas.TransactionSchema, error) {
 	if !input.HasChanges() {
@@ -155,15 +195,40 @@ func (s *TransactionService) Update(ctx context.Context, id int, input schemas.U
 		return schemas.TransactionSchema{}, err
 	}
 
+	// Determine final transaction type
+	newType := existing.Type
+	if input.Type != nil {
+		newType = *input.Type
+	}
+
+	// Validate transfer transaction has destination account
+	if newType == repositories.TransactionTransferType {
+		destAccountID := existing.DestinationAccountID
+		if input.DestinationAccountID != nil {
+			destAccountID = input.DestinationAccountID
+		}
+		if destAccountID == nil {
+			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
+		}
+		sourceAccountID := existing.AccountID
+		if input.AccountID != nil {
+			sourceAccountID = *input.AccountID
+		}
+		if sourceAccountID == *destAccountID {
+			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
+		}
+	}
+
 	// Determine what needs to be validated
 	needAccountValidation := input.AccountID != nil
+	needDestAccountValidation := input.DestinationAccountID != nil
 	needCategoryValidation := input.CategoryID != nil || input.Type != nil
 
 	var account schemas.AccountSchema
 	var category schemas.CategorySchema
 
-	// If both account and category need validation, fetch concurrently
-	if needAccountValidation && needCategoryValidation {
+	// Concurrent validation if multiple resources need checking
+	if (needAccountValidation || needDestAccountValidation) && needCategoryValidation {
 		type accountResult struct {
 			account schemas.AccountSchema
 			err     error
@@ -174,13 +239,24 @@ func (s *TransactionService) Update(ctx context.Context, id int, input schemas.U
 		}
 
 		accountCh := make(chan accountResult, 1)
+		destAccountCh := make(chan accountResult, 1)
 		categoryCh := make(chan categoryResult, 1)
 
-		// Fetch account concurrently
-		go func() {
-			acc, err := s.accountStore.Get(ctx, int64(*input.AccountID))
-			accountCh <- accountResult{account: acc, err: err}
-		}()
+		// Fetch source account if changed
+		if needAccountValidation {
+			go func() {
+				acc, err := s.accountStore.Get(ctx, int64(*input.AccountID))
+				accountCh <- accountResult{account: acc, err: err}
+			}()
+		}
+
+		// Fetch destination account if changed
+		if needDestAccountValidation {
+			go func() {
+				_, err := s.accountStore.Get(ctx, int64(*input.DestinationAccountID))
+				destAccountCh <- accountResult{account: schemas.AccountSchema{}, err: err}
+			}()
+		}
 
 		// Fetch category concurrently
 		go func() {
@@ -192,19 +268,26 @@ func (s *TransactionService) Update(ctx context.Context, id int, input schemas.U
 			categoryCh <- categoryResult{category: cat, err: err}
 		}()
 
-		// Wait for both results
-		accountRes := <-accountCh
-		categoryRes := <-categoryCh
-
-		// Early return on errors
-		if accountRes.err != nil {
-			return schemas.TransactionSchema{}, accountRes.err
+		// Wait for results
+		if needAccountValidation {
+			accountRes := <-accountCh
+			if accountRes.err != nil {
+				return schemas.TransactionSchema{}, accountRes.err
+			}
+			account = accountRes.account
 		}
+
+		if needDestAccountValidation {
+			destAccountRes := <-destAccountCh
+			if destAccountRes.err != nil {
+				return schemas.TransactionSchema{}, destAccountRes.err
+			}
+		}
+
+		categoryRes := <-categoryCh
 		if categoryRes.err != nil {
 			return schemas.TransactionSchema{}, categoryRes.err
 		}
-
-		account = accountRes.account
 		category = categoryRes.category
 	} else {
 		// Sequential validation if only one or neither needs validation
@@ -214,6 +297,13 @@ func (s *TransactionService) Update(ctx context.Context, id int, input schemas.U
 				return schemas.TransactionSchema{}, err
 			}
 			account = acc
+		}
+
+		if needDestAccountValidation {
+			_, err := s.accountStore.Get(ctx, int64(*input.DestinationAccountID))
+			if err != nil {
+				return schemas.TransactionSchema{}, err
+			}
 		}
 
 		if needCategoryValidation {
@@ -231,11 +321,7 @@ func (s *TransactionService) Update(ctx context.Context, id int, input schemas.U
 
 	// Validate account type for expense transactions if account was validated
 	if needAccountValidation {
-		transactionType := existing.Type
-		if input.Type != nil {
-			transactionType = *input.Type
-		}
-		if transactionType == repositories.TransactionExpenseType {
+		if newType == repositories.TransactionExpenseType {
 			if account.Type != repositories.AccountExpenseType && account.Type != repositories.AccountIncomeType {
 				return schemas.TransactionSchema{}, repositories.ErrInvalidAccountTypeForExpense
 			}
@@ -244,48 +330,82 @@ func (s *TransactionService) Update(ctx context.Context, id int, input schemas.U
 
 	// Validate type matches category type if category was validated
 	if needCategoryValidation {
-		transactionType := existing.Type
-		if input.Type != nil {
-			transactionType = *input.Type
-		}
-		if transactionType != category.Type {
+		if newType != category.Type {
 			return schemas.TransactionSchema{}, repositories.ErrTransactionTypeCategoryMismatch
 		}
 	}
 
-	// Sync account balance if amount or account changed
+	// Determine final values for comparison
+	newAmount := existing.Amount
+	if input.Amount != nil {
+		newAmount = *input.Amount
+	}
+
 	newAccountID := existing.AccountID
 	if input.AccountID != nil {
 		newAccountID = *input.AccountID
 	}
 
-	if input.Amount != nil || input.AccountID != nil {
-		// Revert old transaction effect on old account
+	newDestAccountID := existing.DestinationAccountID
+	if input.DestinationAccountID != nil {
+		newDestAccountID = input.DestinationAccountID
+	}
+
+	// For transfer transactions, use atomic repository method
+	if existing.Type == repositories.TransactionTransferType && newType == repositories.TransactionTransferType {
+		return s.transactionStore.UpdateTransfer(ctx, id, existing, input, newAccountID, *newDestAccountID)
+	}
+
+	// For non-transfer or type-changing updates, handle balance updates manually
+	// Revert old transaction effects
+	if existing.Type == repositories.TransactionTransferType {
+		// Revert transfer: add back to source, subtract from destination
+		if existing.DestinationAccountID != nil {
+			if err := s.transactionStore.UpdateAccountBalance(ctx, existing.AccountID, existing.Amount); err != nil {
+				return schemas.TransactionSchema{}, fmt.Errorf("revert old source account balance: %w", err)
+			}
+			if err := s.transactionStore.UpdateAccountBalance(ctx, *existing.DestinationAccountID, -existing.Amount); err != nil {
+				return schemas.TransactionSchema{}, fmt.Errorf("revert old destination account balance: %w", err)
+			}
+		}
+	} else {
+		// Revert income/expense
 		oldDelta := s.calculateDeltaAmount(existing.Type, existing.Amount)
 		if err := s.transactionStore.UpdateAccountBalance(ctx, existing.AccountID, -oldDelta); err != nil {
 			return schemas.TransactionSchema{}, fmt.Errorf("revert old account balance: %w", err)
 		}
+	}
 
-		// Apply new transaction effect on new account
-		newAmount := existing.Amount
-		if input.Amount != nil {
-			newAmount = *input.Amount
+	// Update transaction record
+	updated, err := s.transactionStore.Update(ctx, id, input)
+	if err != nil {
+		return schemas.TransactionSchema{}, err
+	}
+
+	// Apply new transaction effects
+	if newType == repositories.TransactionTransferType {
+		// Apply transfer: deduct from source, add to destination
+		if newDestAccountID != nil {
+			if err := s.transactionStore.UpdateAccountBalance(ctx, newAccountID, -newAmount); err != nil {
+				return schemas.TransactionSchema{}, fmt.Errorf("update new source account balance: %w", err)
+			}
+			if err := s.transactionStore.UpdateAccountBalance(ctx, *newDestAccountID, newAmount); err != nil {
+				return schemas.TransactionSchema{}, fmt.Errorf("update new destination account balance: %w", err)
+			}
 		}
-		newType := existing.Type
-		if input.Type != nil {
-			newType = *input.Type
-		}
+	} else {
+		// Apply income/expense
 		newDelta := s.calculateDeltaAmount(newType, newAmount)
 		if err := s.transactionStore.UpdateAccountBalance(ctx, newAccountID, newDelta); err != nil {
 			return schemas.TransactionSchema{}, fmt.Errorf("update new account balance: %w", err)
 		}
 	}
 
-	// Update transaction
-	return s.transactionStore.Update(ctx, id, input)
+	return updated, nil
 }
 
 // Delete soft-deletes a transaction and reverts its effect on account balance.
+// For transfer transactions, uses atomic repository method to ensure consistency.
 func (s *TransactionService) Delete(ctx context.Context, id int) error {
 	// Get existing transaction to revert balance
 	existing, err := s.transactionStore.Get(ctx, id)
@@ -293,7 +413,12 @@ func (s *TransactionService) Delete(ctx context.Context, id int) error {
 		return err
 	}
 
-	// Revert transaction effect on account balance
+	// For transfer transactions, use atomic repository method
+	if existing.Type == repositories.TransactionTransferType {
+		return s.transactionStore.DeleteTransfer(ctx, existing)
+	}
+
+	// For income/expense transactions, revert balance and delete
 	delta := s.calculateDeltaAmount(existing.Type, existing.Amount)
 	if err := s.transactionStore.UpdateAccountBalance(ctx, existing.AccountID, -delta); err != nil {
 		return fmt.Errorf("revert account balance: %w", err)

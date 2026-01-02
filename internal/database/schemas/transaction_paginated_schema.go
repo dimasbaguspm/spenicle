@@ -22,6 +22,7 @@ func (p *PaginatedTransactionSchema) FromRows(rows pgx.Rows) error {
 			&transaction.Amount,
 			&transaction.AccountID,
 			&transaction.CategoryID,
+			&transaction.DestinationAccountID,
 			&transaction.Note,
 			&transaction.CreatedAt,
 			&transaction.UpdatedAt,

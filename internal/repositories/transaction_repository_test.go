@@ -31,9 +31,9 @@ func TestTransactionRepositoryList(t *testing.T) {
 		mock.ExpectQuery("SELECT COUNT").
 			WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(2))
 
-		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "note", "created_at", "updated_at", "deleted_at"}).
-			AddRow(1, "expense", time.Now(), 50000, 1, 1, nil, time.Now(), time.Now(), nil).
-			AddRow(2, "income", time.Now(), 100000, 2, 2, nil, time.Now(), time.Now(), nil)
+		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "destination_account_id", "note", "created_at", "updated_at", "deleted_at"}).
+			AddRow(1, "expense", time.Now(), 50000, 1, 1, nil, nil, time.Now(), time.Now(), nil).
+			AddRow(2, "income", time.Now(), 100000, 2, 2, nil, nil, time.Now(), time.Now(), nil)
 
 		mock.ExpectQuery("SELECT id, type, date, amount, account_id, category_id").
 			WithArgs(10, 0).
@@ -66,8 +66,8 @@ func TestTransactionRepositoryList(t *testing.T) {
 			WithArgs("expense").
 			WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(1))
 
-		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "note", "created_at", "updated_at", "deleted_at"}).
-			AddRow(1, "expense", time.Now(), 50000, 1, 1, nil, time.Now(), time.Now(), nil)
+		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "destination_account_id", "note", "created_at", "updated_at", "deleted_at"}).
+			AddRow(1, "expense", time.Now(), 50000, 1, 1, nil, nil, time.Now(), time.Now(), nil)
 
 		mock.ExpectQuery("SELECT id, type, date, amount, account_id, category_id").
 			WithArgs("expense", 10, 0).
@@ -101,8 +101,8 @@ func TestTransactionRepositoryList(t *testing.T) {
 			WithArgs(1, 1).
 			WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(1))
 
-		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "note", "created_at", "updated_at", "deleted_at"}).
-			AddRow(1, "expense", time.Now(), 50000, 1, 1, nil, time.Now(), time.Now(), nil)
+		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "destination_account_id", "note", "created_at", "updated_at", "deleted_at"}).
+			AddRow(1, "expense", time.Now(), 50000, 1, 1, nil, nil, time.Now(), time.Now(), nil)
 
 		mock.ExpectQuery("SELECT id, type, date, amount, account_id, category_id").
 			WithArgs(1, 1, 10, 0).
@@ -139,8 +139,8 @@ func TestTransactionRepositoryGet(t *testing.T) {
 
 	t.Run("successfully gets transaction by id", func(t *testing.T) {
 		now := time.Now()
-		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "note", "created_at", "updated_at", "deleted_at"}).
-			AddRow(1, "expense", now, 50000, 1, 1, nil, now, now, nil)
+		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "destination_account_id", "note", "created_at", "updated_at", "deleted_at"}).
+			AddRow(1, "expense", now, 50000, 1, 1, nil, nil, now, now, nil)
 
 		mock.ExpectQuery("SELECT id, type, date, amount, account_id, category_id").
 			WithArgs(1).
@@ -197,11 +197,11 @@ func TestTransactionRepositoryCreate(t *testing.T) {
 			Note:       nil,
 		}
 
-		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "note", "created_at", "updated_at", "deleted_at"}).
-			AddRow(1, "expense", now, 50000, 1, 1, nil, now, now, nil)
+		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "destination_account_id", "note", "created_at", "updated_at", "deleted_at"}).
+			AddRow(1, "expense", now, 50000, 1, 1, nil, nil, now, now, nil)
 
 		mock.ExpectQuery("INSERT INTO transactions").
-			WithArgs("expense", &now, 50000, 1, 1, pgxmock.AnyArg()).
+			WithArgs("expense", &now, 50000, 1, 1, pgxmock.AnyArg(), pgxmock.AnyArg()).
 			WillReturnRows(rows)
 
 		transaction, err := repo.Create(ctx, input)
@@ -229,11 +229,11 @@ func TestTransactionRepositoryCreate(t *testing.T) {
 			Note:       nil,
 		}
 
-		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "note", "created_at", "updated_at", "deleted_at"}).
-			AddRow(2, "income", now, 75000, 2, 2, nil, now, now, nil)
+		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "destination_account_id", "note", "created_at", "updated_at", "deleted_at"}).
+			AddRow(2, "income", now, 75000, 2, 2, nil, nil, now, now, nil)
 
 		mock.ExpectQuery("INSERT INTO transactions").
-			WithArgs("income", pgxmock.AnyArg(), 75000, 2, 2, pgxmock.AnyArg()).
+			WithArgs("income", pgxmock.AnyArg(), 75000, 2, 2, pgxmock.AnyArg(), pgxmock.AnyArg()).
 			WillReturnRows(rows)
 
 		transaction, err := repo.Create(ctx, input)
@@ -264,11 +264,11 @@ func TestTransactionRepositoryUpdate(t *testing.T) {
 			Amount: &amount,
 		}
 
-		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "note", "created_at", "updated_at", "deleted_at"}).
-			AddRow(1, "expense", now, 75000, 1, 1, nil, now, now, nil)
+		rows := pgxmock.NewRows([]string{"id", "type", "date", "amount", "account_id", "category_id", "destination_account_id", "note", "created_at", "updated_at", "deleted_at"}).
+			AddRow(1, "expense", now, 75000, 1, 1, nil, nil, now, now, nil)
 
 		mock.ExpectQuery("UPDATE transactions").
-			WithArgs(pgxmock.AnyArg(), pgxmock.AnyArg(), &amount, pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg(), 1).
+			WithArgs(pgxmock.AnyArg(), pgxmock.AnyArg(), &amount, pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg(), 1).
 			WillReturnRows(rows)
 
 		transaction, err := repo.Update(ctx, 1, input)
@@ -288,7 +288,7 @@ func TestTransactionRepositoryUpdate(t *testing.T) {
 		}
 
 		mock.ExpectQuery("UPDATE transactions").
-			WithArgs(pgxmock.AnyArg(), pgxmock.AnyArg(), &amount, pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg(), 999).
+			WithArgs(pgxmock.AnyArg(), pgxmock.AnyArg(), &amount, pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg(), 999).
 			WillReturnError(pgx.ErrNoRows)
 
 		_, err := repo.Update(ctx, 999, input)

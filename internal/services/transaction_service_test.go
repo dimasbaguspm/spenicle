@@ -18,6 +18,9 @@ type mockTransactionStore struct {
 	updateFunc               func(ctx context.Context, id int, input schemas.UpdateTransactionSchema) (schemas.TransactionSchema, error)
 	deleteFunc               func(ctx context.Context, id int) error
 	updateAccountBalanceFunc func(ctx context.Context, accountID int, deltaAmount int) error
+	createTransferFunc       func(ctx context.Context, input schemas.CreateTransactionSchema, sourceAccountID, destinationAccountID int) (schemas.TransactionSchema, error)
+	updateTransferFunc       func(ctx context.Context, id int, oldTransaction schemas.TransactionSchema, input schemas.UpdateTransactionSchema, newSourceAccountID, newDestinationAccountID int) (schemas.TransactionSchema, error)
+	deleteTransferFunc       func(ctx context.Context, transaction schemas.TransactionSchema) error
 }
 
 func (m *mockTransactionStore) List(ctx context.Context, params schemas.SearchParamTransactionSchema) (schemas.PaginatedTransactionSchema, error) {
@@ -42,6 +45,30 @@ func (m *mockTransactionStore) Delete(ctx context.Context, id int) error {
 
 func (m *mockTransactionStore) UpdateAccountBalance(ctx context.Context, accountID int, deltaAmount int) error {
 	return m.updateAccountBalanceFunc(ctx, accountID, deltaAmount)
+}
+
+func (m *mockTransactionStore) CreateTransfer(ctx context.Context, input schemas.CreateTransactionSchema, sourceAccountID, destinationAccountID int) (schemas.TransactionSchema, error) {
+	if m.createTransferFunc != nil {
+		return m.createTransferFunc(ctx, input, sourceAccountID, destinationAccountID)
+	}
+	// Default implementation for non-transfer tests
+	return m.createFunc(ctx, input)
+}
+
+func (m *mockTransactionStore) UpdateTransfer(ctx context.Context, id int, oldTransaction schemas.TransactionSchema, input schemas.UpdateTransactionSchema, newSourceAccountID, newDestinationAccountID int) (schemas.TransactionSchema, error) {
+	if m.updateTransferFunc != nil {
+		return m.updateTransferFunc(ctx, id, oldTransaction, input, newSourceAccountID, newDestinationAccountID)
+	}
+	// Default implementation for non-transfer tests
+	return m.updateFunc(ctx, id, input)
+}
+
+func (m *mockTransactionStore) DeleteTransfer(ctx context.Context, transaction schemas.TransactionSchema) error {
+	if m.deleteTransferFunc != nil {
+		return m.deleteTransferFunc(ctx, transaction)
+	}
+	// Default implementation for non-transfer tests
+	return m.deleteFunc(ctx, transaction.ID)
 }
 
 type mockAccountStore struct {

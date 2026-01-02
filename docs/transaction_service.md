@@ -23,7 +23,9 @@ Validation & errors
 - Business validation (service layer):
   - Transaction type must match category type (expense→expense, income→income, transfer→transfer) → 422
   - Expense transactions can only use expense or income account types → 422
+  - Transfer transactions require destination account (cannot be same as source account) → 400
   - Account/category must exist → 404
+  - Destination account must exist (for transfers) → 404
   - At least one field to update → 400
 - Not found: repository/service → 404
 
@@ -32,22 +34,25 @@ DB notes
 - Repositories accept a small `DB` interface for testability and use `RETURNING`/`COALESCE` patterns.
 - Soft delete implemented via `deleted_at` timestamp.
 - Transaction types: `expense`, `income`, `transfer` (must match category type)
+- Transfer transactions require `destination_account_id` field (nullable, only for transfers)
 - Account balance sync:
   - CREATE: adds/subtracts amount from account based on transaction type
-  - UPDATE: reverts old effect, applies new effect (handles account/amount changes)
+  - UPDATE: reverts old effect, applies new effect (handles account/amount/destination changes)
   - DELETE: reverts transaction effect on account balance
+  - TRANSFER: deducts from source account, adds to destination account
 
 Account balance logic
 
 - **Income transaction**: adds amount to account balance
 - **Expense transaction**: subtracts amount from account balance
-- **Transfer transaction**: currently returns 0 delta (placeholder for future two-account logic)
+- **Transfer transaction**: deducts from source account (`account_id`), adds to destination account (`destination_account_id`)
 
 Type constraints
 
 - Expense transaction → expense category + (expense OR income account)
 - Income transaction → income category + any account type
-- Transfer transaction → transfer category
+- Transfer transaction → transfer category + any account types (source and destination can be any type)
+- Transfer requires both source and destination accounts, and they must be different
 
 Schema structure
 
