@@ -8,10 +8,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
-// MockAccountStore implements AccountStore for testing
-type MockAccountStore struct {
+// MockAccountService is a mock implementation of AccountService for testing HTTP layer
+type MockAccountService struct {
 	ListFunc   func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error)
 	GetFunc    func(ctx context.Context, id int64) (schemas.AccountSchema, error)
 	CreateFunc func(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
@@ -19,35 +20,35 @@ type MockAccountStore struct {
 	DeleteFunc func(ctx context.Context, id int64) error
 }
 
-func (m *MockAccountStore) List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
+func (m *MockAccountService) List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx, params)
 	}
 	return schemas.PaginatedAccountSchema{}, nil
 }
 
-func (m *MockAccountStore) Get(ctx context.Context, id int64) (schemas.AccountSchema, error) {
+func (m *MockAccountService) Get(ctx context.Context, id int64) (schemas.AccountSchema, error) {
 	if m.GetFunc != nil {
 		return m.GetFunc(ctx, id)
 	}
 	return schemas.AccountSchema{}, nil
 }
 
-func (m *MockAccountStore) Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
+func (m *MockAccountService) Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
 	if m.CreateFunc != nil {
 		return m.CreateFunc(ctx, data)
 	}
 	return schemas.AccountSchema{}, nil
 }
 
-func (m *MockAccountStore) Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
+func (m *MockAccountService) Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
 	if m.UpdateFunc != nil {
 		return m.UpdateFunc(ctx, id, data)
 	}
 	return schemas.AccountSchema{}, nil
 }
 
-func (m *MockAccountStore) Delete(ctx context.Context, id int64) error {
+func (m *MockAccountService) Delete(ctx context.Context, id int64) error {
 	if m.DeleteFunc != nil {
 		return m.DeleteFunc(ctx, id)
 	}
@@ -55,15 +56,15 @@ func (m *MockAccountStore) Delete(ctx context.Context, id int64) error {
 }
 
 // setupTestAPI creates a test API with routes registered
-func setupTestAPI(t *testing.T, store AccountStore) (humatest.TestAPI, *AccountResource) {
+func setupTestAPI(t *testing.T, mockService *MockAccountService) (humatest.TestAPI, *AccountResource) {
 	_, api := humatest.New(t)
-	resource := &AccountResource{store: store}
+	resource := &AccountResource{service: mockService}
 	resource.RegisterRoutes(api)
 	return api, resource
 }
 
 func TestAccountResource_GetPaginated_Success(t *testing.T) {
-	mockStore := &MockAccountStore{
+	mockService := &MockAccountService{
 		ListFunc: func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
 			return schemas.PaginatedAccountSchema{
 				PageTotal:  1,
@@ -77,7 +78,7 @@ func TestAccountResource_GetPaginated_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	api, _ := setupTestAPI(t, mockStore)
+	api, _ := setupTestAPI(t, mockService)
 
 	// Test with default pagination
 	resp := api.Get("/accounts")
@@ -93,8 +94,8 @@ func TestAccountResource_GetPaginated_Success(t *testing.T) {
 }
 
 func TestAccountResource_GetPaginated_ValidationErrors(t *testing.T) {
-	mockStore := &MockAccountStore{}
-	api, _ := setupTestAPI(t, mockStore)
+	mockService := &MockAccountService{}
+	api, _ := setupTestAPI(t, mockService)
 
 	tests := []struct {
 		name       string
@@ -120,7 +121,7 @@ func TestAccountResource_GetPaginated_ValidationErrors(t *testing.T) {
 
 func TestAccountResource_GetDetail_Success(t *testing.T) {
 	now := time.Now()
-	mockStore := &MockAccountStore{
+	mockService := &MockAccountService{
 		GetFunc: func(ctx context.Context, id int64) (schemas.AccountSchema, error) {
 			return schemas.AccountSchema{
 				ID:        id,
@@ -132,7 +133,7 @@ func TestAccountResource_GetDetail_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	api, _ := setupTestAPI(t, mockStore)
+	api, _ := setupTestAPI(t, mockService)
 
 	resp := api.Get("/accounts/1")
 	if resp.Code != http.StatusOK {
@@ -141,8 +142,8 @@ func TestAccountResource_GetDetail_Success(t *testing.T) {
 }
 
 func TestAccountResource_GetDetail_InvalidID(t *testing.T) {
-	mockStore := &MockAccountStore{}
-	api, _ := setupTestAPI(t, mockStore)
+	mockService := &MockAccountService{}
+	api, _ := setupTestAPI(t, mockService)
 
 	tests := []struct {
 		name       string
@@ -166,9 +167,23 @@ func TestAccountResource_GetDetail_InvalidID(t *testing.T) {
 	}
 }
 
+func TestAccountResource_GetDetail_NotFound(t *testing.T) {
+	mockService := &MockAccountService{
+		GetFunc: func(ctx context.Context, id int64) (schemas.AccountSchema, error) {
+			return schemas.AccountSchema{}, services.ErrAccountNotFound
+		},
+	}
+	api, _ := setupTestAPI(t, mockService)
+
+	resp := api.Get("/accounts/999")
+	if resp.Code != http.StatusNotFound {
+		t.Errorf("expected status 404, got %d", resp.Code)
+	}
+}
+
 func TestAccountResource_Create_Success(t *testing.T) {
 	now := time.Now()
-	mockStore := &MockAccountStore{
+	mockService := &MockAccountService{
 		CreateFunc: func(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
 			return schemas.AccountSchema{
 				ID:        1,
@@ -180,7 +195,7 @@ func TestAccountResource_Create_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	api, _ := setupTestAPI(t, mockStore)
+	api, _ := setupTestAPI(t, mockService)
 
 	resp := api.Post("/accounts", map[string]interface{}{
 		"name":   "New Account",
@@ -194,8 +209,8 @@ func TestAccountResource_Create_Success(t *testing.T) {
 }
 
 func TestAccountResource_Create_ValidationErrors(t *testing.T) {
-	mockStore := &MockAccountStore{}
-	api, _ := setupTestAPI(t, mockStore)
+	mockService := &MockAccountService{}
+	api, _ := setupTestAPI(t, mockService)
 
 	tests := []struct {
 		name       string
@@ -259,7 +274,7 @@ func TestAccountResource_Create_ValidationErrors(t *testing.T) {
 
 func TestAccountResource_Update_Success(t *testing.T) {
 	now := time.Now()
-	mockStore := &MockAccountStore{
+	mockService := &MockAccountService{
 		UpdateFunc: func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
 			return schemas.AccountSchema{
 				ID:        id,
@@ -272,7 +287,7 @@ func TestAccountResource_Update_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	api, _ := setupTestAPI(t, mockStore)
+	api, _ := setupTestAPI(t, mockService)
 
 	resp := api.Patch("/accounts/1", map[string]interface{}{
 		"name": "Updated Account",
@@ -284,8 +299,16 @@ func TestAccountResource_Update_Success(t *testing.T) {
 }
 
 func TestAccountResource_Update_ValidationErrors(t *testing.T) {
-	mockStore := &MockAccountStore{}
-	api, _ := setupTestAPI(t, mockStore)
+	mockService := &MockAccountService{
+		UpdateFunc: func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
+			// Simulate business validation from service layer
+			if data.Name == nil && data.Type == nil && data.Note == nil && data.Amount == nil {
+				return schemas.AccountSchema{}, services.ErrNoFieldsToUpdate
+			}
+			return schemas.AccountSchema{ID: id}, nil
+		},
+	}
+	api, _ := setupTestAPI(t, mockService)
 
 	tests := []struct {
 		name       string
@@ -327,13 +350,29 @@ func TestAccountResource_Update_ValidationErrors(t *testing.T) {
 	}
 }
 
+func TestAccountResource_Update_NotFound(t *testing.T) {
+	mockService := &MockAccountService{
+		UpdateFunc: func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
+			return schemas.AccountSchema{}, services.ErrAccountNotFound
+		},
+	}
+	api, _ := setupTestAPI(t, mockService)
+
+	resp := api.Patch("/accounts/999", map[string]interface{}{
+		"name": "Updated",
+	})
+	if resp.Code != http.StatusNotFound {
+		t.Errorf("expected status 404, got %d", resp.Code)
+	}
+}
+
 func TestAccountResource_Delete_Success(t *testing.T) {
-	mockStore := &MockAccountStore{
+	mockService := &MockAccountService{
 		DeleteFunc: func(ctx context.Context, id int64) error {
 			return nil
 		},
 	}
-	api, _ := setupTestAPI(t, mockStore)
+	api, _ := setupTestAPI(t, mockService)
 
 	resp := api.Delete("/accounts/1")
 	if resp.Code != http.StatusNoContent {
@@ -342,8 +381,8 @@ func TestAccountResource_Delete_Success(t *testing.T) {
 }
 
 func TestAccountResource_Delete_InvalidID(t *testing.T) {
-	mockStore := &MockAccountStore{}
-	api, _ := setupTestAPI(t, mockStore)
+	mockService := &MockAccountService{}
+	api, _ := setupTestAPI(t, mockService)
 
 	tests := []struct {
 		name       string
@@ -368,8 +407,8 @@ func TestAccountResource_Delete_InvalidID(t *testing.T) {
 }
 
 func TestAccountResource_MethodValidation(t *testing.T) {
-	mockStore := &MockAccountStore{}
-	api, _ := setupTestAPI(t, mockStore)
+	mockService := &MockAccountService{}
+	api, _ := setupTestAPI(t, mockService)
 
 	tests := []struct {
 		name       string
@@ -416,7 +455,7 @@ func TestAccountResource_MethodValidation(t *testing.T) {
 }
 
 func TestAccountResource_AllEndpointsRegistered(t *testing.T) {
-	mockStore := &MockAccountStore{
+	mockService := &MockAccountService{
 		ListFunc: func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
 			return schemas.PaginatedAccountSchema{}, nil
 		},
@@ -433,7 +472,7 @@ func TestAccountResource_AllEndpointsRegistered(t *testing.T) {
 			return nil
 		},
 	}
-	api, _ := setupTestAPI(t, mockStore)
+	api, _ := setupTestAPI(t, mockService)
 
 	endpoints := []struct {
 		method string

@@ -2,16 +2,18 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
+	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
-// Add interface (doesn't break existing code)
-type AccountStore interface {
+// AccountService defines the interface for account business logic operations.
+// This allows the resource to be tested with mock implementations.
+type AccountService interface {
 	List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error)
 	Get(ctx context.Context, id int64) (schemas.AccountSchema, error)
 	Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
@@ -20,11 +22,11 @@ type AccountStore interface {
 }
 
 type AccountResource struct {
-	store AccountStore
+	service AccountService
 }
 
-func NewAccountResource(store *repositories.AccountRepository) *AccountResource {
-	return &AccountResource{store: store}
+func NewAccountResource(service *services.AccountService) *AccountResource {
+	return &AccountResource{service: service}
 }
 
 type AccountPathParam struct {
@@ -128,7 +130,7 @@ func (ar *AccountResource) RegisterRoutes(api huma.API) {
 func (ar *AccountResource) GetPaginated(ctx context.Context, input *getPaginatedAccountsRequest) (*getPaginatedAccountsResponse, error) {
 	searchParams := input.SearchParamAccountSchema
 
-	parsedResult, err := ar.store.List(ctx, searchParams)
+	parsedResult, err := ar.service.List(ctx, searchParams)
 	if err != nil {
 		log.Printf("Failed to list accounts: %v", err)
 		return nil, huma.Error500InternalServerError("Failed to list accounts", err)
@@ -138,11 +140,13 @@ func (ar *AccountResource) GetPaginated(ctx context.Context, input *getPaginated
 }
 
 func (ar *AccountResource) Get(ctx context.Context, input *getAccountRequest) (*getAccountResponse, error) {
-	accountSchema, err := ar.store.Get(ctx, input.ID)
-
+	accountSchema, err := ar.service.Get(ctx, input.ID)
 	if err != nil {
+		if errors.Is(err, services.ErrAccountNotFound) {
+			return nil, huma.Error404NotFound(services.ErrAccountNotFound.Error())
+		}
 		log.Printf("Failed to get account %d: %v", input.ID, err)
-		return nil, huma.Error404NotFound("Account not found", err)
+		return nil, huma.Error500InternalServerError("Failed to get account", err)
 	}
 
 	return &getAccountResponse{Status: http.StatusOK, Body: accountSchema}, nil
@@ -151,7 +155,7 @@ func (ar *AccountResource) Get(ctx context.Context, input *getAccountRequest) (*
 func (ar *AccountResource) Create(ctx context.Context, input *createAccountRequest) (*createAccountResponse, error) {
 	createSchema := input.Body
 
-	accountSchema, err := ar.store.Create(ctx, createSchema)
+	accountSchema, err := ar.service.Create(ctx, createSchema)
 	if err != nil {
 		log.Printf("Failed to create account: %v", err)
 		return nil, huma.Error500InternalServerError("Failed to create account", err)
@@ -163,13 +167,14 @@ func (ar *AccountResource) Create(ctx context.Context, input *createAccountReque
 func (ar *AccountResource) Update(ctx context.Context, input *updateAccountRequest) (*updateAccountResponse, error) {
 	updateSchema := input.Body
 
-	// Validate at least one field is provided for update
-	if updateSchema.Name == nil && updateSchema.Type == nil && updateSchema.Note == nil && updateSchema.Amount == nil {
-		return nil, huma.Error400BadRequest("At least one field must be provided to update")
-	}
-
-	accountSchema, err := ar.store.Update(ctx, input.ID, updateSchema)
+	accountSchema, err := ar.service.Update(ctx, input.ID, updateSchema)
 	if err != nil {
+		if errors.Is(err, services.ErrNoFieldsToUpdate) {
+			return nil, huma.Error400BadRequest(services.ErrNoFieldsToUpdate.Error())
+		}
+		if errors.Is(err, services.ErrAccountNotFound) {
+			return nil, huma.Error404NotFound(services.ErrAccountNotFound.Error())
+		}
 		log.Printf("Failed to update account %d: %v", input.ID, err)
 		return nil, huma.Error500InternalServerError("Failed to update account", err)
 	}
@@ -178,7 +183,7 @@ func (ar *AccountResource) Update(ctx context.Context, input *updateAccountReque
 }
 
 func (ar *AccountResource) Delete(ctx context.Context, input *deleteAccountRequest) (*deleteAccountResponse, error) {
-	if err := ar.store.Delete(ctx, input.ID); err != nil {
+	if err := ar.service.Delete(ctx, input.ID); err != nil {
 		log.Printf("Failed to delete account %d: %v", input.ID, err)
 		return nil, huma.Error500InternalServerError("Failed to delete account", err)
 	}

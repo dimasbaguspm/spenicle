@@ -6,16 +6,26 @@ This document describes the code patterns, design choices, file structure, and a
 
 ## Design Pattern
 
-- Resource + Repository pattern:
-  - `resource/*` implements HTTP handlers (Huma operations) and contains request/response types and business-level validation.
+- Resource + Service + Repository pattern:
+  - `internal/resources/*` implements HTTP handlers (Huma operations), handles HTTP concerns, and translates service errors to HTTP status codes.
+  - `internal/services/*` implements business logic, business-level validation, and domain rules. Services use a store interface (e.g., `AccountStore`) to interact with repositories.
   - `internal/repositories/*` implements DB access (SQL) and returns schema DTOs.
-  - Resources use an interface (e.g., `AccountStore`) so repositories can be mocked for endpoint tests.
 - Single responsibility:
-  - Resource: HTTP, input validation, simple business rules.
-  - Repository: SQL and persistence concerns.
-  - Schema package: DTOs and validation tags used by Huma.
+  - Resource: HTTP protocol, request/response mapping, HTTP status codes.
+  - Service: Business validation, domain rules, error translation from DB to domain errors.
+  - Repository: SQL queries, row scanning, database-specific concerns.
+  - Schema package: DTOs with Huma validation tags for data-level constraints.
+- Validation layers:
+  - **Schema validation** (data-level): Individual field constraints via struct tags (minLength, enum, minimum, etc.). Enforces data integrity and format.
+  - **Service validation** (business-level): Cross-field rules, domain invariants, business constraints (e.g., "at least one field for update", "unique name per user", "savings accounts need minimum balance").
 - Adapter usage:
   - Huma + Chi adapter is used to register routes and auto-generate OpenAPI.
+- Architecture flow:
+  ```
+  HTTP Request → Resource → Service → Repository → Database
+                    ↓          ↓          ↓
+                HTTP layer  Business  Data layer
+  ```
 
 ## Code Patterns & Conventions
 
@@ -32,52 +42,79 @@ This document describes the code patterns, design choices, file structure, and a
   - Use `COALESCE` for update statements to preserve existing values when fields are absent.
 - Tests:
   - Repository unit tests: use `pgxmock` to assert SQL and return rows.
-  - Endpoint tests: use `humatest` and a mock store implementing the resource interface.
+  - Service unit tests: use function-based mocks to test business logic and validation.
+  - Resource tests: use `humatest` and a mock service implementing the resource interface.
+  - See [testing_standards.md](testing_standards.md) for comprehensive testing guidelines.
 
 ## Project Structure (important files)
 
 - `main.go` — app bootstrap and graceful shutdown.
-- `routes.go` — router setup and Huma adapter registration.
-- `internal/resources/` — HTTP resources and registration (e.g., `internal/resources/account_resource.go`).
+- `handlers.go` — router setup, Huma adapter registration, and dependency wiring.
+- `internal/resources/` — HTTP resources and route registration (e.g., `account_resource.go`).
+- `internal/services/` — Business logic and domain rules (e.g., `account_service.go`).
 - `internal/repositories/` — DB repositories (e.g., `account_repository.go`).
-- `internal/database/schema/` — DTOs: `account_schema.go`, `account_create_schema.go`, `account_update_schema.go`, `account_search_param_schema.go`, `account_paginated_schema.go`.
-- `internal/database/migrations/` — SQL migrations.
+- `internal/database/schemas/` — DTOs with validation tags: `account_schema.go`, `account_create_schema.go`, `account_update_schema.go`, etc.
+- `internal/database/migrations/` — SQL migrations (up/down).
 - `docs/` — project documentation (this file and `account_service.md`).
 
 ## How to Add an Endpoint — Step-by-step
 
-1. Add/Update schema types
-   - Create request and response types under `internal/database/schema`.
-   - Add Huma validation metadata in struct tags (`doc`, `example`, `enum`, `minimum`, `maximum`, etc.).
+1. Add/Update schema typess/`.
+   - Add Huma validation metadata in struct tags for **data-level constraints** (`doc`, `example`, `enum`, `minimum`, `maximum`, `minLength`, `maxLength`).
    - For updates, use pointer fields so absent fields are distinguished from zero values.
 2. Add repository method
    - Implement DB logic in `internal/repositories/<repo>.go`.
    - Use the repository's `DB` interface methods: `QueryRow`, `Query`, `Exec`.
-   - Return schema DTOs.
-3. Add resource handler
+   - Return schema DTOs and wrap errors with context (e.g., `fmt.Errorf("get account: %w", err)`).
+3. Add service method
+   - Implement business logic in `internal/services/<name>_service.go`.
+   - Add **business-level validation** (cross-field rules, domain constraints).
+   - Translate repository errors to domain errors (e.g., `pgx.ErrNoRows` → `ErrAccountNotFound`).
+   - Define domain errors as package-level variables (e.g., `var ErrAccountNotFound = errors.New("account not found")`).
+4. Add resource handler
    - Define request/response wrapper types in `internal/resources/<name>_resource.go` (embedding path/query/body types).
-   - Implement the handler method (context, input pointer) and perform business validation (e.g., require at least one field on update).
+   - Implement the handler method (context, input pointer) calling the service layer.
+   - Translate domain errors to HTTP errors using `errors.Is()` checks (e.g., `ErrAccountNotFound` → `huma.Error404NotFound`).
    - Use Huma error helpers for consistent HTTP error responses.
-4. Register the operation
+5. Register the operation
    - In the resource's `RegisterRoutes` function, call `huma.Register` with a `huma.Operation{OperationID, Method, Path, Summary, Tags}` and the handler method.
-5. OpenAPI & router
-   - Ensure `routes.go` registers the resource and Huma adapter. Huma will generate `openapi.json` automatically.
-   - Avoid CreateHooks that inject `$schema` into responses unless intentionally required.
-6. Tests
+6. Wire dependencies
+   - In `handlers.go`, wire Repository → Service → Resource:
+     ````go
+     repo := repositories.NewAccountRepository(pool)
+     service := services.NewAccountService(repo)
+     resource := resources.NewAccountResource(service)
+     resource.RegisterRoutes(humaApi)
+     ```dependencies.
+     ````
+
+- **Repository tests**: Use `pgxmock` to assert SQL queries and test row scanning. Test error cases (e.g., connection errors, constraint violations).
+- **Service tests**: Mock the store interface and test business logic, validation rules, and error translation (e.g., `pgx.ErrNoRows` → domain errors).
+- **Resource tests**: Mock the service and use `humatest` to test HTTP concerns (status codes, error responses, request/response mapping).
+- Keep tests readable: use table-driven tests for validation and negative cases.
+- Test naming: `Test<MethodName>_<Scenario>` (e.g., `TestUpdate_NoFieldsProvided`, `TestGet_AccountNotFound`)tered operations.
+  - Avoid CreateHooks that inject `$schema` into responses unless intentionally required.
+
+8. Tests
    - Repository tests: add `pgxmock` tests verifying SQL and mapping to DTOs.
-   - Endpoint tests: create a mock store implementing the resource interface and use `humatest.New(t)` to register routes and exercise endpoints.
-   - Verify both successful and validation/error paths.
-7. Migration (if DB change)
+   - Service tests: create a mock store and test business logic, error translation, and validation rules.
+   - Resource tests: create a mock service and use `humatest.New(t)` to register routes and exercise endpoints. Test HTTP status codes and error responses.
+   - Verify both successful and validation/error paths for all layers.
+     9 - Verify both successful and validation/error paths.
+9. Migration (if DB change)
    - Add SQL files under `internal/database/migrations/` (up/down).
    - Follow existing migration formatting and naming conventions.
 
 ## Testing Guidance
 
-- Unit tests should be deterministic and isolated from real DB. Use mocks for DB or store interface.
-- Endpoint tests should focus on validation, method availability, expected status codes, and basic response shape (use `humatest`).
-- Keep tests readable: use table-driven tests for validation and negative cases.
-
-## OpenAPI & Huma Notes
+- Unit tests should be defor **data-level validation** (Huma validation + doc + example).
+- Add repository method and unit tests (`pgxmock`).
+- Add service method with **business-level validation** and unit tests (mocked store).
+- Add resource handler with error translation and endpoint tests (`humatest` with mocked service).
+- Wire dependencies in `handlers.go` (Repository → Service → Resource).
+- Add migrations (up/down) if altering DB schema.
+- Run `go test ./...` and ensure all tests pass.
+- V
 
 - Huma generates OpenAPI from struct tags and registered operations; keep schema tags accurate.
 - Do not attach custom MarshalJSON/UnmarshalJSON methods to schema structs (prevents Huma from observing fields properly).

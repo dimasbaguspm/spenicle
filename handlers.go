@@ -8,10 +8,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
-	"github.com/dimasbaguspm/spenicle-api/internal/constants"
-	"github.com/dimasbaguspm/spenicle-api/internal/database"
+	"github.com/dimasbaguspm/spenicle-api/internal/configs"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/resources"
+	"github.com/dimasbaguspm/spenicle-api/internal/services"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,24 +29,27 @@ type RoutesConfig struct {
 func (rc *RoutesConfig) Setup(ctx context.Context) error {
 	rc.router = chi.NewMux()
 	rc.addMiddleware()
+	env := configs.LoadEnvironment()
 
 	config := huma.DefaultConfig("Spenicle API", "1.0.0")
 	config.Servers = []*huma.Server{
-		{URL: "http://localhost:" + constants.APP_PORT, Description: "Development server"},
+		{URL: "http://localhost:" + env.AppPort, Description: "Development server"},
 	}
 	// exclude the default "$schema" property from all responses
 	config.CreateHooks = []func(huma.Config) huma.Config{}
 
 	humaApi := humachi.New(rc.router, config)
 
-	pool, err := (&database.Database{}).Connect(ctx, constants.DATABASE_URL)
+	pool, err := (&configs.Database{}).Connect(ctx, env.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	rc.dbPool = pool
 
-	resources.NewAccountResource(repositories.NewAccountRepository(pool)).RegisterRoutes(humaApi)
+	// Initialize repositories, services, and resources
+	accountService := services.NewAccountService(repositories.NewAccountRepository(pool))
+	resources.NewAccountResource(accountService).RegisterRoutes(humaApi)
 
 	return nil
 }
@@ -63,8 +66,10 @@ func (rc *RoutesConfig) addMiddleware() {
 // Run starts the HTTP server on the given port and returns the server
 // instance so the caller can manage its lifecycle (shutdown, etc.).
 func (rc *RoutesConfig) Run() *http.Server {
+	env := configs.LoadEnvironment()
+
 	srv := &http.Server{
-		Addr:    ":" + constants.APP_PORT,
+		Addr:    ":" + env.AppPort,
 		Handler: rc.router,
 	}
 
@@ -74,7 +79,7 @@ func (rc *RoutesConfig) Run() *http.Server {
 		}
 	}()
 
-	log.Printf("Server is running on %s", constants.APP_PORT)
+	log.Printf("Server is running on %s", env.AppPort)
 
 	return srv
 }

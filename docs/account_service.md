@@ -2,16 +2,29 @@
 
 ## Overview
 
-This document describes the Account service: its purpose, exposed endpoints, validation rules, data schema, and database behavior.
+This document describes the Account service: its purpose, exposed endpoints, validation rules, data schema, and architecture.
 
 ## Purpose
 
-The Account service manages user accounts (financial ledger entries) with CRUD operations. It exposes HTTP endpoints implemented in internal/resources/account_resource.go and persists data via the repository at internal/repositories/account_repository.go.
+The Account service manages user accounts (financial ledger entries) with CRUD operations. It follows a three-layer architecture:
 
-- Resource implementation: [internal/resources/account_resource.go](../internal/resources/account_resource.go)
-- Repository implementation: [internal/repositories/account_repository.go](../internal/repositories/account_repository.go)
-- Schemas (request/response types): [internal/database/schema](internal/database/schema)
-- DB migrations: [internal/database/migrations/000001_init.up.sql](internal/database/migrations/000001_init.up.sql)
+- **Resource Layer** - HTTP handlers at [internal/resources/account_resource.go](../internal/resources/account_resource.go)
+- **Service Layer** - Business logic at [internal/services/account_service.go](../internal/services/account_service.go)
+- **Repository Layer** - Data access at [internal/repositories/account_repository.go](../internal/repositories/account_repository.go)
+
+### Architecture Flow
+
+```
+HTTP Request → Resource → Service → Repository → Database
+                  ↓          ↓          ↓
+              HTTP layer  Business  Data layer
+```
+
+**Additional References:**
+
+- Schemas (request/response types): [internal/database/schemas/](../internal/database/schemas/)
+- DB migrations: [internal/database/migrations/](../internal/database/migrations/)
+- Testing standards: [testing_standards.md](testing_standards.md)
 
 ## Endpoints
 
@@ -47,25 +60,73 @@ All endpoints are registered in `resource/account_resource.go` with Huma operati
 
 ## Validation
 
-Validation is handled by Huma using tags on the schema types. Key rules:
+Validation occurs at two levels:
 
-- Required fields
-  - `CreateAccountSchema` requires `name`, `type`, `note`, and `amount` as defined in the schema file.
-- Enums
-  - `type` accepts only `income` or `expense` (enum tag on schema fields).
-- Numbers
-  - `amount` must be a non-negative number (minimum 0).
-- Strings
-  - `name` has a max length constraint (e.g., 255 characters).
-- Query parameters
-  - Pagination `pageNumber` and `pageSize` have `minimum` and `maximum` constraints in the schema; defaults may be provided by Huma where applicable.
-- Path params
-  - `id` path parameter has a `minimum: 1` constraint in the resource (`AccountPathParam`). Huma validates type and minimum.
+### Schema Validation (Data-Level)
 
-Behavior notes:
+Handled automatically by Huma using struct tags on schema types. Enforces:
 
-- Huma returns structured problem responses (application/problem+json) for validation errors (422 Unprocessable Entity) and uses the configured Huma error helpers for 400/404/500 responses.
-- The resource enforces additional business validation, e.g., `Update` requires at least one field present; otherwise returns 400 Bad Request.
+- **Required fields** - `CreateAccountSchema` requires `name`, `type`, `note`, and `amount`
+- **Enums** - `type` accepts only `income` or `expense`
+- **Number constraints** - `amount` must be non-negative (minimum: 0)
+- **String constraints** - `name` max length (255 characters)
+- **Query parameters** - Pagination constraints on `pageNumber` and `pageSize`
+- **Path parameters** - `id` must be ≥ 1
+
+Schema validation returns **422 Unprocessable Entity** for violations.
+
+### Business Validation (Service-Level)
+
+Handled by the service layer for domain rules:
+
+- **Update requires fields** - At least one field must be provided for partial updates
+  - Returns `ErrNoFieldsToUpdate` → **400 Bad Request**
+- **Entity existence** - Account must exist for Get/Update/Delete operations
+
+  - Returns `ErrAccountNotFound` → \*\*404 Not Founds`:
+
+- `AccountSchema` ([account_schema.go](../internal/database/schemas/account_schema.go)) — canonical representation returned by the API.
+- `CreateAccountSchema` ([account_create_schema.go](../internal/database/schemas/account_create_schema.go)) — request shape for creating accounts.
+- `UpdateAccountSchema` ([account_update_schema.go](../internal/database/schemas/account_update_schema.go)) — request shape for partial updates; fields are pointers to allow partial updates.
+- `PaginatedAccountSchema` ([account_paginated_schema.go](../internal/database/schemas/account_paginated_schema.go)) — response shape for list endpoints.
+- `SearchParamAccountSchema` ([account_search_param_schema.go](../internal/database/schemas/account_search_param_schema.go)) — query parameters for listing/filtering.
+
+Use these types as the source of truth for request/response validation and for generating OpenAPI via Huma.
+
+## Service Layer
+
+The service layer ([account_service.go](../internal/services/account_service.go)) sits between resources and repositories:
+
+**Responsibilities:**
+
+- Business-level validation (cross-field rules, domain constraints)
+- Error translation (DB errors → domain errors)
+- Business rules enforcement
+- Domain logic implementation
+
+**Domain Errors:**
+
+```go
+var (
+    ErrAccountNotFound    = errors.New("account not found")
+    ErrNoFieldsToUpdate   = errors.New("at least one field must be provided to update")
+    ErrInvalidAccountData = errors.New("invalid account data")
+)
+```
+
+**Error Translation:**
+
+- `pgx.ErrNoRows` → `ErrAccountNotFound` (404)
+- No update fields → `ErrNoFieldsToUpdate` (400)
+- Other DB errors → wrapped with context (500)
+
+The service layer uses an `AccountStore` interface for testability, allowing repository mocking in tests
+Huma returns structured problem responses (application/problem+json):
+
+- **422** - Schema validation failures
+- **400** - Business rule violations (no fields provided)
+- **404** - Entity not found
+- **500** - Internal server errors
 
 ## Data Schema
 

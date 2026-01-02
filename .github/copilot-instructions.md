@@ -2,7 +2,8 @@
 
 Follow this minimal checklist before making changes:
 
-- **Read standards:** Check `docs/code_standards.md` for architecture and style.
+- **Code standards:** Check `docs/code_standards.md` for architecture and style.
+- **Testing standards:** Refer to `docs/testing_standards.md` for testing guidelines.
 - **Account context:** If work touches `account`, include `docs/account_service.md` as required context.
 - **Plan:** For multi-step tasks, create a `manage_todo_list` entry.
 - **Edit:** Use `apply_patch` for modifications; use `create_file` only for new files.
