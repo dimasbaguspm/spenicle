@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle-api/internal/configs"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
 )
 
@@ -17,9 +18,17 @@ func main() {
 	setupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+	env := configs.LoadEnvironment()
+
+	if err := env.Validate(); err != nil {
+		logger.Log().Error("environment configuration validation failed", "error", err)
+		panic(err)
+	}
+
 	routes := &RoutesConfig{}
-	if err := routes.Setup(setupCtx); err != nil {
+	if err := routes.Setup(setupCtx, env); err != nil {
 		logger.Log().Error("failed to set up routes", "error", err)
+		panic(err)
 	}
 
 	srv := routes.Run()

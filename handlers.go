@@ -26,22 +26,20 @@ type RoutesConfig struct {
 
 // Setup initializes the router, registers middleware, connects to the
 // database, and mounts application routes. It returns an error on failure.
-func (rc *RoutesConfig) Setup(ctx context.Context) error {
+func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) error {
 	rc.router = chi.NewMux()
 	rc.addMiddleware()
-	env := configs.LoadEnvironment()
 
 	config := huma.DefaultConfig("Spenicle API", "1.0.0")
 	config.Servers = []*huma.Server{{URL: "http://localhost:" + env.AppPort, Description: "Development server"}}
 	// exclude the default "$schema" property from all responses
 	config.CreateHooks = []func(huma.Config) huma.Config{}
 
-	// Define security schemes at the top level for OpenAPI documentation
+	// define security schemes at the top level for OpenAPI documentation
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearer": {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
 	}
 
-	// Create main API for public routes and docs
 	publicApi := humachi.New(rc.router, config)
 
 	pool, err := (&configs.Database{}).Connect(ctx, env.DatabaseURL)

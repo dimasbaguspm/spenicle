@@ -96,6 +96,7 @@ For complete authentication implementation details, token flows, and security pa
 - `docs/` — Project documentation:
   - `code_standards.md` - Architecture patterns and coding conventions (this file)
   - `authentication_guide.md` - JWT authentication, public/protected routes, security patterns
+  - `performance.md` - Performance optimization, caching, DB pooling, query patterns
   - `account_service.md` - Account API endpoint documentation
   - `testing_standards.md` - Testing patterns and guidelines
 
