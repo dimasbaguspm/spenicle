@@ -8,7 +8,7 @@ This document describes the code patterns, design choices, file structure, and a
 
 - Resource + Repository pattern:
   - `resource/*` implements HTTP handlers (Huma operations) and contains request/response types and business-level validation.
-  - `internal/database/repositories/*` implements DB access (SQL) and returns schema DTOs.
+  - `internal/repositories/*` implements DB access (SQL) and returns schema DTOs.
   - Resources use an interface (e.g., `AccountStore`) so repositories can be mocked for endpoint tests.
 - Single responsibility:
   - Resource: HTTP, input validation, simple business rules.
@@ -38,8 +38,8 @@ This document describes the code patterns, design choices, file structure, and a
 
 - `main.go` — app bootstrap and graceful shutdown.
 - `routes.go` — router setup and Huma adapter registration.
-- `resource/` — HTTP resources and registration (e.g., `resource/account_resource.go`).
-- `internal/database/repositories/` — DB repositories (e.g., `account_repository.go`).
+- `internal/resources/` — HTTP resources and registration (e.g., `internal/resources/account_resource.go`).
+- `internal/repositories/` — DB repositories (e.g., `account_repository.go`).
 - `internal/database/schema/` — DTOs: `account_schema.go`, `account_create_schema.go`, `account_update_schema.go`, `account_search_param_schema.go`, `account_paginated_schema.go`.
 - `internal/database/migrations/` — SQL migrations.
 - `docs/` — project documentation (this file and `account_service.md`).
@@ -51,11 +51,11 @@ This document describes the code patterns, design choices, file structure, and a
    - Add Huma validation metadata in struct tags (`doc`, `example`, `enum`, `minimum`, `maximum`, etc.).
    - For updates, use pointer fields so absent fields are distinguished from zero values.
 2. Add repository method
-   - Implement DB logic in `internal/database/repositories/<repo>.go`.
+   - Implement DB logic in `internal/repositories/<repo>.go`.
    - Use the repository's `DB` interface methods: `QueryRow`, `Query`, `Exec`.
    - Return schema DTOs.
 3. Add resource handler
-   - Define request/response wrapper types in `resource/<name>_resource.go` (embedding path/query/body types).
+   - Define request/response wrapper types in `internal/resources/<name>_resource.go` (embedding path/query/body types).
    - Implement the handler method (context, input pointer) and perform business validation (e.g., require at least one field on update).
    - Use Huma error helpers for consistent HTTP error responses.
 4. Register the operation

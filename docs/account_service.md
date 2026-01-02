@@ -6,10 +6,10 @@ This document describes the Account service: its purpose, exposed endpoints, val
 
 ## Purpose
 
-The Account service manages user accounts (financial ledger entries) with CRUD operations. It exposes HTTP endpoints implemented in resource/account_resource.go and persists data via the repository at internal/database/repositories/account_repository.go.
+The Account service manages user accounts (financial ledger entries) with CRUD operations. It exposes HTTP endpoints implemented in internal/resources/account_resource.go and persists data via the repository at internal/repositories/account_repository.go.
 
-- Resource implementation: [resource/account_resource.go](../resource/account_resource.go)
-- Repository implementation: [internal/database/repositories/account_repository.go](../internal/database/repositories/account_repository.go)
+- Resource implementation: [internal/resources/account_resource.go](../internal/resources/account_resource.go)
+- Repository implementation: [internal/repositories/account_repository.go](../internal/repositories/account_repository.go)
 - Schemas (request/response types): [internal/database/schema](internal/database/schema)
 - DB migrations: [internal/database/migrations/000001_init.up.sql](internal/database/migrations/000001_init.up.sql)
 
@@ -81,7 +81,7 @@ Use these types as the source of truth for request/response validation and for g
 
 ## Database Related
 
-- The repository `AccountRepository` uses a small DB interface and executes SQL for CRUD operations. See implementation: [internal/database/repositories/account_repository.go](../internal/database/repositories/account_repository.go).
+- The repository `AccountRepository` uses a small DB interface and executes SQL for CRUD operations. See implementation: [internal/repositories/account_repository.go](../internal/repositories/account_repository.go).
 - Creation returns the inserted row (RETURNING id, created_at, etc.).
 - Update uses `COALESCE` to preserve existing values where `NULL`/absent values are provided.
 - Delete performs a soft delete by setting `deleted_at` to CURRENT_TIMESTAMP; the row remains in the database.
@@ -112,7 +112,7 @@ Migrations:
 
 ## Where to look in code
 
-- Routes and Huma registrations: [resource/account_resource.go](../../resource/account_resource.go)
-- DB repo & SQL: [internal/database/repositories/account_repository.go](../../internal/database/repositories/account_repository.go)
+- Routes and Huma registrations: [internal/resources/account_resource.go](../../intenral/resources/account_resource.go)
+- DB repo & SQL: [internal/repositories/account_repository.go](../../internal/repositories/account_repository.go)
 - Schemas: [internal/database/schema](../internal/database/schema)
 - Migrations: [internal/database/migrations](../internal/database/migrations)

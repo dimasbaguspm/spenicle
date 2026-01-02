@@ -9,8 +9,8 @@ Spenicle API is a lightweight Go service that exposes CRUD endpoints for financi
 ## Project structure (high level)
 
 - `main.go`, `routes.go` — application bootstrap and router setup
-- `resource/` — HTTP resources and Huma endpoint registrations
-- `internal/database/repositories/` — repository layer (SQL persistence)
+- `internal/resources/` — HTTP resources and Huma endpoint registrations
+- `internal/repositories/` — repository layer (SQL persistence)
 - `internal/database/schema/` — DTOs and validation tags (Huma)
 - `internal/database/migrations/` — SQL migrations
 - `docs/` — documentation and code standards
