@@ -37,6 +37,9 @@ func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
 		Summary:     "List transactions",
 		Description: "Returns a paginated list of transactions",
 		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, r.List)
 
 	huma.Register(api, huma.Operation{
@@ -46,6 +49,9 @@ func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
 		Summary:     "Create a new transaction",
 		Description: "Creates a new transaction and updates account balance",
 		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, r.Create)
 
 	huma.Register(api, huma.Operation{
@@ -55,6 +61,9 @@ func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
 		Summary:     "Get a transaction",
 		Description: "Returns a transaction by ID",
 		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, r.Get)
 
 	huma.Register(api, huma.Operation{
@@ -64,6 +73,9 @@ func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
 		Summary:     "Update a transaction",
 		Description: "Updates a transaction by ID and syncs account balance",
 		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, r.Update)
 
 	huma.Register(api, huma.Operation{
@@ -73,6 +85,9 @@ func (r *TransactionResource) RegisterRoutes(api huma.API, prefix string) {
 		Summary:     "Delete a transaction",
 		Description: "Soft deletes a transaction by ID and reverts account balance",
 		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
 	}, r.Delete)
 }
 

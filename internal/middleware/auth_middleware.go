@@ -123,14 +123,6 @@ func RequireAuth(env *configs.Environment, next http.Handler) http.Handler {
 			return
 		}
 
-		err = jwt.Method.Verify(tokenString, jwt.Signature, []byte(env.JWTSecret))
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
-			return
-		}
-
 		next.ServeHTTP(w, r)
 	})
 }

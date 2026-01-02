@@ -1,0 +1,115 @@
+package resources
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+)
+
+// SummaryService defines the interface for summary business logic operations.
+// This allows the resource to be tested with mock implementations.
+type SummaryService interface {
+	GetTransactionSummary(ctx context.Context, params schemas.SummaryTransactionParamModel) (schemas.SummaryTransactionSchema, error)
+	GetAccountSummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryAccountSchema, error)
+	GetCategorySummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryCategorySchema, error)
+}
+
+type SummaryResource struct {
+	service SummaryService
+}
+
+func NewSummaryResource(service SummaryService) *SummaryResource {
+	return &SummaryResource{service: service}
+}
+
+// RegisterRoutes registers all summary routes (all protected with authentication)
+func (r *SummaryResource) RegisterRoutes(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "get-transaction-summary",
+		Method:      http.MethodGet,
+		Path:        "/summary/transactions",
+		Summary:     "Get transaction summary",
+		Description: "Returns transaction summary grouped by frequency (daily, weekly, monthly, yearly) with optional date filtering",
+		Tags:        []string{"Summary"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.GetTransactionSummary)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-account-summary",
+		Method:      http.MethodGet,
+		Path:        "/summary/accounts",
+		Summary:     "Get account summary",
+		Description: "Returns transaction summary grouped by account with optional date filtering",
+		Tags:        []string{"Summary"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.GetAccountSummary)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-category-summary",
+		Method:      http.MethodGet,
+		Path:        "/summary/categories",
+		Summary:     "Get category summary",
+		Description: "Returns transaction summary grouped by category with optional date filtering",
+		Tags:        []string{"Summary"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.GetCategorySummary)
+}
+
+type GetTransactionSummaryInput struct {
+	schemas.SummaryTransactionParamModel
+}
+
+type GetTransactionSummaryOutput struct {
+	Body schemas.SummaryTransactionSchema
+}
+
+func (r *SummaryResource) GetTransactionSummary(ctx context.Context, input *GetTransactionSummaryInput) (*GetTransactionSummaryOutput, error) {
+	result, err := r.service.GetTransactionSummary(ctx, input.SummaryTransactionParamModel)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to get transaction summary", err)
+	}
+
+	return &GetTransactionSummaryOutput{Body: result}, nil
+}
+
+type GetAccountSummaryInput struct {
+	schemas.SummaryParamModel
+}
+
+type GetAccountSummaryOutput struct {
+	Body schemas.SummaryAccountSchema
+}
+
+func (r *SummaryResource) GetAccountSummary(ctx context.Context, input *GetAccountSummaryInput) (*GetAccountSummaryOutput, error) {
+	result, err := r.service.GetAccountSummary(ctx, input.SummaryParamModel)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to get account summary", err)
+	}
+
+	return &GetAccountSummaryOutput{Body: result}, nil
+}
+
+type GetCategorySummaryInput struct {
+	schemas.SummaryParamModel
+}
+
+type GetCategorySummaryOutput struct {
+	Body schemas.SummaryCategorySchema
+}
+
+func (r *SummaryResource) GetCategorySummary(ctx context.Context, input *GetCategorySummaryInput) (*GetCategorySummaryOutput, error) {
+	result, err := r.service.GetCategorySummary(ctx, input.SummaryParamModel)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to get category summary", err)
+	}
+
+	return &GetCategorySummaryOutput{Body: result}, nil
+}
