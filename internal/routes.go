@@ -53,6 +53,7 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 
 	// services
 	accountService := services.NewAccountService(repositories.NewAccountRepository(pool))
+	categoryService := services.NewCategoryService(repositories.NewCategoryRepository(pool))
 
 	// public routes
 	resources.NewAuthResource(env).RegisterRoutes(publicApi)
@@ -62,6 +63,7 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 		r.Use(func(h http.Handler) http.Handler { return internalmiddleware.RequireAuth(env, h) })
 		protectedApi := humachi.New(r, config)
 		resources.NewAccountResource(accountService).RegisterRoutes(protectedApi)
+		resources.NewCategoryResource(categoryService).RegisterRoutes(protectedApi)
 	})
 
 	return nil
