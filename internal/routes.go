@@ -62,6 +62,8 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 	budgetTemplateRepo := repositories.NewBudgetTemplateRepository(pool)
 	budgetRepo := repositories.NewBudgetRepository(pool)
 	transactionTemplateRepo := repositories.NewTransactionTemplateRepository(pool)
+	tagRepo := repositories.NewTagRepository(pool)
+	transactionTagRepo := repositories.NewTransactionTagRepository(pool)
 
 	// services
 	accountService := services.NewAccountService(accountRepo)
@@ -72,6 +74,8 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 	budgetTemplateService := services.NewBudgetTemplateService(budgetTemplateRepo)
 	budgetService := services.NewBudgetService(budgetRepo)
 	transactionTemplateService := services.NewTransactionTemplateService(transactionTemplateRepo, accountRepo, categoryRepo)
+	tagService := services.NewTagService(tagRepo)
+	transactionTagService := services.NewTransactionTagService(transactionTagRepo, transactionRepo, tagRepo)
 
 	// public routes
 	resources.NewAuthResource(env).RegisterRoutes(publicApi)
@@ -82,10 +86,11 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 		protectedApi := humachi.New(r, config)
 		resources.NewAccountResource(accountService, budgetService).RegisterRoutes(protectedApi)
 		resources.NewCategoryResource(categoryService, budgetService).RegisterRoutes(protectedApi)
-		resources.NewTransactionResource(transactionService, transactionTemplateService).RegisterRoutes(protectedApi)
+		resources.NewTransactionResource(transactionService, transactionTemplateService, transactionTagService).RegisterRoutes(protectedApi)
 		resources.NewSummaryResource(summaryService).RegisterRoutes(protectedApi)
 		resources.NewTransactionRelationResource(transactionRelationService).RegisterRoutes(protectedApi)
 		resources.NewBudgetResource(budgetService, budgetTemplateService).RegisterRoutes(protectedApi)
+		resources.NewTagResource(tagService).RegisterRoutes(protectedApi)
 	})
 
 	// Initialize worker

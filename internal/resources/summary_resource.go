@@ -16,6 +16,7 @@ type SummaryService interface {
 	GetCategorySummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryCategorySchema, error)
 	GetAccountTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error)
 	GetCategoryTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error)
+	GetTagSummary(ctx context.Context, params schemas.SummaryTagParamSchema) (schemas.SummaryTagSchema, error)
 }
 
 type SummaryResource struct {
@@ -87,6 +88,18 @@ func (r *SummaryResource) RegisterRoutes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, r.GetCategoryTrends)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-tag-summary",
+		Method:      http.MethodGet,
+		Path:        "/summary/tags",
+		Summary:     "Get tag summary",
+		Description: "Returns transaction summary grouped by tags with optional date and type filtering",
+		Tags:        []string{"Summary"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.GetTagSummary)
 }
 
 type GetTransactionSummaryInput struct {
@@ -172,4 +185,21 @@ func (r *SummaryResource) GetCategoryTrends(ctx context.Context, input *GetCateg
 	}
 
 	return &GetCategoryTrendsOutput{Body: result}, nil
+}
+
+type GetTagSummaryInput struct {
+	schemas.SummaryTagParamSchema
+}
+
+type GetTagSummaryOutput struct {
+	Body schemas.SummaryTagSchema
+}
+
+func (r *SummaryResource) GetTagSummary(ctx context.Context, input *GetTagSummaryInput) (*GetTagSummaryOutput, error) {
+	result, err := r.service.GetTagSummary(ctx, input.SummaryTagParamSchema)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to get tag summary", err)
+	}
+
+	return &GetTagSummaryOutput{Body: result}, nil
 }

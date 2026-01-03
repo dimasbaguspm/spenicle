@@ -117,7 +117,7 @@ func TestTransactionResourceList(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions")
@@ -136,7 +136,7 @@ func TestTransactionResourceList(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions")
@@ -166,7 +166,7 @@ func TestTransactionResourceGet(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions/1")
@@ -184,7 +184,7 @@ func TestTransactionResourceGet(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Get("/transactions/999")
@@ -214,7 +214,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -237,7 +237,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -260,7 +260,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -283,7 +283,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -306,7 +306,7 @@ func TestTransactionResourceCreate(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions", map[string]any{
@@ -341,7 +341,7 @@ func TestTransactionResourceUpdate(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/1", map[string]any{
@@ -361,7 +361,7 @@ func TestTransactionResourceUpdate(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/1", map[string]any{})
@@ -379,7 +379,7 @@ func TestTransactionResourceUpdate(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/999", map[string]any{
@@ -399,7 +399,7 @@ func TestTransactionResourceUpdate(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/1", map[string]any{
@@ -421,7 +421,7 @@ func TestTransactionResourceDelete(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Delete("/transactions/1")
@@ -439,7 +439,7 @@ func TestTransactionResourceDelete(t *testing.T) {
 		}
 
 		templateService := &MockTransactionTemplateService{}
-		resource := NewTransactionResource(service, templateService)
+		resource := NewTransactionResource(service, templateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Delete("/transactions/999")
@@ -462,7 +462,7 @@ func TestTransactionTemplateErrorHandling(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource := NewTransactionResource(mockService, mockTemplateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions/templates", map[string]any{
@@ -489,7 +489,7 @@ func TestTransactionTemplateErrorHandling(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource := NewTransactionResource(mockService, mockTemplateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions/templates", map[string]any{
@@ -516,7 +516,7 @@ func TestTransactionTemplateErrorHandling(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource := NewTransactionResource(mockService, mockTemplateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions/templates", map[string]any{
@@ -543,7 +543,7 @@ func TestTransactionTemplateErrorHandling(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource := NewTransactionResource(mockService, mockTemplateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Post("/transactions/templates", map[string]any{
@@ -570,7 +570,7 @@ func TestTransactionTemplateErrorHandling(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource := NewTransactionResource(mockService, mockTemplateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/templates/1", map[string]any{
@@ -592,7 +592,7 @@ func TestTransactionTemplateErrorHandling(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource := NewTransactionResource(mockService, mockTemplateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/templates/1", map[string]any{
@@ -614,7 +614,7 @@ func TestTransactionTemplateErrorHandling(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource := NewTransactionResource(mockService, mockTemplateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/templates/1", map[string]any{
@@ -636,7 +636,7 @@ func TestTransactionTemplateErrorHandling(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource := NewTransactionResource(mockService, mockTemplateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/templates/1", map[string]any{})
@@ -656,7 +656,7 @@ func TestTransactionTemplateErrorHandling(t *testing.T) {
 			},
 		}
 
-		resource := NewTransactionResource(mockService, mockTemplateService)
+		resource := NewTransactionResource(mockService, mockTemplateService, nil)
 		resource.RegisterRoutes(api)
 
 		resp := api.Patch("/transactions/templates/1", map[string]any{

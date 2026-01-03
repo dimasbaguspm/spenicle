@@ -29,15 +29,24 @@ type TransactionTemplateService interface {
 	Delete(ctx context.Context, id int) error
 }
 
+// TransactionTagService defines the interface for transaction tag business logic operations.
+type TransactionTagService interface {
+	GetTransactionTags(ctx context.Context, transactionID int) (schemas.TransactionTagsSchema, error)
+	AddTagToTransaction(ctx context.Context, transactionID int, input schemas.AddTransactionTagSchema) error
+	UpdateTransactionTags(ctx context.Context, transactionID int, input schemas.UpdateTransactionTagsSchema) error
+}
+
 type TransactionResource struct {
 	service         TransactionService
 	templateService TransactionTemplateService
+	tagService      TransactionTagService
 }
 
-func NewTransactionResource(service TransactionService, templateService TransactionTemplateService) *TransactionResource {
+func NewTransactionResource(service TransactionService, templateService TransactionTemplateService, tagService TransactionTagService) *TransactionResource {
 	return &TransactionResource{
 		service:         service,
 		templateService: templateService,
+		tagService:      tagService,
 	}
 }
 
@@ -163,6 +172,43 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, r.DeleteTemplate)
+
+	// Transaction Tag routes
+	huma.Register(api, huma.Operation{
+		OperationID: "get-transaction-tags",
+		Method:      http.MethodGet,
+		Path:        "/transactions/{id}/tags",
+		Summary:     "Get transaction tags",
+		Description: "Get all tags for a specific transaction",
+		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.GetTransactionTags)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "add-transaction-tag",
+		Method:      http.MethodPost,
+		Path:        "/transactions/{id}/tags",
+		Summary:     "Add tag to transaction",
+		Description: "Add a tag to a transaction (creates tag if it doesn't exist)",
+		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.AddTransactionTag)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "update-transaction-tags",
+		Method:      http.MethodPut,
+		Path:        "/transactions/{id}/tags",
+		Summary:     "Update transaction tags",
+		Description: "Replace all tags for a transaction",
+		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.UpdateTransactionTags)
 }
 
 type ListTransactionsInput struct {
@@ -409,4 +455,67 @@ func (r *TransactionResource) DeleteTemplate(ctx context.Context, input *DeleteT
 	}
 
 	return &DeleteTransactionTemplateOutput{Status: http.StatusNoContent}, nil
+}
+
+// Transaction Tag handlers
+
+type GetTransactionTagsInput struct {
+	ID int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
+}
+
+type GetTransactionTagsOutput struct {
+	Body schemas.TransactionTagsSchema
+}
+
+func (r *TransactionResource) GetTransactionTags(ctx context.Context, input *GetTransactionTagsInput) (*GetTransactionTagsOutput, error) {
+	data, err := r.tagService.GetTransactionTags(ctx, input.ID)
+	if err != nil {
+		if err.Error() == "transaction not found" {
+			return nil, huma.Error404NotFound("Transaction not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to get transaction tags", err)
+	}
+
+	return &GetTransactionTagsOutput{Body: data}, nil
+}
+
+type AddTransactionTagInput struct {
+	ID   int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
+	Body schemas.AddTransactionTagSchema
+}
+
+type AddTransactionTagOutput struct {
+	Status int
+}
+
+func (r *TransactionResource) AddTransactionTag(ctx context.Context, input *AddTransactionTagInput) (*AddTransactionTagOutput, error) {
+	err := r.tagService.AddTagToTransaction(ctx, input.ID, input.Body)
+	if err != nil {
+		if err.Error() == "transaction not found" {
+			return nil, huma.Error404NotFound("Transaction not found")
+		}
+		if err.Error() == "tag name is required" {
+			return nil, huma.Error400BadRequest("Tag name is required")
+		}
+		return nil, huma.Error500InternalServerError("Failed to add tag to transaction", err)
+	}
+
+	return &AddTransactionTagOutput{Status: http.StatusCreated}, nil
+}
+
+type UpdateTransactionTagsInput struct {
+	ID   int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
+	Body schemas.UpdateTransactionTagsSchema
+}
+
+func (r *TransactionResource) UpdateTransactionTags(ctx context.Context, input *UpdateTransactionTagsInput) (*struct{}, error) {
+	err := r.tagService.UpdateTransactionTags(ctx, input.ID, input.Body)
+	if err != nil {
+		if err.Error() == "transaction not found" {
+			return nil, huma.Error404NotFound("Transaction not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to update transaction tags", err)
+	}
+
+	return &struct{}{}, nil
 }

@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
 )
@@ -505,4 +506,130 @@ func calculateOverallTrend(periods []schemas.TrendItem) (float64, string) {
 	}
 
 	return avgChange, status
+}
+
+// GetTagSummary returns aggregated transaction data grouped by tags
+func (r *SummaryRepository) GetTagSummary(ctx context.Context, params schemas.SummaryTagParamSchema) (schemas.SummaryTagSchema, error) {
+	// Build base query
+	baseQuery := `
+		FROM transactions t
+		INNER JOIN transaction_tags tt ON t.id = tt.transaction_id
+		INNER JOIN tags tg ON tt.tag_id = tg.id
+		WHERE t.deleted_at IS NULL
+	`
+
+	// Build filters
+	filters := []string{}
+	args := []interface{}{}
+	argIndex := 1
+
+	// Date filters
+	if !params.StartDate.IsZero() {
+		filters = append(filters, fmt.Sprintf("t.date >= $%d", argIndex))
+		args = append(args, params.StartDate)
+		argIndex++
+	}
+
+	if !params.EndDate.IsZero() {
+		filters = append(filters, fmt.Sprintf("t.date <= $%d", argIndex))
+		args = append(args, params.EndDate)
+		argIndex++
+	}
+
+	// Type filter
+	if params.Type != "" {
+		filters = append(filters, fmt.Sprintf("t.type = $%d", argIndex))
+		args = append(args, params.Type)
+		argIndex++
+	}
+
+	// Account IDs filter
+	if len(params.AccountIDs) > 0 {
+		accountPlaceholders := make([]string, len(params.AccountIDs))
+		for i, id := range params.AccountIDs {
+			accountPlaceholders[i] = fmt.Sprintf("$%d", argIndex)
+			args = append(args, id)
+			argIndex++
+		}
+		filters = append(filters, fmt.Sprintf("t.account_id IN (%s)", strings.Join(accountPlaceholders, ", ")))
+	}
+
+	// Category IDs filter
+	if len(params.CategoryIDs) > 0 {
+		categoryPlaceholders := make([]string, len(params.CategoryIDs))
+		for i, id := range params.CategoryIDs {
+			categoryPlaceholders[i] = fmt.Sprintf("$%d", argIndex)
+			args = append(args, id)
+			argIndex++
+		}
+		filters = append(filters, fmt.Sprintf("t.category_id IN (%s)", strings.Join(categoryPlaceholders, ", ")))
+	}
+
+	// Tag names filter
+	if len(params.TagNames) > 0 {
+		tagPlaceholders := make([]string, len(params.TagNames))
+		for i, name := range params.TagNames {
+			tagPlaceholders[i] = fmt.Sprintf("$%d", argIndex)
+			args = append(args, name)
+			argIndex++
+		}
+		filters = append(filters, fmt.Sprintf("LOWER(tg.name) IN (%s)", strings.Join(tagPlaceholders, ", ")))
+	}
+
+	whereClause := baseQuery
+	if len(filters) > 0 {
+		whereClause += " AND " + strings.Join(filters, " AND ")
+	}
+
+	// Build summary query
+	summarySQL := `
+		SELECT 
+			tg.id,
+			tg.name,
+			COUNT(*) as total_count,
+			COUNT(*) FILTER (WHERE t.type = 'income') as income_count,
+			COUNT(*) FILTER (WHERE t.type = 'expense') as expense_count,
+			COUNT(*) FILTER (WHERE t.type = 'transfer') as transfer_count,
+			COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income'), 0) as income_amount,
+			COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense'), 0) as expense_amount,
+			COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'transfer'), 0) as transfer_amount
+	` + whereClause + `
+		GROUP BY tg.id, tg.name
+		ORDER BY tg.name
+	`
+
+	rows, err := r.db.Query(ctx, summarySQL, args...)
+	if err != nil {
+		return schemas.SummaryTagSchema{}, fmt.Errorf("get tag summary: %w", err)
+	}
+	defer rows.Close()
+
+	var items []schemas.SummaryTagitem
+	for rows.Next() {
+		var item schemas.SummaryTagitem
+		if err := rows.Scan(
+			&item.TagID,
+			&item.TagName,
+			&item.TotalCount,
+			&item.IncomeCount,
+			&item.ExpenseCount,
+			&item.TransferCount,
+			&item.IncomeAmount,
+			&item.ExpenseAmount,
+			&item.TransferAmount,
+		); err != nil {
+			return schemas.SummaryTagSchema{}, fmt.Errorf("scan tag summary: %w", err)
+		}
+
+		// Calculate net: income - expense
+		item.Net = item.IncomeAmount - item.ExpenseAmount
+
+		items = append(items, item)
+	}
+
+	if items == nil {
+		items = []schemas.SummaryTagitem{}
+	}
+
+	return schemas.SummaryTagSchema{Data: items}, nil
 }

@@ -13,6 +13,7 @@ type SummaryStore interface {
 	GetCategorySummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryCategorySchema, error)
 	GetAccountTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error)
 	GetCategoryTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error)
+	GetTagSummary(ctx context.Context, params schemas.SummaryTagParamSchema) (schemas.SummaryTagSchema, error)
 }
 
 type SummaryService struct {
@@ -120,4 +121,9 @@ func (s *SummaryService) GetCategoryTrend(ctx context.Context, params schemas.Tr
 	}
 
 	return s.summaryStore.GetCategoryTrend(ctx, params)
+}
+
+// GetTagSummary returns aggregated transaction data grouped by tags
+func (s *SummaryService) GetTagSummary(ctx context.Context, params schemas.SummaryTagParamSchema) (schemas.SummaryTagSchema, error) {
+	return s.summaryStore.GetTagSummary(ctx, params)
 }
