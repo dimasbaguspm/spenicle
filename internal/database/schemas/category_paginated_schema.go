@@ -31,7 +31,7 @@ func (pcs *PaginatedCategorySchema) FromRows(rows pgx.Rows, totalItems int, sear
 
 	for rows.Next() {
 		var category CategorySchema
-		err := rows.Scan(&category.ID, &category.Name, &category.Type, &category.Note, &category.CreatedAt, &category.UpdatedAt, &category.DeletedAt)
+		err := rows.Scan(&category.ID, &category.Name, &category.Type, &category.Note, &category.Icon, &category.IconColor, &category.DisplayOrder, &category.ArchivedAt, &category.CreatedAt, &category.UpdatedAt, &category.DeletedAt)
 		if err != nil {
 			return PaginatedCategorySchema{}, err
 		}

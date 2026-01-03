@@ -10,11 +10,12 @@ import (
 
 // MockCategoryStore is a simple mock for testing business logic
 type MockCategoryStore struct {
-	ListFunc   func(ctx context.Context, params schemas.SearchParamCategorySchema) (schemas.PaginatedCategorySchema, error)
-	GetFunc    func(ctx context.Context, id int64) (schemas.CategorySchema, error)
-	CreateFunc func(ctx context.Context, data schemas.CreateCategorySchema) (schemas.CategorySchema, error)
-	UpdateFunc func(ctx context.Context, id int64, data schemas.UpdateCategorySchema) (schemas.CategorySchema, error)
-	DeleteFunc func(ctx context.Context, id int64) error
+	ListFunc    func(ctx context.Context, params schemas.SearchParamCategorySchema) (schemas.PaginatedCategorySchema, error)
+	GetFunc     func(ctx context.Context, id int64) (schemas.CategorySchema, error)
+	CreateFunc  func(ctx context.Context, data schemas.CreateCategorySchema) (schemas.CategorySchema, error)
+	UpdateFunc  func(ctx context.Context, id int64, data schemas.UpdateCategorySchema) (schemas.CategorySchema, error)
+	DeleteFunc  func(ctx context.Context, id int64) error
+	ReorderFunc func(ctx context.Context, items []schemas.CategoryReorderItemSchema) error
 
 	// Track method calls for assertion
 	updateCalled bool
@@ -52,6 +53,13 @@ func (m *MockCategoryStore) Update(ctx context.Context, id int64, data schemas.U
 func (m *MockCategoryStore) Delete(ctx context.Context, id int64) error {
 	if m.DeleteFunc != nil {
 		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
+
+func (m *MockCategoryStore) Reorder(ctx context.Context, items []schemas.CategoryReorderItemSchema) error {
+	if m.ReorderFunc != nil {
+		return m.ReorderFunc(ctx, items)
 	}
 	return nil
 }

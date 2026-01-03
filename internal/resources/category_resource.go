@@ -20,6 +20,7 @@ type CategoryService interface {
 	Create(ctx context.Context, data schemas.CreateCategorySchema) (schemas.CategorySchema, error)
 	Update(ctx context.Context, id int64, data schemas.UpdateCategorySchema) (schemas.CategorySchema, error)
 	Delete(ctx context.Context, id int64) error
+	Reorder(ctx context.Context, data schemas.CategoryReorderSchema) error
 }
 
 // BudgetService interface for budget operations in nested routes
@@ -86,6 +87,14 @@ type deleteCategoryRequest struct {
 }
 
 type deleteCategoryResponse struct {
+	Status int `json:"-"`
+}
+
+type reorderCategoriesRequest struct {
+	Body schemas.CategoryReorderSchema
+}
+
+type reorderCategoriesResponse struct {
 	Status int `json:"-"`
 }
 
@@ -172,6 +181,18 @@ func (cr *CategoryResource) RegisterRoutes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, cr.Delete)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "reorder-categories",
+		Method:      http.MethodPost,
+		Path:        "/categories/reorder",
+		Summary:     "Reorder categories",
+		Description: "Batch update display order of categories atomically",
+		Tags:        []string{"Categories"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, cr.Reorder)
 
 	// Nested budget routes
 	huma.Register(api, huma.Operation{
@@ -307,4 +328,17 @@ func (cr *CategoryResource) GetBudget(ctx context.Context, input *getCategoryBud
 	}
 
 	return &getCategoryBudgetResponse{Status: http.StatusOK, Body: *budget}, nil
+}
+
+// Reorder handles POST /categories/reorder - batch update display order atomically
+func (cr *CategoryResource) Reorder(ctx context.Context, input *reorderCategoriesRequest) (*reorderCategoriesResponse, error) {
+	if err := cr.service.Reorder(ctx, input.Body); err != nil {
+		if errors.Is(err, repositories.ErrCategoryNotFound) {
+			return nil, huma.Error404NotFound("One or more categories not found")
+		}
+		logger.Log().Error("Failed to reorder categories", "error", err)
+		return nil, huma.Error500InternalServerError("Failed to reorder categories", err)
+	}
+
+	return &reorderCategoriesResponse{Status: http.StatusNoContent}, nil
 }

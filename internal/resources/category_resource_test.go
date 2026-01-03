@@ -13,11 +13,12 @@ import (
 
 // MockCategoryService is a mock implementation of CategoryService for testing HTTP layer
 type MockCategoryService struct {
-	ListFunc   func(ctx context.Context, params schemas.SearchParamCategorySchema) (schemas.PaginatedCategorySchema, error)
-	GetFunc    func(ctx context.Context, id int64) (schemas.CategorySchema, error)
-	CreateFunc func(ctx context.Context, data schemas.CreateCategorySchema) (schemas.CategorySchema, error)
-	UpdateFunc func(ctx context.Context, id int64, data schemas.UpdateCategorySchema) (schemas.CategorySchema, error)
-	DeleteFunc func(ctx context.Context, id int64) error
+	ListFunc    func(ctx context.Context, params schemas.SearchParamCategorySchema) (schemas.PaginatedCategorySchema, error)
+	GetFunc     func(ctx context.Context, id int64) (schemas.CategorySchema, error)
+	CreateFunc  func(ctx context.Context, data schemas.CreateCategorySchema) (schemas.CategorySchema, error)
+	UpdateFunc  func(ctx context.Context, id int64, data schemas.UpdateCategorySchema) (schemas.CategorySchema, error)
+	DeleteFunc  func(ctx context.Context, id int64) error
+	ReorderFunc func(ctx context.Context, data schemas.CategoryReorderSchema) error
 }
 
 func (m *MockCategoryService) List(ctx context.Context, params schemas.SearchParamCategorySchema) (schemas.PaginatedCategorySchema, error) {
@@ -51,6 +52,13 @@ func (m *MockCategoryService) Update(ctx context.Context, id int64, data schemas
 func (m *MockCategoryService) Delete(ctx context.Context, id int64) error {
 	if m.DeleteFunc != nil {
 		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
+
+func (m *MockCategoryService) Reorder(ctx context.Context, data schemas.CategoryReorderSchema) error {
+	if m.ReorderFunc != nil {
+		return m.ReorderFunc(ctx, data)
 	}
 	return nil
 }

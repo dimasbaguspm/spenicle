@@ -16,6 +16,7 @@ type CategoryStore interface {
 	Create(ctx context.Context, data schemas.CreateCategorySchema) (schemas.CategorySchema, error)
 	Update(ctx context.Context, id int64, data schemas.UpdateCategorySchema) (schemas.CategorySchema, error)
 	Delete(ctx context.Context, id int64) error
+	Reorder(ctx context.Context, items []schemas.CategoryReorderItemSchema) error
 }
 
 type CategoryService struct {
@@ -74,7 +75,7 @@ func (s *CategoryService) Create(ctx context.Context, data schemas.CreateCategor
 
 // Update validates and updates an existing category.
 func (s *CategoryService) Update(ctx context.Context, id int64, data schemas.UpdateCategorySchema) (schemas.CategorySchema, error) {
-	if data.Name == nil && data.Type == nil && data.Note == nil {
+	if data.Name == nil && data.Type == nil && data.Note == nil && data.Icon == nil && data.IconColor == nil && data.ArchivedAt == nil {
 		return schemas.CategorySchema{}, repositories.ErrNoFieldsToUpdate
 	}
 
@@ -100,6 +101,27 @@ func (s *CategoryService) Update(ctx context.Context, id int64, data schemas.Upd
 func (s *CategoryService) Delete(ctx context.Context, id int64) error {
 	if err := s.store.Delete(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete category: %w", err)
+	}
+	return nil
+}
+
+// Reorder atomically updates the display order for multiple categories.
+func (s *CategoryService) Reorder(ctx context.Context, data schemas.CategoryReorderSchema) error {
+	if len(data.Items) == 0 {
+		return errors.New("at least one category must be provided for reordering")
+	}
+
+	// Validate that all IDs are unique
+	seen := make(map[int64]bool)
+	for _, item := range data.Items {
+		if seen[item.ID] {
+			return fmt.Errorf("duplicate category ID: %d", item.ID)
+		}
+		seen[item.ID] = true
+	}
+
+	if err := s.store.Reorder(ctx, data.Items); err != nil {
+		return fmt.Errorf("failed to reorder categories: %w", err)
 	}
 	return nil
 }

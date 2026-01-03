@@ -125,6 +125,10 @@ func (m *mockCategoryStore) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (m *mockCategoryStore) Reorder(ctx context.Context, items []schemas.CategoryReorderItemSchema) error {
+	return nil
+}
+
 func TestTransactionServiceCreate(t *testing.T) {
 	ctx := context.Background()
 

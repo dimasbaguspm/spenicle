@@ -10,7 +10,8 @@ type SearchParamCategorySchema struct {
 	ID             []int    `query:"id" doc:"Filter by category ID" minimum:"0"`
 	Name           string   `query:"name"`
 	Type           []string `query:"type" enum:"expense,income,transfer"`
-	OrderBy        string   `query:"orderBy" enum:"name,type,createdAt,updatedAt"`
+	Archived       string   `query:"archived" doc:"Filter by archived state (true=archived, false=active, empty=all)\" enum:\"true,false"`
+	OrderBy        string   `query:"orderBy" enum:"name,type,displayOrder,createdAt,updatedAt"`
 	OrderDirection string   `query:"orderDirection" enum:"asc,desc"`
 	PageNumber     int      `query:"pageNumber" minimum:"1" default:"1"`
 	PageSize       int      `query:"pageSize" minimum:"1" maximum:"100" default:"10"`
@@ -35,6 +36,11 @@ func (spcs *SearchParamCategorySchema) ParseFromQuery(payload url.Values) Search
 	// Parse Type array
 	if types := payload["type"]; len(types) > 0 {
 		spcs.Type = types
+	}
+
+	// Parse archived filter
+	if v := payload.Get("archived"); v != "" {
+		spcs.Archived = v
 	}
 
 	// support camelCase first, fall back to snake_case

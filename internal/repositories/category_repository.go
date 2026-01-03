@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
 	"github.com/dimasbaguspm/spenicle-api/internal/utils"
@@ -36,6 +37,15 @@ func (r *CategoryRepository) List(ctx context.Context, params schemas.SearchPara
 	qb.AddLikeFilter("name", params.Name)
 	qb.AddInFilterString("type", params.Type)
 
+	// Add archived filter
+	if params.Archived != "" {
+		if params.Archived == "true" {
+			qb.Add("archived_at IS NOT NULL")
+		} else if params.Archived == "false" {
+			qb.Add("archived_at IS NULL")
+		}
+	}
+
 	// Count total items with filters
 	whereClause, args := qb.ToWhereClause()
 	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM categories %s", whereClause)
@@ -46,17 +56,18 @@ func (r *CategoryRepository) List(ctx context.Context, params schemas.SearchPara
 
 	// Build ORDER BY clause and calculate pagination
 	validColumns := map[string]string{
-		"name":      "name",
-		"type":      "type",
-		"createdAt": "created_at",
-		"updatedAt": "updated_at",
+		"name":         "name",
+		"type":         "type",
+		"displayOrder": "display_order",
+		"createdAt":    "created_at",
+		"updatedAt":    "updated_at",
 	}
 	orderBy := qb.BuildOrderBy(params.OrderBy, params.OrderDirection, validColumns)
 	offset := (params.PageNumber - 1) * params.PageSize
 	limitIdx := qb.NextArgIndex()
 
-	// Query with pagination
-	sql := fmt.Sprintf(`SELECT id, name, type, note, created_at, updated_at, deleted_at 
+	// Query with pagination including new fields
+	sql := fmt.Sprintf(`SELECT id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at 
 	        FROM categories 
 	        %s 
 	        %s
@@ -78,7 +89,7 @@ func (r *CategoryRepository) List(ctx context.Context, params schemas.SearchPara
 func (r *CategoryRepository) Get(ctx context.Context, id int64) (schemas.CategorySchema, error) {
 	var category schemas.CategorySchema
 	// Performance: Add WHERE clause for soft delete filter (allows index usage)
-	sql := `SELECT id, name, type, note, created_at, updated_at, deleted_at 
+	sql := `SELECT id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at 
 	        FROM categories 
 	        WHERE id = $1 AND deleted_at IS NULL`
 
@@ -87,6 +98,10 @@ func (r *CategoryRepository) Get(ctx context.Context, id int64) (schemas.Categor
 		&category.Name,
 		&category.Type,
 		&category.Note,
+		&category.Icon,
+		&category.IconColor,
+		&category.DisplayOrder,
+		&category.ArchivedAt,
 		&category.CreatedAt,
 		&category.UpdatedAt,
 		&category.DeletedAt,
@@ -104,17 +119,22 @@ func (r *CategoryRepository) Get(ctx context.Context, id int64) (schemas.Categor
 
 // Create inserts a new category and returns the created record.
 // Performance: Uses RETURNING to fetch created record in single query.
+// Auto-calculates display_order as max(display_order) + 1.
 func (r *CategoryRepository) Create(ctx context.Context, in schemas.CreateCategorySchema) (schemas.CategorySchema, error) {
 	var category schemas.CategorySchema
-	sql := `INSERT INTO categories (name, type, note) 
-	        VALUES ($1, $2, $3) 
-	        RETURNING id, name, type, note, created_at, updated_at, deleted_at`
+	sql := `INSERT INTO categories (name, type, note, icon, icon_color, display_order) 
+	        VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT MAX(display_order) + 1 FROM categories), 0)) 
+	        RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`
 
-	err := r.db.QueryRow(ctx, sql, in.Name, in.Type, in.Note).Scan(
+	err := r.db.QueryRow(ctx, sql, in.Name, in.Type, in.Note, in.Icon, in.IconColor).Scan(
 		&category.ID,
 		&category.Name,
 		&category.Type,
 		&category.Note,
+		&category.Icon,
+		&category.IconColor,
+		&category.DisplayOrder,
+		&category.ArchivedAt,
 		&category.CreatedAt,
 		&category.UpdatedAt,
 		&category.DeletedAt,
@@ -129,23 +149,64 @@ func (r *CategoryRepository) Create(ctx context.Context, in schemas.CreateCatego
 
 // Update modifies an existing category and returns the updated record.
 // Returns ErrCategoryNotFound if category doesn't exist or is soft deleted.
-// Performance: Uses COALESCE for partial updates, RETURNING for single query.
+// Performance: Uses dynamic field updates, RETURNING for single query.
 func (r *CategoryRepository) Update(ctx context.Context, id int64, in schemas.UpdateCategorySchema) (schemas.CategorySchema, error) {
 	var category schemas.CategorySchema
-	// Add deleted_at check to prevent updating soft-deleted records
-	sql := `UPDATE categories 
-	        SET name = COALESCE($2, name), 
-	            type = COALESCE($3, type), 
-	            note = COALESCE($4, note), 
-	            updated_at = CURRENT_TIMESTAMP 
-	        WHERE id = $1 AND deleted_at IS NULL 
-	        RETURNING id, name, type, note, created_at, updated_at, deleted_at`
+	// Build dynamic update query based on provided fields
+	updateFields := []string{"updated_at = CURRENT_TIMESTAMP"}
+	args := []interface{}{id}
+	paramIdx := 2 // Start at $2 since $1 is used for id in WHERE clause
 
-	err := r.db.QueryRow(ctx, sql, id, in.Name, in.Type, in.Note).Scan(
+	if in.Name != nil {
+		updateFields = append(updateFields, fmt.Sprintf("name = $%d", paramIdx))
+		args = append(args, *in.Name)
+		paramIdx++
+	}
+	if in.Type != nil {
+		updateFields = append(updateFields, fmt.Sprintf("type = $%d", paramIdx))
+		args = append(args, *in.Type)
+		paramIdx++
+	}
+	if in.Note != nil {
+		updateFields = append(updateFields, fmt.Sprintf("note = $%d", paramIdx))
+		args = append(args, *in.Note)
+		paramIdx++
+	}
+	if in.Icon != nil {
+		updateFields = append(updateFields, fmt.Sprintf("icon = $%d", paramIdx))
+		args = append(args, *in.Icon)
+		paramIdx++
+	}
+	if in.IconColor != nil {
+		updateFields = append(updateFields, fmt.Sprintf("icon_color = $%d", paramIdx))
+		args = append(args, *in.IconColor)
+		paramIdx++
+	}
+	if in.ArchivedAt != nil {
+		if *in.ArchivedAt == "" || *in.ArchivedAt == "null" {
+			updateFields = append(updateFields, "archived_at = NULL")
+		} else {
+			updateFields = append(updateFields, fmt.Sprintf("archived_at = $%d", paramIdx))
+			args = append(args, *in.ArchivedAt)
+			paramIdx++
+		}
+	}
+
+	sql := fmt.Sprintf(`UPDATE categories 
+	        SET %s 
+	        WHERE id = $1 AND deleted_at IS NULL 
+	        RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`,
+		strings.Join(updateFields, ", "))
+
+	err := r.db.QueryRow(ctx, sql, args...).Scan(
 		&category.ID,
 		&category.Name,
 		&category.Type,
 		&category.Note,
+		&category.Icon,
+		&category.IconColor,
+		&category.DisplayOrder,
+		&category.ArchivedAt,
 		&category.CreatedAt,
 		&category.UpdatedAt,
 		&category.DeletedAt,
@@ -175,6 +236,52 @@ func (r *CategoryRepository) Delete(ctx context.Context, id int64) error {
 	}
 
 	// Check if any row was affected
+	if result.RowsAffected() == 0 {
+		return ErrCategoryNotFound
+	}
+
+	return nil
+}
+
+// Reorder atomically updates the display_order for multiple categories.
+// Uses a transaction to ensure atomicity.
+func (r *CategoryRepository) Reorder(ctx context.Context, items []schemas.CategoryReorderItemSchema) error {
+	// Build batch update query using CASE statement for atomic operation
+	if len(items) == 0 {
+		return nil
+	}
+
+	// Build query with placeholders
+	sql := `UPDATE categories 
+	        SET display_order = CASE id `
+
+	args := []interface{}{}
+	ids := []int64{}
+	argIdx := 1
+
+	for _, item := range items {
+		sql += fmt.Sprintf("WHEN $%d THEN $%d ", argIdx, argIdx+1)
+		args = append(args, item.ID, item.DisplayOrder)
+		ids = append(ids, item.ID)
+		argIdx += 2
+	}
+
+	sql += "END, updated_at = CURRENT_TIMESTAMP WHERE id IN ("
+	for i, id := range ids {
+		if i > 0 {
+			sql += ", "
+		}
+		sql += fmt.Sprintf("$%d", argIdx)
+		args = append(args, id)
+		argIdx++
+	}
+	sql += ") AND deleted_at IS NULL"
+
+	result, err := r.db.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("reorder categories: %w", err)
+	}
+
 	if result.RowsAffected() == 0 {
 		return ErrCategoryNotFound
 	}

@@ -21,10 +21,10 @@ func TestCategoryRepository_List(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM categories WHERE deleted_at IS NULL")).WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(1))
 
 	// Expect select rows with soft delete filter and ORDER BY
-	cols := []string{"id", "name", "type", "note", "created_at", "updated_at", "deleted_at"}
+	cols := []string{"id", "name", "type", "note", "icon", "icon_color", "display_order", "archived_at", "created_at", "updated_at", "deleted_at"}
 	now := time.Now().UTC()
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, type, note, created_at, updated_at, deleted_at FROM categories WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2")).WithArgs(10, 0).
-		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(1), "Food", "expense", "", now, nil, nil))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at FROM categories WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2")).WithArgs(10, 0).
+		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(1), "Food", "expense", "", nil, nil, 0, nil, now, nil, nil))
 
 	repo := NewCategoryRepository(mock)
 	out, err := repo.List(context.Background(), schemas.SearchParamCategorySchema{PageNumber: 1, PageSize: 10})
@@ -50,11 +50,11 @@ func TestCategoryRepository_Get(t *testing.T) {
 	}
 	defer mock.Close()
 
-	cols := []string{"id", "name", "type", "note", "created_at", "updated_at", "deleted_at"}
+	cols := []string{"id", "name", "type", "note", "icon", "icon_color", "display_order", "archived_at", "created_at", "updated_at", "deleted_at"}
 	now := time.Now().UTC()
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, type, note, created_at, updated_at, deleted_at FROM categories WHERE id = $1 AND deleted_at IS NULL")).WithArgs(int64(2)).
-		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(2), "Transport", "expense", "note", now, nil, nil))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at FROM categories WHERE id = $1 AND deleted_at IS NULL")).WithArgs(int64(2)).
+		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(2), "Transport", "expense", "note", nil, nil, 0, nil, now, nil, nil))
 
 	repo := NewCategoryRepository(mock)
 	got, err := repo.Get(context.Background(), 2)
@@ -77,11 +77,11 @@ func TestCategoryRepository_Create(t *testing.T) {
 	}
 	defer mock.Close()
 
-	cols := []string{"id", "name", "type", "note", "created_at", "updated_at", "deleted_at"}
+	cols := []string{"id", "name", "type", "note", "icon", "icon_color", "display_order", "archived_at", "created_at", "updated_at", "deleted_at"}
 	now := time.Now().UTC()
 
-	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO categories (name, type, note) VALUES ($1, $2, $3) RETURNING id, name, type, note, created_at, updated_at, deleted_at")).WithArgs("Entertainment", "expense", "").
-		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(3), "Entertainment", "expense", "", now, nil, nil))
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO categories (name, type, note, icon, icon_color, display_order) VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT MAX(display_order) + 1 FROM categories), 0)) RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at")).WithArgs("Entertainment", "expense", pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg()).
+		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(3), "Entertainment", "expense", "", nil, nil, 0, nil, now, nil, nil))
 
 	repo := NewCategoryRepository(mock)
 	created, err := repo.Create(context.Background(), schemas.CreateCategorySchema{Name: "Entertainment", Type: "expense"})
@@ -104,11 +104,11 @@ func TestCategoryRepository_Update(t *testing.T) {
 	}
 	defer mock.Close()
 
-	cols := []string{"id", "name", "type", "note", "created_at", "updated_at", "deleted_at"}
+	cols := []string{"id", "name", "type", "note", "icon", "icon_color", "display_order", "archived_at", "created_at", "updated_at", "deleted_at"}
 	now := time.Now().UTC()
 
-	mock.ExpectQuery(regexp.QuoteMeta("UPDATE categories SET name = COALESCE($2, name), type = COALESCE($3, type), note = COALESCE($4, note), updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL RETURNING id, name, type, note, created_at, updated_at, deleted_at")).WithArgs(int64(3), pgxmock.AnyArg(), pgxmock.AnyArg(), pgxmock.AnyArg()).
-		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(3), "Entertainment-upd", "expense", "", now, nil, nil))
+	mock.ExpectQuery(regexp.QuoteMeta("UPDATE categories SET updated_at = CURRENT_TIMESTAMP, name = $2 WHERE id = $1 AND deleted_at IS NULL RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at")).WithArgs(int64(3), "Entertainment-upd").
+		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(3), "Entertainment-upd", "expense", "", nil, nil, 0, nil, now, nil, nil))
 
 	repo := NewCategoryRepository(mock)
 
