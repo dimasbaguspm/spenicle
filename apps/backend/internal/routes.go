@@ -31,19 +31,20 @@ type RoutesConfig struct {
 // database, and mounts application routes. It returns an error on failure.
 func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) error {
 	rc.router = chi.NewMux()
-	rc.addMiddleware()
 
+	// register middleware
+	rc.router.Use(internalmiddleware.CORS)
+	rc.router.Use(middleware.Recoverer)
+	rc.router.Use(tracing.Middleware)
+	rc.router.Use(middleware.Logger)
+
+	// setup openapi by huma
 	config := huma.DefaultConfig("Spenicle API", "1.0.0")
 	config.Servers = []*huma.Server{{URL: "http://localhost:" + env.AppPort, Description: "Development server"}}
-	// exclude the default "$schema" property from all responses
 	config.CreateHooks = []func(huma.Config) huma.Config{}
-
-	// define security schemes at the top level for OpenAPI documentation
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearer": {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
 	}
-
-	publicApi := humachi.New(rc.router, config)
 
 	pool, err := (&configs.Database{}).Connect(ctx, env.DatabaseURL)
 	if err != nil {
@@ -77,12 +78,14 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 	tagService := services.NewTagService(tagRepo)
 	transactionTagService := services.NewTransactionTagService(transactionTagRepo, transactionRepo, tagRepo)
 
+	// initial instance of humachi adapter
+	publicApi := humachi.New(rc.router, config)
 	// public routes
 	resources.NewAuthResource(env).RegisterRoutes(publicApi)
-
 	// protected routes with "/" path, each resources have their own subrouter
 	rc.router.Route("/", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler { return internalmiddleware.RequireAuth(env, h) })
+		// another instance of humachi for protected routes, avoid mixing requireAuth middleware with public routes
 		protectedApi := humachi.New(r, config)
 		resources.NewAccountResource(accountService, budgetService).RegisterRoutes(protectedApi)
 		resources.NewCategoryResource(categoryService, budgetService).RegisterRoutes(protectedApi)
@@ -92,22 +95,12 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 		resources.NewTagResource(tagService).RegisterRoutes(protectedApi)
 	})
 
-	// Initialize worker
+	// setup worker
 	rc.worker = worker.New()
-	budgetGenerationJob := worker.NewBudgetGenerationJob(budgetTemplateRepo, budgetRepo)
-	rc.worker.Register(budgetGenerationJob)
-	transactionGenerationJob := worker.NewTransactionGenerationJob(transactionTemplateRepo, transactionRepo)
-	rc.worker.Register(transactionGenerationJob)
+	rc.worker.Register(worker.NewBudgetGenerationJob(budgetTemplateRepo, budgetRepo))
+	rc.worker.Register(worker.NewTransactionGenerationJob(transactionTemplateRepo, transactionRepo))
 
 	return nil
-}
-
-// addMiddleware registers common middlewares used by the router.
-func (rc *RoutesConfig) addMiddleware() {
-	rc.router.Use(middleware.Recoverer)
-	// ensure every request has a trace id (uses X-Request-Id if available)
-	rc.router.Use(tracing.Middleware)
-	rc.router.Use(middleware.Logger)
 }
 
 // Run starts the HTTP server on the given port and returns the server

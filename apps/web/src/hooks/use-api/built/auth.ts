@@ -8,20 +8,18 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { ENDPOINTS } from "../constant";
 import { useApiMutate } from "../base/use-api-mutate";
-import { useSession } from "@/hooks/use-session";
+import { useSessionProvider } from "@/providers/session-provider";
 
 export const useApiLogin = () => {
   const queryClient = useQueryClient();
-  const { setTokens } = useSession();
+  const { browserSession } = useSessionProvider();
 
   return useApiMutate<AuthLoginResponseModel, AuthLoginRequestModel>({
     path: ENDPOINTS.AUTH.LOGIN,
     method: "POST",
     onSuccess: (data) => {
-      // Store access token in memory (context) and refresh token in localStorage
-      setTokens(data);
+      browserSession.setTokens(data);
 
-      // Optionally invalidate auth-related queries
       queryClient.invalidateQueries({
         queryKey: ["auth"],
         exact: false,
@@ -32,7 +30,7 @@ export const useApiLogin = () => {
 
 export const useApiRefreshToken = () => {
   const queryClient = useQueryClient();
-  const { refreshToken, setTokens } = useSession();
+  const { browserSession } = useSessionProvider();
 
   return useApiMutate<
     AuthRefreshTokenResponseModel,
@@ -41,8 +39,11 @@ export const useApiRefreshToken = () => {
     path: ENDPOINTS.AUTH.REFRESH,
     method: "POST",
     onSuccess: (data) => {
-      if (!refreshToken) return;
-      setTokens({ refresh_token: refreshToken, ...data });
+      if (!browserSession.refreshToken) return;
+      browserSession.setTokens({
+        refresh_token: browserSession.refreshToken,
+        ...data,
+      });
 
       queryClient.invalidateQueries({
         queryKey: ["auth"],

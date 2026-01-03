@@ -4,13 +4,13 @@ import { mergeWith } from "lodash";
 import querystring from "query-string";
 
 import { BASE_URL } from "../constant";
-import { getAccessToken, useSession } from "@/hooks/use-session";
 
 import type {
   InfiniteData,
   InfiniteQueryObserverBaseResult,
 } from "@tanstack/react-query";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useSessionProvider } from "@/providers/session-provider";
 
 export interface UseApiInfiniteQueryOptions<Data, Query, TError> {
   queryKey: (string | number | undefined)[];
@@ -89,7 +89,7 @@ export const useApiInfiniteQuery = <
     select,
   } = options ?? {};
 
-  const { accessToken, clearSession } = useSession();
+  const { browserSession } = useSessionProvider();
   const isOnline = useIsOnline();
 
   const isEnable = enabled && isOnline;
@@ -110,7 +110,9 @@ export const useApiInfiniteQuery = <
           baseURL: BASE_URL,
           headers: {
             ...headers,
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            ...(browserSession.accessToken
+              ? { Authorization: `Bearer ${browserSession.accessToken}` }
+              : {}),
           },
           withCredentials: true,
           paramsSerializer: (p) => {
@@ -125,7 +127,7 @@ export const useApiInfiniteQuery = <
         return data;
       } catch (err) {
         if (err instanceof AxiosError && err.response?.status === 401) {
-          clearSession();
+          browserSession.clearSession();
         }
         onError?.(err as TError);
         return err;

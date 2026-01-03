@@ -6,7 +6,7 @@ import {
 } from "react-router";
 
 import { AppLayout } from "@/core/app-layout";
-import { lazy, type PropsWithChildren } from "react";
+import { lazy, Suspense, type PropsWithChildren } from "react";
 import { PAGE_ROUTES } from "@/constant/page-routes";
 import { DrawerProvider } from "@/providers/drawer-provider";
 import { ModalProvider } from "@/providers/modal-provider";
@@ -15,6 +15,8 @@ import { DrawerRouter } from "../drawer/drawer-router";
 import { ModalRouter } from "../modal/modal-router";
 import { BottomSheetRouter } from "../bottom-sheet/bottom-sheet-router";
 import { AuthProvider, useAuthProvider } from "@/providers/auth-provider";
+import { PageLoader } from "@dimasbaguspm/versaur";
+import { SessionProvider } from "@/providers/session-provider";
 
 export const ProtectedRoute = () => {
   const { isAuthenticated } = useAuthProvider();
@@ -26,18 +28,40 @@ export const ProtectedRoute = () => {
   return <Outlet />;
 };
 
+export const UnprotectedRoute = () => {
+  const { isAuthenticated } = useAuthProvider();
+
+  if (isAuthenticated) {
+    return <Navigate to={PAGE_ROUTES.DASHBOARD} replace />;
+  }
+
+  return <Outlet />;
+};
+
 const router = createBrowserRouter([
   {
+    // general layout and providers
     element: (
-      <AuthProvider>
-        <Outlet />
-      </AuthProvider>
+      <SessionProvider>
+        <AuthProvider>
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
+        </AuthProvider>
+      </SessionProvider>
     ),
     children: [
+      // unprotected routes like login, register, etc
       {
-        path: PAGE_ROUTES.LOGIN,
-        Component: lazy(() => import("./login-page")),
+        element: <UnprotectedRoute />,
+        children: [
+          {
+            path: PAGE_ROUTES.LOGIN,
+            Component: lazy(() => import("./login-page")),
+          },
+        ],
       },
+      // main app routes, protected by auth
       {
         element: <ProtectedRoute />,
         children: [

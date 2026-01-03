@@ -3,7 +3,6 @@ import axios, { AxiosError } from "axios";
 import querystring from "query-string";
 
 import { BASE_URL } from "../constant";
-import { getAccessToken, useSession } from "@/hooks/use-session";
 
 import type {
   QueryObserverBaseResult,
@@ -11,6 +10,7 @@ import type {
   RefetchOptions,
 } from "@tanstack/react-query";
 import { useIsOnline } from "@/hooks/use-is-online";
+import { useSessionProvider } from "@/providers/session-provider";
 
 export interface UseApiQueryOptions<Data, Query, TError> {
   queryKey: (string | number | undefined)[];
@@ -76,7 +76,7 @@ export const useApiQuery = <TData, TQuery, TError = { message: string }>(
   } = options ?? {};
 
   const isOnline = useIsOnline();
-  const { accessToken, clearSession } = useSession();
+  const { browserSession } = useSessionProvider();
 
   const isEnable = enabled && isOnline;
 
@@ -90,7 +90,9 @@ export const useApiQuery = <TData, TQuery, TError = { message: string }>(
           baseURL: BASE_URL,
           headers: {
             ...headers,
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            ...(browserSession.accessToken
+              ? { Authorization: `Bearer ${browserSession.accessToken}` }
+              : {}),
           },
           withCredentials: true,
           paramsSerializer: (params) => {
@@ -106,7 +108,7 @@ export const useApiQuery = <TData, TQuery, TError = { message: string }>(
       } catch (err) {
         if (err instanceof AxiosError) {
           if (err.response?.status === 401) {
-            clearSession();
+            browserSession.clearSession();
           }
           const errorPayload = (err.response?.data ?? err) as TError | null;
           const errorToThrow = (errorPayload ??

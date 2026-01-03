@@ -1,11 +1,29 @@
-import React, { type FC, type PropsWithChildren } from "react";
-import { useSession } from "@/hooks/use-session";
+import { useEffect, type FC, type PropsWithChildren } from "react";
 import { AuthContext } from "./context";
+import { useSessionProvider } from "../session-provider";
+import { useApiRefreshToken } from "@/hooks/use-api/built/auth";
+import { PageLoader } from "@dimasbaguspm/versaur";
 
 export const AuthProvider: FC<PropsWithChildren> = ({ children }) => {
-  const { accessToken, refreshToken, setTokens, clearSession } = useSession();
+  const { browserSession } = useSessionProvider();
 
+  const [getRefreshToken, , { isPending: isRefreshing }] = useApiRefreshToken();
+  const { accessToken, refreshToken, setTokens, setAccessToken, clearSession } =
+    browserSession;
+
+  const shouldRevalidate = !!refreshToken && !accessToken;
+  const isRefreshingToken = isRefreshing && shouldRevalidate;
   const isAuthenticated = !!accessToken;
+
+  useEffect(() => {
+    if (shouldRevalidate) {
+      getRefreshToken({ refresh_token: refreshToken });
+    }
+  }, []);
+
+  if (isRefreshingToken) {
+    return <PageLoader />;
+  }
 
   return (
     <AuthContext.Provider
@@ -13,8 +31,8 @@ export const AuthProvider: FC<PropsWithChildren> = ({ children }) => {
         accessToken,
         refreshToken,
         isAuthenticated,
-        setTokens,
-        clearAuth: clearSession,
+        handleSetTokens: setTokens,
+        handleClearSession: clearSession,
       }}
     >
       {children}

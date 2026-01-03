@@ -4,13 +4,13 @@ import axios, { AxiosError } from "axios";
 import querystring from "query-string";
 
 import { BASE_URL } from "../constant";
-import { getAccessToken, useSession } from "@/hooks/use-session";
 
 import type {
   MutationObserverBaseResult,
   UseMutationOptions,
 } from "@tanstack/react-query";
 import type { AxiosRequestConfig } from "axios";
+import { useSessionProvider } from "@/providers/session-provider";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -58,7 +58,7 @@ export const useApiMutate = <
     silentError = false,
   } = options;
 
-  const { accessToken, clearSession } = useSession();
+  const { browserSession } = useSessionProvider();
   const { showSnack } = useSnackbars();
 
   const mutationOptions: UseMutationOptions<TData, TError, TVariables> = {
@@ -77,7 +77,9 @@ export const useApiMutate = <
           baseURL: BASE_URL,
           headers: {
             ...options.headers,
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            ...(browserSession.accessToken
+              ? { Authorization: `Bearer ${browserSession.accessToken}` }
+              : {}),
           },
           withCredentials: true,
         };
@@ -133,10 +135,10 @@ export const useApiMutate = <
 
         if (err instanceof AxiosError) {
           if (err.response?.status === 401) {
-            clearSession();
+            browserSession.clearSession();
           }
           // Use the response data if available, otherwise use the error message
-          errorToThrow = err.response?.data?.message;
+          errorToThrow = err.response?.data?.detail;
         } else {
           errorToThrow = err as TError;
         }
