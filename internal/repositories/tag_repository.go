@@ -19,7 +19,6 @@ func NewTagRepository(db DB) *TagRepository {
 // List returns paginated tags with optional search
 func (r *TagRepository) List(ctx context.Context, params schemas.SearchParamTagSchema) (schemas.PaginatedTagSchema, error) {
 	qb := utils.QueryBuilder()
-	qb.Add("deleted_at IS NULL")
 
 	// Apply search filter
 	if params.Search != "" {
@@ -75,7 +74,7 @@ func (r *TagRepository) List(ctx context.Context, params schemas.SearchParamTagS
 
 // Get returns a single tag by ID
 func (r *TagRepository) Get(ctx context.Context, id int) (schemas.TagSchema, error) {
-	sql := `SELECT id, name, created_at FROM tags WHERE id = $1 AND deleted_at IS NULL`
+	sql := `SELECT id, name, created_at FROM tags WHERE id = $1`
 
 	var tag schemas.TagSchema
 	err := r.db.QueryRow(ctx, sql, id).Scan(&tag.ID, &tag.Name, &tag.CreatedAt)
@@ -88,7 +87,7 @@ func (r *TagRepository) Get(ctx context.Context, id int) (schemas.TagSchema, err
 
 // GetByName returns a tag by name (case-insensitive)
 func (r *TagRepository) GetByName(ctx context.Context, name string) (schemas.TagSchema, error) {
-	sql := `SELECT id, name, created_at FROM tags WHERE LOWER(name) = LOWER($1) AND deleted_at IS NULL`
+	sql := `SELECT id, name, created_at FROM tags WHERE LOWER(name) = LOWER($1)`
 
 	var tag schemas.TagSchema
 	err := r.db.QueryRow(ctx, sql, name).Scan(&tag.ID, &tag.Name, &tag.CreatedAt)

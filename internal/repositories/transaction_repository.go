@@ -63,7 +63,7 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 	sql := fmt.Sprintf(`SELECT id, type, date, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at 
 	        FROM transactions 
 	        %s 
-	        ORDER BY %s 
+	        %s 
 	        LIMIT $%d OFFSET $%d`, whereClause, orderBy, limitIdx, limitIdx+1)
 
 	args = append(args, params.Limit, offset)

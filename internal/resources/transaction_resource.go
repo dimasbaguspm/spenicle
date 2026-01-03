@@ -36,17 +36,27 @@ type TransactionTagService interface {
 	UpdateTransactionTags(ctx context.Context, transactionID int, input schemas.UpdateTransactionTagsSchema) error
 }
 
+// TransactionRelationService defines the interface for transaction relation operations.
+type TransactionRelationService interface {
+	GetRelatedTransactions(ctx context.Context, transactionID int) ([]schemas.TransactionSchema, error)
+	GetRelatedTransaction(ctx context.Context, transactionID, relatedTransactionID int) (schemas.TransactionSchema, error)
+	Create(ctx context.Context, input schemas.CreateTransactionRelationSchema) (schemas.TransactionRelationSchema, error)
+	Delete(ctx context.Context, transactionID, relatedTransactionID int) error
+}
+
 type TransactionResource struct {
 	service         TransactionService
 	templateService TransactionTemplateService
 	tagService      TransactionTagService
+	relationService TransactionRelationService
 }
 
-func NewTransactionResource(service TransactionService, templateService TransactionTemplateService, tagService TransactionTagService) *TransactionResource {
+func NewTransactionResource(service TransactionService, templateService TransactionTemplateService, tagService TransactionTagService, relationService TransactionRelationService) *TransactionResource {
 	return &TransactionResource{
 		service:         service,
 		templateService: templateService,
 		tagService:      tagService,
+		relationService: relationService,
 	}
 }
 
@@ -209,6 +219,55 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, r.UpdateTransactionTags)
+
+	// Transaction Relation routes
+	huma.Register(api, huma.Operation{
+		OperationID: "list-related-transactions",
+		Method:      http.MethodGet,
+		Path:        "/transactions/{id}/relations",
+		Summary:     "List related transactions",
+		Description: "Get all transactions related to a specific transaction",
+		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.ListRelatedTransactions)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-related-transaction",
+		Method:      http.MethodGet,
+		Path:        "/transactions/{id}/relations/{relatedId}",
+		Summary:     "Get related transaction",
+		Description: "Get details of a specific related transaction",
+		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.GetRelatedTransaction)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "create-transaction-relation",
+		Method:      http.MethodPost,
+		Path:        "/transactions/{id}/relations",
+		Summary:     "Create transaction relation",
+		Description: "Create a relation between two transactions",
+		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.CreateRelation)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "delete-transaction-relation",
+		Method:      http.MethodDelete,
+		Path:        "/transactions/{id}/relations/{relatedId}",
+		Summary:     "Delete transaction relation",
+		Description: "Remove the relation between two transactions",
+		Tags:        []string{"Transactions"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, r.DeleteRelation)
 }
 
 type ListTransactionsInput struct {
@@ -515,6 +574,103 @@ func (r *TransactionResource) UpdateTransactionTags(ctx context.Context, input *
 			return nil, huma.Error404NotFound("Transaction not found")
 		}
 		return nil, huma.Error500InternalServerError("Failed to update transaction tags", err)
+	}
+
+	return &struct{}{}, nil
+}
+
+// Transaction Relation handlers
+
+type ListRelatedTransactionsInput struct {
+	ID int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
+}
+
+type ListRelatedTransactionsOutput struct {
+	Body []schemas.TransactionSchema
+}
+
+func (r *TransactionResource) ListRelatedTransactions(ctx context.Context, input *ListRelatedTransactionsInput) (*ListRelatedTransactionsOutput, error) {
+	transactions, err := r.relationService.GetRelatedTransactions(ctx, input.ID)
+	if err != nil {
+		if err == repositories.ErrTransactionNotFound {
+			return nil, huma.Error404NotFound("Transaction not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to list related transactions", err)
+	}
+
+	return &ListRelatedTransactionsOutput{Body: transactions}, nil
+}
+
+type GetRelatedTransactionInput struct {
+	ID        int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
+	RelatedID int `path:"relatedId" doc:"Related transaction ID" example:"2" minimum:"1"`
+}
+
+type GetRelatedTransactionOutput struct {
+	Body schemas.TransactionSchema
+}
+
+func (r *TransactionResource) GetRelatedTransaction(ctx context.Context, input *GetRelatedTransactionInput) (*GetRelatedTransactionOutput, error) {
+	transaction, err := r.relationService.GetRelatedTransaction(ctx, input.ID, input.RelatedID)
+	if err != nil {
+		if err == repositories.ErrTransactionNotFound {
+			return nil, huma.Error404NotFound("Transaction not found")
+		}
+		if err == repositories.ErrTransactionRelationNotFound {
+			return nil, huma.Error404NotFound("Relation not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to get related transaction", err)
+	}
+
+	return &GetRelatedTransactionOutput{Body: transaction}, nil
+}
+
+type CreateRelationInput struct {
+	ID   int `path:"id" doc:"Source transaction ID" example:"1" minimum:"1"`
+	Body struct {
+		RelatedTransactionID int `json:"relatedTransactionId" doc:"Related transaction ID" example:"2" minimum:"1"`
+	}
+}
+
+type CreateRelationOutput struct {
+	Body schemas.TransactionRelationSchema
+}
+
+func (r *TransactionResource) CreateRelation(ctx context.Context, input *CreateRelationInput) (*CreateRelationOutput, error) {
+	createInput := schemas.CreateTransactionRelationSchema{
+		TransactionID:        input.ID,
+		RelatedTransactionID: input.Body.RelatedTransactionID,
+	}
+
+	relation, err := r.relationService.Create(ctx, createInput)
+	if err != nil {
+		if err == repositories.ErrTransactionNotFound {
+			return nil, huma.Error404NotFound("Transaction not found")
+		}
+		if err == repositories.ErrCannotRelateSameTransaction {
+			return nil, huma.Error400BadRequest("Cannot relate a transaction to itself")
+		}
+		if err == repositories.ErrTransactionRelationAlreadyExists {
+			return nil, huma.Error409Conflict("Relation already exists")
+		}
+		return nil, huma.Error500InternalServerError("Failed to create relation", err)
+	}
+
+	return &CreateRelationOutput{Body: relation}, nil
+}
+
+type DeleteRelationInput struct {
+	ID        int `path:"id" doc:"Source transaction ID" example:"1" minimum:"1"`
+	RelatedID int `path:"relatedId" doc:"Related transaction ID" example:"2" minimum:"1"`
+}
+
+func (r *TransactionResource) DeleteRelation(ctx context.Context, input *DeleteRelationInput) (*struct{}, error) {
+	err := r.relationService.Delete(ctx, input.ID, input.RelatedID)
+	if err != nil {
+		if err == repositories.ErrTransactionRelationNotFound {
+			return nil, huma.Error404NotFound("Relation not found")
+		}
+		return nil, huma.Error500InternalServerError("Failed to delete relation", err)
 	}
 
 	return &struct{}{}, nil

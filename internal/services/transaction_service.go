@@ -66,12 +66,18 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 		input.Note = &sanitized
 	}
 
-	// Validate transfer transaction has destination account
+	// Validate destinationAccountId based on transaction type
 	if input.Type == repositories.TransactionTransferType {
+		// Transfer requires destination account
 		if input.DestinationAccountID == nil {
 			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
 		}
 		if input.AccountID == *input.DestinationAccountID {
+			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
+		}
+	} else {
+		// Income/Expense should not have destination account
+		if input.DestinationAccountID != nil {
 			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
 		}
 	}
@@ -215,6 +221,11 @@ func (s *TransactionService) Update(ctx context.Context, id int, input schemas.U
 			sourceAccountID = *input.AccountID
 		}
 		if sourceAccountID == *destAccountID {
+			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
+		}
+	} else {
+		// Income/Expense should not have destination account
+		if input.DestinationAccountID != nil {
 			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
 		}
 	}
