@@ -18,9 +18,9 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - spenicle-network
+      - spenicle
 
-  app:
+  spenicle-api:
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
@@ -43,11 +43,11 @@ services:
       spenicle-postgres:
         condition: service_healthy
     networks:
-      - spenicle-network
+      - spenicle
 
 volumes:
   spenicle_postgres_data:
 
 networks:
-  spenicle-network:
+  spenicle:
     driver: bridge

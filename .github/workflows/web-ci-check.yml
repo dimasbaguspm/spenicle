@@ -1,0 +1,31 @@
+name: Web CI Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/web-ci-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Dependencies
+        run: |
+          cd apps/web
+          bun install
+
+      - name: Build
+        run: |
+          cd apps/web
+          bun run build

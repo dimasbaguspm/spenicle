@@ -1,2 +1,5 @@
 .env
 spenicle-api
+
+**/node_modules/**
+**/dist/**
