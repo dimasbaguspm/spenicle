@@ -6,17 +6,27 @@
   "scripts": {
     "dev": "bun --hot cmd/dev.ts",
     "start": "NODE_ENV=production bun cmd/index.ts",
-    "build": "bun build index.html --outdir=./dist --minify"
+    "build": "bun build index.html --outdir=./dist --minify",
+    "generate:openapi-types": "bun run scripts/generate-openapi-types.ts"
   },
   "dependencies": {
+    "@dimasbaguspm/versaur": "^0.0.63",
+    "@tanstack/react-query": "^5.90.16",
+    "axios": "^1.13.2",
     "bun-plugin-tailwind": "^0.1.2",
+    "dayjs": "^1.11.19",
+    "lodash": "^4.17.21",
+    "lucide-react": "^0.562.0",
+    "query-string": "^9.3.1",
     "react": "^19",
     "react-dom": "^19",
+    "react-router": "^7.11.0",
     "tailwindcss": "^4.1.11"
   },
   "devDependencies": {
+    "@types/bun": "latest",
+    "@types/lodash": "^4.17.21",
     "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/bun": "latest"
+    "@types/react-dom": "^19"
   }
 }
