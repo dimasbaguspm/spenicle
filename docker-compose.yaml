@@ -22,7 +22,7 @@ services:
 
   app:
     build:
-      context: .
+      context: ./apps/backend
       dockerfile: Dockerfile
     container_name: spenicle-api
     env_file:

@@ -19,8 +19,6 @@ gofmt -w .
 go run main.go
 ```
 
-OpenAPI is available at `/openapi.json` when the server runs (see `internal/routes.go`).
-
 ## Project structure
 
 - `cmd/app` — application bootstrap and wiring

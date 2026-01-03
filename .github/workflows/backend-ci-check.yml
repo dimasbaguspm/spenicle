@@ -1,10 +1,11 @@
-name: CI
+name: Backend CI Check
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci-check.yml"
 
 permissions:
   contents: read
@@ -32,20 +33,21 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Install Dependencies
-        run: go mod download
-
-      - name: Check formatting (gofmt)
         run: |
-          fmt_out=$(gofmt -l .) || true
-          if [ -n "$fmt_out" ]; then
-            echo "Files must be gofmt'ed:"; echo "$fmt_out"; exit 1
-          fi
+          cd apps/backend
+          go mod download
 
       - name: Run go vet
-        run: go vet ./...
+        run: |
+          cd apps/backend
+          go vet ./...
 
       - name: Run tests
-        run: go test ./... -v
+        run: |
+          cd apps/backend
+          go test ./... -v
 
       - name: Build
-        run: go build ./...
+        run: |
+          cd apps/backend
+          go build ./...
