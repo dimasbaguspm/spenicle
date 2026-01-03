@@ -1,5 +1,38 @@
 components:
   schemas:
+    AccountReorderItemSchema:
+      additionalProperties: false
+      properties:
+        displayOrder:
+          description: New display order
+          examples:
+            - 1
+          format: int64
+          type: integer
+        id:
+          description: Account ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+      required:
+        - id
+        - displayOrder
+      type: object
+    AccountReorderSchema:
+      additionalProperties: false
+      properties:
+        items:
+          description: Array of account ID and display order pairs
+          items:
+            $ref: "#/components/schemas/AccountReorderItemSchema"
+          minItems: 1
+          type:
+            - array
+            - "null"
+      required:
+        - items
+      type: object
     AccountSchema:
       additionalProperties: false
       properties:
@@ -9,6 +42,10 @@ components:
             - 5000
           format: int64
           type: integer
+        archivedAt:
+          description: Archive timestamp
+          format: date-time
+          type: string
         createdAt:
           description: Creation timestamp
           format: date-time
@@ -16,6 +53,22 @@ components:
         deletedAt:
           description: Deletion timestamp
           format: date-time
+          type: string
+        displayOrder:
+          description: Display order for sorting
+          examples:
+            - 1
+          format: int64
+          type: integer
+        icon:
+          description: Icon identifier set by frontend
+          examples:
+            - wallet-icon
+          type: string
+        iconColor:
+          description: Icon color in hex format
+          examples:
+            - "#4CAF50"
           type: string
         id:
           description: Unique identifier of the account
@@ -51,7 +104,425 @@ components:
         - type
         - note
         - amount
+        - displayOrder
         - createdAt
+      type: object
+    AccountTrendItem:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        accountName:
+          description: Account name
+          examples:
+            - Checking Account
+          type: string
+        avgChange:
+          description: Average percentage change across periods
+          examples:
+            - 12.5
+          format: double
+          type: number
+        periods:
+          description: Trend data per period
+          items:
+            $ref: "#/components/schemas/TrendItem"
+          type:
+            - array
+            - "null"
+        trendStatus:
+          description: Overall trend status
+          enum:
+            - increasing
+            - decreasing
+            - stable
+            - volatile
+          examples:
+            - increasing
+          type: string
+      required:
+        - accountId
+        - accountName
+        - periods
+        - avgChange
+        - trendStatus
+      type: object
+    AccountTrendSchema:
+      additionalProperties: false
+      properties:
+        data:
+          description: Trend data per account
+          items:
+            $ref: "#/components/schemas/AccountTrendItem"
+          type:
+            - array
+            - "null"
+        endDate:
+          description: Analysis end date
+          format: date-time
+          type: string
+        frequency:
+          description: Trend frequency
+          examples:
+            - monthly
+          type: string
+        startDate:
+          description: Analysis start date
+          format: date-time
+          type: string
+      required:
+        - frequency
+        - startDate
+        - endDate
+        - data
+      type: object
+    AddTransactionTagSchema:
+      additionalProperties: false
+      properties:
+        tagName:
+          description: Tag name to add
+          examples:
+            - bali-2026
+          maxLength: 50
+          minLength: 1
+          type: string
+      required:
+        - tagName
+      type: object
+    BudgetSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID to filter transactions
+          examples:
+            - 1
+          format: int64
+          type: integer
+        actualAmount:
+          description: Actual spent amount in cents (computed from transactions)
+          examples:
+            - 75000
+          format: int64
+          minimum: 0
+          type: integer
+        amountLimit:
+          description: Budget limit amount in cents
+          examples:
+            - 100000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID to filter transactions
+          examples:
+            - 5
+          format: int64
+          type: integer
+        createdAt:
+          description: Creation timestamp
+          format: date-time
+          type: string
+        deletedAt:
+          description: Deletion timestamp
+          format: date-time
+          type: string
+        id:
+          description: Unique identifier of the budget
+          examples:
+            - 1
+          format: int64
+          type: integer
+        note:
+          description: Note for the budget
+          examples:
+            - January food budget
+          maxLength: 500
+          type: string
+        periodEnd:
+          description: Budget period end date
+          format: date-time
+          type: string
+        periodStart:
+          description: Budget period start date
+          format: date-time
+          type: string
+        templateId:
+          description: Budget template ID if generated from template
+          examples:
+            - 1
+          format: int64
+          type: integer
+        updatedAt:
+          description: Last update timestamp
+          format: date-time
+          type: string
+      required:
+        - id
+        - periodStart
+        - periodEnd
+        - amountLimit
+        - actualAmount
+        - note
+        - createdAt
+      type: object
+    BudgetTemplateSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID to filter transactions
+          examples:
+            - 1
+          format: int64
+          type: integer
+        amountLimit:
+          description: Budget limit amount in cents
+          examples:
+            - 100000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID to filter transactions
+          examples:
+            - 5
+          format: int64
+          type: integer
+        createdAt:
+          description: Creation timestamp
+          format: date-time
+          type: string
+        deletedAt:
+          description: Deletion timestamp
+          format: date-time
+          type: string
+        endDate:
+          description: Optional end date for recurrence
+          format: date-time
+          type: string
+        id:
+          description: Unique identifier of the budget template
+          examples:
+            - 1
+          format: int64
+          type: integer
+        note:
+          description: Note for the budget template
+          examples:
+            - Monthly food budget
+          maxLength: 500
+          type: string
+        recurrence:
+          description: Recurrence pattern
+          enum:
+            - none
+            - weekly
+            - monthly
+            - yearly
+          examples:
+            - monthly
+          type: string
+        startDate:
+          description: Start date for recurrence
+          format: date-time
+          type: string
+        updatedAt:
+          description: Last update timestamp
+          format: date-time
+          type: string
+      required:
+        - id
+        - amountLimit
+        - recurrence
+        - startDate
+        - note
+        - createdAt
+      type: object
+    CategoryReorderItemSchema:
+      additionalProperties: false
+      properties:
+        displayOrder:
+          description: New display order
+          examples:
+            - 1
+          format: int64
+          type: integer
+        id:
+          description: Category ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+      required:
+        - id
+        - displayOrder
+      type: object
+    CategoryReorderSchema:
+      additionalProperties: false
+      properties:
+        items:
+          description: Array of category ID and display order pairs
+          items:
+            $ref: "#/components/schemas/CategoryReorderItemSchema"
+          minItems: 1
+          type:
+            - array
+            - "null"
+      required:
+        - items
+      type: object
+    CategorySchema:
+      additionalProperties: false
+      properties:
+        archivedAt:
+          description: Archive timestamp
+          format: date-time
+          type: string
+        createdAt:
+          description: Creation timestamp
+          format: date-time
+          type: string
+        deletedAt:
+          description: Deletion timestamp
+          format: date-time
+          type: string
+        displayOrder:
+          description: Display order for sorting
+          examples:
+            - 1
+          format: int64
+          type: integer
+        icon:
+          description: Icon identifier set by frontend
+          examples:
+            - food-icon
+          type: string
+        iconColor:
+          description: Icon color in hex format
+          examples:
+            - "#FF5733"
+          type: string
+        id:
+          description: Unique identifier of the category
+          examples:
+            - 1
+          format: int64
+          type: integer
+        name:
+          description: Name of the category
+          examples:
+            - Food
+          type: string
+        note:
+          description: Note for the category
+          examples:
+            - Groceries and dining
+          type: string
+        type:
+          description: Type of category
+          enum:
+            - expense
+            - income
+            - transfer
+          examples:
+            - expense
+          type: string
+        updatedAt:
+          description: Last update timestamp
+          format: date-time
+          type: string
+      required:
+        - id
+        - name
+        - type
+        - note
+        - displayOrder
+        - createdAt
+      type: object
+    CategoryTrendItem:
+      additionalProperties: false
+      properties:
+        avgChange:
+          description: Average percentage change across periods
+          examples:
+            - -5.2
+          format: double
+          type: number
+        categoryId:
+          description: Category ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        categoryName:
+          description: Category name
+          examples:
+            - Food & Dining
+          type: string
+        categoryType:
+          description: Category type
+          enum:
+            - income
+            - expense
+          examples:
+            - expense
+          type: string
+        periods:
+          description: Trend data per period
+          items:
+            $ref: "#/components/schemas/TrendItem"
+          type:
+            - array
+            - "null"
+        trendStatus:
+          description: Overall trend status
+          enum:
+            - increasing
+            - decreasing
+            - stable
+            - volatile
+          examples:
+            - decreasing
+          type: string
+      required:
+        - categoryId
+        - categoryName
+        - categoryType
+        - periods
+        - avgChange
+        - trendStatus
+      type: object
+    CategoryTrendSchema:
+      additionalProperties: false
+      properties:
+        data:
+          description: Trend data per category
+          items:
+            $ref: "#/components/schemas/CategoryTrendItem"
+          type:
+            - array
+            - "null"
+        endDate:
+          description: Analysis end date
+          format: date-time
+          type: string
+        frequency:
+          description: Trend frequency
+          examples:
+            - monthly
+          type: string
+        startDate:
+          description: Analysis start date
+          format: date-time
+          type: string
+      required:
+        - frequency
+        - startDate
+        - endDate
+        - data
       type: object
     CreateAccountSchema:
       additionalProperties: false
@@ -63,6 +534,18 @@ components:
           format: int64
           minimum: 0
           type: integer
+        icon:
+          description: Icon identifier set by frontend
+          examples:
+            - wallet-icon
+          maxLength: 255
+          type: string
+        iconColor:
+          description: Icon color in hex format
+          examples:
+            - "#4CAF50"
+          maxLength: 7
+          type: string
         name:
           description: Name of the account
           examples:
@@ -89,6 +572,320 @@ components:
         - type
         - note
         - amount
+      type: object
+    CreateBudgetSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID to filter transactions
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        amountLimit:
+          description: Budget limit amount in cents
+          examples:
+            - 100000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID to filter transactions
+          examples:
+            - 5
+          format: int64
+          minimum: 1
+          type: integer
+        note:
+          description: Note for the budget
+          examples:
+            - January food budget
+          maxLength: 500
+          type: string
+        periodEnd:
+          description: Budget period end date
+          format: date-time
+          type: string
+        periodStart:
+          description: Budget period start date
+          format: date-time
+          type: string
+        templateId:
+          description: Budget template ID if generated from template
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+      required:
+        - periodStart
+        - periodEnd
+        - amountLimit
+        - note
+      type: object
+    CreateBudgetTemplateSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID to filter transactions
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        amountLimit:
+          description: Budget limit amount in cents
+          examples:
+            - 100000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID to filter transactions
+          examples:
+            - 5
+          format: int64
+          minimum: 1
+          type: integer
+        endDate:
+          description: Optional end date for recurrence
+          format: date-time
+          type: string
+        note:
+          description: Note for the budget template
+          examples:
+            - Monthly food budget
+          maxLength: 500
+          type: string
+        recurrence:
+          description: Recurrence pattern
+          enum:
+            - none
+            - weekly
+            - monthly
+            - yearly
+          examples:
+            - monthly
+          type: string
+        startDate:
+          description: Start date for recurrence
+          format: date-time
+          type: string
+      required:
+        - amountLimit
+        - recurrence
+        - startDate
+        - note
+      type: object
+    CreateCategorySchema:
+      additionalProperties: false
+      properties:
+        icon:
+          description: Icon identifier set by frontend
+          examples:
+            - food-icon
+          maxLength: 255
+          type: string
+        iconColor:
+          description: Icon color in hex format
+          examples:
+            - "#FF5733"
+          maxLength: 7
+          type: string
+        name:
+          description: Name of the category
+          examples:
+            - Food
+          maxLength: 255
+          minLength: 1
+          type: string
+        note:
+          description: Optional note for the category
+          examples:
+            - Groceries and dining
+          maxLength: 1000
+          type: string
+        type:
+          description: Type of category
+          enum:
+            - expense
+            - income
+            - transfer
+          examples:
+            - expense
+          type: string
+      required:
+        - name
+        - type
+        - note
+      type: object
+    CreateRelationInputBody:
+      additionalProperties: false
+      properties:
+        relatedTransactionId:
+          description: Related transaction ID
+          examples:
+            - 2
+          format: int64
+          minimum: 1
+          type: integer
+      required:
+        - relatedTransactionId
+      type: object
+    CreateTagSchema:
+      additionalProperties: false
+      properties:
+        name:
+          description: Tag name
+          examples:
+            - bali-2026
+          maxLength: 50
+          minLength: 1
+          type: string
+      required:
+        - name
+      type: object
+    CreateTransactionSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Foreign key to accounts table (source account for transfers)
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        amount:
+          description: Transaction amount
+          examples:
+            - 50000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Foreign key to categories table
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        date:
+          description: Transaction date and time
+          examples:
+            - "2024-01-01T10:00:00Z"
+          format: date-time
+          type: string
+        destinationAccountId:
+          description: Destination account for transfer transactions (required when type is transfer)
+          examples:
+            - 2
+          format: int64
+          minimum: 1
+          type: integer
+        note:
+          description: Optional note about the transaction
+          examples:
+            - Monthly groceries
+          maxLength: 1000
+          type: string
+        type:
+          description: Transaction type
+          enum:
+            - expense
+            - income
+            - transfer
+          examples:
+            - expense
+          type: string
+      required:
+        - type
+        - amount
+        - accountId
+        - categoryId
+      type: object
+    CreateTransactionTemplateSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        amount:
+          description: Amount in cents
+          examples:
+            - 50000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        description:
+          description: Transaction description
+          examples:
+            - Monthly rent
+          maxLength: 500
+          type: string
+        endDate:
+          description: End date (ISO 8601 format, optional)
+          examples:
+            - "2026-12-31T23:59:59Z"
+          format: date-time
+          type: string
+        installmentCount:
+          description: Total installments (optional)
+          examples:
+            - 12
+          format: int64
+          minimum: 1
+          type: integer
+        note:
+          description: Additional notes
+          examples:
+            - Auto-pay setup
+          maxLength: 1000
+          type: string
+        recurrence:
+          description: Recurrence pattern
+          enum:
+            - none
+            - daily
+            - weekly
+            - monthly
+            - yearly
+          examples:
+            - monthly
+          type: string
+        startDate:
+          description: Start date (ISO 8601 format)
+          examples:
+            - "2026-01-01T00:00:00Z"
+          format: date-time
+          type: string
+        type:
+          description: Transaction type
+          enum:
+            - income
+            - expense
+            - transfer
+          examples:
+            - expense
+          type: string
+      required:
+        - accountId
+        - categoryId
+        - type
+        - amount
+        - recurrence
+        - startDate
       type: object
     ErrorDetail:
       additionalProperties: false
@@ -142,6 +939,34 @@ components:
           format: uri
           type: string
       type: object
+    LoginRequestModel:
+      additionalProperties: false
+      properties:
+        password:
+          description: Admin password
+          minLength: 1
+          type: string
+        username:
+          description: Admin username
+          minLength: 1
+          type: string
+      required:
+        - username
+        - password
+      type: object
+    LoginResponseModel:
+      additionalProperties: false
+      properties:
+        access_token:
+          description: Access token valid for 7 days
+          type: string
+        refresh_token:
+          description: Refresh token valid for 30 days
+          type: string
+      required:
+        - access_token
+        - refresh_token
+      type: object
     PaginatedAccountSchema:
       additionalProperties: false
       properties:
@@ -183,6 +1008,747 @@ components:
         - totalCount
         - items
       type: object
+    PaginatedBudgetSchema:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of budgets
+          items:
+            $ref: "#/components/schemas/BudgetSchema"
+          type:
+            - array
+            - "null"
+        limit:
+          description: Items per page
+          examples:
+            - 10
+          format: int64
+          type: integer
+        page:
+          description: Current page number
+          examples:
+            - 1
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of budgets
+          examples:
+            - 100
+          format: int64
+          type: integer
+      required:
+        - items
+        - totalCount
+        - page
+        - limit
+      type: object
+    PaginatedBudgetTemplateSchema:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of budget templates
+          items:
+            $ref: "#/components/schemas/BudgetTemplateSchema"
+          type:
+            - array
+            - "null"
+        limit:
+          description: Items per page
+          examples:
+            - 10
+          format: int64
+          type: integer
+        page:
+          description: Current page number
+          examples:
+            - 1
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of budget templates
+          examples:
+            - 100
+          format: int64
+          type: integer
+      required:
+        - items
+        - totalCount
+        - page
+        - limit
+      type: object
+    PaginatedCategorySchema:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of categories in current page
+          items:
+            $ref: "#/components/schemas/CategorySchema"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          examples:
+            - 1
+          format: int64
+          type: integer
+        pageSize:
+          description: Number of items per page
+          examples:
+            - 10
+          format: int64
+          type: integer
+        pageTotal:
+          description: Total number of pages
+          examples:
+            - 5
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of items
+          examples:
+            - 50
+          format: int64
+          type: integer
+      required:
+        - pageTotal
+        - pageNumber
+        - pageSize
+        - totalCount
+        - items
+      type: object
+    PaginatedTagSchema:
+      additionalProperties: false
+      properties:
+        data:
+          items:
+            $ref: "#/components/schemas/TagSchema"
+          type:
+            - array
+            - "null"
+        limit:
+          format: int64
+          type: integer
+        page:
+          format: int64
+          type: integer
+        totalItems:
+          format: int64
+          type: integer
+        totalPages:
+          format: int64
+          type: integer
+      required:
+        - data
+        - page
+        - limit
+        - totalItems
+        - totalPages
+      type: object
+    PaginatedTransactionSchema:
+      additionalProperties: false
+      properties:
+        data:
+          items:
+            $ref: "#/components/schemas/TransactionSchema"
+          type:
+            - array
+            - "null"
+        limit:
+          format: int64
+          type: integer
+        page:
+          format: int64
+          type: integer
+        totalItems:
+          format: int64
+          type: integer
+        totalPages:
+          format: int64
+          type: integer
+      required:
+        - data
+        - page
+        - limit
+        - totalItems
+        - totalPages
+      type: object
+    PaginatedTransactionTemplateSchema:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of transaction templates
+          items:
+            $ref: "#/components/schemas/TransactionTemplateSchema"
+          type:
+            - array
+            - "null"
+        limit:
+          description: Items per page
+          examples:
+            - 10
+          format: int64
+          type: integer
+        page:
+          description: Current page number
+          examples:
+            - 1
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of items
+          examples:
+            - 100
+          format: int64
+          type: integer
+      required:
+        - items
+        - totalCount
+        - page
+        - limit
+      type: object
+    RefreshRequestModel:
+      additionalProperties: false
+      properties:
+        refresh_token:
+          description: Refresh token
+          minLength: 1
+          type: string
+      required:
+        - refresh_token
+      type: object
+    RefreshResponseModel:
+      additionalProperties: false
+      properties:
+        access_token:
+          description: New access token valid for 7 days
+          type: string
+      required:
+        - access_token
+      type: object
+    SummaryAccountModel:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        accountName:
+          description: Account name
+          examples:
+            - Cash
+          type: string
+        accountType:
+          description: Account type
+          examples:
+            - expense
+          type: string
+        expenseAmount:
+          description: Total expense amount
+          examples:
+            - 2500000
+          format: int64
+          type: integer
+        incomeAmount:
+          description: Total income amount
+          examples:
+            - 3000000
+          format: int64
+          type: integer
+        net:
+          description: Net amount (income - expense)
+          examples:
+            - 500000
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of transactions
+          examples:
+            - 100
+          format: int64
+          type: integer
+      required:
+        - accountId
+        - accountName
+        - accountType
+        - totalCount
+        - incomeAmount
+        - expenseAmount
+        - net
+      type: object
+    SummaryAccountSchema:
+      additionalProperties: false
+      properties:
+        data:
+          description: Summary data grouped by account
+          items:
+            $ref: "#/components/schemas/SummaryAccountModel"
+          type:
+            - array
+            - "null"
+      required:
+        - data
+      type: object
+    SummaryCategoryModel:
+      additionalProperties: false
+      properties:
+        categoryId:
+          description: Category ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        categoryName:
+          description: Category name
+          examples:
+            - Food
+          type: string
+        categoryType:
+          description: Category type
+          examples:
+            - expense
+          type: string
+        expenseAmount:
+          description: Total expense amount
+          examples:
+            - 1500000
+          format: int64
+          type: integer
+        incomeAmount:
+          description: Total income amount
+          examples:
+            - 0
+          format: int64
+          type: integer
+        net:
+          description: Net amount (income - expense)
+          examples:
+            - -1500000
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of transactions
+          examples:
+            - 75
+          format: int64
+          type: integer
+      required:
+        - categoryId
+        - categoryName
+        - categoryType
+        - totalCount
+        - incomeAmount
+        - expenseAmount
+        - net
+      type: object
+    SummaryCategorySchema:
+      additionalProperties: false
+      properties:
+        data:
+          description: Summary data grouped by category
+          items:
+            $ref: "#/components/schemas/SummaryCategoryModel"
+          type:
+            - array
+            - "null"
+      required:
+        - data
+      type: object
+    SummaryTagSchema:
+      additionalProperties: false
+      properties:
+        data:
+          items:
+            $ref: "#/components/schemas/SummaryTagitem"
+          type:
+            - array
+            - "null"
+      required:
+        - data
+      type: object
+    SummaryTagitem:
+      additionalProperties: false
+      properties:
+        expenseAmount:
+          format: int64
+          type: integer
+        expenseCount:
+          format: int64
+          type: integer
+        incomeAmount:
+          format: int64
+          type: integer
+        incomeCount:
+          format: int64
+          type: integer
+        net:
+          format: int64
+          type: integer
+        tagId:
+          format: int64
+          type: integer
+        tagName:
+          type: string
+        totalCount:
+          format: int64
+          type: integer
+        transferAmount:
+          format: int64
+          type: integer
+        transferCount:
+          format: int64
+          type: integer
+      required:
+        - tagId
+        - tagName
+        - totalCount
+        - incomeCount
+        - expenseCount
+        - transferCount
+        - incomeAmount
+        - expenseAmount
+        - transferAmount
+        - net
+      type: object
+    SummaryTransactionItem:
+      additionalProperties: false
+      properties:
+        expenseAmount:
+          description: Total expense amount
+          examples:
+            - 3500000
+          format: int64
+          type: integer
+        expenseCount:
+          description: Number of expense transactions
+          examples:
+            - 95
+          format: int64
+          type: integer
+        incomeAmount:
+          description: Total income amount
+          examples:
+            - 5000000
+          format: int64
+          type: integer
+        incomeCount:
+          description: Number of income transactions
+          examples:
+            - 50
+          format: int64
+          type: integer
+        net:
+          description: Net amount (income - expense)
+          examples:
+            - 1500000
+          format: int64
+          type: integer
+        period:
+          description: Time period (e.g., 2024-01, 2024-W01, 2024-01-01, 2024)
+          examples:
+            - 2024-01
+          type: string
+        totalCount:
+          description: Total number of transactions
+          examples:
+            - 150
+          format: int64
+          type: integer
+        transferAmount:
+          description: Total transfer amount
+          examples:
+            - 500000
+          format: int64
+          type: integer
+        transferCount:
+          description: Number of transfer transactions
+          examples:
+            - 5
+          format: int64
+          type: integer
+      required:
+        - period
+        - totalCount
+        - incomeCount
+        - expenseCount
+        - transferCount
+        - incomeAmount
+        - expenseAmount
+        - transferAmount
+        - net
+      type: object
+    SummaryTransactionSchema:
+      additionalProperties: false
+      properties:
+        data:
+          description: Summary data grouped by period
+          items:
+            $ref: "#/components/schemas/SummaryTransactionItem"
+          type:
+            - array
+            - "null"
+        frequency:
+          description: Grouping frequency
+          examples:
+            - monthly
+          type: string
+      required:
+        - frequency
+        - data
+      type: object
+    TagSchema:
+      additionalProperties: false
+      properties:
+        createdAt:
+          format: date-time
+          type: string
+        id:
+          format: int64
+          type: integer
+        name:
+          type: string
+      required:
+        - id
+        - name
+        - createdAt
+      type: object
+    TransactionRelationSchema:
+      additionalProperties: false
+      properties:
+        createdAt:
+          format: date-time
+          type: string
+        id:
+          format: int64
+          type: integer
+        relatedTransactionId:
+          format: int64
+          type: integer
+        transactionId:
+          format: int64
+          type: integer
+      required:
+        - id
+        - transactionId
+        - relatedTransactionId
+        - createdAt
+      type: object
+    TransactionSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          format: int64
+          type: integer
+        amount:
+          format: int64
+          type: integer
+        categoryId:
+          format: int64
+          type: integer
+        createdAt:
+          format: date-time
+          type: string
+        date:
+          format: date-time
+          type: string
+        deletedAt:
+          format: date-time
+          type: string
+        destinationAccountId:
+          format: int64
+          type: integer
+        id:
+          format: int64
+          type: integer
+        note:
+          type:
+            - string
+            - "null"
+        type:
+          type: string
+        updatedAt:
+          format: date-time
+          type: string
+      required:
+        - id
+        - type
+        - date
+        - amount
+        - accountId
+        - categoryId
+        - note
+        - createdAt
+        - updatedAt
+      type: object
+    TransactionTagsSchema:
+      additionalProperties: false
+      properties:
+        tags:
+          items:
+            $ref: "#/components/schemas/TagSchema"
+          type:
+            - array
+            - "null"
+        transactionId:
+          format: int64
+          type: integer
+      required:
+        - transactionId
+        - tags
+      type: object
+    TransactionTemplateSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID for the transaction
+          format: int64
+          type: integer
+        amount:
+          description: Transaction amount in cents
+          format: int64
+          type: integer
+        categoryId:
+          description: Category ID for the transaction
+          format: int64
+          type: integer
+        createdAt:
+          description: Creation timestamp
+          format: date-time
+          type: string
+        deletedAt:
+          description: Deletion timestamp (soft delete)
+          format: date-time
+          type: string
+        description:
+          description: Transaction description
+          type: string
+        endDate:
+          description: End date for recurring transactions (optional)
+          format: date-time
+          type: string
+        id:
+          description: Unique identifier
+          format: int64
+          type: integer
+        installmentCount:
+          description: Total number of installments (for installment payments)
+          format: int64
+          type: integer
+        installmentCurrent:
+          description: Current installment number (0-based)
+          format: int64
+          type: integer
+        note:
+          description: Additional notes
+          type: string
+        recurrence:
+          description: "Recurrence pattern: none, daily, weekly, monthly, yearly"
+          enum:
+            - none
+            - daily
+            - weekly
+            - monthly
+            - yearly
+          type: string
+        startDate:
+          description: Start date for recurring transactions
+          format: date-time
+          type: string
+        type:
+          description: "Transaction type: income, expense, transfer"
+          enum:
+            - income
+            - expense
+            - transfer
+          type: string
+        updatedAt:
+          description: Last update timestamp
+          format: date-time
+          type: string
+      required:
+        - id
+        - accountId
+        - categoryId
+        - type
+        - amount
+        - recurrence
+        - startDate
+        - installmentCurrent
+        - createdAt
+        - updatedAt
+      type: object
+    TrendItem:
+      additionalProperties: false
+      properties:
+        changePercent:
+          description: Percentage change from previous period
+          examples:
+            - 15.5
+          format: double
+          type: number
+        count:
+          description: Number of transactions
+          examples:
+            - 45
+          format: int64
+          type: integer
+        expenseAmount:
+          description: Total expense amount
+          examples:
+            - 3500000
+          format: int64
+          type: integer
+        incomeAmount:
+          description: Total income amount
+          examples:
+            - 5000000
+          format: int64
+          type: integer
+        net:
+          description: Net amount (income - expense)
+          examples:
+            - 1500000
+          format: int64
+          type: integer
+        period:
+          description: Time period (e.g., 2024-01, 2024-W01)
+          examples:
+            - 2024-01
+          type: string
+        totalAmount:
+          description: Total transaction amount for the period
+          examples:
+            - 3500000
+          format: int64
+          type: integer
+        transferAmount:
+          description: Total transfer amount
+          examples:
+            - 500000
+          format: int64
+          type: integer
+        trend:
+          description: Trend direction
+          enum:
+            - increasing
+            - decreasing
+            - stable
+          examples:
+            - increasing
+          type: string
+      required:
+        - period
+        - totalAmount
+        - incomeAmount
+        - expenseAmount
+        - transferAmount
+        - net
+        - count
+        - changePercent
+        - trend
+      type: object
     UpdateAccountSchema:
       additionalProperties: false
       properties:
@@ -193,6 +1759,24 @@ components:
           format: int64
           minimum: 0
           type: integer
+        archivedAt:
+          description: Archive timestamp in ISO 8601 format, set to null to unarchive
+          examples:
+            - "2026-01-03T00:00:00Z"
+          format: date-time
+          type: string
+        icon:
+          description: Icon identifier set by frontend
+          examples:
+            - wallet-icon
+          maxLength: 255
+          type: string
+        iconColor:
+          description: Icon color in hex format
+          examples:
+            - "#4CAF50"
+          maxLength: 7
+          type: string
         name:
           description: Name of the account
           examples:
@@ -215,6 +1799,296 @@ components:
             - income
           type: string
       type: object
+    UpdateBudgetSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID to filter transactions
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        amountLimit:
+          description: Budget limit amount in cents
+          examples:
+            - 100000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID to filter transactions
+          examples:
+            - 5
+          format: int64
+          minimum: 1
+          type: integer
+        note:
+          description: Note for the budget
+          examples:
+            - Updated note
+          maxLength: 500
+          type: string
+        periodEnd:
+          description: Budget period end date
+          format: date-time
+          type: string
+        periodStart:
+          description: Budget period start date
+          format: date-time
+          type: string
+        templateId:
+          description: Budget template ID if generated from template
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+      type: object
+    UpdateBudgetTemplateSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID to filter transactions
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        amountLimit:
+          description: Budget limit amount in cents
+          examples:
+            - 100000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID to filter transactions
+          examples:
+            - 5
+          format: int64
+          minimum: 1
+          type: integer
+        endDate:
+          description: Optional end date for recurrence
+          format: date-time
+          type: string
+        note:
+          description: Note for the budget template
+          examples:
+            - Updated note
+          maxLength: 500
+          type: string
+        recurrence:
+          description: Recurrence pattern
+          enum:
+            - none
+            - weekly
+            - monthly
+            - yearly
+          examples:
+            - monthly
+          type: string
+        startDate:
+          description: Start date for recurrence
+          format: date-time
+          type: string
+      type: object
+    UpdateCategorySchema:
+      additionalProperties: false
+      properties:
+        archivedAt:
+          description: Archive timestamp in ISO 8601 format, set to null to unarchive
+          examples:
+            - "2026-01-03T00:00:00Z"
+          format: date-time
+          type: string
+        icon:
+          description: Icon identifier set by frontend
+          examples:
+            - food-icon
+          maxLength: 255
+          type: string
+        iconColor:
+          description: Icon color in hex format
+          examples:
+            - "#FF5733"
+          maxLength: 7
+          type: string
+        name:
+          description: Name of the category
+          examples:
+            - Food
+          maxLength: 255
+          minLength: 1
+          type: string
+        note:
+          description: Note for the category
+          examples:
+            - Updated note
+          maxLength: 1000
+          type: string
+        type:
+          description: Type of category
+          enum:
+            - expense
+            - income
+            - transfer
+          examples:
+            - expense
+          type: string
+      type: object
+    UpdateTransactionSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Foreign key to accounts table (source account for transfers)
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        amount:
+          description: Transaction amount
+          examples:
+            - 50000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Foreign key to categories table
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        date:
+          description: Transaction date and time
+          examples:
+            - "2024-01-01T10:00:00Z"
+          format: date-time
+          type: string
+        destinationAccountId:
+          description: Destination account for transfer transactions (required when type is transfer)
+          examples:
+            - 2
+          format: int64
+          minimum: 1
+          type: integer
+        note:
+          description: Optional note about the transaction
+          examples:
+            - Monthly groceries
+          maxLength: 1000
+          type: string
+        type:
+          description: Transaction type
+          enum:
+            - expense
+            - income
+            - transfer
+          examples:
+            - expense
+          type: string
+      type: object
+    UpdateTransactionTagsSchema:
+      additionalProperties: false
+      properties:
+        tagNames:
+          description: Array of tag names
+          examples:
+            - - bali-2026
+              - vacation
+          items:
+            type: string
+          maxLength: 20
+          type:
+            - array
+            - "null"
+      required:
+        - tagNames
+      type: object
+    UpdateTransactionTemplateSchema:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        amount:
+          description: Amount in cents
+          examples:
+            - 50000
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID
+          examples:
+            - 1
+          format: int64
+          minimum: 1
+          type: integer
+        description:
+          description: Transaction description
+          examples:
+            - Monthly rent
+          maxLength: 500
+          type: string
+        endDate:
+          description: End date (ISO 8601 format, optional)
+          examples:
+            - "2026-12-31T23:59:59Z"
+          format: date-time
+          type: string
+        installmentCount:
+          description: Total installments (optional)
+          examples:
+            - 12
+          format: int64
+          minimum: 1
+          type: integer
+        note:
+          description: Additional notes
+          examples:
+            - Auto-pay setup
+          maxLength: 1000
+          type: string
+        recurrence:
+          description: Recurrence pattern
+          enum:
+            - none
+            - daily
+            - weekly
+            - monthly
+            - yearly
+          examples:
+            - monthly
+          type: string
+        startDate:
+          description: Start date (ISO 8601 format)
+          examples:
+            - "2026-01-01T00:00:00Z"
+          format: date-time
+          type: string
+        type:
+          description: Transaction type
+          enum:
+            - income
+            - expense
+            - transfer
+          examples:
+            - expense
+          type: string
+      type: object
+  securitySchemes:
+    bearer:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http
 info:
   title: Spenicle API
   version: 1.0.0
@@ -225,6 +2099,19 @@ paths:
       description: Get a paginated list of accounts with optional search
       operationId: list-accounts
       parameters:
+        - description: Filter by account ID
+          explode: false
+          in: query
+          name: id
+          schema:
+            description: Filter by account ID
+            items:
+              format: int64
+              type: integer
+            minimum: 0
+            type:
+              - array
+              - "null"
         - explode: false
           in: query
           name: name
@@ -234,9 +2121,23 @@ paths:
           in: query
           name: type
           schema:
+            items:
+              enum:
+                - expense
+                - income
+              type: string
+            type:
+              - array
+              - "null"
+        - description: Filter by archived state (true=archived, false=active, empty=all)
+          explode: false
+          in: query
+          name: archived
+          schema:
+            description: Filter by archived state (true=archived, false=active, empty=all)
             enum:
-              - expense
-              - income
+              - "true"
+              - "false"
             type: string
         - explode: false
           in: query
@@ -246,6 +2147,7 @@ paths:
               - name
               - type
               - amount
+              - displayOrder
               - createdAt
               - updatedAt
             type: string
@@ -287,6 +2189,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Error
+      security:
+        - bearer: []
       summary: List accounts
       tags:
         - Accounts
@@ -312,7 +2216,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Error
+      security:
+        - bearer: []
       summary: Create account
+      tags:
+        - Accounts
+  /accounts/reorder:
+    post:
+      description: Update display order for multiple accounts
+      operationId: reorder-accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountReorderSchema"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Reorder accounts
       tags:
         - Accounts
   /accounts/{id}:
@@ -341,6 +2271,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Error
+      security:
+        - bearer: []
       summary: Delete account
       tags:
         - Accounts
@@ -373,6 +2305,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Error
+      security:
+        - bearer: []
       summary: Get account
       tags:
         - Accounts
@@ -411,9 +2345,2033 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorModel"
           description: Error
+      security:
+        - bearer: []
       summary: Update account
       tags:
         - Accounts
+  /accounts/{id}/budgets:
+    get:
+      description: Get all budgets related to this account
+      operationId: list-account-budgets
+      parameters:
+        - description: Unique identifier of the account
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the account
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedBudgetSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List account budgets
+      tags:
+        - Accounts
+  /accounts/{id}/budgets/{budgetId}:
+    get:
+      description: Get a specific budget related to this account
+      operationId: get-account-budget
+      parameters:
+        - description: Account ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Account ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Budget ID
+          example: 1
+          in: path
+          name: budgetId
+          required: true
+          schema:
+            description: Budget ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get account budget
+      tags:
+        - Accounts
+  /auth/login:
+    post:
+      description: Authenticate and receive access and refresh tokens
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequestModel"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponseModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Login
+      tags:
+        - Auth
+  /auth/refresh:
+    post:
+      description: Get new access token using refresh token
+      operationId: refresh
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequestModel"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResponseModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Refresh token
+      tags:
+        - Auth
+  /budgets:
+    get:
+      description: Retrieve a paginated list of budgets
+      operationId: list-budgets
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedBudgetSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List budgets
+      tags:
+        - Budgets
+    post:
+      description: Create a new budget
+      operationId: create-budget
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBudgetSchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Create budget
+      tags:
+        - Budgets
+  /budgets/templates:
+    get:
+      description: Retrieve a paginated list of budget templates with optional filters
+      operationId: list-budget-templates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedBudgetTemplateSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List budget templates
+      tags:
+        - Budgets
+    post:
+      description: Create a new budget template for recurring budgets
+      operationId: create-budget-template
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBudgetTemplateSchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetTemplateSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Create budget template
+      tags:
+        - Budgets
+  /budgets/templates/{id}:
+    delete:
+      description: Soft delete a budget template
+      operationId: delete-budget-template
+      parameters:
+        - description: Unique identifier of the budget template
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the budget template
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Delete budget template
+      tags:
+        - Budgets
+    get:
+      description: Retrieve a specific budget template by ID
+      operationId: get-budget-template
+      parameters:
+        - description: Unique identifier of the budget template
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the budget template
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetTemplateSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get budget template
+      tags:
+        - Budgets
+    patch:
+      description: Update an existing budget template
+      operationId: update-budget-template
+      parameters:
+        - description: Unique identifier of the budget template
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the budget template
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBudgetTemplateSchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetTemplateSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Update budget template
+      tags:
+        - Budgets
+  /budgets/{id}:
+    delete:
+      description: Delete a budget by ID
+      operationId: delete-budget
+      parameters:
+        - description: Unique identifier of the budget
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the budget
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Delete budget
+      tags:
+        - Budgets
+    get:
+      description: Retrieve a budget by ID
+      operationId: get-budget
+      parameters:
+        - description: Unique identifier of the budget
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the budget
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get budget
+      tags:
+        - Budgets
+    patch:
+      description: Update an existing budget
+      operationId: update-budget
+      parameters:
+        - description: Unique identifier of the budget
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the budget
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBudgetSchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Update budget
+      tags:
+        - Budgets
+  /categories:
+    get:
+      description: Get a paginated list of categories with optional search
+      operationId: list-categories
+      parameters:
+        - description: Filter by category ID
+          explode: false
+          in: query
+          name: id
+          schema:
+            description: Filter by category ID
+            items:
+              format: int64
+              type: integer
+            minimum: 0
+            type:
+              - array
+              - "null"
+        - explode: false
+          in: query
+          name: name
+          schema:
+            type: string
+        - explode: false
+          in: query
+          name: type
+          schema:
+            items:
+              enum:
+                - expense
+                - income
+                - transfer
+              type: string
+            type:
+              - array
+              - "null"
+        - description: Filter by archived state (true=archived, false=active, empty=all)" enum:"true,false
+          explode: false
+          in: query
+          name: archived
+          schema:
+            description: Filter by archived state (true=archived, false=active, empty=all)" enum:"true,false
+            type: string
+        - explode: false
+          in: query
+          name: orderBy
+          schema:
+            enum:
+              - name
+              - type
+              - displayOrder
+              - createdAt
+              - updatedAt
+            type: string
+        - explode: false
+          in: query
+          name: orderDirection
+          schema:
+            enum:
+              - asc
+              - desc
+            type: string
+        - explode: false
+          in: query
+          name: pageNumber
+          schema:
+            default: 1
+            format: int64
+            minimum: 1
+            type: integer
+        - explode: false
+          in: query
+          name: pageSize
+          schema:
+            default: 10
+            format: int64
+            maximum: 100
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedCategorySchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List categories
+      tags:
+        - Categories
+    post:
+      description: Create a new category
+      operationId: create-category
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategorySchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategorySchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Create category
+      tags:
+        - Categories
+  /categories/reorder:
+    post:
+      description: Batch update display order of categories atomically
+      operationId: reorder-categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryReorderSchema"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Reorder categories
+      tags:
+        - Categories
+  /categories/{id}:
+    delete:
+      description: Delete a category
+      operationId: delete-category
+      parameters:
+        - description: Unique identifier of the category
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the category
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Delete category
+      tags:
+        - Categories
+    get:
+      description: Get a single category by ID
+      operationId: get-category
+      parameters:
+        - description: Unique identifier of the category
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the category
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategorySchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get category
+      tags:
+        - Categories
+    patch:
+      description: Update an existing category
+      operationId: update-category
+      parameters:
+        - description: Unique identifier of the category
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the category
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategorySchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategorySchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Update category
+      tags:
+        - Categories
+  /categories/{id}/budgets:
+    get:
+      description: Get all budgets related to this category
+      operationId: list-category-budgets
+      parameters:
+        - description: Unique identifier of the category
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the category
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedBudgetSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List category budgets
+      tags:
+        - Categories
+  /categories/{id}/budgets/{budgetId}:
+    get:
+      description: Get a specific budget related to this category
+      operationId: get-category-budget
+      parameters:
+        - description: Category ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Category ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Budget ID
+          example: 1
+          in: path
+          name: budgetId
+          required: true
+          schema:
+            description: Budget ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get category budget
+      tags:
+        - Categories
+  /summary/accounts:
+    get:
+      description: Returns transaction summary grouped by account with optional date filtering
+      operationId: get-account-summary
+      parameters:
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryAccountSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get account summary
+      tags:
+        - Summary
+  /summary/accounts/trends:
+    get:
+      description: Returns trend analysis for accounts showing if spending is increasing or decreasing over time, grouped by frequency (weekly, monthly)
+      operationId: get-account-trends
+      parameters:
+        - description: Start date for trend analysis (required)
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for trend analysis (required)
+            format: date-time
+            type: string
+        - description: End date for trend analysis (required)
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for trend analysis (required)
+            format: date-time
+            type: string
+        - description: Trend frequency
+          example: monthly
+          explode: false
+          in: query
+          name: frequency
+          schema:
+            default: monthly
+            description: Trend frequency
+            enum:
+              - weekly
+              - monthly
+            examples:
+              - monthly
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountTrendSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get account spending trends
+      tags:
+        - Summary
+  /summary/categories:
+    get:
+      description: Returns transaction summary grouped by category with optional date filtering
+      operationId: get-category-summary
+      parameters:
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryCategorySchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get category summary
+      tags:
+        - Summary
+  /summary/categories/trends:
+    get:
+      description: Returns trend analysis for categories showing if spending is increasing or decreasing over time, grouped by frequency (weekly, monthly)
+      operationId: get-category-trends
+      parameters:
+        - description: Start date for trend analysis (required)
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for trend analysis (required)
+            format: date-time
+            type: string
+        - description: End date for trend analysis (required)
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for trend analysis (required)
+            format: date-time
+            type: string
+        - description: Trend frequency
+          example: monthly
+          explode: false
+          in: query
+          name: frequency
+          schema:
+            default: monthly
+            description: Trend frequency
+            enum:
+              - weekly
+              - monthly
+            examples:
+              - monthly
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryTrendSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get category spending trends
+      tags:
+        - Summary
+  /summary/tags:
+    get:
+      description: Returns transaction summary grouped by tags with optional date and type filtering
+      operationId: get-tag-summary
+      parameters:
+        - description: Filter transactions from this date (ISO 8601)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          schema:
+            description: Filter transactions from this date (ISO 8601)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: Filter transactions until this date (ISO 8601)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          schema:
+            description: Filter transactions until this date (ISO 8601)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+        - description: Filter by transaction type
+          explode: false
+          in: query
+          name: type
+          schema:
+            description: Filter by transaction type
+            enum:
+              - income
+              - expense
+              - transfer
+            type: string
+        - description: Filter by account IDs (comma-separated)
+          explode: false
+          in: query
+          name: accountIds
+          schema:
+            description: Filter by account IDs (comma-separated)
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by category IDs (comma-separated)
+          explode: false
+          in: query
+          name: categoryIds
+          schema:
+            description: Filter by category IDs (comma-separated)
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by tag names (comma-separated)
+          explode: false
+          in: query
+          name: tagNames
+          schema:
+            description: Filter by tag names (comma-separated)
+            items:
+              type: string
+            type:
+              - array
+              - "null"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryTagSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get tag summary
+      tags:
+        - Summary
+  /summary/transactions:
+    get:
+      description: Returns transaction summary grouped by frequency (daily, weekly, monthly, yearly) with optional date filtering
+      operationId: get-transaction-summary
+      parameters:
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+        - description: Grouping frequency
+          example: monthly
+          explode: false
+          in: query
+          name: frequency
+          schema:
+            default: monthly
+            description: Grouping frequency
+            enum:
+              - daily
+              - weekly
+              - monthly
+              - yearly
+            examples:
+              - monthly
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryTransactionSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get transaction summary
+      tags:
+        - Summary
+  /tags:
+    get:
+      description: Get a paginated list of tags with optional search
+      operationId: list-tags
+      parameters:
+        - description: Page number
+          explode: false
+          in: query
+          name: page
+          schema:
+            default: 1
+            description: Page number
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Items per page
+          explode: false
+          in: query
+          name: limit
+          schema:
+            default: 10
+            description: Items per page
+            format: int64
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: Search by tag name
+          explode: false
+          in: query
+          name: search
+          schema:
+            description: Search by tag name
+            maxLength: 50
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedTagSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List tags
+      tags:
+        - Tags
+    post:
+      description: Create a new tag
+      operationId: create-tag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTagSchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Create tag
+      tags:
+        - Tags
+  /tags/{id}:
+    delete:
+      description: Delete a tag by ID
+      operationId: delete-tag
+      parameters:
+        - description: Tag ID to delete
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Tag ID to delete
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Delete tag
+      tags:
+        - Tags
+  /transactions:
+    get:
+      description: Returns a paginated list of transactions
+      operationId: list-transactions
+      parameters:
+        - description: Filter by transaction ID
+          explode: false
+          in: query
+          name: id
+          schema:
+            description: Filter by transaction ID
+            items:
+              format: int64
+              type: integer
+            minimum: 0
+            type:
+              - array
+              - "null"
+        - description: Filter by transaction type
+          explode: false
+          in: query
+          name: type
+          schema:
+            description: Filter by transaction type
+            items:
+              enum:
+                - expense
+                - income
+                - transfer
+              type: string
+            type:
+              - array
+              - "null"
+        - description: Filter by account ID
+          explode: false
+          in: query
+          name: accountId
+          schema:
+            description: Filter by account ID
+            items:
+              format: int64
+              type: integer
+            minimum: 0
+            type:
+              - array
+              - "null"
+        - description: Filter by category ID
+          explode: false
+          in: query
+          name: categoryId
+          schema:
+            description: Filter by category ID
+            items:
+              format: int64
+              type: integer
+            minimum: 0
+            type:
+              - array
+              - "null"
+        - description: Page number for pagination
+          example: 1
+          explode: false
+          in: query
+          name: page
+          schema:
+            default: 1
+            description: Page number for pagination
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Number of items per page
+          example: 10
+          explode: false
+          in: query
+          name: limit
+          schema:
+            default: 10
+            description: Number of items per page
+            examples:
+              - 10
+            format: int64
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: Field to order by
+          example: date
+          explode: false
+          in: query
+          name: orderBy
+          schema:
+            default: createdAt
+            description: Field to order by
+            enum:
+              - id
+              - type
+              - date
+              - amount
+              - createdAt
+              - updatedAt
+            examples:
+              - date
+            type: string
+        - description: Order direction
+          example: desc
+          explode: false
+          in: query
+          name: orderDirection
+          schema:
+            default: desc
+            description: Order direction
+            enum:
+              - asc
+              - desc
+            examples:
+              - desc
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedTransactionSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List transactions
+      tags:
+        - Transactions
+    post:
+      description: Creates a new transaction and updates account balance
+      operationId: create-transaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionSchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Create a new transaction
+      tags:
+        - Transactions
+  /transactions/templates:
+    get:
+      description: Returns a paginated list of transaction templates
+      operationId: list-transaction-templates
+      parameters:
+        - description: Filter by transaction template IDs
+          explode: false
+          in: query
+          name: id
+          schema:
+            description: Filter by transaction template IDs
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by account IDs
+          explode: false
+          in: query
+          name: accountId
+          schema:
+            description: Filter by account IDs
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by category IDs
+          explode: false
+          in: query
+          name: categoryId
+          schema:
+            description: Filter by category IDs
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by transaction type
+          explode: false
+          in: query
+          name: type
+          schema:
+            description: Filter by transaction type
+            items:
+              type: string
+            type:
+              - array
+              - "null"
+        - description: Filter by recurrence pattern
+          explode: false
+          in: query
+          name: recurrence
+          schema:
+            description: Filter by recurrence pattern
+            items:
+              type: string
+            type:
+              - array
+              - "null"
+        - description: Page number
+          example: 1
+          explode: false
+          in: query
+          name: page
+          schema:
+            default: 1
+            description: Page number
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Items per page
+          example: 10
+          explode: false
+          in: query
+          name: limit
+          schema:
+            default: 10
+            description: Items per page
+            examples:
+              - 10
+            format: int64
+            maximum: 100
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedTransactionTemplateSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List transaction templates
+      tags:
+        - Transactions
+    post:
+      description: Creates a new recurring transaction template
+      operationId: create-transaction-template
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionTemplateSchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionTemplateSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Create transaction template
+      tags:
+        - Transactions
+  /transactions/templates/{id}:
+    delete:
+      description: Soft deletes a transaction template by ID
+      operationId: delete-transaction-template
+      parameters:
+        - description: Transaction template ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction template ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Delete transaction template
+      tags:
+        - Transactions
+    get:
+      description: Returns a transaction template by ID
+      operationId: get-transaction-template
+      parameters:
+        - description: Transaction template ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction template ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionTemplateSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get transaction template
+      tags:
+        - Transactions
+    patch:
+      description: Updates a transaction template by ID
+      operationId: update-transaction-template
+      parameters:
+        - description: Transaction template ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction template ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTransactionTemplateSchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionTemplateSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Update transaction template
+      tags:
+        - Transactions
+  /transactions/{id}:
+    delete:
+      description: Soft deletes a transaction by ID and reverts account balance
+      operationId: delete-transaction
+      parameters:
+        - description: Transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Delete a transaction
+      tags:
+        - Transactions
+    get:
+      description: Returns a transaction by ID
+      operationId: get-transaction
+      parameters:
+        - description: Transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get a transaction
+      tags:
+        - Transactions
+    patch:
+      description: Updates a transaction by ID and syncs account balance
+      operationId: update-transaction
+      parameters:
+        - description: Transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTransactionSchema"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Update a transaction
+      tags:
+        - Transactions
+  /transactions/{id}/relations:
+    get:
+      description: Get all transactions related to a specific transaction
+      operationId: list-related-transactions
+      parameters:
+        - description: Transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/TransactionSchema"
+                type:
+                  - array
+                  - "null"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List related transactions
+      tags:
+        - Transactions
+    post:
+      description: Create a relation between two transactions
+      operationId: create-transaction-relation
+      parameters:
+        - description: Source transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Source transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRelationInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionRelationSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Create transaction relation
+      tags:
+        - Transactions
+  /transactions/{id}/relations/{relatedId}:
+    delete:
+      description: Remove the relation between two transactions
+      operationId: delete-transaction-relation
+      parameters:
+        - description: Source transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Source transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Related transaction ID
+          example: 2
+          in: path
+          name: relatedId
+          required: true
+          schema:
+            description: Related transaction ID
+            examples:
+              - 2
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Delete transaction relation
+      tags:
+        - Transactions
+    get:
+      description: Get details of a specific related transaction
+      operationId: get-related-transaction
+      parameters:
+        - description: Transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Related transaction ID
+          example: 2
+          in: path
+          name: relatedId
+          required: true
+          schema:
+            description: Related transaction ID
+            examples:
+              - 2
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get related transaction
+      tags:
+        - Transactions
+  /transactions/{id}/tags:
+    get:
+      description: Get all tags for a specific transaction
+      operationId: get-transaction-tags
+      parameters:
+        - description: Transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionTagsSchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get transaction tags
+      tags:
+        - Transactions
+    post:
+      description: Add a tag to a transaction (creates tag if it doesn't exist)
+      operationId: add-transaction-tag
+      parameters:
+        - description: Transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddTransactionTagSchema"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Add tag to transaction
+      tags:
+        - Transactions
+    put:
+      description: Replace all tags for a transaction
+      operationId: update-transaction-tags
+      parameters:
+        - description: Transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTransactionTagsSchema"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Update transaction tags
+      tags:
+        - Transactions
 servers:
   - description: Development server
-    url: http://localhost:3000
+    url: http://localhost:8080
