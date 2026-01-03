@@ -20,6 +20,7 @@ type AccountService interface {
 	Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
 	Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error)
 	Delete(ctx context.Context, id int64) error
+	Reorder(ctx context.Context, items []schemas.AccountReorderItemSchema) error
 }
 
 // BudgetService interface for budget operations in nested routes
@@ -86,6 +87,14 @@ type deleteAccountRequest struct {
 }
 
 type deleteAccountResponse struct {
+	Status int `json:"-"`
+}
+
+type reorderAccountsRequest struct {
+	Body schemas.AccountReorderSchema
+}
+
+type reorderAccountsResponse struct {
 	Status int `json:"-"`
 }
 
@@ -172,6 +181,19 @@ func (ar *AccountResource) RegisterRoutes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, ar.Delete)
+
+	// Reorder endpoint
+	huma.Register(api, huma.Operation{
+		OperationID: "reorder-accounts",
+		Method:      http.MethodPost,
+		Path:        "/accounts/reorder",
+		Summary:     "Reorder accounts",
+		Description: "Update display order for multiple accounts",
+		Tags:        []string{"Accounts"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, ar.Reorder)
 
 	// Nested budget routes
 	huma.Register(api, huma.Operation{
@@ -264,6 +286,17 @@ func (ar *AccountResource) Delete(ctx context.Context, input *deleteAccountReque
 	}
 
 	return &deleteAccountResponse{Status: http.StatusNoContent}, nil
+}
+
+// Reorder handles batch updates of account display order.
+// Returns 204 No Content on success.
+func (ar *AccountResource) Reorder(ctx context.Context, input *reorderAccountsRequest) (*reorderAccountsResponse, error) {
+	if err := ar.service.Reorder(ctx, input.Body.Items); err != nil {
+		logger.Log().Error("Failed to reorder accounts", "error", err)
+		return nil, huma.Error400BadRequest("Failed to reorder accounts", err)
+	}
+
+	return &reorderAccountsResponse{Status: http.StatusNoContent}, nil
 }
 
 func (ar *AccountResource) ListBudgets(ctx context.Context, input *listAccountBudgetsRequest) (*listAccountBudgetsResponse, error) {

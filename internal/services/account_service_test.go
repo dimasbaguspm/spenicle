@@ -10,11 +10,12 @@ import (
 
 // MockAccountStore is a simple mock for testing business logic
 type MockAccountStore struct {
-	ListFunc   func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error)
-	GetFunc    func(ctx context.Context, id int64) (schemas.AccountSchema, error)
-	CreateFunc func(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
-	UpdateFunc func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error)
-	DeleteFunc func(ctx context.Context, id int64) error
+	ListFunc    func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error)
+	GetFunc     func(ctx context.Context, id int64) (schemas.AccountSchema, error)
+	CreateFunc  func(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
+	UpdateFunc  func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error)
+	DeleteFunc  func(ctx context.Context, id int64) error
+	ReorderFunc func(ctx context.Context, items []schemas.AccountReorderItemSchema) error
 
 	// Track method calls for assertion
 	updateCalled bool
@@ -52,6 +53,13 @@ func (m *MockAccountStore) Update(ctx context.Context, id int64, data schemas.Up
 func (m *MockAccountStore) Delete(ctx context.Context, id int64) error {
 	if m.DeleteFunc != nil {
 		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
+
+func (m *MockAccountStore) Reorder(ctx context.Context, items []schemas.AccountReorderItemSchema) error {
+	if m.ReorderFunc != nil {
+		return m.ReorderFunc(ctx, items)
 	}
 	return nil
 }

@@ -10,7 +10,8 @@ type SearchParamAccountSchema struct {
 	ID             []int    `query:"id" doc:"Filter by account ID" minimum:"0"`
 	Name           string   `query:"name"`
 	Type           []string `query:"type" enum:"expense,income"`
-	OrderBy        string   `query:"orderBy" enum:"name,type,amount,createdAt,updatedAt"`
+	Archived       string   `query:"archived" doc:"Filter by archived state (true=archived, false=active, empty=all)" enum:"true,false"`
+	OrderBy        string   `query:"orderBy" enum:"name,type,amount,displayOrder,createdAt,updatedAt"`
 	OrderDirection string   `query:"orderDirection" enum:"asc,desc"`
 	PageNumber     int      `query:"pageNumber" minimum:"1" default:"1"`
 	PageSize       int      `query:"pageSize" minimum:"1" maximum:"100" default:"10"`
@@ -35,6 +36,11 @@ func (spas *SearchParamAccountSchema) ParseFromQuery(payload url.Values) SearchP
 	// Parse Type array
 	if types := payload["type"]; len(types) > 0 {
 		spas.Type = types
+	}
+
+	// Parse archived filter
+	if v := payload.Get("archived"); v != "" {
+		spas.Archived = v
 	}
 
 	// support camelCase first, fall back to snake_case

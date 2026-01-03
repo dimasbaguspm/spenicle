@@ -98,6 +98,10 @@ func (m *mockAccountStore) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (m *mockAccountStore) Reorder(ctx context.Context, items []schemas.AccountReorderItemSchema) error {
+	return nil
+}
+
 type mockCategoryStore struct {
 	getFunc func(ctx context.Context, id int64) (schemas.CategorySchema, error)
 }

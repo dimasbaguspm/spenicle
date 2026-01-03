@@ -13,11 +13,12 @@ import (
 
 // MockAccountService is a mock implementation of AccountService for testing HTTP layer
 type MockAccountService struct {
-	ListFunc   func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error)
-	GetFunc    func(ctx context.Context, id int64) (schemas.AccountSchema, error)
-	CreateFunc func(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
-	UpdateFunc func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error)
-	DeleteFunc func(ctx context.Context, id int64) error
+	ListFunc    func(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error)
+	GetFunc     func(ctx context.Context, id int64) (schemas.AccountSchema, error)
+	CreateFunc  func(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
+	UpdateFunc  func(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error)
+	DeleteFunc  func(ctx context.Context, id int64) error
+	ReorderFunc func(ctx context.Context, items []schemas.AccountReorderItemSchema) error
 }
 
 func (m *MockAccountService) List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
@@ -51,6 +52,13 @@ func (m *MockAccountService) Update(ctx context.Context, id int64, data schemas.
 func (m *MockAccountService) Delete(ctx context.Context, id int64) error {
 	if m.DeleteFunc != nil {
 		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
+
+func (m *MockAccountService) Reorder(ctx context.Context, items []schemas.AccountReorderItemSchema) error {
+	if m.ReorderFunc != nil {
+		return m.ReorderFunc(ctx, items)
 	}
 	return nil
 }

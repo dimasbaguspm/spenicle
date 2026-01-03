@@ -31,7 +31,7 @@ func (pas *PaginatedAccountSchema) FromRows(rows pgx.Rows, totalItems int, searc
 
 	for rows.Next() {
 		var account AccountSchema
-		err := rows.Scan(&account.ID, &account.Name, &account.Type, &account.Note, &account.Amount, &account.CreatedAt, &account.UpdatedAt, &account.DeletedAt)
+		err := rows.Scan(&account.ID, &account.Name, &account.Type, &account.Note, &account.Amount, &account.Icon, &account.IconColor, &account.DisplayOrder, &account.ArchivedAt, &account.CreatedAt, &account.UpdatedAt, &account.DeletedAt)
 		if err != nil {
 			return PaginatedAccountSchema{}, err
 		}

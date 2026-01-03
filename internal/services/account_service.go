@@ -16,6 +16,7 @@ type AccountStore interface {
 	Create(ctx context.Context, data schemas.CreateAccountSchema) (schemas.AccountSchema, error)
 	Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error)
 	Delete(ctx context.Context, id int64) error
+	Reorder(ctx context.Context, items []schemas.AccountReorderItemSchema) error
 }
 
 type AccountService struct {
@@ -74,7 +75,7 @@ func (s *AccountService) Create(ctx context.Context, data schemas.CreateAccountS
 
 // Update validates and updates an existing account.
 func (s *AccountService) Update(ctx context.Context, id int64, data schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
-	if data.Name == nil && data.Type == nil && data.Note == nil && data.Amount == nil {
+	if data.Name == nil && data.Type == nil && data.Note == nil && data.Amount == nil && data.Icon == nil && data.IconColor == nil && data.ArchivedAt == nil {
 		return schemas.AccountSchema{}, repositories.ErrNoFieldsToUpdate
 	}
 
@@ -100,6 +101,24 @@ func (s *AccountService) Update(ctx context.Context, id int64, data schemas.Upda
 func (s *AccountService) Delete(ctx context.Context, id int64) error {
 	if err := s.store.Delete(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete account: %w", err)
+	}
+	return nil
+}
+
+// Reorder atomically updates display order for multiple accounts.
+// Validates that all IDs are unique to prevent data integrity issues.
+func (s *AccountService) Reorder(ctx context.Context, items []schemas.AccountReorderItemSchema) error {
+	// Validate uniqueness of IDs
+	idSet := make(map[int64]bool, len(items))
+	for _, item := range items {
+		if idSet[item.ID] {
+			return errors.New("duplicate account ID in reorder request")
+		}
+		idSet[item.ID] = true
+	}
+
+	if err := s.store.Reorder(ctx, items); err != nil {
+		return fmt.Errorf("failed to reorder accounts: %w", err)
 	}
 	return nil
 }
