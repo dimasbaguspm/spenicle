@@ -112,6 +112,15 @@ const router = createBrowserRouter([
                 ],
               },
               {
+                path: PAGE_ROUTES.INSIGHTS,
+                children: [
+                  {
+                    index: true,
+                    Component: lazy(() => import("./insights-page")),
+                  },
+                ],
+              },
+              {
                 path: PAGE_ROUTES.SETTINGS,
                 children: [
                   {
