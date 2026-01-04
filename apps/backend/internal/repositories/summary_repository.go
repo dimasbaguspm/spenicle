@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
 )
@@ -632,4 +633,60 @@ func (r *SummaryRepository) GetTagSummary(ctx context.Context, params schemas.Su
 	}
 
 	return schemas.SummaryTagSchema{Data: items}, nil
+}
+
+// GetTotalSummary returns aggregated transaction counts by type
+// Filters by date range if provided
+func (r *SummaryRepository) GetTotalSummary(ctx context.Context, params schemas.TotalSummaryParamModel) (schemas.TotalSummarySchema, error) {
+	// Build WHERE clause for date filtering
+	var whereClause string
+	var args []interface{}
+	argCount := 0
+	whereClause = "WHERE deleted_at IS NULL"
+
+	// Parse start date if provided
+	if params.StartDate != "" {
+		startDate, err := time.Parse(time.RFC3339, params.StartDate)
+		if err != nil {
+			return schemas.TotalSummarySchema{}, fmt.Errorf("invalid start date format: %w", err)
+		}
+		argCount++
+		whereClause += fmt.Sprintf(" AND date >= $%d", argCount)
+		args = append(args, startDate)
+	}
+
+	// Parse end date if provided
+	if params.EndDate != "" {
+		endDate, err := time.Parse(time.RFC3339, params.EndDate)
+		if err != nil {
+			return schemas.TotalSummarySchema{}, fmt.Errorf("invalid end date format: %w", err)
+		}
+		argCount++
+		whereClause += fmt.Sprintf(" AND date <= $%d", argCount)
+		args = append(args, endDate)
+	}
+
+	// Query to count transactions by type
+	sql := fmt.Sprintf(`
+		SELECT 
+			COUNT(*) FILTER (WHERE type = 'expense') as expense_count,
+			COUNT(*) FILTER (WHERE type = 'income') as income_count,
+			COUNT(*) FILTER (WHERE type = 'transfer') as transfer_count,
+			COUNT(*) as total_count
+		FROM transactions
+		%s
+	`, whereClause)
+
+	var result schemas.TotalSummarySchema
+	err := r.db.QueryRow(ctx, sql, args...).Scan(
+		&result.Expense,
+		&result.Income,
+		&result.Transfer,
+		&result.TotalTransactions,
+	)
+	if err != nil {
+		return schemas.TotalSummarySchema{}, fmt.Errorf("query total summary: %w", err)
+	}
+
+	return result, nil
 }

@@ -6,6 +6,7 @@ export const BASE_QUERY_KEYS = {
   CATEGORIES: ["categories"],
   TRANSACTIONS: ["transactions"],
   TRANSACTIONS_TEMPLATES: ["transactions-templates"],
+  INSIGHTS: ["insights"],
 };
 
 export const ENDPOINTS = {
@@ -42,5 +43,14 @@ export const ENDPOINTS = {
   TRANSACTIONS_TEMPLATES: {
     PAGINATED: "/transactions/templates",
     BY_ID: (id: number | string) => `/transactions/templates/${id}`,
+  },
+  INSIGHTS: {
+    ACCOUNTS_SUMMARY: "/summary/accounts",
+    ACCOUNTS_SPENDING_TRENDS: "/summary/accounts/trends",
+    CATEGORIES_SUMMARY: "/summary/categories",
+    CATEGORIES_SPENDING_TRENDS: "/summary/categories/trends",
+    TRANSACTIONS_SUMMARY: "/summary/transactions",
+    TAGS_SUMMARY: "/summary/tags",
+    TOTAL_SUMMARY: "/summary/total",
   },
 };

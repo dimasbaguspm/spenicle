@@ -74,18 +74,42 @@ export type CategoryBudgetPagedModel =
 export type CategoryBudgetModel =
   operations["get-category-budget"]["responses"]["200"]["content"]["application/json"];
 
-export type SummaryAccountsModel =
+export type InsightsAccountSearchModel = NonNullable<
+  operations["get-account-summary"]["parameters"]["query"]
+>;
+export type InsightsAccountsModel =
   operations["get-account-summary"]["responses"]["200"]["content"]["application/json"];
-export type SummaryAccountTrendsModel =
+export type InsightsAccountTrendsSearchModel = NonNullable<
+  operations["get-account-trends"]["parameters"]["query"]
+>;
+export type InsightsAccountTrendsModel =
   operations["get-account-trends"]["responses"]["200"]["content"]["application/json"];
-export type SummaryCategoryModel =
+export type InsightsCategorySearchModel = NonNullable<
+  operations["get-category-summary"]["parameters"]["query"]
+>;
+export type InsightsCategoryModel =
   operations["get-category-summary"]["responses"]["200"]["content"]["application/json"];
-export type SummaryCategoriesTrendsModel =
+export type InsightsCategoriesTrendsSearchModel = NonNullable<
+  operations["get-category-trends"]["parameters"]["query"]
+>;
+export type InsightsCategoriesTrendsModel =
   operations["get-category-trends"]["responses"]["200"]["content"]["application/json"];
-export type SummaryTagsModel =
+export type InsightsTagsSearchModel = NonNullable<
+  operations["get-tag-summary"]["parameters"]["query"]
+>;
+export type InsightsTagsModel =
   operations["get-tag-summary"]["responses"]["200"]["content"]["application/json"];
-export type SummaryTransactionModel =
+export type InsightsTransactionsSearchModel = NonNullable<
+  operations["get-transaction-summary"]["parameters"]["query"]
+>;
+export type InsightsTransactionModel =
   operations["get-transaction-summary"]["responses"]["200"]["content"]["application/json"];
+
+export type InsightsTotalSearchModel = NonNullable<
+  operations["get-total-summary"]["parameters"]["query"]
+>;
+export type InsightsTotalModel =
+  operations["get-total-summary"]["responses"]["200"]["content"]["application/json"];
 
 export type TagSearchModel = NonNullable<
   operations["list-tags"]["parameters"]["query"]

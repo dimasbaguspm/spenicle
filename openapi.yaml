@@ -1548,6 +1548,39 @@ components:
         - name
         - createdAt
       type: object
+    TotalSummarySchema:
+      additionalProperties: false
+      properties:
+        expense:
+          description: Total expense transactions
+          examples:
+            - 150
+          format: int64
+          type: integer
+        income:
+          description: Total income transactions
+          examples:
+            - 50
+          format: int64
+          type: integer
+        totalTransactions:
+          description: Total number of all transactions
+          examples:
+            - 220
+          format: int64
+          type: integer
+        transfer:
+          description: Total transfer transactions
+          examples:
+            - 20
+          format: int64
+          type: integer
+      required:
+        - expense
+        - income
+        - transfer
+        - totalTransactions
+      type: object
     TransactionRelationSchema:
       additionalProperties: false
       properties:
@@ -3452,6 +3485,49 @@ paths:
       summary: Get tag summary
       tags:
         - Summary
+  /summary/total:
+    get:
+      description: Returns aggregated transaction counts by type (expense, income, transfer) with optional date filtering
+      operationId: get-total-summary
+      parameters:
+        - description: Start date for filtering (ISO 8601 format, optional)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          schema:
+            description: Start date for filtering (ISO 8601 format, optional)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            type: string
+        - description: End date for filtering (ISO 8601 format, optional)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          schema:
+            description: End date for filtering (ISO 8601 format, optional)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotalSummarySchema"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get total transaction counts
+      tags:
+        - Summary
   /summary/transactions:
     get:
       description: Returns transaction summary grouped by frequency (daily, weekly, monthly, yearly) with optional date filtering
@@ -4358,4 +4434,54 @@ paths:
         required: true
       responses:
         "204":
-          description: N
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Add tag to transaction
+      tags:
+        - Transactions
+    put:
+      description: Replace all tags for a transaction
+      operationId: update-transaction-tags
+      parameters:
+        - description: Transaction ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Transaction ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTransactionTagsSchema"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Update transaction tags
+      tags:
+        - Transactions
+servers:
+  - description: Development server
+    url: http://localhost:8080

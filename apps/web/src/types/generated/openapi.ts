@@ -472,6 +472,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/summary/total": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get total transaction counts
+     * @description Returns aggregated transaction counts by type (expense, income, transfer) with optional date filtering
+     */
+    get: operations["get-total-summary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/summary/transactions": {
     parameters: {
       query?: never;
@@ -700,8 +720,15 @@ export interface paths {
      * @description Get all tags for a specific transaction
      */
     get: operations["get-transaction-tags"];
-    put?: never;
-    /** @description Add a tag to a transaction (creates tag if it doesn't exist) */
+    /**
+     * Update transaction tags
+     * @description Replace all tags for a transaction
+     */
+    put: operations["update-transaction-tags"];
+    /**
+     * Add tag to transaction
+     * @description Add a tag to a transaction (creates tag if it doesn't exist)
+     */
     post: operations["add-transaction-tag"];
     delete?: never;
     options?: never;
@@ -1798,6 +1825,32 @@ export interface components {
       /** Format: int64 */
       id: number;
       name: string;
+    };
+    TotalSummarySchema: {
+      /**
+       * Format: int64
+       * @description Total expense transactions
+       * @example 150
+       */
+      expense: number;
+      /**
+       * Format: int64
+       * @description Total income transactions
+       * @example 50
+       */
+      income: number;
+      /**
+       * Format: int64
+       * @description Total number of all transactions
+       * @example 220
+       */
+      totalTransactions: number;
+      /**
+       * Format: int64
+       * @description Total transfer transactions
+       * @example 20
+       */
+      transfer: number;
     };
     TransactionRelationSchema: {
       /** Format: date-time */
@@ -3428,6 +3481,46 @@ export interface operations {
       };
     };
   };
+  "get-total-summary": {
+    parameters: {
+      query?: {
+        /**
+         * @description Start date for filtering (ISO 8601 format, optional)
+         * @example 2024-01-01T00:00:00Z
+         */
+        startDate?: string;
+        /**
+         * @description End date for filtering (ISO 8601 format, optional)
+         * @example 2024-12-31T23:59:59Z
+         */
+        endDate?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TotalSummarySchema"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "get-transaction-summary": {
     parameters: {
       query?: {
@@ -4152,6 +4245,43 @@ export interface operations {
       };
     };
   };
+  "update-transaction-tags": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /**
+         * @description Transaction ID
+         * @example 1
+         */
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTransactionTagsSchema"];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "add-transaction-tag": {
     parameters: {
       query?: never;
@@ -4171,12 +4301,21 @@ export interface operations {
       };
     };
     responses: {
-      /** @description N */
+      /** @description No Content */
       204: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
       };
     };
   };

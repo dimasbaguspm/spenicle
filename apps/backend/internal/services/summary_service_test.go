@@ -15,6 +15,7 @@ type mockSummaryStore struct {
 	getAccountTrendFunc       func(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error)
 	getCategoryTrendFunc      func(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error)
 	getTagSummaryFunc         func(ctx context.Context, params schemas.SummaryTagParamSchema) (schemas.SummaryTagSchema, error)
+	getTotalSummaryFunc       func(ctx context.Context, params schemas.TotalSummaryParamModel) (schemas.TotalSummarySchema, error)
 }
 
 func (m *mockSummaryStore) GetTransactionSummary(ctx context.Context, params schemas.SummaryTransactionParamModel) (schemas.SummaryTransactionSchema, error) {
@@ -57,6 +58,13 @@ func (m *mockSummaryStore) GetTagSummary(ctx context.Context, params schemas.Sum
 		return m.getTagSummaryFunc(ctx, params)
 	}
 	return schemas.SummaryTagSchema{}, nil
+}
+
+func (m *mockSummaryStore) GetTotalSummary(ctx context.Context, params schemas.TotalSummaryParamModel) (schemas.TotalSummarySchema, error) {
+	if m.getTotalSummaryFunc != nil {
+		return m.getTotalSummaryFunc(ctx, params)
+	}
+	return schemas.TotalSummarySchema{}, nil
 }
 
 func TestSummaryServiceGetTransactionSummary(t *testing.T) {
