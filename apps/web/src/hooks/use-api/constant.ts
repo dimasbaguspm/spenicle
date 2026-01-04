@@ -3,6 +3,9 @@ export const BASE_URL = "http://localhost:8080";
 export const BASE_QUERY_KEYS = {
   AUTH: ["auth"],
   ACCOUNTS: ["accounts"],
+  CATEGORIES: ["categories"],
+  TRANSACTIONS: ["transactions"],
+  TRANSACTIONS_TEMPLATES: ["transactions-templates"],
 };
 
 export const ENDPOINTS = {
@@ -12,6 +15,32 @@ export const ENDPOINTS = {
   },
   ACCOUNT: {
     PAGINATED: "/accounts",
+    REORDER: "/accounts/reorder",
     BY_ID: (id: number | string) => `/accounts/${id}`,
+    BY_ID_BUDGETS: (id: number | string) => `/accounts/${id}/budgets`,
+    BY_ID_BUDGETS_DETAIL: (id: number | string, budgetId: number | string) =>
+      `/accounts/${id}/budgets/${budgetId}`,
+  },
+  CATEGORIES: {
+    PAGINATED: "/categories",
+    REORDER: "/categories/reorder",
+    BY_ID: (id: number | string) => `/categories/${id}`,
+    BY_ID_BUDGETS: (id: number | string) => `/categories/${id}/budgets`,
+    BY_ID_BUDGETS_DETAIL: (id: number | string, budgetId: number | string) =>
+      `/categories/${id}/budgets/${budgetId}`,
+  },
+  TRANSACTIONS: {
+    PAGINATED: "/transactions",
+    BY_ID: (id: number | string) => `/transactions/${id}`,
+    BY_ID_RELATIONS: (id: number | string) => `/transactions/${id}/relations`,
+    BY_ID_RELATIONS_DETAIL: (
+      id: number | string,
+      relationId: number | string
+    ) => `/transactions/${id}/relations/${relationId}`,
+    BY_ID_TAGS: (id: number | string) => `/transactions/${id}/tags`,
+  },
+  TRANSACTIONS_TEMPLATES: {
+    PAGINATED: "/transactions/templates",
+    BY_ID: (id: number | string) => `/transactions/templates/${id}`,
   },
 };

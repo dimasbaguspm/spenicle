@@ -1,4 +1,4 @@
-import { type operations } from "./generated/openapi";
+import { type operations, type paths } from "./generated/openapi";
 
 export type AccountSearchModel = NonNullable<
   operations["list-accounts"]["parameters"]["query"]
@@ -58,7 +58,7 @@ export type BudgetTemplateUpdateModel =
 export type CategorySearchModel = NonNullable<
   operations["list-categories"]["parameters"]["query"]
 >;
-export type CategoriesPageModel =
+export type CategoriesPagedModel =
   operations["list-categories"]["responses"]["200"]["content"]["application/json"];
 export type CategoryCreateModel =
   operations["create-category"]["requestBody"]["content"]["application/json"];
@@ -90,7 +90,7 @@ export type SummaryTransactionModel =
 export type TagSearchModel = NonNullable<
   operations["list-tags"]["parameters"]["query"]
 >;
-export type TagsPageModel =
+export type TagsPagedModel =
   operations["list-tags"]["responses"]["200"]["content"]["application/json"];
 export type TagCreateModel =
   operations["create-tag"]["requestBody"]["content"]["application/json"];
@@ -113,14 +113,15 @@ export type TransactionRelatedListModel =
 export type TransctionRelatedCreateModel =
   operations["create-transaction-relation"]["requestBody"]["content"]["application/json"] &
     operations["create-transaction-relation"]["parameters"]["path"];
+
 export type TransactionRelatedModel =
   operations["get-related-transaction"]["responses"]["200"]["content"]["application/json"];
 
 export type TransactionTagListModel =
   operations["get-transaction-tags"]["responses"]["200"]["content"]["application/json"];
 export type TransactionTagUpdateModel =
-  operations["update-transaction-tags"]["requestBody"]["content"]["application/json"] &
-    operations["update-transaction-tags"]["parameters"]["path"];
+  paths["/transactions/{id}/tags"]["post"]["requestBody"]["content"]["application/json"] &
+    paths["/transactions/{id}/tags"]["post"]["parameters"]["path"];
 export type TransactionTagCreateModel =
   operations["add-transaction-tag"]["requestBody"]["content"]["application/json"] &
     operations["add-transaction-tag"]["parameters"]["path"];

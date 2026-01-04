@@ -74,11 +74,11 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 	defer rows.Close()
 
 	result := schemas.PaginatedTransactionSchema{
-		Data:       []schemas.TransactionSchema{},
-		Page:       params.Page,
-		Limit:      params.Limit,
-		TotalItems: totalCount,
-		TotalPages: (totalCount + params.Limit - 1) / params.Limit,
+		Items:      []schemas.TransactionSchema{},
+		PageNumber: params.Page,
+		PageSize:   params.Limit,
+		TotalCount: totalCount,
+		PageTotal:  (totalCount + params.Limit - 1) / params.Limit,
 	}
 
 	if err := result.FromRows(rows); err != nil {

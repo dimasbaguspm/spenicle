@@ -17,4 +17,38 @@ export const QUERY_KEYS = {
     id,
     JSON.stringify(params ?? {}),
   ],
+  CATEGORY_INFINITE: (params: object = {}) => [
+    ...BASE_QUERY_KEYS.CATEGORIES,
+    "infinite",
+    JSON.stringify(params ?? {}),
+  ],
+  CATEGORY_PAGINATED: (params: object = {}) => [
+    ...BASE_QUERY_KEYS.CATEGORIES,
+    "paginated",
+    JSON.stringify(params ?? {}),
+  ],
+  CATEGORY_BY_ID: (id: number, params: object = {}) => [
+    ...BASE_QUERY_KEYS.CATEGORIES,
+    "by-id",
+    id,
+    JSON.stringify(params ?? {}),
+  ],
+  TRANSACTIONS: {
+    INFINITE: (params: object = {}) => [
+      ...BASE_QUERY_KEYS.TRANSACTIONS,
+      "infinite",
+      JSON.stringify(params ?? {}),
+    ],
+    PAGINATED: (params: object = {}) => [
+      ...BASE_QUERY_KEYS.TRANSACTIONS,
+      "paginated",
+      JSON.stringify(params ?? {}),
+    ],
+    BY_ID: (id: number, params: object = {}) => [
+      ...BASE_QUERY_KEYS.TRANSACTIONS,
+      "by-id",
+      id,
+      JSON.stringify(params ?? {}),
+    ],
+  },
 };

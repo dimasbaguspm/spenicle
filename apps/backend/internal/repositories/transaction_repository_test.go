@@ -44,12 +44,12 @@ func TestTransactionRepositoryList(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(result.Data) != 2 {
-			t.Errorf("expected 2 transactions, got %d", len(result.Data))
+		if len(result.Items) != 2 {
+			t.Errorf("expected 2 transactions, got %d", len(result.Items))
 		}
 
-		if result.TotalItems != 2 {
-			t.Errorf("expected TotalItems to be 2, got %d", result.TotalItems)
+		if result.TotalCount != 2 {
+			t.Errorf("expected TotalCount to be 2, got %d", result.TotalCount)
 		}
 	})
 
@@ -78,12 +78,12 @@ func TestTransactionRepositoryList(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(result.Data) != 1 {
-			t.Errorf("expected 1 transaction, got %d", len(result.Data))
+		if len(result.Items) != 1 {
+			t.Errorf("expected 1 transaction, got %d", len(result.Items))
 		}
 
-		if result.Data[0].Type != "expense" {
-			t.Errorf("expected type 'expense', got %s", result.Data[0].Type)
+		if result.Items[0].Type != "expense" {
+			t.Errorf("expected type 'expense', got %s", result.Items[0].Type)
 		}
 	})
 
@@ -113,16 +113,16 @@ func TestTransactionRepositoryList(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(result.Data) != 1 {
-			t.Errorf("expected 1 transaction, got %d", len(result.Data))
+		if len(result.Items) != 1 {
+			t.Errorf("expected 1 transaction, got %d", len(result.Items))
 		}
 
-		if result.Data[0].AccountID != 1 {
-			t.Errorf("expected AccountID 1, got %d", result.Data[0].AccountID)
+		if result.Items[0].AccountID != 1 {
+			t.Errorf("expected AccountID 1, got %d", result.Items[0].AccountID)
 		}
 
-		if result.Data[0].CategoryID != 1 {
-			t.Errorf("expected CategoryID 1, got %d", result.Data[0].CategoryID)
+		if result.Items[0].CategoryID != 1 {
+			t.Errorf("expected CategoryID 1, got %d", result.Items[0].CategoryID)
 		}
 	})
 }

@@ -4,6 +4,9 @@ import type {
   AccountModel,
   AccountCreateModel,
   AccountUpdateModel,
+  AccountReorderModel,
+  AccountBudgetPagedModel,
+  AccountBudgetModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -55,6 +58,31 @@ export const useApiAccountQuery = (
   });
 };
 
+export const useApiAccountBudgetsQuery = (
+  id: number,
+  options?: Partial<
+    UseApiQueryOptions<AccountBudgetPagedModel, unknown, unknown>
+  >
+) => {
+  return useApiQuery<AccountBudgetPagedModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.ACCOUNT_BY_ID(id, { includeBudgets: true }),
+    path: ENDPOINTS.ACCOUNT.BY_ID_BUDGETS(id),
+  });
+};
+
+export const useApiAccountBudgetDetailQuery = (
+  id: number,
+  budgetId: number,
+  options?: Partial<UseApiQueryOptions<AccountBudgetModel, unknown, unknown>>
+) => {
+  return useApiQuery<AccountBudgetModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.ACCOUNT_BY_ID(id, { includeBudgetDetail: budgetId }),
+    path: ENDPOINTS.ACCOUNT.BY_ID_BUDGETS_DETAIL(id, budgetId),
+  });
+};
+
 export const useApiCreateAccount = () => {
   const queryClient = useQueryClient();
   return useApiMutate<AccountModel, AccountCreateModel>({
@@ -62,11 +90,11 @@ export const useApiCreateAccount = () => {
     method: "POST",
     onSuccess: (data) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.ACCOUNT_PAGINATED().slice(0, 3),
+        queryKey: QUERY_KEYS.ACCOUNT_PAGINATED().slice(0, 2),
         exact: false,
       });
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.ACCOUNT_INFINITE().slice(0, 3),
+        queryKey: QUERY_KEYS.ACCOUNT_INFINITE().slice(0, 2),
         exact: false,
       });
       queryClient.setQueryData(QUERY_KEYS.ACCOUNT_BY_ID(data.id), data);
@@ -81,14 +109,32 @@ export const useApiUpdateAccount = () => {
     method: "PATCH",
     onSuccess: (data) => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.ACCOUNT_PAGINATED().slice(0, 3),
+        queryKey: QUERY_KEYS.ACCOUNT_PAGINATED().slice(0, 2),
         exact: false,
       });
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.ACCOUNT_INFINITE().slice(0, 3),
+        queryKey: QUERY_KEYS.ACCOUNT_INFINITE().slice(0, 2),
         exact: false,
       });
       queryClient.setQueryData(QUERY_KEYS.ACCOUNT_BY_ID(data.id), data);
+    },
+  });
+};
+
+export const useApiReorderAccounts = () => {
+  const queryClient = useQueryClient();
+  return useApiMutate<null, AccountReorderModel>({
+    path: ENDPOINTS.ACCOUNT.REORDER,
+    method: "POST",
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.ACCOUNT_PAGINATED().slice(0, 2),
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.ACCOUNT_INFINITE().slice(0, 2),
+        exact: false,
+      });
     },
   });
 };
@@ -100,11 +146,11 @@ export const useApiDeleteAccount = () => {
     method: "DELETE",
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.ACCOUNT_PAGINATED().slice(0, 3),
+        queryKey: QUERY_KEYS.ACCOUNT_PAGINATED().slice(0, 2),
         exact: false,
       });
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.ACCOUNT_INFINITE().slice(0, 3),
+        queryKey: QUERY_KEYS.ACCOUNT_INFINITE().slice(0, 2),
         exact: false,
       });
     },

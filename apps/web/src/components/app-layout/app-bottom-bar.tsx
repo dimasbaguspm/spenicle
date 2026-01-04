@@ -1,4 +1,6 @@
+import { BOTTOM_SHEET_ROUTES } from "@/constant/bottom-sheet-routes";
 import { DEEP_PAGE_LINKS } from "@/constant/page-routes";
+import { useBottomSheetProvider } from "@/providers/bottom-sheet-provider";
 import { BottomBar, Icon } from "@dimasbaguspm/versaur";
 import { Settings2Icon } from "lucide-react";
 import { useNavigate } from "react-router";
@@ -6,11 +8,12 @@ import { useNavigate } from "react-router";
 const BOTTOM_BAR_LINKS = [
   DEEP_PAGE_LINKS.DASHBOARD,
   DEEP_PAGE_LINKS.TRANSACTIONS_ALT,
-  DEEP_PAGE_LINKS.SUMMARY,
+  DEEP_PAGE_LINKS.INSIGHTS,
 ];
 
 export const AppBottomBar = () => {
   const navigate = useNavigate();
+  const { openBottomSheet } = useBottomSheetProvider();
 
   const handleNavigation = (path: string) => () => {
     navigate(path);
@@ -48,11 +51,13 @@ export const AppBottomBar = () => {
         );
       })}
 
-      <BottomBar.Item>
+      <BottomBar.Item onClick={() => openBottomSheet(BOTTOM_SHEET_ROUTES.MENU)}>
         <Icon
           as={Settings2Icon}
           size="md"
-          // color={isActive(DEEP_PAGE_LINKS.SETTINGS.path) ? "primary" : "inherit"}
+          color={
+            isActive(DEEP_PAGE_LINKS.SETTINGS.path) ? "primary" : "inherit"
+          }
         />
       </BottomBar.Item>
     </BottomBar>

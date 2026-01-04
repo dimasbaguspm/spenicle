@@ -5,7 +5,7 @@ import {
   RouterProvider,
 } from "react-router";
 
-import { AppLayout } from "@/core/app-layout";
+import { AppLayout } from "@/components/app-layout";
 import { lazy, Suspense, type PropsWithChildren } from "react";
 import { PAGE_ROUTES } from "@/constant/page-routes";
 import { DrawerProvider } from "@/providers/drawer-provider";
@@ -17,6 +17,9 @@ import { BottomSheetRouter } from "../bottom-sheet/bottom-sheet-router";
 import { AuthProvider, useAuthProvider } from "@/providers/auth-provider";
 import { PageLoader } from "@dimasbaguspm/versaur";
 import { SessionProvider } from "@/providers/session-provider";
+import { DRAWER_ROUTES } from "@/constant/drawer-routes";
+import { PAGE_HANDLES } from "@/constant/page-handles";
+import { FloatingActions } from "../floating-actions";
 
 export const ProtectedRoute = () => {
   const { isAuthenticated } = useAuthProvider();
@@ -67,23 +70,69 @@ const router = createBrowserRouter([
         children: [
           {
             element: (
-              <AppLayout>
-                <DrawerProvider>
-                  <ModalProvider>
-                    <BottomSheetProvider>
+              <DrawerProvider>
+                <ModalProvider>
+                  <BottomSheetProvider>
+                    <AppLayout>
                       <Outlet />
                       <DrawerRouter />
                       <ModalRouter />
                       <BottomSheetRouter />
-                    </BottomSheetProvider>
-                  </ModalProvider>
-                </DrawerProvider>
-              </AppLayout>
+                      <FloatingActions />
+                    </AppLayout>
+                  </BottomSheetProvider>
+                </ModalProvider>
+              </DrawerProvider>
             ),
             children: [
               {
                 path: PAGE_ROUTES.DASHBOARD,
                 Component: lazy(() => import("./dashboard-page")),
+              },
+              {
+                path: PAGE_ROUTES.TRANSACTIONS,
+                children: [
+                  {
+                    index: true,
+                    Component: lazy(() => import("./transactions-page")),
+                  },
+                  {
+                    path: PAGE_ROUTES.TRANSACTIONS_DATE,
+                    Component: lazy(() => import("./transactions-page")),
+                    handle: {
+                      floatingActionButton: [
+                        {
+                          label: "New Transaction",
+                          link: DRAWER_ROUTES.TRANSACTION_CREATE,
+                          type: PAGE_HANDLES.DRAWER,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+              {
+                path: PAGE_ROUTES.SETTINGS,
+                children: [
+                  {
+                    path: PAGE_ROUTES.SETTINGS_ACCOUNTS,
+                    handle: {
+                      floatingActionButton: [
+                        {
+                          label: "Add Account",
+                          link: DRAWER_ROUTES.ACCOUNT_CREATE,
+                          type: PAGE_HANDLES.DRAWER,
+                        },
+                      ],
+                    },
+                    Component: lazy(() => import("./settings-accounts-page")),
+                  },
+                  {
+                    path: PAGE_ROUTES.SETTINGS_CATEGORIES,
+                    handle: {},
+                    Component: lazy(() => import("./settings-categories-page")),
+                  },
+                ],
               },
             ],
           },

@@ -12,10 +12,10 @@ export const PAGE_ROUTES = {
   DASHBOARD: "/",
   TRANSACTIONS: "/transactions",
   TRANSACTIONS_DATE: ":year/:month/:day",
-  ACCOUNTS: "/accounts",
-  CATEGORIES: "/categories",
-  SUMMARY: "/summary",
+  INSIGHTS: "/insights",
   SETTINGS: "/settings",
+  SETTINGS_ACCOUNTS: "accounts",
+  SETTINGS_CATEGORIES: "categories",
 } as const;
 
 export const DEEP_PAGE_LINKS = {
@@ -35,25 +35,26 @@ export const DEEP_PAGE_LINKS = {
     title: "Transactions by Date",
     icon: ListCollapseIcon,
   },
-  ACCOUNTS: {
-    path: PAGE_ROUTES.ACCOUNTS,
-    title: "Accounts",
-    icon: WalletCardsIcon,
-  },
-  CATEGORIES: {
-    path: PAGE_ROUTES.CATEGORIES,
-    title: "Categories",
-    icon: TagsIcon,
-  },
-  SUMMARY: {
-    path: PAGE_ROUTES.SUMMARY,
-    title: "Summary",
+
+  INSIGHTS: {
+    path: PAGE_ROUTES.INSIGHTS,
+    title: "Insights",
     icon: ChartColumnIcon,
   },
   SETTINGS: {
     path: PAGE_ROUTES.SETTINGS,
     title: "Settings",
     icon: BoltIcon,
+  },
+  SETTINGS_ACCOUNTS: {
+    path: `${PAGE_ROUTES.SETTINGS}/${PAGE_ROUTES.SETTINGS_ACCOUNTS}`,
+    title: "Accounts",
+    icon: WalletCardsIcon,
+  },
+  SETTINGS_CATEGORIES: {
+    path: `${PAGE_ROUTES.SETTINGS}/${PAGE_ROUTES.SETTINGS_CATEGORIES}`,
+    title: "Categories",
+    icon: TagsIcon,
   },
 } as const;
 

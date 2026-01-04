@@ -2,10 +2,11 @@ package schemas
 
 // PaginatedBudgetSchema represents paginated budget results
 type PaginatedBudgetSchema struct {
+	PageTotal  int            `json:"pageTotal" doc:"Total number of pages" example:"5"`
+	PageNumber int            `json:"pageNumber" doc:"Current page number" example:"1"`
+	PageSize   int            `json:"pageSize" doc:"Number of items per page" example:"10"`
+	TotalCount int            `json:"totalCount" doc:"Total number of items" example:"50"`
 	Items      []BudgetSchema `json:"items" doc:"List of budgets"`
-	TotalCount int            `json:"totalCount" doc:"Total number of budgets" example:"100"`
-	Page       int            `json:"page" doc:"Current page number" example:"1"`
-	Limit      int            `json:"limit" doc:"Items per page" example:"10"`
 }
 
 // FromRows scans multiple database rows into BudgetSchema slice

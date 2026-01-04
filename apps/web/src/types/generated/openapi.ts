@@ -700,15 +700,8 @@ export interface paths {
      * @description Get all tags for a specific transaction
      */
     get: operations["get-transaction-tags"];
-    /**
-     * Update transaction tags
-     * @description Replace all tags for a transaction
-     */
-    put: operations["update-transaction-tags"];
-    /**
-     * Add tag to transaction
-     * @description Add a tag to a transaction (creates tag if it doesn't exist)
-     */
+    put?: never;
+    /** @description Add a tag to a transaction (creates tag if it doesn't exist) */
     post: operations["add-transaction-tag"];
     delete?: never;
     options?: never;
@@ -1465,20 +1458,26 @@ export interface components {
       items: components["schemas"]["BudgetSchema"][] | null;
       /**
        * Format: int64
-       * @description Items per page
-       * @example 10
-       */
-      limit: number;
-      /**
-       * Format: int64
        * @description Current page number
        * @example 1
        */
-      page: number;
+      pageNumber: number;
       /**
        * Format: int64
-       * @description Total number of budgets
-       * @example 100
+       * @description Number of items per page
+       * @example 10
+       */
+      pageSize: number;
+      /**
+       * Format: int64
+       * @description Total number of pages
+       * @example 5
+       */
+      pageTotal: number;
+      /**
+       * Format: int64
+       * @description Total number of items
+       * @example 50
        */
       totalCount: number;
     };
@@ -1487,16 +1486,22 @@ export interface components {
       items: components["schemas"]["BudgetTemplateSchema"][] | null;
       /**
        * Format: int64
-       * @description Items per page
-       * @example 10
-       */
-      limit: number;
-      /**
-       * Format: int64
        * @description Current page number
        * @example 1
        */
-      page: number;
+      pageNumber: number;
+      /**
+       * Format: int64
+       * @description Number of items per page
+       * @example 10
+       */
+      pageSize: number;
+      /**
+       * Format: int64
+       * @description Total number of pages
+       * @example 10
+       */
+      pageTotal: number;
       /**
        * Format: int64
        * @description Total number of budget templates
@@ -1544,35 +1549,58 @@ export interface components {
       totalPages: number;
     };
     PaginatedTransactionSchema: {
-      data: components["schemas"]["TransactionSchema"][] | null;
-      /** Format: int64 */
-      limit: number;
-      /** Format: int64 */
-      page: number;
-      /** Format: int64 */
-      totalItems: number;
-      /** Format: int64 */
-      totalPages: number;
-    };
-    PaginatedTransactionTemplateSchema: {
-      /** @description List of transaction templates */
-      items: components["schemas"]["TransactionTemplateSchema"][] | null;
-      /**
-       * Format: int64
-       * @description Items per page
-       * @example 10
-       */
-      limit: number;
+      /** @description List of transactions in current page */
+      items: components["schemas"]["TransactionSchema"][] | null;
       /**
        * Format: int64
        * @description Current page number
        * @example 1
        */
-      page: number;
+      pageNumber: number;
+      /**
+       * Format: int64
+       * @description Number of items per page
+       * @example 10
+       */
+      pageSize: number;
+      /**
+       * Format: int64
+       * @description Total number of pages
+       * @example 5
+       */
+      pageTotal: number;
       /**
        * Format: int64
        * @description Total number of items
-       * @example 100
+       * @example 50
+       */
+      totalCount: number;
+    };
+    PaginatedTransactionTemplateSchema: {
+      /** @description List of transaction templates in current page */
+      items: components["schemas"]["TransactionTemplateSchema"][] | null;
+      /**
+       * Format: int64
+       * @description Current page number
+       * @example 1
+       */
+      pageNumber: number;
+      /**
+       * Format: int64
+       * @description Number of items per page
+       * @example 10
+       */
+      pageSize: number;
+      /**
+       * Format: int64
+       * @description Total number of pages
+       * @example 5
+       */
+      pageTotal: number;
+      /**
+       * Format: int64
+       * @description Total number of items
+       * @example 50
        */
       totalCount: number;
     };
@@ -4124,43 +4152,6 @@ export interface operations {
       };
     };
   };
-  "update-transaction-tags": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /**
-         * @description Transaction ID
-         * @example 1
-         */
-        id: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdateTransactionTagsSchema"];
-      };
-    };
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Error */
-      default: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["ErrorModel"];
-        };
-      };
-    };
-  };
   "add-transaction-tag": {
     parameters: {
       query?: never;
@@ -4180,21 +4171,12 @@ export interface operations {
       };
     };
     responses: {
-      /** @description No Content */
+      /** @description N */
       204: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
-      };
-      /** @description Error */
-      default: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["ErrorModel"];
-        };
       };
     };
   };

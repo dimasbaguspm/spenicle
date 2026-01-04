@@ -53,8 +53,9 @@ func (r *BudgetTemplateRepository) List(ctx context.Context, params schemas.Sear
 		return &schemas.PaginatedBudgetTemplateSchema{
 			Items:      []schemas.BudgetTemplateSchema{},
 			TotalCount: 0,
-			Page:       params.Page,
-			Limit:      params.Limit,
+			PageNumber: params.Page,
+			PageSize:   params.Limit,
+			PageTotal:  0,
 		}, nil
 	}
 
@@ -101,8 +102,9 @@ func (r *BudgetTemplateRepository) List(ctx context.Context, params schemas.Sear
 	return &schemas.PaginatedBudgetTemplateSchema{
 		Items:      items,
 		TotalCount: totalCount,
-		Page:       params.Page,
-		Limit:      params.Limit,
+		PageNumber: params.Page,
+		PageSize:   params.Limit,
+		PageTotal:  (totalCount + params.Limit - 1) / params.Limit,
 	}, nil
 }
 

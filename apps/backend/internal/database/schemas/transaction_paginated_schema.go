@@ -5,11 +5,11 @@ import (
 )
 
 type PaginatedTransactionSchema struct {
-	Data       []TransactionSchema `json:"data"`
-	Page       int                 `json:"page"`
-	Limit      int                 `json:"limit"`
-	TotalItems int                 `json:"totalItems"`
-	TotalPages int                 `json:"totalPages"`
+	PageTotal  int                 `json:"pageTotal" doc:"Total number of pages" example:"5"`
+	PageNumber int                 `json:"pageNumber" doc:"Current page number" example:"1"`
+	PageSize   int                 `json:"pageSize" doc:"Number of items per page" example:"10"`
+	TotalCount int                 `json:"totalCount" doc:"Total number of items" example:"50"`
+	Items      []TransactionSchema `json:"items" doc:"List of transactions in current page"`
 }
 
 func (p *PaginatedTransactionSchema) FromRows(rows pgx.Rows) error {
@@ -31,7 +31,7 @@ func (p *PaginatedTransactionSchema) FromRows(rows pgx.Rows) error {
 		if err != nil {
 			return err
 		}
-		p.Data = append(p.Data, transaction)
+		p.Items = append(p.Items, transaction)
 	}
 	return rows.Err()
 }

@@ -107,11 +107,11 @@ func TestTransactionResourceList(t *testing.T) {
 		service := &MockTransactionService{
 			ListFunc: func(ctx context.Context, params schemas.SearchParamTransactionSchema) (schemas.PaginatedTransactionSchema, error) {
 				return schemas.PaginatedTransactionSchema{
-					Data:       []schemas.TransactionSchema{},
-					Page:       1,
-					Limit:      10,
-					TotalItems: 0,
-					TotalPages: 0,
+					Items:      []schemas.TransactionSchema{},
+					PageNumber: 1,
+					PageSize:   10,
+					TotalCount: 0,
+					PageTotal:  0,
 				}, nil
 			},
 		}

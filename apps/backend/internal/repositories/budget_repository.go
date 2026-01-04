@@ -53,8 +53,9 @@ func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamB
 		return &schemas.PaginatedBudgetSchema{
 			Items:      []schemas.BudgetSchema{},
 			TotalCount: 0,
-			Page:       params.Page,
-			Limit:      params.Limit,
+			PageNumber: params.Page,
+			PageSize:   params.Limit,
+			PageTotal:  0,
 		}, nil
 	}
 
@@ -111,8 +112,9 @@ func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamB
 	return &schemas.PaginatedBudgetSchema{
 		Items:      items,
 		TotalCount: totalCount,
-		Page:       params.Page,
-		Limit:      params.Limit,
+		PageNumber: params.Page,
+		PageSize:   params.Limit,
+		PageTotal:  (totalCount + params.Limit - 1) / params.Limit,
 	}, nil
 }
 
