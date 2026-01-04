@@ -25,15 +25,8 @@ export const TransactionCard: FC<TransactionCardProps> = ({
   hideNotesSubtitle,
   ...props
 }) => {
-  const {
-    variant,
-    amount,
-    capitalizedType,
-    dateTime,
-    time,
-    trimmedNotes,
-    isTransfer,
-  } = formatTransactionData(transaction);
+  const { variant, amount, capitalizedType, dateTime, time, trimmedNotes } =
+    formatTransactionData(transaction);
 
   return (
     <Card

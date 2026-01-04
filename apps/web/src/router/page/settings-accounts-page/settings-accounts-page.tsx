@@ -33,7 +33,7 @@ const SettingsAccountPage = () => {
   };
 
   const handleAccountClick = (account: AccountModel) => {
-    // openDrawer(DRAWER_ROUTES.VIEW_ACCOUNT, { accountId: account.id });
+    openDrawer(DRAWER_ROUTES.ACCOUNT_VIEW, { accountId: account.id });
   };
 
   return (

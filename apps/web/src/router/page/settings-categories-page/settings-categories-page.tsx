@@ -32,7 +32,7 @@ const SettingsCategoriesPage = () => {
   };
 
   const handleCategoryClick = (category: CategoryModel) => {
-    // openDrawer(DRAWER_ROUTES.VIEW_ACCOUNT, { accountId: account.id });
+    openDrawer(DRAWER_ROUTES.CATEGORY_VIEW, { categoryId: category.id });
   };
 
   return (

@@ -1,10 +1,9 @@
 import type { CategoryModel } from "@/types/schemas";
-import dayjs from "dayjs";
-import { capitalize, startCase } from "lodash";
+import { capitalize } from "lodash";
 import { nameToInitials } from "../name-to-initial";
 import { DateFormat, formatDate } from "../format-date";
 
-export const formatSpenicleCategory = (category: CategoryModel | null) => {
+export const formatCategoryData = (category: CategoryModel | null) => {
   const isIncome = category?.type === "income";
   const isExpense = category?.type === "expense";
   const isTransfer = category?.type === "transfer";

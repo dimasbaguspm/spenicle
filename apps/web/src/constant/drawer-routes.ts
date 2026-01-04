@@ -1,7 +1,13 @@
 export const DRAWER_ROUTES = {
   ACCOUNT_CREATE: "account-create",
+  ACCOUNT_VIEW: "account-view",
+  ACCOUNT_UPDATE: "account-update",
   CATEGORY_CREATE: "category-create",
+  CATEGORY_VIEW: "category-view",
+  CATEGORY_UPDATE: "category-update",
   TRANSACTION_CREATE: "transaction-create",
+  TRANSACTION_VIEW: "transaction-view",
+  TRANSACTION_UPDATE: "transaction-update",
   SELECT_SINGLE_ACCOUNT: "select-single-account",
   SELECT_SINGLE_CATEGORY: "select-single-category",
 } as const;

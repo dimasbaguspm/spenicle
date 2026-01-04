@@ -79,9 +79,9 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
   };
 
   const handleOnTransactionClick = (transaction: TransactionModel) => {
-    // openDrawer(DRAWER_ROUTES.DETAIL_TRANSACTION, {
-    //   transactionId: transaction.id,
-    // });
+    openDrawer(DRAWER_ROUTES.TRANSACTION_VIEW, {
+      transactionId: transaction.id,
+    });
   };
 
   const handleOnFilterClick = () => {

@@ -1,4 +1,4 @@
-import { formatSpenicleCategory } from "@/lib/format-data";
+import { formatCategoryData } from "@/lib/format-data";
 import { When } from "@/lib/when";
 import type { CategoryModel } from "@/types/schemas";
 import {
@@ -24,7 +24,7 @@ export const CategoryCard: FC<CategoryCardProps> = ({
   hideType,
   ...rest
 }) => {
-  const { variant, name, initialName, type } = formatSpenicleCategory(category);
+  const { variant, name, initialName, type } = formatCategoryData(category);
 
   const handleClick = () => {
     onClick?.(category);
