@@ -61,7 +61,34 @@ docker-compose up -d          # start PostgreSQL
 
 #### Web (`apps/web/`)
 
-(Guidelines will be added when web app is developed)
+Follow this checklist for web frontend work:
+
+- **Documentation:** Check `apps/web/README.md` for overview and `apps/web/docs/` for specifics
+- **Key docs:**
+  - Architecture & routing → `apps/web/docs/routing.md`
+  - State management → `apps/web/docs/state-management.md`
+  - Code conventions → `apps/web/docs/conventions.md`
+  - API integration → `apps/web/docs/api-integration.md`
+- **Type safety:** Always use TypeScript strictly (no `any`)
+- **API types:** Run `bun run generate:openapi-types` after backend schema changes
+- **Routing layers:** Understand the 4-layer system (Page/Drawer/Modal/BottomSheet)
+- **State:** Use Providers for cross-cutting concerns, TanStack Query for server state
+- **Naming:** Follow conventions in `apps/web/docs/conventions.md`
+  - Components: kebab-case files, PascalCase names (e.g., `account-card.tsx` exports `AccountCard`)
+  - Hooks: kebab-case with `use-` prefix (e.g., `use-session.ts`)
+  - Utils: kebab-case (e.g., `format-date.ts`)
+- **File structure:** Use barrel exports (`index.ts`) for clean imports
+- **Testing:** Add tests for complex logic and user interactions
+
+**Web Quick Commands:**
+
+```bash
+cd apps/web
+bun install                     # install dependencies
+bun run dev                     # start dev server
+bun run generate:openapi-types  # generate API types
+bun run build                   # build for production
+```
 
 #### CLI (`apps/cli/`)
 
@@ -104,11 +131,22 @@ If changes affect multiple apps:
 
 **Where to find:**
 
-- Architecture & patterns → `apps/backend/docs/code_standards.md`
-- Testing guidelines → `apps/backend/docs/testing_standards.md`
-- API documentation → `apps/backend/docs/{feature}_service.md`
-- Database schema → `apps/backend/internal/database/migrations/`
-- Schema examples → `apps/backend/internal/database/schemas/`
+- **Backend:**
+
+  - Architecture & patterns → `apps/backend/docs/code_standards.md`
+  - Testing guidelines → `apps/backend/docs/testing_standards.md`
+  - API documentation → `apps/backend/docs/{feature}_service.md`
+  - Database schema → `apps/backend/internal/database/migrations/`
+  - Schema examples → `apps/backend/internal/database/schemas/`
+
+- **Web:**
+  - Overview → `apps/web/README.md`
+  - Routing system → `apps/web/docs/routing.md`
+  - State management → `apps/web/docs/state-management.md`
+  - Code conventions → `apps/web/docs/conventions.md`
+  - API integration → `apps/web/docs/api-integration.md`
+  - Component examples → `apps/web/src/components/`
+  - Provider examples → `apps/web/src/providers/`
 
 **Working directory:**
 Always `cd` to the appropriate app directory before running commands:

@@ -32,11 +32,29 @@ Go-based REST API server providing financial management capabilities.
 - Summary and trend analysis
 - JWT authentication
 
+**Documentation:** See [apps/backend/docs/](apps/backend/docs/) for detailed guides
+
 ### Web (`apps/web/`)
 
-Web-based frontend for Spenicle (in development).
+React-based web frontend for Spenicle.
 
-**Status:** In Development
+**Tech Stack:**
+
+- React 19 + TypeScript + Bun
+- React Router v7 with multi-layer routing (Page/Drawer/Modal/Bottom Sheet)
+- TanStack Query for API integration
+- Tailwind CSS + shadcn/ui
+- OpenAPI-generated types
+
+**Key Features:**
+
+- Multi-layer routing system (4 independent navigation layers)
+- Context-based state management (Providers)
+- Session management (sessionStorage + localStorage)
+- Dynamic floating action buttons
+- Type-safe API integration with generated types
+
+**Documentation:** See [apps/web/docs/](apps/web/docs/)
 
 ### CLI (`apps/cli/`)
 
@@ -70,7 +88,15 @@ See [.github/copilot-instructions.md](.github/copilot-instructions.md) for AI as
 ## Project Status
 
 - ✅ **Backend:** MVP complete with core features
-- 🚧 **Web:** In development
+  - REST API with Huma framework
+  - PostgreSQL database
+  - JWT authentication
+  - Full transaction/account/budget management
+- 🚀 **Web:** Active development
+  - Multi-layer routing implemented
+  - Provider architecture established
+  - API integration complete
+  - Core UI components in progress
 - 🚧 **CLI:** In development
 - 🚧 **E2E Tests:** In development
 
