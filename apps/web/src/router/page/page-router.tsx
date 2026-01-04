@@ -115,6 +115,10 @@ const router = createBrowserRouter([
                 path: PAGE_ROUTES.SETTINGS,
                 children: [
                   {
+                    index: true,
+                    Component: lazy(() => import("./settings-page")),
+                  },
+                  {
                     path: PAGE_ROUTES.SETTINGS_ACCOUNTS,
                     handle: {
                       floatingActionButton: [
@@ -129,7 +133,15 @@ const router = createBrowserRouter([
                   },
                   {
                     path: PAGE_ROUTES.SETTINGS_CATEGORIES,
-                    handle: {},
+                    handle: {
+                      floatingActionButton: [
+                        {
+                          label: "Add Category",
+                          link: DRAWER_ROUTES.CATEGORY_CREATE,
+                          type: PAGE_HANDLES.DRAWER,
+                        },
+                      ],
+                    },
                     Component: lazy(() => import("./settings-categories-page")),
                   },
                 ],
