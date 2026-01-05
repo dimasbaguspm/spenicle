@@ -23,8 +23,8 @@ type SummaryTagSchema struct {
 
 // SummaryTagParamSchema represents query parameters for tag summary
 type SummaryTagParamSchema struct {
-	StartDate   time.Time `query:"startDate" doc:"Filter transactions from this date (ISO 8601)" example:"2024-01-01T00:00:00Z"`
-	EndDate     time.Time `query:"endDate" doc:"Filter transactions until this date (ISO 8601)" example:"2024-12-31T23:59:59Z"`
+	StartDate   time.Time `query:"startDate" doc:"Filter transactions from this date (ISO 8601)"  format:"date-time" example:"2024-01-01T00:00:00Z"`
+	EndDate     time.Time `query:"endDate" doc:"Filter transactions until this date (ISO 8601)" format:"date-time" example:"2024-12-31T23:59:59Z"`
 	Type        string    `query:"type" enum:"income,expense,transfer" doc:"Filter by transaction type"`
 	AccountIDs  []int     `query:"accountIds" doc:"Filter by account IDs (comma-separated)"`
 	CategoryIDs []int     `query:"categoryIds" doc:"Filter by category IDs (comma-separated)"`

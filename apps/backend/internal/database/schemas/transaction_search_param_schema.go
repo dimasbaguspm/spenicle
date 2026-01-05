@@ -3,8 +3,8 @@ package schemas
 type SearchParamTransactionSchema struct {
 	ID                    []int    `query:"id" doc:"Filter by transaction ID" minimum:"0"`
 	Type                  []string `query:"type" enum:"expense,income,transfer" doc:"Filter by transaction type"`
-	StartDate             string   `query:"startDate" doc:"Filter by start date (inclusive)" format:"date" example:"2023-01-01"`
-	EndDate               string   `query:"endDate" doc:"Filter by end date (inclusive)" format:"date" example:"2023-12-31"`
+	StartDate             string   `query:"startDate" doc:"Filter by start date (inclusive)" format:"date-time" example:"2023-01-01T00:00:00Z"`
+	EndDate               string   `query:"endDate" doc:"Filter by end date (inclusive)" format:"date-time" example:"2023-12-31T23:59:59Z"`
 	MinAmount             int64    `query:"minAmount" doc:"Filter by minimum amount" example:"1000"`
 	MaxAmount             int64    `query:"maxAmount" doc:"Filter by maximum amount" example:"5000"`
 	AccountIDs            []int    `query:"accountIds" doc:"Filter by account IDs" minimum:"0"`

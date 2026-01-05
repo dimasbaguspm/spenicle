@@ -1,8 +1,10 @@
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { useApiAccountsInfiniteQuery } from "@/hooks/use-api";
+import { useAccountFilter } from "@/hooks/use-filter-state";
 import { When } from "@/lib/when";
 import { useDrawerProvider } from "@/providers/drawer-provider";
 import { AccountCard } from "@/ui/account-card";
+import { AccountFilterFields } from "@/ui/account-filter-fields";
 import {
   Button,
   ButtonGroup,
@@ -35,14 +37,24 @@ export const AccountSelectSingleDrawer: FC<AccountSelectSingleDrawerProps> = ({
     typeof payload?.[payloadId] === "number" ? payload[payloadId] : null
   );
 
+  const filter = useAccountFilter({
+    defaultValues: {
+      type: ["expense", "income"].includes(payload?.type as string)
+        ? [payload.type as "expense" | "income"]
+        : [],
+    },
+    adapter: "state",
+  });
   const [
     accounts,
     ,
     { isInitialFetching, isFetchingNextPage, hasNextPage },
     { fetchNextPage },
   ] = useApiAccountsInfiniteQuery({
-    orderBy: "name",
-    orderDirection: "asc",
+    name: filter.appliedFilters.name,
+    type: filter.appliedFilters.type,
+    sortBy: "name",
+    sortOrder: "asc",
     pageSize: 15,
   });
 
@@ -81,6 +93,7 @@ export const AccountSelectSingleDrawer: FC<AccountSelectSingleDrawerProps> = ({
       </Drawer.Header>
 
       <Drawer.Body>
+        <AccountFilterFields control={filter} />
         <When condition={isInitialFetching}>
           <PageLoader />
         </When>
@@ -138,7 +151,6 @@ export const AccountSelectSingleDrawer: FC<AccountSelectSingleDrawerProps> = ({
           </When>
         </When>
       </Drawer.Body>
-
       <Drawer.Footer>
         <ButtonGroup alignment="end" fluid={!isDesktop}>
           <Button variant="ghost" onClick={handleOnCancel}>

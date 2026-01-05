@@ -2,8 +2,8 @@ package schemas
 
 // TotalSummaryParamModel defines the query parameters for total summary endpoint
 type TotalSummaryParamModel struct {
-	StartDate string `query:"startDate" doc:"Start date for filtering (ISO 8601 format, optional)" example:"2024-01-01T00:00:00Z"`
-	EndDate   string `query:"endDate" doc:"End date for filtering (ISO 8601 format, optional)" example:"2024-12-31T23:59:59Z"`
+	StartDate string `query:"startDate" doc:"Start date for filtering (ISO 8601 format, optional)" format:"date-time" example:"2024-01-01T00:00:00Z"`
+	EndDate   string `query:"endDate" doc:"End date for filtering (ISO 8601 format, optional)" format:"date-time" example:"2024-12-31T23:59:59Z"`
 }
 
 // TotalSummarySchema defines the response for total transaction summary

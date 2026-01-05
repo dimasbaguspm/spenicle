@@ -1,9 +1,11 @@
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { useApiAccountsInfiniteQuery } from "@/hooks/use-api";
+import { useAccountFilter } from "@/hooks/use-filter-state";
 import { When } from "@/lib/when";
 import { useDrawerProvider } from "@/providers/drawer-provider";
 import type { AccountModel } from "@/types/schemas";
 import { AccountCard } from "@/ui/account-card";
+import { AccountFilterFields } from "@/ui/account-filter-fields";
 import {
   Button,
   ButtonGroup,
@@ -19,12 +21,17 @@ import { PlusIcon, SearchXIcon } from "lucide-react";
 const SettingsAccountPage = () => {
   const { openDrawer } = useDrawerProvider();
 
+  const filters = useAccountFilter({ adapter: "url" });
   const [
     accounts,
     ,
     { isInitialFetching, isFetchingNextPage, hasNextPage },
     { fetchNextPage },
   ] = useApiAccountsInfiniteQuery({
+    sortBy: "name",
+    sortOrder: "asc",
+    name: filters.appliedFilters.name,
+    type: filters.appliedFilters.type,
     pageSize: 15,
   });
 
@@ -47,6 +54,8 @@ const SettingsAccountPage = () => {
       </PageLayout.HeaderRegion>
       <PageLayout.ContentRegion>
         <PageContent size="wide">
+          <AccountFilterFields control={filters} />
+
           <When condition={isInitialFetching}>
             <PageLoader />
           </When>

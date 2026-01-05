@@ -40,38 +40,19 @@ export const TransactionViewDrawer: FC<TransactionViewDrawerProps> = ({
   const [transactionData, , { isPending: isFetchingTransaction }] =
     useApiTransactionQuery(transactionId);
 
-  const [accountData, , { isPending: isFetchingAccount }] = useApiAccountQuery(
-    transactionData?.accountId || 0,
-    {
-      enabled: !!transactionData?.accountId,
-    }
-  );
-  const [
-    destinationAccountData,
-    ,
-    { isPending: isFetchingDestinationAccount },
-  ] = useApiAccountQuery(transactionData?.destinationAccountId || 0, {
-    enabled: !!transactionData?.destinationAccountId,
-  });
-  const [categoryData, , { isPending: isFetchingCategory }] =
-    useApiCategoryQuery(transactionData?.categoryId || 0, {
-      enabled: !!transactionData?.categoryId,
-    });
+  const isInitialLoading = isFetchingTransaction;
 
-  const isInitialLoading =
-    isFetchingTransaction ||
-    isFetchingAccount ||
-    isFetchingDestinationAccount ||
-    isFetchingCategory;
-
-  const { note, variant, capitalizedType, date, time, amount } =
-    formatTransactionData(transactionData);
-
-  const { name: accountName } = formatAccountData(accountData);
-  const { name: destinationAccountName } = formatAccountData(
-    destinationAccountData
-  );
-  const { name: categoryName } = formatCategoryData(categoryData);
+  const {
+    note,
+    variant,
+    capitalizedType,
+    date,
+    time,
+    amount,
+    relatedAccountName,
+    relatedDestinationAccountName,
+    relatedCategoryName,
+  } = formatTransactionData(transactionData);
 
   const handleOnEditClick = () => {
     openDrawer(DRAWER_ROUTES.TRANSACTION_UPDATE, {
@@ -87,13 +68,13 @@ export const TransactionViewDrawer: FC<TransactionViewDrawerProps> = ({
 
   const handleCategoryClick = () => {
     openDrawer(DRAWER_ROUTES.CATEGORY_VIEW, {
-      categoryId: categoryData?.id.toString() || "",
+      categoryId: transactionData?.category?.id.toString() || "",
     });
   };
 
   const handleAccountClick = () => {
     openDrawer(DRAWER_ROUTES.ACCOUNT_VIEW, {
-      accountId: accountData?.id.toString() || "",
+      accountId: transactionData?.account?.id.toString() || "",
     });
   };
 
@@ -148,14 +129,18 @@ export const TransactionViewDrawer: FC<TransactionViewDrawerProps> = ({
                 <Text>{amount}</Text>
               </AttributeList.Item>
               <AttributeList.Item title="Category">
-                <Anchor onClick={handleCategoryClick}>{categoryName}</Anchor>
+                <Anchor onClick={handleCategoryClick}>
+                  {relatedCategoryName}
+                </Anchor>
               </AttributeList.Item>
               <AttributeList.Item title="Source">
-                <Anchor onClick={handleAccountClick}>{accountName}</Anchor>
+                <Anchor onClick={handleAccountClick}>
+                  {relatedAccountName}
+                </Anchor>
               </AttributeList.Item>
-              <When condition={[destinationAccountName]}>
+              <When condition={[relatedDestinationAccountName]}>
                 <AttributeList.Item title="Destination">
-                  <Text>{destinationAccountName}</Text>
+                  <Text>{relatedDestinationAccountName}</Text>
                 </AttributeList.Item>
               </When>
               <When condition={[note]}>

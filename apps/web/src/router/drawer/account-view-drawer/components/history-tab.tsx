@@ -1,9 +1,11 @@
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { useApiTransactionsInfiniteQuery } from "@/hooks/use-api";
+import { useTransactionFilter } from "@/hooks/use-filter-state";
 import { When } from "@/lib/when";
 import { useDrawerProvider } from "@/providers/drawer-provider";
 import type { AccountModel, TransactionModel } from "@/types/schemas";
 import { TransactionCard } from "@/ui/transaction-card";
+import { TransactionFilterFields } from "@/ui/transaction-filter-fields";
 import {
   Button,
   ButtonGroup,
@@ -21,15 +23,19 @@ interface HistoryTabProps {
 export const HistoryTab: FC<HistoryTabProps> = ({ data }) => {
   const { openDrawer } = useDrawerProvider();
 
+  const filters = useTransactionFilter({ adapter: "state" });
   const [
     transactions,
     ,
     { hasNextPage, isLoading, isFetchingNextPage },
     { fetchNextPage },
   ] = useApiTransactionsInfiniteQuery({
-    limit: 15,
-    orderBy: "date",
-    accountId: [data.id],
+    pageSize: 15,
+    sortBy: "date",
+    accountIds: [data.id],
+    startDate: filters.appliedFilters.startDate,
+    endDate: filters.appliedFilters.endDate,
+    type: filters.appliedFilters.type,
   });
 
   const handleOnTransactionClick = (transaction: TransactionModel) => {
@@ -40,6 +46,7 @@ export const HistoryTab: FC<HistoryTabProps> = ({ data }) => {
 
   return (
     <>
+      <TransactionFilterFields control={filters} />
       <When condition={isLoading}>
         <PageLoader />
       </When>

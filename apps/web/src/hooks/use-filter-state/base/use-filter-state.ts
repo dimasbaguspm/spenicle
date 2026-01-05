@@ -13,7 +13,7 @@ export interface FilterStateAdapter {
   setParams: (params: URLSearchParams) => void;
 }
 
-export interface UseFilterStateReturn<T extends Record<string, unknown>> {
+export interface UseFilterStateReturn<T extends object> {
   /**
    * Get a single filter value as string or undefined
    */
@@ -55,16 +55,16 @@ export interface UseFilterStateReturn<T extends Record<string, unknown>> {
    * Remove all values for specific filter keys
    */
   removeAll: (keys: (keyof T)[]) => void;
-
-  /**
-   * Get current search params instance (for advanced usage)
-   */
-  searchParams: URLSearchParams;
 }
 
 export type FilterAdapterStateType = "url" | "state";
 
-export interface UseFilterStateOptions {
+export interface UseFilterStateOptions<T> {
+  /**
+   * Default filter values to initialize the state with
+   * @default {}
+   */
+  defaultValues?: Partial<T>;
   /**
    * Whether to replace the current history entry instead of pushing a new one
    * Only applies when adapter is 'url'
@@ -91,14 +91,21 @@ export interface UseFilterStateOptions {
  * A reusable hook for managing URL search parameters as filters
  * Provides CRUD operations with clear responsibilities
  */
-export const useFilterState = <T extends Record<string, unknown>>(
-  options: UseFilterStateOptions = {}
+export const useFilterState = <T extends object>(
+  options: UseFilterStateOptions<T> = {}
 ): UseFilterStateReturn<T> => {
-  const { replace = true, adapter = "url", customAdapter } = options;
+  const {
+    defaultValues = {},
+    replace = true,
+    adapter = "url",
+    customAdapter,
+  } = options;
 
   // Built-in adapters
   const urlAdapter = (): FilterStateAdapter => {
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams(
+      new URLSearchParams(defaultValues as Record<string, string>)
+    );
     return {
       getParams: () => searchParams,
       setParams: (params) => setSearchParams(params, { replace }),
@@ -107,7 +114,7 @@ export const useFilterState = <T extends Record<string, unknown>>(
 
   const stateAdapter = (): FilterStateAdapter => {
     const [searchParams, setSearchParams] = useState(
-      () => new URLSearchParams()
+      () => new URLSearchParams(defaultValues as Record<string, string>)
     );
     return {
       getParams: () => searchParams,
@@ -227,6 +234,5 @@ export const useFilterState = <T extends Record<string, unknown>>(
     addSingle,
     removeSingle,
     removeAll,
-    searchParams,
   };
 };

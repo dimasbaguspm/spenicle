@@ -1852,6 +1852,70 @@ export interface components {
        */
       transfer: number;
     };
+    TransactionAccountSchema: {
+      /**
+       * Format: int64
+       * @description Account balance
+       * @example 100000
+       */
+      amount: number;
+      /**
+       * @description Icon identifier
+       * @example wallet
+       */
+      icon?: string;
+      /**
+       * @description Icon color
+       * @example #4CAF50
+       */
+      iconColor?: string;
+      /**
+       * Format: int64
+       * @description Account ID
+       * @example 1
+       */
+      id: number;
+      /**
+       * @description Account name
+       * @example Cash
+       */
+      name: string;
+      /**
+       * @description Account type
+       * @example expense
+       * @enum {string}
+       */
+      type: "expense" | "income";
+    };
+    TransactionCategorySchema: {
+      /**
+       * @description Icon identifier
+       * @example food
+       */
+      icon?: string;
+      /**
+       * @description Icon color
+       * @example #FF5733
+       */
+      iconColor?: string;
+      /**
+       * Format: int64
+       * @description Category ID
+       * @example 1
+       */
+      id: number;
+      /**
+       * @description Category name
+       * @example Food
+       */
+      name: string;
+      /**
+       * @description Category type
+       * @example expense
+       * @enum {string}
+       */
+      type: "expense" | "income" | "transfer";
+    };
     TransactionRelationSchema: {
       /** Format: date-time */
       createdAt: string;
@@ -1863,26 +1927,37 @@ export interface components {
       transactionId: number;
     };
     TransactionSchema: {
-      /** Format: int64 */
-      accountId: number;
+      account: components["schemas"]["TransactionAccountSchema"];
       /** Format: int64 */
       amount: number;
-      /** Format: int64 */
-      categoryId: number;
+      category: components["schemas"]["TransactionCategorySchema"];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
       date: string;
       /** Format: date-time */
       deletedAt?: string;
-      /** Format: int64 */
-      destinationAccountId?: number;
+      destinationAccount: components["schemas"]["TransactionAccountSchema"];
       /** Format: int64 */
       id: number;
       note: string | null;
+      tags: components["schemas"]["TransactionTagSchema"][] | null;
       type: string;
       /** Format: date-time */
       updatedAt: string;
+    };
+    TransactionTagSchema: {
+      /**
+       * Format: int64
+       * @description Tag ID
+       * @example 1
+       */
+      id: number;
+      /**
+       * @description Tag name
+       * @example vacation
+       */
+      name: string;
     };
     TransactionTagsSchema: {
       tags: components["schemas"]["TagSchema"][] | null;
@@ -2302,14 +2377,14 @@ export interface operations {
         type?: ("expense" | "income")[] | null;
         /** @description Filter by archived state (true=archived, false=active, empty=all) */
         archived?: "true" | "false";
-        orderBy?:
+        sortBy?:
           | "name"
           | "type"
           | "amount"
           | "displayOrder"
           | "createdAt"
           | "updatedAt";
-        orderDirection?: "asc" | "desc";
+        sortOrder?: "asc" | "desc";
         pageNumber?: number;
         pageSize?: number;
       };
@@ -2998,8 +3073,8 @@ export interface operations {
         type?: ("expense" | "income" | "transfer")[] | null;
         /** @description Filter by archived state (true=archived, false=active, empty=all)" enum:"true,false */
         archived?: string;
-        orderBy?: "name" | "type" | "displayOrder" | "createdAt" | "updatedAt";
-        orderDirection?: "asc" | "desc";
+        sortBy?: "name" | "type" | "displayOrder" | "createdAt" | "updatedAt";
+        sortOrder?: "asc" | "desc";
         pageNumber?: number;
         pageSize?: number;
       };
@@ -3277,17 +3352,17 @@ export interface operations {
   };
   "get-account-summary": {
     parameters: {
-      query?: {
+      query: {
         /**
          * @description Start date for filtering (ISO 8601 format)
          * @example 2024-01-01T00:00:00Z
          */
-        startDate?: string;
+        startDate: string;
         /**
          * @description End date for filtering (ISO 8601 format)
          * @example 2024-12-31T23:59:59Z
          */
-        endDate?: string;
+        endDate: string;
       };
       header?: never;
       path?: never;
@@ -3356,17 +3431,17 @@ export interface operations {
   };
   "get-category-summary": {
     parameters: {
-      query?: {
+      query: {
         /**
          * @description Start date for filtering (ISO 8601 format)
          * @example 2024-01-01T00:00:00Z
          */
-        startDate?: string;
+        startDate: string;
         /**
          * @description End date for filtering (ISO 8601 format)
          * @example 2024-12-31T23:59:59Z
          */
-        endDate?: string;
+        endDate: string;
       };
       header?: never;
       path?: never;
@@ -3523,17 +3598,17 @@ export interface operations {
   };
   "get-transaction-summary": {
     parameters: {
-      query?: {
+      query: {
         /**
          * @description Start date for filtering (ISO 8601 format)
          * @example 2024-01-01T00:00:00Z
          */
-        startDate?: string;
+        startDate: string;
         /**
          * @description End date for filtering (ISO 8601 format)
          * @example 2024-12-31T23:59:59Z
          */
-        endDate?: string;
+        endDate: string;
         /**
          * @description Grouping frequency
          * @example monthly
@@ -3675,30 +3750,54 @@ export interface operations {
         id?: number[] | null;
         /** @description Filter by transaction type */
         type?: ("expense" | "income" | "transfer")[] | null;
-        /** @description Filter by account ID */
-        accountId?: number[] | null;
-        /** @description Filter by category ID */
-        categoryId?: number[] | null;
+        /**
+         * @description Filter by start date (inclusive)
+         * @example 2023-01-01
+         */
+        startDate?: string;
+        /**
+         * @description Filter by end date (inclusive)
+         * @example 2023-12-31
+         */
+        endDate?: string;
+        /**
+         * @description Filter by minimum amount
+         * @example 1000
+         */
+        minAmount?: number;
+        /**
+         * @description Filter by maximum amount
+         * @example 5000
+         */
+        maxAmount?: number;
+        /** @description Filter by account IDs */
+        accountIds?: number[] | null;
+        /** @description Filter by destination account IDs */
+        destinationAccountIds?: number[] | null;
+        /** @description Filter by category IDs */
+        categoryIds?: number[] | null;
+        /** @description Filter by tag IDs (returns transactions with any of these tags) */
+        tagIds?: number[] | null;
         /**
          * @description Page number for pagination
          * @example 1
          */
-        page?: number;
+        pageNumber?: number;
         /**
          * @description Number of items per page
          * @example 10
          */
-        limit?: number;
+        pageSize?: number;
         /**
          * @description Field to order by
          * @example date
          */
-        orderBy?: "id" | "type" | "date" | "amount" | "createdAt" | "updatedAt";
+        sortBy?: "id" | "type" | "date" | "amount" | "createdAt" | "updatedAt";
         /**
          * @description Order direction
          * @example desc
          */
-        orderDirection?: "asc" | "desc";
+        sortOrder?: "asc" | "desc";
       };
       header?: never;
       path?: never;

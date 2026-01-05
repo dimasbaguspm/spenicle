@@ -1,9 +1,11 @@
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { useApiCategoriesInfiniteQuery } from "@/hooks/use-api";
+import { useCategoryFilter } from "@/hooks/use-filter-state";
 import { When } from "@/lib/when";
 import { useDrawerProvider } from "@/providers/drawer-provider";
 import type { CategoryModel } from "@/types/schemas";
 import { CategoryCard } from "@/ui/category-card";
+import { CategoryFilterFields } from "@/ui/category-filter-fields";
 import {
   Button,
   ButtonGroup,
@@ -18,6 +20,9 @@ import { PlusIcon, SearchXIcon } from "lucide-react";
 
 const SettingsCategoriesPage = () => {
   const { openDrawer } = useDrawerProvider();
+
+  const filters = useCategoryFilter({ adapter: "url" });
+
   const [
     categories,
     ,
@@ -25,6 +30,10 @@ const SettingsCategoriesPage = () => {
     { fetchNextPage },
   ] = useApiCategoriesInfiniteQuery({
     pageSize: 15,
+    sortBy: "name",
+    sortOrder: "asc",
+    name: filters.appliedFilters.name,
+    type: filters.appliedFilters.type,
   });
 
   const handleOpenDrawer = () => {
@@ -46,6 +55,8 @@ const SettingsCategoriesPage = () => {
       </PageLayout.HeaderRegion>
       <PageLayout.ContentRegion>
         <PageContent size="wide">
+          <CategoryFilterFields control={filters} />
+
           <When condition={isInitialFetching}>
             <PageLoader />
           </When>

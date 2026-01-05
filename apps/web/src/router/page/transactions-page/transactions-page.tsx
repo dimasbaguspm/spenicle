@@ -28,6 +28,8 @@ import { PlusIcon, SearchXIcon } from "lucide-react";
 import { TabsDate } from "./components/tabs-date";
 import dayjs from "dayjs";
 import { TransactionCard } from "@/ui/transaction-card";
+import { useTransactionFilter } from "@/hooks/use-filter-state";
+import { ActionsControl } from "./components/actions-control";
 
 interface TransactionsPageProps {
   startDate: Dayjs;
@@ -38,16 +40,19 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  const filters = useTransactionFilter({ adapter: "url" });
   const [
     transactions,
     ,
     { hasNextPage, isLoading, isFetchingNextPage },
     { fetchNextPage },
   ] = useApiTransactionsInfiniteQuery({
-    // dateFrom: formatDate(startDate.startOf("day"), DateFormat.ISO_DATETIME),
-    // dateTo: formatDate(startDate.endOf("day"), DateFormat.ISO_DATETIME),
-    limit: 15,
-    orderBy: "date",
+    startDate: formatDate(startDate.startOf("day"), DateFormat.ISO_DATETIME),
+    endDate: formatDate(startDate.endOf("day"), DateFormat.ISO_DATETIME),
+    pageSize: 15,
+    sortBy: "date",
+    sortOrder: "asc",
+    type: filters.appliedFilters.type,
   });
 
   // Helper function to navigate while preserving search params
@@ -82,10 +87,6 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
     openDrawer(DRAWER_ROUTES.TRANSACTION_VIEW, {
       transactionId: transaction.id,
     });
-  };
-
-  const handleOnFilterClick = () => {
-    // openDrawer(DRAWER_ROUTES.FILTER_TRANSACTION);
   };
 
   const handleOnCalendarDateChange = (date: Dayjs) => {
@@ -139,6 +140,10 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
           size="wide"
           className="min-h-[calc(100dvh-25dvh)]"
         >
+          <ActionsControl
+            date={startDate}
+            onDateChange={handleOnCalendarDateChange}
+          />
           <When condition={isLoading}>
             <PageLoader />
           </When>

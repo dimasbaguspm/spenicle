@@ -15,8 +15,8 @@ type TransactionTemplateSchema struct {
 	Amount             int        `json:"amount" doc:"Transaction amount in cents"`
 	Description        *string    `json:"description,omitempty" doc:"Transaction description"`
 	Recurrence         string     `json:"recurrence" doc:"Recurrence pattern: none, daily, weekly, monthly, yearly" enum:"none,daily,weekly,monthly,yearly"`
-	StartDate          time.Time  `json:"startDate" doc:"Start date for recurring transactions"`
-	EndDate            *time.Time `json:"endDate,omitempty" doc:"End date for recurring transactions (optional)"`
+	StartDate          time.Time  `json:"startDate" doc:"Start date for recurring transactions" format:"date-time" example:"2024-01-01T00:00:00Z" required:"true"`
+	EndDate            *time.Time `json:"endDate,omitempty" doc:"End date for recurring transactions (optional)" format:"date-time" example:"2024-12-31T23:59:59Z"`
 	InstallmentCount   *int       `json:"installmentCount,omitempty" doc:"Total number of installments (for installment payments)"`
 	InstallmentCurrent int        `json:"installmentCurrent" doc:"Current installment number (0-based)"`
 	Note               *string    `json:"note,omitempty" doc:"Additional notes"`

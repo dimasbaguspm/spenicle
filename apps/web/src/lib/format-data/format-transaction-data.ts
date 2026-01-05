@@ -20,6 +20,11 @@ export const formatTransactionData = (transaction: TransactionModel | null) => {
   const capitalizedType = capitalize(transaction?.type);
   const amount = formatPrice(transaction?.amount ?? 0, PriceFormat.CURRENCY);
 
+  const relatedAccountName = transaction?.account?.name ?? "";
+  const relatedDestinationAccountName =
+    transaction?.destinationAccount?.name ?? "";
+  const relatedCategoryName = transaction?.category?.name ?? "";
+
   return {
     isIncome,
     isExpense,
@@ -29,6 +34,9 @@ export const formatTransactionData = (transaction: TransactionModel | null) => {
     capitalizedType,
     amount,
     note,
+    relatedAccountName,
+    relatedDestinationAccountName,
+    relatedCategoryName,
     time: transaction?.date
       ? formatDate(transaction.date, DateFormat.TIME_24H)
       : "",

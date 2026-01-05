@@ -79,26 +79,31 @@ export type InsightsAccountSearchModel = NonNullable<
 >;
 export type InsightsAccountsModel =
   operations["get-account-summary"]["responses"]["200"]["content"]["application/json"];
+
 export type InsightsAccountTrendsSearchModel = NonNullable<
   operations["get-account-trends"]["parameters"]["query"]
 >;
 export type InsightsAccountTrendsModel =
   operations["get-account-trends"]["responses"]["200"]["content"]["application/json"];
+
 export type InsightsCategorySearchModel = NonNullable<
   operations["get-category-summary"]["parameters"]["query"]
 >;
 export type InsightsCategoryModel =
   operations["get-category-summary"]["responses"]["200"]["content"]["application/json"];
+
 export type InsightsCategoriesTrendsSearchModel = NonNullable<
   operations["get-category-trends"]["parameters"]["query"]
 >;
 export type InsightsCategoriesTrendsModel =
   operations["get-category-trends"]["responses"]["200"]["content"]["application/json"];
+
 export type InsightsTagsSearchModel = NonNullable<
   operations["get-tag-summary"]["parameters"]["query"]
 >;
 export type InsightsTagsModel =
   operations["get-tag-summary"]["responses"]["200"]["content"]["application/json"];
+
 export type InsightsTransactionsSearchModel = NonNullable<
   operations["get-transaction-summary"]["parameters"]["query"]
 >;

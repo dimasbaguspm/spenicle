@@ -1,8 +1,10 @@
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { useApiCategoriesInfiniteQuery } from "@/hooks/use-api";
+import { useCategoryFilter } from "@/hooks/use-filter-state";
 import { When } from "@/lib/when";
 import { useDrawerProvider } from "@/providers/drawer-provider";
 import { CategoryCard } from "@/ui/category-card";
+import { CategoryFilterFields } from "@/ui/category-filter-fields";
 import {
   Button,
   ButtonGroup,
@@ -13,6 +15,7 @@ import {
   SelectableSingleInput,
   useDesktopBreakpoint,
 } from "@dimasbaguspm/versaur";
+import { filter } from "lodash";
 import { SearchXIcon, XIcon } from "lucide-react";
 import { type FC, useState } from "react";
 
@@ -27,19 +30,29 @@ export const CategorySelectSingleDrawer: FC<
   CategorySelectSingleDrawerProps
 > = ({ returnToDrawer, returnToDrawerId = null, payloadId, payload }) => {
   const isDesktop = useDesktopBreakpoint();
-  const { openDrawer, closeDrawer } = useDrawerProvider();
+  const { openDrawer } = useDrawerProvider();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     typeof payload?.[payloadId] === "number" ? payload[payloadId] : null
   );
 
+  const filters = useCategoryFilter({
+    defaultValues: {
+      type: ["expense", "income", "transfer"].includes(payload?.type as string)
+        ? [payload.type as "expense" | "income" | "transfer"]
+        : [],
+    },
+    adapter: "state",
+  });
   const [
     categories,
     ,
     { isInitialFetching, isFetchingNextPage, hasNextPage },
     { fetchNextPage },
   ] = useApiCategoriesInfiniteQuery({
-    orderBy: "name",
-    orderDirection: "asc",
+    name: filters.appliedFilters.name,
+    type: filters.appliedFilters.type,
+    sortBy: "name",
+    sortOrder: "asc",
     pageSize: 15,
   });
 
@@ -78,6 +91,7 @@ export const CategorySelectSingleDrawer: FC<
       </Drawer.Header>
 
       <Drawer.Body>
+        <CategoryFilterFields control={filters} />
         <When condition={isInitialFetching}>
           <PageLoader />
         </When>
