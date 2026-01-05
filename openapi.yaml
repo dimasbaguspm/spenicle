@@ -1581,6 +1581,88 @@ components:
         - transfer
         - totalTransactions
       type: object
+    TransactionAccountSchema:
+      additionalProperties: false
+      properties:
+        amount:
+          description: Account balance
+          examples:
+            - 100000
+          format: int64
+          type: integer
+        icon:
+          description: Icon identifier
+          examples:
+            - wallet
+          type: string
+        iconColor:
+          description: Icon color
+          examples:
+            - "#4CAF50"
+          type: string
+        id:
+          description: Account ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        name:
+          description: Account name
+          examples:
+            - Cash
+          type: string
+        type:
+          description: Account type
+          enum:
+            - expense
+            - income
+          examples:
+            - expense
+          type: string
+      required:
+        - id
+        - name
+        - type
+        - amount
+      type: object
+    TransactionCategorySchema:
+      additionalProperties: false
+      properties:
+        icon:
+          description: Icon identifier
+          examples:
+            - food
+          type: string
+        iconColor:
+          description: Icon color
+          examples:
+            - "#FF5733"
+          type: string
+        id:
+          description: Category ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        name:
+          description: Category name
+          examples:
+            - Food
+          type: string
+        type:
+          description: Category type
+          enum:
+            - expense
+            - income
+            - transfer
+          examples:
+            - expense
+          type: string
+      required:
+        - id
+        - name
+        - type
+      type: object
     TransactionRelationSchema:
       additionalProperties: false
       properties:
@@ -1605,15 +1687,13 @@ components:
     TransactionSchema:
       additionalProperties: false
       properties:
-        accountId:
-          format: int64
-          type: integer
+        account:
+          $ref: "#/components/schemas/TransactionAccountSchema"
         amount:
           format: int64
           type: integer
-        categoryId:
-          format: int64
-          type: integer
+        category:
+          $ref: "#/components/schemas/TransactionCategorySchema"
         createdAt:
           format: date-time
           type: string
@@ -1623,15 +1703,20 @@ components:
         deletedAt:
           format: date-time
           type: string
-        destinationAccountId:
-          format: int64
-          type: integer
+        destinationAccount:
+          $ref: "#/components/schemas/TransactionAccountSchema"
         id:
           format: int64
           type: integer
         note:
           type:
             - string
+            - "null"
+        tags:
+          items:
+            $ref: "#/components/schemas/TransactionTagSchema"
+          type:
+            - array
             - "null"
         type:
           type: string
@@ -1643,11 +1728,31 @@ components:
         - type
         - date
         - amount
-        - accountId
-        - categoryId
+        - account
+        - category
+        - destinationAccount
+        - tags
         - note
         - createdAt
         - updatedAt
+      type: object
+    TransactionTagSchema:
+      additionalProperties: false
+      properties:
+        id:
+          description: Tag ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        name:
+          description: Tag name
+          examples:
+            - vacation
+          type: string
+      required:
+        - id
+        - name
       type: object
     TransactionTagsSchema:
       additionalProperties: false
@@ -2208,7 +2313,7 @@ paths:
             type: string
         - explode: false
           in: query
-          name: orderBy
+          name: sortBy
           schema:
             enum:
               - name
@@ -2220,7 +2325,7 @@ paths:
             type: string
         - explode: false
           in: query
-          name: orderDirection
+          name: sortOrder
           schema:
             enum:
               - asc
@@ -2904,7 +3009,7 @@ paths:
             type: string
         - explode: false
           in: query
-          name: orderBy
+          name: sortBy
           schema:
             enum:
               - name
@@ -2915,7 +3020,7 @@ paths:
             type: string
         - explode: false
           in: query
-          name: orderDirection
+          name: sortOrder
           schema:
             enum:
               - asc
@@ -3204,6 +3309,7 @@ paths:
           explode: false
           in: query
           name: startDate
+          required: true
           schema:
             description: Start date for filtering (ISO 8601 format)
             examples:
@@ -3215,6 +3321,7 @@ paths:
           explode: false
           in: query
           name: endDate
+          required: true
           schema:
             description: End date for filtering (ISO 8601 format)
             examples:
@@ -3304,6 +3411,7 @@ paths:
           explode: false
           in: query
           name: startDate
+          required: true
           schema:
             description: Start date for filtering (ISO 8601 format)
             examples:
@@ -3315,6 +3423,7 @@ paths:
           explode: false
           in: query
           name: endDate
+          required: true
           schema:
             description: End date for filtering (ISO 8601 format)
             examples:
@@ -3538,6 +3647,7 @@ paths:
           explode: false
           in: query
           name: startDate
+          required: true
           schema:
             description: Start date for filtering (ISO 8601 format)
             examples:
@@ -3549,6 +3659,7 @@ paths:
           explode: false
           in: query
           name: endDate
+          required: true
           schema:
             description: End date for filtering (ISO 8601 format)
             examples:
@@ -3732,12 +3843,56 @@ paths:
             type:
               - array
               - "null"
-        - description: Filter by account ID
+        - description: Filter by start date (inclusive)
+          example: "2023-01-01"
           explode: false
           in: query
-          name: accountId
+          name: startDate
           schema:
-            description: Filter by account ID
+            description: Filter by start date (inclusive)
+            examples:
+              - "2023-01-01"
+            format: date
+            type: string
+        - description: Filter by end date (inclusive)
+          example: "2023-12-31"
+          explode: false
+          in: query
+          name: endDate
+          schema:
+            description: Filter by end date (inclusive)
+            examples:
+              - "2023-12-31"
+            format: date
+            type: string
+        - description: Filter by minimum amount
+          example: 1000
+          explode: false
+          in: query
+          name: minAmount
+          schema:
+            description: Filter by minimum amount
+            examples:
+              - 1000
+            format: int64
+            type: integer
+        - description: Filter by maximum amount
+          example: 5000
+          explode: false
+          in: query
+          name: maxAmount
+          schema:
+            description: Filter by maximum amount
+            examples:
+              - 5000
+            format: int64
+            type: integer
+        - description: Filter by account IDs
+          explode: false
+          in: query
+          name: accountIds
+          schema:
+            description: Filter by account IDs
             items:
               format: int64
               type: integer
@@ -3745,12 +3900,38 @@ paths:
             type:
               - array
               - "null"
-        - description: Filter by category ID
+        - description: Filter by destination account IDs
           explode: false
           in: query
-          name: categoryId
+          name: destinationAccountIds
           schema:
-            description: Filter by category ID
+            description: Filter by destination account IDs
+            items:
+              format: int64
+              type: integer
+            minimum: 0
+            type:
+              - array
+              - "null"
+        - description: Filter by category IDs
+          explode: false
+          in: query
+          name: categoryIds
+          schema:
+            description: Filter by category IDs
+            items:
+              format: int64
+              type: integer
+            minimum: 0
+            type:
+              - array
+              - "null"
+        - description: Filter by tag IDs (returns transactions with any of these tags)
+          explode: false
+          in: query
+          name: tagIds
+          schema:
+            description: Filter by tag IDs (returns transactions with any of these tags)
             items:
               format: int64
               type: integer
@@ -3762,7 +3943,7 @@ paths:
           example: 1
           explode: false
           in: query
-          name: page
+          name: pageNumber
           schema:
             default: 1
             description: Page number for pagination
@@ -3775,7 +3956,7 @@ paths:
           example: 10
           explode: false
           in: query
-          name: limit
+          name: pageSize
           schema:
             default: 10
             description: Number of items per page
@@ -3789,7 +3970,7 @@ paths:
           example: date
           explode: false
           in: query
-          name: orderBy
+          name: sortBy
           schema:
             default: createdAt
             description: Field to order by
@@ -3807,7 +3988,7 @@ paths:
           example: desc
           explode: false
           in: query
-          name: orderDirection
+          name: sortOrder
           schema:
             default: desc
             description: Order direction
@@ -3969,7 +4150,7 @@ paths:
         - bearer: []
       summary: List transaction templates
       tags:
-        - Transactions
+        - Transaction Templates
     post:
       description: Creates a new recurring transaction template
       operationId: create-transaction-template
@@ -3996,7 +4177,7 @@ paths:
         - bearer: []
       summary: Create transaction template
       tags:
-        - Transactions
+        - Transaction Templates
   /transactions/templates/{id}:
     delete:
       description: Soft deletes a transaction template by ID
@@ -4027,7 +4208,7 @@ paths:
         - bearer: []
       summary: Delete transaction template
       tags:
-        - Transactions
+        - Transaction Templates
     get:
       description: Returns a transaction template by ID
       operationId: get-transaction-template
@@ -4061,7 +4242,7 @@ paths:
         - bearer: []
       summary: Get transaction template
       tags:
-        - Transactions
+        - Transaction Templates
     patch:
       description: Updates a transaction template by ID
       operationId: update-transaction-template
@@ -4101,7 +4282,7 @@ paths:
         - bearer: []
       summary: Update transaction template
       tags:
-        - Transactions
+        - Transaction Templates
   /transactions/{id}:
     delete:
       description: Soft deletes a transaction by ID and reverts account balance
@@ -4245,7 +4426,7 @@ paths:
         - bearer: []
       summary: List related transactions
       tags:
-        - Transactions
+        - Transaction Relations
     post:
       description: Create a relation between two transactions
       operationId: create-transaction-relation
@@ -4285,7 +4466,7 @@ paths:
         - bearer: []
       summary: Create transaction relation
       tags:
-        - Transactions
+        - Transaction Relations
   /transactions/{id}/relations/{relatedId}:
     delete:
       description: Remove the relation between two transactions
@@ -4328,7 +4509,7 @@ paths:
         - bearer: []
       summary: Delete transaction relation
       tags:
-        - Transactions
+        - Transaction Relations
     get:
       description: Get details of a specific related transaction
       operationId: get-related-transaction
@@ -4374,7 +4555,7 @@ paths:
         - bearer: []
       summary: Get related transaction
       tags:
-        - Transactions
+        - Transaction Relations
   /transactions/{id}/tags:
     get:
       description: Get all tags for a specific transaction
@@ -4409,7 +4590,7 @@ paths:
         - bearer: []
       summary: Get transaction tags
       tags:
-        - Transactions
+        - Transaction Tags
     post:
       description: Add a tag to a transaction (creates tag if it doesn't exist)
       operationId: add-transaction-tag
@@ -4445,7 +4626,7 @@ paths:
         - bearer: []
       summary: Add tag to transaction
       tags:
-        - Transactions
+        - Transaction Tags
     put:
       description: Replace all tags for a transaction
       operationId: update-transaction-tags
@@ -4481,7 +4662,7 @@ paths:
         - bearer: []
       summary: Update transaction tags
       tags:
-        - Transactions
+        - Transaction Tags
 servers:
   - description: Development server
     url: http://localhost:8080
