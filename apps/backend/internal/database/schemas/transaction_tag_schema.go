@@ -1,15 +1,5 @@
 package schemas
 
-import "time"
-
-// TransactionTagSchema represents a transaction-tag relationship
-type TransactionTagSchema struct {
-	TransactionID int       `json:"transactionId"`
-	TagID         int       `json:"tagId"`
-	TagName       string    `json:"tagName"`
-	CreatedAt     time.Time `json:"createdAt"`
-}
-
 // TransactionTagsSchema represents all tags for a transaction
 type TransactionTagsSchema struct {
 	TransactionID int         `json:"transactionId"`

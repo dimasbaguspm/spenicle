@@ -2,8 +2,10 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
 	"github.com/dimasbaguspm/spenicle-api/internal/utils"
@@ -32,36 +34,46 @@ func NewTransactionRepository(db DB) *TransactionRepository {
 // Only returns non-deleted transactions (soft delete filter).
 func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchParamTransactionSchema) (schemas.PaginatedTransactionSchema, error) {
 	qb := utils.QueryBuilder()
-	qb.Add("deleted_at IS NULL")
-	qb.AddInFilter("id", params.ID)
-	qb.AddInFilterString("type", params.Type)
-	qb.AddInFilter("account_id", params.AccountIDs)
-	qb.AddInFilter("category_id", params.CategoryIDs)
-	qb.AddInFilter("destination_account_id", params.DestinationAccountIDs)
+	qb.Add("t.deleted_at IS NULL")
+	qb.AddInFilter("t.id", params.ID)
+	qb.AddInFilterString("t.type", params.Type)
+	qb.AddInFilter("t.account_id", params.AccountIDs)
+	qb.AddInFilter("t.category_id", params.CategoryIDs)
+	qb.AddInFilter("t.destination_account_id", params.DestinationAccountIDs)
+
+	// Add tag filter - transactions must have at least one of the specified tags
+	if len(params.TagIDs) > 0 {
+		placeholders := make([]string, len(params.TagIDs))
+		for i, tagID := range params.TagIDs {
+			idx := qb.AddArg(tagID)
+			placeholders[i] = fmt.Sprintf("$%d", idx)
+		}
+		qb.Add(fmt.Sprintf("t.id IN (SELECT transaction_id FROM transaction_tags WHERE tag_id IN (%s))", strings.Join(placeholders, ",")))
+	}
 
 	// Add date range filters
 	if params.StartDate != "" {
 		idx := qb.AddArg(params.StartDate)
-		qb.Add(fmt.Sprintf("date >= $%d", idx))
+		qb.Add(fmt.Sprintf("t.date >= $%d", idx))
 	}
 	if params.EndDate != "" {
 		idx := qb.AddArg(params.EndDate)
-		qb.Add(fmt.Sprintf("date <= $%d", idx))
+		qb.Add(fmt.Sprintf("t.date <= $%d", idx))
 	}
 
 	// Add amount range filters (0 means not set)
 	if params.MinAmount > 0 {
 		idx := qb.AddArg(params.MinAmount)
-		qb.Add(fmt.Sprintf("amount >= $%d", idx))
+		qb.Add(fmt.Sprintf("t.amount >= $%d", idx))
 	}
 	if params.MaxAmount > 0 {
 		idx := qb.AddArg(params.MaxAmount)
-		qb.Add(fmt.Sprintf("amount <= $%d", idx))
+		qb.Add(fmt.Sprintf("t.amount <= $%d", idx))
 	}
 
 	// Count total items with filters
 	whereClause, args := qb.ToWhereClause()
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM transactions %s", whereClause)
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM transactions t %s", whereClause)
 	var totalCount int
 	if err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
 		return schemas.PaginatedTransactionSchema{}, fmt.Errorf("count transactions: %w", err)
@@ -69,20 +81,37 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 
 	// Build ORDER BY clause and calculate pagination
 	validColumns := map[string]string{
-		"id":        "id",
-		"type":      "type",
-		"date":      "date",
-		"amount":    "amount",
-		"createdAt": "created_at",
-		"updatedAt": "updated_at",
+		"id":        "t.id",
+		"type":      "t.type",
+		"date":      "t.date",
+		"amount":    "t.amount",
+		"createdAt": "t.created_at",
+		"updatedAt": "t.updated_at",
 	}
 	orderBy := qb.BuildOrderBy(params.SortBy, params.SortOrder, validColumns)
 	offset := (params.PageNumber - 1) * params.PageSize
 	limitIdx := qb.NextArgIndex()
 
-	// Query with pagination
-	sql := fmt.Sprintf(`SELECT id, type, date, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at 
-	        FROM transactions 
+	// Query with pagination - JOIN with accounts and categories to get embedded data
+	sql := fmt.Sprintf(`SELECT 
+		t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
+		-- Account info
+		a.id, a.name, a.type, a.amount, a.icon, a.icon_color,
+		-- Category info
+		c.id, c.name, c.type, c.icon, c.icon_color,
+		-- Destination account info (nullable)
+		da.id, da.name, da.type, da.amount, da.icon, da.icon_color,
+		-- Tags info (array of JSON objects)
+		COALESCE(
+			(SELECT JSON_AGG(JSON_BUILD_OBJECT('id', tg.id, 'name', tg.name))
+			FROM transaction_tags tt
+			JOIN tags tg ON tt.tag_id = tg.id
+			WHERE tt.transaction_id = t.id), '[]'::json
+		) as tags
+		FROM transactions t
+		JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
+		JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
+		LEFT JOIN accounts da ON t.destination_account_id = da.id AND da.deleted_at IS NULL
 	        %s 
 	        %s 
 	        LIMIT $%d OFFSET $%d`, whereClause, orderBy, limitIdx, limitIdx+1)
@@ -109,26 +138,66 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 	return result, nil
 }
 
-// Get retrieves a single transaction by ID.
+// Get retrieves a single transaction by ID with embedded account, category, and tags data.
 // Returns ErrTransactionNotFound if not found or soft-deleted.
 func (r *TransactionRepository) Get(ctx context.Context, id int) (schemas.TransactionSchema, error) {
-	sql := `SELECT id, type, date, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at 
-	        FROM transactions 
-	        WHERE id = $1 AND deleted_at IS NULL`
+	sql := `SELECT 
+		t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
+		-- Account info
+		a.id, a.name, a.type, a.amount, a.icon, a.icon_color,
+		-- Category info
+		c.id, c.name, c.type, c.icon, c.icon_color,
+		-- Destination account info (nullable)
+		da.id, da.name, da.type, da.amount, da.icon, da.icon_color,
+		-- Tags info (array of JSON objects)
+		COALESCE(
+			(SELECT JSON_AGG(JSON_BUILD_OBJECT('id', tg.id, 'name', tg.name))
+			FROM transaction_tags tt
+			JOIN tags tg ON tt.tag_id = tg.id
+			WHERE tt.transaction_id = t.id), '[]'::json
+		) as tags
+		FROM transactions t
+		JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
+		JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
+		LEFT JOIN accounts da ON t.destination_account_id = da.id AND da.deleted_at IS NULL
+		WHERE t.id = $1 AND t.deleted_at IS NULL`
 
 	var transaction schemas.TransactionSchema
+	var destAccountID, destAccountAmount *int64
+	var destAccountName, destAccountType, destAccountIcon, destAccountIconColor *string
+	var tagsJSON []byte
+
 	err := r.db.QueryRow(ctx, sql, id).Scan(
 		&transaction.ID,
 		&transaction.Type,
 		&transaction.Date,
 		&transaction.Amount,
-		&transaction.AccountID,
-		&transaction.CategoryID,
-		&transaction.DestinationAccountID,
 		&transaction.Note,
 		&transaction.CreatedAt,
 		&transaction.UpdatedAt,
 		&transaction.DeletedAt,
+		// Account
+		&transaction.Account.ID,
+		&transaction.Account.Name,
+		&transaction.Account.Type,
+		&transaction.Account.Amount,
+		&transaction.Account.Icon,
+		&transaction.Account.IconColor,
+		// Category
+		&transaction.Category.ID,
+		&transaction.Category.Name,
+		&transaction.Category.Type,
+		&transaction.Category.Icon,
+		&transaction.Category.IconColor,
+		// Destination Account (nullable)
+		&destAccountID,
+		&destAccountName,
+		&destAccountType,
+		&destAccountAmount,
+		&destAccountIcon,
+		&destAccountIconColor,
+		// Tags (JSON array)
+		&tagsJSON,
 	)
 
 	if err != nil {
@@ -136,6 +205,34 @@ func (r *TransactionRepository) Get(ctx context.Context, id int) (schemas.Transa
 			return schemas.TransactionSchema{}, ErrTransactionNotFound
 		}
 		return schemas.TransactionSchema{}, fmt.Errorf("get transaction: %w", err)
+	}
+
+	// Populate internal ID fields for DB operations
+	transaction.AccountID = int(transaction.Account.ID)
+	transaction.CategoryID = int(transaction.Category.ID)
+
+	// Populate destination account if present
+	if destAccountID != nil {
+		destAccID := int(*destAccountID)
+		transaction.DestinationAccountID = &destAccID
+		transaction.DestinationAccount = &schemas.TransactionAccountSchema{
+			ID:        *destAccountID,
+			Name:      *destAccountName,
+			Type:      *destAccountType,
+			Amount:    *destAccountAmount,
+			Icon:      destAccountIcon,
+			IconColor: destAccountIconColor,
+		}
+	}
+
+	// Unmarshal tags JSON
+	if len(tagsJSON) > 0 {
+		if err := json.Unmarshal(tagsJSON, &transaction.Tags); err != nil {
+			return schemas.TransactionSchema{}, fmt.Errorf("unmarshal tags: %w", err)
+		}
+	}
+	if transaction.Tags == nil {
+		transaction.Tags = []schemas.TransactionTagSchema{}
 	}
 
 	return transaction, nil

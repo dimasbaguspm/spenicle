@@ -10,6 +10,7 @@ type SearchParamTransactionSchema struct {
 	AccountIDs            []int    `query:"accountIds" doc:"Filter by account IDs" minimum:"0"`
 	DestinationAccountIDs []int    `query:"destinationAccountIds" doc:"Filter by destination account IDs" minimum:"0"`
 	CategoryIDs           []int    `query:"categoryIds" doc:"Filter by category IDs" minimum:"0"`
+	TagIDs                []int    `query:"tagIds" doc:"Filter by tag IDs (returns transactions with any of these tags)" minimum:"0"`
 	PageNumber            int      `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination" example:"1"`
 	PageSize              int      `query:"pageSize" default:"10" minimum:"1" maximum:"100" doc:"Number of items per page" example:"10"`
 	SortBy                string   `query:"sortBy" default:"createdAt" enum:"id,type,date,amount,createdAt,updatedAt" doc:"Field to order by" example:"date"`

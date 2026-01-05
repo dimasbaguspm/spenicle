@@ -11,11 +11,51 @@ Where to look
 
 Core endpoints (JWT protected)
 
-- GET /transactions — paginated list (filters via `SearchParamTransactionSchema`: type, accountIds, categoryIds, startDate, endDate, minAmount, maxAmount)
+- GET /transactions — paginated list (filters via `SearchParamTransactionSchema`: type, accountIds, categoryIds, tagIds, startDate, endDate, minAmount, maxAmount)
+  - Returns transactions with embedded account/category objects and tags array (no separate requests needed)
+  - Uses SQL JOINs to fetch account and category data in single query
+  - Tag filter: returns transactions that have at least one of the specified tag IDs
 - POST /transactions — create (`CreateTransactionSchema`) → 201 + account balance update
 - GET /transactions/{id} — retrieve by id → 200 or 404
+  - Returns transaction with embedded account/category objects
 - PATCH /transactions/{id} — partial update (`UpdateTransactionSchema`) → 200 + account balance sync
 - DELETE /transactions/{id} — soft delete → 204 + account balance revert
+
+Response format
+
+Transaction responses include embedded objects with essential fields only:
+
+```json
+{
+  "id": 1,
+  "type": "expense",
+  "date": "2026-01-01T00:00:00Z",
+  "amount": 50000,
+  "account": {
+    "id": 1,
+    "name": "Cash",
+    "type": "expense",
+    "amount": 100000,
+    "icon": "wallet",
+    "iconColor": "#FF0000"
+  },
+  "category": {
+    "id": 1,
+    "name": "Food",
+    "type": "expense",
+    "icon": "food",
+    "iconColor": "#00FF00"
+  },
+  "destinationAccount": null,
+  "note": "Groceries",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z"
+}
+```
+
+Note: Embedded objects contain only basic information to minimize response size. For full account/category details, use the dedicated account/category endpoints.
+
+**Implementation details:** See `docs/embedded_data_pattern.md` for comprehensive guide on embedded data structure and fetching patterns.
 
 Validation & errors
 
@@ -35,6 +75,11 @@ DB notes
 - Soft delete implemented via `deleted_at` timestamp.
 - Transaction types: `expense`, `income`, `transfer` (must match category type)
 - Transfer transactions require `destination_account_id` field (nullable, only for transfers)
+- **Embedded data fetching**: List and Get operations use SQL JOINs to fetch account/category data
+  - Single query retrieves transaction + account + category + destination account (if applicable)
+  - Eliminates N+1 query problem for paginated lists
+  - Repository scans 26 columns: transaction (8) + account (6) + category (5) + destination account (6, nullable)
+  - Internal ID fields (`account_id`, `category_id`, `destination_account_id`) are populated for DB operations but hidden from JSON responses
 - Account balance sync:
   - CREATE: adds/subtracts amount from account based on transaction type
   - UPDATE: reverts old effect, applies new effect (handles account/amount/destination changes)
@@ -56,7 +101,20 @@ Type constraints
 
 Schema structure
 
-- **TransactionSchema**: full entity with timestamps, account_id, category_id
+- **TransactionSchema**: full entity with timestamps and embedded account/category objects
+  - Contains internal fields: `account_id`, `category_id`, `destination_account_id` (hidden from JSON with `json:"-"`)
+  - Embedded objects for easier frontend consumption:
+    - `account`: `TransactionAccountSchema` (id, name, type, amount, icon, iconColor)
+    - `category`: `TransactionCategorySchema` (id, name, type, icon, iconColor)
+    - `destinationAccount`: `*TransactionAccountSchema` (nullable, same fields as account)
+- **TransactionAccountSchema**: lightweight account representation in transaction responses
+  - Fields: id, name, type, amount, icon (optional), iconColor (optional)
+  - Used for `account` and `destinationAccount` fields in TransactionSchema
+  - Omits metadata fields like createdAt, updatedAt, note, displayOrder, archivedAt
+- **TransactionCategorySchema**: lightweight category representation in transaction responses
+  - Fields: id, name, type, icon (optional), iconColor (optional)
+  - Used for `category` field in TransactionSchema
+  - Omits metadata fields like createdAt, updatedAt, note, displayOrder, archivedAt
 - **CreateTransactionSchema**: type (required), date (optional, defaults to now), amount (required), account_id (required), category_id (required), note (optional)
 - **UpdateTransactionSchema**: all fields optional (partial update) - updates trigger account balance sync if amount/account changed
 - **SearchParamTransactionSchema**: pagination + filters (type, accountIds, destinationAccountIds, categoryIds, startDate, endDate, minAmount, maxAmount, sortBy, sortOrder, pageNumber, pageSize)

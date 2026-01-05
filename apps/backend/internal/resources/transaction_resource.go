@@ -129,7 +129,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/templates",
 		Summary:     "List transaction templates",
 		Description: "Returns a paginated list of transaction templates",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -141,7 +141,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/templates",
 		Summary:     "Create transaction template",
 		Description: "Creates a new recurring transaction template",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -153,7 +153,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/templates/{id}",
 		Summary:     "Get transaction template",
 		Description: "Returns a transaction template by ID",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -165,7 +165,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/templates/{id}",
 		Summary:     "Update transaction template",
 		Description: "Updates a transaction template by ID",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -177,7 +177,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/templates/{id}",
 		Summary:     "Delete transaction template",
 		Description: "Soft deletes a transaction template by ID",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -190,7 +190,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/{id}/tags",
 		Summary:     "Get transaction tags",
 		Description: "Get all tags for a specific transaction",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Tags"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -202,7 +202,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/{id}/tags",
 		Summary:     "Add tag to transaction",
 		Description: "Add a tag to a transaction (creates tag if it doesn't exist)",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Tags"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -214,7 +214,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/{id}/tags",
 		Summary:     "Update transaction tags",
 		Description: "Replace all tags for a transaction",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Tags"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -227,7 +227,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/{id}/relations",
 		Summary:     "List related transactions",
 		Description: "Get all transactions related to a specific transaction",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Relations"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -239,7 +239,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/{id}/relations/{relatedId}",
 		Summary:     "Get related transaction",
 		Description: "Get details of a specific related transaction",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Relations"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -251,7 +251,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/{id}/relations",
 		Summary:     "Create transaction relation",
 		Description: "Create a relation between two transactions",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Relations"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -263,7 +263,7 @@ func (r *TransactionResource) RegisterRoutes(api huma.API) {
 		Path:        "/transactions/{id}/relations/{relatedId}",
 		Summary:     "Delete transaction relation",
 		Description: "Remove the relation between two transactions",
-		Tags:        []string{"Transactions"},
+		Tags:        []string{"Transaction Relations"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
