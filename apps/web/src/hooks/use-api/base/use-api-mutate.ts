@@ -66,7 +66,10 @@ export const useApiMutate = <
       try {
         let response;
 
-        const templatedPath = path.replace(/:([a-zA-Z_]+)/g, (_, key) => {
+        const templatePathKey = /:([a-zA-Z_]+)/g;
+        const pathParams: string[] = [];
+        const templatedPath = path.replace(templatePathKey, (_, key) => {
+          pathParams.push(key); // Track all path parameters
           if (variables && typeof variables === "object" && key in variables) {
             return String((variables as Record<string, unknown>)[key]);
           }
@@ -98,23 +101,35 @@ export const useApiMutate = <
             });
             break;
           case "POST":
+            const postBody = { ...variables };
+            pathParams.forEach((param) => {
+              delete (postBody as Record<string, unknown>)[param];
+            });
             response = await axios.post<TData>(
               templatedPath,
-              variables,
+              postBody,
               axiosConfig
             );
             break;
           case "PUT":
+            const putBody = { ...variables };
+            pathParams.forEach((param) => {
+              delete (putBody as Record<string, unknown>)[param];
+            });
             response = await axios.put<TData>(
               templatedPath,
-              variables,
+              putBody,
               axiosConfig
             );
             break;
           case "PATCH":
+            const patchBody = { ...variables };
+            pathParams.forEach((param) => {
+              delete (patchBody as Record<string, unknown>)[param];
+            });
             response = await axios.patch<TData>(
               templatedPath,
-              variables,
+              patchBody,
               axiosConfig
             );
             break;

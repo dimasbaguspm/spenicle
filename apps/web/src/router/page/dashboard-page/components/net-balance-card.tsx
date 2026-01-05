@@ -34,24 +34,28 @@ export const NetBalanceCard = ({
       return [];
 
     const sorted = summaryTransactions
-      .map((item) => ({
-        month: dayjs(item.period).format("MMM"),
-        income: Math.abs(item.incomeAmount ?? 0),
-        expense: Math.abs(item.expenseAmount ?? 0),
-        net: item.net ?? 0,
-        date: item.period,
-      }))
+      .map((item) => {
+        const income = item.incomeAmount ?? 0;
+        const expense = Math.abs(item.expenseAmount ?? 0);
+        const net = item.net ?? 0;
+
+        return {
+          month: dayjs(item.period).format("MMM"),
+          income,
+          expense,
+          net,
+          date: item.period,
+        };
+      })
       .sort((a, b) => dayjs(a.date).unix() - dayjs(b.date).unix());
 
-    // Build running balance so each month carries over previous net
     let carry = 0;
     const withRunningBalance = sorted.map((item) => {
-      const runningBalance = carry + (item.net ?? 0);
+      const runningBalance = carry + item.net;
       carry = runningBalance;
       return { ...item, runningBalance };
     });
 
-    // On mobile, only show last 4 months (current month + 3 previous)
     return isMobile ? withRunningBalance.slice(-4) : withRunningBalance;
   }, [summaryTransactions, isMobile]);
 

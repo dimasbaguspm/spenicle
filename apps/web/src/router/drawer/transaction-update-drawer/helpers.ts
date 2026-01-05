@@ -62,13 +62,13 @@ export const formatDefaultValues = (
       time: transaction
         ? formatDate(dayjs(transaction.date), DateFormat.TIME_24H)
         : formatDate(dayjs(), DateFormat.TIME_24H),
-      accountId: transaction ? transaction.accountId : 0,
-      destinationAccountId: transaction
-        ? transaction.destinationAccountId || undefined
+      accountId: transaction?.account?.id ? transaction.account.id : 0,
+      destinationAccountId: transaction?.destinationAccount?.id
+        ? transaction.destinationAccount.id
         : undefined,
-      categoryId: transaction ? transaction.categoryId : 0,
-      amount: transaction ? transaction.amount : 0,
-      notes: transaction ? transaction.note || "" : "",
+      categoryId: transaction?.category?.id ? transaction.category.id : 0,
+      amount: transaction?.amount ?? 0,
+      notes: transaction?.note || "",
     };
   }
 };
@@ -76,9 +76,13 @@ export const formatDefaultValues = (
 export const extractDateTimeFromParams = (
   params: Record<string, string | undefined>
 ) => {
-  const year = params.year ? parseInt(params.year, 10) : dayjs().year();
-  const month = params.month ? parseInt(params.month, 10) : dayjs().month();
-  const day = params.day ? parseInt(params.day, 10) : dayjs().date();
+  if (!params.year || !params.month || !params.day) {
+    return {};
+  }
+
+  const year = parseInt(params.year, 10);
+  const month = parseInt(params.month, 10);
+  const day = parseInt(params.day, 10);
 
   const date = dayjs().set("year", year).set("month", month).set("date", day);
 

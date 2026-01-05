@@ -9,7 +9,7 @@ import type {
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { ENDPOINTS } from "../constant";
+import { BASE_QUERY_KEYS, ENDPOINTS } from "../constant";
 import { QUERY_KEYS } from "../queries-keys";
 import {
   useApiInfiniteQuery,
@@ -75,6 +75,10 @@ export const useApiCreateTransaction = () => {
         queryKey: QUERY_KEYS.TRANSACTIONS.INFINITE().slice(0, 2),
         exact: false,
       });
+      queryClient.invalidateQueries({
+        queryKey: BASE_QUERY_KEYS.INSIGHTS,
+        exact: false,
+      });
       queryClient.setQueryData(QUERY_KEYS.TRANSACTIONS.BY_ID(data.id), data);
     },
   });
@@ -94,6 +98,10 @@ export const useApiUpdateTransaction = () => {
         queryKey: QUERY_KEYS.TRANSACTIONS.INFINITE().slice(0, 2),
         exact: false,
       });
+      queryClient.invalidateQueries({
+        queryKey: BASE_QUERY_KEYS.INSIGHTS,
+        exact: false,
+      });
       queryClient.setQueryData(QUERY_KEYS.TRANSACTIONS.BY_ID(data.id), data);
     },
   });
@@ -111,6 +119,10 @@ export const useApiDeleteTransaction = () => {
       });
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.TRANSACTIONS.INFINITE().slice(0, 2),
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: BASE_QUERY_KEYS.INSIGHTS,
         exact: false,
       });
     },

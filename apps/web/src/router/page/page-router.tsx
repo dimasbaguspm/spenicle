@@ -88,6 +88,15 @@ const router = createBrowserRouter([
               {
                 path: PAGE_ROUTES.DASHBOARD,
                 Component: lazy(() => import("./dashboard-page")),
+                handle: {
+                  floatingActionButton: [
+                    {
+                      label: "New Transaction",
+                      link: DRAWER_ROUTES.TRANSACTION_CREATE,
+                      type: PAGE_HANDLES.DRAWER,
+                    },
+                  ],
+                },
               },
               {
                 path: PAGE_ROUTES.TRANSACTIONS,

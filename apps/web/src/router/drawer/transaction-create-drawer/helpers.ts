@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 export const formatDefaultValues = (
   payload?: Record<string, unknown>
 ): TransactionCreateFormSchema => {
+  console.log("Formatting default values with payload:", payload);
   return {
     type:
       payload?.type === "expense" ||
@@ -51,9 +52,13 @@ export const formatDefaultValues = (
 export const extractDateTimeFromParams = (
   params: Record<string, string | undefined>
 ) => {
-  const year = params.year ? parseInt(params.year, 10) : dayjs().year();
-  const month = params.month ? parseInt(params.month, 10) : dayjs().month();
-  const day = params.day ? parseInt(params.day, 10) : dayjs().date();
+  if (!params.year || !params.month || !params.day) {
+    return {};
+  }
+
+  const year = parseInt(params.year, 10);
+  const month = parseInt(params.month, 10);
+  const day = parseInt(params.day, 10);
 
   const date = dayjs().set("year", year).set("month", month).set("date", day);
 

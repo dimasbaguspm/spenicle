@@ -1,0 +1,122 @@
+import { DEEP_PAGE_LINKS } from "@/constant/page-routes";
+import { formatPrice, PriceFormat } from "@/lib/format-price";
+import {
+  Button,
+  ButtonGroup,
+  ButtonMenuIcon,
+  Heading,
+  Icon,
+  Text,
+  Tile,
+  useMobileBreakpoint,
+} from "@dimasbaguspm/versaur";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ChartColumnIcon,
+  EllipsisVerticalIcon,
+  ListCollapseIcon,
+} from "lucide-react";
+import { useNavigate } from "react-router";
+
+interface ThisMonthSummaryCardsProps {
+  totalIncome: number;
+  totalExpense: number;
+}
+
+export const ThisMonthSummaryCards = ({
+  totalIncome,
+  totalExpense,
+}: ThisMonthSummaryCardsProps) => {
+  const isMobile = useMobileBreakpoint();
+  const navigate = useNavigate();
+
+  const handleOnViewSummaryClick = () => {
+    navigate(DEEP_PAGE_LINKS.INSIGHTS.path);
+  };
+
+  const handleOnViewTransactionsClick = () => {
+    navigate(DEEP_PAGE_LINKS.TRANSACTIONS_ALT.path);
+  };
+
+  return (
+    <div>
+      <div className="flex flex-row justify-between items-center gap-3 mb-4">
+        <Heading as="h5" color="ghost">
+          This Month At Glance
+        </Heading>
+        {isMobile ? (
+          <ButtonMenuIcon
+            as={EllipsisVerticalIcon}
+            variant="outline"
+            aria-label="Actions"
+            placement="bottom-right"
+          >
+            <ButtonMenuIcon.Item onClick={handleOnViewSummaryClick}>
+              <Icon as={ChartColumnIcon} color="inherit" size="sm" />
+              Summary
+            </ButtonMenuIcon.Item>
+            <ButtonMenuIcon.Item onClick={handleOnViewTransactionsClick}>
+              <Icon as={ListCollapseIcon} color="inherit" size="sm" />
+              Transactions
+            </ButtonMenuIcon.Item>
+          </ButtonMenuIcon>
+        ) : (
+          <ButtonGroup>
+            <Button variant="outline" onClick={handleOnViewSummaryClick}>
+              <Icon as={ChartColumnIcon} color="inherit" size="sm" />
+              Summary
+            </Button>
+            <Button variant="outline" onClick={handleOnViewTransactionsClick}>
+              <Icon as={ListCollapseIcon} color="inherit" size="sm" />
+              Transactions
+            </Button>
+          </ButtonGroup>
+        )}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Tile>
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-xl bg-secondary-soft flex items-center justify-center">
+              <Icon as={ArrowUpIcon} color="secondary" />
+            </div>
+            <div className="flex flex-col">
+              <Text
+                as="small"
+                fontWeight="medium"
+                color="gray"
+                transform="uppercase"
+              >
+                Income
+              </Text>
+              <Heading as="h4" color="neutral">
+                {formatPrice(totalIncome, PriceFormat.CURRENCY)}
+              </Heading>
+            </div>
+          </div>
+        </Tile>
+
+        <Tile>
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-xl bg-primary-soft flex items-center justify-center">
+              <Icon as={ArrowDownIcon} color="primary" />
+            </div>
+            <div className="flex flex-col">
+              <Text
+                as="small"
+                fontWeight="medium"
+                color="gray"
+                transform="uppercase"
+              >
+                Expenses
+              </Text>
+              <Heading as="h4" color="neutral">
+                {formatPrice(totalExpense, PriceFormat.CURRENCY)}
+              </Heading>
+            </div>
+          </div>
+        </Tile>
+      </div>
+    </div>
+  );
+};

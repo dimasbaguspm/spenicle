@@ -20,6 +20,8 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { DashboardTransactionViewMode } from "./types";
 import { NetBalanceCard } from "./components/net-balance-card";
+import { ThisMonthSummaryCards } from "./components/this-month-summary-card";
+import { RecentTransactions } from "./components/recent-transactions";
 
 const DashboardPage = () => {
   const isMobile = useMobileBreakpoint();
@@ -27,15 +29,16 @@ const DashboardPage = () => {
   const navigate = useNavigate();
 
   const [totalSummary] = useApiInsightsTotalSummaryQuery({});
+  // Fetch transaction summary for the last 6 months to show trends
   const [summaryTransactions] = useApiInsightsTransactionsSummaryQuery({
     frequency: "monthly",
-    startDate: dayjs().subtract(6, "month").startOf("month").toISOString(),
+    startDate: dayjs().subtract(5, "month").startOf("month").toISOString(),
     endDate: dayjs().endOf("month").toISOString(),
   });
   const [transactions] = useApiTransactionsPaginatedQuery({
-    limit: 5,
-    orderBy: "date",
-    orderDirection: "desc",
+    pageSize: 5,
+    sortBy: "date",
+    sortOrder: "desc",
   });
 
   const [transactionViewMode, setTransactionViewMode] =
@@ -45,18 +48,18 @@ const DashboardPage = () => {
   const totalExpense = Math.abs(totalSummary?.expense ?? 0);
   const netBalance = totalIncome - totalExpense;
 
-  // Get current month summary from summaryTransactions
   const currentMonthSummary = useMemo(() => {
     if (
-      !Array.isArray(summaryTransactions) ||
-      summaryTransactions.length === 0
+      !Array.isArray(summaryTransactions?.data) ||
+      summaryTransactions.data.length === 0
     ) {
       return { income: 0, expense: 0 };
     }
-    const latest = summaryTransactions[summaryTransactions.length - 1];
+    const latest =
+      summaryTransactions.data[summaryTransactions.data.length - 1];
     return {
-      income: Math.abs(latest?.income ?? 0),
-      expense: Math.abs(latest?.expense ?? 0),
+      income: latest?.incomeAmount ?? 0,
+      expense: Math.abs(latest?.expenseAmount ?? 0),
     };
   }, [summaryTransactions]);
 
@@ -83,13 +86,10 @@ const DashboardPage = () => {
                 summaryTransactions={summaryTransactions?.data ?? []}
                 isMobile={isMobile}
               />
-
-              {/* <ThisMonthSummaryCards
+              <ThisMonthSummaryCards
                 totalIncome={currentMonthSummary.income}
                 totalExpense={currentMonthSummary.expense}
-                onViewSummaryClick={handleOnViewSummaryClick}
-                onViewTransactionsClick={handleOnViewTransactionsClick}
-              /> */}
+              />
             </div>
 
             <div className="lg:col-span-1 space-y-6">
@@ -121,17 +121,14 @@ const DashboardPage = () => {
                   onViewAll={handleViewAllScheduled}
                 />
               </When>
+              */}
               <When
                 condition={
                   transactionViewMode === DashboardTransactionViewMode.Recent
                 }
               >
-                <RecentTransactions
-                  transactions={transactions?.items ?? []}
-                  onTransactionClick={handleTransactionClick}
-                  onViewAll={handleViewAllTransactions}
-                />
-              </When> */}
+                <RecentTransactions transactions={transactions?.items ?? []} />
+              </When>
             </div>
           </div>
         </PageContent>

@@ -31,6 +31,7 @@ export const useApiInsightsAccountSummaryQuery = (
 ) => {
   return useApiQuery<InsightsAccountsModel, InsightsAccountSearchModel>({
     ...options,
+    queryParams: params,
     queryKey: QUERY_KEYS.INSIGHTS.ACCOUNTS_SUMMARY(params),
     path: ENDPOINTS.INSIGHTS.ACCOUNTS_SUMMARY,
   });
@@ -51,6 +52,7 @@ export const useApiInsightsAccountsTrendsQuery = (
     InsightsAccountTrendsSearchModel
   >({
     ...options,
+    queryParams: params,
     queryKey: QUERY_KEYS.INSIGHTS.ACCOUNTS_TRENDS(params),
     path: ENDPOINTS.INSIGHTS.ACCOUNTS_SPENDING_TRENDS,
   });
@@ -68,6 +70,7 @@ export const useApiInsightsCategoriesSummaryQuery = (
 ) => {
   return useApiQuery<InsightsCategoryModel, InsightsCategorySearchModel>({
     ...options,
+    queryParams: params,
     queryKey: QUERY_KEYS.INSIGHTS.CATEGORIES_SUMMARY(params),
     path: ENDPOINTS.INSIGHTS.CATEGORIES_SUMMARY,
   });
@@ -88,6 +91,7 @@ export const useApiInsightsCategoriesTrendsQuery = (
     InsightsCategoriesTrendsSearchModel
   >({
     ...options,
+    queryParams: params,
     queryKey: QUERY_KEYS.INSIGHTS.CATEGORIES_TRENDS(params),
     path: ENDPOINTS.INSIGHTS.CATEGORIES_SPENDING_TRENDS,
   });
@@ -106,6 +110,7 @@ export const useApiInsightsTransactionsSummaryQuery = (
   return useApiQuery<InsightsTransactionModel, InsightsTransactionsSearchModel>(
     {
       ...options,
+      queryParams: params,
       queryKey: QUERY_KEYS.INSIGHTS.TRANSACTIONS_SUMMARY(params),
       path: ENDPOINTS.INSIGHTS.TRANSACTIONS_SUMMARY,
     }
@@ -120,6 +125,7 @@ export const useApiInsightsTagsSummaryQuery = (
 ) => {
   return useApiQuery<InsightsTagsModel, InsightsTagsSearchModel>({
     ...options,
+    queryParams: params,
     queryKey: QUERY_KEYS.INSIGHTS.TAGS_SUMMARY(params),
     path: ENDPOINTS.INSIGHTS.TAGS_SUMMARY,
   });
@@ -133,6 +139,7 @@ export const useApiInsightsTotalSummaryQuery = (
 ) => {
   return useApiQuery<InsightsTotalModel, InsightsTotalSearchModel>({
     ...options,
+    queryParams: params,
     queryKey: QUERY_KEYS.INSIGHTS.TOTAL_SUMMARY(params),
     path: ENDPOINTS.INSIGHTS.TOTAL_SUMMARY,
   });
