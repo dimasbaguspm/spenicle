@@ -56,6 +56,8 @@ Tag system for organizing transactions with many-to-many relationships, automati
 
 ## Key Features
 
+- **Embedded Tags in Transactions**: Transaction responses include tags array with id/name (no separate request needed)
+- **Tag Filtering**: Filter transactions by tag IDs via `tagIds` query parameter in GET /transactions
 - **Automatic Tag Creation**: Adding non-existent tag to transaction creates it
 - **Cascade Delete**: Deleting transaction/tag removes associations
 - **Duplicate Prevention**: Composite PK prevents duplicate tag assignments
@@ -65,6 +67,9 @@ Tag system for organizing transactions with many-to-many relationships, automati
 ## Usage Examples
 
 ```bash
+# Filter transactions by tags (returns transactions with at least one of the specified tag IDs)
+curl "/transactions?tagIds=1,2" -H "Authorization: Bearer $TOKEN"
+
 # Create and assign tag
 curl -X POST /transactions/123/tags -d '{"name": "groceries"}' -H "Authorization: Bearer $TOKEN"
 

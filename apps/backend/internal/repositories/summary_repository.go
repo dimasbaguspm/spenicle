@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+	"github.com/dimasbaguspm/spenicle-api/internal/utils"
 )
 
 type SummaryRepository struct {
@@ -19,8 +20,11 @@ func NewSummaryRepository(db DB) *SummaryRepository {
 
 // GetTransactionSummary returns transaction summary grouped by frequency (daily, weekly, monthly, yearly).
 // Uses efficient SQL with GROUP BY and aggregations.
-// Filters by date range if provided.
+// Always returns all periods between startDate and endDate with zero values for periods without transactions.
 func (r *SummaryRepository) GetTransactionSummary(ctx context.Context, params schemas.SummaryTransactionParamModel) (schemas.SummaryTransactionSchema, error) {
+	// Generate all periods between start and end dates
+	allPeriods := utils.GeneratePeriods(params.StartDate, params.EndDate, params.Frequency)
+
 	// Determine the date format and grouping based on frequency
 	var dateFormat string
 	switch params.Frequency {
@@ -34,24 +38,7 @@ func (r *SummaryRepository) GetTransactionSummary(ctx context.Context, params sc
 		dateFormat = "TO_CHAR(date, 'YYYY-MM')"
 	}
 
-	// Build WHERE clause for date filtering
-	var whereClause string
-	var args []interface{}
-	argCount := 0
-	whereClause = "WHERE deleted_at IS NULL"
-
-	if !params.StartDate.IsZero() {
-		argCount++
-		whereClause += fmt.Sprintf(" AND date >= $%d", argCount)
-		args = append(args, params.StartDate)
-	}
-	if !params.EndDate.IsZero() {
-		argCount++
-		whereClause += fmt.Sprintf(" AND date <= $%d", argCount)
-		args = append(args, params.EndDate)
-	}
-
-	// Efficient SQL query using CASE statements for conditional aggregation
+	// Build WHERE clause for date filtering - now always required
 	sql := fmt.Sprintf(`
 		SELECT 
 			%s as period,
@@ -64,18 +51,19 @@ func (r *SummaryRepository) GetTransactionSummary(ctx context.Context, params sc
 			COALESCE(SUM(amount) FILTER (WHERE type = 'transfer'), 0) as transfer_amount,
 			COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) - COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as net
 		FROM transactions
-		%s
+		WHERE deleted_at IS NULL AND date >= $1 AND date <= $2
 		GROUP BY period
 		ORDER BY period DESC
-	`, dateFormat, whereClause)
+	`, dateFormat)
 
-	rows, err := r.db.Query(ctx, sql, args...)
+	rows, err := r.db.Query(ctx, sql, params.StartDate, params.EndDate)
 	if err != nil {
 		return schemas.SummaryTransactionSchema{}, fmt.Errorf("query transaction summary: %w", err)
 	}
 	defer rows.Close()
 
-	var items []schemas.SummaryTransactionItem
+	// Build map of existing data
+	dataMap := make(map[string]schemas.SummaryTransactionItem)
 	for rows.Next() {
 		var item schemas.SummaryTransactionItem
 		if err := rows.Scan(
@@ -91,11 +79,29 @@ func (r *SummaryRepository) GetTransactionSummary(ctx context.Context, params sc
 		); err != nil {
 			return schemas.SummaryTransactionSchema{}, fmt.Errorf("scan transaction summary: %w", err)
 		}
-		items = append(items, item)
+		dataMap[item.Period] = item
 	}
 
-	if items == nil {
-		items = []schemas.SummaryTransactionItem{}
+	// Fill in missing periods with zero values
+	items := make([]schemas.SummaryTransactionItem, 0, len(allPeriods))
+	for i := len(allPeriods) - 1; i >= 0; i-- { // Reverse to get DESC order
+		period := allPeriods[i]
+		if item, exists := dataMap[period]; exists {
+			items = append(items, item)
+		} else {
+			// Create zero-value item for missing period
+			items = append(items, schemas.SummaryTransactionItem{
+				Period:         period,
+				TotalCount:     0,
+				IncomeCount:    0,
+				ExpenseCount:   0,
+				TransferCount:  0,
+				IncomeAmount:   0,
+				ExpenseAmount:  0,
+				TransferAmount: 0,
+				Net:            0,
+			})
+		}
 	}
 
 	return schemas.SummaryTransactionSchema{
@@ -246,6 +252,9 @@ func (r *SummaryRepository) GetCategorySummary(ctx context.Context, params schem
 
 // GetAccountTrend returns trend analysis for accounts over time
 func (r *SummaryRepository) GetAccountTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error) {
+	// Generate all periods between start and end dates
+	allPeriods := utils.GeneratePeriods(params.StartDate, params.EndDate, params.Frequency)
+
 	// Determine the date format based on frequency
 	var dateFormat string
 	switch params.Frequency {
@@ -317,6 +326,35 @@ func (r *SummaryRepository) GetAccountTrend(ctx context.Context, params schemas.
 		})
 	}
 
+	// Fill missing periods for each account
+	for accountID := range accountMap {
+		item := accountMap[accountID]
+		periodMap := make(map[string]schemas.TrendItem)
+		for _, p := range item.Periods {
+			periodMap[p.Period] = p
+		}
+
+		// Rebuild periods with all expected periods
+		filledPeriods := make([]schemas.TrendItem, 0, len(allPeriods))
+		for _, period := range allPeriods {
+			if existingPeriod, exists := periodMap[period]; exists {
+				filledPeriods = append(filledPeriods, existingPeriod)
+			} else {
+				// Create zero-value period
+				filledPeriods = append(filledPeriods, schemas.TrendItem{
+					Period:         period,
+					TotalAmount:    0,
+					IncomeAmount:   0,
+					ExpenseAmount:  0,
+					TransferAmount: 0,
+					Net:            0,
+					Count:          0,
+				})
+			}
+		}
+		item.Periods = filledPeriods
+	}
+
 	// Calculate trends and changes for each account
 	var data []schemas.AccountTrendItem
 	for _, accountID := range accountIDs {
@@ -340,6 +378,9 @@ func (r *SummaryRepository) GetAccountTrend(ctx context.Context, params schemas.
 
 // GetCategoryTrend returns trend analysis for categories over time
 func (r *SummaryRepository) GetCategoryTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error) {
+	// Generate all periods between start and end dates
+	allPeriods := utils.GeneratePeriods(params.StartDate, params.EndDate, params.Frequency)
+
 	// Determine the date format based on frequency
 	var dateFormat string
 	switch params.Frequency {
@@ -411,6 +452,35 @@ func (r *SummaryRepository) GetCategoryTrend(ctx context.Context, params schemas
 			Net:            net,
 			Count:          count,
 		})
+	}
+
+	// Fill missing periods for each category
+	for categoryID := range categoryMap {
+		item := categoryMap[categoryID]
+		periodMap := make(map[string]schemas.TrendItem)
+		for _, p := range item.Periods {
+			periodMap[p.Period] = p
+		}
+
+		// Rebuild periods with all expected periods
+		filledPeriods := make([]schemas.TrendItem, 0, len(allPeriods))
+		for _, period := range allPeriods {
+			if existingPeriod, exists := periodMap[period]; exists {
+				filledPeriods = append(filledPeriods, existingPeriod)
+			} else {
+				// Create zero-value period
+				filledPeriods = append(filledPeriods, schemas.TrendItem{
+					Period:         period,
+					TotalAmount:    0,
+					IncomeAmount:   0,
+					ExpenseAmount:  0,
+					TransferAmount: 0,
+					Net:            0,
+					Count:          0,
+				})
+			}
+		}
+		item.Periods = filledPeriods
 	}
 
 	// Calculate trends and changes for each category

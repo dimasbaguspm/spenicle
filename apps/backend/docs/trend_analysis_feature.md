@@ -145,14 +145,20 @@ Average of all period-over-period percentage changes across the date range.
   - Monthly: `'YYYY-MM'` (e.g., "2024-01")
 - Conditional aggregation with `FILTER` clauses for income/expense/transfer amounts
 - Returns data ordered by entity ID and period ascending
+- **Period filling**: Missing periods are filled with zero values
+  - Uses `utils.GeneratePeriods()` to create complete period sequence
+  - Ensures all periods between startDate and endDate are represented
+  - Zero-filled periods maintain trend calculation accuracy
 
 ### Calculation Flow
 
 1. Query groups transactions by entity (account/category) and period
-2. Repository calculates trends per period using `calculateTrendMetrics()`
-3. Repository calculates overall trend using `calculateOverallTrend()`
-4. Service sets default frequency to "monthly" if not provided
-5. Resource returns formatted response
+2. Repository generates complete period sequence using `utils.GeneratePeriods()`
+3. Repository fills missing periods with zero values
+4. Repository calculates trends per period using `calculateTrendMetrics()`
+5. Repository calculates overall trend using `calculateOverallTrend()`
+6. Service sets default frequency to "monthly" if not provided
+7. Resource returns formatted response
 
 ## Architecture
 

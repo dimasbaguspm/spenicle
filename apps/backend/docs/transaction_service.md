@@ -47,6 +47,16 @@ Transaction responses include embedded objects with essential fields only:
     "iconColor": "#00FF00"
   },
   "destinationAccount": null,
+  "tags": [
+    {
+      "id": 1,
+      "name": "groceries"
+    },
+    {
+      "id": 2,
+      "name": "recurring"
+    }
+  ],
   "note": "Groceries",
   "createdAt": "2026-01-01T00:00:00Z",
   "updatedAt": "2026-01-01T00:00:00Z"
@@ -75,10 +85,12 @@ DB notes
 - Soft delete implemented via `deleted_at` timestamp.
 - Transaction types: `expense`, `income`, `transfer` (must match category type)
 - Transfer transactions require `destination_account_id` field (nullable, only for transfers)
-- **Embedded data fetching**: List and Get operations use SQL JOINs to fetch account/category data
-  - Single query retrieves transaction + account + category + destination account (if applicable)
+- **Embedded data fetching**: List and Get operations use SQL JOINs to fetch account/category data and JSON_AGG for tags
+  - Single query retrieves transaction + account + category + destination account (if applicable) + tags array
   - Eliminates N+1 query problem for paginated lists
-  - Repository scans 26 columns: transaction (8) + account (6) + category (5) + destination account (6, nullable)
+  - Repository scans 27 columns: transaction (9 with tags JSON) + account (6) + category (5) + destination account (6, nullable) + tags (1, JSON array)
+  - Tags are fetched using `JSON_AGG(JSON_BUILD_OBJECT('id', tg.id, 'name', tg.name))` from junction table
+  - Tags array is empty `[]` if transaction has no tags
   - Internal ID fields (`account_id`, `category_id`, `destination_account_id`) are populated for DB operations but hidden from JSON responses
 - Account balance sync:
   - CREATE: adds/subtracts amount from account based on transaction type

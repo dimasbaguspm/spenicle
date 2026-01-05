@@ -20,19 +20,25 @@ func TestSummaryRepositoryGetTransactionSummary(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("successfully gets monthly transaction summary", func(t *testing.T) {
+		startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(2024, 2, 28, 23, 59, 59, 0, time.UTC)
+
 		params := schemas.SummaryTransactionParamModel{
-			SummaryParamModel: schemas.SummaryParamModel{},
-			Frequency:         "monthly",
+			SummaryParamModel: schemas.SummaryParamModel{
+				StartDate: startDate,
+				EndDate:   endDate,
+			},
+			Frequency: "monthly",
 		}
 
 		rows := pgxmock.NewRows([]string{
 			"period", "total_count", "income_count", "expense_count", "transfer_count",
 			"income_amount", "expense_amount", "transfer_amount", "net",
 		}).
-			AddRow("2024-01", 150, 50, 95, 5, 5000000, 3500000, 500000, 1500000).
-			AddRow("2023-12", 120, 40, 75, 5, 4000000, 2800000, 400000, 1200000)
+			AddRow("2024-01", 150, 50, 95, 5, 5000000, 3500000, 500000, 1500000)
 
 		mock.ExpectQuery("SELECT.*TO_CHAR\\(date, 'YYYY-MM'\\).*FROM transactions").
+			WithArgs(startDate, endDate).
 			WillReturnRows(rows)
 
 		result, err := repo.GetTransactionSummary(ctx, params)
@@ -44,19 +50,30 @@ func TestSummaryRepositoryGetTransactionSummary(t *testing.T) {
 			t.Errorf("expected frequency 'monthly', got %s", result.Frequency)
 		}
 
+		// Should have 2 months: 2024-01 and 2024-02 (filled with zero)
 		if len(result.Data) != 2 {
 			t.Errorf("expected 2 items, got %d", len(result.Data))
 		}
 
+		// First item should be 2024-02 (DESC order) with zero values
 		first := result.Data[0]
-		if first.Period != "2024-01" {
-			t.Errorf("expected period '2024-01', got %s", first.Period)
+		if first.Period != "2024-02" {
+			t.Errorf("expected period '2024-02', got %s", first.Period)
 		}
-		if first.TotalCount != 150 {
-			t.Errorf("expected total count 150, got %d", first.TotalCount)
+		if first.TotalCount != 0 {
+			t.Errorf("expected total count 0, got %d", first.TotalCount)
 		}
-		if first.Net != 1500000 {
-			t.Errorf("expected net 1500000, got %d", first.Net)
+
+		// Second item should be 2024-01 with actual data
+		second := result.Data[1]
+		if second.Period != "2024-01" {
+			t.Errorf("expected period '2024-01', got %s", second.Period)
+		}
+		if second.TotalCount != 150 {
+			t.Errorf("expected total count 150, got %d", second.TotalCount)
+		}
+		if second.Net != 1500000 {
+			t.Errorf("expected net 1500000, got %d", second.Net)
 		}
 
 		if err := mock.ExpectationsWereMet(); err != nil {
@@ -66,7 +83,7 @@ func TestSummaryRepositoryGetTransactionSummary(t *testing.T) {
 
 	t.Run("successfully gets daily transaction summary with date filter", func(t *testing.T) {
 		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-		end := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+		end := time.Date(2024, 1, 3, 23, 59, 59, 0, time.UTC)
 		params := schemas.SummaryTransactionParamModel{
 			SummaryParamModel: schemas.SummaryParamModel{
 				StartDate: start,
@@ -79,7 +96,7 @@ func TestSummaryRepositoryGetTransactionSummary(t *testing.T) {
 			"period", "total_count", "income_count", "expense_count", "transfer_count",
 			"income_amount", "expense_amount", "transfer_amount", "net",
 		}).
-			AddRow("2024-01-15", 10, 3, 6, 1, 300000, 200000, 50000, 100000)
+			AddRow("2024-01-02", 10, 3, 6, 1, 300000, 200000, 50000, 100000)
 
 		mock.ExpectQuery("SELECT.*TO_CHAR\\(date, 'YYYY-MM-DD'\\).*FROM transactions.*WHERE.*date >= \\$1.*AND date <= \\$2").
 			WithArgs(start, end).
@@ -94,8 +111,22 @@ func TestSummaryRepositoryGetTransactionSummary(t *testing.T) {
 			t.Errorf("expected frequency 'daily', got %s", result.Frequency)
 		}
 
-		if len(result.Data) != 1 {
-			t.Errorf("expected 1 item, got %d", len(result.Data))
+		// Should have 3 days: 2024-01-01, 2024-01-02, 2024-01-03
+		if len(result.Data) != 3 {
+			t.Errorf("expected 3 items, got %d", len(result.Data))
+		}
+
+		// Check that 2024-01-02 has data
+		if result.Data[1].Period != "2024-01-02" {
+			t.Errorf("expected period '2024-01-02', got %s", result.Data[1].Period)
+		}
+		if result.Data[1].TotalCount != 10 {
+			t.Errorf("expected total count 10, got %d", result.Data[1].TotalCount)
+		}
+
+		// Check that 2024-01-01 is filled with zeros
+		if result.Data[2].TotalCount != 0 {
+			t.Errorf("expected zero-filled period, got %d", result.Data[2].TotalCount)
 		}
 
 		if err := mock.ExpectationsWereMet(); err != nil {
@@ -104,8 +135,15 @@ func TestSummaryRepositoryGetTransactionSummary(t *testing.T) {
 	})
 
 	t.Run("returns empty array when no data", func(t *testing.T) {
+		startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+
 		params := schemas.SummaryTransactionParamModel{
-			Frequency: "yearly",
+			SummaryParamModel: schemas.SummaryParamModel{
+				StartDate: startDate,
+				EndDate:   endDate,
+			},
+			Frequency: "monthly",
 		}
 
 		rows := pgxmock.NewRows([]string{
@@ -113,7 +151,8 @@ func TestSummaryRepositoryGetTransactionSummary(t *testing.T) {
 			"income_amount", "expense_amount", "transfer_amount", "net",
 		})
 
-		mock.ExpectQuery("SELECT.*TO_CHAR\\(date, 'YYYY'\\).*FROM transactions").
+		mock.ExpectQuery("SELECT.*TO_CHAR\\(date, 'YYYY-MM'\\).*FROM transactions").
+			WithArgs(startDate, endDate).
 			WillReturnRows(rows)
 
 		result, err := repo.GetTransactionSummary(ctx, params)
@@ -121,8 +160,13 @@ func TestSummaryRepositoryGetTransactionSummary(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(result.Data) != 0 {
-			t.Errorf("expected empty array, got %d items", len(result.Data))
+		// Should return 1 month (2024-01) with zero values
+		if len(result.Data) != 1 {
+			t.Errorf("expected 1 item with zeros, got %d", len(result.Data))
+		}
+
+		if result.Data[0].TotalCount != 0 {
+			t.Errorf("expected TotalCount 0, got %d", result.Data[0].TotalCount)
 		}
 
 		if err := mock.ExpectationsWereMet(); err != nil {
@@ -427,13 +471,25 @@ func TestSummaryRepositoryGetAccountTrend(t *testing.T) {
 			t.Errorf("expected trend status 'volatile', got %s", account1.TrendStatus)
 		}
 
-		// Check second account (Bank) with 1 period
+		// Check second account (Bank) with 3 periods (2 filled with zeros, 1 with data)
 		account2 := result.Data[1]
 		if account2.AccountID != 2 {
 			t.Errorf("expected account ID 2, got %d", account2.AccountID)
 		}
-		if len(account2.Periods) != 1 {
-			t.Errorf("expected 1 period for account 2, got %d", len(account2.Periods))
+		if len(account2.Periods) != 3 {
+			t.Errorf("expected 3 periods for account 2, got %d", len(account2.Periods))
+		}
+
+		// Check that account2 has data only in first period
+		if account2.Periods[0].TotalAmount != 2000000 {
+			t.Errorf("expected first period amount 2000000, got %d", account2.Periods[0].TotalAmount)
+		}
+		// Second and third periods should be zero
+		if account2.Periods[1].TotalAmount != 0 {
+			t.Errorf("expected second period to be zero-filled, got %d", account2.Periods[1].TotalAmount)
+		}
+		if account2.Periods[2].TotalAmount != 0 {
+			t.Errorf("expected third period to be zero-filled, got %d", account2.Periods[2].TotalAmount)
 		}
 
 		if err := mock.ExpectationsWereMet(); err != nil {
@@ -475,12 +531,27 @@ func TestSummaryRepositoryGetAccountTrend(t *testing.T) {
 		}
 
 		account := result.Data[0]
-		if len(account.Periods) != 2 {
-			t.Errorf("expected 2 periods, got %d", len(account.Periods))
+		// January 2024 has 5 weeks, so we should get 5 periods (2 with data, 3 zero-filled)
+		if len(account.Periods) != 5 {
+			t.Errorf("expected 5 periods (for 5 weeks in Jan), got %d", len(account.Periods))
 		}
 
+		// Check that first two weeks have data
 		if account.Periods[0].Period != "2024-W01" {
 			t.Errorf("expected period '2024-W01', got %s", account.Periods[0].Period)
+		}
+		if account.Periods[0].TotalAmount != 500000 {
+			t.Errorf("expected amount 500000, got %d", account.Periods[0].TotalAmount)
+		}
+		if account.Periods[1].TotalAmount != 550000 {
+			t.Errorf("expected amount 550000, got %d", account.Periods[1].TotalAmount)
+		}
+
+		// Check that remaining weeks are zero-filled
+		for i := 2; i < 5; i++ {
+			if account.Periods[i].TotalAmount != 0 {
+				t.Errorf("expected zero-filled period at index %d, got %d", i, account.Periods[i].TotalAmount)
+			}
 		}
 
 		if err := mock.ExpectationsWereMet(); err != nil {
@@ -589,7 +660,7 @@ func TestSummaryRepositoryGetCategoryTrend(t *testing.T) {
 			t.Errorf("expected second period trend 'increasing', got %s", category1.Periods[1].Trend)
 		}
 
-		// Check income category (Salary) with single period
+		// Check income category (Salary) - should have 3 periods (1 with data, 2 zero-filled)
 		category2 := result.Data[1]
 		if category2.CategoryID != 2 {
 			t.Errorf("expected category ID 2, got %d", category2.CategoryID)
@@ -597,11 +668,18 @@ func TestSummaryRepositoryGetCategoryTrend(t *testing.T) {
 		if category2.CategoryType != "income" {
 			t.Errorf("expected category type 'income', got %s", category2.CategoryType)
 		}
-		if len(category2.Periods) != 1 {
-			t.Errorf("expected 1 period for category 2, got %d", len(category2.Periods))
+		if len(category2.Periods) != 3 {
+			t.Errorf("expected 3 periods for category 2, got %d", len(category2.Periods))
 		}
-		if category2.TrendStatus != "stable" {
-			t.Errorf("expected trend status 'stable' for single period, got %s", category2.TrendStatus)
+
+		// First period has data
+		if category2.Periods[0].TotalAmount != 5000000 {
+			t.Errorf("expected first period amount 5000000, got %d", category2.Periods[0].TotalAmount)
+		}
+
+		// Second and third periods are zero-filled
+		if category2.Periods[1].TotalAmount != 0 || category2.Periods[2].TotalAmount != 0 {
+			t.Errorf("expected second and third periods to be zero-filled")
 		}
 
 		if err := mock.ExpectationsWereMet(); err != nil {
@@ -643,8 +721,17 @@ func TestSummaryRepositoryGetCategoryTrend(t *testing.T) {
 		}
 
 		category := result.Data[0]
-		if len(category.Periods) != 2 {
-			t.Errorf("expected 2 periods, got %d", len(category.Periods))
+		// January 2024 has 5 weeks, should get 5 periods (2 with data, 3 zero-filled)
+		if len(category.Periods) != 5 {
+			t.Errorf("expected 5 periods (for 5 weeks in Jan), got %d", len(category.Periods))
+		}
+
+		// Check that first two weeks have data
+		if category.Periods[0].TotalAmount != 250000 {
+			t.Errorf("expected first period amount 250000, got %d", category.Periods[0].TotalAmount)
+		}
+		if category.Periods[1].TotalAmount != 300000 {
+			t.Errorf("expected second period amount 300000, got %d", category.Periods[1].TotalAmount)
 		}
 
 		// Check change calculation (250000 -> 300000 = 20% increase)

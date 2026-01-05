@@ -30,30 +30,3 @@ type SummaryTagParamSchema struct {
 	CategoryIDs []int     `query:"categoryIds" doc:"Filter by category IDs (comma-separated)"`
 	TagNames    []string  `query:"tagNames" doc:"Filter by tag names (comma-separated)"`
 }
-
-// TransactionTagItem represents a transaction with its tags
-type TransactionTagItem struct {
-	TransactionSchema
-	Tags []string `json:"tags"`
-}
-
-// TransactionTagsSchema represents a list of transactions filtered by tags
-type PaginatedTransactionTagsSchema struct {
-	Data       []TransactionTagItem `json:"data"`
-	Page       int                  `json:"page"`
-	Limit      int                  `json:"limit"`
-	TotalItems int                  `json:"totalItems"`
-	TotalPages int                  `json:"totalPages"`
-}
-
-// TransactionTagsParamSchema represents query parameters for listing transactions by tags
-type TransactionTagsParamSchema struct {
-	Page        int       `query:"page" minimum:"1" default:"1" doc:"Page number"`
-	Limit       int       `query:"limit" minimum:"1" maximum:"100" default:"10" doc:"Items per page"`
-	StartDate   time.Time `query:"startDate" doc:"Filter transactions from this date (ISO 8601)"`
-	EndDate     time.Time `query:"endDate" doc:"Filter transactions until this date (ISO 8601)"`
-	TagNames    []string  `query:"tagNames" doc:"Filter by tag names (comma-separated)"`
-	AccountIDs  []int     `query:"accountIds" doc:"Filter by account IDs (comma-separated)"`
-	CategoryIDs []int     `query:"categoryIds" doc:"Filter by category IDs (comma-separated)"`
-	Type        string    `query:"type" enum:"income,expense,transfer" doc:"Filter by transaction type"`
-}

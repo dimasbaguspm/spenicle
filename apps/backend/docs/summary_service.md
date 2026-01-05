@@ -17,8 +17,8 @@ Core endpoints (JWT protected)
 
 Query parameters
 
-- `startDate` (optional): Start date for filtering (ISO 8601 format, e.g., `2024-01-01T00:00:00Z`)
-- `endDate` (optional): End date for filtering (ISO 8601 format, e.g., `2024-12-31T23:59:59Z`)
+- `startDate` (required): Start date for filtering (ISO 8601 format, e.g., `2024-01-01T00:00:00Z`)
+- `endDate` (required): End date for filtering (ISO 8601 format, e.g., `2024-12-31T23:59:59Z`)
 - `frequency` (transaction only): Grouping frequency — `daily`, `weekly`, `monthly` (default), `yearly`
 
 Response schemas
@@ -89,8 +89,13 @@ DB notes
 
 - Efficient SQL aggregation with `GROUP BY` and date functions
 - Uses `CASE WHEN` for conditional aggregations
-- Date filtering applied via `WHERE` clauses when `startDate`/`endDate` provided
+- Date filtering applied via `WHERE` clauses with required `startDate`/`endDate` parameters
 - Transaction summary supports dynamic date truncation based on frequency parameter
+- **Period filling**: All endpoints fill missing periods with zero values
+  - Generates complete period sequence between startDate and endDate using `utils.GeneratePeriods()`
+  - Periods without transactions return zero counts and amounts
+  - Ensures consistent data visualization and trend analysis
+  - Maintains DESC order (most recent periods first)
 
 Service features
 

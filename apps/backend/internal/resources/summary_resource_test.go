@@ -89,7 +89,9 @@ func TestSummaryResourceGetTransactionSummary(t *testing.T) {
 		resource := NewSummaryResource(service)
 		resource.RegisterRoutes(api)
 
-		resp := api.Get("/summary/transactions")
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+		resp := api.Get("/summary/transactions?startDate=" + start.Format(time.RFC3339) + "&endDate=" + end.Format(time.RFC3339))
 		if resp.Code != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.Code)
 		}
@@ -113,7 +115,9 @@ func TestSummaryResourceGetTransactionSummary(t *testing.T) {
 		resource := NewSummaryResource(service)
 		resource.RegisterRoutes(api)
 
-		resp := api.Get("/summary/transactions?frequency=daily")
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+		resp := api.Get("/summary/transactions?frequency=daily&startDate=" + start.Format(time.RFC3339) + "&endDate=" + end.Format(time.RFC3339))
 		if resp.Code != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.Code)
 		}
@@ -158,7 +162,9 @@ func TestSummaryResourceGetTransactionSummary(t *testing.T) {
 		resource := NewSummaryResource(service)
 		resource.RegisterRoutes(api)
 
-		resp := api.Get("/summary/transactions")
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+		resp := api.Get("/summary/transactions?startDate=" + start.Format(time.RFC3339) + "&endDate=" + end.Format(time.RFC3339))
 		if resp.Code != http.StatusInternalServerError {
 			t.Errorf("expected status 500, got %d", resp.Code)
 		}
@@ -182,7 +188,9 @@ func TestSummaryResourceGetAccountSummary(t *testing.T) {
 		resource := NewSummaryResource(service)
 		resource.RegisterRoutes(api)
 
-		resp := api.Get("/summary/accounts")
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+		resp := api.Get("/summary/accounts?startDate=" + start.Format(time.RFC3339) + "&endDate=" + end.Format(time.RFC3339))
 		if resp.Code != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.Code)
 		}
@@ -196,6 +204,9 @@ func TestSummaryResourceGetAccountSummary(t *testing.T) {
 				if params.StartDate.IsZero() {
 					t.Error("expected start_date to be set")
 				}
+				if params.EndDate.IsZero() {
+					t.Error("expected end_date to be set")
+				}
 				return schemas.SummaryAccountSchema{
 					Data: []schemas.SummaryAccountModel{},
 				}, nil
@@ -205,7 +216,9 @@ func TestSummaryResourceGetAccountSummary(t *testing.T) {
 		resource := NewSummaryResource(service)
 		resource.RegisterRoutes(api)
 
-		resp := api.Get("/summary/accounts?startDate=2024-01-01T00:00:00Z")
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+		resp := api.Get("/summary/accounts?startDate=" + start.Format(time.RFC3339) + "&endDate=" + end.Format(time.RFC3339))
 		if resp.Code != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.Code)
 		}
@@ -223,7 +236,9 @@ func TestSummaryResourceGetAccountSummary(t *testing.T) {
 		resource := NewSummaryResource(service)
 		resource.RegisterRoutes(api)
 
-		resp := api.Get("/summary/accounts")
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+		resp := api.Get("/summary/accounts?startDate=" + start.Format(time.RFC3339) + "&endDate=" + end.Format(time.RFC3339))
 		if resp.Code != http.StatusInternalServerError {
 			t.Errorf("expected status 500, got %d", resp.Code)
 		}
@@ -247,7 +262,9 @@ func TestSummaryResourceGetCategorySummary(t *testing.T) {
 		resource := NewSummaryResource(service)
 		resource.RegisterRoutes(api)
 
-		resp := api.Get("/summary/categories")
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+		resp := api.Get("/summary/categories?startDate=" + start.Format(time.RFC3339) + "&endDate=" + end.Format(time.RFC3339))
 		if resp.Code != http.StatusOK {
 			t.Errorf("expected status 200, got %d", resp.Code)
 		}
@@ -290,7 +307,9 @@ func TestSummaryResourceGetCategorySummary(t *testing.T) {
 		resource := NewSummaryResource(service)
 		resource.RegisterRoutes(api)
 
-		resp := api.Get("/summary/categories")
+		start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
+		resp := api.Get("/summary/categories?startDate=" + start.Format(time.RFC3339) + "&endDate=" + end.Format(time.RFC3339))
 		if resp.Code != http.StatusInternalServerError {
 			t.Errorf("expected status 500, got %d", resp.Code)
 		}
