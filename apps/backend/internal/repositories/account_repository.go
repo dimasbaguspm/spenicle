@@ -75,7 +75,7 @@ func (r *AccountRepository) List(ctx context.Context, params schemas.SearchParam
 		"createdAt":    "created_at",
 		"updatedAt":    "updated_at",
 	}
-	orderBy := qb.BuildOrderBy(params.OrderBy, params.OrderDirection, validColumns)
+	orderBy := qb.BuildOrderBy(params.SortBy, params.SortOrder, validColumns)
 	offset := (params.PageNumber - 1) * params.PageSize
 	limitIdx := qb.NextArgIndex()
 

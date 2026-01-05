@@ -34,7 +34,7 @@ Schema structure
 - **CategorySchema**: full entity with timestamps
 - **CreateCategorySchema**: name, type (required), note (optional)
 - **UpdateCategorySchema**: all fields optional (partial update)
-- **SearchParamCategorySchema**: pagination + filters (name, type, orderBy, orderDirection)
+- **SearchParamCategorySchema**: pagination + filters (name, type, sortBy, sortOrder, pageNumber, pageSize)
 - **PaginatedCategorySchema**: wrapper with pagination metadata + items array
 
 Quick commands

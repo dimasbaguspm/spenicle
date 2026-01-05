@@ -14,7 +14,7 @@ Tag system for organizing transactions with many-to-many relationships, automati
 
 ### Tag Management
 
-- `GET /tags` - List tags (pagination: page, pageSize; filter: search)
+- `GET /tags` - List tags (pagination: pageNumber, pageSize; filter: search)
 - `POST /tags` - Create tag (body: `{name}`)
 - `DELETE /tags/{id}` - Delete tag
 

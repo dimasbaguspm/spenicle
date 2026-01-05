@@ -15,27 +15,74 @@ Updated search parameter schemas to support array fields:
 #### Account Search Parameters (`account_search_param_schema.go`)
 
 - `ID []int` - Filter by multiple account IDs
+- `Name string` - Filter by account name (partial match)
 - `Type []string` - Filter by multiple account types (expense, income)
+- `Archived string` - Filter by archived state (true/false/empty)
+- `SortBy string` - Field to sort by (name, type, amount, displayOrder, createdAt, updatedAt)
+- `SortOrder string` - Sort direction (asc, desc)
+- `PageNumber int` - Page number for pagination (default: 1)
+- `PageSize int` - Items per page (default: 10, max: 100)
 
 #### Category Search Parameters (`category_search_param_schema.go`)
 
 - `ID []int` - Filter by multiple category IDs
-- `Type []string` - Filter by multiple category types (expense, income)
+- `Name string` - Filter by category name (partial match)
+- `Type []string` - Filter by multiple category types (expense, income, transfer)
+- `Archived string` - Filter by archived state (true/false/empty)
+- `SortBy string` - Field to sort by (name, type, displayOrder, createdAt, updatedAt)
+- `SortOrder string` - Sort direction (asc, desc)
+- `PageNumber int` - Page number for pagination (default: 1)
+- `PageSize int` - Items per page (default: 10, max: 100)
 
 #### Transaction Search Parameters (`transaction_search_param_schema.go`)
 
 - `ID []int` - Filter by multiple transaction IDs
 - `Type []string` - Filter by multiple transaction types (expense, income, transfer)
+- `StartDate string` - Filter by start date (inclusive, format: YYYY-MM-DD)
+- `EndDate string` - Filter by end date (inclusive, format: YYYY-MM-DD)
+- `MinAmount int64` - Filter by minimum amount (0 = not set)
+- `MaxAmount int64` - Filter by maximum amount (0 = not set)
+- `AccountIDs []int` - Filter by multiple account IDs
+- `DestinationAccountIDs []int` - Filter by multiple destination account IDs (for transfers)
+- `CategoryIDs []int` - Filter by multiple category IDs
+- `SortBy string` - Field to sort by (id, type, date, amount, createdAt, updatedAt)
+- `SortOrder string` - Sort direction (asc, desc)
+- `PageNumber int` - Page number for pagination (default: 1)
+- `PageSize int` - Items per page (default: 10, max: 100)
+
+#### Budget Search Parameters (`budget_search_param_schema.go`)
+
+- `ID []int` - Filter by multiple budget IDs
+- `TemplateIDs []int` - Filter by multiple template IDs
 - `AccountIDs []int` - Filter by multiple account IDs
 - `CategoryIDs []int` - Filter by multiple category IDs
+- `SortBy string` - Field to sort by (id, templateId, accountId, categoryId, periodStart, periodEnd, amountLimit, createdAt, updatedAt)
+- `SortOrder string` - Sort direction (asc, desc)
+- `PageNumber int` - Page number for pagination (default: 1)
+- `PageSize int` - Items per page (default: 10, max: 100)
 
-### 2. Query Parameter Parsing
+### 2. Automatic Query Parameter Parsing
 
-Updated `ParseFromQuery()` methods in all three schemas to:
+Huma automatically parses query parameters based on the struct tags. All search parameter schemas use standard `query` tags for automatic parsing:
 
-- Extract all values for array parameters from URL query strings
-- Support multiple occurrences of the same parameter (e.g., `?id=1&id=2&type=expense&type=income`)
-- Maintain backward compatibility with single-value parameters
+```go
+type SearchParamAccountSchema struct {
+    ID         []int    `query:"id" doc:"Filter by account ID" minimum:"0"`
+    Name       string   `query:"name"`
+    Type       []string `query:"type" enum:"expense,income"`
+    SortBy     string   `query:"sortBy" enum:"name,type,amount,displayOrder,createdAt,updatedAt"`
+    SortOrder  string   `query:"sortOrder" enum:"asc,desc"`
+    PageNumber int      `query:"pageNumber" minimum:"1" default:"1"`
+    PageSize   int      `query:"pageSize" minimum:"1" maximum:"100" default:"10"`
+}
+```
+
+This approach:
+
+- Eliminates manual parsing code
+- Provides automatic validation
+- Generates accurate OpenAPI documentation
+- Supports array parameters natively (e.g., `?id=1&id=2&type=expense&type=income`)
 
 ### 3. Repository Layer Updates
 
@@ -58,7 +105,7 @@ validColumns := map[string]string{
     "createdAt": "created_at",
     "updatedAt": "updated_at",
 }
-orderBy := qb.BuildOrderBy(params.OrderBy, params.OrderDirection, validColumns)
+orderBy := qb.BuildOrderBy(params.SortBy, params.SortOrder, validColumns)
 
 // Generate SQL
 countSQL := fmt.Sprintf("SELECT COUNT(*) FROM accounts %s", qb.ToWhereClause())

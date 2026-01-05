@@ -37,6 +37,27 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 	qb.AddInFilterString("type", params.Type)
 	qb.AddInFilter("account_id", params.AccountIDs)
 	qb.AddInFilter("category_id", params.CategoryIDs)
+	qb.AddInFilter("destination_account_id", params.DestinationAccountIDs)
+
+	// Add date range filters
+	if params.StartDate != "" {
+		idx := qb.AddArg(params.StartDate)
+		qb.Add(fmt.Sprintf("date >= $%d", idx))
+	}
+	if params.EndDate != "" {
+		idx := qb.AddArg(params.EndDate)
+		qb.Add(fmt.Sprintf("date <= $%d", idx))
+	}
+
+	// Add amount range filters (0 means not set)
+	if params.MinAmount > 0 {
+		idx := qb.AddArg(params.MinAmount)
+		qb.Add(fmt.Sprintf("amount >= $%d", idx))
+	}
+	if params.MaxAmount > 0 {
+		idx := qb.AddArg(params.MaxAmount)
+		qb.Add(fmt.Sprintf("amount <= $%d", idx))
+	}
 
 	// Count total items with filters
 	whereClause, args := qb.ToWhereClause()
@@ -55,8 +76,8 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 		"createdAt": "created_at",
 		"updatedAt": "updated_at",
 	}
-	orderBy := qb.BuildOrderBy(params.OrderBy, params.OrderDirection, validColumns)
-	offset := (params.Page - 1) * params.Limit
+	orderBy := qb.BuildOrderBy(params.SortBy, params.SortOrder, validColumns)
+	offset := (params.PageNumber - 1) * params.PageSize
 	limitIdx := qb.NextArgIndex()
 
 	// Query with pagination
@@ -66,7 +87,7 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 	        %s 
 	        LIMIT $%d OFFSET $%d`, whereClause, orderBy, limitIdx, limitIdx+1)
 
-	args = append(args, params.Limit, offset)
+	args = append(args, params.PageSize, offset)
 	rows, err := r.db.Query(ctx, sql, args...)
 	if err != nil {
 		return schemas.PaginatedTransactionSchema{}, fmt.Errorf("query transactions: %w", err)
@@ -75,10 +96,10 @@ func (r *TransactionRepository) List(ctx context.Context, params schemas.SearchP
 
 	result := schemas.PaginatedTransactionSchema{
 		Items:      []schemas.TransactionSchema{},
-		PageNumber: params.Page,
-		PageSize:   params.Limit,
+		PageNumber: params.PageNumber,
+		PageSize:   params.PageSize,
 		TotalCount: totalCount,
-		PageTotal:  (totalCount + params.Limit - 1) / params.Limit,
+		PageTotal:  (totalCount + params.PageSize - 1) / params.PageSize,
 	}
 
 	if err := result.FromRows(rows); err != nil {

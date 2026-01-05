@@ -62,7 +62,7 @@ func (r *CategoryRepository) List(ctx context.Context, params schemas.SearchPara
 		"createdAt":    "created_at",
 		"updatedAt":    "updated_at",
 	}
-	orderBy := qb.BuildOrderBy(params.OrderBy, params.OrderDirection, validColumns)
+	orderBy := qb.BuildOrderBy(params.SortBy, params.SortOrder, validColumns)
 	offset := (params.PageNumber - 1) * params.PageSize
 	limitIdx := qb.NextArgIndex()
 

@@ -11,7 +11,7 @@ Where to look
 
 Core endpoints (JWT protected)
 
-- GET /transactions — paginated list (filters via `SearchParamTransactionSchema`: type, account_id, category_id)
+- GET /transactions — paginated list (filters via `SearchParamTransactionSchema`: type, accountIds, categoryIds, startDate, endDate, minAmount, maxAmount)
 - POST /transactions — create (`CreateTransactionSchema`) → 201 + account balance update
 - GET /transactions/{id} — retrieve by id → 200 or 404
 - PATCH /transactions/{id} — partial update (`UpdateTransactionSchema`) → 200 + account balance sync
@@ -59,7 +59,7 @@ Schema structure
 - **TransactionSchema**: full entity with timestamps, account_id, category_id
 - **CreateTransactionSchema**: type (required), date (optional, defaults to now), amount (required), account_id (required), category_id (required), note (optional)
 - **UpdateTransactionSchema**: all fields optional (partial update) - updates trigger account balance sync if amount/account changed
-- **SearchParamTransactionSchema**: pagination + filters (type, account_id, category_id, orderBy, orderDirection)
+- **SearchParamTransactionSchema**: pagination + filters (type, accountIds, destinationAccountIds, categoryIds, startDate, endDate, minAmount, maxAmount, sortBy, sortOrder, pageNumber, pageSize)
 - **PaginatedTransactionSchema**: wrapper with pagination metadata + items array
 
 Quick commands

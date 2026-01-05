@@ -22,10 +22,10 @@ func TestTransactionRepositoryList(t *testing.T) {
 
 	t.Run("successfully lists transactions with pagination", func(t *testing.T) {
 		params := schemas.SearchParamTransactionSchema{
-			Page:           1,
-			Limit:          10,
-			OrderBy:        "date",
-			OrderDirection: "desc",
+			PageNumber: 1,
+			PageSize:   10,
+			SortBy:     "date",
+			SortOrder:  "desc",
 		}
 
 		mock.ExpectQuery("SELECT COUNT").
@@ -55,11 +55,11 @@ func TestTransactionRepositoryList(t *testing.T) {
 
 	t.Run("successfully lists transactions with type filter", func(t *testing.T) {
 		params := schemas.SearchParamTransactionSchema{
-			Type:           []string{"expense"},
-			Page:           1,
-			Limit:          10,
-			OrderBy:        "date",
-			OrderDirection: "desc",
+			Type:       []string{"expense"},
+			PageNumber: 1,
+			PageSize:   10,
+			SortBy:     "date",
+			SortOrder:  "desc",
 		}
 
 		mock.ExpectQuery("SELECT COUNT").
@@ -89,12 +89,12 @@ func TestTransactionRepositoryList(t *testing.T) {
 
 	t.Run("successfully lists transactions with account and category filters", func(t *testing.T) {
 		params := schemas.SearchParamTransactionSchema{
-			AccountIDs:     []int{1},
-			CategoryIDs:    []int{1},
-			Page:           1,
-			Limit:          10,
-			OrderBy:        "created_at",
-			OrderDirection: "desc",
+			AccountIDs:  []int{1},
+			CategoryIDs: []int{1},
+			PageNumber:  1,
+			PageSize:    10,
+			SortBy:      "createdAt",
+			SortOrder:   "desc",
 		}
 
 		mock.ExpectQuery("SELECT COUNT").

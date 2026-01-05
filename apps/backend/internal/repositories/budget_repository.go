@@ -26,14 +26,14 @@ func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamB
 	if len(params.ID) > 0 {
 		qb.AddInFilter("id", params.ID)
 	}
-	if len(params.TemplateID) > 0 {
-		qb.AddInFilter("template_id", params.TemplateID)
+	if len(params.TemplateIDs) > 0 {
+		qb.AddInFilter("template_id", params.TemplateIDs)
 	}
-	if len(params.AccountID) > 0 {
-		qb.AddInFilter("account_id", params.AccountID)
+	if len(params.AccountIDs) > 0 {
+		qb.AddInFilter("account_id", params.AccountIDs)
 	}
-	if len(params.CategoryID) > 0 {
-		qb.AddInFilter("category_id", params.CategoryID)
+	if len(params.CategoryIDs) > 0 {
+		qb.AddInFilter("category_id", params.CategoryIDs)
 	}
 	qb.Add("deleted_at IS NULL")
 
@@ -53,14 +53,14 @@ func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamB
 		return &schemas.PaginatedBudgetSchema{
 			Items:      []schemas.BudgetSchema{},
 			TotalCount: 0,
-			PageNumber: params.Page,
-			PageSize:   params.Limit,
+			PageNumber: params.PageNumber,
+			PageSize:   params.PageSize,
 			PageTotal:  0,
 		}, nil
 	}
 
 	// Build ORDER BY clause
-	orderByClause := qb.BuildOrderBy(params.OrderBy, params.Sort, map[string]string{
+	orderByClause := qb.BuildOrderBy(params.SortBy, params.SortOrder, map[string]string{
 		"id":          "id",
 		"templateId":  "template_id",
 		"accountId":   "account_id",
@@ -73,7 +73,7 @@ func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamB
 	})
 
 	// Build data query with pagination and calculated actual_amount
-	offset := (params.Page - 1) * params.Limit
+	offset := (params.PageNumber - 1) * params.PageSize
 	dataQuery := fmt.Sprintf(`
 		SELECT b.id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end,
 		       b.amount_limit,
@@ -96,7 +96,7 @@ func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamB
 		qb.NextArgIndex(),
 		qb.NextArgIndex()+1,
 	)
-	args = append(args, params.Limit, offset)
+	args = append(args, params.PageSize, offset)
 
 	rows, err := r.db.Query(ctx, dataQuery, args...)
 	if err != nil {
@@ -112,9 +112,9 @@ func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamB
 	return &schemas.PaginatedBudgetSchema{
 		Items:      items,
 		TotalCount: totalCount,
-		PageNumber: params.Page,
-		PageSize:   params.Limit,
-		PageTotal:  (totalCount + params.Limit - 1) / params.Limit,
+		PageNumber: params.PageNumber,
+		PageSize:   params.PageSize,
+		PageTotal:  (totalCount + params.PageSize - 1) / params.PageSize,
 	}, nil
 }
 
@@ -287,13 +287,13 @@ func (r *BudgetRepository) Delete(ctx context.Context, id int) error {
 
 // GetByAccountID retrieves budgets for a specific account
 func (r *BudgetRepository) GetByAccountID(ctx context.Context, accountID int, params schemas.SearchParamBudgetSchema) (*schemas.PaginatedBudgetSchema, error) {
-	params.AccountID = []int{accountID}
+	params.AccountIDs = []int{accountID}
 	return r.List(ctx, params)
 }
 
 // GetByCategoryID retrieves budgets for a specific category
 func (r *BudgetRepository) GetByCategoryID(ctx context.Context, categoryID int, params schemas.SearchParamBudgetSchema) (*schemas.PaginatedBudgetSchema, error) {
-	params.CategoryID = []int{categoryID}
+	params.CategoryIDs = []int{categoryID}
 	return r.List(ctx, params)
 }
 

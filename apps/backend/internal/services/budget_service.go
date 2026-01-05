@@ -32,16 +32,16 @@ func (s *BudgetService) List(ctx context.Context, params schemas.SearchParamBudg
 	defaultPageSize := 10
 
 	// Enforce maximum page size (performance constraint)
-	if params.Limit > maxPageSize {
-		params.Limit = maxPageSize
+	if params.PageSize > maxPageSize {
+		params.PageSize = maxPageSize
 	}
-	if params.Limit <= 0 {
-		params.Limit = defaultPageSize
+	if params.PageSize <= 0 {
+		params.PageSize = defaultPageSize
 	}
 
 	// Ensure valid page number
-	if params.Page <= 0 {
-		params.Page = 1
+	if params.PageNumber <= 0 {
+		params.PageNumber = 1
 	}
 
 	return s.store.List(ctx, params)
@@ -128,14 +128,14 @@ func (s *BudgetService) Delete(ctx context.Context, id int) error {
 // GetByAccountID retrieves budgets for a specific account
 func (s *BudgetService) GetByAccountID(ctx context.Context, accountID int, params schemas.SearchParamBudgetSchema) (*schemas.PaginatedBudgetSchema, error) {
 	// Validate pagination
-	if params.Limit <= 0 {
-		params.Limit = 10
+	if params.PageSize <= 0 {
+		params.PageSize = 10
 	}
-	if params.Limit > 100 {
-		params.Limit = 100
+	if params.PageSize > 100 {
+		params.PageSize = 100
 	}
-	if params.Page <= 0 {
-		params.Page = 1
+	if params.PageNumber <= 0 {
+		params.PageNumber = 1
 	}
 
 	return s.store.GetByAccountID(ctx, accountID, params)
@@ -144,14 +144,14 @@ func (s *BudgetService) GetByAccountID(ctx context.Context, accountID int, param
 // GetByCategoryID retrieves budgets for a specific category
 func (s *BudgetService) GetByCategoryID(ctx context.Context, categoryID int, params schemas.SearchParamBudgetSchema) (*schemas.PaginatedBudgetSchema, error) {
 	// Validate pagination
-	if params.Limit <= 0 {
-		params.Limit = 10
+	if params.PageSize <= 0 {
+		params.PageSize = 10
 	}
-	if params.Limit > 100 {
-		params.Limit = 100
+	if params.PageSize > 100 {
+		params.PageSize = 100
 	}
-	if params.Page <= 0 {
-		params.Page = 1
+	if params.PageNumber <= 0 {
+		params.PageNumber = 1
 	}
 
 	return s.store.GetByCategoryID(ctx, categoryID, params)

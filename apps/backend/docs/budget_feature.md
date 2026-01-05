@@ -192,7 +192,7 @@ POST /budgets
 ### Query Budgets by Account
 
 ```
-GET /accounts/1/budgets?page=1&limit=10
+GET /accounts/1/budgets?pageNumber=1&pageSize=10
 ```
 
 ### Get Specific Account Budget
