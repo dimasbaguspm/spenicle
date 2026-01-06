@@ -8,8 +8,8 @@ type TotalSummaryParamModel struct {
 
 // TotalSummarySchema defines the response for total transaction summary
 type TotalSummarySchema struct {
-	Expense           int64 `json:"expense" doc:"Total expense transactions" example:"150"`
-	Income            int64 `json:"income" doc:"Total income transactions" example:"50"`
-	Transfer          int64 `json:"transfer" doc:"Total transfer transactions" example:"20"`
+	Expense           int64 `json:"expense" doc:"Total expense amount" example:"3500000"`
+	Income            int64 `json:"income" doc:"Total income amount" example:"5000000"`
+	Transfer          int64 `json:"transfer" doc:"Total transfer amount" example:"500000"`
 	TotalTransactions int64 `json:"totalTransactions" doc:"Total number of all transactions" example:"220"`
 }

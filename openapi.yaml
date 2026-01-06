@@ -1552,15 +1552,15 @@ components:
       additionalProperties: false
       properties:
         expense:
-          description: Total expense transactions
+          description: Total expense amount
           examples:
-            - 150
+            - 3500000
           format: int64
           type: integer
         income:
-          description: Total income transactions
+          description: Total income amount
           examples:
-            - 50
+            - 5000000
           format: int64
           type: integer
         totalTransactions:
@@ -1570,9 +1570,9 @@ components:
           format: int64
           type: integer
         transfer:
-          description: Total transfer transactions
+          description: Total transfer amount
           examples:
-            - 20
+            - 500000
           format: int64
           type: integer
       required:

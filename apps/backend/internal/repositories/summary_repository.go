@@ -705,7 +705,7 @@ func (r *SummaryRepository) GetTagSummary(ctx context.Context, params schemas.Su
 	return schemas.SummaryTagSchema{Data: items}, nil
 }
 
-// GetTotalSummary returns aggregated transaction counts by type
+// GetTotalSummary returns aggregated transaction amounts by type
 // Filters by date range if provided
 func (r *SummaryRepository) GetTotalSummary(ctx context.Context, params schemas.TotalSummaryParamModel) (schemas.TotalSummarySchema, error) {
 	// Build WHERE clause for date filtering
@@ -736,12 +736,12 @@ func (r *SummaryRepository) GetTotalSummary(ctx context.Context, params schemas.
 		args = append(args, endDate)
 	}
 
-	// Query to count transactions by type
+	// Query to aggregate transaction amounts by type
 	sql := fmt.Sprintf(`
 		SELECT 
-			COUNT(*) FILTER (WHERE type = 'expense') as expense_count,
-			COUNT(*) FILTER (WHERE type = 'income') as income_count,
-			COUNT(*) FILTER (WHERE type = 'transfer') as transfer_count,
+			COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as expense_amount,
+			COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as income_amount,
+			COALESCE(SUM(amount) FILTER (WHERE type = 'transfer'), 0) as transfer_amount,
 			COUNT(*) as total_count
 		FROM transactions
 		%s
