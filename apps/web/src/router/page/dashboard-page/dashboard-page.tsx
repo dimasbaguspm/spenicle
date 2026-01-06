@@ -55,8 +55,8 @@ const DashboardPage = () => {
     ) {
       return { income: 0, expense: 0 };
     }
-    const latest =
-      summaryTransactions.data[summaryTransactions.data.length - 1];
+    // api design show most recent month first
+    const latest = summaryTransactions.data[0];
     return {
       income: latest?.incomeAmount ?? 0,
       expense: Math.abs(latest?.expenseAmount ?? 0),
