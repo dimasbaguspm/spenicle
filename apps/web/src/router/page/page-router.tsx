@@ -122,10 +122,19 @@ const router = createBrowserRouter([
               },
               {
                 path: PAGE_ROUTES.INSIGHTS,
+                Component: lazy(() => import("./insights-page")),
                 children: [
                   {
                     index: true,
-                    Component: lazy(() => import("./insights-page")),
+                    Component: lazy(() => import("./insights-overview-page")),
+                  },
+                  {
+                    path: PAGE_ROUTES.INSIGHTS_ACCOUNTS,
+                    Component: lazy(() => import("./insights-accounts-page")),
+                  },
+                  {
+                    path: PAGE_ROUTES.INSIGHTS_CATEGORIES,
+                    Component: lazy(() => import("./insights-categories-page")),
                   },
                 ],
               },

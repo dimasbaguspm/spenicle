@@ -14,6 +14,7 @@ import { CategoryViewDrawer } from "./category-view-drawer";
 import { CategoryUpdateDrawer } from "./category-update-drawer";
 import { TransactionUpdateDrawer } from "./transaction-update-drawer";
 import { TransactionViewDrawer } from "./transaction-view-drawer";
+import { InsightFilterDrawer } from "./insight-filter-drawer/insight-filter-drawer";
 
 interface DrawerParams {
   accountId?: number;
@@ -88,6 +89,9 @@ export const DrawerRouter = () => {
           transactionId={params.transactionId!}
           payload={state?.payload}
         />
+      )}
+      {is(DRAWER_ROUTES.INSIGHTS_FILTER) && (
+        <InsightFilterDrawer payload={state?.payload} />
       )}
       {/** Filters drawer */}
       {is(DRAWER_ROUTES.SELECT_SINGLE_ACCOUNT) &&

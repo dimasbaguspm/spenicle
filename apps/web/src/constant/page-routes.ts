@@ -13,6 +13,8 @@ export const PAGE_ROUTES = {
   TRANSACTIONS: "/transactions",
   TRANSACTIONS_DATE: ":year/:month/:day",
   INSIGHTS: "/insights",
+  INSIGHTS_ACCOUNTS: "accounts",
+  INSIGHTS_CATEGORIES: "categories",
   SETTINGS: "/settings",
   SETTINGS_ACCOUNTS: "accounts",
   SETTINGS_CATEGORIES: "categories",
@@ -40,6 +42,16 @@ export const DEEP_PAGE_LINKS = {
     path: PAGE_ROUTES.INSIGHTS,
     title: "Insights",
     icon: ChartColumnIcon,
+  },
+  INSIGHTS_ACCOUNTS: {
+    path: `${PAGE_ROUTES.INSIGHTS}/${PAGE_ROUTES.INSIGHTS_ACCOUNTS}`,
+    title: "Accounts Insights",
+    icon: WalletCardsIcon,
+  },
+  INSIGHTS_CATEGORIES: {
+    path: `${PAGE_ROUTES.INSIGHTS}/${PAGE_ROUTES.INSIGHTS_CATEGORIES}`,
+    title: "Categories Insights",
+    icon: TagsIcon,
   },
   SETTINGS: {
     path: PAGE_ROUTES.SETTINGS,

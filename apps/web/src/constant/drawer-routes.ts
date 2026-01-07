@@ -10,4 +10,5 @@ export const DRAWER_ROUTES = {
   TRANSACTION_UPDATE: "transaction-update",
   SELECT_SINGLE_ACCOUNT: "select-single-account",
   SELECT_SINGLE_CATEGORY: "select-single-category",
+  INSIGHTS_FILTER: "insights-filter",
 } as const;
