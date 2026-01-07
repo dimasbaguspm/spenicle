@@ -5,6 +5,7 @@ import {
   FilterInsightFrequency,
   type FilterInsightFormSchema,
 } from "./types";
+import { DateFormat, formatDate } from "@/lib/format-date";
 
 interface ExtractedDateRange {
   dateFrom: string;
@@ -145,8 +146,8 @@ export const convertInsightFilterToFormSchema = (
       return {
         dateRangePreset: preset,
         useCustomDateRange: false,
-        customDateFrom: undefined,
-        customDateTo: undefined,
+        customDateFrom: formatDate(filters.startDate, DateFormat.ISO_DATE),
+        customDateTo: formatDate(filters.endDate, DateFormat.ISO_DATE),
         customFrequency: undefined,
       };
     }

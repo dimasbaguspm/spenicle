@@ -13,6 +13,7 @@ import {
   convertInsightFilterToFormSchema,
   extractDateRangeFromPreset,
 } from "./helpers";
+import dayjs from "dayjs";
 
 interface InsightFilterDrawer {
   payload?: Record<string, unknown>;
@@ -35,19 +36,19 @@ export const InsightFilterDrawer: FC<InsightFilterDrawer> = ({ payload }) => {
       customFrequency,
     } = data ?? {};
 
-    const { dateFrom, dateTo, frequency } =
-      extractDateRangeFromPreset(dateRangePreset);
-
     if (useCustomDateRange) {
       insightFilters.replaceAll({
-        startDate: customDateFrom,
-        endDate: customDateTo,
+        startDate: dayjs(customDateFrom).toISOString(),
+        endDate: dayjs(customDateTo).toISOString(),
         frequency: customFrequency,
       });
     } else {
+      const { dateFrom, dateTo, frequency } =
+        extractDateRangeFromPreset(dateRangePreset);
+
       insightFilters.replaceAll({
-        startDate: dateFrom,
-        endDate: dateTo,
+        startDate: dayjs(dateFrom).toISOString(),
+        endDate: dayjs(dateTo).toISOString(),
         frequency: frequency,
       });
     }

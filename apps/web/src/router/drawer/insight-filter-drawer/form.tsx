@@ -42,7 +42,7 @@ export const Form: FC<FormProps> = ({ defaultValues, handleOnValidSubmit }) => {
               >
                 {Object.entries(FilterInsightDateRangePresets).map(
                   ([key, label]) => (
-                    <SelectInput.Option key={key} value={key}>
+                    <SelectInput.Option key={key} value={label}>
                       {startCase(label)}
                     </SelectInput.Option>
                   )
@@ -103,7 +103,7 @@ export const Form: FC<FormProps> = ({ defaultValues, handleOnValidSubmit }) => {
                   >
                     {Object.entries(FilterInsightFrequency).map(
                       ([key, label]) => (
-                        <SelectInput.Option key={key} value={key}>
+                        <SelectInput.Option key={key} value={label}>
                           {startCase(label)}
                         </SelectInput.Option>
                       )
