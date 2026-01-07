@@ -50,6 +50,7 @@ const InsightsOverviewPage = () => {
         <div className="grid grid-cols-1 gap-6">
           <HistoricalBreakdownTable
             transactionData={transactionSummary?.data ?? []}
+            frequency={transactionSummary?.frequency}
             isLoading={!!isLoadingTransactions}
           />
         </div>
