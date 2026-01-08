@@ -5,7 +5,6 @@ import dayjs from "dayjs";
 export const formatDefaultValues = (
   payload?: Record<string, unknown>
 ): TransactionCreateFormSchema => {
-  console.log("Formatting default values with payload:", payload);
   return {
     type:
       payload?.type === "expense" ||
