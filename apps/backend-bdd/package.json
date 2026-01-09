@@ -1,0 +1,35 @@
+{
+  "name": "backend-bdd",
+  "version": "1.0.0",
+  "description": "E2E tests for Spenicle API using Playwright",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report",
+    "generate:types": "tsx scripts/generate-openapi-types.ts",
+    "docker:up": "docker-compose -f ../../docker-compose.yaml up -d",
+    "docker:down": "docker-compose -f ../../docker-compose.yaml down",
+    "docker:reset": "docker-compose -f ../../docker-compose.yaml down -v && docker-compose -f ../../docker-compose.yaml up -d",
+    "pretest": "npm run generate:types"
+  },
+  "keywords": [
+    "e2e",
+    "playwright",
+    "api-testing"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.0.0",
+    "openapi-typescript": "^7.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
