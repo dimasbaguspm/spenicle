@@ -66,18 +66,24 @@ Backend E2E Tests (`apps/backend-bdd/`)
 Follow this checklist for backend E2E test work:
 
 - **Documentation:** Check `apps/backend-bdd/docs/` for comprehensive guides:
+  - **🎯 Test patterns & organization → `test-patterns.md` (START HERE for writing tests)**
   - Setup & Docker environment → `setup.md`
   - Authentication & global setup → `authentication.md`
   - Type generation from OpenAPI → `type-generation.md`
   - Fixture architecture → `fixture-architecture.md`
   - Test writing patterns → `writing-tests.md`
+- **Test Organization:** Follow patterns in `test-patterns.md`:
+  - CRUD tests: `{resource}.spec.ts` (accounts, categories, transactions)
+  - Business requirements: `{feature}-{description}.spec.ts` (type-conversions, balance-consistency)
+  - Advanced features: `advanced-{feature}.spec.ts` (advanced-filtering)
+  - Edge cases: `{feature}-edge-cases.spec.ts` (relations-edge-cases)
 - **Type Safety:** All types auto-generated from OpenAPI spec
 - **No manual types:** Always use `components['schemas']` from `types/openapi.ts`
 - **Authentication:** Global setup handles auth (no per-test login)
 - **Docker:** Isolated environment (`docker-compose.yml` in backend-bdd/)
 - **Environment:** Configure via `.env` (copy from `.env.example`)
 - **Clean tests:** Tests auto-authenticated, focus on assertions only
-- **Test patterns:** Follow AAA pattern (Arrange, Act, Assert, Cleanup)
+- **Test structure:** Follow AAAC pattern (Arrange, Act, Assert, Cleanup)
 - **Schema sync:** Run `bun run generate:types` after backend schema changes
 
 **Backend E2E Quick Commands:**
@@ -143,12 +149,13 @@ bun run build                   # build for production
 - Schema examples → `apps/backend/internal/database/schemas/`
 
 - **Backend E2E Tests:**
+  - **Test patterns & organization → `apps/backend-bdd/docs/test-patterns.md` (PRIORITY)**
   - Setup & environment → `apps/backend-bdd/docs/setup.md`
   - Authentication flow → `apps/backend-bdd/docs/authentication.md`
   - Type generation → `apps/backend-bdd/docs/type-generation.md`
   - Fixture patterns → `apps/backend-bdd/docs/fixture-architecture.md`
   - Writing tests → `apps/backend-bdd/docs/writing-tests.md`
-  - Test examples → `apps/backend-bdd/spec
+  - Test examples → `apps/backend-bdd/specs/`
 
 Always use full paths from repository root:
 

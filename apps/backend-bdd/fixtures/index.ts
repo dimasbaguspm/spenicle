@@ -3,6 +3,7 @@ import { AuthAPIClient } from "./auth-client";
 import { AccountAPIClient } from "./account-client";
 import { CategoryAPIClient } from "./category-client";
 import { TransactionAPIClient } from "./transaction-client";
+import { TagAPIClient } from "./tag-client";
 import type { TestContext } from "../types/common";
 import * as fs from "fs";
 import * as path from "path";
@@ -16,6 +17,7 @@ type APIFixtures = {
   accountAPI: AccountAPIClient;
   categoryAPI: CategoryAPIClient;
   transactionAPI: TransactionAPIClient;
+  tagAPI: TagAPIClient;
   authenticatedContext: TestContext;
 };
 
@@ -101,6 +103,14 @@ export const test = base.extend<APIFixtures>({
    */
   transactionAPI: async ({ request, testContext }, use) => {
     const client = new TransactionAPIClient(request, testContext);
+    await use(client);
+  },
+
+  /**
+   * Tag API client
+   */
+  tagAPI: async ({ request, testContext }, use) => {
+    const client = new TagAPIClient(request, testContext);
     await use(client);
   },
 

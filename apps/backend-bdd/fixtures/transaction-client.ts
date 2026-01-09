@@ -22,6 +22,9 @@ export type AddTransactionTagSchema =
 export type UpdateTransactionTagsSchema =
   components["schemas"]["UpdateTransactionTagsSchema"];
 
+type TransactionTag = components["schemas"]["TransactionTagsSchema"];
+type TransactionRelationCreateSchema =
+  components["schemas"]["TransactionRelationSchema"];
 /**
  * Transaction API client
  */
@@ -75,7 +78,7 @@ export class TransactionAPIClient extends BaseAPIClient {
   /**
    * Get transaction tags
    */
-  async getTransactionTags(id: number): Promise<APIResponse<any>> {
+  async getTransactionTags(id: number): Promise<APIResponse<TransactionTag>> {
     return this.get<any>(`/transactions/${id}/tags`);
   }
 
@@ -85,8 +88,8 @@ export class TransactionAPIClient extends BaseAPIClient {
   async addTransactionTag(
     id: number,
     tagName: string
-  ): Promise<APIResponse<any>> {
-    return this.post<any>(`/transactions/${id}/tags`, { tagName });
+  ): Promise<APIResponse<void>> {
+    return this.post<void>(`/transactions/${id}/tags`, { tagName });
   }
 
   /**
@@ -95,14 +98,16 @@ export class TransactionAPIClient extends BaseAPIClient {
   async updateTransactionTags(
     id: number,
     tagIds: string[]
-  ): Promise<APIResponse<any>> {
-    return this.put<any>(`/transactions/${id}/tags`, { tagIds });
+  ): Promise<APIResponse<void>> {
+    return this.put<void>(`/transactions/${id}/tags`, { tagIds });
   }
 
   /**
    * Get transaction relations
    */
-  async getTransactionRelations(id: number): Promise<APIResponse<any>> {
+  async getTransactionRelations(
+    id: number
+  ): Promise<APIResponse<TransactionSchema[]>> {
     return this.get<any>(`/transactions/${id}/relations`);
   }
 
@@ -112,7 +117,7 @@ export class TransactionAPIClient extends BaseAPIClient {
   async createTransactionRelation(
     id: number,
     relatedTransactionId: number
-  ): Promise<APIResponse<any>> {
+  ): Promise<APIResponse<TransactionRelationCreateSchema>> {
     return this.post<any>(`/transactions/${id}/relations`, {
       relatedTransactionId,
     });

@@ -405,12 +405,12 @@ func (r *TransactionRepository) CreateTransfer(ctx context.Context, input schema
 	}
 
 	// Deduct from source account
-	updateSQL := `UPDATE accounts 
+	deductSQL := `UPDATE accounts 
 	              SET amount = amount - $1,
 	                  updated_at = CURRENT_TIMESTAMP
 	              WHERE id = $2 AND deleted_at IS NULL`
 
-	tag, err := tx.Exec(ctx, updateSQL, input.Amount, sourceAccountID)
+	tag, err := tx.Exec(ctx, deductSQL, input.Amount, sourceAccountID)
 	if err != nil {
 		return schemas.TransactionSchema{}, fmt.Errorf("update source account balance: %w", err)
 	}
@@ -419,7 +419,12 @@ func (r *TransactionRepository) CreateTransfer(ctx context.Context, input schema
 	}
 
 	// Add to destination account
-	tag, err = tx.Exec(ctx, updateSQL[:len(updateSQL)-len("- $1")]+"+"+updateSQL[len(updateSQL)-len("$1"):], input.Amount, destinationAccountID)
+	addSQL := `UPDATE accounts 
+	           SET amount = amount + $1,
+	               updated_at = CURRENT_TIMESTAMP
+	           WHERE id = $2 AND deleted_at IS NULL`
+
+	tag, err = tx.Exec(ctx, addSQL, input.Amount, destinationAccountID)
 	if err != nil {
 		return schemas.TransactionSchema{}, fmt.Errorf("update destination account balance: %w", err)
 	}

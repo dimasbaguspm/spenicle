@@ -118,19 +118,25 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 		}()
 	}
 
-	// Validate category exists (concurrent)
-	go func() {
-		category, err := s.categoryStore.Get(ctx, int64(input.CategoryID))
-		if err != nil {
-			categoryCh <- categoryResult{err: err}
-			return
-		}
-		categoryCh <- categoryResult{category: category}
-	}()
+	// Validate category exists (concurrent) - skip for transfers
+	if input.Type != repositories.TransactionTransferType {
+		go func() {
+			category, err := s.categoryStore.Get(ctx, int64(input.CategoryID))
+			if err != nil {
+				categoryCh <- categoryResult{err: err}
+				return
+			}
+			categoryCh <- categoryResult{category: category}
+		}()
+	}
 
 	// Wait for results
 	accountRes := <-accountCh
-	categoryRes := <-categoryCh
+
+	var categoryRes categoryResult
+	if input.Type != repositories.TransactionTransferType {
+		categoryRes = <-categoryCh
+	}
 
 	var destAccountRes accountResult
 	if input.Type == repositories.TransactionTransferType && input.DestinationAccountID != nil {
@@ -141,15 +147,15 @@ func (s *TransactionService) Create(ctx context.Context, input schemas.CreateTra
 	if accountRes.err != nil {
 		return schemas.TransactionSchema{}, accountRes.err
 	}
-	if categoryRes.err != nil {
+	if input.Type != repositories.TransactionTransferType && categoryRes.err != nil {
 		return schemas.TransactionSchema{}, categoryRes.err
 	}
 	if input.Type == repositories.TransactionTransferType && destAccountRes.err != nil {
 		return schemas.TransactionSchema{}, destAccountRes.err
 	}
 
-	// Validate transaction type matches category type
-	if input.Type != categoryRes.category.Type {
+	// Validate transaction type matches category type (skip for transfers)
+	if input.Type != repositories.TransactionTransferType && input.Type != categoryRes.category.Type {
 		return schemas.TransactionSchema{}, repositories.ErrTransactionTypeCategoryMismatch
 	}
 
@@ -226,6 +232,10 @@ func (s *TransactionService) Update(ctx context.Context, id int, input schemas.U
 	} else {
 		// Income/Expense should not have destination account
 		if input.DestinationAccountID != nil {
+			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
+		}
+		// Income/Expense must have category (validate when converting to these types)
+		if existing.Type == repositories.TransactionTransferType && input.CategoryID == nil {
 			return schemas.TransactionSchema{}, repositories.ErrInvalidTransactionData
 		}
 	}
@@ -339,9 +349,9 @@ func (s *TransactionService) Update(ctx context.Context, id int, input schemas.U
 		}
 	}
 
-	// Validate type matches category type if category was validated
+	// Validate type matches category type if category was validated (skip for transfers)
 	if needCategoryValidation {
-		if newType != category.Type {
+		if newType != repositories.TransactionTransferType && newType != category.Type {
 			return schemas.TransactionSchema{}, repositories.ErrTransactionTypeCategoryMismatch
 		}
 	}
