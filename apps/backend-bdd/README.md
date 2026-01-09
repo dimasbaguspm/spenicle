@@ -1,10 +1,44 @@
 # Backend E2E Tests
 
-Comprehensive end-to-end API tests for the Spenicle backend using Playwright.
+Comprehensive end-to-end API tests for the Spenicle backend using Playwright with an **isolated Docker environment**.
 
 ## Overview
 
-This test suite provides type-safe, automated testing for all backend API endpoints using Playwright's API testing capabilities. The tests use custom fixtures that encapsulate API calls, making tests clean, readable, and maintainable.
+This test suite provides type-safe, automated testing for all backend API endpoints using Playwright's API testing capabilities. The tests run in a completely isolated Docker environment (separate PostgreSQL + backend instance) to ensure no interference with development data.
+
+**Key Features:**
+
+- 🔒 **Isolated Environment**: Dedicated PostgreSQL (port 5433) and API (port 8081)
+- ✅ **Type-Safe**: All API calls fully typed based on OpenAPI spec
+- 🎯 **Custom Fixtures**: Encapsulated API clients for clean test code
+- 🔐 **Global Authentication**: Single login with token persistence
+- 🧹 **Clean Tests**: Minimal boilerplate, focus on test logic
+- 📊 **Comprehensive**: Tests for all CRUD operations and edge cases
+
+## Quick Start
+
+```bash
+# Navigate to backend-bdd directory
+cd apps/backend-bdd
+
+# Install dependencies
+bun install
+
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your credentials
+
+# Start isolated E2E environment
+sudo docker compose up -d
+
+# Run tests
+bun run test
+
+# Stop environment
+sudo docker compose down
+```
+
+See **[docs/setup.md](./docs/setup.md)** for detailed setup instructions.
 
 ## Structure
 
@@ -68,8 +102,8 @@ Edit `.env` to match your setup:
 
 ```env
 API_BASE_URL=http://localhost:8080
-TEST_USERNAME=testuser
-TEST_PASSWORD=testpassword
+ADMIN_USERNAME=testuser
+ADMIN_PASSWORD=testpassword
 ```
 
 ### 3. Start Backend Services
@@ -298,15 +332,15 @@ The `playwright.config.ts` automatically enables features like retries and prope
 
 ### Tests Failing with 401 Unauthorized
 
-- Check that `TEST_USERNAME` and `TEST_PASSWORD` are correct in `.env`
+- Check that `ADMIN_USERNAME` and `ADMIN_PASSWORD` are correct in `.env`
 - Ensure the backend has created the test user
 - Verify the backend is running and accessible
 
 ### Connection Refused Errors
 
 - Ensure Docker services are running: `docker-compose ps`
-- Check that `API_BASE_URL` is correct in `.env`
-- Verify the backend is healthy: `curl http://localhost:8080`
+- Check that `APP_PORT` spenicle service is correct in `.env`
+- Verify the backend is healthy: `curl http://localhost:${APP_PORT}`
 
 ### Database State Issues
 

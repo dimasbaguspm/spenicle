@@ -31,31 +31,10 @@ export interface ErrorDetail {
 }
 
 /**
- * Pagination response wrapper
- */
-export interface PaginatedResponse<T> {
-  items: T[];
-  pageTotal: number;
-  pageNumber: number;
-  pageSize: number;
-  totalItems: number;
-  totalPages: number;
-}
-
-/**
- * Auth tokens
- */
-export interface AuthTokens {
-  access_token: string;
-  refresh_token: string;
-}
-
-/**
  * Test context that carries auth and other shared state
  */
 export interface TestContext {
   accessToken?: string;
   refreshToken?: string;
   baseURL: string;
-  userId?: string;
 }

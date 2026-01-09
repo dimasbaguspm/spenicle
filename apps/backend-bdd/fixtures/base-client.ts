@@ -1,5 +1,5 @@
-import { test as base, APIRequestContext, expect } from "@playwright/test";
-import type { APIResponse, AuthTokens, TestContext } from "../types/common";
+import { APIRequestContext, expect } from "@playwright/test";
+import type { APIResponse, TestContext } from "../types/common";
 
 /**
  * Base API client with common utilities

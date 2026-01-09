@@ -9,8 +9,8 @@ test.describe("Authentication API", () => {
     test("should successfully login with valid credentials", async ({
       authAPI,
     }) => {
-      const username = process.env.TEST_USERNAME || "testuser";
-      const password = process.env.TEST_PASSWORD || "testpassword";
+      const username = process.env.ADMIN_USERNAME || "testuser";
+      const password = process.env.ADMIN_PASSWORD || "testpassword";
 
       const response = await authAPI.login(username, password);
 
@@ -38,7 +38,7 @@ test.describe("Authentication API", () => {
     });
 
     test("should fail login with empty password", async ({ authAPI }) => {
-      const username = process.env.TEST_USERNAME || "testuser";
+      const username = process.env.ADMIN_USERNAME || "testuser";
       const response = await authAPI.login(username, "");
 
       expect(response.status).toBeGreaterThanOrEqual(400);
@@ -51,8 +51,8 @@ test.describe("Authentication API", () => {
       authAPI,
     }) => {
       // First login to get tokens
-      const username = process.env.TEST_USERNAME || "testuser";
-      const password = process.env.TEST_PASSWORD || "testpassword";
+      const username = process.env.ADMIN_USERNAME || "testuser";
+      const password = process.env.ADMIN_PASSWORD || "testpassword";
       const loginResponse = await authAPI.login(username, password);
 
       expect(loginResponse.data).toBeDefined();

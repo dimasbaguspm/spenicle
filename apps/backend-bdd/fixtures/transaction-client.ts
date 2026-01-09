@@ -1,10 +1,6 @@
 import { APIRequestContext } from "@playwright/test";
 import { BaseAPIClient } from "./base-client";
-import type {
-  TestContext,
-  APIResponse,
-  PaginatedResponse,
-} from "../types/common";
+import type { TestContext, APIResponse } from "../types/common";
 import type { operations, components } from "../types/openapi";
 
 /**

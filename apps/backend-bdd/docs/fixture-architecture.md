@@ -2,35 +2,50 @@
 
 ## Overview
 
-The fixture system provides a clean, type-safe way to interact with the API in tests. Fixtures encapsulate common operations and provide automatic setup/teardown.
+The fixture system provides a clean, type-safe way to interact with the API in tests. All types are **automatically generated from OpenAPI spec**, ensuring fixtures stay in sync with the backend.
 
 ## Design Principles
 
-1. **Type Safety**: All API methods are strongly typed
-2. **Reusability**: Common operations are extracted into fixtures
+1. **Type Safety**: All API methods use OpenAPI-generated types
+2. **Reusability**: Common operations extracted into fixtures
 3. **Isolation**: Each test gets fresh fixture instances
-4. **Authentication**: Automatic token management
+4. **Global Authentication**: Single login with token persistence (`.auth/user.json`)
 5. **Error Handling**: Consistent error response handling
+6. **Auto-sync**: Types regenerated before each test run
+
+## Type Generation
+
+Types are automatically generated from `openapi.yaml`:
+
+```bash
+# Runs automatically before tests
+bun run generate:types
+
+# Manual generation
+bun run generate:types
+```
+
+This creates `types/openapi.ts` with all schema definitions.
 
 ## Fixture Hierarchy
 
 ```
-BaseAPIClient
-├── AuthAPIClient
-├── AccountAPIClient
-├── CategoryAPIClient
-└── TransactionAPIClient
+BaseAPIClient (reads auth tokens from .auth/user.json)
+├── AuthAPIClient (login, refresh)
+├── AccountAPIClient (CRUD + archive + reorder)
+├── CategoryAPIClient (CRUD + archive + reorder)
+└── TransactionAPIClient (CRUD + tags + relations)
 ```
 
 ### BaseAPIClient
 
-The foundation for all API clients, providing:
+Foundation for all API clients, providing:
 
+- **Auto-authentication**: Reads tokens from `.auth/user.json` (set by global-setup.ts)
 - HTTP methods (GET, POST, PATCH, PUT, DELETE)
-- Authorization header management
-- Response parsing
+- Authorization header injection
+- Response parsing with type safety
 - Error handling
-- Assertion helpers
 
 **Key Methods:**
 
@@ -38,11 +53,15 @@ The foundation for all API clients, providing:
 protected async get<T>(path: string, params?: Record<string, any>): Promise<APIResponse<T>>
 protected async post<T>(path: string, body?: any): Promise<APIResponse<T>>
 protected async patch<T>(path: string, body?: any): Promise<APIResponse<T>>
-protected async put<T>(path: string, body?: any): Promise<APIResponse<T>>
 protected async delete<T>(path: string): Promise<APIResponse<T>>
-protected assertSuccess<T>(response: APIResponse<T>): void
-protected assertError(response: APIResponse<any>, expectedStatus?: number): void
 ```
+
+**Authentication Flow:**
+
+1. `global-setup.ts` runs once before all tests
+2. Performs login, saves tokens to `.auth/user.json`
+3. All fixtures auto-read tokens from this file
+4. No per-test authentication needed
 
 ## Creating a New Fixture
 

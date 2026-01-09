@@ -8,6 +8,7 @@ This is a **monorepo** containing multiple applications:
 spenicle/
 ├── apps/
 │   ├── backend/     # Go REST API
+│   ├── backend-bdd/ # Backend E2E tests (Playwright)
 │   ├── web/         # Web frontend
 │   └── cli/         # CLI application
 ├── e2e/             # End-to-end tests
@@ -22,6 +23,7 @@ spenicle/
 Before making changes, determine which app you're working on:
 
 - **Backend (Go API):** Check `apps/backend/docs/` for specific guidelines
+- **Backend E2E Tests:** Check `apps/backend-bdd/docs/` for test patterns
 - **Web Frontend:** Check `apps/web/docs/` (when available)
 - **CLI:** Check `apps/cli/docs/` (when available)
 - **E2E Tests:** Mirror the app structure under `e2e/`
@@ -58,6 +60,39 @@ gofmt -w .                    # format code
 go build ./...                # build
 docker-compose up -d          # start PostgreSQL
 ```
+
+Backend E2E Tests (`apps/backend-bdd/`)
+
+Follow this checklist for backend E2E test work:
+
+- **Documentation:** Check `apps/backend-bdd/docs/` for comprehensive guides:
+  - Setup & Docker environment → `setup.md`
+  - Authentication & global setup → `authentication.md`
+  - Type generation from OpenAPI → `type-generation.md`
+  - Fixture architecture → `fixture-architecture.md`
+  - Test writing patterns → `writing-tests.md`
+- **Type Safety:** All types auto-generated from OpenAPI spec
+- **No manual types:** Always use `components['schemas']` from `types/openapi.ts`
+- **Authentication:** Global setup handles auth (no per-test login)
+- **Docker:** Isolated environment (`docker-compose.yml` in backend-bdd/)
+- **Environment:** Configure via `.env` (copy from `.env.example`)
+- **Clean tests:** Tests auto-authenticated, focus on assertions only
+- **Test patterns:** Follow AAA pattern (Arrange, Act, Assert, Cleanup)
+- **Schema sync:** Run `bun run generate:types` after backend schema changes
+
+**Backend E2E Quick Commands:**
+
+```bash
+cd apps/backend-bdd
+bun install                   # install dependencies
+cp .env.example .env          # create environment file
+sudo docker compose up -d     # start isolated backend + PostgreSQL
+bun run test                  # run all E2E tests
+bun run generate:types        # regenerate OpenAPI types
+sudo docker compose down -v   # stop and clean environment
+```
+
+####
 
 #### Web (`apps/web/`)
 
@@ -100,12 +135,20 @@ bun run build                   # build for production
 2. **Check docs first:** Look in `apps/{app}/docs/` for specifics
 3. **Test appropriately:**
    - Unit tests within the app
-   - Integration tests where apps interact
-   - E2E tests in `e2e/` for full system
-4. **Update docs:** Keep documentation in sync
-5. **Propose options:** If unsure, present 2 options to the user
 
-### File Paths
+- Architecture & patterns → `apps/backend/docs/code_standards.md`
+- Testing guidelines → `apps/backend/docs/testing_standards.md`
+- API documentation → `apps/backend/docs/{feature}_service.md`
+- Database schema → `apps/backend/internal/database/migrations/`
+- Schema examples → `apps/backend/internal/database/schemas/`
+
+- **Backend E2E Tests:**
+  - Setup & environment → `apps/backend-bdd/docs/setup.md`
+  - Authentication flow → `apps/backend-bdd/docs/authentication.md`
+  - Type generation → `apps/backend-bdd/docs/type-generation.md`
+  - Fixture patterns → `apps/backend-bdd/docs/fixture-architecture.md`
+  - Writing tests → `apps/backend-bdd/docs/writing-tests.md`
+  - Test examples → `apps/backend-bdd/spec
 
 Always use full paths from repository root:
 
@@ -114,12 +157,11 @@ Always use full paths from repository root:
 
 ### Multi-App Changes
 
-If changes affect multiple apps:
-
-1. Plan the full scope first
-2. Update each app in dependency order (backend → frontend → cli)
-3. Update e2e tests to match
-4. Test the integration
+If changes affect # for backend work
+cd apps/backend-bdd # for backend E2E tests
+cd apps/web # for web work
+cd apps/cli # for CLI work
+cd e2e ate each app in dependency order (backend → frontend → cli) 3. Update e2e tests to match 4. Test the integration
 
 ### Documentation Structure
 

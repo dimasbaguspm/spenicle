@@ -10,6 +10,7 @@ This is a monorepo containing three main applications:
 spenicle/
 ├── apps/
 │   ├── backend/     # Go REST API server
+│   ├── backend-bdd/ # Backend E2E tests (Playwright)
 │   ├── web/         # Web frontend application
 │   └── cli/         # Command-line interface
 ├── e2e/             # End-to-end tests (mirrors apps/ structure)
@@ -33,6 +34,27 @@ Go-based REST API server providing financial management capabilities.
 - JWT authentication
 
 **Documentation:** See [apps/backend/docs/](apps/backend/docs/) for detailed guides
+
+### Backend E2E Tests (`apps/backend-bdd/`)
+
+Comprehensive E2E API tests using Playwright with isolated Docker environment.
+
+**Key Features:**
+
+- Type-safe tests with OpenAPI-generated types
+- Global authentication (single login for all tests)
+- Isolated Docker environment (separate PostgreSQL + backend)
+- Custom fixtures for clean, reusable test code
+- Automatic type generation from backend schemas
+
+**Tech Stack:**
+
+- Playwright for API testing
+- TypeScript with strict mode
+- openapi-typescript for type generation
+- Docker Compose for isolated environment
+
+**Documentation:** See [apps/backend-bdd/docs/](apps/backend-bdd/docs/)
 
 ### Web (`apps/web/`)
 

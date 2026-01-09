@@ -4,35 +4,67 @@ A comprehensive guide to writing effective E2E tests for the Spenicle API.
 
 ## Test Structure
 
-Every test should follow this structure:
+Every test follows this structure:
 
 ```typescript
-import { test, expect } from '../../fixtures';
+import { test, expect } from "../../fixtures";
 
-test.describe('Feature/Endpoint Name', () => {
-  // Use authentication if needed
-  test.use({ authenticatedContext: {} as any });
-
-  test.describe('HTTP_METHOD /path', () => {
-    test('should do something successfully', async ({ apiClient }) => {
+test.describe("Resource API", () => {
+  test.describe("POST /resources", () => {
+    test("should create resource with valid data", async ({ resourceAPI }) => {
       // 1. Arrange: Set up test data
-      const data = { ... };
+      const data = {
+        name: "Test Resource",
+        type: "example" as const,
+      };
 
       // 2. Act: Perform the operation
-      const response = await apiClient.doSomething(data);
+      const response = await resourceAPI.createResource(data);
 
       // 3. Assert: Verify the results
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.data).toBeDefined();
+      expect(response.data?.name).toBe(data.name);
 
       // 4. Cleanup: Remove test data
-      await apiClient.cleanup();
+      if (response.data?.id) {
+        await resourceAPI.deleteResource(response.data.id);
+      }
     });
 
-    test('should fail with invalid data', async ({ apiClient }) => {
-      // Test error cases
+    test("should fail with invalid data", async ({ resourceAPI }) => {
+      const invalidData = { name: "" }; // Empty name
+
+      const response = await resourceAPI.createResource(invalidData as any);
+
+      expect(response.status).toBeGreaterThanOrEqual(400);
+      expect(response.error).toBeDefined();
     });
   });
+});
+```
+
+## Authentication
+
+**Authentication is automatic!** All tests are pre-authenticated via global setup:
+
+```typescript
+// ✅ No authentication needed - tokens already loaded
+test("should get accounts", async ({ accountAPI }) => {
+  const response = await accountAPI.getAccounts();
+  expect(response.status).toBe(200);
+});
+
+// ❌ Don't do this (outdated pattern):
+test.use({ authenticatedContext: {} as any });
+```
+
+For testing authentication endpoints specifically, use `authAPI`:
+
+```typescript
+test("should fail login with wrong password", async ({ authAPI }) => {
+  const response = await authAPI.login("admin", "wrongpassword");
+  expect(response.status).toBe(401);
 });
 ```
 

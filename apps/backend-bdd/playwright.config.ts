@@ -1,7 +1,6 @@
 import { defineConfig } from "@playwright/test";
 import dotenv from "dotenv";
 
-// Load environment variables
 dotenv.config();
 
 /**
@@ -28,7 +27,7 @@ export default defineConfig({
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ["html", { outputFolder: "test-results/html" }],
+    ["html", { outputFolder: "playwright-report" }],
     ["json", { outputFile: "test-results/results.json" }],
     ["list"],
   ],
@@ -36,7 +35,7 @@ export default defineConfig({
   /* Shared settings for all the projects below */
   use: {
     /* Base URL for API requests */
-    baseURL: process.env.API_BASE_URL || "http://localhost:8080",
+    baseURL: `http://localhost:${process.env.APP_PORT || "8080"}`,
 
     /* Collect trace when retrying the failed test */
     trace: "on-first-retry",

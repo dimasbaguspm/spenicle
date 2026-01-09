@@ -63,7 +63,7 @@ export const test = base.extend<APIFixtures>({
     const { accessToken, refreshToken } = loadAuthTokens();
 
     const context: TestContext = {
-      baseURL: process.env.API_BASE_URL || "http://localhost:8080",
+      baseURL: `http://localhost:${process.env.APP_PORT}`,
       accessToken,
       refreshToken,
     };

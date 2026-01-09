@@ -11,13 +11,12 @@ async function globalSetup(config: FullConfig) {
   // Load environment variables
   dotenv.config();
 
-  const baseURL = process.env.API_BASE_URL || "http://localhost:8080";
-  const username = process.env.TEST_USERNAME || "my_username";
-  const password = process.env.TEST_PASSWORD || "my_password";
+  const baseURL = `http://localhost:${process.env.APP_PORT}`;
+  const username = process.env.ADMIN_USERNAME;
+  const password = process.env.ADMIN_PASSWORD;
 
-  console.log("🔐 Performing global authentication setup...");
+  console.log("Performing global authentication setup...");
 
-  // Create API request context
   const requestContext = await request.newContext({
     baseURL,
     extraHTTPHeaders: {
@@ -27,7 +26,6 @@ async function globalSetup(config: FullConfig) {
   });
 
   try {
-    // Perform login via API
     const response = await requestContext.post("/auth/login", {
       data: {
         username,
@@ -56,7 +54,6 @@ async function globalSetup(config: FullConfig) {
       fs.mkdirSync(authDir, { recursive: true });
     }
 
-    // Save tokens in Playwright storage state format
     const storageState = {
       cookies: [],
       origins: [
@@ -76,13 +73,12 @@ async function globalSetup(config: FullConfig) {
       ],
     };
 
-    // Write storage state to file
     const authStatePath = path.join(authDir, "user.json");
     fs.writeFileSync(authStatePath, JSON.stringify(storageState, null, 2));
 
-    console.log("💾 Auth tokens saved to .auth/user.json");
+    console.log("Auth tokens saved to .auth/user.json");
   } catch (error) {
-    console.error("❌ Global setup failed:", error);
+    console.error("Global setup failed:", error);
     throw error;
   } finally {
     await requestContext.dispose();
