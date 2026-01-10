@@ -3,12 +3,7 @@ import { useFloatingActionHandler } from "./handler";
 import type { FloatingActionsHandle, FloatingActionItem } from "./types";
 import { EllipsisVerticalIcon, Plus, XIcon } from "lucide-react";
 import { useState } from "react";
-import {
-  Button,
-  ButtonIcon,
-  useDesktopBreakpoint,
-  useMobileBreakpoint,
-} from "@dimasbaguspm/versaur";
+import { Button, ButtonIcon, useMobileBreakpoint } from "@dimasbaguspm/versaur";
 
 /**
  * FloatingActions component

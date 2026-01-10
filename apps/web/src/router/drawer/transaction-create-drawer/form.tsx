@@ -5,7 +5,6 @@ import {
   Icon,
   PriceInput,
   TextAreaInput,
-  TextInput,
   TextInputAsButton,
   TimePickerInput,
 } from "@dimasbaguspm/versaur";

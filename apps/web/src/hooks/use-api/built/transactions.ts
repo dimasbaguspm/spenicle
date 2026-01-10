@@ -4,8 +4,6 @@ import type {
   TransactionModel,
   TransactionCreateModel,
   TransactionUpdateModel,
-  TransactionRelatedModel,
-  TransctionRelatedCreateModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 

@@ -1,16 +1,14 @@
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
-import { DEEP_PAGE_LINKS, PAGE_ROUTES } from "@/constant/page-routes";
+import { PAGE_ROUTES } from "@/constant/page-routes";
 import { useDrawerProvider } from "@/providers/drawer-provider";
 import {
   Button,
   ButtonIcon,
   Icon,
-  PageContent,
   PageHeader,
   PageLayout,
   PageLoader,
   Tabs,
-  useMobileBreakpoint,
 } from "@dimasbaguspm/versaur";
 import { FilterIcon } from "lucide-react";
 import { Suspense } from "react";

@@ -13,7 +13,7 @@ FROM oven/bun:1-alpine AS web-builder
 
 WORKDIR /build
 
-COPY apps/web/package.json apps/web/bun.lock apps/web/bunfig.toml ./
+COPY apps/web/package.json apps/web/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY apps/web/ ./
 ENV NODE_ENV=production

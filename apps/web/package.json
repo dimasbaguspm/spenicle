@@ -1,19 +1,19 @@
 {
-  "name": "bun-react-template",
+  "name": "spenicle-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run generate:css && bun --hot cmd/dev.ts",
-    "build": "NODE_ENV=production bun run generate:css && NODE_ENV=production bun build index.html --outdir=./dist --minify",
-    "generate:css": "npx @tailwindcss/cli -i src/index.css -o public/index.css --minify",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
     "generate:openapi-types": "bun run scripts/generate-openapi-types.ts"
   },
   "dependencies": {
     "@dimasbaguspm/versaur": "^0.0.63",
+    "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.90.16",
     "axios": "^1.13.2",
-    "bun-plugin-tailwind": "^0.1.2",
     "class-variance-authority": "^0.7.1",
     "dayjs": "^1.11.19",
     "lodash": "^4.17.21",
@@ -24,14 +24,16 @@
     "react-hook-form": "^7.69.0",
     "react-router": "^7.11.0",
     "react-swipeable": "^7.0.2",
-    "recharts": "^3.6.0",
-    "tailwindcss": "^4.1.11"
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.1.18",
-    "@types/bun": "latest",
     "@types/lodash": "^4.17.21",
+    "@types/node": "^22.10.5",
     "@types/react": "^19",
-    "@types/react-dom": "^19"
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
   }
 }

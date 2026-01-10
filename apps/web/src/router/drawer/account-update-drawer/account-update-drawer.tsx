@@ -12,11 +12,7 @@ import type { FC } from "react";
 import { Form, formId } from "./form";
 import type { AccountUpdateFormSchema } from "./types";
 import { useDrawerProvider } from "@/providers/drawer-provider";
-import {
-  useApiAccountQuery,
-  useApiCreateAccount,
-  useApiUpdateAccount,
-} from "@/hooks/use-api";
+import { useApiAccountQuery, useApiUpdateAccount } from "@/hooks/use-api";
 import { When } from "@/lib/when";
 import { SearchXIcon } from "lucide-react";
 

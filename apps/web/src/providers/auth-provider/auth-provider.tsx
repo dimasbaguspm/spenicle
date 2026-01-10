@@ -8,8 +8,7 @@ export const AuthProvider: FC<PropsWithChildren> = ({ children }) => {
   const { browserSession } = useSessionProvider();
 
   const [getRefreshToken, , { isPending: isRefreshing }] = useApiRefreshToken();
-  const { accessToken, refreshToken, setTokens, setAccessToken, clearSession } =
-    browserSession;
+  const { accessToken, refreshToken, setTokens, clearSession } = browserSession;
 
   const shouldRevalidate = !!refreshToken && !accessToken;
   const isRefreshingToken = isRefreshing && shouldRevalidate;

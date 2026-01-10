@@ -15,13 +15,11 @@ import { useDrawerProvider } from "@/providers/drawer-provider";
 import {
   useApiAccountQuery,
   useApiCategoryQuery,
-  useApiCreateTransaction,
   useApiTransactionQuery,
   useApiUpdateTransaction,
 } from "@/hooks/use-api";
-import { useParams } from "react-router";
 import dayjs from "dayjs";
-import { extractDateTimeFromParams, formatDefaultValues } from "./helpers";
+import { formatDefaultValues } from "./helpers";
 import { When } from "@/lib/when";
 import { SearchXIcon } from "lucide-react";
 
@@ -34,7 +32,6 @@ export const TransactionUpdateDrawer: FC<TransactionUpdateDrawerProps> = ({
   transactionId,
   payload,
 }) => {
-  const params = useParams();
   const { closeDrawer } = useDrawerProvider();
   const { showSnack } = useSnackbars();
   const isDesktop = useDesktopBreakpoint();

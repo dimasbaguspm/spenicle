@@ -1,6 +1,5 @@
 import { formatPrice, PriceFormat } from "@/lib/format-price";
 import type { InsightsAccountsModel } from "@/types/schemas";
-import { Heading, Tile } from "@dimasbaguspm/versaur";
 import { startCase } from "lodash";
 import React from "react";
 

@@ -4,20 +4,18 @@ Web frontend for Spenicle personal finance management system.
 
 ## Tech Stack
 
-- **Runtime:** Bun
+- **Runtime:** Bun (package manager) / Node.js (runtime)
 - **Framework:** React 19 + TypeScript
+- **Build Tool:** Vite
 - **Routing:** React Router v7
-- **Styling:** Tailwind CSS + shadcn/ui
+- **Styling:** Tailwind CSS v4 + shadcn/ui
 - **API:** OpenAPI-generated types + TanStack Query
 - **State Management:** React Context + Custom Providers
-- **Build Tool:** Vite (via Bun)
 
 ## Project Structure
 
 ```
 apps/web/
-├── cmd/                       # Entry points
-│   └── dev.ts                # Development server
 ├── scripts/                   # Build scripts
 │   └── generate-openapi-types.ts
 ├── src/
@@ -172,8 +170,8 @@ bun run dev
 ### Commands
 
 ```bash
-bun run dev                     # Start dev server
-bun run generate:css            # Generate minified tailwind css for static files
+bun run dev                     # Start Vite dev server
+bun run build                   # Build for production
 bun run generate:openapi-types  # Generate API types from backend
 ```
 

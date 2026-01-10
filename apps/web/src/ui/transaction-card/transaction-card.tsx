@@ -1,14 +1,7 @@
 import { formatTransactionData } from "@/lib/format-data";
-import { formatPrice } from "@/lib/format-price";
 import { When } from "@/lib/when";
 import type { TransactionModel } from "@/types/schemas";
-import {
-  Avatar,
-  Badge,
-  BadgeGroup,
-  Card,
-  type CardProps,
-} from "@dimasbaguspm/versaur";
+import { Badge, BadgeGroup, Card, type CardProps } from "@dimasbaguspm/versaur";
 import type { FC } from "react";
 
 interface TransactionCardProps extends Omit<CardProps, "onClick"> {

@@ -23,6 +23,7 @@ export const InsightFilterDrawer: FC<InsightFilterDrawer> = ({ payload }) => {
   const isDesktop = useDesktopBreakpoint();
   const insightFilters = useInsightFilter({
     adapter: "url",
+    defaultValues: payload,
   });
 
   const { closeDrawer } = useDrawerProvider();

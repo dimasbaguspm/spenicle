@@ -1,13 +1,9 @@
-import { DRAWER_ROUTES } from "@/constant/drawer-routes";
-import { DEEP_PAGE_LINKS } from "@/constant/page-routes";
 import {
   useApiInsightsTotalSummaryQuery,
   useApiInsightsTransactionsSummaryQuery,
   useApiTransactionsPaginatedQuery,
 } from "@/hooks/use-api";
 import { When } from "@/lib/when";
-import { useDrawerProvider } from "@/providers/drawer-provider";
-import type { TransactionModel } from "@/types/schemas";
 import {
   ChipSingleInput,
   PageContent,
@@ -17,7 +13,6 @@ import {
 } from "@dimasbaguspm/versaur";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
 import { DashboardTransactionViewMode } from "./types";
 import { NetBalanceCard } from "./components/net-balance-card";
 import { ThisMonthSummaryCards } from "./components/this-month-summary-card";
@@ -25,8 +20,6 @@ import { RecentTransactions } from "./components/recent-transactions";
 
 const DashboardPage = () => {
   const isMobile = useMobileBreakpoint();
-  const { openDrawer } = useDrawerProvider();
-  const navigate = useNavigate();
 
   const [totalSummary] = useApiInsightsTotalSummaryQuery({});
   // Fetch transaction summary for the last 6 months to show trends

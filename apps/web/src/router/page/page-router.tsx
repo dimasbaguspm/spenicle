@@ -6,7 +6,7 @@ import {
 } from "react-router";
 
 import { AppLayout } from "@/components/app-layout";
-import { lazy, Suspense, type PropsWithChildren } from "react";
+import { lazy, Suspense } from "react";
 import { PAGE_ROUTES } from "@/constant/page-routes";
 import { DrawerProvider } from "@/providers/drawer-provider";
 import { ModalProvider } from "@/providers/modal-provider";
@@ -181,6 +181,6 @@ const router = createBrowserRouter([
   },
 ]);
 
-export const PageRouter = (props: PropsWithChildren) => {
+export const PageRouter = () => {
   return <RouterProvider router={router} />;
 };

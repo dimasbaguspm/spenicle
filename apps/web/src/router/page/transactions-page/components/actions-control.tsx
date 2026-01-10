@@ -1,7 +1,6 @@
 import { useTransactionFilter } from "@/hooks/use-filter-state";
 import { DateFormat, formatDate } from "@/lib/format-date/format-date";
 import { When } from "@/lib/when";
-import { TransactionFilterFields } from "@/ui/transaction-filter-fields";
 import {
   Button,
   ButtonGroup,

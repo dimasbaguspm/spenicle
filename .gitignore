@@ -3,3 +3,4 @@ spenicle-api
 
 **/node_modules/**
 **/dist/**
+**/*.tsbuildinfo

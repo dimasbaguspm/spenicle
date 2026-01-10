@@ -1,7 +1,6 @@
 import {
   Button,
   ButtonGroup,
-  EmailInput,
   FormLayout,
   Heading,
   Text,

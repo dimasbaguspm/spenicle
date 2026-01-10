@@ -15,7 +15,6 @@ import {
   SelectableSingleInput,
   useDesktopBreakpoint,
 } from "@dimasbaguspm/versaur";
-import { filter } from "lodash";
 import { SearchXIcon, XIcon } from "lucide-react";
 import { type FC, useState } from "react";
 
