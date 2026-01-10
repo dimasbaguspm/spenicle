@@ -1,9 +1,9 @@
 services:
-  spenicle-postgres:
+  spenicle-build-postgres:
     env_file:
       - .env
     image: postgres:16-alpine
-    container_name: spenicle-postgres
+    container_name: spenicle-build-postgres
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -11,20 +11,20 @@ services:
     ports:
       - "${DB_PORT}:5432"
     volumes:
-      - spenicle_postgres_data:/var/lib/postgresql/data
+      - spenicle_postgres_build_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - spenicle
+      - spenicle-build
 
-  spenicle-api:
+  spenicle-build-api:
     build:
-      context: .
+      context: ..
       dockerfile: scripts/Dockerfile
-    container_name: spenicle-api
+    container_name: spenicle-build-api
     env_file:
       - .env
     ports:
@@ -39,14 +39,14 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     depends_on:
-      spenicle-postgres:
+      spenicle-build-postgres:
         condition: service_healthy
     networks:
-      - spenicle
+      - spenicle-build
 
 volumes:
-  spenicle_postgres_data:
+  spenicle_postgres_build_data:
 
 networks:
-  spenicle:
+  spenicle-build:
     driver: bridge
