@@ -11,9 +11,9 @@ async function globalSetup(config: FullConfig) {
   // Load environment variables
   dotenv.config();
 
-  const baseURL = `http://localhost:${process.env.APP_PORT}`;
-  const username = process.env.ADMIN_USERNAME;
-  const password = process.env.ADMIN_PASSWORD;
+  const baseURL = `http://localhost:8081`;
+  const username = "admin_username";
+  const password = "admin_password";
 
   console.log("Performing global authentication setup...");
 

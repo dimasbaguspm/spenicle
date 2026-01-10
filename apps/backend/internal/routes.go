@@ -40,11 +40,15 @@ func (rc *RoutesConfig) Setup(ctx context.Context, env *configs.Environment) err
 
 	// setup openapi by huma
 	config := huma.DefaultConfig("Spenicle API", "1.0.0")
-	// Expose both proxy-based server and direct development server.
-	config.Servers = []*huma.Server{
-		{URL: "/api", Description: "Proxied API (production)"},
-		{URL: "http://localhost:" + env.AppPort, Description: "Direct development server"},
+	// Set OpenAPI server URL based on environment.
+	url := "http://localhost:" + env.AppPort
+	desc := "Development server"
+	if env.AppStage == configs.AppStageProd {
+		url = "/api"
+		desc = "Proxied server"
 	}
+	config.Servers = []*huma.Server{{URL: url, Description: desc}}
+
 	config.CreateHooks = []func(huma.Config) huma.Config{}
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearer": {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},

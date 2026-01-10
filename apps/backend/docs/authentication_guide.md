@@ -98,7 +98,7 @@ echo "eyJhbGc..." | base64 -d
 
 **Check:**
 
-1. `ADMIN_USERNAME` and `ADMIN_PASSWORD` set correctly in `.env`?
+1. `ADMIN_USERNAME` and `ADMIN_PASSWORD` set correctly in the compose environment
 2. Environment variables loaded (`configs.LoadEnvironment()` called)?
 3. Request body format correct (`{"username": "...", "password": "..."}`)?
 

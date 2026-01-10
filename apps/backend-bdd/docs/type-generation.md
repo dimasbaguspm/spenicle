@@ -238,4 +238,5 @@ bun run generate:types  # Regenerate TypeScript types
 
 **Symptom**: Tests fail with connection errors
 
-**Fix**: Ensure `.env` has `APP_PORT=8080` matching docker-compose.yml
+**Fix**: Ensure `APP_PORT` is set in the `docker-compose.yml` used for tests
+to match the expected port (default: `8080`). Edit the compose file if needed.

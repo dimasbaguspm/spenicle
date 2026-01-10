@@ -1,19 +1,17 @@
 services:
   spenicle-build-postgres:
-    env_file:
-      - .env
     image: postgres:16-alpine
     container_name: spenicle-build-postgres
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: db_user
+      POSTGRES_PASSWORD: db_password
+      POSTGRES_DB: db_name
     ports:
-      - "${DB_PORT}:5432"
+      - "5432:5432"
     volumes:
       - spenicle_postgres_build_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U db_user -d db_name"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,19 +23,17 @@ services:
       context: ..
       dockerfile: scripts/Dockerfile
     container_name: spenicle-build-api
-    env_file:
-      - .env
     ports:
       - "3000:3000"
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      JWT_SECRET: ${JWT_SECRET}
-      ADMIN_USERNAME: ${ADMIN_USERNAME}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      DB_HOST: spenicle-build-postgres
+      DB_PORT: 5432
+      DB_USER: db_user
+      DB_PASSWORD: db_password
+      DB_NAME: db_name
+      JWT_SECRET: long-text-to-just-filled-out-the-jwt-secret-variable
+      ADMIN_USERNAME: admin_username
+      ADMIN_PASSWORD: admin_password
     depends_on:
       spenicle-build-postgres:
         condition: service_healthy

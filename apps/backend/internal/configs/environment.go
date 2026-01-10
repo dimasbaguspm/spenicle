@@ -11,6 +11,7 @@ import (
 
 const (
 	APP_PORT_ENV       = "APP_PORT"
+	IS_DEV_ENV         = "IS_DEV_ENV"
 	DB_HOST_ENV        = "DB_HOST"
 	DB_PORT_ENV        = "DB_PORT"
 	DB_USER_ENV        = "DB_USER"
@@ -19,6 +20,11 @@ const (
 	JWT_SECRET_ENV     = "JWT_SECRET"
 	ADMIN_USERNAME_ENV = "ADMIN_USERNAME"
 	ADMIN_PASSWORD_ENV = "ADMIN_PASSWORD"
+)
+
+const (
+	AppStageProd = "AppStageProd"
+	AppStageDev  = "AppStageDev"
 )
 
 const (
@@ -32,6 +38,7 @@ var _ = godotenv.Load()
 
 type Environment struct {
 	AppPort       string
+	AppStage      string
 	DBHost        string
 	DBPort        string
 	DBUser        string
@@ -58,8 +65,17 @@ func LoadEnvironment() *Environment {
 			dbUser, dbPassword, dbHost, dbPort, dbName)
 	}
 
+	var stage string
+	_, isExist := os.LookupEnv(IS_DEV_ENV)
+	if isExist {
+		stage = AppStageDev
+	} else {
+		stage = AppStageProd
+	}
+
 	return &Environment{
 		AppPort:       os.Getenv(APP_PORT_ENV),
+		AppStage:      stage,
 		DBHost:        dbHost,
 		DBPort:        dbPort,
 		DBUser:        dbUser,

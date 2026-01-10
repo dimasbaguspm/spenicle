@@ -81,7 +81,9 @@ Follow this checklist for backend E2E test work:
 - **No manual types:** Always use `components['schemas']` from `types/openapi.ts`
 - **Authentication:** Global setup handles auth (no per-test login)
 - **Docker:** Isolated environment (`docker-compose.yml` in backend-bdd/)
-- **Environment:** Configure via `.env` (copy from `.env.example`)
+  -- **Environment:** Configure via `docker-compose.yml`. Use `.env.example` as a
+  reference; change values by editing the compose files for the app you are
+  working on.
 - **Clean tests:** Tests auto-authenticated, focus on assertions only
 - **Test structure:** Follow AAAC pattern (Arrange, Act, Assert, Cleanup)
 - **Schema sync:** Run `bun run generate:types` after backend schema changes
@@ -91,7 +93,7 @@ Follow this checklist for backend E2E test work:
 ```bash
 cd apps/backend-bdd
 bun install                   # install dependencies
-cp .env.example .env          # create environment file
+# Recommended: use compose defaults; change compose files to alter settings
 sudo docker compose up -d     # start isolated backend + PostgreSQL
 bun run test                  # run all E2E tests
 bun run generate:types        # regenerate OpenAPI types

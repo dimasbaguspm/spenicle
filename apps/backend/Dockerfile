@@ -2,6 +2,7 @@
 FROM golang:1.25-alpine AS builder
 
 ARG APP_PORT
+ARG IS_DEV_ENV
 
 RUN apk add --no-cache git ca-certificates
 WORKDIR /app

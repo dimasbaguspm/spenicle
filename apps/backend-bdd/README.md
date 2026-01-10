@@ -24,9 +24,6 @@ cd apps/backend-bdd
 # Install dependencies
 bun install
 
-# Copy and configure environment
-cp .env.example .env
-# Edit .env with your credentials
 
 # Start isolated E2E environment
 sudo docker compose up -d
@@ -92,19 +89,8 @@ bun install
 
 ### 2. Configure Environment
 
-Copy the example environment file and update as needed:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` to match your setup:
-
-```env
-API_BASE_URL=http://localhost:8080
-ADMIN_USERNAME=testuser
-ADMIN_PASSWORD=testpassword
-```
+The E2E environment is driven by `docker compose` and the service environment
+values in `docker-compose.yml`.
 
 ### 3. Start Backend Services
 
@@ -332,15 +318,18 @@ The `playwright.config.ts` automatically enables features like retries and prope
 
 ### Tests Failing with 401 Unauthorized
 
-- Check that `ADMIN_USERNAME` and `ADMIN_PASSWORD` are correct in `.env`
+- Check that `ADMIN_USERNAME` and `ADMIN_PASSWORD` are correct in the compose
+  configuration or your local overrides
 - Ensure the backend has created the test user
 - Verify the backend is running and accessible
 
 ### Connection Refused Errors
 
 - Ensure Docker services are running: `docker-compose ps`
-- Check that `APP_PORT` spenicle service is correct in `.env`
-- Verify the backend is healthy: `curl http://localhost:${APP_PORT}`
+  -- Check that `APP_PORT` is set in the compose configuration or your local
+  overrides
+  - Verify the backend is healthy: `curl http://localhost:8080` (or the
+    overridden port)
 
 ### Database State Issues
 

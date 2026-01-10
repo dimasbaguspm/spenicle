@@ -145,7 +145,11 @@ func (s *AccountService) Update(ctx context.Context, id int64, data schemas.Upda
 
 ## Environment Variables
 
-Required environment variables in `.env`:
+Required environment variables are provided by `docker-compose.yml` for local
+development and E2E runs. To change values, edit the `docker-compose.yml`
+used for your environment.
+
+Reference values:
 
 ```env
 DATABASE_URL=postgres://user:password@localhost:5432/dbname

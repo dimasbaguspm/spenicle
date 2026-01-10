@@ -5,7 +5,8 @@
 The E2E tests use a **global authentication** pattern to avoid per-test login overhead:
 
 1. **Global Setup** (`global-setup.ts`) runs once before all tests
-2. Performs a single login with admin credentials from `.env`
+2. Performs a single login with admin credentials provided via the environment
+   (driven by `docker-compose.yml` or local overrides)
 3. Saves access & refresh tokens to `.auth/user.json` in Playwright storage state format
 4. All tests automatically load these tokens via `storageState` in `playwright.config.ts`
 
@@ -16,10 +17,10 @@ The E2E tests use a **global authentication** pattern to avoid per-test login ov
 ```typescript
 // Runs ONCE before all tests
 async function globalSetup(config: FullConfig) {
-  // Construct API URL from APP_PORT in .env
-  const baseURL = `http://localhost:${process.env.APP_PORT || "8080"}`;
+  // Construct API URL from APP_PORT (come from compose or local overrides)
+  const baseURL = `http://localhost:8080`;
 
-  // Use admin credentials from .env
+  // Use admin credentials from environment (compose or local overrides)
   const username = process.env.ADMIN_USERNAME;
   const password = process.env.ADMIN_PASSWORD;
 
@@ -102,10 +103,13 @@ class BaseAPIClient {
 
 ## Environment Variables
 
-Configure in `.env`:
+Configuration values are provided by `docker-compose.yml` for E2E runs. To
+change values edit the compose file(s) directly;
+
+Typical values (for reference):
 
 ```bash
-# Used by docker-compose.yml and global-setup.ts
+# Admin credentials used by the backend and tests
 ADMIN_USERNAME=my_username
 ADMIN_PASSWORD=my_password
 APP_PORT=8080
@@ -120,10 +124,10 @@ DB_NAME=spenicle_e2e-test
 
 **Important:**
 
-- `ADMIN_USERNAME` and `ADMIN_PASSWORD` are used for both:
-  - Backend admin account creation (docker-compose.yml)
-  - Test authentication (global-setup.ts)
-- `APP_PORT` determines the API URL (http://localhost:8080)
+- `ADMIN_USERNAME` and `ADMIN_PASSWORD` are used by both the backend service
+  and the test global setup (they should match the values in compose or your
+  overrides).
+- `APP_PORT` determines the API URL (http://localhost:8081).
 
 ## Testing Authentication Endpoints
 
@@ -144,17 +148,20 @@ The `authAPI` fixture bypasses the global auth tokens for testing auth logic.
 
 ### "Invalid URL" Error
 
-**Cause**: `.env` is missing or `APP_PORT` is not set
+**Cause**: `APP_PORT` is not set in the environment used by the compose run
 
-**Fix**: Ensure `.env` exists with `APP_PORT=8080`
+**Fix**: Ensure `APP_PORT` is set in `docker-compose.yml` used by the compose
+run before starting the tests.
 
 ### "Authentication failed" Error
 
-**Cause**: Admin credentials in `.env` don't match backend
+**Cause**: Admin credentials provided to the backend don't match the test
+configuration
 
 **Fix**:
 
-1. Check `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env`
+1. Check `ADMIN_USERNAME` and `ADMIN_PASSWORD` in the compose configuration
+   (`docker-compose.yml`)
 2. Ensure docker containers are running: `sudo docker compose ps`
 3. Check backend logs: `sudo docker compose logs spenicle-e2e-api`
 

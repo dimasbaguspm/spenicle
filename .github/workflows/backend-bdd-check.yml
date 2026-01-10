@@ -46,7 +46,6 @@ jobs:
       - name: Start Docker services
         working-directory: apps/backend-bdd
         run: |
-          cp .env.example .env
           docker compose up -d --wait
           docker compose ps
 

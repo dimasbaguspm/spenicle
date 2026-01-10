@@ -16,13 +16,10 @@ This ensures E2E tests don't interfere with your development database and can ru
 
 ### 1. Configure Environment
 
-Copy the example environment file and update with your credentials:
-
-```bash
-cd apps/backend-bdd
-cp .env.example .env
-# Edit .env with your preferred settings
-```
+The E2E environment is driven by `docker compose` and the service environment
+values in `docker-compose.yml`. Values are defined in the compose files and
+must be changed there when you need different settings.
+Edit `apps/backend-bdd/docker-compose.yml` (or `scripts/docker-compose.build.yaml` for CI) to change ports, credentials, or secrets for local development or CI runs.
 
 ### 2. Start the E2E Environment
 
@@ -74,32 +71,22 @@ sudo docker compose down -v
 
 ### E2E Environment Variables
 
-Configuration is stored in `.env` (copy from `.env.example`):
+Configuration values live in `docker-compose.yml` for the E2E environment.
+`apps/backend-bdd/.env.example` remains as a reference template but is not
+required to run the environment. To change values, edit the compose file(s)
+directly; the CI workflow uses the values from `scripts/docker-compose.build.yaml`.
 
-```bash
-# Database Configuration
-DB_HOST=spenicle-e2e-postgres
-DB_PORT=5432
-DB_USER=my_username
-DB_PASSWORD=my_password
-DB_NAME=spenicle_e2e-test
+Typical values you may want to override:
 
-APP_PORT=8080
+- `DB_HOST` (defaults to the PostgreSQL service name used in compose)
+- `DB_PORT` (container port exposed on the host)
+- `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `APP_PORT` (default API listen port: 8080)
+- `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`
 
-# JWT secret for authentication
-JWT_SECRET=your-secret-key-change-this-in-production
-
-# Admin Credentials
-ADMIN_USERNAME=my_username
-ADMIN_PASSWORD=my_password
-```
-
-**Note:**
-
-- `DB_HOST` must match the PostgreSQL container name in docker-compose.yml
-- `APP_PORT` is the port the API listens on (default: 8080)
-- Update `ADMIN_USERNAME` and `ADMIN_PASSWORD` for test authentication
-- The `.env` file is gitignored, so it won't be committed
+When running in CI the workflow uses the values hardcoded in
+`scripts/docker-compose.build.yaml` for deterministic test runs; do not expect
+a generated `.env` file.
 
 ### Docker Services
 
@@ -109,12 +96,12 @@ The `docker-compose.yml` defines:
 
   - Volume: `spenicle_e2e_postgres_data`
   - Network: `spenicle_e2e`
-  - Port: Configurable via `DB_PORT` in .env
+  - Port: Configurable via `DB_PORT` in `docker-compose.yml`
 
 - **spenicle-e2e-api**: Backend API
   - Connects to E2E PostgreSQL
   - Network: `spenicle_e2e`
-  - Port: Configurable via `APP_PORT` in .env
+  - Port: Configurable via `APP_PORT` in `docker-compose.yml`
   - Health checks enabled
 
 The E2E environment uses:
@@ -123,7 +110,8 @@ The E2E environment uses:
 - Isolated Docker network (`spenicle_e2e`)
 - Separate data volume (`spenicle_e2e_postgres_data`)
 
-Configure ports in `.env` to avoid conflicts with your development environment.
+Configure ports via `docker-compose.yml` to avoid conflicts with your
+development environment.
 
 ### Why Isolation?
 
@@ -139,19 +127,16 @@ Configure ports in `.env` to avoid conflicts with your development environment.
 
 ## Troubleshooting
 
-, update the ports in `.env`:
+, update the ports by editing `docker-compose.yml` or the CI compose file:
 
 ```bash
 # Check what's using the ports
 lsof -i :5432
 lsof -i :8080
 
-# Edit .env to use different ports
-DB_PORT=5433
-APP_PORT=8081
-lsof -i :8081
-
-# Or use different ports by editing docker-compose.e2e.yml
+# Edit the ports in `docker-compose.yml` and restart the compose environment
+sudo docker compose down -v
+sudo docker compose up -d
 ```
 
 ### Tests Failing After Environment Start
@@ -193,7 +178,8 @@ Connect to the E2E database:
 sudo docker exec -it spenicle-e2e-postgres psql -U my_username -d spenicle_e2e-test
 ```
 
-Or use your favorite PostgreSQL client with credentials from `.env`.
+Or use your favorite PostgreSQL client with credentials from the compose
+configuration.
 
 - Password: `spenicle_e2e_password`
 
@@ -231,26 +217,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: playwright-report compose down -v && docker compose up -d --build` before important test runs
-2. **Check logs**: Use `docker compose logs -f` to debug failing tests
-3. **Don't commit .env**: Keep your local .env gitignored, use .env.example as template
+          name: playwright-report
+
       - name: Cleanup
         if: always()
         run: cd apps/backend-bdd && docker compose down -v
-│  └─────────────────┘   └────────────────┘  │
-│           │                      ▲          │
-│           │                      │          │
-│     ┌─────▼──────┐              │          │
-│     │  Volume    │              │          │
-│     │  (isolated)│              │          │
-│     └────────────┘              │          │
-│                                 │          │
-└─────────────────────────────────┼──────────┘
-                                  │
-                      ┌───────────▼──────────┐
-                      │  Playwright Tests    │
-                      │  (localhost:8081)    │
-                      └──────────────────────┘
+
+Notes:
+  - Use `docker compose logs -f` to debug failing tests.
+  - Do not commit local secret files; prefer using CI secrets or editing the
+    compose files in source control for deterministic configuration.
 ```
 
 ## Next Steps

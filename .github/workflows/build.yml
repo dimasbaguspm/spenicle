@@ -31,14 +31,6 @@ jobs:
       - name: Start Docker services
         working-directory: scripts
         run: |
-          echo "DB_HOST=${DB_HOST}" > .env
-          echo "DB_PORT=${DB_PORT}" >> .env
-          echo "DB_USER=${DB_USER}" >> .env
-          echo "DB_PASSWORD=${DB_PASSWORD}" >> .env
-          echo "DB_NAME=${DB_NAME}" >> .env
-          echo "ADMIN_USERNAME=${ADMIN_USERNAME}" >> .env
-          echo "ADMIN_PASSWORD=${ADMIN_PASSWORD}" >> .env
-          echo "JWT_SECRET=${JWT_SECRET}" >> .env
 
           docker compose -f docker-compose.build.yaml up --build -d
 
