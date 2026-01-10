@@ -50,12 +50,22 @@ jobs:
           docker compose up -d --wait
           docker compose ps
 
-      - name: Wait for services to be ready
+      - name: Wait for backend to be ready
         working-directory: apps/backend-bdd
         run: |
-          echo "Waiting for backend to be ready..."
-          timeout 60 bash -c 'until curl -f http://localhost:8080/health > /dev/null 2>&1; do sleep 2; done' || exit 1
-          echo "Backend is ready!"
+          echo "Waiting for backend API to be ready..."
+          for i in {1..30}; do
+            if docker compose ps spenicle-e2e-api | grep -q "Up"; then
+              echo "Backend is running!"
+              sleep 5
+              exit 0
+            fi
+            echo "Attempt $i: Backend not ready yet..."
+            sleep 2
+          done
+          echo "ERROR: Backend failed to start!"
+          docker compose logs spenicle-e2e-api
+          exit 1
 
       - name: Run E2E tests
         working-directory: apps/backend-bdd
