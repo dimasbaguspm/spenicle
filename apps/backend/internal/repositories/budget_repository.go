@@ -2,12 +2,15 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
 	"github.com/dimasbaguspm/spenicle-api/internal/utils"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type BudgetRepository struct {
@@ -151,7 +154,7 @@ func (r *BudgetRepository) Get(ctx context.Context, id int) (*schemas.BudgetSche
 		&budget.UpdatedAt,
 		&budget.DeletedAt,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -194,6 +197,18 @@ func (r *BudgetRepository) Create(ctx context.Context, input schemas.CreateBudge
 		&budget.DeletedAt,
 	)
 	if err != nil {
+		// Check for foreign key constraint violation
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			// Foreign key violation - determine which constraint
+			if strings.Contains(pgErr.Message, "account_id") {
+				return nil, schemas.ErrBudgetInvalidAccount
+			}
+			if strings.Contains(pgErr.Message, "category_id") {
+				return nil, schemas.ErrBudgetInvalidCategory
+			}
+			return nil, schemas.ErrBudgetForeignKeyViolation
+		}
 		return nil, fmt.Errorf("failed to create budget: %w", err)
 	}
 
@@ -254,7 +269,7 @@ func (r *BudgetRepository) Update(ctx context.Context, id int, input schemas.Upd
 
 	var budgetID int
 	err := r.db.QueryRow(ctx, query, qb.GetArgs()...).Scan(&budgetID)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

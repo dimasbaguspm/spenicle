@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -203,6 +204,14 @@ type createBudgetResponse struct {
 func (r *BudgetResource) createBudget(ctx context.Context, input *createBudgetRequest) (*createBudgetResponse, error) {
 	budget, err := r.budgetService.Create(ctx, input.Body)
 	if err != nil {
+		// Check for validation errors
+		if err == schemas.ErrBudgetRequiresTarget || err == schemas.ErrBudgetInvalidDates {
+			return nil, huma.Error422UnprocessableEntity("Validation failed", err)
+		}
+		// Check for foreign key violations (non-existent account/category) - use errors.Is for wrapped errors
+		if errors.Is(err, schemas.ErrBudgetInvalidAccount) || errors.Is(err, schemas.ErrBudgetInvalidCategory) {
+			return nil, huma.Error404NotFound(err.Error())
+		}
 		return nil, huma.Error500InternalServerError("Failed to create budget", err)
 	}
 
@@ -222,6 +231,9 @@ type getBudgetResponse struct {
 func (r *BudgetResource) getBudget(ctx context.Context, input *getBudgetRequest) (*getBudgetResponse, error) {
 	budget, err := r.budgetService.Get(ctx, int(input.ID))
 	if err != nil {
+		return nil, huma.Error500InternalServerError("Failed to get budget", err)
+	}
+	if budget == nil {
 		return nil, huma.Error404NotFound("Budget not found")
 	}
 
@@ -242,7 +254,14 @@ type updateBudgetResponse struct {
 func (r *BudgetResource) updateBudget(ctx context.Context, input *updateBudgetRequest) (*updateBudgetResponse, error) {
 	budget, err := r.budgetService.Update(ctx, int(input.ID), input.Body)
 	if err != nil {
+		// Check for validation errors
+		if err == schemas.ErrBudgetInvalidDates {
+			return nil, huma.Error422UnprocessableEntity("Validation failed", err)
+		}
 		return nil, huma.Error500InternalServerError("Failed to update budget", err)
+	}
+	if budget == nil {
+		return nil, huma.Error404NotFound("Budget not found")
 	}
 
 	return &updateBudgetResponse{Body: *budget, Status: http.StatusOK}, nil

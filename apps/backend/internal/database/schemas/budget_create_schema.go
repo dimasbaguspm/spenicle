@@ -6,8 +6,11 @@ import (
 )
 
 var (
-	ErrBudgetRequiresTarget = errors.New("budget must have at least accountId or categoryId")
-	ErrBudgetInvalidDates   = errors.New("periodEnd must be after periodStart")
+	ErrBudgetRequiresTarget      = errors.New("budget must have at least accountId or categoryId")
+	ErrBudgetInvalidDates        = errors.New("periodEnd must be after periodStart")
+	ErrBudgetInvalidAccount      = errors.New("account not found")
+	ErrBudgetInvalidCategory     = errors.New("category not found")
+	ErrBudgetForeignKeyViolation = errors.New("foreign key constraint violation")
 )
 
 // CreateBudgetSchema represents input for creating a budget
@@ -28,8 +31,8 @@ func (c *CreateBudgetSchema) Validate() error {
 		return ErrBudgetRequiresTarget
 	}
 
-	// periodEnd must be after periodStart
-	if !c.PeriodEnd.After(c.PeriodStart) {
+	// periodEnd must be after or equal to periodStart (same-day periods allowed)
+	if c.PeriodEnd.Before(c.PeriodStart) {
 		return ErrBudgetInvalidDates
 	}
 

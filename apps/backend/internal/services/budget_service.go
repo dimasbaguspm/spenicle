@@ -99,6 +99,11 @@ func (s *BudgetService) Update(ctx context.Context, id int, input schemas.Update
 		return existing, nil
 	}
 
+	// Validate business rules with existing budget context
+	if err := input.Validate(existing); err != nil {
+		return nil, err
+	}
+
 	budget, err := s.store.Update(ctx, id, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update budget: %w", err)
