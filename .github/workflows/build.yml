@@ -30,9 +30,7 @@ jobs:
 
       - name: Start Docker services
         working-directory: scripts
-        run: |
-
-          docker compose -f docker-compose.build.yaml up --build -d
+        run: docker compose up --build -d
 
       - name: Run smoke checks
         run: |

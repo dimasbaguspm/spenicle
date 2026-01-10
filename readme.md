@@ -29,16 +29,37 @@ edit the appropriate `docker-compose.yml` for the app you are running.
 
 ## Run with Docker
 
-1. Configure environment (recommended):
-
-The Compose files drive development configuration so creating a local `.env`
-is not required. To change values edit the compose file(s) for the app instead
-of using a runtime override file.
-
-2. Run the container (binds port 3000):
+1. Docker
 
 ```bash
-docker run --rm -p 3000:3000 ghcr.io/dimasbaguspm/spenicle:latest
+docker run --rm -p 3000:3000 \
+	-e DB_HOST=spenicle-postgres \
+	-e DB_PORT=5432 \
+	-e DB_USER=spenicle_user \
+	-e DB_PASSWORD=change-me \
+	-e DB_NAME=spenicle_db \
+	-e ADMIN_USERNAME=admin \
+	-e ADMIN_PASSWORD=admin-password \
+	-e JWT_SECRET=replace-with-a-secret \
+	ghcr.io/dimasbaguspm/spenicle:latest
 ```
 
-After the container starts, open http://localhost:3000 in your browser
+2. Docker Compose
+
+```yaml
+services:
+	spenicle:
+		image: ghcr.io/dimasbaguspm/spenicle:latest
+		restart: unless-stopped
+		environment:
+			DB_HOST: db_host
+			DB_PORT: db_port
+			DB_USER: db_user
+			DB_PASSWORD: db_password
+			DB_NAME: db_name
+			ADMIN_USERNAME: admin_username
+			ADMIN_PASSWORD: admin_password
+			JWT_SECRET: replace-it-with-minimum-32-characters-for-secret
+		ports:
+			- "change-to-another-port:3000"
+```
