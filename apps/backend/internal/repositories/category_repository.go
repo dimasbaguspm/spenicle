@@ -244,40 +244,31 @@ func (r *CategoryRepository) Delete(ctx context.Context, id int64) error {
 }
 
 // Reorder atomically updates the display_order for multiple categories.
-// Uses a transaction to ensure atomicity.
+// Uses a single SQL statement with CASE expression for atomic batch update.
+// Only updates non-deleted categories.
 func (r *CategoryRepository) Reorder(ctx context.Context, items []schemas.CategoryReorderItemSchema) error {
-	// Build batch update query using CASE statement for atomic operation
 	if len(items) == 0 {
 		return nil
 	}
 
-	// Build query with placeholders
-	sql := `UPDATE categories 
-	        SET display_order = CASE id `
-
-	args := []interface{}{}
-	ids := []int64{}
-	argIdx := 1
-
+	// Build CASE expression for each item
+	var caseExprs []string
+	var ids []int64
 	for _, item := range items {
-		sql += fmt.Sprintf("WHEN $%d THEN $%d ", argIdx, argIdx+1)
-		args = append(args, item.ID, item.DisplayOrder)
+		caseExprs = append(caseExprs, fmt.Sprintf("WHEN id = %d THEN %d", item.ID, item.DisplayOrder))
 		ids = append(ids, item.ID)
-		argIdx += 2
 	}
 
-	sql += "END, updated_at = CURRENT_TIMESTAMP WHERE id IN ("
-	for i, id := range ids {
-		if i > 0 {
-			sql += ", "
-		}
-		sql += fmt.Sprintf("$%d", argIdx)
-		args = append(args, id)
-		argIdx++
-	}
-	sql += ") AND deleted_at IS NULL"
+	// Build the full SQL statement
+	// Using a single UPDATE with CASE ensures atomicity
+	sql := fmt.Sprintf(`UPDATE categories 
+		SET display_order = CASE %s END,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id IN (%s) AND deleted_at IS NULL`,
+		strings.Join(caseExprs, " "),
+		joinInt64ForSQL(ids, ","))
 
-	result, err := r.db.Exec(ctx, sql, args...)
+	result, err := r.db.Exec(ctx, sql)
 	if err != nil {
 		return fmt.Errorf("reorder categories: %w", err)
 	}
@@ -287,4 +278,13 @@ func (r *CategoryRepository) Reorder(ctx context.Context, items []schemas.Catego
 	}
 
 	return nil
+}
+
+// joinInt64ForSQL joins int64 slice into a comma-separated string for SQL IN clauses.
+func joinInt64ForSQL(ids []int64, sep string) string {
+	strIds := make([]string, len(ids))
+	for i, id := range ids {
+		strIds[i] = fmt.Sprintf("%d", id)
+	}
+	return strings.Join(strIds, sep)
 }

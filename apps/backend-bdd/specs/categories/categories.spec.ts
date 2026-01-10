@@ -213,9 +213,7 @@ test.describe("Category API", () => {
   });
 
   test.describe("POST /categories/reorder", () => {
-    test.skip("should reorder categories successfully", async ({
-      categoryAPI,
-    }) => {
+    test("should reorder categories successfully", async ({ categoryAPI }) => {
       // Create multiple categories
       const category1 = await categoryAPI.createCategory({
         name: "Category 1",
