@@ -22,13 +22,14 @@ services:
 
   spenicle-api:
     build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: scripts/Dockerfile
     container_name: spenicle-api
     env_file:
       - .env
     ports:
       - "${APP_PORT}:${APP_PORT}"
+      - "${WEB_PORT}:${WEB_PORT}"
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}

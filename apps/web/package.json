@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --hot cmd/dev.ts",
-    "start": "NODE_ENV=production bun cmd/index.ts",
-    "build": "bun build index.html --outdir=./dist --minify",
+    "dev": "bun run generate:css && bun --hot cmd/dev.ts",
+    "build": "bun run generate:css && bun build index.html --outdir=./dist --minify",
+    "generate:css": "npx @tailwindcss/cli -i src/index.css -o public/index.css --minify",
     "generate:openapi-types": "bun run scripts/generate-openapi-types.ts"
   },
   "dependencies": {
@@ -28,6 +28,7 @@
     "tailwindcss": "^4.1.11"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
     "@types/bun": "latest",
     "@types/lodash": "^4.17.21",
     "@types/react": "^19",

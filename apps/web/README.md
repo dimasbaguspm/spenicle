@@ -173,8 +173,7 @@ bun run dev
 
 ```bash
 bun run dev                     # Start dev server
-bun run build                   # Build for production
-bun run preview                 # Preview production build
+bun run generate:css            # Generate minified tailwind css for static files
 bun run generate:openapi-types  # Generate API types from backend
 ```
 
