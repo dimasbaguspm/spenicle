@@ -16,6 +16,7 @@ WORKDIR /build
 COPY apps/web/package.json apps/web/bun.lock apps/web/bunfig.toml ./
 RUN bun install --frozen-lockfile
 COPY apps/web/ ./
+ENV NODE_ENV=production
 RUN bun run build
 
 FROM alpine:3.19
@@ -30,25 +31,23 @@ RUN apk add --no-cache \
     nginx \
     && rm -rf /var/cache/apk/*
 
+ENV APP_PORT=8080
+ENV WEB_PORT=3000
+
 COPY --from=oven/bun:1-alpine /usr/local/bin/bun /usr/local/bin/bun
 
 COPY --from=backend-builder /app/spenicle-api /app/spenicle-api
 COPY --from=backend-builder /build/internal/database/migrations /app/internal/database/migrations
 
 COPY --from=web-builder /build/dist /app/web/dist
-COPY --from=web-builder /build/cmd /app/web/cmd
 COPY --from=web-builder /build/package.json /app/web/package.json
 
 COPY scripts/supervisord.conf /etc/supervisord.conf
-
-# Nginx config to serve frontend static assets
 COPY scripts/nginx.conf /etc/nginx/nginx.conf
 
-# Copy entrypoint script (use runtime env vars passed to container)
 COPY scripts/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Expose ports
-EXPOSE 8080 3000
+EXPOSE ${WEB_PORT}
 
 ENTRYPOINT ["/app/entrypoint.sh"]

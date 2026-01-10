@@ -28,15 +28,13 @@ services:
     env_file:
       - .env
     ports:
-      - "${APP_PORT}:${APP_PORT}"
-      - "${WEB_PORT}:${WEB_PORT}"
+      - "3000:3000"
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
-      APP_PORT: ${APP_PORT}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run generate:css && bun --hot cmd/dev.ts",
-    "build": "bun run generate:css && bun build index.html --outdir=./dist --minify",
+    "build": "NODE_ENV=production bun run generate:css && NODE_ENV=production bun build index.html --outdir=./dist --minify",
     "generate:css": "npx @tailwindcss/cli -i src/index.css -o public/index.css --minify",
     "generate:openapi-types": "bun run scripts/generate-openapi-types.ts"
   },
