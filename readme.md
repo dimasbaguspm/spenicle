@@ -120,7 +120,12 @@ See [.github/copilot-instructions.md](.github/copilot-instructions.md) for AI as
   - API integration complete
   - Core UI components in progress
 - 🚧 **CLI:** In development
-- 🚧 **E2E Tests:** In development
+- ✅ **Backend E2E Tests:** Complete
+  - 93+ passing tests with comprehensive coverage
+  - CRUD operations for all resources
+  - Business requirements validation (type conversions, balance consistency)
+  - Advanced features (filtering, sorting, pagination)
+  - Edge case handling (relations, duplicates, errors)
 
 ## License
 
