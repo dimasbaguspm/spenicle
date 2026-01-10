@@ -213,9 +213,11 @@ func (r *AccountRepository) Update(ctx context.Context, id int64, in schemas.Upd
 		paramIdx++
 	}
 	if in.ArchivedAt != nil {
-		if *in.ArchivedAt == "null" {
+		if *in.ArchivedAt == "" || *in.ArchivedAt == "null" {
+			// Empty string or "null" string means unarchive (set to NULL in DB)
 			setClauses = append(setClauses, "archived_at = NULL")
 		} else {
+			// Any other value means archive with current timestamp
 			setClauses = append(setClauses, fmt.Sprintf("archived_at = $%d", paramIdx))
 			args = append(args, time.Now())
 			paramIdx++

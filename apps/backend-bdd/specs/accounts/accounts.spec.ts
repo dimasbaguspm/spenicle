@@ -268,9 +268,7 @@ test.describe("Account API", () => {
   });
 
   test.describe("Archive/Unarchive operations", () => {
-    test.skip("should archive and unarchive an account", async ({
-      accountAPI,
-    }) => {
+    test("should archive and unarchive an account", async ({ accountAPI }) => {
       // Create account
       const createResponse = await accountAPI.createAccount({
         name: "Account to Archive",
@@ -287,12 +285,10 @@ test.describe("Account API", () => {
       expect(archiveResponse.status).toBe(200);
       expect(archiveResponse.data?.archivedAt).toBeDefined();
 
-      //   // Unarchive it by setting archivedAt to null
-      //   const unarchiveResponse = await accountAPI.updateAccount(accountId, {
-      //     archivedAt: null,
-      //   });
-      //   expect(unarchiveResponse.status).toBe(200);
-      //   expect(unarchiveResponse.data?.archivedAt).toBeNull();
+      // Unarchive it using the helper method
+      const unarchiveResponse = await accountAPI.unarchiveAccount(accountId);
+      expect(unarchiveResponse.status).toBe(200);
+      expect(unarchiveResponse.data?.archivedAt).toBeUndefined();
 
       // Cleanup
       await accountAPI.deleteAccount(accountId);

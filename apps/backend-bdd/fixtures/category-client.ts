@@ -88,6 +88,6 @@ export class CategoryAPIClient extends BaseAPIClient {
    * Unarchive a category
    */
   async unarchiveCategory(id: number): Promise<APIResponse<CategorySchema>> {
-    return this.updateCategory(id, { archivedAt: null as any });
+    return this.updateCategory(id, { archivedAt: "" });
   }
 }

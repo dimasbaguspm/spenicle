@@ -9,7 +9,7 @@ type UpdateAccountSchema struct {
 	Amount     *int64  `json:"amount,omitempty" minimum:"0" doc:"Account amount" example:"5000"`
 	Icon       *string `json:"icon,omitempty" doc:"Icon identifier set by frontend" example:"wallet-icon" maxLength:"255"`
 	IconColor  *string `json:"iconColor,omitempty" doc:"Icon color in hex format" example:"#4CAF50" maxLength:"7"`
-	ArchivedAt *string `json:"archivedAt,omitempty" doc:"Archive timestamp in ISO 8601 format, set to null to unarchive" example:"2026-01-03T00:00:00Z" format:"date-time"`
+	ArchivedAt *string `json:"archivedAt,omitempty" doc:"Archive timestamp in ISO 8601 format. Set to empty string or null to unarchive. Set to any non-empty value to archive with current timestamp" example:"2026-01-03T00:00:00Z"`
 }
 
 func (uas *UpdateAccountSchema) HasChanges(payload AccountSchema) bool {

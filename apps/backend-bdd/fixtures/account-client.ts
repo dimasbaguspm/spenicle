@@ -86,6 +86,6 @@ export class AccountAPIClient extends BaseAPIClient {
    * Unarchive an account
    */
   async unarchiveAccount(id: number): Promise<APIResponse<AccountSchema>> {
-    return this.updateAccount(id, { archivedAt: null as any });
+    return this.updateAccount(id, { archivedAt: "" });
   }
 }

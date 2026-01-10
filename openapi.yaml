@@ -1798,6 +1798,8 @@ components:
           type: string
         endDate:
           description: End date for recurring transactions (optional)
+          examples:
+            - "2024-12-31T23:59:59Z"
           format: date-time
           type: string
         id:
@@ -1826,6 +1828,8 @@ components:
           type: string
         startDate:
           description: Start date for recurring transactions
+          examples:
+            - "2024-01-01T00:00:00Z"
           format: date-time
           type: string
         type:
@@ -1932,10 +1936,9 @@ components:
           minimum: 0
           type: integer
         archivedAt:
-          description: Archive timestamp in ISO 8601 format, set to null to unarchive
+          description: Archive timestamp in ISO 8601 format. Set to empty string or null to unarchive. Set to any non-empty value to archive with current timestamp
           examples:
             - "2026-01-03T00:00:00Z"
-          format: date-time
           type: string
         icon:
           description: Icon identifier set by frontend
@@ -2070,10 +2073,9 @@ components:
       additionalProperties: false
       properties:
         archivedAt:
-          description: Archive timestamp in ISO 8601 format, set to null to unarchive
+          description: Archive timestamp in ISO 8601 format. Set to empty string or null to unarchive. Set to any non-empty value to archive with current timestamp
           examples:
             - "2026-01-03T00:00:00Z"
-          format: date-time
           type: string
         icon:
           description: Icon identifier set by frontend
@@ -3608,6 +3610,7 @@ paths:
             description: Start date for filtering (ISO 8601 format, optional)
             examples:
               - "2024-01-01T00:00:00Z"
+            format: date-time
             type: string
         - description: End date for filtering (ISO 8601 format, optional)
           example: "2024-12-31T23:59:59Z"
@@ -3618,6 +3621,7 @@ paths:
             description: End date for filtering (ISO 8601 format, optional)
             examples:
               - "2024-12-31T23:59:59Z"
+            format: date-time
             type: string
       responses:
         "200":
@@ -3844,26 +3848,26 @@ paths:
               - array
               - "null"
         - description: Filter by start date (inclusive)
-          example: "2023-01-01"
+          example: "2023-01-01T00:00:00Z"
           explode: false
           in: query
           name: startDate
           schema:
             description: Filter by start date (inclusive)
             examples:
-              - "2023-01-01"
-            format: date
+              - "2023-01-01T00:00:00Z"
+            format: date-time
             type: string
         - description: Filter by end date (inclusive)
-          example: "2023-12-31"
+          example: "2023-12-31T23:59:59Z"
           explode: false
           in: query
           name: endDate
           schema:
             description: Filter by end date (inclusive)
             examples:
-              - "2023-12-31"
-            format: date
+              - "2023-12-31T23:59:59Z"
+            format: date-time
             type: string
         - description: Filter by minimum amount
           example: 1000
@@ -4665,4 +4669,4 @@ paths:
         - Transaction Tags
 servers:
   - description: Development server
-    url: http://localhost:8080
+    url: http://localhost:8081

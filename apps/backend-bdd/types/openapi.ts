@@ -1995,6 +1995,7 @@ export interface components {
             /**
              * Format: date-time
              * @description End date for recurring transactions (optional)
+             * @example 2024-12-31T23:59:59Z
              */
             endDate?: string;
             /**
@@ -2022,6 +2023,7 @@ export interface components {
             /**
              * Format: date-time
              * @description Start date for recurring transactions
+             * @example 2024-01-01T00:00:00Z
              */
             startDate: string;
             /**
@@ -2098,8 +2100,7 @@ export interface components {
              */
             amount?: number;
             /**
-             * Format: date-time
-             * @description Archive timestamp in ISO 8601 format, set to null to unarchive
+             * @description Archive timestamp in ISO 8601 format. Set to empty string or null to unarchive. Set to any non-empty value to archive with current timestamp
              * @example 2026-01-03T00:00:00Z
              */
             archivedAt?: string;
@@ -2214,8 +2215,7 @@ export interface components {
         };
         UpdateCategorySchema: {
             /**
-             * Format: date-time
-             * @description Archive timestamp in ISO 8601 format, set to null to unarchive
+             * @description Archive timestamp in ISO 8601 format. Set to empty string or null to unarchive. Set to any non-empty value to archive with current timestamp
              * @example 2026-01-03T00:00:00Z
              */
             archivedAt?: string;
@@ -3746,12 +3746,12 @@ export interface operations {
                 type?: ("expense" | "income" | "transfer")[] | null;
                 /**
                  * @description Filter by start date (inclusive)
-                 * @example 2023-01-01
+                 * @example 2023-01-01T00:00:00Z
                  */
                 startDate?: string;
                 /**
                  * @description Filter by end date (inclusive)
-                 * @example 2023-12-31
+                 * @example 2023-12-31T23:59:59Z
                  */
                 endDate?: string;
                 /**

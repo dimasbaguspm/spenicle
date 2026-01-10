@@ -250,9 +250,7 @@ test.describe("Category API", () => {
   });
 
   test.describe("Archive/Unarchive operations", () => {
-    test.skip("should archive and unarchive a category", async ({
-      categoryAPI,
-    }) => {
+    test("should archive and unarchive a category", async ({ categoryAPI }) => {
       // Create category
       const createResponse = await categoryAPI.createCategory({
         name: "Category to Archive",
@@ -268,12 +266,10 @@ test.describe("Category API", () => {
       expect(archiveResponse.status).toBe(200);
       expect(archiveResponse.data?.archivedAt).toBeDefined();
 
-      //   // Unarchive it by setting archivedAt to null
-      //   const unarchiveResponse = await categoryAPI.updateCategory(categoryId, {
-      //     archivedAt: null,
-      //   });
-      //   expect(unarchiveResponse.status).toBe(200);
-      //   expect(unarchiveResponse.data?.archivedAt).toBeNull();
+      // Unarchive it using the helper method
+      const unarchiveResponse = await categoryAPI.unarchiveCategory(categoryId);
+      expect(unarchiveResponse.status).toBe(200);
+      expect(unarchiveResponse.data?.archivedAt).toBeUndefined();
 
       // Cleanup
       await categoryAPI.deleteCategory(categoryId);
