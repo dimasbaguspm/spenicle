@@ -3,67 +3,32 @@ package repositories
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
-	"time"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/utils"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type BudgetRepository struct {
-	db DB
+	pgx *pgxpool.Pool
 }
 
-func NewBudgetRepository(db DB) *BudgetRepository {
-	return &BudgetRepository{db: db}
+func NewBudgetRepository(pgx *pgxpool.Pool) BudgetRepository {
+	return BudgetRepository{pgx}
 }
 
-// List retrieves paginated budgets with filters
-func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamBudgetSchema) (*schemas.PaginatedBudgetSchema, error) {
-	qb := utils.QueryBuilder()
-
-	// Add filters
-	if len(params.ID) > 0 {
-		qb.AddInFilter("id", params.ID)
+// List retrieves paginated budgets with filters and calculated actual amounts
+func (br BudgetRepository) List(ctx context.Context, p models.ListBudgetsRequestModel) (models.ListBudgetsResponseModel, error) {
+	// Enforce page size limits
+	if p.PageSize <= 0 || p.PageSize > 100 {
+		p.PageSize = 10
 	}
-	if len(params.TemplateIDs) > 0 {
-		qb.AddInFilter("template_id", params.TemplateIDs)
-	}
-	if len(params.AccountIDs) > 0 {
-		qb.AddInFilter("account_id", params.AccountIDs)
-	}
-	if len(params.CategoryIDs) > 0 {
-		qb.AddInFilter("category_id", params.CategoryIDs)
-	}
-	qb.Add("deleted_at IS NULL")
-
-	whereClause, args := qb.ToWhereClause()
-
-	// Build count query
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM budgets %s", whereClause)
-
-	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count budgets: %w", err)
+	if p.PageNumber <= 0 {
+		p.PageNumber = 1
 	}
 
-	// Handle empty result
-	if totalCount == 0 {
-		return &schemas.PaginatedBudgetSchema{
-			Items:      []schemas.BudgetSchema{},
-			TotalCount: 0,
-			PageNumber: params.PageNumber,
-			PageSize:   params.PageSize,
-			PageTotal:  0,
-		}, nil
-	}
-
-	// Build ORDER BY clause
-	orderByClause := qb.BuildOrderBy(params.SortBy, params.SortOrder, map[string]string{
+	sortByMap := map[string]string{
 		"id":          "id",
 		"templateId":  "template_id",
 		"accountId":   "account_id",
@@ -73,11 +38,32 @@ func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamB
 		"amountLimit": "amount_limit",
 		"createdAt":   "created_at",
 		"updatedAt":   "updated_at",
-	})
+	}
+	sortOrderMap := map[string]string{
+		"asc":  "ASC",
+		"desc": "DESC",
+	}
 
-	// Build data query with pagination and calculated actual_amount
-	offset := (params.PageNumber - 1) * params.PageSize
-	dataQuery := fmt.Sprintf(`
+	sortColumn, ok := sortByMap[p.SortBy]
+	if !ok {
+		sortColumn = "created_at"
+	}
+	sortOrder, ok := sortOrderMap[p.SortOrder]
+	if !ok {
+		sortOrder = "DESC"
+	}
+
+	offset := (p.PageNumber - 1) * p.PageSize
+
+	// Count total matching budgets
+	countSQL := `SELECT COUNT(*) FROM budgets WHERE deleted_at IS NULL`
+	var totalCount int
+	if err := br.pgx.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
+		return models.ListBudgetsResponseModel{}, huma.Error400BadRequest("Unable to count budgets", err)
+	}
+
+	// Fetch paginated budgets with calculated actual_amount
+	sql := `
 		SELECT b.id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end,
 		       b.amount_limit,
 		       COALESCE((
@@ -91,38 +77,52 @@ func (r *BudgetRepository) List(ctx context.Context, params schemas.SearchParamB
 		       ), 0) as actual_amount,
 		       b.note, b.created_at, b.updated_at, b.deleted_at
 		FROM budgets b
-		%s
-		%s
-		LIMIT $%d OFFSET $%d`,
-		whereClause,
-		orderByClause,
-		qb.NextArgIndex(),
-		qb.NextArgIndex()+1,
-	)
-	args = append(args, params.PageSize, offset)
+		WHERE b.deleted_at IS NULL
+		ORDER BY ` + sortColumn + ` ` + sortOrder + `
+		LIMIT $1 OFFSET $2`
 
-	rows, err := r.db.Query(ctx, dataQuery, args...)
+	rows, err := br.pgx.Query(ctx, sql, p.PageSize, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query budgets: %w", err)
+		return models.ListBudgetsResponseModel{}, huma.Error400BadRequest("Unable to query budgets", err)
 	}
 	defer rows.Close()
 
-	items, err := schemas.PaginatedBudgetSchema{}.FromRows(rows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to scan budgets: %w", err)
+	var items []models.BudgetModel
+	for rows.Next() {
+		var item models.BudgetModel
+		if err := rows.Scan(
+			&item.ID, &item.TemplateID, &item.AccountID, &item.CategoryID, &item.PeriodStart, &item.PeriodEnd,
+			&item.AmountLimit, &item.ActualAmount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+		); err != nil {
+			return models.ListBudgetsResponseModel{}, huma.Error400BadRequest("Unable to scan budget data", err)
+		}
+		items = append(items, item)
 	}
 
-	return &schemas.PaginatedBudgetSchema{
-		Items:      items,
+	if err := rows.Err(); err != nil {
+		return models.ListBudgetsResponseModel{}, huma.Error400BadRequest("Error reading budget rows", err)
+	}
+
+	if items == nil {
+		items = []models.BudgetModel{}
+	}
+
+	totalPages := 0
+	if totalCount > 0 {
+		totalPages = (totalCount + p.PageSize - 1) / p.PageSize
+	}
+
+	return models.ListBudgetsResponseModel{
+		Data:       items,
+		PageNumber: p.PageNumber,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
-		PageNumber: params.PageNumber,
-		PageSize:   params.PageSize,
-		PageTotal:  (totalCount + params.PageSize - 1) / params.PageSize,
+		TotalPages: totalPages,
 	}, nil
 }
 
-// Get retrieves a single budget by ID (not deleted) with calculated actual_amount
-func (r *BudgetRepository) Get(ctx context.Context, id int) (*schemas.BudgetSchema, error) {
+// Get retrieves a single budget by ID with calculated actual_amount
+func (br BudgetRepository) Get(ctx context.Context, id int64) (models.BudgetModel, error) {
 	query := `
 		SELECT b.id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end,
 		       b.amount_limit,
@@ -139,209 +139,107 @@ func (r *BudgetRepository) Get(ctx context.Context, id int) (*schemas.BudgetSche
 		FROM budgets b
 		WHERE b.id = $1 AND b.deleted_at IS NULL`
 
-	var budget schemas.BudgetSchema
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&budget.ID,
-		&budget.TemplateID,
-		&budget.AccountID,
-		&budget.CategoryID,
-		&budget.PeriodStart,
-		&budget.PeriodEnd,
-		&budget.AmountLimit,
-		&budget.ActualAmount,
-		&budget.Note,
-		&budget.CreatedAt,
-		&budget.UpdatedAt,
-		&budget.DeletedAt,
+	var item models.BudgetModel
+	err := br.pgx.QueryRow(ctx, query, id).Scan(
+		&item.ID, &item.TemplateID, &item.AccountID, &item.CategoryID, &item.PeriodStart, &item.PeriodEnd,
+		&item.AmountLimit, &item.ActualAmount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 	)
+
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return models.BudgetModel{}, huma.Error404NotFound("Budget not found")
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to get budget: %w", err)
+		return models.BudgetModel{}, huma.Error400BadRequest("Unable to query budget", err)
 	}
 
-	return &budget, nil
+	return item, nil
 }
 
 // Create creates a new budget
-func (r *BudgetRepository) Create(ctx context.Context, input schemas.CreateBudgetSchema) (*schemas.BudgetSchema, error) {
+func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetRequestModel) (models.CreateBudgetResponseModel, error) {
 	query := `
 		INSERT INTO budgets (template_id, account_id, category_id, period_start, period_end, amount_limit, note)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, template_id, account_id, category_id, period_start, period_end,
 		          amount_limit, note, created_at, updated_at, deleted_at`
 
-	var budget schemas.BudgetSchema
-	err := r.db.QueryRow(
+	var item models.BudgetModel
+	err := br.pgx.QueryRow(
 		ctx,
 		query,
-		input.TemplateID,
-		input.AccountID,
-		input.CategoryID,
-		input.PeriodStart,
-		input.PeriodEnd,
-		input.AmountLimit,
-		input.Note,
+		p.TemplateID,
+		p.AccountID,
+		p.CategoryID,
+		p.PeriodStart,
+		p.PeriodEnd,
+		p.AmountLimit,
+		p.Note,
 	).Scan(
-		&budget.ID,
-		&budget.TemplateID,
-		&budget.AccountID,
-		&budget.CategoryID,
-		&budget.PeriodStart,
-		&budget.PeriodEnd,
-		&budget.AmountLimit,
-		&budget.Note,
-		&budget.CreatedAt,
-		&budget.UpdatedAt,
-		&budget.DeletedAt,
+		&item.ID, &item.TemplateID, &item.AccountID, &item.CategoryID, &item.PeriodStart, &item.PeriodEnd,
+		&item.AmountLimit, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 	)
+
 	if err != nil {
-		// Check for foreign key constraint violation
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
-			// Foreign key violation - determine which constraint
-			if strings.Contains(pgErr.Message, "account_id") {
-				return nil, schemas.ErrBudgetInvalidAccount
-			}
-			if strings.Contains(pgErr.Message, "category_id") {
-				return nil, schemas.ErrBudgetInvalidCategory
-			}
-			return nil, schemas.ErrBudgetForeignKeyViolation
-		}
-		return nil, fmt.Errorf("failed to create budget: %w", err)
+		return models.CreateBudgetResponseModel{}, huma.Error400BadRequest("Unable to create budget", err)
 	}
 
-	// Fetch the created budget with calculated actual_amount
-	return r.Get(ctx, int(budget.ID))
+	return models.CreateBudgetResponseModel{BudgetModel: item}, nil
 }
 
 // Update updates an existing budget
-func (r *BudgetRepository) Update(ctx context.Context, id int, input schemas.UpdateBudgetSchema) (*schemas.BudgetSchema, error) {
-	qb := utils.QueryBuilder()
-	updates := []string{}
-
-	if input.TemplateID != nil {
-		updates = append(updates, fmt.Sprintf("template_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.TemplateID)
-	}
-	if input.AccountID != nil {
-		updates = append(updates, fmt.Sprintf("account_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.AccountID)
-	}
-	if input.CategoryID != nil {
-		updates = append(updates, fmt.Sprintf("category_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.CategoryID)
-	}
-	if input.PeriodStart != nil {
-		updates = append(updates, fmt.Sprintf("period_start = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.PeriodStart)
-	}
-	if input.PeriodEnd != nil {
-		updates = append(updates, fmt.Sprintf("period_end = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.PeriodEnd)
-	}
-	if input.AmountLimit != nil {
-		updates = append(updates, fmt.Sprintf("amount_limit = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.AmountLimit)
-	}
-	if input.Note != nil {
-		updates = append(updates, fmt.Sprintf("note = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.Note)
-	}
-
-	if len(updates) == 0 {
-		return r.Get(ctx, id)
-	}
-
-	updates = append(updates, fmt.Sprintf("updated_at = $%d", qb.NextArgIndex()))
-	qb.AddArg(time.Now())
-
-	query := fmt.Sprintf(`
+func (br BudgetRepository) Update(ctx context.Context, id int64, p models.UpdateBudgetRequestModel) (models.UpdateBudgetResponseModel, error) {
+	query := `
 		UPDATE budgets
-		SET %s
-		WHERE id = $%d AND deleted_at IS NULL
-		RETURNING id`,
-		utils.JoinStrings(updates, ", "),
-		qb.NextArgIndex(),
+		SET account_id = COALESCE($1, account_id),
+		    category_id = COALESCE($2, category_id),
+		    period_start = COALESCE($3, period_start),
+		    period_end = COALESCE($4, period_end),
+		    amount_limit = COALESCE($5, amount_limit),
+		    note = COALESCE($6, note),
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = $7 AND deleted_at IS NULL
+		RETURNING id, template_id, account_id, category_id, period_start, period_end,
+		          amount_limit, note, created_at, updated_at, deleted_at`
+
+	var item models.BudgetModel
+	err := br.pgx.QueryRow(
+		ctx,
+		query,
+		p.AccountID,
+		p.CategoryID,
+		p.PeriodStart,
+		p.PeriodEnd,
+		p.AmountLimit,
+		p.Note,
+		id,
+	).Scan(
+		&item.ID, &item.TemplateID, &item.AccountID, &item.CategoryID, &item.PeriodStart, &item.PeriodEnd,
+		&item.AmountLimit, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 	)
-	qb.AddArg(id)
 
-	var budgetID int
-	err := r.db.QueryRow(ctx, query, qb.GetArgs()...).Scan(&budgetID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
-	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to update budget: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UpdateBudgetResponseModel{}, huma.Error404NotFound("Budget not found")
+		}
+		return models.UpdateBudgetResponseModel{}, huma.Error400BadRequest("Unable to update budget", err)
 	}
 
-	// Fetch the updated budget with calculated actual_amount
-	return r.Get(ctx, budgetID)
+	return models.UpdateBudgetResponseModel{BudgetModel: item}, nil
 }
 
 // Delete soft-deletes a budget
-func (r *BudgetRepository) Delete(ctx context.Context, id int) error {
-	query := `
-		UPDATE budgets
-		SET deleted_at = $1, updated_at = $1
-		WHERE id = $2 AND deleted_at IS NULL`
+func (br BudgetRepository) Delete(ctx context.Context, id int64) error {
+	sql := `UPDATE budgets
+			SET deleted_at = CURRENT_TIMESTAMP
+			WHERE id = $1 AND deleted_at IS NULL`
 
-	result, err := r.db.Exec(ctx, query, time.Now(), id)
+	cmdTag, err := br.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete budget: %w", err)
+		return huma.Error400BadRequest("Unable to delete budget", err)
 	}
-
-	rowsAffected := result.RowsAffected()
-	if rowsAffected == 0 {
-		return nil // Already deleted or not found
+	if cmdTag.RowsAffected() == 0 {
+		return huma.Error404NotFound("Budget not found")
 	}
 
 	return nil
-}
-
-// GetByAccountID retrieves budgets for a specific account
-func (r *BudgetRepository) GetByAccountID(ctx context.Context, accountID int, params schemas.SearchParamBudgetSchema) (*schemas.PaginatedBudgetSchema, error) {
-	params.AccountIDs = []int{accountID}
-	return r.List(ctx, params)
-}
-
-// GetByCategoryID retrieves budgets for a specific category
-func (r *BudgetRepository) GetByCategoryID(ctx context.Context, categoryID int, params schemas.SearchParamBudgetSchema) (*schemas.PaginatedBudgetSchema, error) {
-	params.CategoryIDs = []int{categoryID}
-	return r.List(ctx, params)
-}
-
-// CheckDuplicate checks if a budget already exists for the same period and targets
-func (r *BudgetRepository) CheckDuplicate(ctx context.Context, templateID *int, accountID *int, categoryID *int, periodStart time.Time, periodEnd time.Time) (bool, error) {
-	qb := utils.QueryBuilder()
-	qb.Add("deleted_at IS NULL")
-	qb.Add(fmt.Sprintf("period_start = $%d", qb.NextArgIndex()))
-	qb.AddArg(periodStart)
-	qb.Add(fmt.Sprintf("period_end = $%d", qb.NextArgIndex()))
-	qb.AddArg(periodEnd)
-
-	if templateID != nil {
-		qb.Add(fmt.Sprintf("template_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*templateID)
-	}
-	if accountID != nil {
-		qb.Add(fmt.Sprintf("account_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*accountID)
-	}
-	if categoryID != nil {
-		qb.Add(fmt.Sprintf("category_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*categoryID)
-	}
-
-	whereClause, args := qb.ToWhereClause()
-	query := fmt.Sprintf("SELECT COUNT(*) FROM budgets %s", whereClause)
-
-	var count int
-	err := r.db.QueryRow(ctx, query, args...).Scan(&count)
-	if err != nil {
-		return false, fmt.Errorf("failed to check duplicate budget: %w", err)
-	}
-
-	return count > 0, nil
 }

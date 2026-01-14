@@ -2,130 +2,177 @@ package repositories
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/utils"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TagRepository struct {
-	db DB
+	pgx *pgxpool.Pool
 }
 
-func NewTagRepository(db DB) *TagRepository {
-	return &TagRepository{db: db}
+func NewTagRepository(pgx *pgxpool.Pool) TagRepository {
+	return TagRepository{pgx}
 }
 
-// List returns paginated tags with optional search
-func (r *TagRepository) List(ctx context.Context, params schemas.SearchParamTagSchema) (schemas.PaginatedTagSchema, error) {
-	qb := utils.QueryBuilder()
-
-	// Apply search filter
-	if params.Search != "" {
-		qb.AddLikeFilter("name", params.Search)
+// List returns a paginated list of tags
+func (tr TagRepository) List(ctx context.Context, query models.ListTagsRequestModel) (models.ListTagsResponseModel, error) {
+	// Enforce page size limits
+	if query.PageSize <= 0 || query.PageSize > 100 {
+		query.PageSize = 10
+	}
+	if query.PageNumber <= 0 {
+		query.PageNumber = 1
 	}
 
-	// Get total count
-	whereClause, args := qb.ToWhereClause()
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM tags %s", whereClause)
-	var totalItems int
-	if err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalItems); err != nil {
-		return schemas.PaginatedTagSchema{}, fmt.Errorf("count tags: %w", err)
+	sortByMap := map[string]string{
+		"id":        "id",
+		"name":      "name",
+		"createdAt": "created_at",
+		"updatedAt": "updated_at",
+	}
+	sortOrderMap := map[string]string{
+		"asc":  "ASC",
+		"desc": "DESC",
 	}
 
-	// Apply pagination
-	offset := (params.Page - 1) * params.Limit
-	limitIdx := qb.NextArgIndex()
+	sortColumn, ok := sortByMap[query.SortBy]
+	if !ok {
+		sortColumn = "created_at"
+	}
+	sortOrder, ok := sortOrderMap[query.SortOrder]
+	if !ok {
+		sortOrder = "DESC"
+	}
 
-	// Execute query
-	sql := fmt.Sprintf(`SELECT id, name, created_at FROM tags %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d`,
-		whereClause, limitIdx, limitIdx+1)
-	args = append(args, params.Limit, offset)
+	offset := (query.PageNumber - 1) * query.PageSize
+	searchPattern := "%" + query.Name + "%"
 
-	rows, err := r.db.Query(ctx, sql, args...)
+	countSQL := `SELECT COUNT(*) FROM tags WHERE deleted_at IS NULL`
+	var totalCount int
+	if err := tr.pgx.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
+		return models.ListTagsResponseModel{}, huma.Error400BadRequest("Unable to count tags", err)
+	}
+
+	sql := `SELECT id, name, created_at, updated_at, deleted_at
+			FROM tags
+			WHERE deleted_at IS NULL
+			AND (name ILIKE $1 OR $1 = '%%')
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $2 OFFSET $3`
+
+	rows, err := tr.pgx.Query(ctx, sql, searchPattern, query.PageSize, offset)
 	if err != nil {
-		return schemas.PaginatedTagSchema{}, fmt.Errorf("list tags: %w", err)
+		return models.ListTagsResponseModel{}, huma.Error400BadRequest("Unable to query tags", err)
 	}
 	defer rows.Close()
 
-	var tags []schemas.TagSchema
+	var items []models.TagModel
 	for rows.Next() {
-		var tag schemas.TagSchema
-		if err := rows.Scan(&tag.ID, &tag.Name, &tag.CreatedAt); err != nil {
-			return schemas.PaginatedTagSchema{}, fmt.Errorf("scan tag: %w", err)
+		var item models.TagModel
+		err := rows.Scan(&item.ID, &item.Name, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt)
+		if err != nil {
+			return models.ListTagsResponseModel{}, huma.Error400BadRequest("Unable to scan tag data", err)
 		}
-		tags = append(tags, tag)
+		items = append(items, item)
 	}
 
-	if tags == nil {
-		tags = []schemas.TagSchema{}
+	if err := rows.Err(); err != nil {
+		return models.ListTagsResponseModel{}, huma.Error400BadRequest("Error reading tag rows", err)
 	}
 
-	totalPages := (totalItems + params.Limit - 1) / params.Limit
+	if items == nil {
+		items = []models.TagModel{}
+	}
 
-	return schemas.PaginatedTagSchema{
-		Data:       tags,
-		Page:       params.Page,
-		Limit:      params.Limit,
-		TotalItems: totalItems,
+	totalPages := 0
+	if totalCount > 0 {
+		totalPages = (totalCount + query.PageSize - 1) / query.PageSize
+	}
+
+	return models.ListTagsResponseModel{
+		Data:       items,
+		PageNumber: query.PageNumber,
+		PageSize:   query.PageSize,
+		TotalCount: totalCount,
 		TotalPages: totalPages,
 	}, nil
 }
 
 // Get returns a single tag by ID
-func (r *TagRepository) Get(ctx context.Context, id int) (schemas.TagSchema, error) {
-	sql := `SELECT id, name, created_at FROM tags WHERE id = $1`
+func (tr TagRepository) Get(ctx context.Context, id int64) (models.TagModel, error) {
+	var data models.TagModel
 
-	var tag schemas.TagSchema
-	err := r.db.QueryRow(ctx, sql, id).Scan(&tag.ID, &tag.Name, &tag.CreatedAt)
+	sql := `SELECT id, name, created_at, updated_at, deleted_at
+			FROM tags
+			WHERE id = $1 AND deleted_at IS NULL`
+
+	err := tr.pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+
 	if err != nil {
-		return schemas.TagSchema{}, fmt.Errorf("get tag: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.TagModel{}, huma.Error404NotFound("Tag not found")
+		}
+		return models.TagModel{}, huma.Error400BadRequest("Unable to query tag", err)
 	}
 
-	return tag, nil
-}
-
-// GetByName returns a tag by name (case-insensitive)
-func (r *TagRepository) GetByName(ctx context.Context, name string) (schemas.TagSchema, error) {
-	sql := `SELECT id, name, created_at FROM tags WHERE LOWER(name) = LOWER($1)`
-
-	var tag schemas.TagSchema
-	err := r.db.QueryRow(ctx, sql, name).Scan(&tag.ID, &tag.Name, &tag.CreatedAt)
-	if err != nil {
-		return schemas.TagSchema{}, fmt.Errorf("get tag by name: %w", err)
-	}
-
-	return tag, nil
+	return data, nil
 }
 
 // Create creates a new tag
-func (r *TagRepository) Create(ctx context.Context, input schemas.CreateTagSchema) (schemas.TagSchema, error) {
-	sql := `
-		INSERT INTO tags (name, created_at)
-		VALUES ($1, NOW())
-		RETURNING id, name, created_at
-	`
+func (tr TagRepository) Create(ctx context.Context, payload models.CreateTagRequestModel) (models.CreateTagResponseModel, error) {
+	var data models.TagModel
 
-	var tag schemas.TagSchema
-	err := r.db.QueryRow(ctx, sql, input.Name).Scan(&tag.ID, &tag.Name, &tag.CreatedAt)
+	sql := `INSERT INTO tags (name)
+			VALUES ($1)
+			RETURNING id, name, created_at, updated_at, deleted_at`
+
+	err := tr.pgx.QueryRow(ctx, sql, payload.Name).Scan(&data.ID, &data.Name, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+
 	if err != nil {
-		return schemas.TagSchema{}, fmt.Errorf("create tag: %w", err)
+		return models.CreateTagResponseModel{}, huma.Error400BadRequest("Unable to create tag", err)
 	}
 
-	return tag, nil
+	return models.CreateTagResponseModel{TagModel: data}, nil
 }
 
-// Delete deletes a tag (this will cascade to transaction_tags)
-func (r *TagRepository) Delete(ctx context.Context, id int) error {
-	sql := `DELETE FROM tags WHERE id = $1`
+// Update updates an existing tag
+func (tr TagRepository) Update(ctx context.Context, id int64, payload models.UpdateTagRequestModel) (models.UpdateTagResponseModel, error) {
+	var data models.TagModel
 
-	result, err := r.db.Exec(ctx, sql, id)
+	sql := `UPDATE tags
+			SET name = COALESCE($1, name),
+				updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2 AND deleted_at IS NULL
+			RETURNING id, name, created_at, updated_at, deleted_at`
+
+	err := tr.pgx.QueryRow(ctx, sql, payload.Name, id).Scan(&data.ID, &data.Name, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+
 	if err != nil {
-		return fmt.Errorf("delete tag: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UpdateTagResponseModel{}, huma.Error404NotFound("Tag not found")
+		}
+		return models.UpdateTagResponseModel{}, huma.Error400BadRequest("Unable to update tag", err)
 	}
 
-	if result.RowsAffected() == 0 {
-		return fmt.Errorf("tag not found")
+	return models.UpdateTagResponseModel{TagModel: data}, nil
+}
+
+// Delete soft deletes a tag
+func (tr TagRepository) Delete(ctx context.Context, id int64) error {
+	sql := `UPDATE tags
+			SET deleted_at = CURRENT_TIMESTAMP
+			WHERE id = $1 AND deleted_at IS NULL`
+
+	cmdTag, err := tr.pgx.Exec(ctx, sql, id)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to delete tag", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return huma.Error404NotFound("Tag not found")
 	}
 
 	return nil

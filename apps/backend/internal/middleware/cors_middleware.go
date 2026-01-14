@@ -3,6 +3,8 @@ package middleware
 import (
 	"net/http"
 	"strings"
+
+	"github.com/danielgtaylor/huma/v2"
 )
 
 var (
@@ -11,27 +13,26 @@ var (
 	allowedHeaders = []string{"Content-Type", "Authorization"}
 )
 
-// CORS middleware to handle Cross-Origin Resource Sharing
-func CORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
+func CORS(api huma.API) func(huma.Context, func(huma.Context)) {
+	return func(ctx huma.Context, next func(huma.Context)) {
+		origin := ctx.Header("Origin")
+
+		if ctx.Method() == http.MethodOptions {
+			huma.WriteErr(api, ctx, http.StatusNoContent, "Method doesn't allowed")
+			return
+		}
+
+		ctx.SetHeader("Access-Control-Allow-Methods", strings.Join(allowedMethods, ", "))
+		ctx.SetHeader("Access-Control-Allow-Headers", strings.Join(allowedHeaders, ", "))
+		ctx.SetHeader("Access-Control-Allow-Credentials", "true")
 
 		for _, allowedOrigin := range allowedOrigins {
 			if origin == allowedOrigin {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
+				ctx.SetHeader("Access-Control-Allow-Origin", origin)
 				break
 			}
 		}
 
-		w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ", "))
-		w.Header().Set("Access-Control-Allow-Headers", strings.Join(allowedHeaders, ", "))
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
+		next(ctx)
+	}
 }

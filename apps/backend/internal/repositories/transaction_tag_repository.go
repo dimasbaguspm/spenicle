@@ -2,213 +2,164 @@ package repositories
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"errors"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/utils"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TransactionTagRepository struct {
-	db DB
+	pgx *pgxpool.Pool
 }
 
-func NewTransactionTagRepository(db DB) *TransactionTagRepository {
-	return &TransactionTagRepository{db: db}
+func NewTransactionTagRepository(pgx *pgxpool.Pool) TransactionTagRepository {
+	return TransactionTagRepository{pgx}
 }
 
-// GetTransactionTags returns all tags for a specific transaction
-func (r *TransactionTagRepository) GetTransactionTags(ctx context.Context, transactionID int) ([]schemas.TagSchema, error) {
-	sql := `
-		SELECT t.id, t.name, t.created_at
-		FROM tags t
-		INNER JOIN transaction_tags tt ON t.id = tt.tag_id
-		WHERE tt.transaction_id = $1
-		ORDER BY t.name ASC
-	`
+// List returns a paginated list of tags for a transaction
+func (ttr TransactionTagRepository) List(ctx context.Context, transactionID int64, pageNumber int, pageSize int) (models.ListTransactionTagsResponseModel, error) {
+	// Enforce page size limits
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 10
+	}
+	if pageNumber <= 0 {
+		pageNumber = 1
+	}
 
-	rows, err := r.db.Query(ctx, sql, transactionID)
+	offset := (pageNumber - 1) * pageSize
+
+	countSQL := `SELECT COUNT(*) FROM transaction_tags WHERE transaction_id = $1`
+	var totalCount int
+	if err := ttr.pgx.QueryRow(ctx, countSQL, transactionID).Scan(&totalCount); err != nil {
+		return models.ListTransactionTagsResponseModel{}, huma.Error400BadRequest("Unable to count transaction tags", err)
+	}
+
+	sql := `SELECT tt.transaction_id, t.id, t.name, tt.created_at
+			FROM transaction_tags tt
+			INNER JOIN tags t ON tt.tag_id = t.id
+			WHERE tt.transaction_id = $1 AND t.deleted_at IS NULL
+			ORDER BY t.name ASC
+			LIMIT $2 OFFSET $3`
+
+	rows, err := ttr.pgx.Query(ctx, sql, transactionID, pageSize, offset)
 	if err != nil {
-		return nil, fmt.Errorf("get transaction tags: %w", err)
+		return models.ListTransactionTagsResponseModel{}, huma.Error400BadRequest("Unable to query transaction tags", err)
 	}
 	defer rows.Close()
 
-	var tags []schemas.TagSchema
+	var items []models.TransactionTagModel
 	for rows.Next() {
-		var tag schemas.TagSchema
-		if err := rows.Scan(&tag.ID, &tag.Name, &tag.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scan tag: %w", err)
-		}
-		tags = append(tags, tag)
-	}
-
-	if tags == nil {
-		tags = []schemas.TagSchema{}
-	}
-
-	return tags, nil
-}
-
-// AddTagToTransaction adds a tag to a transaction (idempotent)
-func (r *TransactionTagRepository) AddTagToTransaction(ctx context.Context, transactionID int, tagID int) error {
-	sql := `
-		INSERT INTO transaction_tags (transaction_id, tag_id, created_at)
-		VALUES ($1, $2, NOW())
-		ON CONFLICT (transaction_id, tag_id) DO NOTHING
-	`
-
-	_, err := r.db.Exec(ctx, sql, transactionID, tagID)
-	if err != nil {
-		return fmt.Errorf("add tag to transaction: %w", err)
-	}
-
-	return nil
-}
-
-// RemoveTagFromTransaction removes a tag from a transaction
-func (r *TransactionTagRepository) RemoveTagFromTransaction(ctx context.Context, transactionID int, tagID int) error {
-	sql := `DELETE FROM transaction_tags WHERE transaction_id = $1 AND tag_id = $2`
-
-	_, err := r.db.Exec(ctx, sql, transactionID, tagID)
-	if err != nil {
-		return fmt.Errorf("remove tag from transaction: %w", err)
-	}
-
-	return nil
-}
-
-// ReplaceTransactionTags replaces all tags for a transaction
-func (r *TransactionTagRepository) ReplaceTransactionTags(ctx context.Context, transactionID int, tagIDs []int) error {
-	// Delete existing tags
-	deleteSql := `DELETE FROM transaction_tags WHERE transaction_id = $1`
-	if _, err := r.db.Exec(ctx, deleteSql, transactionID); err != nil {
-		return fmt.Errorf("delete existing tags: %w", err)
-	}
-
-	// If no tags to add, we're done
-	if len(tagIDs) == 0 {
-		return nil
-	}
-
-	// Build bulk insert
-	valueStrings := make([]string, 0, len(tagIDs))
-	valueArgs := make([]interface{}, 0, len(tagIDs)*2)
-	argPosition := 1
-
-	for _, tagID := range tagIDs {
-		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, NOW())", argPosition, argPosition+1))
-		valueArgs = append(valueArgs, transactionID, tagID)
-		argPosition += 2
-	}
-
-	insertSql := fmt.Sprintf(
-		"INSERT INTO transaction_tags (transaction_id, tag_id, created_at) VALUES %s",
-		strings.Join(valueStrings, ","),
-	)
-
-	if _, err := r.db.Exec(ctx, insertSql, valueArgs...); err != nil {
-		return fmt.Errorf("insert new tags: %w", err)
-	}
-
-	return nil
-}
-
-// GetTagSummary returns summary statistics grouped by tags
-func (r *TransactionTagRepository) GetTagSummary(ctx context.Context, params schemas.SummaryTagParamSchema) (schemas.SummaryTagSchema, error) {
-	qb := utils.QueryBuilder()
-
-	// Apply filters using query builder
-	if !params.StartDate.IsZero() {
-		idx := qb.AddArg(params.StartDate)
-		qb.Add(fmt.Sprintf("tr.date >= $%d", idx))
-	}
-
-	if !params.EndDate.IsZero() {
-		idx := qb.AddArg(params.EndDate)
-		qb.Add(fmt.Sprintf("tr.date <= $%d", idx))
-	}
-
-	if len(params.TagNames) > 0 {
-		placeholders := qb.BuildPlaceholders(len(params.TagNames))
-		for _, name := range params.TagNames {
-			qb.AddArg(name)
-		}
-		qb.Add(fmt.Sprintf("t.name IN (%s)", placeholders))
-	}
-
-	if len(params.AccountIDs) > 0 {
-		placeholders := qb.BuildPlaceholders(len(params.AccountIDs))
-		for _, id := range params.AccountIDs {
-			qb.AddArg(id)
-		}
-		qb.Add(fmt.Sprintf("tr.account_id IN (%s)", placeholders))
-	}
-
-	if len(params.CategoryIDs) > 0 {
-		placeholders := qb.BuildPlaceholders(len(params.CategoryIDs))
-		for _, id := range params.CategoryIDs {
-			qb.AddArg(id)
-		}
-		qb.Add(fmt.Sprintf("tr.category_id IN (%s)", placeholders))
-	}
-
-	if params.Type != "" {
-		idx := qb.AddArg(params.Type)
-		qb.Add(fmt.Sprintf("tr.type = $%d", idx))
-	}
-
-	// Build WHERE clause
-	whereClause, args := qb.ToWhereClause()
-	if whereClause == "" {
-		whereClause = "WHERE tr.deleted_at IS NULL"
-	} else {
-		whereClause = "WHERE tr.deleted_at IS NULL AND " + strings.TrimPrefix(whereClause, "WHERE ")
-	}
-
-	// Build full SQL query
-	sql := fmt.Sprintf(`
-		SELECT 
-			t.id as tag_id,
-			t.name as tag_name,
-			COUNT(*) as total_count,
-			COUNT(*) FILTER (WHERE tr.type = 'income') as income_count,
-			COUNT(*) FILTER (WHERE tr.type = 'expense') as expense_count,
-			COUNT(*) FILTER (WHERE tr.type = 'transfer') as transfer_count,
-			COALESCE(SUM(tr.amount) FILTER (WHERE tr.type = 'income'), 0) as income_amount,
-			COALESCE(SUM(tr.amount) FILTER (WHERE tr.type = 'expense'), 0) as expense_amount,
-			COALESCE(SUM(tr.amount) FILTER (WHERE tr.type = 'transfer'), 0) as transfer_amount,
-			COALESCE(SUM(tr.amount) FILTER (WHERE tr.type = 'income'), 0) - 
-			COALESCE(SUM(tr.amount) FILTER (WHERE tr.type = 'expense'), 0) as net
-		FROM tags t
-		INNER JOIN transaction_tags tt ON t.id = tt.tag_id
-		INNER JOIN transactions tr ON tt.transaction_id = tr.id
-		%s
-		GROUP BY t.id, t.name 
-		ORDER BY t.name ASC
-	`, whereClause)
-
-	rows, err := r.db.Query(ctx, sql, args...)
-	if err != nil {
-		return schemas.SummaryTagSchema{}, fmt.Errorf("get tag summary: %w", err)
-	}
-	defer rows.Close()
-
-	var items []schemas.SummaryTagitem
-	for rows.Next() {
-		var item schemas.SummaryTagitem
-		if err := rows.Scan(
-			&item.TagID, &item.TagName, &item.TotalCount,
-			&item.IncomeCount, &item.ExpenseCount, &item.TransferCount,
-			&item.IncomeAmount, &item.ExpenseAmount, &item.TransferAmount, &item.Net,
-		); err != nil {
-			return schemas.SummaryTagSchema{}, fmt.Errorf("scan tag summary: %w", err)
+		var item models.TransactionTagModel
+		err := rows.Scan(&item.TransactionID, &item.TagID, &item.TagName, &item.CreatedAt)
+		if err != nil {
+			return models.ListTransactionTagsResponseModel{}, huma.Error400BadRequest("Unable to scan transaction tag data", err)
 		}
 		items = append(items, item)
 	}
 
-	if items == nil {
-		items = []schemas.SummaryTagitem{}
+	if err := rows.Err(); err != nil {
+		return models.ListTransactionTagsResponseModel{}, huma.Error400BadRequest("Error reading transaction tag rows", err)
 	}
 
-	return schemas.SummaryTagSchema{Data: items}, nil
+	if items == nil {
+		items = []models.TransactionTagModel{}
+	}
+
+	totalPages := 0
+	if totalCount > 0 {
+		totalPages = (totalCount + pageSize - 1) / pageSize
+	}
+
+	return models.ListTransactionTagsResponseModel{
+		Data:       items,
+		PageNumber: pageNumber,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+		TotalPages: totalPages,
+	}, nil
+}
+
+// Get returns a single transaction tag by ID
+func (ttr TransactionTagRepository) Get(ctx context.Context, transactionID int64, tagID int64) (models.TransactionTagModel, error) {
+	var data models.TransactionTagModel
+
+	sql := `SELECT tt.transaction_id, t.id, t.name, tt.created_at
+			FROM transaction_tags tt
+			INNER JOIN tags t ON tt.tag_id = t.id
+			WHERE tt.transaction_id = $1 AND tt.tag_id = $2 AND t.deleted_at IS NULL`
+
+	err := ttr.pgx.QueryRow(ctx, sql, transactionID, tagID).Scan(&data.TransactionID, &data.TagID, &data.TagName, &data.CreatedAt)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.TransactionTagModel{}, huma.Error404NotFound("Transaction tag not found")
+		}
+		return models.TransactionTagModel{}, huma.Error400BadRequest("Unable to query transaction tag", err)
+	}
+
+	return data, nil
+}
+
+// Create adds a tag to a transaction
+func (ttr TransactionTagRepository) Create(ctx context.Context, payload models.CreateTransactionTagRequestModel) (models.CreateTransactionTagResponseModel, error) {
+	var data models.TransactionTagModel
+
+	// Insert and get tag details
+	sql := `INSERT INTO transaction_tags (transaction_id, tag_id)
+			VALUES ($1, $2)
+			ON CONFLICT (transaction_id, tag_id) DO NOTHING
+			RETURNING (SELECT transaction_id FROM transaction_tags WHERE transaction_id = $1 AND tag_id = $2),
+					  (SELECT $2),
+					  (SELECT name FROM tags WHERE id = $2 AND deleted_at IS NULL),
+					  (SELECT created_at FROM transaction_tags WHERE transaction_id = $1 AND tag_id = $2)`
+
+	err := ttr.pgx.QueryRow(ctx, sql, payload.TransactionID, payload.TagID).Scan(&data.TransactionID, &data.TagID, &data.TagName, &data.CreatedAt)
+
+	if err != nil {
+		return models.CreateTransactionTagResponseModel{}, huma.Error400BadRequest("Unable to add tag to transaction", err)
+	}
+
+	return models.CreateTransactionTagResponseModel{TransactionTagModel: data}, nil
+}
+
+// Delete removes a tag from a transaction
+func (ttr TransactionTagRepository) Delete(ctx context.Context, transactionID int64, tagID int64) error {
+	sql := `DELETE FROM transaction_tags
+			WHERE transaction_id = $1 AND tag_id = $2`
+
+	cmdTag, err := ttr.pgx.Exec(ctx, sql, transactionID, tagID)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to remove tag from transaction", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return huma.Error404NotFound("Transaction tag not found")
+	}
+
+	return nil
+}
+
+// DeleteByTransactionID removes all tags from a transaction
+func (ttr TransactionTagRepository) DeleteByTransactionID(ctx context.Context, transactionID int64) error {
+	sql := `DELETE FROM transaction_tags WHERE transaction_id = $1`
+
+	_, err := ttr.pgx.Exec(ctx, sql, transactionID)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to delete transaction tags", err)
+	}
+
+	return nil
+}
+
+// DeleteByTagID removes a tag from all transactions
+func (ttr TransactionTagRepository) DeleteByTagID(ctx context.Context, tagID int64) error {
+	sql := `DELETE FROM transaction_tags WHERE tag_id = $1`
+
+	_, err := ttr.pgx.Exec(ctx, sql, tagID)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to delete tag from transactions", err)
+	}
+
+	return nil
 }

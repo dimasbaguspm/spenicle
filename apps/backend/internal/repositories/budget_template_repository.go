@@ -2,65 +2,33 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
-	"time"
+	"errors"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/utils"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type BudgetTemplateRepository struct {
-	db DB
+	pgx *pgxpool.Pool
 }
 
-func NewBudgetTemplateRepository(db DB) *BudgetTemplateRepository {
-	return &BudgetTemplateRepository{db: db}
+func NewBudgetTemplateRepository(pgx *pgxpool.Pool) BudgetTemplateRepository {
+	return BudgetTemplateRepository{pgx}
 }
 
 // List retrieves paginated budget templates with filters
-func (r *BudgetTemplateRepository) List(ctx context.Context, params schemas.SearchParamBudgetTemplateSchema) (*schemas.PaginatedBudgetTemplateSchema, error) {
-	qb := utils.QueryBuilder()
-
-	// Add filters
-	if len(params.ID) > 0 {
-		qb.AddInFilter("id", params.ID)
+func (btr BudgetTemplateRepository) List(ctx context.Context, p models.ListBudgetTemplatesRequestModel) (models.ListBudgetTemplatesResponseModel, error) {
+	// Enforce page size limits
+	if p.PageSize <= 0 || p.PageSize > 100 {
+		p.PageSize = 10
 	}
-	if len(params.AccountID) > 0 {
-		qb.AddInFilter("account_id", params.AccountID)
-	}
-	if len(params.CategoryID) > 0 {
-		qb.AddInFilter("category_id", params.CategoryID)
-	}
-	if len(params.Recurrence) > 0 {
-		qb.AddInFilterString("recurrence", params.Recurrence)
-	}
-	qb.Add("deleted_at IS NULL")
-
-	whereClause, args := qb.ToWhereClause()
-
-	// Build count query
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM budget_templates %s", whereClause)
-
-	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count budget templates: %w", err)
+	if p.PageNumber <= 0 {
+		p.PageNumber = 1
 	}
 
-	// Handle empty result
-	if totalCount == 0 {
-		return &schemas.PaginatedBudgetTemplateSchema{
-			Items:      []schemas.BudgetTemplateSchema{},
-			TotalCount: 0,
-			PageNumber: params.Page,
-			PageSize:   params.Limit,
-			PageTotal:  0,
-		}, nil
-	}
-
-	// Build ORDER BY clause
-	orderByClause := qb.BuildOrderBy(params.OrderBy, params.Sort, map[string]string{
+	sortByMap := map[string]string{
 		"id":          "id",
 		"accountId":   "account_id",
 		"categoryId":  "category_id",
@@ -70,234 +38,259 @@ func (r *BudgetTemplateRepository) List(ctx context.Context, params schemas.Sear
 		"endDate":     "end_date",
 		"createdAt":   "created_at",
 		"updatedAt":   "updated_at",
-	})
+	}
+	sortOrderMap := map[string]string{
+		"asc":  "ASC",
+		"desc": "DESC",
+	}
 
-	// Build data query with pagination
-	offset := (params.Page - 1) * params.Limit
-	dataQuery := fmt.Sprintf(`
-		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date,
-		       note, created_at, updated_at, deleted_at
+	sortColumn, ok := sortByMap[p.SortBy]
+	if !ok {
+		sortColumn = "created_at"
+	}
+	sortOrder, ok := sortOrderMap[p.SortOrder]
+	if !ok {
+		sortOrder = "DESC"
+	}
+
+	offset := (p.PageNumber - 1) * p.PageSize
+
+	// Count total matching budget templates
+	countSQL := `SELECT COUNT(*) FROM budget_templates WHERE deleted_at IS NULL`
+	var totalCount int
+	if err := btr.pgx.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
+		return models.ListBudgetTemplatesResponseModel{}, huma.Error400BadRequest("Unable to count budget templates", err)
+	}
+
+	// Fetch paginated budget templates
+	sql := `
+		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date, note, created_at, updated_at, deleted_at
 		FROM budget_templates
-		%s
-		%s
-		LIMIT $%d OFFSET $%d`,
-		whereClause,
-		orderByClause,
-		qb.NextArgIndex(),
-		qb.NextArgIndex()+1,
-	)
-	args = append(args, params.Limit, offset)
+		WHERE deleted_at IS NULL
+		ORDER BY ` + sortColumn + ` ` + sortOrder + `
+		LIMIT $1 OFFSET $2`
 
-	rows, err := r.db.Query(ctx, dataQuery, args...)
+	rows, err := btr.pgx.Query(ctx, sql, p.PageSize, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query budget templates: %w", err)
+		return models.ListBudgetTemplatesResponseModel{}, huma.Error400BadRequest("Unable to query budget templates", err)
 	}
 	defer rows.Close()
 
-	items, err := schemas.PaginatedBudgetTemplateSchema{}.FromRows(rows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to scan budget templates: %w", err)
+	var items []models.BudgetTemplateModel
+	for rows.Next() {
+		var item models.BudgetTemplateModel
+		if err := rows.Scan(
+			&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence,
+			&item.StartDate, &item.EndDate, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+		); err != nil {
+			return models.ListBudgetTemplatesResponseModel{}, huma.Error400BadRequest("Unable to scan budget template data", err)
+		}
+		items = append(items, item)
 	}
 
-	return &schemas.PaginatedBudgetTemplateSchema{
-		Items:      items,
+	if err := rows.Err(); err != nil {
+		return models.ListBudgetTemplatesResponseModel{}, huma.Error400BadRequest("Error reading budget template rows", err)
+	}
+
+	if items == nil {
+		items = []models.BudgetTemplateModel{}
+	}
+
+	totalPages := 0
+	if totalCount > 0 {
+		totalPages = (totalCount + p.PageSize - 1) / p.PageSize
+	}
+
+	return models.ListBudgetTemplatesResponseModel{
+		Data:       items,
+		PageNumber: p.PageNumber,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
-		PageNumber: params.Page,
-		PageSize:   params.Limit,
-		PageTotal:  (totalCount + params.Limit - 1) / params.Limit,
+		TotalPages: totalPages,
 	}, nil
 }
 
-// Get retrieves a single budget template by ID (not deleted)
-func (r *BudgetTemplateRepository) Get(ctx context.Context, id int) (*schemas.BudgetTemplateSchema, error) {
+// Get retrieves a single budget template by ID
+func (btr BudgetTemplateRepository) Get(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
 	query := `
-		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date,
-		       note, created_at, updated_at, deleted_at
+		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date, note, created_at, updated_at, deleted_at
 		FROM budget_templates
 		WHERE id = $1 AND deleted_at IS NULL`
 
-	var template schemas.BudgetTemplateSchema
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&template.ID,
-		&template.AccountID,
-		&template.CategoryID,
-		&template.AmountLimit,
-		&template.Recurrence,
-		&template.StartDate,
-		&template.EndDate,
-		&template.Note,
-		&template.CreatedAt,
-		&template.UpdatedAt,
-		&template.DeletedAt,
+	var item models.BudgetTemplateModel
+	err := btr.pgx.QueryRow(ctx, query, id).Scan(
+		&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence,
+		&item.StartDate, &item.EndDate, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 	)
-	if err == sql.ErrNoRows {
-		return nil, nil
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.BudgetTemplateModel{}, huma.Error404NotFound("Budget template not found")
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to get budget template: %w", err)
+		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Unable to query budget template", err)
 	}
 
-	return &template, nil
+	return item, nil
 }
 
 // Create creates a new budget template
-func (r *BudgetTemplateRepository) Create(ctx context.Context, input schemas.CreateBudgetTemplateSchema) (*schemas.BudgetTemplateSchema, error) {
+func (btr BudgetTemplateRepository) Create(ctx context.Context, p models.CreateBudgetTemplateRequestModel) (models.CreateBudgetTemplateResponseModel, error) {
 	query := `
 		INSERT INTO budget_templates (account_id, category_id, amount_limit, recurrence, start_date, end_date, note)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, account_id, category_id, amount_limit, recurrence, start_date, end_date,
-		          note, created_at, updated_at, deleted_at`
+		RETURNING id, account_id, category_id, amount_limit, recurrence, start_date, end_date, note, created_at, updated_at, deleted_at`
 
-	var template schemas.BudgetTemplateSchema
-	err := r.db.QueryRow(
+	var item models.BudgetTemplateModel
+	err := btr.pgx.QueryRow(
 		ctx,
 		query,
-		input.AccountID,
-		input.CategoryID,
-		input.AmountLimit,
-		input.Recurrence,
-		input.StartDate,
-		input.EndDate,
-		input.Note,
+		p.AccountID,
+		p.CategoryID,
+		p.AmountLimit,
+		p.Recurrence,
+		p.StartDate,
+		p.EndDate,
+		p.Note,
 	).Scan(
-		&template.ID,
-		&template.AccountID,
-		&template.CategoryID,
-		&template.AmountLimit,
-		&template.Recurrence,
-		&template.StartDate,
-		&template.EndDate,
-		&template.Note,
-		&template.CreatedAt,
-		&template.UpdatedAt,
-		&template.DeletedAt,
+		&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence,
+		&item.StartDate, &item.EndDate, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 	)
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to create budget template: %w", err)
+		return models.CreateBudgetTemplateResponseModel{}, huma.Error400BadRequest("Unable to create budget template", err)
 	}
 
-	return &template, nil
+	return models.CreateBudgetTemplateResponseModel{BudgetTemplateModel: item}, nil
 }
 
 // Update updates an existing budget template
-func (r *BudgetTemplateRepository) Update(ctx context.Context, id int, input schemas.UpdateBudgetTemplateSchema) (*schemas.BudgetTemplateSchema, error) {
-	qb := utils.QueryBuilder()
-	updates := []string{}
-
-	if input.AccountID != nil {
-		updates = append(updates, fmt.Sprintf("account_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.AccountID)
-	}
-	if input.CategoryID != nil {
-		updates = append(updates, fmt.Sprintf("category_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.CategoryID)
-	}
-	if input.AmountLimit != nil {
-		updates = append(updates, fmt.Sprintf("amount_limit = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.AmountLimit)
-	}
-	if input.Recurrence != nil {
-		updates = append(updates, fmt.Sprintf("recurrence = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.Recurrence)
-	}
-	if input.StartDate != nil {
-		updates = append(updates, fmt.Sprintf("start_date = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.StartDate)
-	}
-	if input.EndDate != nil {
-		updates = append(updates, fmt.Sprintf("end_date = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.EndDate)
-	}
-	if input.Note != nil {
-		updates = append(updates, fmt.Sprintf("note = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.Note)
-	}
-
-	if len(updates) == 0 {
-		return r.Get(ctx, id)
-	}
-
-	updates = append(updates, fmt.Sprintf("updated_at = $%d", qb.NextArgIndex()))
-	qb.AddArg(time.Now())
-
-	query := fmt.Sprintf(`
+func (btr BudgetTemplateRepository) Update(ctx context.Context, id int64, p models.UpdateBudgetTemplateRequestModel) (models.UpdateBudgetTemplateResponseModel, error) {
+	query := `
 		UPDATE budget_templates
-		SET %s
-		WHERE id = $%d AND deleted_at IS NULL
-		RETURNING id, account_id, category_id, amount_limit, recurrence, start_date, end_date,
-		          note, created_at, updated_at, deleted_at`,
-		utils.JoinStrings(updates, ", "),
-		qb.NextArgIndex(),
-	)
-	qb.AddArg(id)
+		SET account_id = COALESCE($1, account_id),
+		    category_id = COALESCE($2, category_id),
+		    amount_limit = COALESCE($3, amount_limit),
+		    recurrence = COALESCE($4, recurrence),
+		    start_date = COALESCE($5, start_date),
+		    end_date = COALESCE($6, end_date),
+		    note = COALESCE($7, note),
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = $8 AND deleted_at IS NULL
+		RETURNING id, account_id, category_id, amount_limit, recurrence, start_date, end_date, note, created_at, updated_at, deleted_at`
 
-	var template schemas.BudgetTemplateSchema
-	err := r.db.QueryRow(ctx, query, qb.GetArgs()...).Scan(
-		&template.ID,
-		&template.AccountID,
-		&template.CategoryID,
-		&template.AmountLimit,
-		&template.Recurrence,
-		&template.StartDate,
-		&template.EndDate,
-		&template.Note,
-		&template.CreatedAt,
-		&template.UpdatedAt,
-		&template.DeletedAt,
+	var item models.BudgetTemplateModel
+	err := btr.pgx.QueryRow(
+		ctx,
+		query,
+		p.AccountID,
+		p.CategoryID,
+		p.AmountLimit,
+		p.Recurrence,
+		p.StartDate,
+		p.EndDate,
+		p.Note,
+		id,
+	).Scan(
+		&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence,
+		&item.StartDate, &item.EndDate, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to update budget template: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UpdateBudgetTemplateResponseModel{}, huma.Error404NotFound("Budget template not found")
+		}
+		return models.UpdateBudgetTemplateResponseModel{}, huma.Error400BadRequest("Unable to update budget template", err)
 	}
 
-	return &template, nil
+	return models.UpdateBudgetTemplateResponseModel{BudgetTemplateModel: item}, nil
 }
 
 // Delete soft-deletes a budget template
-func (r *BudgetTemplateRepository) Delete(ctx context.Context, id int) error {
-	query := `
-		UPDATE budget_templates
-		SET deleted_at = $1, updated_at = $1
-		WHERE id = $2 AND deleted_at IS NULL`
+func (btr BudgetTemplateRepository) Delete(ctx context.Context, id int64) error {
+	sql := `UPDATE budget_templates
+			SET deleted_at = CURRENT_TIMESTAMP
+			WHERE id = $1 AND deleted_at IS NULL`
 
-	result, err := r.db.Exec(ctx, query, time.Now(), id)
+	cmdTag, err := btr.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete budget template: %w", err)
+		return huma.Error400BadRequest("Unable to delete budget template", err)
 	}
-
-	rowsAffected := result.RowsAffected()
-	if rowsAffected == 0 {
-		return nil // Already deleted or not found
+	if cmdTag.RowsAffected() == 0 {
+		return huma.Error404NotFound("Budget template not found")
 	}
 
 	return nil
 }
 
-// GetActiveTemplates retrieves templates that should generate budgets
-// Used by worker to create recurring budgets
-func (r *BudgetTemplateRepository) GetActiveTemplates(ctx context.Context) ([]schemas.BudgetTemplateSchema, error) {
-	query := `
-		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date,
-		       note, created_at, updated_at, deleted_at
+// GetDueTemplates retrieves budget templates that are due for processing based on their recurrence patterns
+func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]models.BudgetTemplateModel, error) {
+	// Query budget templates that:
+	// 1. Are not deleted
+	// 2. Have recurrence set to something other than 'none'
+	// 3. Start date is today or in the past
+	// 4. End date is NULL or today or in the future
+	// 5. Either have never been executed (last_executed_at IS NULL) or are due based on recurrence
+	sql := `
+		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date, note, created_at, updated_at, deleted_at
 		FROM budget_templates
 		WHERE deleted_at IS NULL
 		  AND recurrence != 'none'
-		  AND start_date <= $1
-		  AND (end_date IS NULL OR end_date >= $1)
-		ORDER BY id`
+		  AND start_date <= CURRENT_DATE
+		  AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+		  AND (
+		    last_executed_at IS NULL
+		    OR (
+		      recurrence = 'weekly' AND last_executed_at < NOW() - INTERVAL '7 days'
+		    )
+		    OR (
+		      recurrence = 'monthly' AND last_executed_at < NOW() - INTERVAL '1 month'
+		    )
+		    OR (
+		      recurrence = 'yearly' AND last_executed_at < NOW() - INTERVAL '1 year'
+		    )
+		  )
+		ORDER BY created_at ASC`
 
-	rows, err := r.db.Query(ctx, query, time.Now())
+	rows, err := btr.pgx.Query(ctx, sql)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query active templates: %w", err)
+		return nil, huma.Error400BadRequest("Unable to query due budget templates", err)
 	}
 	defer rows.Close()
 
-	items, err := schemas.PaginatedBudgetTemplateSchema{}.FromRows(rows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to scan active templates: %w", err)
+	var items []models.BudgetTemplateModel
+	for rows.Next() {
+		var item models.BudgetTemplateModel
+		if err := rows.Scan(
+			&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence,
+			&item.StartDate, &item.EndDate, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+		); err != nil {
+			return nil, huma.Error400BadRequest("Unable to scan due budget template data", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, huma.Error400BadRequest("Error reading due budget template rows", err)
+	}
+
+	if items == nil {
+		items = []models.BudgetTemplateModel{}
 	}
 
 	return items, nil
+}
+
+// UpdateLastExecuted updates the last_executed_at timestamp for a budget template
+func (btr BudgetTemplateRepository) UpdateLastExecuted(ctx context.Context, id int64) error {
+	sql := `
+		UPDATE budget_templates
+		SET last_executed_at = NOW(),
+		    updated_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL`
+
+	_, err := btr.pgx.Exec(ctx, sql, id)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to update budget template execution time", err)
+	}
+	return nil
 }

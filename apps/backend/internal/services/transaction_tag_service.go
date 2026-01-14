@@ -2,124 +2,45 @@ package services
 
 import (
 	"context"
-	"database/sql"
-	"errors"
-	"fmt"
-	"strings"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 )
 
 type TransactionTagService struct {
-	transactionTagRepo *repositories.TransactionTagRepository
-	transactionRepo    *repositories.TransactionRepository
-	tagRepo            *repositories.TagRepository
+	repo repositories.TransactionTagRepository
 }
 
-func NewTransactionTagService(
-	transactionTagRepo *repositories.TransactionTagRepository,
-	transactionRepo *repositories.TransactionRepository,
-	tagRepo *repositories.TagRepository,
-) *TransactionTagService {
-	return &TransactionTagService{
-		transactionTagRepo: transactionTagRepo,
-		transactionRepo:    transactionRepo,
-		tagRepo:            tagRepo,
-	}
+func NewTransactionTagService(repo repositories.TransactionTagRepository) TransactionTagService {
+	return TransactionTagService{repo}
 }
 
-// GetTransactionTags returns all tags for a transaction
-func (s *TransactionTagService) GetTransactionTags(ctx context.Context, transactionID int) (schemas.TransactionTagsSchema, error) {
-	// Verify transaction exists
-	_, err := s.transactionRepo.Get(ctx, transactionID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows") {
-			return schemas.TransactionTagsSchema{}, errors.New("transaction not found")
-		}
-		return schemas.TransactionTagsSchema{}, fmt.Errorf("get transaction: %w", err)
-	}
-
-	tags, err := s.transactionTagRepo.GetTransactionTags(ctx, transactionID)
-	if err != nil {
-		return schemas.TransactionTagsSchema{}, fmt.Errorf("get transaction tags: %w", err)
-	}
-
-	return schemas.TransactionTagsSchema{Tags: tags}, nil
+// List delegates to repository
+func (tts TransactionTagService) List(ctx context.Context, transactionID int64, pageNumber int, pageSize int) (models.ListTransactionTagsResponseModel, error) {
+	return tts.repo.List(ctx, transactionID, pageNumber, pageSize)
 }
 
-// AddTagToTransaction adds a tag to a transaction
-func (s *TransactionTagService) AddTagToTransaction(ctx context.Context, transactionID int, input schemas.AddTransactionTagSchema) error {
-	// Verify transaction exists
-	_, err := s.transactionRepo.Get(ctx, transactionID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows") {
-			return errors.New("transaction not found")
-		}
-		return fmt.Errorf("get transaction: %w", err)
-	}
-
-	// Get or create tag
-	tagName := strings.TrimSpace(input.TagName)
-	if tagName == "" {
-		return errors.New("tag name is required")
-	}
-
-	normalizedName := strings.ToLower(tagName)
-	tag, err := s.tagRepo.GetByName(ctx, normalizedName)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows") {
-			// Tag doesn't exist, create it
-			createInput := schemas.CreateTagSchema{Name: normalizedName}
-			tag, err = s.tagRepo.Create(ctx, createInput)
-			if err != nil {
-				return fmt.Errorf("create tag: %w", err)
-			}
-		} else {
-			return fmt.Errorf("get tag: %w", err)
-		}
-	}
-
-	// Add tag to transaction
-	return s.transactionTagRepo.AddTagToTransaction(ctx, transactionID, tag.ID)
+// Get delegates to repository
+func (tts TransactionTagService) Get(ctx context.Context, transactionID int64, tagID int64) (models.TransactionTagModel, error) {
+	return tts.repo.Get(ctx, transactionID, tagID)
 }
 
-// UpdateTransactionTags replaces all tags for a transaction
-func (s *TransactionTagService) UpdateTransactionTags(ctx context.Context, transactionID int, input schemas.UpdateTransactionTagsSchema) error {
-	// Verify transaction exists
-	_, err := s.transactionRepo.Get(ctx, transactionID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows") {
-			return errors.New("transaction not found")
-		}
-		return fmt.Errorf("get transaction: %w", err)
-	}
+// Create delegates to repository
+func (tts TransactionTagService) Create(ctx context.Context, payload models.CreateTransactionTagRequestModel) (models.CreateTransactionTagResponseModel, error) {
+	return tts.repo.Create(ctx, payload)
+}
 
-	// Resolve all tag names to IDs (create if needed)
-	tagIDs := make([]int, 0, len(input.TagNames))
-	for _, tagName := range input.TagNames {
-		normalizedName := strings.ToLower(strings.TrimSpace(tagName))
-		if normalizedName == "" {
-			continue
-		}
+// Delete delegates to repository
+func (tts TransactionTagService) Delete(ctx context.Context, transactionID int64, tagID int64) error {
+	return tts.repo.Delete(ctx, transactionID, tagID)
+}
 
-		tag, err := s.tagRepo.GetByName(ctx, normalizedName)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows") {
-				// Create new tag
-				createInput := schemas.CreateTagSchema{Name: normalizedName}
-				tag, err = s.tagRepo.Create(ctx, createInput)
-				if err != nil {
-					return fmt.Errorf("create tag %s: %w", normalizedName, err)
-				}
-			} else {
-				return fmt.Errorf("get tag %s: %w", normalizedName, err)
-			}
-		}
+// DeleteByTransactionID delegates to repository
+func (tts TransactionTagService) DeleteByTransactionID(ctx context.Context, transactionID int64) error {
+	return tts.repo.DeleteByTransactionID(ctx, transactionID)
+}
 
-		tagIDs = append(tagIDs, tag.ID)
-	}
-
-	// Update transaction tags
-	return s.transactionTagRepo.ReplaceTransactionTags(ctx, transactionID, tagIDs)
+// DeleteByTagID delegates to repository
+func (tts TransactionTagService) DeleteByTagID(ctx context.Context, tagID int64) error {
+	return tts.repo.DeleteByTagID(ctx, tagID)
 }

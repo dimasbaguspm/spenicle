@@ -2,675 +2,562 @@ package resources
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
-// TransactionService defines the interface for transaction business logic operations.
-// This allows the resource to be tested with mock implementations.
-type TransactionService interface {
-	List(ctx context.Context, params schemas.SearchParamTransactionSchema) (schemas.PaginatedTransactionSchema, error)
-	Get(ctx context.Context, id int) (schemas.TransactionSchema, error)
-	Create(ctx context.Context, input schemas.CreateTransactionSchema) (schemas.TransactionSchema, error)
-	Update(ctx context.Context, id int, input schemas.UpdateTransactionSchema) (schemas.TransactionSchema, error)
-	Delete(ctx context.Context, id int) error
-}
-
-// TransactionTemplateService defines the interface for transaction template operations
-type TransactionTemplateService interface {
-	List(ctx context.Context, params schemas.SearchParamTransactionTemplateSchema) (*schemas.PaginatedTransactionTemplateSchema, error)
-	Get(ctx context.Context, id int) (*schemas.TransactionTemplateSchema, error)
-	Create(ctx context.Context, input schemas.CreateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error)
-	Update(ctx context.Context, id int, input schemas.UpdateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error)
-	Delete(ctx context.Context, id int) error
-}
-
-// TransactionTagService defines the interface for transaction tag business logic operations.
-type TransactionTagService interface {
-	GetTransactionTags(ctx context.Context, transactionID int) (schemas.TransactionTagsSchema, error)
-	AddTagToTransaction(ctx context.Context, transactionID int, input schemas.AddTransactionTagSchema) error
-	UpdateTransactionTags(ctx context.Context, transactionID int, input schemas.UpdateTransactionTagsSchema) error
-}
-
-// TransactionRelationService defines the interface for transaction relation operations.
-type TransactionRelationService interface {
-	GetRelatedTransactions(ctx context.Context, transactionID int) ([]schemas.TransactionSchema, error)
-	GetRelatedTransaction(ctx context.Context, transactionID, relatedTransactionID int) (schemas.TransactionSchema, error)
-	Create(ctx context.Context, input schemas.CreateTransactionRelationSchema) (schemas.TransactionRelationSchema, error)
-	Delete(ctx context.Context, transactionID, relatedTransactionID int) error
-}
-
 type TransactionResource struct {
-	service         TransactionService
-	templateService TransactionTemplateService
-	tagService      TransactionTagService
-	relationService TransactionRelationService
+	ts     services.TransactionService
+	trs    services.TransactionRelationService
+	tts    services.TransactionTagService
+	ttemps services.TransactionTemplateService
 }
 
-func NewTransactionResource(service TransactionService, templateService TransactionTemplateService, tagService TransactionTagService, relationService TransactionRelationService) *TransactionResource {
-	return &TransactionResource{
-		service:         service,
-		templateService: templateService,
-		tagService:      tagService,
-		relationService: relationService,
-	}
+func NewTransactionResource(ts services.TransactionService, trs services.TransactionRelationService, tts services.TransactionTagService, ttemps services.TransactionTemplateService) TransactionResource {
+	return TransactionResource{ts, trs, tts, ttemps}
 }
 
-// RegisterRoutes registers all transaction routes
-func (r *TransactionResource) RegisterRoutes(api huma.API) {
+func (tr TransactionResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "list-transactions",
-		Method:      http.MethodGet,
+		Method:      "GET",
 		Path:        "/transactions",
 		Summary:     "List transactions",
-		Description: "Returns a paginated list of transactions",
+		Description: "Get a paginated list of transactions with optional filters",
 		Tags:        []string{"Transactions"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.List)
+	}, tr.List)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "create-transaction",
-		Method:      http.MethodPost,
+		Method:      "POST",
 		Path:        "/transactions",
-		Summary:     "Create a new transaction",
-		Description: "Creates a new transaction and updates account balance",
+		Summary:     "Create transaction",
+		Description: "Create a new transaction",
 		Tags:        []string{"Transactions"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.Create)
+	}, tr.Create)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-transaction",
-		Method:      http.MethodGet,
+		Method:      "GET",
 		Path:        "/transactions/{id}",
-		Summary:     "Get a transaction",
-		Description: "Returns a transaction by ID",
+		Summary:     "Get transaction",
+		Description: "Get a single transaction by ID",
 		Tags:        []string{"Transactions"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.Get)
+	}, tr.Get)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "update-transaction",
-		Method:      http.MethodPatch,
+		Method:      "PATCH",
 		Path:        "/transactions/{id}",
-		Summary:     "Update a transaction",
-		Description: "Updates a transaction by ID and syncs account balance",
+		Summary:     "Update transaction",
+		Description: "Update an existing transaction",
 		Tags:        []string{"Transactions"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.Update)
+	}, tr.Update)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-transaction",
-		Method:      http.MethodDelete,
+		Method:      "DELETE",
 		Path:        "/transactions/{id}",
-		Summary:     "Delete a transaction",
-		Description: "Soft deletes a transaction by ID and reverts account balance",
+		Summary:     "Delete transaction",
+		Description: "Delete a transaction",
 		Tags:        []string{"Transactions"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.Delete)
+	}, tr.Delete)
 
-	// Transaction Template routes
 	huma.Register(api, huma.Operation{
 		OperationID: "list-transaction-templates",
-		Method:      http.MethodGet,
-		Path:        "/transactions/templates",
+		Method:      "GET",
+		Path:        "/transaction-templates",
 		Summary:     "List transaction templates",
-		Description: "Returns a paginated list of transaction templates",
+		Description: "Get a paginated list of transaction templates",
 		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.ListTemplates)
+	}, tr.ListTemplates)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "create-transaction-template",
-		Method:      http.MethodPost,
-		Path:        "/transactions/templates",
+		Method:      "POST",
+		Path:        "/transaction-templates",
 		Summary:     "Create transaction template",
-		Description: "Creates a new recurring transaction template",
+		Description: "Create a new transaction template for recurring/installment payments",
 		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.CreateTemplate)
+	}, tr.CreateTemplate)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-transaction-template",
-		Method:      http.MethodGet,
-		Path:        "/transactions/templates/{id}",
+		Method:      "GET",
+		Path:        "/transaction-templates/{templateId}",
 		Summary:     "Get transaction template",
-		Description: "Returns a transaction template by ID",
+		Description: "Get a single transaction template by ID",
 		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.GetTemplate)
+	}, tr.GetTemplate)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "update-transaction-template",
-		Method:      http.MethodPatch,
-		Path:        "/transactions/templates/{id}",
+		Method:      "PATCH",
+		Path:        "/transaction-templates/{templateId}",
 		Summary:     "Update transaction template",
-		Description: "Updates a transaction template by ID",
+		Description: "Update an existing transaction template",
 		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.UpdateTemplate)
+	}, tr.UpdateTemplate)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-transaction-template",
-		Method:      http.MethodDelete,
-		Path:        "/transactions/templates/{id}",
+		Method:      "DELETE",
+		Path:        "/transaction-templates/{templateId}",
 		Summary:     "Delete transaction template",
-		Description: "Soft deletes a transaction template by ID",
+		Description: "Delete a transaction template",
 		Tags:        []string{"Transaction Templates"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.DeleteTemplate)
-
-	// Transaction Tag routes
-	huma.Register(api, huma.Operation{
-		OperationID: "get-transaction-tags",
-		Method:      http.MethodGet,
-		Path:        "/transactions/{id}/tags",
-		Summary:     "Get transaction tags",
-		Description: "Get all tags for a specific transaction",
-		Tags:        []string{"Transaction Tags"},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-	}, r.GetTransactionTags)
+	}, tr.DeleteTemplate)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "add-transaction-tag",
-		Method:      http.MethodPost,
-		Path:        "/transactions/{id}/tags",
-		Summary:     "Add tag to transaction",
-		Description: "Add a tag to a transaction (creates tag if it doesn't exist)",
-		Tags:        []string{"Transaction Tags"},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-	}, r.AddTransactionTag)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "update-transaction-tags",
-		Method:      http.MethodPut,
-		Path:        "/transactions/{id}/tags",
-		Summary:     "Update transaction tags",
-		Description: "Replace all tags for a transaction",
-		Tags:        []string{"Transaction Tags"},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-	}, r.UpdateTransactionTags)
-
-	// Transaction Relation routes
-	huma.Register(api, huma.Operation{
-		OperationID: "list-related-transactions",
-		Method:      http.MethodGet,
-		Path:        "/transactions/{id}/relations",
-		Summary:     "List related transactions",
-		Description: "Get all transactions related to a specific transaction",
+		OperationID: "list-transaction-relations",
+		Method:      "GET",
+		Path:        "/transactions/{transactionId}/relations",
+		Summary:     "List transaction relations",
+		Description: "Get a paginated list of relations for a transaction",
 		Tags:        []string{"Transaction Relations"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.ListRelatedTransactions)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "get-related-transaction",
-		Method:      http.MethodGet,
-		Path:        "/transactions/{id}/relations/{relatedId}",
-		Summary:     "Get related transaction",
-		Description: "Get details of a specific related transaction",
-		Tags:        []string{"Transaction Relations"},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-	}, r.GetRelatedTransaction)
+	}, tr.ListRelations)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "create-transaction-relation",
-		Method:      http.MethodPost,
-		Path:        "/transactions/{id}/relations",
+		Method:      "POST",
+		Path:        "/transactions/{transactionId}/relations",
 		Summary:     "Create transaction relation",
 		Description: "Create a relation between two transactions",
 		Tags:        []string{"Transaction Relations"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.CreateRelation)
+	}, tr.CreateRelation)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "delete-transaction-relation",
-		Method:      http.MethodDelete,
-		Path:        "/transactions/{id}/relations/{relatedId}",
-		Summary:     "Delete transaction relation",
-		Description: "Remove the relation between two transactions",
+		OperationID: "get-transaction-relation",
+		Method:      "GET",
+		Path:        "/transactions/{transactionId}/relations/{relationId}",
+		Summary:     "Get transaction relation",
+		Description: "Get a specific relation between transactions",
 		Tags:        []string{"Transaction Relations"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.DeleteRelation)
+	}, tr.GetRelation)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "delete-transaction-relation",
+		Method:      "DELETE",
+		Path:        "/transactions/{transactionId}/relations/{relationId}",
+		Summary:     "Delete transaction relation",
+		Description: "Delete a relation between transactions",
+		Tags:        []string{"Transaction Relations"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, tr.DeleteRelation)
+
+	// Transaction Tags
+	huma.Register(api, huma.Operation{
+		OperationID: "list-transaction-tags",
+		Method:      "GET",
+		Path:        "/transactions/{transactionId}/tags",
+		Summary:     "List transaction tags",
+		Description: "Get a paginated list of tags for a transaction",
+		Tags:        []string{"Transaction Tags"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, tr.ListTags)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "create-transaction-tag",
+		Method:      "POST",
+		Path:        "/transactions/{transactionId}/tags",
+		Summary:     "Add tag to transaction",
+		Description: "Add a tag to a transaction",
+		Tags:        []string{"Transaction Tags"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, tr.CreateTag)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "get-transaction-tag",
+		Method:      "GET",
+		Path:        "/transactions/{transactionId}/tags/{tagId}",
+		Summary:     "Get transaction tag",
+		Description: "Get a specific tag on a transaction",
+		Tags:        []string{"Transaction Tags"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, tr.GetTag)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "delete-transaction-tag",
+		Method:      "DELETE",
+		Path:        "/transactions/{transactionId}/tags/{tagId}",
+		Summary:     "Remove tag from transaction",
+		Description: "Remove a tag from a transaction",
+		Tags:        []string{"Transaction Tags"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, tr.DeleteTag)
 }
 
-type ListTransactionsInput struct {
-	schemas.SearchParamTransactionSchema
-}
-
-type ListTransactionsOutput struct {
-	Body schemas.PaginatedTransactionSchema
-}
-
-func (r *TransactionResource) List(ctx context.Context, input *ListTransactionsInput) (*ListTransactionsOutput, error) {
-	result, err := r.service.List(ctx, input.SearchParamTransactionSchema)
+func (tr TransactionResource) List(ctx context.Context, input *struct {
+	models.ListTransactionsRequestModel
+}) (*struct {
+	models.ListTransactionsResponseModel
+}, error) {
+	resp, err := tr.ts.List(ctx, input.ListTransactionsRequestModel)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to list transactions", err)
+		return nil, err
 	}
 
-	return &ListTransactionsOutput{Body: result}, nil
+	return &struct {
+		models.ListTransactionsResponseModel
+	}{
+		ListTransactionsResponseModel: resp,
+	}, nil
 }
 
-type CreateTransactionInput struct {
-	Body schemas.CreateTransactionSchema
-}
-
-type CreateTransactionOutput struct {
-	Body schemas.TransactionSchema
-}
-
-func (r *TransactionResource) Create(ctx context.Context, input *CreateTransactionInput) (*CreateTransactionOutput, error) {
-	transaction, err := r.service.Create(ctx, input.Body)
+func (tr TransactionResource) Get(ctx context.Context, input *struct {
+	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
+}) (*struct {
+	models.GetTransactionResponseModel
+}, error) {
+	resp, err := tr.ts.Get(ctx, input.ID)
 	if err != nil {
-		if errors.Is(err, repositories.ErrTransactionTypeCategoryMismatch) {
-			return nil, huma.Error422UnprocessableEntity("Transaction type must match category type", err)
-		}
-		if errors.Is(err, repositories.ErrInvalidAccountTypeForExpense) {
-			return nil, huma.Error422UnprocessableEntity("Expense transactions can only use expense or income account types", err)
-		}
-		if errors.Is(err, repositories.ErrAccountNotFound) {
-			return nil, huma.Error404NotFound("Account not found", err)
-		}
-		if errors.Is(err, repositories.ErrCategoryNotFound) {
-			return nil, huma.Error404NotFound("Category not found", err)
-		}
-		return nil, huma.Error500InternalServerError("Failed to create transaction", err)
+		return nil, err
 	}
 
-	return &CreateTransactionOutput{Body: transaction}, nil
+	return &struct {
+		models.GetTransactionResponseModel
+	}{
+		GetTransactionResponseModel: models.GetTransactionResponseModel{TransactionModel: resp},
+	}, nil
 }
 
-type GetTransactionInput struct {
-	ID int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
-}
-
-type GetTransactionOutput struct {
-	Body schemas.TransactionSchema
-}
-
-func (r *TransactionResource) Get(ctx context.Context, input *GetTransactionInput) (*GetTransactionOutput, error) {
-	transaction, err := r.service.Get(ctx, input.ID)
+func (tr TransactionResource) Create(ctx context.Context, input *struct {
+	Body models.CreateTransactionRequestModel
+}) (*struct {
+	models.CreateTransactionResponseModel
+}, error) {
+	resp, err := tr.ts.Create(ctx, input.Body)
 	if err != nil {
-		if errors.Is(err, repositories.ErrTransactionNotFound) {
-			return nil, huma.Error404NotFound("Transaction not found", err)
-		}
-		return nil, huma.Error500InternalServerError("Failed to get transaction", err)
+		return nil, err
 	}
 
-	return &GetTransactionOutput{Body: transaction}, nil
+	return &struct {
+		models.CreateTransactionResponseModel
+	}{
+		CreateTransactionResponseModel: resp,
+	}, nil
 }
 
-type UpdateTransactionInput struct {
-	ID   int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
-	Body schemas.UpdateTransactionSchema
-}
-
-type UpdateTransactionOutput struct {
-	Body schemas.TransactionSchema
-}
-
-func (r *TransactionResource) Update(ctx context.Context, input *UpdateTransactionInput) (*UpdateTransactionOutput, error) {
-	transaction, err := r.service.Update(ctx, input.ID, input.Body)
+func (tr TransactionResource) Update(ctx context.Context, input *struct {
+	ID   int64                                `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
+	Body models.UpdateTransactionRequestModel `json:""`
+}) (*struct {
+	models.UpdateTransactionResponseModel
+}, error) {
+	resp, err := tr.ts.Update(ctx, input.ID, input.Body)
 	if err != nil {
-		if errors.Is(err, repositories.ErrNoFieldsToUpdate) {
-			return nil, huma.Error400BadRequest("At least one field must be provided to update", err)
-		}
-		if errors.Is(err, repositories.ErrTransactionNotFound) {
-			return nil, huma.Error404NotFound("Transaction not found", err)
-		}
-		if errors.Is(err, repositories.ErrTransactionTypeCategoryMismatch) {
-			return nil, huma.Error422UnprocessableEntity("Transaction type must match category type", err)
-		}
-		if errors.Is(err, repositories.ErrInvalidAccountTypeForExpense) {
-			return nil, huma.Error422UnprocessableEntity("Expense transactions can only use expense or income account types", err)
-		}
-		if errors.Is(err, repositories.ErrAccountNotFound) {
-			return nil, huma.Error404NotFound("Account not found", err)
-		}
-		if errors.Is(err, repositories.ErrCategoryNotFound) {
-			return nil, huma.Error404NotFound("Category not found", err)
-		}
-		return nil, huma.Error500InternalServerError("Failed to update transaction", err)
+		return nil, err
 	}
 
-	return &UpdateTransactionOutput{Body: transaction}, nil
+	return &struct {
+		models.UpdateTransactionResponseModel
+	}{
+		UpdateTransactionResponseModel: resp,
+	}, nil
 }
 
-type DeleteTransactionInput struct {
-	ID int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
-}
-
-func (r *TransactionResource) Delete(ctx context.Context, input *DeleteTransactionInput) (*struct{}, error) {
-	err := r.service.Delete(ctx, input.ID)
+func (tr TransactionResource) Delete(ctx context.Context, input *struct {
+	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
+}) (*struct{}, error) {
+	err := tr.ts.Delete(ctx, input.ID)
 	if err != nil {
-		if errors.Is(err, repositories.ErrTransactionNotFound) {
-			return nil, huma.Error404NotFound("Transaction not found", err)
-		}
-		return nil, huma.Error500InternalServerError("Failed to delete transaction", err)
-	}
-
-	return nil, nil
-}
-
-// Transaction Template handlers
-
-type ListTransactionTemplatesInput struct {
-	schemas.SearchParamTransactionTemplateSchema
-}
-
-type ListTransactionTemplatesOutput struct {
-	Status int `json:"-"`
-	Body   schemas.PaginatedTransactionTemplateSchema
-}
-
-func (r *TransactionResource) ListTemplates(ctx context.Context, input *ListTransactionTemplatesInput) (*ListTransactionTemplatesOutput, error) {
-	result, err := r.templateService.List(ctx, input.SearchParamTransactionTemplateSchema)
-	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to list transaction templates", err)
-	}
-
-	return &ListTransactionTemplatesOutput{Status: http.StatusOK, Body: *result}, nil
-}
-
-type CreateTransactionTemplateInput struct {
-	Body schemas.CreateTransactionTemplateSchema
-}
-
-type CreateTransactionTemplateOutput struct {
-	Status int `json:"-"`
-	Body   schemas.TransactionTemplateSchema
-}
-
-func (r *TransactionResource) CreateTemplate(ctx context.Context, input *CreateTransactionTemplateInput) (*CreateTransactionTemplateOutput, error) {
-	template, err := r.templateService.Create(ctx, input.Body)
-	if err != nil {
-		if errors.Is(err, repositories.ErrTransactionTypeCategoryMismatch) {
-			return nil, huma.Error422UnprocessableEntity("Transaction type must match category type", err)
-		}
-		if errors.Is(err, repositories.ErrInvalidAccountTypeForExpense) {
-			return nil, huma.Error422UnprocessableEntity("Expense transactions can only use expense or income account types", err)
-		}
-		if errors.Is(err, repositories.ErrAccountNotFound) {
-			return nil, huma.Error404NotFound("Account not found", err)
-		}
-		if errors.Is(err, repositories.ErrCategoryNotFound) {
-			return nil, huma.Error404NotFound("Category not found", err)
-		}
-		return nil, huma.Error400BadRequest("Failed to create transaction template", err)
-	}
-
-	return &CreateTransactionTemplateOutput{Status: http.StatusCreated, Body: *template}, nil
-}
-
-type GetTransactionTemplateInput struct {
-	ID int `path:"id" doc:"Transaction template ID" example:"1" minimum:"1"`
-}
-
-type GetTransactionTemplateOutput struct {
-	Status int `json:"-"`
-	Body   schemas.TransactionTemplateSchema
-}
-
-func (r *TransactionResource) GetTemplate(ctx context.Context, input *GetTransactionTemplateInput) (*GetTransactionTemplateOutput, error) {
-	template, err := r.templateService.Get(ctx, input.ID)
-	if err != nil {
-		if errors.Is(err, repositories.ErrTransactionTemplateNotFound) {
-			return nil, huma.Error404NotFound("Transaction template not found")
-		}
-		return nil, huma.Error500InternalServerError("Failed to get transaction template", err)
-	}
-
-	return &GetTransactionTemplateOutput{Status: http.StatusOK, Body: *template}, nil
-}
-
-type UpdateTransactionTemplateInput struct {
-	ID   int `path:"id" doc:"Transaction template ID" example:"1" minimum:"1"`
-	Body schemas.UpdateTransactionTemplateSchema
-}
-
-type UpdateTransactionTemplateOutput struct {
-	Status int `json:"-"`
-	Body   schemas.TransactionTemplateSchema
-}
-
-func (r *TransactionResource) UpdateTemplate(ctx context.Context, input *UpdateTransactionTemplateInput) (*UpdateTransactionTemplateOutput, error) {
-	template, err := r.templateService.Update(ctx, input.ID, input.Body)
-	if err != nil {
-		if errors.Is(err, repositories.ErrNoFieldsToUpdate) {
-			return nil, huma.Error400BadRequest(repositories.ErrNoFieldsToUpdate.Error())
-		}
-		if errors.Is(err, repositories.ErrTransactionTemplateNotFound) {
-			return nil, huma.Error404NotFound("Transaction template not found")
-		}
-		if errors.Is(err, repositories.ErrTransactionTypeCategoryMismatch) {
-			return nil, huma.Error422UnprocessableEntity("Transaction type must match category type", err)
-		}
-		if errors.Is(err, repositories.ErrInvalidAccountTypeForExpense) {
-			return nil, huma.Error422UnprocessableEntity("Expense transactions can only use expense or income account types", err)
-		}
-		if errors.Is(err, repositories.ErrAccountNotFound) {
-			return nil, huma.Error404NotFound("Account not found", err)
-		}
-		if errors.Is(err, repositories.ErrCategoryNotFound) {
-			return nil, huma.Error404NotFound("Category not found", err)
-		}
-		return nil, huma.Error500InternalServerError("Failed to update transaction template", err)
-	}
-
-	return &UpdateTransactionTemplateOutput{Status: http.StatusOK, Body: *template}, nil
-}
-
-type DeleteTransactionTemplateInput struct {
-	ID int `path:"id" doc:"Transaction template ID" example:"1" minimum:"1"`
-}
-
-type DeleteTransactionTemplateOutput struct {
-	Status int `json:"-"`
-}
-
-func (r *TransactionResource) DeleteTemplate(ctx context.Context, input *DeleteTransactionTemplateInput) (*DeleteTransactionTemplateOutput, error) {
-	err := r.templateService.Delete(ctx, input.ID)
-	if err != nil {
-		if errors.Is(err, repositories.ErrTransactionTemplateNotFound) {
-			return nil, huma.Error404NotFound("Transaction template not found")
-		}
-		return nil, huma.Error500InternalServerError("Failed to delete transaction template", err)
-	}
-
-	return &DeleteTransactionTemplateOutput{Status: http.StatusNoContent}, nil
-}
-
-// Transaction Tag handlers
-
-type GetTransactionTagsInput struct {
-	ID int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
-}
-
-type GetTransactionTagsOutput struct {
-	Body schemas.TransactionTagsSchema
-}
-
-func (r *TransactionResource) GetTransactionTags(ctx context.Context, input *GetTransactionTagsInput) (*GetTransactionTagsOutput, error) {
-	data, err := r.tagService.GetTransactionTags(ctx, input.ID)
-	if err != nil {
-		if err.Error() == "transaction not found" {
-			return nil, huma.Error404NotFound("Transaction not found")
-		}
-		return nil, huma.Error500InternalServerError("Failed to get transaction tags", err)
-	}
-
-	return &GetTransactionTagsOutput{Body: data}, nil
-}
-
-type AddTransactionTagInput struct {
-	ID   int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
-	Body schemas.AddTransactionTagSchema
-}
-
-type AddTransactionTagOutput struct {
-	Status int
-}
-
-func (r *TransactionResource) AddTransactionTag(ctx context.Context, input *AddTransactionTagInput) (*AddTransactionTagOutput, error) {
-	err := r.tagService.AddTagToTransaction(ctx, input.ID, input.Body)
-	if err != nil {
-		if err.Error() == "transaction not found" {
-			return nil, huma.Error404NotFound("Transaction not found")
-		}
-		if err.Error() == "tag name is required" {
-			return nil, huma.Error400BadRequest("Tag name is required")
-		}
-		return nil, huma.Error500InternalServerError("Failed to add tag to transaction", err)
-	}
-
-	return &AddTransactionTagOutput{Status: http.StatusCreated}, nil
-}
-
-type UpdateTransactionTagsInput struct {
-	ID   int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
-	Body schemas.UpdateTransactionTagsSchema
-}
-
-func (r *TransactionResource) UpdateTransactionTags(ctx context.Context, input *UpdateTransactionTagsInput) (*struct{}, error) {
-	err := r.tagService.UpdateTransactionTags(ctx, input.ID, input.Body)
-	if err != nil {
-		if err.Error() == "transaction not found" {
-			return nil, huma.Error404NotFound("Transaction not found")
-		}
-		return nil, huma.Error500InternalServerError("Failed to update transaction tags", err)
+		return nil, err
 	}
 
 	return &struct{}{}, nil
 }
 
-// Transaction Relation handlers
+// Transaction Relation Handlers
 
-type ListRelatedTransactionsInput struct {
-	ID int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
-}
-
-type ListRelatedTransactionsOutput struct {
-	Body []schemas.TransactionSchema
-}
-
-func (r *TransactionResource) ListRelatedTransactions(ctx context.Context, input *ListRelatedTransactionsInput) (*ListRelatedTransactionsOutput, error) {
-	transactions, err := r.relationService.GetRelatedTransactions(ctx, input.ID)
+func (tr TransactionResource) ListRelations(ctx context.Context, input *struct {
+	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
+	PageNumber    int   `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
+	PageSize      int   `query:"pageSize" default:"10" minimum:"1" maximum:"100" doc:"Number of items per page"`
+}) (*struct {
+	models.ListTransactionRelationsResponseModel
+}, error) {
+	resp, err := tr.trs.List(ctx, input.TransactionID, input.PageNumber, input.PageSize)
 	if err != nil {
-		if err == repositories.ErrTransactionNotFound {
-			return nil, huma.Error404NotFound("Transaction not found")
-		}
-		return nil, huma.Error500InternalServerError("Failed to list related transactions", err)
+		return nil, err
 	}
 
-	return &ListRelatedTransactionsOutput{Body: transactions}, nil
+	return &struct {
+		models.ListTransactionRelationsResponseModel
+	}{
+		ListTransactionRelationsResponseModel: resp,
+	}, nil
 }
 
-type GetRelatedTransactionInput struct {
-	ID        int `path:"id" doc:"Transaction ID" example:"1" minimum:"1"`
-	RelatedID int `path:"relatedId" doc:"Related transaction ID" example:"2" minimum:"1"`
-}
-
-type GetRelatedTransactionOutput struct {
-	Body schemas.TransactionSchema
-}
-
-func (r *TransactionResource) GetRelatedTransaction(ctx context.Context, input *GetRelatedTransactionInput) (*GetRelatedTransactionOutput, error) {
-	transaction, err := r.relationService.GetRelatedTransaction(ctx, input.ID, input.RelatedID)
+func (tr TransactionResource) GetRelation(ctx context.Context, input *struct {
+	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
+	RelationID    int64 `path:"relationId" minimum:"1" doc:"Relation ID"`
+}) (*struct {
+	models.GetTransactionRelationResponseModel
+}, error) {
+	resp, err := tr.trs.Get(ctx, input.RelationID)
 	if err != nil {
-		if err == repositories.ErrTransactionNotFound {
-			return nil, huma.Error404NotFound("Transaction not found")
-		}
-		if err == repositories.ErrTransactionRelationNotFound {
-			return nil, huma.Error404NotFound("Relation not found")
-		}
-		return nil, huma.Error500InternalServerError("Failed to get related transaction", err)
+		return nil, err
 	}
 
-	return &GetRelatedTransactionOutput{Body: transaction}, nil
-}
-
-type CreateRelationInput struct {
-	ID   int `path:"id" doc:"Source transaction ID" example:"1" minimum:"1"`
-	Body struct {
-		RelatedTransactionID int `json:"relatedTransactionId" doc:"Related transaction ID" example:"2" minimum:"1"`
-	}
-}
-
-type CreateRelationOutput struct {
-	Body schemas.TransactionRelationSchema
-}
-
-func (r *TransactionResource) CreateRelation(ctx context.Context, input *CreateRelationInput) (*CreateRelationOutput, error) {
-	createInput := schemas.CreateTransactionRelationSchema{
-		TransactionID:        input.ID,
-		RelatedTransactionID: input.Body.RelatedTransactionID,
+	// Verify the relation belongs to the transaction
+	if resp.TransactionID != input.TransactionID {
+		return nil, huma.Error404NotFound("Transaction relation not found")
 	}
 
-	relation, err := r.relationService.Create(ctx, createInput)
+	return &struct {
+		models.GetTransactionRelationResponseModel
+	}{
+		GetTransactionRelationResponseModel: models.GetTransactionRelationResponseModel{TransactionRelationModel: resp},
+	}, nil
+}
+
+func (tr TransactionResource) CreateRelation(ctx context.Context, input *struct {
+	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
+	Body          models.CreateTransactionRelationRequestModel
+}) (*struct {
+	models.CreateTransactionRelationResponseModel
+}, error) {
+	// Override the transaction ID in request body with the path parameter
+	input.Body.TransactionID = input.TransactionID
+
+	resp, err := tr.trs.Create(ctx, input.Body)
 	if err != nil {
-		if err == repositories.ErrTransactionNotFound {
-			return nil, huma.Error404NotFound("Transaction not found")
-		}
-		if err == repositories.ErrCannotRelateSameTransaction {
-			return nil, huma.Error400BadRequest("Cannot relate a transaction to itself")
-		}
-		if err == repositories.ErrTransactionRelationAlreadyExists {
-			return nil, huma.Error409Conflict("Relation already exists")
-		}
-		return nil, huma.Error500InternalServerError("Failed to create relation", err)
+		return nil, err
 	}
 
-	return &CreateRelationOutput{Body: relation}, nil
+	return &struct {
+		models.CreateTransactionRelationResponseModel
+	}{
+		CreateTransactionRelationResponseModel: resp,
+	}, nil
 }
 
-type DeleteRelationInput struct {
-	ID        int `path:"id" doc:"Source transaction ID" example:"1" minimum:"1"`
-	RelatedID int `path:"relatedId" doc:"Related transaction ID" example:"2" minimum:"1"`
-}
-
-func (r *TransactionResource) DeleteRelation(ctx context.Context, input *DeleteRelationInput) (*struct{}, error) {
-	err := r.relationService.Delete(ctx, input.ID, input.RelatedID)
+func (tr TransactionResource) DeleteRelation(ctx context.Context, input *struct {
+	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
+	RelationID    int64 `path:"relationId" minimum:"1" doc:"Relation ID"`
+}) (*struct{}, error) {
+	// Verify the relation belongs to the transaction before deleting
+	relation, err := tr.trs.Get(ctx, input.RelationID)
 	if err != nil {
-		if err == repositories.ErrTransactionRelationNotFound {
-			return nil, huma.Error404NotFound("Relation not found")
-		}
-		return nil, huma.Error500InternalServerError("Failed to delete relation", err)
+		return nil, err
+	}
+
+	if relation.TransactionID != input.TransactionID {
+		return nil, huma.Error404NotFound("Transaction relation not found")
+	}
+
+	if err := tr.trs.Delete(ctx, input.RelationID); err != nil {
+		return nil, err
+	}
+
+	return &struct{}{}, nil
+}
+
+// Transaction Tag Handlers
+
+func (tr TransactionResource) ListTags(ctx context.Context, input *struct {
+	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
+	PageNumber    int   `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
+	PageSize      int   `query:"pageSize" default:"10" minimum:"1" maximum:"100" doc:"Number of items per page"`
+}) (*struct {
+	models.ListTransactionTagsResponseModel
+}, error) {
+	resp, err := tr.tts.List(ctx, input.TransactionID, input.PageNumber, input.PageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		models.ListTransactionTagsResponseModel
+	}{
+		ListTransactionTagsResponseModel: resp,
+	}, nil
+}
+
+func (tr TransactionResource) GetTag(ctx context.Context, input *struct {
+	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
+	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
+}) (*struct {
+	models.GetTransactionTagResponseModel
+}, error) {
+	resp, err := tr.tts.Get(ctx, input.TransactionID, input.TagID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		models.GetTransactionTagResponseModel
+	}{
+		GetTransactionTagResponseModel: models.GetTransactionTagResponseModel{TransactionTagModel: resp},
+	}, nil
+}
+
+func (tr TransactionResource) CreateTag(ctx context.Context, input *struct {
+	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
+	Body          models.CreateTransactionTagRequestModel
+}) (*struct {
+	models.CreateTransactionTagResponseModel
+}, error) {
+	// Override the transaction ID in request body with the path parameter
+	input.Body.TransactionID = input.TransactionID
+
+	resp, err := tr.tts.Create(ctx, input.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		models.CreateTransactionTagResponseModel
+	}{
+		CreateTransactionTagResponseModel: resp,
+	}, nil
+}
+
+func (tr TransactionResource) DeleteTag(ctx context.Context, input *struct {
+	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
+	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
+}) (*struct{}, error) {
+	// Verify the tag belongs to the transaction before deleting
+	_, err := tr.tts.Get(ctx, input.TransactionID, input.TagID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tr.tts.Delete(ctx, input.TransactionID, input.TagID); err != nil {
+		return nil, err
+	}
+
+	return &struct{}{}, nil
+}
+
+// Transaction Template Handlers
+
+func (tr TransactionResource) ListTemplates(ctx context.Context, input *struct {
+	models.ListTransactionTemplatesRequestModel
+}) (*struct {
+	models.ListTransactionTemplatesResponseModel
+}, error) {
+	resp, err := tr.ttemps.List(ctx, input.ListTransactionTemplatesRequestModel)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		models.ListTransactionTemplatesResponseModel
+	}{
+		ListTransactionTemplatesResponseModel: resp,
+	}, nil
+}
+
+func (tr TransactionResource) GetTemplate(ctx context.Context, input *struct {
+	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
+}) (*struct {
+	models.GetTransactionTemplateResponseModel
+}, error) {
+	resp, err := tr.ttemps.Get(ctx, input.TemplateID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		models.GetTransactionTemplateResponseModel
+	}{
+		GetTransactionTemplateResponseModel: models.GetTransactionTemplateResponseModel{TransactionTemplateModel: resp},
+	}, nil
+}
+
+func (tr TransactionResource) CreateTemplate(ctx context.Context, input *struct {
+	Body models.CreateTransactionTemplateRequestModel
+}) (*struct {
+	models.CreateTransactionTemplateResponseModel
+}, error) {
+	resp, err := tr.ttemps.Create(ctx, input.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		models.CreateTransactionTemplateResponseModel
+	}{
+		CreateTransactionTemplateResponseModel: resp,
+	}, nil
+}
+
+func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct {
+	TemplateID int64                                        `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
+	Body       models.UpdateTransactionTemplateRequestModel `json:""`
+}) (*struct {
+	models.UpdateTransactionTemplateResponseModel
+}, error) {
+	resp, err := tr.ttemps.Update(ctx, input.TemplateID, input.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		models.UpdateTransactionTemplateResponseModel
+	}{
+		UpdateTransactionTemplateResponseModel: resp,
+	}, nil
+}
+
+func (tr TransactionResource) DeleteTemplate(ctx context.Context, input *struct {
+	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
+}) (*struct{}, error) {
+	err := tr.ttemps.Delete(ctx, input.TemplateID)
+	if err != nil {
+		return nil, err
 	}
 
 	return &struct{}{}, nil

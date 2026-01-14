@@ -4,287 +4,209 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/utils"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-)
-
-var (
-	ErrCategoryNotFound    = errors.New("category not found")
-	ErrInvalidCategoryData = errors.New("invalid category data")
-
-	CategoryTypeExpense  = "expense"
-	CategoryTypeIncome   = "income"
-	CategoryTypeTransfer = "transfer"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CategoryRepository struct {
-	db DB
+	pgx *pgxpool.Pool
 }
 
-func NewCategoryRepository(db DB) *CategoryRepository {
-	return &CategoryRepository{db: db}
+func NewCategoryRepository(pgx *pgxpool.Pool) CategoryRepository {
+	return CategoryRepository{pgx}
 }
 
-// List returns a paginated list of categories based on search params.
-// Only returns non-deleted categories (soft delete filter).
-func (r *CategoryRepository) List(ctx context.Context, params schemas.SearchParamCategorySchema) (schemas.PaginatedCategorySchema, error) {
-	qb := utils.QueryBuilder()
-	qb.Add("deleted_at IS NULL")
-	qb.AddInFilter("id", params.ID)
-	qb.AddLikeFilter("name", params.Name)
-	qb.AddInFilterString("type", params.Type)
-
-	// Add archived filter
-	if params.Archived != "" {
-		if params.Archived == "true" {
-			qb.Add("archived_at IS NOT NULL")
-		} else if params.Archived == "false" {
-			qb.Add("archived_at IS NULL")
-		}
+// List returns a paginated list of categories
+func (cr CategoryRepository) List(ctx context.Context, query models.ListCategoriesRequestModel) (models.ListCategoriesResponseModel, error) {
+	// Enforce page size limits
+	if query.PageSize <= 0 || query.PageSize > 100 {
+		query.PageSize = 10
+	}
+	if query.PageNumber <= 0 {
+		query.PageNumber = 1
 	}
 
-	// Count total items with filters
-	whereClause, args := qb.ToWhereClause()
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM categories %s", whereClause)
-	var totalCount int
-	if err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
-		return schemas.PaginatedCategorySchema{}, fmt.Errorf("count categories: %w", err)
-	}
-
-	// Build ORDER BY clause and calculate pagination
-	validColumns := map[string]string{
+	sortByMap := map[string]string{
 		"name":         "name",
 		"type":         "type",
 		"displayOrder": "display_order",
 		"createdAt":    "created_at",
 		"updatedAt":    "updated_at",
 	}
-	orderBy := qb.BuildOrderBy(params.SortBy, params.SortOrder, validColumns)
-	offset := (params.PageNumber - 1) * params.PageSize
-	limitIdx := qb.NextArgIndex()
+	sortOrderMap := map[string]string{
+		"asc":  "ASC",
+		"desc": "DESC",
+	}
 
-	// Query with pagination including new fields
-	sql := fmt.Sprintf(`SELECT id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at 
-	        FROM categories 
-	        %s 
-	        %s
-	        LIMIT $%d OFFSET $%d`, whereClause, orderBy, limitIdx, limitIdx+1)
+	sortColumn, ok := sortByMap[query.SortBy]
+	if !ok {
+		sortColumn = "created_at"
+	}
+	sortOrder, ok := sortOrderMap[query.SortOrder]
+	if !ok {
+		sortOrder = "DESC"
+	}
 
-	args = append(args, params.PageSize, offset)
-	rows, err := r.db.Query(ctx, sql, args...)
+	offset := (query.PageNumber - 1) * query.PageSize
+	searchPattern := "%" + query.Name + "%"
+
+	countSQL := `SELECT COUNT(*) FROM categories WHERE deleted_at IS NULL`
+	var totalCount int
+	if err := cr.pgx.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
+		return models.ListCategoriesResponseModel{}, huma.Error400BadRequest("Unable to count categories", err)
+	}
+
+	sql := `SELECT id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
+			FROM categories
+			WHERE deleted_at IS NULL
+			AND (name ILIKE $1 OR $1 = '%%')
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $2 OFFSET $3`
+
+	rows, err := cr.pgx.Query(ctx, sql, searchPattern, query.PageSize, offset)
 	if err != nil {
-		return schemas.PaginatedCategorySchema{}, fmt.Errorf("query categories: %w", err)
+		return models.ListCategoriesResponseModel{}, huma.Error400BadRequest("Unable to query categories", err)
 	}
 	defer rows.Close()
 
-	pcs := schemas.PaginatedCategorySchema{}
-	return pcs.FromRows(rows, totalCount, params)
+	var items []models.CategoryModel
+	for rows.Next() {
+		var item models.CategoryModel
+		err := rows.Scan(&item.ID, &item.Name, &item.Type, &item.Note, &item.Icon, &item.IconColor, &item.DisplayOrder, &item.ArchivedAt, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt)
+		if err != nil {
+			return models.ListCategoriesResponseModel{}, huma.Error400BadRequest("Unable to scan category data", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return models.ListCategoriesResponseModel{}, huma.Error400BadRequest("Error reading category rows", err)
+	}
+
+	if items == nil {
+		items = []models.CategoryModel{}
+	}
+
+	totalPages := 0
+	if totalCount > 0 {
+		totalPages = (totalCount + query.PageSize - 1) / query.PageSize
+	}
+
+	return models.ListCategoriesResponseModel{
+		Data:       items,
+		PageNumber: query.PageNumber,
+		PageSize:   query.PageSize,
+		TotalCount: totalCount,
+		TotalPages: totalPages,
+	}, nil
 }
 
-// Get returns a single category by id.
-// Returns ErrCategoryNotFound if category doesn't exist or is soft deleted.
-func (r *CategoryRepository) Get(ctx context.Context, id int64) (schemas.CategorySchema, error) {
-	var category schemas.CategorySchema
-	// Performance: Add WHERE clause for soft delete filter (allows index usage)
-	sql := `SELECT id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at 
-	        FROM categories 
-	        WHERE id = $1 AND deleted_at IS NULL`
+func (cr CategoryRepository) Get(ctx context.Context, id int64) (models.CategoryModel, error) {
+	var data models.CategoryModel
 
-	err := r.db.QueryRow(ctx, sql, id).Scan(
-		&category.ID,
-		&category.Name,
-		&category.Type,
-		&category.Note,
-		&category.Icon,
-		&category.IconColor,
-		&category.DisplayOrder,
-		&category.ArchivedAt,
-		&category.CreatedAt,
-		&category.UpdatedAt,
-		&category.DeletedAt,
-	)
+	sql := `SELECT id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
+			FROM categories
+			WHERE id = $1 AND deleted_at IS NULL`
+
+	err := cr.pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return schemas.CategorySchema{}, ErrCategoryNotFound
+			return models.CategoryModel{}, huma.Error404NotFound("Category not found")
 		}
-		return schemas.CategorySchema{}, fmt.Errorf("get category: %w", err)
+		return models.CategoryModel{}, huma.Error400BadRequest("Unable to query category", err)
 	}
 
-	return category, nil
+	return data, nil
 }
 
-// Create inserts a new category and returns the created record.
-// Performance: Uses RETURNING to fetch created record in single query.
-// Auto-calculates display_order as max(display_order) + 1.
-func (r *CategoryRepository) Create(ctx context.Context, in schemas.CreateCategorySchema) (schemas.CategorySchema, error) {
-	var category schemas.CategorySchema
-	sql := `INSERT INTO categories (name, type, note, icon, icon_color, display_order) 
-	        VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT MAX(display_order) + 1 FROM categories), 0)) 
-	        RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`
+func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCategoryRequestModel) (models.CreateCategoryResponseModel, error) {
+	var data models.CategoryModel
 
-	err := r.db.QueryRow(ctx, sql, in.Name, in.Type, in.Note, in.Icon, in.IconColor).Scan(
-		&category.ID,
-		&category.Name,
-		&category.Type,
-		&category.Note,
-		&category.Icon,
-		&category.IconColor,
-		&category.DisplayOrder,
-		&category.ArchivedAt,
-		&category.CreatedAt,
-		&category.UpdatedAt,
-		&category.DeletedAt,
-	)
+	sql := `INSERT INTO categories (name, type, note, icon, icon_color, display_order)
+			VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT MAX(display_order) + 1 FROM categories), 0))
+			RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`
+
+	err := cr.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
-		return schemas.CategorySchema{}, fmt.Errorf("create category: %w", err)
+		return models.CreateCategoryResponseModel{}, huma.Error400BadRequest("Unable to create category", err)
 	}
 
-	return category, nil
+	return models.CreateCategoryResponseModel{CategoryModel: data}, nil
 }
 
-// Update modifies an existing category and returns the updated record.
-// Returns ErrCategoryNotFound if category doesn't exist or is soft deleted.
-// Performance: Uses dynamic field updates, RETURNING for single query.
-func (r *CategoryRepository) Update(ctx context.Context, id int64, in schemas.UpdateCategorySchema) (schemas.CategorySchema, error) {
-	var category schemas.CategorySchema
-	// Build dynamic update query based on provided fields
-	updateFields := []string{"updated_at = CURRENT_TIMESTAMP"}
-	args := []interface{}{id}
-	paramIdx := 2 // Start at $2 since $1 is used for id in WHERE clause
+func (cr CategoryRepository) Update(ctx context.Context, id int64, payload models.UpdateCategoryRequestModel) (models.UpdateCategoryResponseModel, error) {
+	var data models.CategoryModel
 
-	if in.Name != nil {
-		updateFields = append(updateFields, fmt.Sprintf("name = $%d", paramIdx))
-		args = append(args, *in.Name)
-		paramIdx++
-	}
-	if in.Type != nil {
-		updateFields = append(updateFields, fmt.Sprintf("type = $%d", paramIdx))
-		args = append(args, *in.Type)
-		paramIdx++
-	}
-	if in.Note != nil {
-		updateFields = append(updateFields, fmt.Sprintf("note = $%d", paramIdx))
-		args = append(args, *in.Note)
-		paramIdx++
-	}
-	if in.Icon != nil {
-		updateFields = append(updateFields, fmt.Sprintf("icon = $%d", paramIdx))
-		args = append(args, *in.Icon)
-		paramIdx++
-	}
-	if in.IconColor != nil {
-		updateFields = append(updateFields, fmt.Sprintf("icon_color = $%d", paramIdx))
-		args = append(args, *in.IconColor)
-		paramIdx++
-	}
-	if in.ArchivedAt != nil {
-		if *in.ArchivedAt == "" || *in.ArchivedAt == "null" {
-			updateFields = append(updateFields, "archived_at = NULL")
-		} else {
-			updateFields = append(updateFields, fmt.Sprintf("archived_at = $%d", paramIdx))
-			args = append(args, *in.ArchivedAt)
-			paramIdx++
-		}
-	}
+	sql := `UPDATE categories
+			SET name = COALESCE($1, name),
+				type = COALESCE($2, type),
+				note = COALESCE($3, note),
+				icon = COALESCE($4, icon),
+				icon_color = COALESCE($5, icon_color),
+				archived_at = CASE
+					WHEN $6::text = '' OR $6::text = 'null' THEN NULL
+					WHEN $6::text IS NOT NULL THEN CURRENT_TIMESTAMP
+					ELSE archived_at
+				END,
+				updated_at = CURRENT_TIMESTAMP
+			WHERE id = $7 AND deleted_at IS NULL
+			RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`
 
-	sql := fmt.Sprintf(`UPDATE categories 
-	        SET %s 
-	        WHERE id = $1 AND deleted_at IS NULL 
-	        RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`,
-		strings.Join(updateFields, ", "))
-
-	err := r.db.QueryRow(ctx, sql, args...).Scan(
-		&category.ID,
-		&category.Name,
-		&category.Type,
-		&category.Note,
-		&category.Icon,
-		&category.IconColor,
-		&category.DisplayOrder,
-		&category.ArchivedAt,
-		&category.CreatedAt,
-		&category.UpdatedAt,
-		&category.DeletedAt,
-	)
+	err := cr.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor, payload.ArchivedAt, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return schemas.CategorySchema{}, ErrCategoryNotFound
+			return models.UpdateCategoryResponseModel{}, huma.Error404NotFound("Category not found")
 		}
-		return schemas.CategorySchema{}, fmt.Errorf("update category: %w", err)
+		return models.UpdateCategoryResponseModel{}, huma.Error400BadRequest("Unable to update category", err)
 	}
 
-	return category, nil
+	return models.UpdateCategoryResponseModel{CategoryModel: data}, nil
 }
 
-// Delete performs a soft delete by setting deleted_at.
-// Returns ErrCategoryNotFound if category doesn't exist or is already deleted.
-// Performance: Prevents deleting already deleted records.
-func (r *CategoryRepository) Delete(ctx context.Context, id int64) error {
-	sql := `UPDATE categories 
-	        SET deleted_at = CURRENT_TIMESTAMP 
-	        WHERE id = $1 AND deleted_at IS NULL`
+func (cr CategoryRepository) Delete(ctx context.Context, id int64) error {
+	sql := `UPDATE categories
+			SET deleted_at = CURRENT_TIMESTAMP
+			WHERE id = $1 AND deleted_at IS NULL`
 
-	result, err := r.db.Exec(ctx, sql, id)
+	cmdTag, err := cr.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return fmt.Errorf("delete category: %w", err)
+		return huma.Error400BadRequest("Unable to delete category", err)
 	}
-
-	// Check if any row was affected
-	if result.RowsAffected() == 0 {
-		return ErrCategoryNotFound
+	if cmdTag.RowsAffected() == 0 {
+		return huma.Error404NotFound("Category not found")
 	}
 
 	return nil
 }
 
-// Reorder atomically updates the display_order for multiple categories.
-// Uses a single SQL statement with CASE expression for atomic batch update.
-// Only updates non-deleted categories.
-func (r *CategoryRepository) Reorder(ctx context.Context, items []schemas.CategoryReorderItemSchema) error {
+func (cr CategoryRepository) Reorder(ctx context.Context, items []models.ReorderCategoryItemModel) error {
 	if len(items) == 0 {
 		return nil
 	}
 
-	// Build CASE expression for each item
-	var caseExprs []string
-	var ids []int64
-	for _, item := range items {
-		caseExprs = append(caseExprs, fmt.Sprintf("WHEN id = %d THEN %d", item.ID, item.DisplayOrder))
-		ids = append(ids, item.ID)
+	var caseExpr string
+	for i, item := range items {
+		if i > 0 {
+			caseExpr += " "
+		}
+		caseExpr += fmt.Sprintf("WHEN id = %d THEN %d", item.ID, item.DisplayOrder)
 	}
 
-	// Build the full SQL statement
-	// Using a single UPDATE with CASE ensures atomicity
-	sql := fmt.Sprintf(`UPDATE categories 
-		SET display_order = CASE %s END,
-		    updated_at = CURRENT_TIMESTAMP
-		WHERE id IN (%s) AND deleted_at IS NULL`,
-		strings.Join(caseExprs, " "),
-		joinInt64ForSQL(ids, ","))
+	sql := `UPDATE categories
+			SET display_order = CASE ` + caseExpr + ` END,
+				updated_at = CURRENT_TIMESTAMP
+			WHERE deleted_at IS NULL`
 
-	result, err := r.db.Exec(ctx, sql)
+	_, err := cr.pgx.Exec(ctx, sql)
 	if err != nil {
-		return fmt.Errorf("reorder categories: %w", err)
-	}
-
-	if result.RowsAffected() == 0 {
-		return ErrCategoryNotFound
+		return huma.Error400BadRequest("Unable to reorder categories", err)
 	}
 
 	return nil
-}
-
-// joinInt64ForSQL joins int64 slice into a comma-separated string for SQL IN clauses.
-func joinInt64ForSQL(ids []int64, sep string) string {
-	strIds := make([]string, len(ids))
-	for i, id := range ids {
-		strIds[i] = fmt.Sprintf("%d", id)
-	}
-	return strings.Join(strIds, sep)
 }

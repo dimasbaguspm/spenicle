@@ -4,35 +4,19 @@ import (
 	"context"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/configs"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
 type AuthResource struct {
-	env *configs.Environment
+	as services.AuthService
 }
 
-func NewAuthResource(env *configs.Environment) *AuthResource {
-	return &AuthResource{env: env}
+func NewAuthResource(as services.AuthService) AuthResource {
+	return AuthResource{}
 }
 
-type loginRequestBody struct {
-	Body middleware.LoginRequestModel
-}
-
-type loginResponseBody struct {
-	Body middleware.LoginResponseModel
-}
-
-type refreshRequestBody struct {
-	Body middleware.RefreshRequestModel
-}
-
-type refreshResponseBody struct {
-	Body middleware.RefreshResponseModel
-}
-
-func (ar *AuthResource) RegisterRoutes(api huma.API) {
+func (ar AuthResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "login",
 		Method:      "POST",
@@ -52,25 +36,24 @@ func (ar *AuthResource) RegisterRoutes(api huma.API) {
 	}, ar.Refresh)
 }
 
-func (ar *AuthResource) Login(ctx context.Context, input *loginRequestBody) (*loginResponseBody, error) {
-	accessToken, refreshToken, err := middleware.GenerateToken(ar.env, input.Body)
+func (ar AuthResource) Login(ctx context.Context, input *struct{ Body models.LoginRequestModel }) (*struct{ models.LoginResponseModel }, error) {
+	resp, err := ar.as.Login(input.Body)
 	if err != nil {
-		return nil, huma.Error401Unauthorized("invalid credentials")
+		return nil, err
 	}
 
-	resp := &loginResponseBody{}
-	resp.Body.AccessToken = accessToken
-	resp.Body.RefreshToken = refreshToken
-	return resp, nil
+	return &struct{ models.LoginResponseModel }{
+		LoginResponseModel: resp,
+	}, nil
 }
 
-func (ar *AuthResource) Refresh(ctx context.Context, input *refreshRequestBody) (*refreshResponseBody, error) {
-	accessToken, err := middleware.GenerateAccessToken(ar.env, input.Body)
+func (ar AuthResource) Refresh(ctx context.Context, input *struct{ Body models.RefreshRequestModel }) (*struct{ models.RefreshResponseModel }, error) {
+	resp, err := ar.as.Refresh(input.Body)
 	if err != nil {
-		return nil, huma.Error401Unauthorized("invalid refresh token")
+		return nil, err
 	}
 
-	resp := &refreshResponseBody{}
-	resp.Body.AccessToken = accessToken
-	return resp, nil
+	return &struct{ models.RefreshResponseModel }{
+		RefreshResponseModel: resp,
+	}, nil
 }

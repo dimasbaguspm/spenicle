@@ -1,0 +1,476 @@
+# Code Patterns
+
+## Repository Pattern
+
+All data access is abstracted through repositories. Each resource has a dedicated repository.
+
+### Structure
+
+```go
+type {Resource}Repository struct {
+    pgx *pgxpool.Pool
+}
+
+func New{Resource}Repository(pool *pgxpool.Pool) {Resource}Repository {
+    return {Resource}Repository{pool}
+}
+
+// Methods follow CRUD + custom queries
+func (r {Resource}Repository) List(ctx context.Context, params) (response, error)
+func (r {Resource}Repository) Get(ctx context.Context, id int64) (model, error)
+func (r {Resource}Repository) Create(ctx context.Context, req) (model, error)
+func (r {Resource}Repository) Update(ctx context.Context, id int64, req) (model, error)
+func (r {Resource}Repository) Delete(ctx context.Context, id int64) error
+```
+
+### Example: TransactionRepository
+
+```go
+type TransactionRepository struct {
+    pgx *pgxpool.Pool
+}
+
+func (tr TransactionRepository) List(ctx context.Context, p models.ListTransactionsRequestModel) (models.ListTransactionsResponseModel, error) {
+    // Normalize pagination params
+    if p.PageSize <= 0 || p.PageSize > 100 {
+        p.PageSize = 10
+    }
+    if p.PageNumber <= 0 {
+        p.PageNumber = 1
+    }
+
+    // Map string parameters to SQL
+    sortByMap := map[string]string{"id": "t.id", ...}
+    sortColumn := sortByMap[p.SortBy]
+    sortOrder := sortOrderMap[p.SortOrder]
+
+    // Calculate offset
+    offset := (p.PageNumber - 1) * p.PageSize
+
+    // Count total
+    err := tr.pgx.QueryRow(ctx, "SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL").Scan(&totalCount)
+
+    // Query paginated results
+    rows, err := tr.pgx.Query(ctx, `
+        SELECT t.id, t.type, t.date, t.amount, ...
+        FROM transactions t
+        WHERE deleted_at IS NULL
+        ORDER BY {sortColumn} {sortOrder}
+        LIMIT $1 OFFSET $2
+    `, p.PageSize, offset)
+
+    // Scan into models
+    for rows.Next() {
+        var model TransactionModel
+        rows.Scan(&model.ID, &model.Type, ...)
+        models = append(models, model)
+    }
+
+    // Return response
+    return ListTransactionsResponseModel{
+        Data: models,
+        PageNumber: p.PageNumber,
+        PageSize: p.PageSize,
+        TotalCount: totalCount,
+        TotalPages: (totalCount + p.PageSize - 1) / p.PageSize,
+    }, nil
+}
+
+func (tr TransactionRepository) Create(ctx context.Context, req models.CreateTransactionRequestModel) (models.CreateTransactionResponseModel, error) {
+    // Execute INSERT with RETURNING
+    err := tr.pgx.QueryRow(ctx, `
+        INSERT INTO transactions (type, date, amount, account_id, category_id, note)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, created_at, updated_at
+    `, req.Type, req.Date, req.Amount, req.AccountID, req.CategoryID, req.Note).
+        Scan(&model.ID, &model.CreatedAt, &model.UpdatedAt)
+
+    return model, err
+}
+
+func (tr TransactionRepository) UpdateAccountBalance(ctx context.Context, accountID int64, delta int64) error {
+    _, err := tr.pgx.Exec(ctx, `
+        UPDATE accounts
+        SET amount = amount + $1, updated_at = NOW()
+        WHERE id = $2
+    `, delta, accountID)
+    return err
+}
+```
+
+## Service Pattern
+
+Services contain business logic and coordinate between repositories.
+
+### Structure
+
+```go
+type {Resource}Service struct {
+    repo {Resource}Repository
+    // other dependencies as needed
+}
+
+func New{Resource}Service(repo {Resource}Repository) {Resource}Service {
+    return {Resource}Service{repo}
+}
+
+// Methods delegate to repository and add business logic
+func (s {Resource}Service) List(ctx context.Context, params) (response, error) {
+    return s.repo.List(ctx, params)
+}
+
+func (s {Resource}Service) Create(ctx context.Context, req) (response, error) {
+    // Business logic here (validation, coordination, etc.)
+    return s.repo.Create(ctx, req)
+}
+```
+
+### Example: TransactionService
+
+```go
+type TransactionService struct {
+    tr repositories.TransactionRepository
+}
+
+func NewTransactionService(tr repositories.TransactionRepository) TransactionService {
+    return TransactionService{tr}
+}
+
+func (ts TransactionService) Create(ctx context.Context, p models.CreateTransactionRequestModel) (models.CreateTransactionResponseModel, error) {
+    // Create the transaction first
+    resp, err := ts.tr.Create(ctx, p)
+    if err != nil {
+        return models.CreateTransactionResponseModel{}, err
+    }
+
+    // Business logic: update account balances based on type
+    if p.Type == "transfer" {
+        // Transfer: deduct from source, add to destination
+        if p.DestinationAccountID != nil {
+            if err := ts.tr.UpdateAccountBalance(ctx, p.AccountID, -p.Amount); err != nil {
+                return models.CreateTransactionResponseModel{}, fmt.Errorf("failed to update source account balance: %w", err)
+            }
+            if err := ts.tr.UpdateAccountBalance(ctx, *p.DestinationAccountID, p.Amount); err != nil {
+                return models.CreateTransactionResponseModel{}, fmt.Errorf("failed to update destination account balance: %w", err)
+            }
+        }
+    } else if p.Type == "income" {
+        // Income: add to account
+        if err := ts.tr.UpdateAccountBalance(ctx, p.AccountID, p.Amount); err != nil {
+            return models.CreateTransactionResponseModel{}, fmt.Errorf("failed to update account balance: %w", err)
+        }
+    } else if p.Type == "expense" {
+        // Expense: deduct from account
+        if err := ts.tr.UpdateAccountBalance(ctx, p.AccountID, -p.Amount); err != nil {
+            return models.CreateTransactionResponseModel{}, fmt.Errorf("failed to update account balance: %w", err)
+        }
+    }
+
+    return resp, nil
+}
+```
+
+## Resource Pattern
+
+Resources define HTTP endpoints and request/response handling.
+
+### Structure
+
+```go
+type {Resource}Resource struct {
+    service {Resource}Service
+}
+
+func New{Resource}Resource(service {Resource}Service) {Resource}Resource {
+    return {Resource}Resource{service}
+}
+
+func (r {Resource}Resource) Routes(api huma.API) {
+    // Define all HTTP operations
+    huma.Get(api, "GET /path/{id}", r.Get)
+    huma.Get(api, "GET /path", r.List)
+    huma.Post(api, "POST /path", r.Post)
+    huma.Put(api, "PUT /path/{id}", r.Put)
+    huma.Delete(api, "DELETE /path/{id}", r.Delete)
+}
+
+func (r {Resource}Resource) List(ctx context.Context, params *ListRequest) (*ListResponse, error)
+func (r {Resource}Resource) Get(ctx context.Context, params *GetRequest) (*GetResponse, error)
+func (r {Resource}Resource) Post(ctx context.Context, req *PostRequest) (*PostResponse, error)
+```
+
+### Example: AccountResource
+
+```go
+type AccountResource struct {
+    service AccountService
+}
+
+func NewAccountResource(service AccountService) AccountResource {
+    return AccountResource{service}
+}
+
+func (r AccountResource) Routes(api huma.API) {
+    huma.Get(api, "GET /accounts", r.List)
+    huma.Get(api, "GET /accounts/{id}", r.Get)
+    huma.Post(api, "POST /accounts", r.Create)
+    huma.Put(api, "PUT /accounts/{id}", r.Update)
+    huma.Delete(api, "DELETE /accounts/{id}", r.Delete)
+}
+
+// Huma annotations generate OpenAPI schema from request struct tags
+func (r AccountResource) List(ctx context.Context, params *struct {
+    PageNumber int `query:"pageNumber" default:"1"`
+    PageSize int `query:"pageSize" default:"25"`
+    SortBy string `query:"sortBy" default:"createdAt"`
+    SortOrder string `query:"sortOrder" default:"desc"`
+}) (*struct {
+    Body struct {
+        Data []AccountModel `json:"data"`
+        PageNumber int `json:"pageNumber"`
+        TotalCount int `json:"totalCount"`
+    }
+    Headers struct {
+        ContentType string `header:"Content-Type"`
+    }
+}, error) {
+    resp, err := r.service.List(ctx, params)
+    if err != nil {
+        return nil, huma.Error500InternalServerError("Failed to list accounts", err)
+    }
+    return &struct {
+        Body struct { ... }
+        Headers struct { ... }
+    }{
+        Body: struct {
+            Data: resp.Data,
+            ...
+        },
+    }, nil
+}
+
+func (r AccountResource) Create(ctx context.Context, req *struct {
+    Body models.CreateAccountRequestModel
+}) (*struct {
+    Body models.CreateAccountResponseModel
+    StatusCode int
+}, error) {
+    resp, err := r.service.Create(ctx, req.Body)
+    if err != nil {
+        return nil, huma.Error400BadRequest("Failed to create account", err)
+    }
+    return &struct {
+        Body models.CreateAccountResponseModel
+        StatusCode int
+    }{
+        Body: resp,
+        StatusCode: http.StatusCreated,
+    }, nil
+}
+```
+
+## Model Pattern
+
+Models use struct tags for:
+
+- JSON serialization (`json:"fieldName"`)
+- OpenAPI schema generation (`doc:"description"`, `minimum:"1"`, `enum:"val1,val2"`)
+- Request validation (`required:"true"`, `minLength:"1"`)
+
+### Example: AccountModel
+
+```go
+type ListAccountsRequestModel struct {
+    PageNumber int      `query:"pageNumber" default:"1" minimum:"1" doc:"Page number"`
+    PageSize   int      `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Items per page"`
+    SortBy     string   `query:"sortBy" default:"createdAt" enum:"name,type,amount,createdAt" doc:"Sort field"`
+    SortOrder  string   `query:"sortOrder" default:"desc" enum:"asc,desc" doc:"Sort order"`
+}
+
+type AccountModel struct {
+    ID          int64      `json:"id" doc:"Unique identifier"`
+    Name        string     `json:"name" minLength:"1" doc:"Account name"`
+    Type        string     `json:"type" enum:"expense,income" doc:"Account type"`
+    Amount      int64      `json:"amount" doc:"Current balance"`
+    ArchivedAt  *time.Time `json:"archivedAt,omitempty" doc:"Archive timestamp"`
+    CreatedAt   time.Time  `json:"createdAt" doc:"Creation timestamp"`
+    UpdatedAt   *time.Time `json:"updatedAt,omitempty" doc:"Update timestamp"`
+    DeletedAt   *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
+}
+
+type CreateAccountRequestModel struct {
+    Name   string `json:"name" minLength:"1" required:"true" doc:"Account name"`
+    Type   string `json:"type" enum:"expense,income" required:"true" doc:"Account type"`
+    Amount int64  `json:"amount" doc:"Initial balance"`
+}
+
+type CreateAccountResponseModel struct {
+    AccountModel  // Embed base model
+}
+```
+
+## Error Handling Pattern
+
+### Repository Layer
+
+```go
+func (r Repository) Method(ctx context.Context) (Model, error) {
+    err := r.pgx.QueryRow(ctx, "SELECT ...").Scan(&model)
+    if err != nil {
+        if err == pgx.ErrNoRows {
+            return Model{}, fmt.Errorf("record not found: %w", err)
+        }
+        return Model{}, fmt.Errorf("database error: %w", err)
+    }
+    return model, nil
+}
+```
+
+### Service Layer
+
+```go
+func (s Service) Method(ctx context.Context, req Request) (Response, error) {
+    model, err := s.repo.Method(ctx)
+    if err != nil {
+        return Response{}, fmt.Errorf("failed to fetch model: %w", err)
+    }
+    // business logic
+    return resp, nil
+}
+```
+
+### Resource Layer
+
+```go
+func (r Resource) Handler(ctx context.Context, req *Request) (*Response, error) {
+    resp, err := r.service.Method(ctx)
+    if err != nil {
+        // Transform to HTTP error
+        if strings.Contains(err.Error(), "not found") {
+            return nil, huma.Error404NotFound("Record not found", err)
+        }
+        return nil, huma.Error500InternalServerError("Server error", err)
+    }
+    return &resp, nil
+}
+```
+
+## Soft Delete Pattern
+
+All tables have `deleted_at TIMESTAMP` column. Records are "deleted" by setting this to NOW().
+
+### Delete Operation
+
+```go
+func (r Repository) Delete(ctx context.Context, id int64) error {
+    _, err := r.pgx.Exec(ctx, `
+        UPDATE table_name
+        SET deleted_at = NOW(), updated_at = NOW()
+        WHERE id = $1
+    `, id)
+    return err
+}
+```
+
+### List/Get Operations
+
+**Always filter out soft-deleted records:**
+
+```go
+func (r Repository) List(ctx context.Context) ([]Model, error) {
+    rows, err := r.pgx.Query(ctx, `
+        SELECT id, name, ...
+        FROM table_name
+        WHERE deleted_at IS NULL  -- Always include this
+        ORDER BY created_at DESC
+    `)
+    // scan into models
+}
+
+func (r Repository) Get(ctx context.Context, id int64) (Model, error) {
+    err := r.pgx.QueryRow(ctx, `
+        SELECT id, name, ...
+        FROM table_name
+        WHERE id = $1 AND deleted_at IS NULL  -- Always include this
+    `, id).Scan(&model.ID, &model.Name, ...)
+}
+```
+
+## Template Query Pattern (Workers)
+
+Template repositories implement custom query logic for worker processing.
+
+### GetDueTemplates Pattern
+
+```go
+func (r TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([]TransactionTemplateModel, error) {
+    // Query templates that are:
+    // 1. Not deleted
+    // 2. Set to recur (recurrence != 'none')
+    // 3. Within date range (start <= today <= end)
+    // 4. Due for processing (last_executed_at elapsed based on interval)
+
+    rows, err := r.pgx.Query(ctx, `
+        SELECT id, name, type, amount, account_id, category_id, recurrence, start_date, end_date, last_executed_at, created_at
+        FROM transaction_templates
+        WHERE deleted_at IS NULL
+        AND recurrence != 'none'
+        AND start_date <= CURRENT_DATE
+        AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+        AND (
+            last_executed_at IS NULL
+            OR (recurrence = 'daily' AND last_executed_at < CURRENT_TIMESTAMP - INTERVAL '24 hours')
+            OR (recurrence = 'weekly' AND last_executed_at < CURRENT_TIMESTAMP - INTERVAL '7 days')
+            OR (recurrence = 'monthly' AND last_executed_at < CURRENT_TIMESTAMP - INTERVAL '1 month')
+            OR (recurrence = 'yearly' AND last_executed_at < CURRENT_TIMESTAMP - INTERVAL '1 year')
+        )
+        ORDER BY created_at ASC
+    `)
+
+    // Scan into models slice
+}
+
+func (r TransactionTemplateRepository) UpdateLastExecuted(ctx context.Context, id int64) error {
+    _, err := r.pgx.Exec(ctx, `
+        UPDATE transaction_templates
+        SET last_executed_at = NOW(), updated_at = NOW()
+        WHERE id = $1
+    `, id)
+    return err
+}
+```
+
+### BudgetPeriod Calculation Pattern
+
+```go
+func (w *BudgetTemplateWorker) calculateBudgetPeriod(recurrence string) (time.Time, time.Time) {
+    now := time.Now()
+
+    switch recurrence {
+    case "weekly":
+        // Monday to Sunday of current week
+        weekday := now.Weekday()
+        daysToMonday := int(time.Monday) - int(weekday)
+        if daysToMonday > 0 {
+            daysToMonday -= 7
+        }
+        monday := now.AddDate(0, 0, daysToMonday)
+        sunday := monday.AddDate(0, 0, 6)
+        return monday, sunday
+
+    case "monthly":
+        // 1st to last day of current month
+        first := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+        last := first.AddDate(0, 1, -1)
+        return first, last
+
+    case "yearly":
+        // Jan 1 to Dec 31 of current year
+        first := time.Date(now.Year(), time.January, 1, 0, 0, 0, 0, now.Location())
+        last := time.Date(now.Year(), time.December, 31, 23, 59, 59, 0, now.Location())
+        return first, last
+    }
+
+    return now, now
+}
+```

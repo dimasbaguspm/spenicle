@@ -2,23 +2,30 @@ package configs
 
 import (
 	"context"
+	"log/slog"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/observability/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Database struct {
+	env Environment
 }
 
-// Connect establishes a connection to the database
-func (dbConfig *Database) Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, url)
+func NewDatabase(env Environment) Database {
+	return Database{
+		env,
+	}
+}
+
+func (db Database) Connect(ctx context.Context) (*pgxpool.Pool, error) {
+	pool, err := pgxpool.New(ctx, db.env.DatabaseURL)
 	if err != nil {
-		logger.Log().Error("Unable to create connection pool", "error", err)
+		slog.Info("Unable to create pool connection")
 		return nil, err
 	}
 
 	if err := pool.Ping(ctx); err != nil {
+		slog.Info("Db is unreachable")
 		pool.Close()
 		return nil, err
 	}

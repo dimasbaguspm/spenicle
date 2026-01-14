@@ -24,7 +24,7 @@ RUN addgroup -g 1000 appuser && \
 WORKDIR /app
 
 COPY --from=builder /app/spenicle-api .
-COPY --from=builder /app/internal/database/migrations ./internal/database/migrations
+COPY --from=builder /app/migrations ./migrations
 RUN chown -R appuser:appuser /app
 
 USER appuser

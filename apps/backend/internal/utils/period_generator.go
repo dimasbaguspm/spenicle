@@ -36,16 +36,3 @@ func GeneratePeriods(startDate, endDate time.Time, frequency string) []string {
 
 	return periods
 }
-
-// FillMissingPeriods takes existing data and fills in missing periods with zero values
-func FillMissingPeriods(allPeriods []string, existingData map[string]interface{}, defaultValue interface{}) []interface{} {
-	result := make([]interface{}, 0, len(allPeriods))
-	for _, period := range allPeriods {
-		if data, exists := existingData[period]; exists {
-			result = append(result, data)
-		} else {
-			result = append(result, defaultValue)
-		}
-	}
-	return result
-}

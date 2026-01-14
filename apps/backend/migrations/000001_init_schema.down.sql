@@ -1,0 +1,18 @@
+-- Drop all tables and indexes
+DROP TABLE IF EXISTS transaction_tags CASCADE;
+
+DROP TABLE IF EXISTS tags CASCADE;
+
+DROP TABLE IF EXISTS transaction_relations CASCADE;
+
+DROP TABLE IF EXISTS transaction_templates CASCADE;
+
+DROP TABLE IF EXISTS transactions CASCADE;
+
+DROP TABLE IF EXISTS budgets CASCADE;
+
+DROP TABLE IF EXISTS budget_templates CASCADE;
+
+DROP TABLE IF EXISTS categories CASCADE;
+
+DROP TABLE IF EXISTS accounts CASCADE;

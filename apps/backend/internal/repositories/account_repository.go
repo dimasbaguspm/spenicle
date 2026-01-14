@@ -4,70 +4,32 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/utils"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-)
-
-// DB is a subset of the pgx pool API used by the repository. It is
-// implemented by *pgxpool.Pool in production and by pgxmock in tests.
-type DB interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-	Begin(ctx context.Context) (pgx.Tx, error)
-}
-
-var (
-	ErrAccountNotFound    = errors.New("account not found")
-	ErrNoFieldsToUpdate   = errors.New("at least one field must be provided to update")
-	ErrInvalidAccountData = errors.New("invalid account data")
-
-	AccountExpenseType = "expense"
-	AccountIncomeType  = "income"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AccountRepository struct {
-	db DB
+	pgx *pgxpool.Pool
 }
 
-func NewAccountRepository(db DB) *AccountRepository {
-	return &AccountRepository{db: db}
+func NewAccountRepository(pgx *pgxpool.Pool) AccountRepository {
+	return AccountRepository{pgx}
 }
 
-// List returns a paginated list of accounts based on search params.
-// Only returns non-deleted accounts (soft delete filter).
-func (r *AccountRepository) List(ctx context.Context, params schemas.SearchParamAccountSchema) (schemas.PaginatedAccountSchema, error) {
-	// Build query filters using queryBuilder for cleaner code
-	qb := utils.QueryBuilder()
-	qb.Add("deleted_at IS NULL")
-	qb.AddInFilter("id", params.ID)
-	qb.AddLikeFilter("name", params.Name)
-	qb.AddInFilterString("type", params.Type)
-
-	// Add archived filter
-	if params.Archived != "" {
-		if params.Archived == "true" {
-			qb.Add("archived_at IS NOT NULL")
-		} else if params.Archived == "false" {
-			qb.Add("archived_at IS NULL")
-		}
+// List returns a paginated list of accounts
+func (ar AccountRepository) List(ctx context.Context, query models.ListAccountsRequestModel) (models.ListAccountsResponseModel, error) {
+	// Enforce page size limits
+	if query.PageSize <= 0 || query.PageSize > 100 {
+		query.PageSize = 10
+	}
+	if query.PageNumber <= 0 {
+		query.PageNumber = 1
 	}
 
-	// Count total items with filters
-	whereClause, args := qb.ToWhereClause()
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM accounts %s", whereClause)
-	var totalCount int
-	if err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount); err != nil {
-		return schemas.PaginatedAccountSchema{}, fmt.Errorf("count accounts: %w", err)
-	}
-
-	// Build ORDER BY clause and calculate pagination
-	validColumns := map[string]string{
+	sortByMap := map[string]string{
 		"name":         "name",
 		"type":         "type",
 		"amount":       "amount",
@@ -75,247 +37,178 @@ func (r *AccountRepository) List(ctx context.Context, params schemas.SearchParam
 		"createdAt":    "created_at",
 		"updatedAt":    "updated_at",
 	}
-	orderBy := qb.BuildOrderBy(params.SortBy, params.SortOrder, validColumns)
-	offset := (params.PageNumber - 1) * params.PageSize
-	limitIdx := qb.NextArgIndex()
+	sortOrderMap := map[string]string{
+		"asc":  "ASC",
+		"desc": "DESC",
+	}
 
-	// Query with pagination
-	sql := fmt.Sprintf(`SELECT id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at 
-	        FROM accounts 
-	        %s 
-	        %s
-	        LIMIT $%d OFFSET $%d`, whereClause, orderBy, limitIdx, limitIdx+1)
+	sortColumn, ok := sortByMap[query.SortBy]
+	if !ok {
+		sortColumn = "created_at"
+	}
+	sortOrder, ok := sortOrderMap[query.SortOrder]
+	if !ok {
+		sortOrder = "DESC"
+	}
 
-	args = append(args, params.PageSize, offset)
-	rows, err := r.db.Query(ctx, sql, args...)
+	offset := (query.PageNumber - 1) * query.PageSize
+	searchPattern := "%" + query.Name + "%"
+
+	countSQL := `SELECT COUNT(*) FROM accounts WHERE deleted_at IS NULL`
+	var totalCount int
+	if err := ar.pgx.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
+		return models.ListAccountsResponseModel{}, huma.Error400BadRequest("Unable to count accounts", err)
+	}
+
+	sql := `SELECT id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
+			FROM accounts
+			WHERE deleted_at IS NULL
+			AND (name ILIKE $1 OR $1 = '%%')
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $2 OFFSET $3`
+
+	rows, err := ar.pgx.Query(ctx, sql, searchPattern, query.PageSize, offset)
 	if err != nil {
-		return schemas.PaginatedAccountSchema{}, fmt.Errorf("query accounts: %w", err)
+		return models.ListAccountsResponseModel{}, huma.Error400BadRequest("Unable to query accounts", err)
 	}
 	defer rows.Close()
 
-	pas := schemas.PaginatedAccountSchema{}
-	return pas.FromRows(rows, totalCount, params)
+	var items []models.AccountModel
+	for rows.Next() {
+		var item models.AccountModel
+		err := rows.Scan(&item.ID, &item.Name, &item.Type, &item.Note, &item.Amount, &item.Icon, &item.IconColor, &item.DisplayOrder, &item.ArchivedAt, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt)
+		if err != nil {
+			return models.ListAccountsResponseModel{}, huma.Error400BadRequest("Unable to scan account data", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return models.ListAccountsResponseModel{}, huma.Error400BadRequest("Error reading account rows", err)
+	}
+
+	if items == nil {
+		items = []models.AccountModel{}
+	}
+
+	totalPages := 0
+	if totalCount > 0 {
+		totalPages = (totalCount + query.PageSize - 1) / query.PageSize
+	}
+
+	return models.ListAccountsResponseModel{
+		Data:       items,
+		PageNumber: query.PageNumber,
+		PageSize:   query.PageSize,
+		TotalCount: totalCount,
+		TotalPages: totalPages,
+	}, nil
 }
 
-// Get returns a single account by id.
-// Returns ErrAccountNotFound if account doesn't exist or is soft deleted.
-func (r *AccountRepository) Get(ctx context.Context, id int64) (schemas.AccountSchema, error) {
-	var account schemas.AccountSchema
-	// Performance: Add WHERE clause for soft delete filter (allows index usage)
-	sql := `SELECT id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at 
-	        FROM accounts 
-	        WHERE id = $1 AND deleted_at IS NULL`
+func (ar AccountRepository) Get(ctx context.Context, id int64) (models.AccountModel, error) {
+	var data models.AccountModel
 
-	err := r.db.QueryRow(ctx, sql, id).Scan(
-		&account.ID,
-		&account.Name,
-		&account.Type,
-		&account.Note,
-		&account.Amount,
-		&account.Icon,
-		&account.IconColor,
-		&account.DisplayOrder,
-		&account.ArchivedAt,
-		&account.CreatedAt,
-		&account.UpdatedAt,
-		&account.DeletedAt,
-	)
+	sql := `SELECT id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
+			FROM accounts
+			WHERE id = $1 AND deleted_at IS NULL`
+
+	err := ar.pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return schemas.AccountSchema{}, ErrAccountNotFound
+			return models.AccountModel{}, huma.Error404NotFound("Account not found")
 		}
-		return schemas.AccountSchema{}, fmt.Errorf("get account: %w", err)
+		return models.AccountModel{}, huma.Error400BadRequest("Unable to query account", err)
 	}
 
-	return account, nil
+	return data, nil
 }
 
-// Create inserts a new account and returns the created record.
-// Performance: Uses RETURNING to fetch created record in single query.
-// Auto-calculates display_order as max(display_order) + 1.
-func (r *AccountRepository) Create(ctx context.Context, in schemas.CreateAccountSchema) (schemas.AccountSchema, error) {
-	var account schemas.AccountSchema
-	sql := `INSERT INTO accounts (name, type, note, amount, icon, icon_color, display_order) 
-	        VALUES ($1, $2, $3, $4, $5, $6, COALESCE((SELECT MAX(display_order) + 1 FROM accounts), 0)) 
-	        RETURNING id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`
+func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAccountRequestModel) (models.CreateAccountResponseModel, error) {
+	var data models.AccountModel
 
-	err := r.db.QueryRow(ctx, sql, in.Name, in.Type, in.Note, in.Amount, in.Icon, in.IconColor).Scan(
-		&account.ID,
-		&account.Name,
-		&account.Type,
-		&account.Note,
-		&account.Amount,
-		&account.Icon,
-		&account.IconColor,
-		&account.DisplayOrder,
-		&account.ArchivedAt,
-		&account.CreatedAt,
-		&account.UpdatedAt,
-		&account.DeletedAt,
-	)
+	sql := `INSERT INTO accounts (name, type, note, amount, icon, icon_color, display_order)
+			VALUES ($1, $2, $3, $4, $5, $6, COALESCE((SELECT MAX(display_order) + 1 FROM accounts), 0))
+			RETURNING id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`
+
+	err := ar.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Amount, payload.Icon, payload.IconColor).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
-		return schemas.AccountSchema{}, fmt.Errorf("create account: %w", err)
+		return models.CreateAccountResponseModel{}, huma.Error400BadRequest("Unable to create account", err)
 	}
 
-	return account, nil
+	return models.CreateAccountResponseModel{AccountModel: data}, nil
 }
 
-// Update modifies an existing account and returns the updated record.
-// Dynamically builds UPDATE clause for only the fields provided.
-// Returns ErrAccountNotFound if account doesn't exist or is soft deleted.
-func (r *AccountRepository) Update(ctx context.Context, id int64, in schemas.UpdateAccountSchema) (schemas.AccountSchema, error) {
-	// Performance: Verify account exists before trying to update
-	var exists bool
-	checkSQL := "SELECT EXISTS(SELECT 1 FROM accounts WHERE id = $1 AND deleted_at IS NULL)"
-	if err := r.db.QueryRow(ctx, checkSQL, id).Scan(&exists); err != nil {
-		return schemas.AccountSchema{}, fmt.Errorf("check account existence: %w", err)
-	}
-	if !exists {
-		return schemas.AccountSchema{}, ErrAccountNotFound
-	}
+func (ar AccountRepository) Update(ctx context.Context, id int64, payload models.UpdateAccountRequestModel) (models.UpdateAccountResponseModel, error) {
+	var data models.AccountModel
 
-	// Build dynamic UPDATE clause for provided fields only
-	var setClauses []string
-	var args []any
-	args = append(args, id) // $1 is always id
-	paramIdx := 2           // Start from $2
+	sql := `UPDATE accounts
+			SET name = COALESCE($1, name),
+				type = COALESCE($2, type),
+				note = COALESCE($3, note),
+				amount = COALESCE($4, amount),
+				icon = COALESCE($5, icon),
+				icon_color = COALESCE($6, icon_color),
+				archived_at = CASE
+					WHEN $7::text = '' OR $7::text = 'null' THEN NULL
+					WHEN $7::text IS NOT NULL THEN CURRENT_TIMESTAMP
+					ELSE archived_at
+				END,
+				updated_at = CURRENT_TIMESTAMP
+			WHERE id = $8 AND deleted_at IS NULL
+			RETURNING id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`
 
-	if in.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", paramIdx))
-		args = append(args, *in.Name)
-		paramIdx++
-	}
-	if in.Type != nil {
-		setClauses = append(setClauses, fmt.Sprintf("type = $%d", paramIdx))
-		args = append(args, *in.Type)
-		paramIdx++
-	}
-	if in.Note != nil {
-		setClauses = append(setClauses, fmt.Sprintf("note = $%d", paramIdx))
-		args = append(args, *in.Note)
-		paramIdx++
-	}
-	if in.Amount != nil {
-		setClauses = append(setClauses, fmt.Sprintf("amount = $%d", paramIdx))
-		args = append(args, *in.Amount)
-		paramIdx++
-	}
-	if in.Icon != nil {
-		setClauses = append(setClauses, fmt.Sprintf("icon = $%d", paramIdx))
-		args = append(args, *in.Icon)
-		paramIdx++
-	}
-	if in.IconColor != nil {
-		setClauses = append(setClauses, fmt.Sprintf("icon_color = $%d", paramIdx))
-		args = append(args, *in.IconColor)
-		paramIdx++
-	}
-	if in.ArchivedAt != nil {
-		if *in.ArchivedAt == "" || *in.ArchivedAt == "null" {
-			// Empty string or "null" string means unarchive (set to NULL in DB)
-			setClauses = append(setClauses, "archived_at = NULL")
-		} else {
-			// Any other value means archive with current timestamp
-			setClauses = append(setClauses, fmt.Sprintf("archived_at = $%d", paramIdx))
-			args = append(args, time.Now())
-			paramIdx++
+	err := ar.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Amount, payload.Icon, payload.IconColor, payload.ArchivedAt, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UpdateAccountResponseModel{}, huma.Error404NotFound("Account not found")
 		}
+		return models.UpdateAccountResponseModel{}, huma.Error400BadRequest("Unable to update account", err)
 	}
 
-	// Always update updated_at
-	setClauses = append(setClauses, "updated_at = NOW()")
-
-	sql := fmt.Sprintf(`UPDATE accounts 
-	        SET %s
-	        WHERE id = $1 AND deleted_at IS NULL
-	        RETURNING id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`,
-		strings.Join(setClauses, ", "))
-
-	var account schemas.AccountSchema
-	err := r.db.QueryRow(ctx, sql, args...).Scan(
-		&account.ID,
-		&account.Name,
-		&account.Type,
-		&account.Note,
-		&account.Amount,
-		&account.Icon,
-		&account.IconColor,
-		&account.DisplayOrder,
-		&account.ArchivedAt,
-		&account.CreatedAt,
-		&account.UpdatedAt,
-		&account.DeletedAt,
-	)
-
-	if err != nil {
-		return schemas.AccountSchema{}, fmt.Errorf("update account: %w", err)
-	}
-
-	return account, nil
+	return models.UpdateAccountResponseModel{AccountModel: data}, nil
 }
 
-// Delete performs a soft delete by setting deleted_at.
-// Returns ErrAccountNotFound if account doesn't exist or is already deleted.
-// Performance: Prevents deleting already deleted records.
-func (r *AccountRepository) Delete(ctx context.Context, id int64) error {
-	sql := `UPDATE accounts 
-	        SET deleted_at = CURRENT_TIMESTAMP 
-	        WHERE id = $1 AND deleted_at IS NULL`
+func (ar AccountRepository) Delete(ctx context.Context, id int64) error {
+	sql := `UPDATE accounts
+			SET deleted_at = CURRENT_TIMESTAMP
+			WHERE id = $1 AND deleted_at IS NULL`
 
-	result, err := r.db.Exec(ctx, sql, id)
+	cmdTag, err := ar.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return fmt.Errorf("delete account: %w", err)
+		return huma.Error400BadRequest("Unable to delete account", err)
 	}
-
-	// Check if any row was affected
-	if result.RowsAffected() == 0 {
-		return ErrAccountNotFound
+	if cmdTag.RowsAffected() == 0 {
+		return huma.Error404NotFound("Account not found")
 	}
 
 	return nil
 }
 
-// Reorder atomically updates display_order for multiple accounts.
-// Uses a single SQL statement with CASE expression for atomic batch update.
-// Only updates non-deleted accounts.
-func (r *AccountRepository) Reorder(ctx context.Context, items []schemas.AccountReorderItemSchema) error {
+func (ar AccountRepository) Reorder(ctx context.Context, items []models.ReorderAccountItemModel) error {
 	if len(items) == 0 {
 		return nil
 	}
 
-	// Build CASE expression for each item
-	var caseExprs []string
-	var ids []int64
-	for _, item := range items {
-		caseExprs = append(caseExprs, fmt.Sprintf("WHEN id = %d THEN %d", item.ID, item.DisplayOrder))
-		ids = append(ids, item.ID)
+	var caseExpr string
+	for i, item := range items {
+		if i > 0 {
+			caseExpr += " "
+		}
+		caseExpr += fmt.Sprintf("WHEN id = %d THEN %d", item.ID, item.DisplayOrder)
 	}
 
-	// Build the full SQL statement
-	// Using a single UPDATE with CASE ensures atomicity
-	sql := fmt.Sprintf(`UPDATE accounts 
-		SET display_order = CASE %s END,
-		    updated_at = NOW()
-		WHERE id IN (%s) AND deleted_at IS NULL`,
-		strings.Join(caseExprs, " "),
-		joinInt64(ids, ","))
+	sql := `UPDATE accounts
+			SET display_order = CASE ` + caseExpr + ` END,
+				updated_at = CURRENT_TIMESTAMP
+			WHERE deleted_at IS NULL`
 
-	_, err := r.db.Exec(ctx, sql)
+	_, err := ar.pgx.Exec(ctx, sql)
 	if err != nil {
-		return fmt.Errorf("reorder accounts: %w", err)
+		return huma.Error400BadRequest("Unable to reorder accounts", err)
 	}
 
 	return nil
-}
-
-// joinInt64 joins int64 slice into a comma-separated string.
-// Used for building SQL IN clauses.
-func joinInt64(ids []int64, sep string) string {
-	strIds := make([]string, len(ids))
-	for i, id := range ids {
-		strIds[i] = fmt.Sprintf("%d", id)
-	}
-	return strings.Join(strIds, sep)
 }

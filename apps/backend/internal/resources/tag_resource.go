@@ -2,27 +2,24 @@ package resources
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
 type TagResource struct {
-	tagService *services.TagService
+	ts services.TagService
 }
 
-func NewTagResource(tagService *services.TagService) *TagResource {
-	return &TagResource{
-		tagService: tagService,
-	}
+func NewTagResource(ts services.TagService) TagResource {
+	return TagResource{ts}
 }
 
-func (r *TagResource) RegisterRoutes(api huma.API) {
+func (tr TagResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "list-tags",
-		Method:      http.MethodGet,
+		Method:      "GET",
 		Path:        "/tags",
 		Summary:     "List tags",
 		Description: "Get a paginated list of tags with optional search",
@@ -30,11 +27,11 @@ func (r *TagResource) RegisterRoutes(api huma.API) {
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.ListTags)
+	}, tr.List)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "create-tag",
-		Method:      http.MethodPost,
+		Method:      "POST",
 		Path:        "/tags",
 		Summary:     "Create tag",
 		Description: "Create a new tag",
@@ -42,74 +39,116 @@ func (r *TagResource) RegisterRoutes(api huma.API) {
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.CreateTag)
+	}, tr.Create)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "delete-tag",
-		Method:      http.MethodDelete,
+		OperationID: "get-tag",
+		Method:      "GET",
 		Path:        "/tags/{id}",
-		Summary:     "Delete tag",
-		Description: "Delete a tag by ID",
+		Summary:     "Get tag",
+		Description: "Get a single tag by ID",
 		Tags:        []string{"Tags"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.DeleteTag)
+	}, tr.Get)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "update-tag",
+		Method:      "PATCH",
+		Path:        "/tags/{id}",
+		Summary:     "Update tag",
+		Description: "Update an existing tag",
+		Tags:        []string{"Tags"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, tr.Update)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "delete-tag",
+		Method:      "DELETE",
+		Path:        "/tags/{id}",
+		Summary:     "Delete tag",
+		Description: "Delete a tag",
+		Tags:        []string{"Tags"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, tr.Delete)
 }
 
-// ListTags handles GET /tags
-func (r *TagResource) ListTags(ctx context.Context, input *struct {
-	schemas.SearchParamTagSchema
+func (tr TagResource) List(ctx context.Context, input *struct {
+	models.ListTagsRequestModel
 }) (*struct {
-	Body schemas.PaginatedTagSchema
+	models.ListTagsResponseModel
 }, error) {
-	data, err := r.tagService.ListTags(ctx, input.SearchParamTagSchema)
+	resp, err := tr.ts.List(ctx, input.ListTagsRequestModel)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to list tags", err)
+		return nil, err
 	}
 
 	return &struct {
-		Body schemas.PaginatedTagSchema
-	}{Body: data}, nil
-}
-
-// CreateTag handles POST /tags
-func (r *TagResource) CreateTag(ctx context.Context, input *struct {
-	Body schemas.CreateTagSchema
-}) (*struct {
-	Status int
-	Body   schemas.TagSchema
-}, error) {
-	tag, err := r.tagService.CreateTag(ctx, input.Body)
-	if err != nil {
-		if err.Error() == "tag already exists" {
-			return nil, huma.Error409Conflict("Tag already exists")
-		}
-		if err.Error() == "tag name is required" || err.Error() == "tag name must be 50 characters or less" {
-			return nil, huma.Error400BadRequest(err.Error())
-		}
-		return nil, huma.Error500InternalServerError("Failed to create tag", err)
-	}
-
-	return &struct {
-		Status int
-		Body   schemas.TagSchema
+		models.ListTagsResponseModel
 	}{
-		Status: http.StatusCreated,
-		Body:   tag,
+		ListTagsResponseModel: resp,
 	}, nil
 }
 
-// DeleteTag handles DELETE /tags/:id
-func (r *TagResource) DeleteTag(ctx context.Context, input *struct {
-	schemas.DeleteTagInput
-}) (*struct{}, error) {
-	err := r.tagService.DeleteTag(ctx, input.ID)
+func (tr TagResource) Get(ctx context.Context, input *struct {
+	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
+}) (*struct{ models.GetTagResponseModel }, error) {
+	resp, err := tr.ts.Get(ctx, input.ID)
 	if err != nil {
-		if err.Error() == "tag not found" {
-			return nil, huma.Error404NotFound("Tag not found")
-		}
-		return nil, huma.Error500InternalServerError("Failed to delete tag", err)
+		return nil, err
+	}
+
+	return &struct{ models.GetTagResponseModel }{
+		GetTagResponseModel: models.GetTagResponseModel{TagModel: resp},
+	}, nil
+}
+
+func (tr TagResource) Create(ctx context.Context, input *struct {
+	Body models.CreateTagRequestModel
+}) (*struct {
+	models.CreateTagResponseModel
+}, error) {
+	resp, err := tr.ts.Create(ctx, input.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		models.CreateTagResponseModel
+	}{
+		CreateTagResponseModel: resp,
+	}, nil
+}
+
+func (tr TagResource) Update(ctx context.Context, input *struct {
+	ID   int64                        `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
+	Body models.UpdateTagRequestModel `json:""`
+}) (*struct {
+	models.UpdateTagResponseModel
+}, error) {
+	resp, err := tr.ts.Update(ctx, input.ID, input.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		models.UpdateTagResponseModel
+	}{
+		UpdateTagResponseModel: resp,
+	}, nil
+}
+
+func (tr TagResource) Delete(ctx context.Context, input *struct {
+	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
+}) (*struct{}, error) {
+	err := tr.ts.Delete(ctx, input.ID)
+	if err != nil {
+		return nil, err
 	}
 
 	return &struct{}{}, nil

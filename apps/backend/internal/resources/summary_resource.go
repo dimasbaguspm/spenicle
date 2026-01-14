@@ -5,231 +5,83 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
-// SummaryService defines the interface for summary business logic operations.
-// This allows the resource to be tested with mock implementations.
-type SummaryService interface {
-	GetTransactionSummary(ctx context.Context, params schemas.SummaryTransactionParamModel) (schemas.SummaryTransactionSchema, error)
-	GetAccountSummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryAccountSchema, error)
-	GetCategorySummary(ctx context.Context, params schemas.SummaryParamModel) (schemas.SummaryCategorySchema, error)
-	GetAccountTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.AccountTrendSchema, error)
-	GetCategoryTrend(ctx context.Context, params schemas.TrendParamSchema) (schemas.CategoryTrendSchema, error)
-	GetTagSummary(ctx context.Context, params schemas.SummaryTagParamSchema) (schemas.SummaryTagSchema, error)
-	GetTotalSummary(ctx context.Context, params schemas.TotalSummaryParamModel) (schemas.TotalSummarySchema, error)
-}
-
 type SummaryResource struct {
-	service SummaryService
+	service services.SummaryService
 }
 
-func NewSummaryResource(service SummaryService) *SummaryResource {
-	return &SummaryResource{service: service}
+func NewSummaryResource(service services.SummaryService) SummaryResource {
+	return SummaryResource{service}
 }
 
-// RegisterRoutes registers all summary routes (all protected with authentication)
-func (r *SummaryResource) RegisterRoutes(api huma.API) {
+// Routes registers all summary routes
+func (sr SummaryResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "get-transaction-summary",
 		Method:      http.MethodGet,
 		Path:        "/summary/transactions",
 		Summary:     "Get transaction summary",
-		Description: "Returns transaction summary grouped by frequency (daily, weekly, monthly, yearly) with optional date filtering",
+		Description: "Returns transaction summary grouped by frequency (daily, weekly, monthly, yearly)",
 		Tags:        []string{"Summary"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.GetTransactionSummary)
+	}, sr.GetTransactionSummary)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-account-summary",
 		Method:      http.MethodGet,
 		Path:        "/summary/accounts",
 		Summary:     "Get account summary",
-		Description: "Returns transaction summary grouped by account with optional date filtering",
+		Description: "Returns transaction summary grouped by account",
 		Tags:        []string{"Summary"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.GetAccountSummary)
+	}, sr.GetAccountSummary)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-category-summary",
 		Method:      http.MethodGet,
 		Path:        "/summary/categories",
 		Summary:     "Get category summary",
-		Description: "Returns transaction summary grouped by category with optional date filtering",
+		Description: "Returns transaction summary grouped by category",
 		Tags:        []string{"Summary"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, r.GetCategorySummary)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "get-account-trends",
-		Method:      http.MethodGet,
-		Path:        "/summary/accounts/trends",
-		Summary:     "Get account spending trends",
-		Description: "Returns trend analysis for accounts showing if spending is increasing or decreasing over time, grouped by frequency (weekly, monthly)",
-		Tags:        []string{"Summary"},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-	}, r.GetAccountTrends)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "get-category-trends",
-		Method:      http.MethodGet,
-		Path:        "/summary/categories/trends",
-		Summary:     "Get category spending trends",
-		Description: "Returns trend analysis for categories showing if spending is increasing or decreasing over time, grouped by frequency (weekly, monthly)",
-		Tags:        []string{"Summary"},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-	}, r.GetCategoryTrends)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "get-tag-summary",
-		Method:      http.MethodGet,
-		Path:        "/summary/tags",
-		Summary:     "Get tag summary",
-		Description: "Returns transaction summary grouped by tags with optional date and type filtering",
-		Tags:        []string{"Summary"},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-	}, r.GetTagSummary)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "get-total-summary",
-		Method:      http.MethodGet,
-		Path:        "/summary/total",
-		Summary:     "Get total transaction counts",
-		Description: "Returns aggregated transaction counts by type (expense, income, transfer) with optional date filtering",
-		Tags:        []string{"Summary"},
-		Security: []map[string][]string{
-			{"bearer": {}},
-		},
-	}, r.GetTotalSummary)
+	}, sr.GetCategorySummary)
 }
 
-type GetTransactionSummaryInput struct {
-	schemas.SummaryTransactionParamModel
-}
-
-type GetTransactionSummaryOutput struct {
-	Body schemas.SummaryTransactionSchema
-}
-
-func (r *SummaryResource) GetTransactionSummary(ctx context.Context, input *GetTransactionSummaryInput) (*GetTransactionSummaryOutput, error) {
-	result, err := r.service.GetTransactionSummary(ctx, input.SummaryTransactionParamModel)
+func (sr SummaryResource) GetTransactionSummary(ctx context.Context, input *struct {
+	Params models.SummaryTransactionRequestModel
+}) (*models.SummaryTransactionResponseModel, error) {
+	resp, err := sr.service.GetTransactionSummary(ctx, input.Params)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to get transaction summary", err)
+		return nil, err
 	}
-
-	return &GetTransactionSummaryOutput{Body: result}, nil
+	return &resp, nil
 }
 
-type GetAccountSummaryInput struct {
-	schemas.SummaryParamModel
-}
-
-type GetAccountSummaryOutput struct {
-	Body schemas.SummaryAccountSchema
-}
-
-func (r *SummaryResource) GetAccountSummary(ctx context.Context, input *GetAccountSummaryInput) (*GetAccountSummaryOutput, error) {
-	result, err := r.service.GetAccountSummary(ctx, input.SummaryParamModel)
+func (sr SummaryResource) GetAccountSummary(ctx context.Context, input *struct {
+	Params models.SummaryRequestModel
+}) (*models.SummaryAccountResponseModel, error) {
+	resp, err := sr.service.GetAccountSummary(ctx, input.Params)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to get account summary", err)
+		return nil, err
 	}
-
-	return &GetAccountSummaryOutput{Body: result}, nil
+	return &resp, nil
 }
 
-type GetCategorySummaryInput struct {
-	schemas.SummaryParamModel
-}
-
-type GetCategorySummaryOutput struct {
-	Body schemas.SummaryCategorySchema
-}
-
-func (r *SummaryResource) GetCategorySummary(ctx context.Context, input *GetCategorySummaryInput) (*GetCategorySummaryOutput, error) {
-	result, err := r.service.GetCategorySummary(ctx, input.SummaryParamModel)
+func (sr SummaryResource) GetCategorySummary(ctx context.Context, input *struct {
+	Params models.SummaryRequestModel
+}) (*models.SummaryCategoryResponseModel, error) {
+	resp, err := sr.service.GetCategorySummary(ctx, input.Params)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to get category summary", err)
+		return nil, err
 	}
-
-	return &GetCategorySummaryOutput{Body: result}, nil
-}
-
-type GetAccountTrendsInput struct {
-	schemas.TrendParamSchema
-}
-
-type GetAccountTrendsOutput struct {
-	Body schemas.AccountTrendSchema
-}
-
-func (r *SummaryResource) GetAccountTrends(ctx context.Context, input *GetAccountTrendsInput) (*GetAccountTrendsOutput, error) {
-	result, err := r.service.GetAccountTrend(ctx, input.TrendParamSchema)
-	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to get account trends", err)
-	}
-
-	return &GetAccountTrendsOutput{Body: result}, nil
-}
-
-type GetCategoryTrendsInput struct {
-	schemas.TrendParamSchema
-}
-
-type GetCategoryTrendsOutput struct {
-	Body schemas.CategoryTrendSchema
-}
-
-func (r *SummaryResource) GetCategoryTrends(ctx context.Context, input *GetCategoryTrendsInput) (*GetCategoryTrendsOutput, error) {
-	result, err := r.service.GetCategoryTrend(ctx, input.TrendParamSchema)
-	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to get category trends", err)
-	}
-
-	return &GetCategoryTrendsOutput{Body: result}, nil
-}
-
-type GetTagSummaryInput struct {
-	schemas.SummaryTagParamSchema
-}
-
-type GetTotalSummaryInput struct {
-	schemas.TotalSummaryParamModel
-}
-
-type GetTotalSummaryOutput struct {
-	Body schemas.TotalSummarySchema
-}
-
-func (r *SummaryResource) GetTotalSummary(ctx context.Context, input *GetTotalSummaryInput) (*GetTotalSummaryOutput, error) {
-	result, err := r.service.GetTotalSummary(ctx, input.TotalSummaryParamModel)
-	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to get total summary", err)
-	}
-
-	return &GetTotalSummaryOutput{Body: result}, nil
-}
-
-type GetTagSummaryOutput struct {
-	Body schemas.SummaryTagSchema
-}
-
-func (r *SummaryResource) GetTagSummary(ctx context.Context, input *GetTagSummaryInput) (*GetTagSummaryOutput, error) {
-	result, err := r.service.GetTagSummary(ctx, input.SummaryTagParamSchema)
-	if err != nil {
-		return nil, huma.Error500InternalServerError("Failed to get tag summary", err)
-	}
-
-	return &GetTagSummaryOutput{Body: result}, nil
+	return &resp, nil
 }

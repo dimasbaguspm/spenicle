@@ -2,355 +2,274 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"errors"
-	"fmt"
-	"time"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/database/schemas"
-	"github.com/dimasbaguspm/spenicle-api/internal/utils"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TransactionTemplateRepository struct {
-	db DB
+	pgx *pgxpool.Pool
 }
 
-func NewTransactionTemplateRepository(db DB) *TransactionTemplateRepository {
-	return &TransactionTemplateRepository{db: db}
+func NewTransactionTemplateRepository(pgx *pgxpool.Pool) TransactionTemplateRepository {
+	return TransactionTemplateRepository{pgx}
 }
-
-var (
-	ErrTransactionTemplateNotFound = errors.New("transaction template not found")
-)
 
 // List retrieves paginated transaction templates with filters
-func (r *TransactionTemplateRepository) List(ctx context.Context, params schemas.SearchParamTransactionTemplateSchema) (*schemas.PaginatedTransactionTemplateSchema, error) {
-	qb := utils.QueryBuilder()
+func (ttr TransactionTemplateRepository) List(ctx context.Context, p models.ListTransactionTemplatesRequestModel) (models.ListTransactionTemplatesResponseModel, error) {
+	// Enforce page size limits
+	if p.PageSize <= 0 || p.PageSize > 100 {
+		p.PageSize = 10
+	}
+	if p.PageNumber <= 0 {
+		p.PageNumber = 1
+	}
 
-	// Add filters
-	if len(params.ID) > 0 {
-		ids := make([]int, len(params.ID))
-		for i, id := range params.ID {
-			ids[i] = int(id)
-		}
-		qb.AddInFilter("id", ids)
+	sortByMap := map[string]string{
+		"id":        "id",
+		"name":      "name",
+		"amount":    "amount",
+		"type":      "type",
+		"createdAt": "created_at",
+		"updatedAt": "updated_at",
 	}
-	if len(params.AccountID) > 0 {
-		accountIDs := make([]int, len(params.AccountID))
-		for i, id := range params.AccountID {
-			accountIDs[i] = int(id)
-		}
-		qb.AddInFilter("account_id", accountIDs)
+	sortOrderMap := map[string]string{
+		"asc":  "ASC",
+		"desc": "DESC",
 	}
-	if len(params.CategoryID) > 0 {
-		categoryIDs := make([]int, len(params.CategoryID))
-		for i, id := range params.CategoryID {
-			categoryIDs[i] = int(id)
-		}
-		qb.AddInFilter("category_id", categoryIDs)
-	}
-	if len(params.Type) > 0 {
-		qb.AddInFilterString("type", params.Type)
-	}
-	if len(params.Recurrence) > 0 {
-		qb.AddInFilterString("recurrence", params.Recurrence)
-	}
-	qb.Add("deleted_at IS NULL")
 
-	whereClause, args := qb.ToWhereClause()
+	sortColumn, ok := sortByMap[p.SortBy]
+	if !ok {
+		sortColumn = "created_at"
+	}
+	sortOrder, ok := sortOrderMap[p.SortOrder]
+	if !ok {
+		sortOrder = "DESC"
+	}
 
-	// Build count query
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM transaction_templates %s", whereClause)
+	offset := (p.PageNumber - 1) * p.PageSize
+	searchPattern := "%" + p.Name + "%"
 
+	// Count total matching transaction templates
+	countSQL := `SELECT COUNT(*) FROM transaction_templates WHERE deleted_at IS NULL`
 	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count transaction templates: %w", err)
+	if err := ttr.pgx.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
+		return models.ListTransactionTemplatesResponseModel{}, huma.Error400BadRequest("Unable to count transaction templates", err)
 	}
 
-	if totalCount == 0 {
-		return &schemas.PaginatedTransactionTemplateSchema{
-			Items:      []schemas.TransactionTemplateSchema{},
-			TotalCount: 0,
-			PageNumber: params.Page,
-			PageSize:   params.Limit,
-			PageTotal:  0,
-		}, nil
-	}
+	// Fetch paginated transaction templates
+	sql := `SELECT id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at
+			FROM transaction_templates
+			WHERE deleted_at IS NULL
+			AND (name ILIKE $1 OR $1 = '%%')
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $2 OFFSET $3`
 
-	// Build paginated query
-	offset := (params.Page - 1) * params.Limit
-	dataQuery := fmt.Sprintf(`
-		SELECT id, account_id, category_id, type, amount, description, recurrence,
-		       start_date, end_date, installment_count, installment_current, note,
-		       created_at, updated_at, deleted_at
-		FROM transaction_templates
-		%s
-		ORDER BY created_at DESC
-		LIMIT %d OFFSET %d`,
-		whereClause, params.Limit, offset)
-
-	rows, err := r.db.Query(ctx, dataQuery, args...)
+	rows, err := ttr.pgx.Query(ctx, sql, searchPattern, p.PageSize, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query transaction templates: %w", err)
+		return models.ListTransactionTemplatesResponseModel{}, huma.Error400BadRequest("Unable to query transaction templates", err)
 	}
 	defer rows.Close()
 
-	items, err := schemas.PaginatedTransactionTemplateSchema{}.FromRows(rows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to scan transaction templates: %w", err)
+	var items []models.TransactionTemplateModel
+	for rows.Next() {
+		var item models.TransactionTemplateModel
+		if err := rows.Scan(
+			&item.ID, &item.Name, &item.Type, &item.Amount, &item.AccountID, &item.CategoryID,
+			&item.DestinationAccountID, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+		); err != nil {
+			return models.ListTransactionTemplatesResponseModel{}, huma.Error400BadRequest("Unable to scan transaction template data", err)
+		}
+		items = append(items, item)
 	}
 
-	return &schemas.PaginatedTransactionTemplateSchema{
-		Items:      items,
+	if err := rows.Err(); err != nil {
+		return models.ListTransactionTemplatesResponseModel{}, huma.Error400BadRequest("Error reading transaction template rows", err)
+	}
+
+	if items == nil {
+		items = []models.TransactionTemplateModel{}
+	}
+
+	totalPages := 0
+	if totalCount > 0 {
+		totalPages = (totalCount + p.PageSize - 1) / p.PageSize
+	}
+
+	return models.ListTransactionTemplatesResponseModel{
+		Data:       items,
+		PageNumber: p.PageNumber,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
-		PageNumber: params.Page,
-		PageSize:   params.Limit,
-		PageTotal:  (totalCount + params.Limit - 1) / params.Limit,
+		TotalPages: totalPages,
 	}, nil
 }
 
-// Get retrieves a single transaction template by ID (not deleted)
-func (r *TransactionTemplateRepository) Get(ctx context.Context, id int) (*schemas.TransactionTemplateSchema, error) {
-	query := `
-		SELECT id, account_id, category_id, type, amount, description, recurrence,
-		       start_date, end_date, installment_count, installment_current, note,
-		       created_at, updated_at, deleted_at
-		FROM transaction_templates
-		WHERE id = $1 AND deleted_at IS NULL`
+// Get retrieves a single transaction template by ID
+func (ttr TransactionTemplateRepository) Get(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
+	var data models.TransactionTemplateModel
 
-	var template schemas.TransactionTemplateSchema
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&template.ID,
-		&template.AccountID,
-		&template.CategoryID,
-		&template.Type,
-		&template.Amount,
-		&template.Description,
-		&template.Recurrence,
-		&template.StartDate,
-		&template.EndDate,
-		&template.InstallmentCount,
-		&template.InstallmentCurrent,
-		&template.Note,
-		&template.CreatedAt,
-		&template.UpdatedAt,
-		&template.DeletedAt,
+	sql := `SELECT id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at
+			FROM transaction_templates
+			WHERE id = $1 AND deleted_at IS NULL`
+
+	err := ttr.pgx.QueryRow(ctx, sql, id).Scan(
+		&data.ID, &data.Name, &data.Type, &data.Amount, &data.AccountID, &data.CategoryID,
+		&data.DestinationAccountID, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transaction template: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.TransactionTemplateModel{}, huma.Error404NotFound("Transaction template not found")
+		}
+		return models.TransactionTemplateModel{}, huma.Error400BadRequest("Unable to query transaction template", err)
 	}
 
-	return &template, nil
+	return data, nil
 }
 
 // Create creates a new transaction template
-func (r *TransactionTemplateRepository) Create(ctx context.Context, input schemas.CreateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
-	query := `
-		INSERT INTO transaction_templates (
-			account_id, category_id, type, amount, description, recurrence,
-			start_date, end_date, installment_count, note
-		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		RETURNING id, account_id, category_id, type, amount, description, recurrence,
-		          start_date, end_date, installment_count, installment_current, note,
-		          created_at, updated_at, deleted_at`
+func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload models.CreateTransactionTemplateRequestModel) (models.CreateTransactionTemplateResponseModel, error) {
+	var data models.TransactionTemplateModel
 
-	var template schemas.TransactionTemplateSchema
-	err := r.db.QueryRow(
-		ctx,
-		query,
-		input.AccountID,
-		input.CategoryID,
-		input.Type,
-		input.Amount,
-		input.Description,
-		input.Recurrence,
-		input.StartDate,
-		input.EndDate,
-		input.InstallmentCount,
-		input.Note,
-	).Scan(
-		&template.ID,
-		&template.AccountID,
-		&template.CategoryID,
-		&template.Type,
-		&template.Amount,
-		&template.Description,
-		&template.Recurrence,
-		&template.StartDate,
-		&template.EndDate,
-		&template.InstallmentCount,
-		&template.InstallmentCurrent,
-		&template.Note,
-		&template.CreatedAt,
-		&template.UpdatedAt,
-		&template.DeletedAt,
+	sql := `INSERT INTO transaction_templates (name, type, amount, account_id, category_id, destination_account_id, note)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			RETURNING id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at`
+
+	err := ttr.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Amount, payload.AccountID, payload.CategoryID, payload.DestinationAccountID, payload.Note).Scan(
+		&data.ID, &data.Name, &data.Type, &data.Amount, &data.AccountID, &data.CategoryID,
+		&data.DestinationAccountID, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to create transaction template: %w", err)
+		return models.CreateTransactionTemplateResponseModel{}, huma.Error400BadRequest("Unable to create transaction template", err)
 	}
 
-	return &template, nil
+	return models.CreateTransactionTemplateResponseModel{TransactionTemplateModel: data}, nil
 }
 
 // Update updates an existing transaction template
-func (r *TransactionTemplateRepository) Update(ctx context.Context, id int, input schemas.UpdateTransactionTemplateSchema) (*schemas.TransactionTemplateSchema, error) {
-	qb := utils.QueryBuilder()
-	updates := []string{}
+func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, payload models.UpdateTransactionTemplateRequestModel) (models.UpdateTransactionTemplateResponseModel, error) {
+	var data models.TransactionTemplateModel
 
-	if input.AccountID != nil {
-		updates = append(updates, fmt.Sprintf("account_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.AccountID)
-	}
-	if input.CategoryID != nil {
-		updates = append(updates, fmt.Sprintf("category_id = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.CategoryID)
-	}
-	if input.Type != nil {
-		updates = append(updates, fmt.Sprintf("type = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.Type)
-	}
-	if input.Amount != nil {
-		updates = append(updates, fmt.Sprintf("amount = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.Amount)
-	}
-	if input.Description != nil {
-		updates = append(updates, fmt.Sprintf("description = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.Description)
-	}
-	if input.Recurrence != nil {
-		updates = append(updates, fmt.Sprintf("recurrence = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.Recurrence)
-	}
-	if input.StartDate != nil {
-		updates = append(updates, fmt.Sprintf("start_date = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.StartDate)
-	}
-	if input.EndDate != nil {
-		updates = append(updates, fmt.Sprintf("end_date = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.EndDate)
-	}
-	if input.InstallmentCount != nil {
-		updates = append(updates, fmt.Sprintf("installment_count = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.InstallmentCount)
-	}
-	if input.Note != nil {
-		updates = append(updates, fmt.Sprintf("note = $%d", qb.NextArgIndex()))
-		qb.AddArg(*input.Note)
-	}
+	sql := `UPDATE transaction_templates
+			SET name = COALESCE($1, name),
+				type = COALESCE($2, type),
+				amount = COALESCE($3, amount),
+				account_id = COALESCE($4, account_id),
+				category_id = COALESCE($5, category_id),
+				destination_account_id = COALESCE($6, destination_account_id),
+				note = $7,
+				updated_at = CURRENT_TIMESTAMP
+			WHERE id = $8 AND deleted_at IS NULL
+			RETURNING id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at`
 
-	if len(updates) == 0 {
-		return r.Get(ctx, id)
-	}
-
-	updates = append(updates, fmt.Sprintf("updated_at = $%d", qb.NextArgIndex()))
-	qb.AddArg(time.Now())
-
-	query := fmt.Sprintf(`
-		UPDATE transaction_templates
-		SET %s
-		WHERE id = $%d AND deleted_at IS NULL
-		RETURNING id, account_id, category_id, type, amount, description, recurrence,
-		          start_date, end_date, installment_count, installment_current, note,
-		          created_at, updated_at, deleted_at`,
-		utils.JoinStrings(updates, ", "),
-		qb.NextArgIndex(),
+	err := ttr.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Amount, payload.AccountID, payload.CategoryID, payload.DestinationAccountID, payload.Note, id).Scan(
+		&data.ID, &data.Name, &data.Type, &data.Amount, &data.AccountID, &data.CategoryID,
+		&data.DestinationAccountID, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
-	qb.AddArg(id)
 
-	var template schemas.TransactionTemplateSchema
-	err := r.db.QueryRow(ctx, query, qb.GetArgs()...).Scan(
-		&template.ID,
-		&template.AccountID,
-		&template.CategoryID,
-		&template.Type,
-		&template.Amount,
-		&template.Description,
-		&template.Recurrence,
-		&template.StartDate,
-		&template.EndDate,
-		&template.InstallmentCount,
-		&template.InstallmentCurrent,
-		&template.Note,
-		&template.CreatedAt,
-		&template.UpdatedAt,
-		&template.DeletedAt,
-	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to update transaction template: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UpdateTransactionTemplateResponseModel{}, huma.Error404NotFound("Transaction template not found")
+		}
+		return models.UpdateTransactionTemplateResponseModel{}, huma.Error400BadRequest("Unable to update transaction template", err)
 	}
 
-	return &template, nil
+	return models.UpdateTransactionTemplateResponseModel{TransactionTemplateModel: data}, nil
 }
 
 // Delete soft deletes a transaction template
-func (r *TransactionTemplateRepository) Delete(ctx context.Context, id int) error {
-	query := `
-		UPDATE transaction_templates
-		SET deleted_at = $1, updated_at = $1
-		WHERE id = $2 AND deleted_at IS NULL`
+func (ttr TransactionTemplateRepository) Delete(ctx context.Context, id int64) error {
+	sql := `UPDATE transaction_templates
+			SET deleted_at = CURRENT_TIMESTAMP
+			WHERE id = $1 AND deleted_at IS NULL`
 
-	result, err := r.db.Exec(ctx, query, time.Now(), id)
+	cmdTag, err := ttr.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete transaction template: %w", err)
+		return huma.Error400BadRequest("Unable to delete transaction template", err)
 	}
-
-	rowsAffected := result.RowsAffected()
-	if rowsAffected == 0 {
-		return nil // Already deleted or not found
+	if cmdTag.RowsAffected() == 0 {
+		return huma.Error404NotFound("Transaction template not found")
 	}
-
 	return nil
 }
 
-// GetActiveTemplates retrieves templates that should generate transactions
-// Used by worker to create recurring transactions
-func (r *TransactionTemplateRepository) GetActiveTemplates(ctx context.Context) ([]schemas.TransactionTemplateSchema, error) {
-	query := `
-		SELECT id, account_id, category_id, type, amount, description, recurrence,
-		       start_date, end_date, installment_count, installment_current, note,
-		       created_at, updated_at, deleted_at
+// GetDueTemplates retrieves templates that are due for processing based on their recurrence patterns
+func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([]models.TransactionTemplateModel, error) {
+	// Query templates that:
+	// 1. Are not deleted
+	// 2. Have recurrence set to something other than 'none'
+	// 3. Start date is today or in the past
+	// 4. End date is NULL or today or in the future
+	// 5. Either have never been executed (last_executed_at IS NULL) or are due based on recurrence
+	sql := `
+		SELECT id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at
 		FROM transaction_templates
 		WHERE deleted_at IS NULL
 		  AND recurrence != 'none'
-		  AND start_date <= $1
-		  AND (end_date IS NULL OR end_date >= $1)
-		  AND (installment_count IS NULL OR installment_current < installment_count)
-		ORDER BY id`
+		  AND start_date <= CURRENT_DATE
+		  AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+		  AND (
+		    last_executed_at IS NULL
+		    OR (
+		      recurrence = 'daily' AND last_executed_at < NOW() - INTERVAL '1 day'
+		    )
+		    OR (
+		      recurrence = 'weekly' AND last_executed_at < NOW() - INTERVAL '7 days'
+		    )
+		    OR (
+		      recurrence = 'monthly' AND last_executed_at < NOW() - INTERVAL '1 month'
+		    )
+		    OR (
+		      recurrence = 'yearly' AND last_executed_at < NOW() - INTERVAL '1 year'
+		    )
+		  )
+		ORDER BY created_at ASC`
 
-	rows, err := r.db.Query(ctx, query, time.Now())
+	rows, err := ttr.pgx.Query(ctx, sql)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query active templates: %w", err)
+		return nil, huma.Error400BadRequest("Unable to query due transaction templates", err)
 	}
 	defer rows.Close()
 
-	items, err := schemas.PaginatedTransactionTemplateSchema{}.FromRows(rows)
-	if err != nil {
-		return nil, fmt.Errorf("failed to scan active templates: %w", err)
+	var items []models.TransactionTemplateModel
+	for rows.Next() {
+		var item models.TransactionTemplateModel
+		if err := rows.Scan(
+			&item.ID, &item.Name, &item.Type, &item.Amount, &item.AccountID, &item.CategoryID,
+			&item.DestinationAccountID, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+		); err != nil {
+			return nil, huma.Error400BadRequest("Unable to scan due transaction template data", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, huma.Error400BadRequest("Error reading due transaction template rows", err)
+	}
+
+	if items == nil {
+		items = []models.TransactionTemplateModel{}
 	}
 
 	return items, nil
 }
 
-// IncrementInstallment increments the installment_current counter
-func (r *TransactionTemplateRepository) IncrementInstallment(ctx context.Context, id int) error {
-	query := `
+// UpdateLastExecuted updates the last_executed_at timestamp for a template
+func (ttr TransactionTemplateRepository) UpdateLastExecuted(ctx context.Context, id int64) error {
+	sql := `
 		UPDATE transaction_templates
-		SET installment_current = installment_current + 1,
-		    updated_at = $1
-		WHERE id = $2 AND deleted_at IS NULL`
+		SET last_executed_at = NOW(),
+		    updated_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL`
 
-	_, err := r.db.Exec(ctx, query, time.Now(), id)
+	_, err := ttr.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return fmt.Errorf("failed to increment installment: %w", err)
+		return huma.Error400BadRequest("Unable to update template execution time", err)
 	}
-
 	return nil
 }
