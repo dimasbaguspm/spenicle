@@ -1,8 +1,4 @@
 import { test, expect } from "../../fixtures";
-import type {
-  BudgetSchema,
-  CreateBudgetSchema,
-} from "../../fixtures/budget-client";
 
 /**
  * Budget API - CRUD Tests
@@ -68,7 +64,7 @@ test.describe("Budget API - CRUD Operations", () => {
         0
       ).toISOString();
 
-      const budgetData: CreateBudgetSchema = {
+      const budgetData = {
         accountId: testAccountId,
         amountLimit: 500000, // 5000.00 in cents
         note: "Monthly account budget",
@@ -103,7 +99,7 @@ test.describe("Budget API - CRUD Operations", () => {
         0
       ).toISOString();
 
-      const budgetData: CreateBudgetSchema = {
+      const budgetData = {
         categoryId: testCategoryId,
         amountLimit: 300000, // 3000.00 in cents
         note: "Monthly category budget",
@@ -134,7 +130,7 @@ test.describe("Budget API - CRUD Operations", () => {
         0
       ).toISOString();
 
-      const budgetData: CreateBudgetSchema = {
+      const budgetData = {
         accountId: testAccountId,
         categoryId: testCategoryId,
         amountLimit: 200000, // 2000.00 in cents
@@ -167,7 +163,7 @@ test.describe("Budget API - CRUD Operations", () => {
         0
       ).toISOString();
 
-      const budgetData: CreateBudgetSchema = {
+      const budgetData = {
         amountLimit: 100000,
         note: "Budget without filters",
         periodStart,
@@ -195,7 +191,7 @@ test.describe("Budget API - CRUD Operations", () => {
         1
       ).toISOString();
 
-      const budgetData: CreateBudgetSchema = {
+      const budgetData = {
         accountId: testAccountId,
         amountLimit: 100000,
         note: "Invalid date range",
@@ -250,8 +246,8 @@ test.describe("Budget API - CRUD Operations", () => {
 
       expect(response.status).toBe(200);
       expect(response.data).toBeDefined();
-      expect(response.data!.items).toBeDefined();
-      expect(Array.isArray(response.data!.items)).toBe(true);
+      expect(response.data!.data).toBeDefined();
+      expect(Array.isArray(response.data!.data)).toBe(true);
       expect(response.data!.pageNumber).toBeDefined();
       expect(response.data!.pageSize).toBeDefined();
       expect(response.data!.totalCount).toBeDefined();
@@ -399,8 +395,8 @@ test.describe("Budget API - CRUD Operations", () => {
   test.afterAll(async ({ accountAPI, categoryAPI, budgetAPI }) => {
     // Clean up budgets (delete any remaining test budgets)
     const budgets = await budgetAPI.getBudgets();
-    if (budgets.data?.items) {
-      for (const budget of budgets.data.items) {
+    if (budgets.data?.data) {
+      for (const budget of budgets.data.data) {
         if (
           budget.accountId === testAccountId ||
           budget.categoryId === testCategoryId

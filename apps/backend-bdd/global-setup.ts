@@ -40,6 +40,8 @@ async function globalSetup(config: FullConfig) {
       );
     }
 
+    console.log(response);
+
     const data = await response.json();
 
     if (!data.access_token || !data.refresh_token) {

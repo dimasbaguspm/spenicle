@@ -1,5 +1,4 @@
 import { test, expect } from "../../fixtures";
-import type { CreateBudgetSchema } from "../../fixtures/budget-client";
 
 /**
  * Budget API - Business Requirements & Edge Cases
@@ -479,8 +478,8 @@ test.describe("Budget API - Business Requirements", () => {
       const response = await budgetAPI.getBudgets();
 
       expect(response.status).toBe(200);
-      expect(response.data!.items).toBeDefined();
-      expect(Array.isArray(response.data!.items)).toBe(true);
+      expect(response.data!.data).toBeDefined();
+      expect(Array.isArray(response.data!.data)).toBe(true);
       expect(response.data!.pageNumber).toBeDefined();
       expect(response.data!.pageSize).toBeDefined();
       expect(response.data!.totalCount).toBeGreaterThan(0);
@@ -492,7 +491,7 @@ test.describe("Budget API - Business Requirements", () => {
       expect(response.status).toBe(200);
       expect(response.data!.pageNumber).toBeGreaterThanOrEqual(1);
       expect(response.data!.pageSize).toBeGreaterThan(0);
-      expect(response.data!.pageTotal).toBeGreaterThanOrEqual(1);
+      expect(response.data!.totalPages).toBeGreaterThanOrEqual(1);
     });
 
     test.afterAll(async ({ budgetAPI }) => {
@@ -507,8 +506,8 @@ test.describe("Budget API - Business Requirements", () => {
   test.afterAll(async ({ accountAPI, categoryAPI, budgetAPI }) => {
     // Clean up any remaining budgets
     const budgets = await budgetAPI.getBudgets();
-    if (budgets.data?.items) {
-      for (const budget of budgets.data.items) {
+    if (budgets.data?.data) {
+      for (const budget of budgets.data.data) {
         if (
           budget.accountId === testAccountId ||
           budget.categoryId === testCategoryId

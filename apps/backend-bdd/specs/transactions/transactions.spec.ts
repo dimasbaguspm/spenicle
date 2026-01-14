@@ -133,8 +133,8 @@ test.describe("Transaction API", () => {
 
       expect(response.status).toBe(200);
       expect(response.data).toBeDefined();
-      expect(response.data?.items).toBeDefined();
-      expect(Array.isArray(response.data?.items)).toBe(true);
+      expect(response.data?.data).toBeDefined();
+      expect(Array.isArray(response.data?.data)).toBe(true);
     });
 
     test("should filter transactions by type", async ({ transactionAPI }) => {
@@ -146,8 +146,8 @@ test.describe("Transaction API", () => {
       expect(response.data).toBeDefined();
 
       // All returned transactions should be expenses
-      if (response.data?.items) {
-        response.data.items.forEach((tx) => {
+      if (response.data?.data) {
+        response.data.data.forEach((tx: any) => {
           expect(tx.type).toBe("expense");
         });
       }
@@ -157,15 +157,15 @@ test.describe("Transaction API", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
       });
 
       expect(response.status).toBe(200);
       expect(response.data).toBeDefined();
 
       // All returned transactions should be from the test account
-      if (response.data?.items) {
-        response.data.items.forEach((tx) => {
+      if (response.data?.data) {
+        response.data.data.forEach((tx: any) => {
           expect(tx.account.id).toBe(testAccountId);
         });
       }

@@ -93,7 +93,7 @@ func (cr CategoryResource) Routes(api huma.API) {
 func (cr CategoryResource) List(ctx context.Context, input *struct {
 	models.ListCategoriesRequestModel
 }) (*struct {
-	models.ListCategoriesResponseModel
+	Body models.ListCategoriesResponseModel
 }, error) {
 	resp, err := cr.cs.List(ctx, input.ListCategoriesRequestModel)
 	if err != nil {
@@ -101,16 +101,16 @@ func (cr CategoryResource) List(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.ListCategoriesResponseModel
+		Body models.ListCategoriesResponseModel
 	}{
-		ListCategoriesResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
 func (cr CategoryResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the category" example:"1"`
 }) (*struct {
-	models.GetCategoryResponseModel
+	Body models.GetCategoryResponseModel
 }, error) {
 	resp, err := cr.cs.Get(ctx, input.ID)
 	if err != nil {
@@ -118,16 +118,16 @@ func (cr CategoryResource) Get(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.GetCategoryResponseModel
+		Body models.GetCategoryResponseModel
 	}{
-		GetCategoryResponseModel: models.GetCategoryResponseModel{CategoryModel: resp},
+		Body: models.GetCategoryResponseModel{CategoryModel: resp},
 	}, nil
 }
 
 func (cr CategoryResource) Create(ctx context.Context, input *struct {
 	Body models.CreateCategoryRequestModel
 }) (*struct {
-	models.CreateCategoryResponseModel
+	Body models.CreateCategoryResponseModel
 }, error) {
 	resp, err := cr.cs.Create(ctx, input.Body)
 	if err != nil {
@@ -135,9 +135,9 @@ func (cr CategoryResource) Create(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.CreateCategoryResponseModel
+		Body models.CreateCategoryResponseModel
 	}{
-		CreateCategoryResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
@@ -145,7 +145,7 @@ func (cr CategoryResource) Update(ctx context.Context, input *struct {
 	ID   int64                             `path:"id" minimum:"1" doc:"Unique identifier of the category" example:"1"`
 	Body models.UpdateCategoryRequestModel `json:""`
 }) (*struct {
-	models.UpdateCategoryResponseModel
+	Body models.UpdateCategoryResponseModel
 }, error) {
 	resp, err := cr.cs.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -153,9 +153,9 @@ func (cr CategoryResource) Update(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.UpdateCategoryResponseModel
+		Body models.UpdateCategoryResponseModel
 	}{
-		UpdateCategoryResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 

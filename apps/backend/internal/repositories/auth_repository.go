@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -12,19 +13,13 @@ import (
 
 type AuthRepository struct {
 	ctx context.Context
-	env configs.Environment
 }
 
 func NewAuthRepository(ctx context.Context) AuthRepository {
-	env := configs.NewEnvironment()
-	return AuthRepository{ctx: ctx, env: env}
+	return AuthRepository{ctx: ctx}
 }
 
 func (aR AuthRepository) Login(d models.LoginRequestModel) (models.LoginResponseModel, error) {
-	if d.Username != aR.env.AdminUsername && d.Password != aR.env.AdminPassword {
-		return models.LoginResponseModel{}, huma.Error401Unauthorized("Invalid credentials")
-	}
-
 	aTk, err := aR.createToken("access", time.Now().Add(7*24*time.Hour))
 	if err != nil {
 		return models.LoginResponseModel{}, err
@@ -60,13 +55,12 @@ func (aR AuthRepository) Refresh(d models.RefreshRequestModel) (models.RefreshRe
 
 func (aR AuthRepository) createToken(sub string, time time.Time) (string, error) {
 	tokenClaims := jwt.MapClaims{
-		"exp":      jwt.NewNumericDate(time),
-		"iat":      jwt.NewNumericDate(time),
-		"sub":      sub,
-		"username": aR.env.AdminUsername,
+		"exp": jwt.NewNumericDate(time),
+		"iat": jwt.NewNumericDate(time),
+		"sub": sub,
 	}
 	accessTokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, tokenClaims)
-	return accessTokenObj.SignedString([]byte(aR.env.JWTSecret))
+	return accessTokenObj.SignedString([]byte(os.Getenv(configs.JWT_SECRET_ENV)))
 }
 
 func (aR AuthRepository) ParseToken(tk string) (bool, error) {
@@ -74,7 +68,7 @@ func (aR AuthRepository) ParseToken(tk string) (bool, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, huma.Error401Unauthorized("Invalid sign in method")
 		}
-		return []byte(aR.env.JWTSecret), nil
+		return []byte(os.Getenv(configs.JWT_SECRET_ENV)), nil
 	})
 
 	if err != nil || !token.Valid {

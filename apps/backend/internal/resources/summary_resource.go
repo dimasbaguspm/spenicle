@@ -58,30 +58,48 @@ func (sr SummaryResource) Routes(api huma.API) {
 
 func (sr SummaryResource) GetTransactionSummary(ctx context.Context, input *struct {
 	Params models.SummaryTransactionRequestModel
-}) (*models.SummaryTransactionResponseModel, error) {
+}) (*struct {
+	Body models.SummaryTransactionResponseModel
+}, error) {
 	resp, err := sr.service.GetTransactionSummary(ctx, input.Params)
 	if err != nil {
 		return nil, err
 	}
-	return &resp, nil
+	return &struct {
+		Body models.SummaryTransactionResponseModel
+	}{
+		Body: resp,
+	}, nil
 }
 
 func (sr SummaryResource) GetAccountSummary(ctx context.Context, input *struct {
 	Params models.SummaryRequestModel
-}) (*models.SummaryAccountResponseModel, error) {
+}) (*struct {
+	Body models.SummaryAccountResponseModel
+}, error) {
 	resp, err := sr.service.GetAccountSummary(ctx, input.Params)
 	if err != nil {
 		return nil, err
 	}
-	return &resp, nil
+	return &struct {
+		Body models.SummaryAccountResponseModel
+	}{
+		Body: resp,
+	}, nil
 }
 
 func (sr SummaryResource) GetCategorySummary(ctx context.Context, input *struct {
 	Params models.SummaryRequestModel
-}) (*models.SummaryCategoryResponseModel, error) {
+}) (*struct {
+	Body models.SummaryCategoryResponseModel
+}, error) {
 	resp, err := sr.service.GetCategorySummary(ctx, input.Params)
 	if err != nil {
 		return nil, err
 	}
-	return &resp, nil
+	return &struct {
+		Body models.SummaryCategoryResponseModel
+	}{
+		Body: resp,
+	}, nil
 }

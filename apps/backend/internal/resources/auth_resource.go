@@ -13,7 +13,7 @@ type AuthResource struct {
 }
 
 func NewAuthResource(as services.AuthService) AuthResource {
-	return AuthResource{}
+	return AuthResource{as}
 }
 
 func (ar AuthResource) Routes(api huma.API) {
@@ -36,24 +36,24 @@ func (ar AuthResource) Routes(api huma.API) {
 	}, ar.Refresh)
 }
 
-func (ar AuthResource) Login(ctx context.Context, input *struct{ Body models.LoginRequestModel }) (*struct{ models.LoginResponseModel }, error) {
+func (ar AuthResource) Login(ctx context.Context, input *struct{ Body models.LoginRequestModel }) (*struct{ Body models.LoginResponseModel }, error) {
 	resp, err := ar.as.Login(input.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	return &struct{ models.LoginResponseModel }{
-		LoginResponseModel: resp,
+	return &struct{ Body models.LoginResponseModel }{
+		Body: resp,
 	}, nil
 }
 
-func (ar AuthResource) Refresh(ctx context.Context, input *struct{ Body models.RefreshRequestModel }) (*struct{ models.RefreshResponseModel }, error) {
+func (ar AuthResource) Refresh(ctx context.Context, input *struct{ Body models.RefreshRequestModel }) (*struct{ Body models.RefreshResponseModel }, error) {
 	resp, err := ar.as.Refresh(input.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	return &struct{ models.RefreshResponseModel }{
-		RefreshResponseModel: resp,
+	return &struct{ Body models.RefreshResponseModel }{
+		Body: resp,
 	}, nil
 }

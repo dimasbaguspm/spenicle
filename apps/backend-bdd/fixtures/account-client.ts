@@ -6,15 +6,17 @@ import type { operations, components } from "../types/openapi";
 /**
  * Account types from OpenAPI operations
  */
-export type AccountSchema = components["schemas"]["AccountSchema"];
+export type AccountModel = components["schemas"]["AccountModel"];
 export type AccountSearchSchema =
   operations["list-accounts"]["parameters"]["query"];
-export type CreateAccountSchema = components["schemas"]["CreateAccountSchema"];
-export type UpdateAccountSchema = components["schemas"]["UpdateAccountSchema"];
-export type AccountReorderSchema =
-  components["schemas"]["AccountReorderSchema"];
-export type PaginatedAccountSchema =
-  components["schemas"]["PaginatedAccountSchema"];
+export type CreateAccountRequestModel =
+  components["schemas"]["CreateAccountRequestModel"];
+export type UpdateAccountRequestModel =
+  components["schemas"]["UpdateAccountRequestModel"];
+export type AccountReorderRequestModel =
+  components["schemas"]["ReorderAccountsRequestModel"];
+export type PaginatedAccountResponseModel =
+  components["schemas"]["ListAccountsResponseModel"];
 
 /**
  * Account API client
@@ -29,24 +31,24 @@ export class AccountAPIClient extends BaseAPIClient {
    */
   async getAccounts(
     params?: AccountSearchSchema
-  ): Promise<APIResponse<PaginatedAccountSchema>> {
-    return this.get<PaginatedAccountSchema>("/accounts", params);
+  ): Promise<APIResponse<PaginatedAccountResponseModel>> {
+    return this.get<PaginatedAccountResponseModel>("/accounts", params);
   }
 
   /**
    * Get a single account by ID
    */
-  async getAccount(id: number): Promise<APIResponse<AccountSchema>> {
-    return this.get<AccountSchema>(`/accounts/${id}`);
+  async getAccount(id: number): Promise<APIResponse<AccountModel>> {
+    return this.get<AccountModel>(`/accounts/${id}`);
   }
 
   /**
    * Create a new account
    */
   async createAccount(
-    data: CreateAccountSchema
-  ): Promise<APIResponse<AccountSchema>> {
-    return this.post<AccountSchema>("/accounts", data);
+    data: CreateAccountRequestModel
+  ): Promise<APIResponse<AccountModel>> {
+    return this.post<AccountModel>("/accounts", data);
   }
 
   /**
@@ -54,9 +56,9 @@ export class AccountAPIClient extends BaseAPIClient {
    */
   async updateAccount(
     id: number,
-    data: UpdateAccountSchema
-  ): Promise<APIResponse<AccountSchema>> {
-    return this.patch<AccountSchema>(`/accounts/${id}`, data);
+    data: UpdateAccountRequestModel
+  ): Promise<APIResponse<AccountModel>> {
+    return this.patch<AccountModel>(`/accounts/${id}`, data);
   }
 
   /**
@@ -70,7 +72,7 @@ export class AccountAPIClient extends BaseAPIClient {
    * Reorder accounts
    */
   async reorderAccounts(
-    data: AccountReorderSchema
+    data: AccountReorderRequestModel
   ): Promise<APIResponse<void>> {
     return this.post<void>("/accounts/reorder", data);
   }
@@ -78,14 +80,14 @@ export class AccountAPIClient extends BaseAPIClient {
   /**
    * Archive an account
    */
-  async archiveAccount(id: number): Promise<APIResponse<AccountSchema>> {
+  async archiveAccount(id: number): Promise<APIResponse<AccountModel>> {
     return this.updateAccount(id, { archivedAt: new Date().toISOString() });
   }
 
   /**
    * Unarchive an account
    */
-  async unarchiveAccount(id: number): Promise<APIResponse<AccountSchema>> {
+  async unarchiveAccount(id: number): Promise<APIResponse<AccountModel>> {
     return this.updateAccount(id, { archivedAt: "" });
   }
 }

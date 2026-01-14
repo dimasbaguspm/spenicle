@@ -82,58 +82,58 @@ func (br BudgetResource) Routes(api huma.API) {
 func (br BudgetResource) List(ctx context.Context, input *struct {
 	models.ListBudgetsRequestModel
 }) (*struct {
-	models.ListBudgetsResponseModel
+	Body models.ListBudgetsResponseModel
 }, error) {
 	resp, err := br.bs.List(ctx, input.ListBudgetsRequestModel)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		models.ListBudgetsResponseModel
-	}{resp}, nil
+		Body models.ListBudgetsResponseModel
+	}{Body: resp}, nil
 }
 
 func (br BudgetResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget ID"`
 }) (*struct {
-	models.BudgetModel
+	Body models.BudgetModel
 }, error) {
 	item, err := br.bs.Get(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Budget not found")
 	}
 	return &struct {
-		models.BudgetModel
-	}{item}, nil
+		Body models.BudgetModel
+	}{Body: item}, nil
 }
 
 func (br BudgetResource) Create(ctx context.Context, input *struct {
 	Body models.CreateBudgetRequestModel
 }) (*struct {
-	models.CreateBudgetResponseModel
+	Body models.CreateBudgetResponseModel
 }, error) {
 	resp, err := br.bs.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		models.CreateBudgetResponseModel
-	}{resp}, nil
+		Body models.CreateBudgetResponseModel
+	}{Body: resp}, nil
 }
 
 func (br BudgetResource) Update(ctx context.Context, input *struct {
 	ID   int64 `path:"id" minimum:"1" doc:"Budget ID"`
 	Body models.UpdateBudgetRequestModel
 }) (*struct {
-	models.UpdateBudgetResponseModel
+	Body models.UpdateBudgetResponseModel
 }, error) {
 	resp, err := br.bs.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		models.UpdateBudgetResponseModel
-	}{resp}, nil
+		Body models.UpdateBudgetResponseModel
+	}{Body: resp}, nil
 }
 
 func (br BudgetResource) Delete(ctx context.Context, input *struct {

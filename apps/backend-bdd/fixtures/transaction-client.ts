@@ -6,25 +6,24 @@ import type { operations, components } from "../types/openapi";
 /**
  * Transaction types from OpenAPI operations
  */
-export type TransactionSchema = components["schemas"]["TransactionSchema"];
+export type TransactionModel = components["schemas"]["TransactionModel"];
 export type TransactionSearchSchema =
   operations["list-transactions"]["parameters"]["query"];
-export type CreateTransactionSchema =
-  components["schemas"]["CreateTransactionSchema"];
-export type UpdateTransactionSchema =
-  components["schemas"]["UpdateTransactionSchema"];
-export type PaginatedTransactionSchema =
-  components["schemas"]["PaginatedTransactionSchema"];
-export type TransactionTagsSchema =
-  components["schemas"]["TransactionTagsSchema"];
-export type AddTransactionTagSchema =
-  components["schemas"]["AddTransactionTagSchema"];
-export type UpdateTransactionTagsSchema =
-  components["schemas"]["UpdateTransactionTagsSchema"];
+export type CreateTransactionRequestModel =
+  components["schemas"]["CreateTransactionRequestModel"];
+export type UpdateTransactionRequestModel =
+  components["schemas"]["UpdateTransactionRequestModel"];
+export type ListTransactionsResponseModel =
+  components["schemas"]["ListTransactionsResponseModel"];
+export type TransactionTagModel = components["schemas"]["TransactionTagModel"];
+export type CreateTransactionTagRequestModel =
+  components["schemas"]["CreateTransactionTagRequestModel"];
+export type ListTransactionTagsResponseModel =
+  components["schemas"]["ListTransactionTagsResponseModel"];
 
-type TransactionTag = components["schemas"]["TransactionTagsSchema"];
+type TransactionTag = components["schemas"]["TransactionTagModel"];
 type TransactionRelationCreateSchema =
-  components["schemas"]["TransactionRelationSchema"];
+  components["schemas"]["TransactionRelationModel"];
 /**
  * Transaction API client
  */
@@ -38,24 +37,24 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async getTransactions(
     params?: TransactionSearchSchema
-  ): Promise<APIResponse<PaginatedTransactionSchema>> {
-    return this.get<PaginatedTransactionSchema>("/transactions", params);
+  ): Promise<APIResponse<ListTransactionsResponseModel>> {
+    return this.get<ListTransactionsResponseModel>("/transactions", params);
   }
 
   /**
    * Get a single transaction by ID
    */
-  async getTransaction(id: number): Promise<APIResponse<TransactionSchema>> {
-    return this.get<TransactionSchema>(`/transactions/${id}`);
+  async getTransaction(id: number): Promise<APIResponse<TransactionModel>> {
+    return this.get<TransactionModel>(`/transactions/${id}`);
   }
 
   /**
    * Create a new transaction
    */
   async createTransaction(
-    data: CreateTransactionSchema
-  ): Promise<APIResponse<TransactionSchema>> {
-    return this.post<TransactionSchema>("/transactions", data);
+    data: CreateTransactionRequestModel
+  ): Promise<APIResponse<TransactionModel>> {
+    return this.post<TransactionModel>("/transactions", data);
   }
 
   /**
@@ -63,9 +62,9 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async updateTransaction(
     id: number,
-    data: UpdateTransactionSchema
-  ): Promise<APIResponse<TransactionSchema>> {
-    return this.patch<TransactionSchema>(`/transactions/${id}`, data);
+    data: UpdateTransactionRequestModel
+  ): Promise<APIResponse<TransactionModel>> {
+    return this.patch<TransactionModel>(`/transactions/${id}`, data);
   }
 
   /**
@@ -107,7 +106,7 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async getTransactionRelations(
     id: number
-  ): Promise<APIResponse<TransactionSchema[]>> {
+  ): Promise<APIResponse<TransactionModel[]>> {
     return this.get<any>(`/transactions/${id}/relations`);
   }
 

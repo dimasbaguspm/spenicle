@@ -13,7 +13,7 @@ type AccountResource struct {
 }
 
 func NewAccountResource(as services.AccountService) AccountResource {
-	return AccountResource{}
+	return AccountResource{as}
 }
 
 func (ar AccountResource) Routes(api huma.API) {
@@ -93,7 +93,7 @@ func (ar AccountResource) Routes(api huma.API) {
 func (ar AccountResource) List(ctx context.Context, input *struct {
 	models.ListAccountsRequestModel
 }) (*struct {
-	models.ListAccountsResponseModel
+	Body models.ListAccountsResponseModel
 }, error) {
 	resp, err := ar.as.List(ctx, input.ListAccountsRequestModel)
 	if err != nil {
@@ -101,29 +101,33 @@ func (ar AccountResource) List(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.ListAccountsResponseModel
+		Body models.ListAccountsResponseModel
 	}{
-		ListAccountsResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
 func (ar AccountResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
-}) (*struct{ models.GetAccountResponseModel }, error) {
+}) (*struct {
+	Body models.GetAccountResponseModel
+}, error) {
 	resp, err := ar.as.Get(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	return &struct{ models.GetAccountResponseModel }{
-		GetAccountResponseModel: models.GetAccountResponseModel{AccountModel: resp},
+	return &struct {
+		Body models.GetAccountResponseModel
+	}{
+		Body: models.GetAccountResponseModel{AccountModel: resp},
 	}, nil
 }
 
 func (ar AccountResource) Create(ctx context.Context, input *struct {
 	Body models.CreateAccountRequestModel
 }) (*struct {
-	models.CreateAccountResponseModel
+	Body models.CreateAccountResponseModel
 }, error) {
 	resp, err := ar.as.Create(ctx, input.Body)
 	if err != nil {
@@ -131,9 +135,9 @@ func (ar AccountResource) Create(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.CreateAccountResponseModel
+		Body models.CreateAccountResponseModel
 	}{
-		CreateAccountResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
@@ -141,7 +145,7 @@ func (ar AccountResource) Update(ctx context.Context, input *struct {
 	ID   int64                            `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
 	Body models.UpdateAccountRequestModel `json:""`
 }) (*struct {
-	models.UpdateAccountResponseModel
+	Body models.UpdateAccountResponseModel
 }, error) {
 	resp, err := ar.as.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -149,9 +153,9 @@ func (ar AccountResource) Update(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.UpdateAccountResponseModel
+		Body models.UpdateAccountResponseModel
 	}{
-		UpdateAccountResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 

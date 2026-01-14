@@ -241,7 +241,7 @@ func (tr TransactionResource) Routes(api huma.API) {
 func (tr TransactionResource) List(ctx context.Context, input *struct {
 	models.ListTransactionsRequestModel
 }) (*struct {
-	models.ListTransactionsResponseModel
+	Body models.ListTransactionsResponseModel
 }, error) {
 	resp, err := tr.ts.List(ctx, input.ListTransactionsRequestModel)
 	if err != nil {
@@ -249,16 +249,16 @@ func (tr TransactionResource) List(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.ListTransactionsResponseModel
+		Body models.ListTransactionsResponseModel
 	}{
-		ListTransactionsResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
 }) (*struct {
-	models.GetTransactionResponseModel
+	Body models.GetTransactionResponseModel
 }, error) {
 	resp, err := tr.ts.Get(ctx, input.ID)
 	if err != nil {
@@ -266,16 +266,16 @@ func (tr TransactionResource) Get(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.GetTransactionResponseModel
+		Body models.GetTransactionResponseModel
 	}{
-		GetTransactionResponseModel: models.GetTransactionResponseModel{TransactionModel: resp},
+		Body: models.GetTransactionResponseModel{TransactionModel: resp},
 	}, nil
 }
 
 func (tr TransactionResource) Create(ctx context.Context, input *struct {
 	Body models.CreateTransactionRequestModel
 }) (*struct {
-	models.CreateTransactionResponseModel
+	Body models.CreateTransactionResponseModel
 }, error) {
 	resp, err := tr.ts.Create(ctx, input.Body)
 	if err != nil {
@@ -283,9 +283,9 @@ func (tr TransactionResource) Create(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.CreateTransactionResponseModel
+		Body models.CreateTransactionResponseModel
 	}{
-		CreateTransactionResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
@@ -293,7 +293,7 @@ func (tr TransactionResource) Update(ctx context.Context, input *struct {
 	ID   int64                                `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
 	Body models.UpdateTransactionRequestModel `json:""`
 }) (*struct {
-	models.UpdateTransactionResponseModel
+	Body models.UpdateTransactionResponseModel
 }, error) {
 	resp, err := tr.ts.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -301,9 +301,9 @@ func (tr TransactionResource) Update(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.UpdateTransactionResponseModel
+		Body models.UpdateTransactionResponseModel
 	}{
-		UpdateTransactionResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
@@ -325,7 +325,7 @@ func (tr TransactionResource) ListRelations(ctx context.Context, input *struct {
 	PageNumber    int   `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
 	PageSize      int   `query:"pageSize" default:"10" minimum:"1" maximum:"100" doc:"Number of items per page"`
 }) (*struct {
-	models.ListTransactionRelationsResponseModel
+	Body models.ListTransactionRelationsResponseModel
 }, error) {
 	resp, err := tr.trs.List(ctx, input.TransactionID, input.PageNumber, input.PageSize)
 	if err != nil {
@@ -333,9 +333,9 @@ func (tr TransactionResource) ListRelations(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.ListTransactionRelationsResponseModel
+		Body models.ListTransactionRelationsResponseModel
 	}{
-		ListTransactionRelationsResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
@@ -343,7 +343,7 @@ func (tr TransactionResource) GetRelation(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	RelationID    int64 `path:"relationId" minimum:"1" doc:"Relation ID"`
 }) (*struct {
-	models.GetTransactionRelationResponseModel
+	Body models.GetTransactionRelationResponseModel
 }, error) {
 	resp, err := tr.trs.Get(ctx, input.RelationID)
 	if err != nil {
@@ -356,9 +356,9 @@ func (tr TransactionResource) GetRelation(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.GetTransactionRelationResponseModel
+		Body models.GetTransactionRelationResponseModel
 	}{
-		GetTransactionRelationResponseModel: models.GetTransactionRelationResponseModel{TransactionRelationModel: resp},
+		Body: models.GetTransactionRelationResponseModel{TransactionRelationModel: resp},
 	}, nil
 }
 
@@ -366,7 +366,7 @@ func (tr TransactionResource) CreateRelation(ctx context.Context, input *struct 
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	Body          models.CreateTransactionRelationRequestModel
 }) (*struct {
-	models.CreateTransactionRelationResponseModel
+	Body models.CreateTransactionRelationResponseModel
 }, error) {
 	// Override the transaction ID in request body with the path parameter
 	input.Body.TransactionID = input.TransactionID
@@ -377,9 +377,9 @@ func (tr TransactionResource) CreateRelation(ctx context.Context, input *struct 
 	}
 
 	return &struct {
-		models.CreateTransactionRelationResponseModel
+		Body models.CreateTransactionRelationResponseModel
 	}{
-		CreateTransactionRelationResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
@@ -411,7 +411,7 @@ func (tr TransactionResource) ListTags(ctx context.Context, input *struct {
 	PageNumber    int   `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
 	PageSize      int   `query:"pageSize" default:"10" minimum:"1" maximum:"100" doc:"Number of items per page"`
 }) (*struct {
-	models.ListTransactionTagsResponseModel
+	Body models.ListTransactionTagsResponseModel
 }, error) {
 	resp, err := tr.tts.List(ctx, input.TransactionID, input.PageNumber, input.PageSize)
 	if err != nil {
@@ -419,9 +419,9 @@ func (tr TransactionResource) ListTags(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.ListTransactionTagsResponseModel
+		Body models.ListTransactionTagsResponseModel
 	}{
-		ListTransactionTagsResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
@@ -429,7 +429,7 @@ func (tr TransactionResource) GetTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
 }) (*struct {
-	models.GetTransactionTagResponseModel
+	Body models.GetTransactionTagResponseModel
 }, error) {
 	resp, err := tr.tts.Get(ctx, input.TransactionID, input.TagID)
 	if err != nil {
@@ -437,9 +437,9 @@ func (tr TransactionResource) GetTag(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.GetTransactionTagResponseModel
+		Body models.GetTransactionTagResponseModel
 	}{
-		GetTransactionTagResponseModel: models.GetTransactionTagResponseModel{TransactionTagModel: resp},
+		Body: models.GetTransactionTagResponseModel{TransactionTagModel: resp},
 	}, nil
 }
 
@@ -447,7 +447,7 @@ func (tr TransactionResource) CreateTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	Body          models.CreateTransactionTagRequestModel
 }) (*struct {
-	models.CreateTransactionTagResponseModel
+	Body models.CreateTransactionTagResponseModel
 }, error) {
 	// Override the transaction ID in request body with the path parameter
 	input.Body.TransactionID = input.TransactionID
@@ -458,9 +458,9 @@ func (tr TransactionResource) CreateTag(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.CreateTransactionTagResponseModel
+		Body models.CreateTransactionTagResponseModel
 	}{
-		CreateTransactionTagResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
@@ -486,7 +486,7 @@ func (tr TransactionResource) DeleteTag(ctx context.Context, input *struct {
 func (tr TransactionResource) ListTemplates(ctx context.Context, input *struct {
 	models.ListTransactionTemplatesRequestModel
 }) (*struct {
-	models.ListTransactionTemplatesResponseModel
+	Body models.ListTransactionTemplatesResponseModel
 }, error) {
 	resp, err := tr.ttemps.List(ctx, input.ListTransactionTemplatesRequestModel)
 	if err != nil {
@@ -494,16 +494,16 @@ func (tr TransactionResource) ListTemplates(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.ListTransactionTemplatesResponseModel
+		Body models.ListTransactionTemplatesResponseModel
 	}{
-		ListTransactionTemplatesResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) GetTemplate(ctx context.Context, input *struct {
 	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
 }) (*struct {
-	models.GetTransactionTemplateResponseModel
+	Body models.GetTransactionTemplateResponseModel
 }, error) {
 	resp, err := tr.ttemps.Get(ctx, input.TemplateID)
 	if err != nil {
@@ -511,16 +511,16 @@ func (tr TransactionResource) GetTemplate(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		models.GetTransactionTemplateResponseModel
+		Body models.GetTransactionTemplateResponseModel
 	}{
-		GetTransactionTemplateResponseModel: models.GetTransactionTemplateResponseModel{TransactionTemplateModel: resp},
+		Body: models.GetTransactionTemplateResponseModel{TransactionTemplateModel: resp},
 	}, nil
 }
 
 func (tr TransactionResource) CreateTemplate(ctx context.Context, input *struct {
 	Body models.CreateTransactionTemplateRequestModel
 }) (*struct {
-	models.CreateTransactionTemplateResponseModel
+	Body models.CreateTransactionTemplateResponseModel
 }, error) {
 	resp, err := tr.ttemps.Create(ctx, input.Body)
 	if err != nil {
@@ -528,9 +528,9 @@ func (tr TransactionResource) CreateTemplate(ctx context.Context, input *struct 
 	}
 
 	return &struct {
-		models.CreateTransactionTemplateResponseModel
+		Body models.CreateTransactionTemplateResponseModel
 	}{
-		CreateTransactionTemplateResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 
@@ -538,7 +538,7 @@ func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct 
 	TemplateID int64                                        `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
 	Body       models.UpdateTransactionTemplateRequestModel `json:""`
 }) (*struct {
-	models.UpdateTransactionTemplateResponseModel
+	Body models.UpdateTransactionTemplateResponseModel
 }, error) {
 	resp, err := tr.ttemps.Update(ctx, input.TemplateID, input.Body)
 	if err != nil {
@@ -546,9 +546,9 @@ func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct 
 	}
 
 	return &struct {
-		models.UpdateTransactionTemplateResponseModel
+		Body models.UpdateTransactionTemplateResponseModel
 	}{
-		UpdateTransactionTemplateResponseModel: resp,
+		Body: resp,
 	}, nil
 }
 

@@ -74,9 +74,9 @@ test.describe("Category API", () => {
 
       expect(response.status).toBe(200);
       expect(response.data).toBeDefined();
-      expect(response.data?.items).toBeDefined();
-      expect(Array.isArray(response.data?.items)).toBe(true);
-      expect(response.data?.pageTotal).toBeDefined();
+      expect(response.data?.data).toBeDefined();
+      expect(Array.isArray(response.data?.data)).toBe(true);
+      expect(response.data?.totalPages).toBeDefined();
     });
 
     test("should filter categories by search term", async ({ categoryAPI }) => {
@@ -95,9 +95,9 @@ test.describe("Category API", () => {
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
-      if (response.data?.items) {
-        expect(response.data.items.length).toBeGreaterThan(0);
+      expect(response.data?.data).toBeDefined();
+      if (response.data?.data) {
+        expect(response.data.data.length).toBeGreaterThan(0);
       }
 
       // Cleanup
@@ -116,8 +116,8 @@ test.describe("Category API", () => {
       expect(response.data).toBeDefined();
       expect(response.data?.pageNumber).toBe(1);
       expect(response.data?.pageSize).toBe(5);
-      if (response.data?.items) {
-        expect(response.data.items.length).toBeLessThanOrEqual(5);
+      if (response.data?.data) {
+        expect(response.data.data.length).toBeLessThanOrEqual(5);
       }
     });
   });

@@ -6,17 +6,17 @@ import type { operations, components } from "../types/openapi";
 /**
  * Category types from OpenAPI operations
  */
-export type CategorySchema = components["schemas"]["CategorySchema"];
+export type CategoryModel = components["schemas"]["CategoryModel"];
 export type CategorySearchSchema =
   operations["list-categories"]["parameters"]["query"];
-export type CreateCategorySchema =
-  components["schemas"]["CreateCategorySchema"];
-export type UpdateCategorySchema =
-  components["schemas"]["UpdateCategorySchema"];
-export type CategoryReorderSchema =
-  components["schemas"]["CategoryReorderSchema"];
-export type PaginatedCategorySchema =
-  components["schemas"]["PaginatedCategorySchema"];
+export type CreateCategoryRequestModel =
+  components["schemas"]["CreateCategoryRequestModel"];
+export type UpdateCategoryRequestModel =
+  components["schemas"]["UpdateCategoryRequestModel"];
+export type CategoryReorderRequestModel =
+  components["schemas"]["ReorderCategoriesRequestModel"];
+export type PaginatedCategoryResponseModel =
+  components["schemas"]["ListCategoriesResponseModel"];
 
 /**
  * Category API client
@@ -31,24 +31,24 @@ export class CategoryAPIClient extends BaseAPIClient {
    */
   async getCategories(
     params?: CategorySearchSchema
-  ): Promise<APIResponse<PaginatedCategorySchema>> {
-    return this.get<PaginatedCategorySchema>("/categories", params);
+  ): Promise<APIResponse<PaginatedCategoryResponseModel>> {
+    return this.get<PaginatedCategoryResponseModel>("/categories", params);
   }
 
   /**
    * Get a single category by ID
    */
-  async getCategory(id: number): Promise<APIResponse<CategorySchema>> {
-    return this.get<CategorySchema>(`/categories/${id}`);
+  async getCategory(id: number): Promise<APIResponse<CategoryModel>> {
+    return this.get<CategoryModel>(`/categories/${id}`);
   }
 
   /**
    * Create a new category
    */
   async createCategory(
-    data: CreateCategorySchema
-  ): Promise<APIResponse<CategorySchema>> {
-    return this.post<CategorySchema>("/categories", data);
+    data: CreateCategoryRequestModel
+  ): Promise<APIResponse<CategoryModel>> {
+    return this.post<CategoryModel>("/categories", data);
   }
 
   /**
@@ -56,9 +56,9 @@ export class CategoryAPIClient extends BaseAPIClient {
    */
   async updateCategory(
     id: number,
-    data: UpdateCategorySchema
-  ): Promise<APIResponse<CategorySchema>> {
-    return this.patch<CategorySchema>(`/categories/${id}`, data);
+    data: UpdateCategoryRequestModel
+  ): Promise<APIResponse<CategoryModel>> {
+    return this.patch<CategoryModel>(`/categories/${id}`, data);
   }
 
   /**
@@ -72,7 +72,7 @@ export class CategoryAPIClient extends BaseAPIClient {
    * Reorder categories
    */
   async reorderCategories(
-    data: CategoryReorderSchema
+    data: CategoryReorderRequestModel
   ): Promise<APIResponse<void>> {
     return this.post<void>("/categories/reorder", data);
   }
@@ -80,14 +80,14 @@ export class CategoryAPIClient extends BaseAPIClient {
   /**
    * Archive a category
    */
-  async archiveCategory(id: number): Promise<APIResponse<CategorySchema>> {
+  async archiveCategory(id: number): Promise<APIResponse<CategoryModel>> {
     return this.updateCategory(id, { archivedAt: new Date().toISOString() });
   }
 
   /**
    * Unarchive a category
    */
-  async unarchiveCategory(id: number): Promise<APIResponse<CategorySchema>> {
+  async unarchiveCategory(id: number): Promise<APIResponse<CategoryModel>> {
     return this.updateCategory(id, { archivedAt: "" });
   }
 }

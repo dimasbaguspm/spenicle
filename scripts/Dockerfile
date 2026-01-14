@@ -37,7 +37,7 @@ ENV WEB_PORT=3000
 COPY --from=oven/bun:1-alpine /usr/local/bin/bun /usr/local/bin/bun
 
 COPY --from=backend-builder /app/spenicle-api /app/spenicle-api
-COPY --from=backend-builder /build/internal/database/migrations /app/internal/database/migrations
+COPY --from=backend-builder /build/migrations /app/migrations
 
 COPY --from=web-builder /build/dist /app/web/dist
 COPY --from=web-builder /build/package.json /app/web/package.json

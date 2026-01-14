@@ -82,58 +82,58 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 func (btr BudgetTemplateResource) List(ctx context.Context, input *struct {
 	models.ListBudgetTemplatesRequestModel
 }) (*struct {
-	models.ListBudgetTemplatesResponseModel
+	Body models.ListBudgetTemplatesResponseModel
 }, error) {
 	resp, err := btr.bts.List(ctx, input.ListBudgetTemplatesRequestModel)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		models.ListBudgetTemplatesResponseModel
-	}{resp}, nil
+		Body models.ListBudgetTemplatesResponseModel
+	}{Body: resp}, nil
 }
 
 func (btr BudgetTemplateResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
 }) (*struct {
-	models.BudgetTemplateModel
+	Body models.BudgetTemplateModel
 }, error) {
 	item, err := btr.bts.Get(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Budget template not found")
 	}
 	return &struct {
-		models.BudgetTemplateModel
-	}{item}, nil
+		Body models.BudgetTemplateModel
+	}{Body: item}, nil
 }
 
 func (btr BudgetTemplateResource) Create(ctx context.Context, input *struct {
 	Body models.CreateBudgetTemplateRequestModel
 }) (*struct {
-	models.CreateBudgetTemplateResponseModel
+	Body models.CreateBudgetTemplateResponseModel
 }, error) {
 	resp, err := btr.bts.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		models.CreateBudgetTemplateResponseModel
-	}{resp}, nil
+		Body models.CreateBudgetTemplateResponseModel
+	}{Body: resp}, nil
 }
 
 func (btr BudgetTemplateResource) Update(ctx context.Context, input *struct {
 	ID   int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
 	Body models.UpdateBudgetTemplateRequestModel
 }) (*struct {
-	models.UpdateBudgetTemplateResponseModel
+	Body models.UpdateBudgetTemplateResponseModel
 }, error) {
 	resp, err := btr.bts.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		models.UpdateBudgetTemplateResponseModel
-	}{resp}, nil
+		Body models.UpdateBudgetTemplateResponseModel
+	}{Body: resp}, nil
 }
 
 func (btr BudgetTemplateResource) Delete(ctx context.Context, input *struct {

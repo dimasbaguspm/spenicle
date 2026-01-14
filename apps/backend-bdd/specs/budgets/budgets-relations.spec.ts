@@ -1,5 +1,4 @@
 import { test, expect } from "../../fixtures";
-import type { CreateBudgetSchema } from "../../fixtures/budget-client";
 
 /**
  * Budget API - Relationship Tests
@@ -98,11 +97,11 @@ test.describe("Budget API - Relationship Tests", () => {
 
       expect(response.status).toBe(200);
       expect(response.data).toBeDefined();
-      expect(response.data!.items).toBeDefined();
-      expect(Array.isArray(response.data!.items)).toBe(true);
+      expect(response.data!.data).toBeDefined();
+      expect(Array.isArray(response.data!.data)).toBe(true);
 
       // Should include budgets for account 1
-      const budgets = response.data!.items!;
+      const budgets = response.data!.data!;
       const accountBudget = budgets.find((b) => b.id === budget1Id);
       const combinedBudget = budgets.find((b) => b.id === budget3Id);
 
@@ -146,8 +145,8 @@ test.describe("Budget API - Relationship Tests", () => {
 
       expect(response.status).toBe(200);
       expect(response.data).toBeDefined();
-      expect(response.data!.items).toBeDefined();
-      expect(response.data!.items!.length).toBe(0);
+      expect(response.data!.data).toBeDefined();
+      expect(response.data!.data!.length).toBe(0);
     });
 
     test("should return 404 for non-existent account", async ({
@@ -165,11 +164,11 @@ test.describe("Budget API - Relationship Tests", () => {
 
       expect(response.status).toBe(200);
       expect(response.data).toBeDefined();
-      expect(response.data!.items).toBeDefined();
-      expect(Array.isArray(response.data!.items)).toBe(true);
+      expect(response.data!.data).toBeDefined();
+      expect(Array.isArray(response.data!.data)).toBe(true);
 
       // Should include budgets for category 1
-      const budgets = response.data!.items!;
+      const budgets = response.data!.data!;
       const categoryBudget = budgets.find((b) => b.id === budget2Id);
       const combinedBudget = budgets.find((b) => b.id === budget3Id);
 
@@ -213,8 +212,8 @@ test.describe("Budget API - Relationship Tests", () => {
 
       expect(response.status).toBe(200);
       expect(response.data).toBeDefined();
-      expect(response.data!.items).toBeDefined();
-      expect(response.data!.items!.length).toBe(0);
+      expect(response.data!.data).toBeDefined();
+      expect(response.data!.data!.length).toBe(0);
     });
 
     test("should return 404 for non-existent category", async ({

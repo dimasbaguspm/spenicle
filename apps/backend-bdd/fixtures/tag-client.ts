@@ -6,10 +6,12 @@ import type { operations, components } from "../types/openapi";
 /**
  * Tag types from OpenAPI operations
  */
-export type TagSchema = components["schemas"]["TagSchema"];
+export type TagModel = components["schemas"]["TagModel"];
 export type TagSearchSchema = operations["list-tags"]["parameters"]["query"];
-export type CreateTagSchema = components["schemas"]["CreateTagSchema"];
-export type PaginatedTagSchema = components["schemas"]["PaginatedTagSchema"];
+export type CreateTagRequestModel =
+  components["schemas"]["CreateTagRequestModel"];
+export type PaginatedTagResponseModel =
+  components["schemas"]["ListTagsResponseModel"];
 
 /**
  * Tag API client
@@ -24,15 +26,15 @@ export class TagAPIClient extends BaseAPIClient {
    */
   async getTags(
     params?: TagSearchSchema
-  ): Promise<APIResponse<PaginatedTagSchema>> {
-    return this.get<PaginatedTagSchema>("/tags", params);
+  ): Promise<APIResponse<PaginatedTagResponseModel>> {
+    return this.get<PaginatedTagResponseModel>("/tags", params);
   }
 
   /**
    * Create a new tag
    */
-  async createTag(data: CreateTagSchema): Promise<APIResponse<TagSchema>> {
-    return this.post<TagSchema>("/tags", data);
+  async createTag(data: CreateTagRequestModel): Promise<APIResponse<TagModel>> {
+    return this.post<TagModel>("/tags", data);
   }
 
   /**

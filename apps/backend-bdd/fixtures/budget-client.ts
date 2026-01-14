@@ -6,21 +6,19 @@ import type { operations, components } from "../types/openapi";
 /**
  * Budget types from OpenAPI schemas
  */
-export type BudgetSchema = components["schemas"]["BudgetSchema"];
-export type CreateBudgetSchema = components["schemas"]["CreateBudgetSchema"];
-export type UpdateBudgetSchema = components["schemas"]["UpdateBudgetSchema"];
-export type PaginatedBudgetSchema =
-  components["schemas"]["PaginatedBudgetSchema"];
+export type BudgetModel = components["schemas"]["BudgetModel"];
+export type CreateBudgetRequestModel =
+  components["schemas"]["CreateBudgetRequestModel"];
+export type UpdateBudgetRequestModel =
+  components["schemas"]["UpdateBudgetRequestModel"];
+export type PaginatedBudgetResponseModel =
+  components["schemas"]["ListBudgetsResponseModel"];
 
 /**
  * Query parameter types
  */
 export type ListBudgetsParams =
   operations["list-budgets"]["parameters"]["query"];
-export type ListAccountBudgetsParams =
-  operations["list-account-budgets"]["parameters"]["query"];
-export type ListCategoryBudgetsParams =
-  operations["list-category-budgets"]["parameters"]["query"];
 
 /**
  * Budget API client for managing budgets
@@ -35,24 +33,24 @@ export class BudgetAPIClient extends BaseAPIClient {
    */
   async getBudgets(
     params?: ListBudgetsParams
-  ): Promise<APIResponse<PaginatedBudgetSchema>> {
-    return this.get<PaginatedBudgetSchema>("/budgets", params);
+  ): Promise<APIResponse<PaginatedBudgetResponseModel>> {
+    return this.get<PaginatedBudgetResponseModel>("/budgets", params);
   }
 
   /**
    * Get a single budget by ID
    */
-  async getBudget(id: number): Promise<APIResponse<BudgetSchema>> {
-    return this.get<BudgetSchema>(`/budgets/${id}`);
+  async getBudget(id: number): Promise<APIResponse<BudgetModel>> {
+    return this.get<BudgetModel>(`/budgets/${id}`);
   }
 
   /**
    * Create a new budget
    */
   async createBudget(
-    data: CreateBudgetSchema
-  ): Promise<APIResponse<BudgetSchema>> {
-    return this.post<BudgetSchema>("/budgets", data);
+    data: CreateBudgetRequestModel
+  ): Promise<APIResponse<BudgetModel>> {
+    return this.post<BudgetModel>("/budgets", data);
   }
 
   /**
@@ -60,9 +58,9 @@ export class BudgetAPIClient extends BaseAPIClient {
    */
   async updateBudget(
     id: number,
-    data: UpdateBudgetSchema
-  ): Promise<APIResponse<BudgetSchema>> {
-    return this.patch<BudgetSchema>(`/budgets/${id}`, data);
+    data: UpdateBudgetRequestModel
+  ): Promise<APIResponse<BudgetModel>> {
+    return this.patch<BudgetModel>(`/budgets/${id}`, data);
   }
 
   /**
@@ -77,9 +75,9 @@ export class BudgetAPIClient extends BaseAPIClient {
    */
   async getAccountBudgets(
     accountId: number,
-    params?: ListAccountBudgetsParams
-  ): Promise<APIResponse<PaginatedBudgetSchema>> {
-    return this.get<PaginatedBudgetSchema>(
+    params?: ListBudgetsParams
+  ): Promise<APIResponse<PaginatedBudgetResponseModel>> {
+    return this.get<PaginatedBudgetResponseModel>(
       `/accounts/${accountId}/budgets`,
       params
     );
@@ -91,8 +89,8 @@ export class BudgetAPIClient extends BaseAPIClient {
   async getAccountBudget(
     accountId: number,
     budgetId: number
-  ): Promise<APIResponse<BudgetSchema>> {
-    return this.get<BudgetSchema>(`/accounts/${accountId}/budgets/${budgetId}`);
+  ): Promise<APIResponse<BudgetModel>> {
+    return this.get<BudgetModel>(`/accounts/${accountId}/budgets/${budgetId}`);
   }
 
   /**
@@ -100,9 +98,9 @@ export class BudgetAPIClient extends BaseAPIClient {
    */
   async getCategoryBudgets(
     categoryId: number,
-    params?: ListCategoryBudgetsParams
-  ): Promise<APIResponse<PaginatedBudgetSchema>> {
-    return this.get<PaginatedBudgetSchema>(
+    params?: ListBudgetsParams
+  ): Promise<APIResponse<PaginatedBudgetResponseModel>> {
+    return this.get<PaginatedBudgetResponseModel>(
       `/categories/${categoryId}/budgets`,
       params
     );
@@ -114,8 +112,8 @@ export class BudgetAPIClient extends BaseAPIClient {
   async getCategoryBudget(
     categoryId: number,
     budgetId: number
-  ): Promise<APIResponse<BudgetSchema>> {
-    return this.get<BudgetSchema>(
+  ): Promise<APIResponse<BudgetModel>> {
+    return this.get<BudgetModel>(
       `/categories/${categoryId}/budgets/${budgetId}`
     );
   }

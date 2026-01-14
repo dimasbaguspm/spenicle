@@ -36,7 +36,6 @@ type Environment struct {
 	DBPassword    string
 	DBName        string
 	DatabaseURL   string
-	JWTSecret     string
 	AdminUsername string
 	AdminPassword string
 }
@@ -68,7 +67,6 @@ func NewEnvironment() Environment {
 		DBPassword:    dbPassword,
 		DBName:        dbName,
 		DatabaseURL:   databaseURL,
-		JWTSecret:     os.Getenv(JWT_SECRET_ENV),
 		AdminUsername: os.Getenv(ADMIN_USERNAME_ENV),
 		AdminPassword: os.Getenv(ADMIN_PASSWORD_ENV),
 	}

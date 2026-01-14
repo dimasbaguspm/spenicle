@@ -69,15 +69,15 @@ test.describe("Transaction Advanced Filtering", () => {
 
       // Add tags to some transactions
       const txList = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
       });
-      if (txList.data?.items && txList.data.items.length >= 2) {
+      if (txList.data?.data && txList.data.data.length >= 2) {
         await transactionAPI.addTransactionTag(
-          txList.data.items[0].id,
+          txList.data.data[0].id,
           "urgent"
         );
         await transactionAPI.addTransactionTag(
-          txList.data.items[1].id,
+          txList.data.data[1].id,
           "recurring"
         );
       }
@@ -89,15 +89,15 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         minAmount: 500,
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items) {
-        response.data.items.forEach((tx) => {
+      if (response.data?.data) {
+        response.data.data.forEach((tx: any) => {
           expect(tx.amount).toBeGreaterThanOrEqual(500);
         });
       }
@@ -107,15 +107,15 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         maxAmount: 500,
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items) {
-        response.data.items.forEach((tx) => {
+      if (response.data?.data) {
+        response.data.data.forEach((tx: any) => {
           expect(tx.amount).toBeLessThanOrEqual(500);
         });
       }
@@ -125,16 +125,16 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         minAmount: 200,
         maxAmount: 800,
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items) {
-        response.data.items.forEach((tx) => {
+      if (response.data?.data) {
+        response.data.data.forEach((tx: any) => {
           expect(tx.amount).toBeGreaterThanOrEqual(200);
           expect(tx.amount).toBeLessThanOrEqual(800);
         });
@@ -147,17 +147,17 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
-        categoryIds: [testCategoryId],
+        accountId: [testAccountId],
+        categoryId: [testCategoryId],
         startDate: new Date("2024-02-01").toISOString(),
         endDate: new Date("2024-03-31").toISOString(),
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items) {
-        response.data.items.forEach((tx) => {
+      if (response.data?.data) {
+        response.data.data.forEach((tx: any) => {
           expect(tx.account.id).toBe(testAccountId);
           expect(tx.category.id).toBe(testCategoryId);
           const txDate = new Date(tx.date);
@@ -183,10 +183,10 @@ test.describe("Transaction Advanced Filtering", () => {
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items) {
-        response.data.items.forEach((tx) => {
+      if (response.data?.data) {
+        response.data.data.forEach((tx: any) => {
           expect(tx.type).toBe("expense");
           expect(tx.amount).toBeGreaterThanOrEqual(100);
           expect(tx.amount).toBeLessThanOrEqual(1000);
@@ -200,16 +200,16 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
-        tagIds: [testTag1Id],
+        accountId: [testAccountId],
+        tagId: [testTag1Id],
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items) {
-        response.data.items.forEach((tx) => {
-          const hasTag = tx.tags?.some((tag) => tag.id === testTag1Id);
+      if (response.data?.data) {
+        response.data.data.forEach((tx: any) => {
+          const hasTag = tx.tags?.some((tag: any) => tag.id === testTag1Id);
           expect(hasTag).toBe(true);
         });
       }
@@ -219,17 +219,17 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
-        tagIds: [testTag1Id, testTag2Id],
+        accountId: [testAccountId],
+        tagId: [testTag1Id, testTag2Id],
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items && response.data.items.length > 0) {
-        response.data.items.forEach((tx) => {
+      if (response.data?.data && response.data.data.length > 0) {
+        response.data.data.forEach((tx: any) => {
           const hasAnyTag = tx.tags?.some(
-            (tag) => tag.id === testTag1Id || tag.id === testTag2Id
+            (tag: any) => tag.id === testTag1Id || tag.id === testTag2Id
           );
           expect(hasAnyTag).toBe(true);
         });
@@ -242,18 +242,18 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         sortBy: "amount",
         sortOrder: "asc",
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items && response.data.items.length > 1) {
-        for (let i = 0; i < response.data.items.length - 1; i++) {
-          expect(response.data.items[i].amount).toBeLessThanOrEqual(
-            response.data.items[i + 1].amount
+      if (response.data?.data && response.data.data.length > 1) {
+        for (let i = 0; i < response.data.data.length - 1; i++) {
+          expect(response.data.data[i].amount).toBeLessThanOrEqual(
+            response.data.data[i + 1].amount
           );
         }
       }
@@ -263,18 +263,18 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         sortBy: "amount",
         sortOrder: "desc",
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items && response.data.items.length > 1) {
-        for (let i = 0; i < response.data.items.length - 1; i++) {
-          expect(response.data.items[i].amount).toBeGreaterThanOrEqual(
-            response.data.items[i + 1].amount
+      if (response.data?.data && response.data.data.length > 1) {
+        for (let i = 0; i < response.data.data.length - 1; i++) {
+          expect(response.data.data[i].amount).toBeGreaterThanOrEqual(
+            response.data.data[i + 1].amount
           );
         }
       }
@@ -282,18 +282,18 @@ test.describe("Transaction Advanced Filtering", () => {
 
     test("should sort transactions by date", async ({ transactionAPI }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         sortBy: "date",
         sortOrder: "desc",
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
+      expect(response.data?.data).toBeDefined();
 
-      if (response.data?.items && response.data.items.length > 1) {
-        for (let i = 0; i < response.data.items.length - 1; i++) {
-          const date1 = new Date(response.data.items[i].date).getTime();
-          const date2 = new Date(response.data.items[i + 1].date).getTime();
+      if (response.data?.data && response.data.data.length > 1) {
+        for (let i = 0; i < response.data.data.length - 1; i++) {
+          const date1 = new Date(response.data.data[i].date).getTime();
+          const date2 = new Date(response.data.data[i + 1].date).getTime();
           expect(date1).toBeGreaterThanOrEqual(date2);
         }
       }
@@ -303,14 +303,14 @@ test.describe("Transaction Advanced Filtering", () => {
   test.describe("Pagination Edge Cases", () => {
     test("should handle page size of 1", async ({ transactionAPI }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         pageSize: 1,
         pageNumber: 1,
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
-      expect(response.data?.items?.length).toBeLessThanOrEqual(1);
+      expect(response.data?.data).toBeDefined();
+      expect(response.data?.data?.length).toBeLessThanOrEqual(1);
       expect(response.data?.pageSize).toBe(1);
     });
 
@@ -318,21 +318,21 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         pageSize: 10,
         pageNumber: 9999,
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
-      expect(response.data?.items?.length).toBe(0);
+      expect(response.data?.data).toBeDefined();
+      expect(response.data?.data?.length).toBe(0);
     });
 
     test("should return correct pagination metadata", async ({
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         pageSize: 2,
         pageNumber: 1,
       });
@@ -341,7 +341,7 @@ test.describe("Transaction Advanced Filtering", () => {
       expect(response.data?.pageNumber).toBe(1);
       expect(response.data?.pageSize).toBe(2);
       expect(response.data?.totalCount).toBeGreaterThanOrEqual(0);
-      expect(response.data?.pageTotal).toBeGreaterThanOrEqual(0);
+      expect(response.data?.totalPages).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -351,12 +351,12 @@ test.describe("Transaction Advanced Filtering", () => {
     }) => {
       // Get some transactions first
       const listResponse = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         pageSize: 2,
       });
 
-      expect(listResponse.data?.items).toBeDefined();
-      const ids = listResponse?.data?.items?.map((tx) => tx.id) || [];
+      expect(listResponse.data?.data).toBeDefined();
+      const ids = listResponse?.data?.data?.map((tx: any) => tx.id) || [];
 
       if (ids.length > 0) {
         // Filter by those IDs
@@ -365,10 +365,10 @@ test.describe("Transaction Advanced Filtering", () => {
         });
 
         expect(filterResponse.status).toBe(200);
-        expect(filterResponse.data?.items).toBeDefined();
+        expect(filterResponse.data?.data).toBeDefined();
 
-        if (filterResponse.data?.items) {
-          filterResponse.data.items.forEach((tx) => {
+        if (filterResponse.data?.data) {
+          filterResponse.data.data.forEach((tx: any) => {
             expect(ids).toContain(tx.id);
           });
         }
@@ -383,8 +383,8 @@ test.describe("Transaction Advanced Filtering", () => {
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
-      expect(response.data?.items?.length).toBe(0);
+      expect(response.data?.data).toBeDefined();
+      expect(response.data?.data?.length).toBe(0);
     });
   });
 
@@ -393,14 +393,14 @@ test.describe("Transaction Advanced Filtering", () => {
       transactionAPI,
     }) => {
       const response = await transactionAPI.getTransactions({
-        accountIds: [testAccountId],
+        accountId: [testAccountId],
         minAmount: 999999,
         maxAmount: 9999999,
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
-      expect(response.data?.items?.length).toBe(0);
+      expect(response.data?.data).toBeDefined();
+      expect(response.data?.data?.length).toBe(0);
       expect(response.data?.totalCount).toBe(0);
     });
 
@@ -413,8 +413,8 @@ test.describe("Transaction Advanced Filtering", () => {
       });
 
       expect(response.status).toBe(200);
-      expect(response.data?.items).toBeDefined();
-      expect(response.data?.items?.length).toBe(0);
+      expect(response.data?.data).toBeDefined();
+      expect(response.data?.data?.length).toBe(0);
     });
   });
 
