@@ -91,17 +91,17 @@ func (cr CategoryResource) Routes(api huma.API) {
 }
 
 func (cr CategoryResource) List(ctx context.Context, input *struct {
-	models.ListCategoriesRequestModel
+	models.CategoriesSearchModel
 }) (*struct {
-	Body models.ListCategoriesResponseModel
+	Body models.CategoriesPagedModel
 }, error) {
-	resp, err := cr.cs.List(ctx, input.ListCategoriesRequestModel)
+	resp, err := cr.cs.GetPaged(ctx, input.CategoriesSearchModel)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.ListCategoriesResponseModel
+		Body models.CategoriesPagedModel
 	}{
 		Body: resp,
 	}, nil
@@ -110,24 +110,24 @@ func (cr CategoryResource) List(ctx context.Context, input *struct {
 func (cr CategoryResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the category" example:"1"`
 }) (*struct {
-	Body models.GetCategoryResponseModel
+	Body models.CategoryModel
 }, error) {
-	resp, err := cr.cs.Get(ctx, input.ID)
+	resp, err := cr.cs.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.GetCategoryResponseModel
+		Body models.CategoryModel
 	}{
-		Body: models.GetCategoryResponseModel{CategoryModel: resp},
+		Body: resp,
 	}, nil
 }
 
 func (cr CategoryResource) Create(ctx context.Context, input *struct {
-	Body models.CreateCategoryRequestModel
+	Body models.CreateCategoryModel
 }) (*struct {
-	Body models.CreateCategoryResponseModel
+	Body models.CategoryModel
 }, error) {
 	resp, err := cr.cs.Create(ctx, input.Body)
 	if err != nil {
@@ -135,17 +135,17 @@ func (cr CategoryResource) Create(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		Body models.CreateCategoryResponseModel
+		Body models.CategoryModel
 	}{
 		Body: resp,
 	}, nil
 }
 
 func (cr CategoryResource) Update(ctx context.Context, input *struct {
-	ID   int64                             `path:"id" minimum:"1" doc:"Unique identifier of the category" example:"1"`
-	Body models.UpdateCategoryRequestModel `json:""`
+	ID   int64 `path:"id" minimum:"1" doc:"Unique identifier of the category" example:"1"`
+	Body models.UpdateCategoryModel
 }) (*struct {
-	Body models.UpdateCategoryResponseModel
+	Body models.CategoryModel
 }, error) {
 	resp, err := cr.cs.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -153,7 +153,7 @@ func (cr CategoryResource) Update(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		Body models.UpdateCategoryResponseModel
+		Body models.CategoryModel
 	}{
 		Body: resp,
 	}, nil

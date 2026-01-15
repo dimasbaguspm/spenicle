@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-type ListTransactionsRequestModel struct {
+type TransactionsSearchModel struct {
 	PageNumber            int      `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
 	PageSize              int      `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Number of items per page"`
 	SortBy                string   `query:"sortBy" default:"date" enum:"id,type,date,amount,createdAt,updatedAt" doc:"Field to sort by"`
@@ -56,15 +56,15 @@ type TransactionModel struct {
 	DeletedAt          *time.Time                  `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
 }
 
-type ListTransactionsResponseModel struct {
-	Data       []TransactionModel `json:"data" doc:"List of transactions"`
+type TransactionsPagedModel struct {
+	Items      []TransactionModel `json:"items" doc:"List of transactions"`
 	PageNumber int                `json:"pageNumber" doc:"Current page number"`
 	PageSize   int                `json:"pageSize" doc:"Items per page"`
 	TotalCount int                `json:"totalCount" doc:"Total number of matching items"`
 	TotalPages int                `json:"totalPages" doc:"Total number of pages"`
 }
 
-type CreateTransactionRequestModel struct {
+type CreateTransactionModel struct {
 	Type                 string    `json:"type" minLength:"1" required:"true" enum:"expense,income,transfer" doc:"Transaction type"`
 	Date                 time.Time `json:"date" required:"true" doc:"Transaction date"`
 	Amount               int64     `json:"amount" required:"true" minimum:"1" doc:"Transaction amount"`
@@ -74,26 +74,12 @@ type CreateTransactionRequestModel struct {
 	Note                 *string   `json:"note,omitempty" doc:"Optional transaction notes"`
 }
 
-type CreateTransactionResponseModel struct {
-	TransactionModel
-}
-
-type GetTransactionResponseModel struct {
-	TransactionModel
-}
-
-type UpdateTransactionRequestModel struct {
+type UpdateTransactionModel struct {
+	Type                 *string    `json:"type,omitempty" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
 	Date                 *time.Time `json:"date,omitempty" doc:"Transaction date"`
 	Amount               *int64     `json:"amount,omitempty" minimum:"1" doc:"Transaction amount"`
 	AccountID            *int64     `json:"accountId,omitempty" minimum:"1" doc:"Source account ID"`
 	CategoryID           *int64     `json:"categoryId,omitempty" minimum:"1" doc:"Category ID"`
 	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
 	Note                 *string    `json:"note,omitempty" doc:"Transaction notes"`
-}
-
-type UpdateTransactionResponseModel struct {
-	TransactionModel
-}
-
-type DeleteTransactionResponseModel struct {
 }

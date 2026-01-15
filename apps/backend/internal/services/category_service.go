@@ -17,19 +17,19 @@ func NewCategoryService(cr repositories.CategoryRepository) CategoryService {
 	}
 }
 
-func (cs CategoryService) List(ctx context.Context, p models.ListCategoriesRequestModel) (models.ListCategoriesResponseModel, error) {
-	return cs.cr.List(ctx, p)
+func (cs CategoryService) GetPaged(ctx context.Context, p models.CategoriesSearchModel) (models.CategoriesPagedModel, error) {
+	return cs.cr.GetPaged(ctx, p)
 }
 
-func (cs CategoryService) Get(ctx context.Context, id int64) (models.CategoryModel, error) {
-	return cs.cr.Get(ctx, id)
+func (cs CategoryService) GetDetail(ctx context.Context, id int64) (models.CategoryModel, error) {
+	return cs.cr.GetDetail(ctx, id)
 }
 
-func (cs CategoryService) Create(ctx context.Context, p models.CreateCategoryRequestModel) (models.CreateCategoryResponseModel, error) {
+func (cs CategoryService) Create(ctx context.Context, p models.CreateCategoryModel) (models.CategoryModel, error) {
 	return cs.cr.Create(ctx, p)
 }
 
-func (cs CategoryService) Update(ctx context.Context, id int64, p models.UpdateCategoryRequestModel) (models.UpdateCategoryResponseModel, error) {
+func (cs CategoryService) Update(ctx context.Context, id int64, p models.UpdateCategoryModel) (models.CategoryModel, error) {
 	return cs.cr.Update(ctx, id, p)
 }
 

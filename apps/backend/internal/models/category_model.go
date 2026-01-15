@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-type ListCategoriesRequestModel struct {
+type CategoriesSearchModel struct {
 	PageNumber int      `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
 	PageSize   int      `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Number of items per page"`
 	SortBy     string   `query:"sortBy" default:"createdAt" enum:"name,type,createdAt,updatedAt" doc:"Field to sort by"`
@@ -27,15 +27,15 @@ type CategoryModel struct {
 	DeletedAt    *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
 }
 
-type ListCategoriesResponseModel struct {
-	Data       []CategoryModel `json:"data" doc:"List of categories"`
+type CategoriesPagedModel struct {
+	Items      []CategoryModel `json:"Items" doc:"List of categories"`
 	PageNumber int             `json:"pageNumber" doc:"Current page number"`
 	PageSize   int             `json:"pageSize" doc:"Items per page"`
 	TotalCount int             `json:"totalCount" doc:"Total number of matching items"`
 	TotalPages int             `json:"totalPages" doc:"Total number of pages"`
 }
 
-type CreateCategoryRequestModel struct {
+type CreateCategoryModel struct {
 	Name      string  `json:"name" minLength:"1" required:"true" doc:"Category name"`
 	Type      string  `json:"type" minLength:"1" required:"true" enum:"expense,income,transfer" doc:"Category type"`
 	Note      string  `json:"note" doc:"Optional category notes"`
@@ -43,28 +43,13 @@ type CreateCategoryRequestModel struct {
 	IconColor *string `json:"iconColor,omitempty" doc:"Icon color code"`
 }
 
-type CreateCategoryResponseModel struct {
-	CategoryModel
-}
-
-type GetCategoryResponseModel struct {
-	CategoryModel
-}
-
-type UpdateCategoryRequestModel struct {
+type UpdateCategoryModel struct {
 	Name       *string `json:"name,omitempty" minLength:"1" doc:"Category name"`
 	Type       *string `json:"type,omitempty" minLength:"1" enum:"expense,income,transfer" doc:"Category type"`
 	Note       *string `json:"note,omitempty" doc:"Category notes"`
 	Icon       *string `json:"icon,omitempty" doc:"Icon identifier"`
 	IconColor  *string `json:"iconColor,omitempty" doc:"Icon color code"`
 	ArchivedAt *string `json:"archivedAt,omitempty" doc:"Archive status (null string to unarchive, any other value to archive)"`
-}
-
-type UpdateCategoryResponseModel struct {
-	CategoryModel
-}
-
-type DeleteCategoryResponseModel struct {
 }
 
 type ReorderCategoryItemModel struct {
@@ -74,7 +59,4 @@ type ReorderCategoryItemModel struct {
 
 type ReorderCategoriesRequestModel struct {
 	Items []ReorderCategoryItemModel `json:"items" doc:"List of categories to reorder"`
-}
-
-type ReorderCategoriesResponseModel struct {
 }

@@ -239,17 +239,17 @@ func (tr TransactionResource) Routes(api huma.API) {
 }
 
 func (tr TransactionResource) List(ctx context.Context, input *struct {
-	models.ListTransactionsRequestModel
+	models.TransactionsSearchModel
 }) (*struct {
-	Body models.ListTransactionsResponseModel
+	Body models.TransactionsPagedModel
 }, error) {
-	resp, err := tr.ts.List(ctx, input.ListTransactionsRequestModel)
+	resp, err := tr.ts.GetPaged(ctx, input.TransactionsSearchModel)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.ListTransactionsResponseModel
+		Body models.TransactionsPagedModel
 	}{
 		Body: resp,
 	}, nil
@@ -258,24 +258,24 @@ func (tr TransactionResource) List(ctx context.Context, input *struct {
 func (tr TransactionResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
 }) (*struct {
-	Body models.GetTransactionResponseModel
+	Body models.TransactionModel
 }, error) {
-	resp, err := tr.ts.Get(ctx, input.ID)
+	resp, err := tr.ts.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.GetTransactionResponseModel
+		Body models.TransactionModel
 	}{
-		Body: models.GetTransactionResponseModel{TransactionModel: resp},
+		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) Create(ctx context.Context, input *struct {
-	Body models.CreateTransactionRequestModel
+	Body models.CreateTransactionModel
 }) (*struct {
-	Body models.CreateTransactionResponseModel
+	Body models.TransactionModel
 }, error) {
 	resp, err := tr.ts.Create(ctx, input.Body)
 	if err != nil {
@@ -283,17 +283,17 @@ func (tr TransactionResource) Create(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		Body models.CreateTransactionResponseModel
+		Body models.TransactionModel
 	}{
 		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) Update(ctx context.Context, input *struct {
-	ID   int64                                `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
-	Body models.UpdateTransactionRequestModel `json:""`
+	ID   int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
+	Body models.UpdateTransactionModel
 }) (*struct {
-	Body models.UpdateTransactionResponseModel
+	Body models.TransactionModel
 }, error) {
 	resp, err := tr.ts.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -301,7 +301,7 @@ func (tr TransactionResource) Update(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		Body models.UpdateTransactionResponseModel
+		Body models.TransactionModel
 	}{
 		Body: resp,
 	}, nil

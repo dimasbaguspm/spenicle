@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-type ListAccountsRequestModel struct {
+type AccountsSearchModel struct {
 	PageNumber int      `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
 	PageSize   int      `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Number of items per page"`
 	SortBy     string   `query:"sortBy" default:"createdAt" enum:"name,type,amount,displayOrder,createdAt,updatedAt" doc:"Field to sort by (name, type, amount, displayOrder, createdAt, updatedAt)"`
@@ -28,15 +28,15 @@ type AccountModel struct {
 	DeletedAt    *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
 }
 
-type ListAccountsResponseModel struct {
-	Data       []AccountModel `json:"data" doc:"List of accounts"`
+type AccountsPagedModel struct {
+	Items      []AccountModel `json:"items" doc:"List of accounts"`
 	PageNumber int            `json:"pageNumber" doc:"Current page number"`
 	PageSize   int            `json:"pageSize" doc:"Items per page"`
 	TotalCount int            `json:"totalCount" doc:"Total number of matching items"`
 	TotalPages int            `json:"totalPages" doc:"Total number of pages"`
 }
 
-type CreateAccountRequestModel struct {
+type CreateAccountModel struct {
 	Name      string  `json:"name" minLength:"1" required:"true" doc:"Account name"`
 	Type      string  `json:"type" minLength:"1" required:"true" enum:"expense,income" doc:"Account type (expense or income)"`
 	Note      string  `json:"note" doc:"Optional account notes"`
@@ -45,15 +45,7 @@ type CreateAccountRequestModel struct {
 	IconColor *string `json:"iconColor,omitempty" doc:"Icon color code"`
 }
 
-type CreateAccountResponseModel struct {
-	AccountModel
-}
-
-type GetAccountResponseModel struct {
-	AccountModel
-}
-
-type UpdateAccountRequestModel struct {
+type UpdateAccountModel struct {
 	Name       *string `json:"name,omitempty" minLength:"1" doc:"Account name"`
 	Type       *string `json:"type,omitempty" minLength:"1" enum:"expense,income" doc:"Account type (expense or income)"`
 	Note       *string `json:"note,omitempty" doc:"Account notes"`
@@ -63,21 +55,11 @@ type UpdateAccountRequestModel struct {
 	ArchivedAt *string `json:"archivedAt,omitempty" doc:"Archive status (null string to unarchive, any other value to archive)"`
 }
 
-type UpdateAccountResponseModel struct {
-	AccountModel
-}
-
-type DeleteAccountResponseModel struct {
-}
-
 type ReorderAccountItemModel struct {
 	ID           int64 `json:"id" doc:"Account ID"`
 	DisplayOrder int   `json:"displayOrder" doc:"New display order"`
 }
 
 type ReorderAccountsRequestModel struct {
-	Items []ReorderAccountItemModel `json:"items" doc:"List of accounts to reorder"`
-}
-
-type ReorderAccountsResponseModel struct {
+	Data []ReorderAccountItemModel `json:"data" doc:"List of accounts to reorder"`
 }

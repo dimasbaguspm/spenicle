@@ -41,7 +41,7 @@ func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Poo
 
 	as := services.NewAccountService(ar)
 	cs := services.NewCategoryService(cr)
-	ts := services.NewTransactionService(tr)
+	ts := services.NewTransactionService(tr, ar)
 	ss := services.NewSummaryService(sr)
 	bs := services.NewBudgetService(br)
 	bts := services.NewBudgetTemplateService(btr)
@@ -60,12 +60,13 @@ func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Poo
 }
 
 func RegisterWorkers(ctx context.Context, pool *pgxpool.Pool) func() {
+	ar := repositories.NewAccountRepository(pool)
 	ttr := repositories.NewTransactionTemplateRepository(pool)
 	tr := repositories.NewTransactionRepository(pool)
 	br := repositories.NewBudgetRepository(pool)
 	btr := repositories.NewBudgetTemplateRepository(pool)
 
-	ts := services.NewTransactionService(tr)
+	ts := services.NewTransactionService(tr, ar)
 	bs := services.NewBudgetService(br)
 
 	ttWorker := workers.NewTransactionTemplateWorker(ctx, ttr, ts)

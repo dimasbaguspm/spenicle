@@ -17,19 +17,19 @@ func NewAccountService(ar repositories.AccountRepository) AccountService {
 	}
 }
 
-func (as AccountService) List(ctx context.Context, p models.ListAccountsRequestModel) (models.ListAccountsResponseModel, error) {
-	return as.ar.List(ctx, p)
+func (as AccountService) GetPaged(ctx context.Context, p models.AccountsSearchModel) (models.AccountsPagedModel, error) {
+	return as.ar.GetPaged(ctx, p)
 }
 
-func (as AccountService) Get(ctx context.Context, id int64) (models.AccountModel, error) {
-	return as.ar.Get(ctx, id)
+func (as AccountService) GetDetail(ctx context.Context, id int64) (models.AccountModel, error) {
+	return as.ar.GetDetail(ctx, id)
 }
 
-func (as AccountService) Create(ctx context.Context, p models.CreateAccountRequestModel) (models.CreateAccountResponseModel, error) {
+func (as AccountService) Create(ctx context.Context, p models.CreateAccountModel) (models.AccountModel, error) {
 	return as.ar.Create(ctx, p)
 }
 
-func (as AccountService) Update(ctx context.Context, id int64, p models.UpdateAccountRequestModel) (models.UpdateAccountResponseModel, error) {
+func (as AccountService) Update(ctx context.Context, id int64, p models.UpdateAccountModel) (models.AccountModel, error) {
 	return as.ar.Update(ctx, id, p)
 }
 

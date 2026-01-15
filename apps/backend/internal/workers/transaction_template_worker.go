@@ -93,7 +93,7 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 		"amount", template.Amount,
 	)
 
-	transactionRequest := models.CreateTransactionRequestModel{
+	transactionRequest := models.CreateTransactionModel{
 		Type:                 template.Type,
 		Date:                 time.Now(),
 		Amount:               template.Amount,

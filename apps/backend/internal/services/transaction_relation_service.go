@@ -21,8 +21,7 @@ func NewTransactionRelationService(
 
 // List retrieves transaction relations for a specific transaction
 func (trs TransactionRelationService) List(ctx context.Context, transactionID int64, pageNumber, pageSize int) (models.ListTransactionRelationsResponseModel, error) {
-	// Verify transaction exists
-	_, err := trs.tr.Get(ctx, transactionID)
+	_, err := trs.tr.GetDetail(ctx, transactionID)
 	if err != nil {
 		return models.ListTransactionRelationsResponseModel{}, err
 	}

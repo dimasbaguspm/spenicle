@@ -19,16 +19,7 @@ func NewAccountRepository(pgx *pgxpool.Pool) AccountRepository {
 	return AccountRepository{pgx}
 }
 
-// List returns a paginated list of accounts
-func (ar AccountRepository) List(ctx context.Context, query models.ListAccountsRequestModel) (models.ListAccountsResponseModel, error) {
-	// Enforce page size limits
-	if query.PageSize <= 0 || query.PageSize > 100 {
-		query.PageSize = 10
-	}
-	if query.PageNumber <= 0 {
-		query.PageNumber = 1
-	}
-
+func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsSearchModel) (models.AccountsPagedModel, error) {
 	sortByMap := map[string]string{
 		"name":         "name",
 		"type":         "type",
@@ -42,49 +33,60 @@ func (ar AccountRepository) List(ctx context.Context, query models.ListAccountsR
 		"desc": "DESC",
 	}
 
-	sortColumn, ok := sortByMap[query.SortBy]
-	if !ok {
-		sortColumn = "created_at"
-	}
-	sortOrder, ok := sortOrderMap[query.SortOrder]
-	if !ok {
-		sortOrder = "DESC"
-	}
+	sortColumn := sortByMap[query.SortBy]
+	sortOrder := sortOrderMap[query.SortOrder]
 
 	offset := (query.PageNumber - 1) * query.PageSize
 	searchPattern := "%" + query.Name + "%"
 
-	countSQL := `SELECT COUNT(*) FROM accounts WHERE deleted_at IS NULL`
-	var totalCount int
-	if err := ar.pgx.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
-		return models.ListAccountsResponseModel{}, huma.Error400BadRequest("Unable to count accounts", err)
-	}
-
-	sql := `SELECT id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
+	sql := `
+		WITH filtered AS (
+			SELECT id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at
 			FROM accounts
 			WHERE deleted_at IS NULL
-			AND (name ILIKE $1 OR $1 = '%%')
+				AND (name ILIKE $1 OR $1 = '')
+		), 
+		counted AS (
+			SELECT COUNT(*) as total FROM filtered
+		)	
+		SELECT
+			f.id,
+			f.name,
+			f.type,
+			f.note,
+			f.amount,
+			f.icon,
+			f.icon_color,
+			f.display_order,
+			f.archived_at,
+			f.created_at,
+			f.updated_at,
+			c.total
+		FROM filtered f
+		CROSS JOIN counted c
 			ORDER BY ` + sortColumn + ` ` + sortOrder + `
 			LIMIT $2 OFFSET $3`
 
 	rows, err := ar.pgx.Query(ctx, sql, searchPattern, query.PageSize, offset)
 	if err != nil {
-		return models.ListAccountsResponseModel{}, huma.Error400BadRequest("Unable to query accounts", err)
+		return models.AccountsPagedModel{}, huma.Error400BadRequest("Unable to query accounts", err)
 	}
 	defer rows.Close()
 
 	var items []models.AccountModel
+	var totalCount int
+
 	for rows.Next() {
 		var item models.AccountModel
-		err := rows.Scan(&item.ID, &item.Name, &item.Type, &item.Note, &item.Amount, &item.Icon, &item.IconColor, &item.DisplayOrder, &item.ArchivedAt, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt)
+		err := rows.Scan(&item.ID, &item.Name, &item.Type, &item.Note, &item.Amount, &item.Icon, &item.IconColor, &item.DisplayOrder, &item.ArchivedAt, &item.CreatedAt, &item.UpdatedAt, &totalCount)
 		if err != nil {
-			return models.ListAccountsResponseModel{}, huma.Error400BadRequest("Unable to scan account data", err)
+			return models.AccountsPagedModel{}, huma.Error400BadRequest("Unable to scan account data", err)
 		}
 		items = append(items, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.ListAccountsResponseModel{}, huma.Error400BadRequest("Error reading account rows", err)
+		return models.AccountsPagedModel{}, huma.Error400BadRequest("Error reading account rows", err)
 	}
 
 	if items == nil {
@@ -96,16 +98,16 @@ func (ar AccountRepository) List(ctx context.Context, query models.ListAccountsR
 		totalPages = (totalCount + query.PageSize - 1) / query.PageSize
 	}
 
-	return models.ListAccountsResponseModel{
-		Data:       items,
+	return models.AccountsPagedModel{
+		Items:      items,
 		PageNumber: query.PageNumber,
 		PageSize:   query.PageSize,
-		TotalCount: totalCount,
 		TotalPages: totalPages,
+		TotalCount: totalCount,
 	}, nil
 }
 
-func (ar AccountRepository) Get(ctx context.Context, id int64) (models.AccountModel, error) {
+func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.AccountModel, error) {
 	var data models.AccountModel
 
 	sql := `SELECT id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
@@ -124,7 +126,7 @@ func (ar AccountRepository) Get(ctx context.Context, id int64) (models.AccountMo
 	return data, nil
 }
 
-func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAccountRequestModel) (models.CreateAccountResponseModel, error) {
+func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAccountModel) (models.AccountModel, error) {
 	var data models.AccountModel
 
 	sql := `INSERT INTO accounts (name, type, note, amount, icon, icon_color, display_order)
@@ -134,13 +136,13 @@ func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAcc
 	err := ar.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Amount, payload.Icon, payload.IconColor).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
-		return models.CreateAccountResponseModel{}, huma.Error400BadRequest("Unable to create account", err)
+		return models.AccountModel{}, huma.Error400BadRequest("Unable to create account", err)
 	}
 
-	return models.CreateAccountResponseModel{AccountModel: data}, nil
+	return data, nil
 }
 
-func (ar AccountRepository) Update(ctx context.Context, id int64, payload models.UpdateAccountRequestModel) (models.UpdateAccountResponseModel, error) {
+func (ar AccountRepository) Update(ctx context.Context, id int64, payload models.UpdateAccountModel) (models.AccountModel, error) {
 	var data models.AccountModel
 
 	sql := `UPDATE accounts
@@ -163,12 +165,12 @@ func (ar AccountRepository) Update(ctx context.Context, id int64, payload models
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.UpdateAccountResponseModel{}, huma.Error404NotFound("Account not found")
+			return models.AccountModel{}, huma.Error404NotFound("Account not found")
 		}
-		return models.UpdateAccountResponseModel{}, huma.Error400BadRequest("Unable to update account", err)
+		return models.AccountModel{}, huma.Error400BadRequest("Unable to update account", err)
 	}
 
-	return models.UpdateAccountResponseModel{AccountModel: data}, nil
+	return data, nil
 }
 
 func (ar AccountRepository) Delete(ctx context.Context, id int64) error {
@@ -208,6 +210,24 @@ func (ar AccountRepository) Reorder(ctx context.Context, items []models.ReorderA
 	_, err := ar.pgx.Exec(ctx, sql)
 	if err != nil {
 		return huma.Error400BadRequest("Unable to reorder accounts", err)
+	}
+
+	return nil
+}
+
+// UpdateBalanceWithTx updates an account's balance within a provided database transaction
+func (ar AccountRepository) UpdateBalanceWithTx(ctx context.Context, tx pgx.Tx, accountID int64, deltaAmount int64) error {
+	sql := `UPDATE accounts
+			SET amount = amount + $1,
+				updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2 AND deleted_at IS NULL`
+
+	cmdTag, err := tx.Exec(ctx, sql, deltaAmount, accountID)
+	if err != nil {
+		return fmt.Errorf("unable to update account balance: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("account not found")
 	}
 
 	return nil

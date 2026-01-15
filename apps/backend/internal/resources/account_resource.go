@@ -91,17 +91,17 @@ func (ar AccountResource) Routes(api huma.API) {
 }
 
 func (ar AccountResource) List(ctx context.Context, input *struct {
-	models.ListAccountsRequestModel
+	models.AccountsSearchModel
 }) (*struct {
-	Body models.ListAccountsResponseModel
+	Body models.AccountsPagedModel
 }, error) {
-	resp, err := ar.as.List(ctx, input.ListAccountsRequestModel)
+	resp, err := ar.as.GetPaged(ctx, input.AccountsSearchModel)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.ListAccountsResponseModel
+		Body models.AccountsPagedModel
 	}{
 		Body: resp,
 	}, nil
@@ -110,24 +110,24 @@ func (ar AccountResource) List(ctx context.Context, input *struct {
 func (ar AccountResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
 }) (*struct {
-	Body models.GetAccountResponseModel
+	Body models.AccountModel
 }, error) {
-	resp, err := ar.as.Get(ctx, input.ID)
+	resp, err := ar.as.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.GetAccountResponseModel
+		Body models.AccountModel
 	}{
-		Body: models.GetAccountResponseModel{AccountModel: resp},
+		Body: resp,
 	}, nil
 }
 
 func (ar AccountResource) Create(ctx context.Context, input *struct {
-	Body models.CreateAccountRequestModel
+	Body models.CreateAccountModel
 }) (*struct {
-	Body models.CreateAccountResponseModel
+	Body models.AccountModel
 }, error) {
 	resp, err := ar.as.Create(ctx, input.Body)
 	if err != nil {
@@ -135,17 +135,17 @@ func (ar AccountResource) Create(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		Body models.CreateAccountResponseModel
+		Body models.AccountModel
 	}{
 		Body: resp,
 	}, nil
 }
 
 func (ar AccountResource) Update(ctx context.Context, input *struct {
-	ID   int64                            `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
-	Body models.UpdateAccountRequestModel `json:""`
+	ID   int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
+	Body models.UpdateAccountModel
 }) (*struct {
-	Body models.UpdateAccountResponseModel
+	Body models.AccountModel
 }, error) {
 	resp, err := ar.as.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -153,7 +153,7 @@ func (ar AccountResource) Update(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		Body models.UpdateAccountResponseModel
+		Body models.AccountModel
 	}{
 		Body: resp,
 	}, nil
@@ -167,13 +167,13 @@ func (ar AccountResource) Delete(ctx context.Context, input *struct {
 		return nil, err
 	}
 
-	return &struct{}{}, nil
+	return nil, nil
 }
 
 func (ar AccountResource) Reorder(ctx context.Context, input *struct {
 	Body models.ReorderAccountsRequestModel
 }) (*struct{}, error) {
-	err := ar.as.Reorder(ctx, input.Body.Items)
+	err := ar.as.Reorder(ctx, input.Body.Data)
 	if err != nil {
 		return nil, err
 	}
