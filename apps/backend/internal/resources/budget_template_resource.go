@@ -28,7 +28,7 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, btr.List)
+	}, btr.GetPaged)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "create-budget-template",
@@ -52,7 +52,7 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
-	}, btr.Get)
+	}, btr.GetDetail)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "update-budget-template",
@@ -79,26 +79,26 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 	}, btr.Delete)
 }
 
-func (btr BudgetTemplateResource) List(ctx context.Context, input *struct {
-	models.ListBudgetTemplatesRequestModel
+func (btr BudgetTemplateResource) GetPaged(ctx context.Context, input *struct {
+	models.BudgetTemplatesSearchModel
 }) (*struct {
-	Body models.ListBudgetTemplatesResponseModel
+	Body models.BudgetTemplatesPagedModel
 }, error) {
-	resp, err := btr.bts.List(ctx, input.ListBudgetTemplatesRequestModel)
+	resp, err := btr.bts.GetPaged(ctx, input.BudgetTemplatesSearchModel)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		Body models.ListBudgetTemplatesResponseModel
+		Body models.BudgetTemplatesPagedModel
 	}{Body: resp}, nil
 }
 
-func (btr BudgetTemplateResource) Get(ctx context.Context, input *struct {
+func (btr BudgetTemplateResource) GetDetail(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
-	item, err := btr.bts.Get(ctx, input.ID)
+	item, err := btr.bts.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Budget template not found")
 	}
@@ -108,31 +108,31 @@ func (btr BudgetTemplateResource) Get(ctx context.Context, input *struct {
 }
 
 func (btr BudgetTemplateResource) Create(ctx context.Context, input *struct {
-	Body models.CreateBudgetTemplateRequestModel
+	Body models.CreateBudgetTemplateModel
 }) (*struct {
-	Body models.CreateBudgetTemplateResponseModel
+	Body models.BudgetTemplateModel
 }, error) {
 	resp, err := btr.bts.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		Body models.CreateBudgetTemplateResponseModel
+		Body models.BudgetTemplateModel
 	}{Body: resp}, nil
 }
 
 func (btr BudgetTemplateResource) Update(ctx context.Context, input *struct {
 	ID   int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
-	Body models.UpdateBudgetTemplateRequestModel
+	Body models.UpdateBudgetTemplateModel
 }) (*struct {
-	Body models.UpdateBudgetTemplateResponseModel
+	Body models.BudgetTemplateModel
 }, error) {
 	resp, err := btr.bts.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		Body models.UpdateBudgetTemplateResponseModel
+		Body models.BudgetTemplateModel
 	}{Body: resp}, nil
 }
 

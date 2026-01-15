@@ -15,19 +15,19 @@ func NewBudgetTemplateService(btr repositories.BudgetTemplateRepository) BudgetT
 	return BudgetTemplateService{btr}
 }
 
-func (bts BudgetTemplateService) List(ctx context.Context, p models.ListBudgetTemplatesRequestModel) (models.ListBudgetTemplatesResponseModel, error) {
-	return bts.btr.List(ctx, p)
+func (bts BudgetTemplateService) GetPaged(ctx context.Context, p models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
+	return bts.btr.GetPaged(ctx, p)
 }
 
-func (bts BudgetTemplateService) Get(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
-	return bts.btr.Get(ctx, id)
+func (bts BudgetTemplateService) GetDetail(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
+	return bts.btr.GetDetail(ctx, id)
 }
 
-func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudgetTemplateRequestModel) (models.CreateBudgetTemplateResponseModel, error) {
+func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
 	return bts.btr.Create(ctx, p)
 }
 
-func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.UpdateBudgetTemplateRequestModel) (models.UpdateBudgetTemplateResponseModel, error) {
+func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.UpdateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
 	return bts.btr.Update(ctx, id, p)
 }
 
