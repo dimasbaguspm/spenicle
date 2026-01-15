@@ -15,14 +15,14 @@ func NewSummaryService(sr repositories.SummaryRepository) SummaryService {
 	return SummaryService{sr}
 }
 
-func (ss SummaryService) GetTransactionSummary(ctx context.Context, p models.SummaryTransactionRequestModel) (models.SummaryTransactionResponseModel, error) {
+func (ss SummaryService) GetTransactionSummary(ctx context.Context, p models.SummaryTransactionSearchModel) (models.SummaryTransactionListModel, error) {
 	return ss.sr.GetTransactionSummary(ctx, p)
 }
 
-func (ss SummaryService) GetAccountSummary(ctx context.Context, p models.SummaryRequestModel) (models.SummaryAccountResponseModel, error) {
+func (ss SummaryService) GetAccountSummary(ctx context.Context, p models.SummarySearchModel) (models.SummaryAccountListModel, error) {
 	return ss.sr.GetAccountSummary(ctx, p)
 }
 
-func (ss SummaryService) GetCategorySummary(ctx context.Context, p models.SummaryRequestModel) (models.SummaryCategoryResponseModel, error) {
+func (ss SummaryService) GetCategorySummary(ctx context.Context, p models.SummarySearchModel) (models.SummaryCategoryListModel, error) {
 	return ss.sr.GetCategorySummary(ctx, p)
 }

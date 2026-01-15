@@ -57,48 +57,48 @@ func (sr SummaryResource) Routes(api huma.API) {
 }
 
 func (sr SummaryResource) GetTransactionSummary(ctx context.Context, input *struct {
-	Params models.SummaryTransactionRequestModel
+	Params models.SummaryTransactionSearchModel
 }) (*struct {
-	Body models.SummaryTransactionResponseModel
+	Body models.SummaryTransactionListModel
 }, error) {
 	resp, err := sr.service.GetTransactionSummary(ctx, input.Params)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		Body models.SummaryTransactionResponseModel
+		Body models.SummaryTransactionListModel
 	}{
 		Body: resp,
 	}, nil
 }
 
 func (sr SummaryResource) GetAccountSummary(ctx context.Context, input *struct {
-	Params models.SummaryRequestModel
+	Params models.SummarySearchModel
 }) (*struct {
-	Body models.SummaryAccountResponseModel
+	Body models.SummaryAccountListModel
 }, error) {
 	resp, err := sr.service.GetAccountSummary(ctx, input.Params)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		Body models.SummaryAccountResponseModel
+		Body models.SummaryAccountListModel
 	}{
 		Body: resp,
 	}, nil
 }
 
 func (sr SummaryResource) GetCategorySummary(ctx context.Context, input *struct {
-	Params models.SummaryRequestModel
+	Params models.SummarySearchModel
 }) (*struct {
-	Body models.SummaryCategoryResponseModel
+	Body models.SummaryCategoryListModel
 }, error) {
 	resp, err := sr.service.GetCategorySummary(ctx, input.Params)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		Body models.SummaryCategoryResponseModel
+		Body models.SummaryCategoryListModel
 	}{
 		Body: resp,
 	}, nil

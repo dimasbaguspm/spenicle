@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/danielgtaylor/huma/v2"
-	internalmiddleware "github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/resources"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
@@ -14,7 +14,7 @@ import (
 )
 
 func RegisterMiddlewares(ctx context.Context, huma huma.API) {
-	huma.UseMiddleware(internalmiddleware.CORS(huma))
+	huma.UseMiddleware(middleware.CORS(huma))
 
 }
 
@@ -26,7 +26,7 @@ func RegisterPublicRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool
 }
 
 func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool) {
-	huma.UseMiddleware(internalmiddleware.SessionMiddleware(huma))
+	huma.UseMiddleware(middleware.SessionMiddleware(huma))
 
 	ar := repositories.NewAccountRepository(pool)
 	cr := repositories.NewCategoryRepository(pool)
