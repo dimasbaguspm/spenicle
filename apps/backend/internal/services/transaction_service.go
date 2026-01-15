@@ -94,7 +94,6 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 		newDestAccountID = p.DestinationAccountID
 	}
 
-	// Apply new balance effects
 	if err := ts.applyBalanceChanges(ctx, tx, newType, newAmount, newAccountID, newDestAccountID); err != nil {
 		return models.TransactionModel{}, err
 	}
@@ -118,7 +117,6 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Revert balance changes
 	oldDestAccountID := (*int64)(nil)
 	if existing.DestinationAccount != nil {
 		oldDestAccountID = &existing.DestinationAccount.ID
@@ -139,7 +137,8 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 }
 
 func (ts TransactionService) applyBalanceChanges(ctx context.Context, tx pgx.Tx, txType string, amount int64, accountID int64, destAccountID *int64) error {
-	if txType == "transfer" {
+	switch txType {
+	case "transfer":
 		if destAccountID != nil {
 			if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, -amount); err != nil {
 				return huma.Error422UnprocessableEntity("failed to update source account balance")
@@ -148,11 +147,11 @@ func (ts TransactionService) applyBalanceChanges(ctx context.Context, tx pgx.Tx,
 				return huma.Error422UnprocessableEntity("failed to update destination account balance")
 			}
 		}
-	} else if txType == "income" {
+	case "income":
 		if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, amount); err != nil {
 			return huma.Error422UnprocessableEntity("failed to update account balance")
 		}
-	} else if txType == "expense" {
+	case "expense":
 		if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, -amount); err != nil {
 			return huma.Error422UnprocessableEntity("failed to update account balance")
 		}
@@ -161,7 +160,8 @@ func (ts TransactionService) applyBalanceChanges(ctx context.Context, tx pgx.Tx,
 }
 
 func (ts TransactionService) revertBalanceChanges(ctx context.Context, tx pgx.Tx, txType string, amount int64, accountID int64, destAccountID *int64) error {
-	if txType == "transfer" {
+	switch txType {
+	case "transfer":
 		if destAccountID != nil {
 			if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, amount); err != nil {
 				return huma.Error422UnprocessableEntity("failed to revert source account balance")
@@ -170,11 +170,11 @@ func (ts TransactionService) revertBalanceChanges(ctx context.Context, tx pgx.Tx
 				return huma.Error422UnprocessableEntity("failed to revert destination account balance")
 			}
 		}
-	} else if txType == "income" {
+	case "income":
 		if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, -amount); err != nil {
 			return huma.Error422UnprocessableEntity("failed to revert account balance")
 		}
-	} else if txType == "expense" {
+	case "expense":
 		if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, amount); err != nil {
 			return huma.Error422UnprocessableEntity("failed to revert account balance")
 		}

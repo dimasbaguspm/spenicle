@@ -79,17 +79,17 @@ func (tr TagResource) Routes(api huma.API) {
 }
 
 func (tr TagResource) List(ctx context.Context, input *struct {
-	models.ListTagsRequestModel
+	models.TagsSearchModel
 }) (*struct {
-	Body models.ListTagsResponseModel
+	Body models.TagsPagedModel
 }, error) {
-	resp, err := tr.ts.List(ctx, input.ListTagsRequestModel)
+	resp, err := tr.ts.GetPaged(ctx, input.TagsSearchModel)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.ListTagsResponseModel
+		Body models.TagsPagedModel
 	}{
 		Body: resp,
 	}, nil
@@ -97,21 +97,21 @@ func (tr TagResource) List(ctx context.Context, input *struct {
 
 func (tr TagResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
-}) (*struct{ Body models.GetTagResponseModel }, error) {
-	resp, err := tr.ts.Get(ctx, input.ID)
+}) (*struct{ Body models.TagModel }, error) {
+	resp, err := tr.ts.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	return &struct{ Body models.GetTagResponseModel }{
-		Body: models.GetTagResponseModel{TagModel: resp},
+	return &struct{ Body models.TagModel }{
+		Body: resp,
 	}, nil
 }
 
 func (tr TagResource) Create(ctx context.Context, input *struct {
-	Body models.CreateTagRequestModel
+	Body models.CreateTagModel
 }) (*struct {
-	Body models.CreateTagResponseModel
+	Body models.TagModel
 }, error) {
 	resp, err := tr.ts.Create(ctx, input.Body)
 	if err != nil {
@@ -119,17 +119,17 @@ func (tr TagResource) Create(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		Body models.CreateTagResponseModel
+		Body models.TagModel
 	}{
 		Body: resp,
 	}, nil
 }
 
 func (tr TagResource) Update(ctx context.Context, input *struct {
-	ID   int64                        `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
-	Body models.UpdateTagRequestModel `json:""`
+	ID   int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
+	Body models.UpdateTagModel
 }) (*struct {
-	Body models.UpdateTagResponseModel
+	Body models.TagModel
 }, error) {
 	resp, err := tr.ts.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -137,7 +137,7 @@ func (tr TagResource) Update(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		Body models.UpdateTagResponseModel
+		Body models.TagModel
 	}{
 		Body: resp,
 	}, nil
@@ -151,5 +151,5 @@ func (tr TagResource) Delete(ctx context.Context, input *struct {
 		return nil, err
 	}
 
-	return &struct{}{}, nil
+	return nil, nil
 }
