@@ -18,16 +18,7 @@ func NewBudgetRepository(pgx *pgxpool.Pool) BudgetRepository {
 	return BudgetRepository{pgx}
 }
 
-// List retrieves paginated budgets with filters and calculated actual amounts
-func (br BudgetRepository) List(ctx context.Context, p models.ListBudgetsRequestModel) (models.ListBudgetsResponseModel, error) {
-	// Enforce page size limits
-	if p.PageSize <= 0 || p.PageSize > 100 {
-		p.PageSize = 10
-	}
-	if p.PageNumber <= 0 {
-		p.PageNumber = 1
-	}
-
+func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSearchModel) (models.BudgetsPagedModel, error) {
 	sortByMap := map[string]string{
 		"id":          "id",
 		"templateId":  "template_id",
@@ -44,63 +35,86 @@ func (br BudgetRepository) List(ctx context.Context, p models.ListBudgetsRequest
 		"desc": "DESC",
 	}
 
-	sortColumn, ok := sortByMap[p.SortBy]
-	if !ok {
-		sortColumn = "created_at"
-	}
-	sortOrder, ok := sortOrderMap[p.SortOrder]
-	if !ok {
-		sortOrder = "DESC"
-	}
+	sortColumn := sortByMap[query.SortBy]
+	sortOrder := sortOrderMap[query.SortOrder]
+	offset := (query.PageNumber - 1) * query.PageSize
 
-	offset := (p.PageNumber - 1) * p.PageSize
-
-	// Count total matching budgets
-	countSQL := `SELECT COUNT(*) FROM budgets WHERE deleted_at IS NULL`
-	var totalCount int
-	if err := br.pgx.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
-		return models.ListBudgetsResponseModel{}, huma.Error400BadRequest("Unable to count budgets", err)
-	}
-
-	// Fetch paginated budgets with calculated actual_amount
 	sql := `
-		SELECT b.id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end,
-		       b.amount_limit,
-		       COALESCE((
-		           SELECT SUM(t.amount)
-		           FROM transactions t
-		           WHERE t.deleted_at IS NULL
-		             AND t.date >= b.period_start
-		             AND t.date <= b.period_end
-		             AND (b.account_id IS NULL OR t.account_id = b.account_id)
-		             AND (b.category_id IS NULL OR t.category_id = b.category_id)
-		       ), 0) as actual_amount,
-		       b.note, b.created_at, b.updated_at, b.deleted_at
-		FROM budgets b
-		WHERE b.deleted_at IS NULL
-		ORDER BY ` + sortColumn + ` ` + sortOrder + `
-		LIMIT $1 OFFSET $2`
+		WITH filtered AS (
+			b.id,
+			b.template_id,
+			b.account_id,
+			b.category_id,
+			b.period_start,
+			b.period_end,
+		    b.amount_limit,
+		    COALESCE((
+		        SELECT SUM(t.amount)
+		        FROM transactions t
+		        WHERE t.deleted_at IS NULL
+		            AND t.date >= b.period_start
+		            AND t.date <= b.period_end
+		            AND (b.account_id IS NULL OR t.account_id = b.account_id)
+		            AND (b.category_id IS NULL OR t.category_id = b.category_id)
+		    ), 0) as actual_amount,
+		    b.note,
+			b.created_at,
+			b.updated_at
+		),
+		counted AS (
+			SELECT COUNT(*) as total FROM filtered
+		)
+		SELECT
+			f.id,
+			f.template_id,
+			f.account_id,
+			f.category_id,
+			f.period_start,
+			f.period_end,
+			f.amount_limit,
+			f.actual_amount,
+			f.note,
+			f.created_at,
+			f.updated_at,
+			c.total
+		FROM filtered f
+		CROSS JOIN counted c
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $1 OFFSET $2
+	`
 
-	rows, err := br.pgx.Query(ctx, sql, p.PageSize, offset)
+	rows, err := br.pgx.Query(ctx, sql, query.PageSize, offset)
 	if err != nil {
-		return models.ListBudgetsResponseModel{}, huma.Error400BadRequest("Unable to query budgets", err)
+		return models.BudgetsPagedModel{}, huma.Error400BadRequest("Unable to query budgets", err)
 	}
 	defer rows.Close()
 
 	var items []models.BudgetModel
+	var totalCount int
+
 	for rows.Next() {
 		var item models.BudgetModel
-		if err := rows.Scan(
-			&item.ID, &item.TemplateID, &item.AccountID, &item.CategoryID, &item.PeriodStart, &item.PeriodEnd,
-			&item.AmountLimit, &item.ActualAmount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
-		); err != nil {
-			return models.ListBudgetsResponseModel{}, huma.Error400BadRequest("Unable to scan budget data", err)
+		err := rows.Scan(
+			&item.ID,
+			&item.TemplateID,
+			&item.AccountID,
+			&item.CategoryID,
+			&item.PeriodStart,
+			&item.PeriodEnd,
+			&item.AmountLimit,
+			&item.ActualAmount,
+			&item.Note,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+			&totalCount)
+		if err != nil {
+			return models.BudgetsPagedModel{}, huma.Error400BadRequest("Unable to scan budget data", err)
 		}
 		items = append(items, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.ListBudgetsResponseModel{}, huma.Error400BadRequest("Error reading budget rows", err)
+		return models.BudgetsPagedModel{}, huma.Error400BadRequest("Error reading budget rows", err)
 	}
 
 	if items == nil {
@@ -109,40 +123,49 @@ func (br BudgetRepository) List(ctx context.Context, p models.ListBudgetsRequest
 
 	totalPages := 0
 	if totalCount > 0 {
-		totalPages = (totalCount + p.PageSize - 1) / p.PageSize
+		totalPages = (totalCount + query.PageSize - 1) / query.PageSize
 	}
 
-	return models.ListBudgetsResponseModel{
-		Data:       items,
-		PageNumber: p.PageNumber,
-		PageSize:   p.PageSize,
-		TotalCount: totalCount,
+	return models.BudgetsPagedModel{
+		Items:      items,
+		PageNumber: query.PageNumber,
+		PageSize:   query.PageSize,
 		TotalPages: totalPages,
+		TotalCount: totalCount,
 	}, nil
 }
 
-// Get retrieves a single budget by ID with calculated actual_amount
-func (br BudgetRepository) Get(ctx context.Context, id int64) (models.BudgetModel, error) {
-	query := `
-		SELECT b.id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end,
-		       b.amount_limit,
-		       COALESCE((
-		           SELECT SUM(t.amount)
-		           FROM transactions t
-		           WHERE t.deleted_at IS NULL
-		             AND t.date >= b.period_start
-		             AND t.date <= b.period_end
-		             AND (b.account_id IS NULL OR t.account_id = b.account_id)
-		             AND (b.category_id IS NULL OR t.category_id = b.category_id)
-		       ), 0) as actual_amount,
-		       b.note, b.created_at, b.updated_at, b.deleted_at
-		FROM budgets b
-		WHERE b.id = $1 AND b.deleted_at IS NULL`
+func (br BudgetRepository) GetDetail(ctx context.Context, id int64) (models.BudgetModel, error) {
+	var data models.BudgetModel
 
-	var item models.BudgetModel
+	query := `
+		SELECT
+			b.id,
+			b.template_id,
+			b.account_id,
+			b.category_id,
+			b.period_start,
+			b.period_end,
+		    b.amount_limit,
+		    COALESCE((
+		        SELECT SUM(t.amount)
+		        FROM transactions t
+		        WHERE t.deleted_at IS NULL
+		            AND t.date >= b.period_start
+		            AND t.date <= b.period_end
+		            AND (b.account_id IS NULL OR t.account_id = b.account_id)
+		            AND (b.category_id IS NULL OR t.category_id = b.category_id)
+		    ), 0) as actual_amount,
+		    b.note,
+			b.created_at,
+			b.updated_at
+		FROM budgets b
+		WHERE b.id = $1
+			AND b.deleted_at IS NULL`
+
 	err := br.pgx.QueryRow(ctx, query, id).Scan(
-		&item.ID, &item.TemplateID, &item.AccountID, &item.CategoryID, &item.PeriodStart, &item.PeriodEnd,
-		&item.AmountLimit, &item.ActualAmount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+		&data.ID, &data.TemplateID, &data.AccountID, &data.CategoryID, &data.PeriodStart, &data.PeriodEnd,
+		&data.AmountLimit, &data.ActualAmount, &data.Note, &data.CreatedAt, &data.UpdatedAt,
 	)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -152,18 +175,23 @@ func (br BudgetRepository) Get(ctx context.Context, id int64) (models.BudgetMode
 		return models.BudgetModel{}, huma.Error400BadRequest("Unable to query budget", err)
 	}
 
-	return item, nil
+	return data, nil
 }
 
-// Create creates a new budget
-func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetRequestModel) (models.CreateBudgetResponseModel, error) {
+func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetModel) (models.BudgetModel, error) {
 	query := `
-		INSERT INTO budgets (template_id, account_id, category_id, period_start, period_end, amount_limit, note)
+		INSERT INTO budgets (
+			template_id,
+			account_id,
+			category_id,
+			period_start,
+			period_end,
+			amount_limit,
+			note)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, template_id, account_id, category_id, period_start, period_end,
-		          amount_limit, note, created_at, updated_at, deleted_at`
+		RETURNING id`
 
-	var item models.BudgetModel
+	var ID int64
 	err := br.pgx.QueryRow(
 		ctx,
 		query,
@@ -174,20 +202,16 @@ func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetRequ
 		p.PeriodEnd,
 		p.AmountLimit,
 		p.Note,
-	).Scan(
-		&item.ID, &item.TemplateID, &item.AccountID, &item.CategoryID, &item.PeriodStart, &item.PeriodEnd,
-		&item.AmountLimit, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
-	)
+	).Scan(&ID)
 
 	if err != nil {
-		return models.CreateBudgetResponseModel{}, huma.Error400BadRequest("Unable to create budget", err)
+		return models.BudgetModel{}, huma.Error400BadRequest("Unable to create budget", err)
 	}
 
-	return models.CreateBudgetResponseModel{BudgetModel: item}, nil
+	return br.GetDetail(ctx, ID)
 }
 
-// Update updates an existing budget
-func (br BudgetRepository) Update(ctx context.Context, id int64, p models.UpdateBudgetRequestModel) (models.UpdateBudgetResponseModel, error) {
+func (br BudgetRepository) Update(ctx context.Context, id int64, p models.UpdateBudgetModel) (models.BudgetModel, error) {
 	query := `
 		UPDATE budgets
 		SET account_id = COALESCE($1, account_id),
@@ -198,10 +222,9 @@ func (br BudgetRepository) Update(ctx context.Context, id int64, p models.Update
 		    note = COALESCE($6, note),
 		    updated_at = CURRENT_TIMESTAMP
 		WHERE id = $7 AND deleted_at IS NULL
-		RETURNING id, template_id, account_id, category_id, period_start, period_end,
-		          amount_limit, note, created_at, updated_at, deleted_at`
+		RETURNING id`
 
-	var item models.BudgetModel
+	var ID int64
 	err := br.pgx.QueryRow(
 		ctx,
 		query,
@@ -212,26 +235,23 @@ func (br BudgetRepository) Update(ctx context.Context, id int64, p models.Update
 		p.AmountLimit,
 		p.Note,
 		id,
-	).Scan(
-		&item.ID, &item.TemplateID, &item.AccountID, &item.CategoryID, &item.PeriodStart, &item.PeriodEnd,
-		&item.AmountLimit, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
-	)
+	).Scan(&ID)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.UpdateBudgetResponseModel{}, huma.Error404NotFound("Budget not found")
+			return models.BudgetModel{}, huma.Error404NotFound("Budget not found")
 		}
-		return models.UpdateBudgetResponseModel{}, huma.Error400BadRequest("Unable to update budget", err)
+		return models.BudgetModel{}, huma.Error400BadRequest("Unable to update budget", err)
 	}
 
-	return models.UpdateBudgetResponseModel{BudgetModel: item}, nil
+	return br.GetDetail(ctx, ID)
 }
 
-// Delete soft-deletes a budget
 func (br BudgetRepository) Delete(ctx context.Context, id int64) error {
-	sql := `UPDATE budgets
-			SET deleted_at = CURRENT_TIMESTAMP
-			WHERE id = $1 AND deleted_at IS NULL`
+	sql := `
+		UPDATE budgets
+		SET deleted_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND deleted_at IS NULL`
 
 	cmdTag, err := br.pgx.Exec(ctx, sql, id)
 	if err != nil {

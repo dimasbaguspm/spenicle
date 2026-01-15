@@ -80,16 +80,16 @@ func (br BudgetResource) Routes(api huma.API) {
 }
 
 func (br BudgetResource) List(ctx context.Context, input *struct {
-	models.ListBudgetsRequestModel
+	models.BudgetsSearchModel
 }) (*struct {
-	Body models.ListBudgetsResponseModel
+	Body models.BudgetsPagedModel
 }, error) {
-	resp, err := br.bs.List(ctx, input.ListBudgetsRequestModel)
+	resp, err := br.bs.GetPaged(ctx, input.BudgetsSearchModel)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		Body models.ListBudgetsResponseModel
+		Body models.BudgetsPagedModel
 	}{Body: resp}, nil
 }
 
@@ -98,7 +98,7 @@ func (br BudgetResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetModel
 }, error) {
-	item, err := br.bs.Get(ctx, input.ID)
+	item, err := br.bs.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Budget not found")
 	}
@@ -108,31 +108,31 @@ func (br BudgetResource) Get(ctx context.Context, input *struct {
 }
 
 func (br BudgetResource) Create(ctx context.Context, input *struct {
-	Body models.CreateBudgetRequestModel
+	Body models.CreateBudgetModel
 }) (*struct {
-	Body models.CreateBudgetResponseModel
+	Body models.BudgetModel
 }, error) {
 	resp, err := br.bs.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		Body models.CreateBudgetResponseModel
+		Body models.BudgetModel
 	}{Body: resp}, nil
 }
 
 func (br BudgetResource) Update(ctx context.Context, input *struct {
 	ID   int64 `path:"id" minimum:"1" doc:"Budget ID"`
-	Body models.UpdateBudgetRequestModel
+	Body models.UpdateBudgetModel
 }) (*struct {
-	Body models.UpdateBudgetResponseModel
+	Body models.BudgetModel
 }, error) {
 	resp, err := br.bs.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
 	return &struct {
-		Body models.UpdateBudgetResponseModel
+		Body models.BudgetModel
 	}{Body: resp}, nil
 }
 
@@ -142,5 +142,5 @@ func (br BudgetResource) Delete(ctx context.Context, input *struct {
 	if err := br.bs.Delete(ctx, input.ID); err != nil {
 		return nil, err
 	}
-	return &struct{}{}, nil
+	return nil, nil
 }

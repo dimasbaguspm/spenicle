@@ -15,19 +15,21 @@ func NewBudgetService(br repositories.BudgetRepository) BudgetService {
 	return BudgetService{br}
 }
 
-func (bs BudgetService) List(ctx context.Context, p models.ListBudgetsRequestModel) (models.ListBudgetsResponseModel, error) {
-	return bs.br.List(ctx, p)
+func (bs BudgetService) GetPaged(ctx context.Context, p models.BudgetsSearchModel) (models.BudgetsPagedModel, error) {
+	return bs.br.GetPaged(ctx, p)
 }
 
-func (bs BudgetService) Get(ctx context.Context, id int64) (models.BudgetModel, error) {
-	return bs.br.Get(ctx, id)
+func (bs BudgetService) GetDetail(ctx context.Context, id int64) (models.BudgetModel, error) {
+	return bs.br.GetDetail(ctx, id)
 }
 
-func (bs BudgetService) Create(ctx context.Context, p models.CreateBudgetRequestModel) (models.CreateBudgetResponseModel, error) {
+func (bs BudgetService) Create(ctx context.Context, p models.CreateBudgetModel) (models.BudgetModel, error) {
+	// ensure that budgets created via service do not have template ID set
+	p.TemplateID = nil
 	return bs.br.Create(ctx, p)
 }
 
-func (bs BudgetService) Update(ctx context.Context, id int64, p models.UpdateBudgetRequestModel) (models.UpdateBudgetResponseModel, error) {
+func (bs BudgetService) Update(ctx context.Context, id int64, p models.UpdateBudgetModel) (models.BudgetModel, error) {
 	return bs.br.Update(ctx, id, p)
 }
 

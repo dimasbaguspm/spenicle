@@ -91,7 +91,6 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 	return nil
 }
 
-// processTemplate creates a budget from a template
 func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template models.BudgetTemplateModel) error {
 	slog.Debug(
 		"Processing individual budget template",
@@ -100,11 +99,9 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 		"recurrence", template.Recurrence,
 	)
 
-	// Calculate period start and end dates based on recurrence
 	periodStart, periodEnd := calculateBudgetPeriod(template.Recurrence)
 
-	// Create a budget from the template
-	budgetRequest := models.CreateBudgetRequestModel{
+	budgetRequest := models.CreateBudgetModel{
 		TemplateID:  &template.ID,
 		AccountID:   template.AccountID,
 		CategoryID:  template.CategoryID,
