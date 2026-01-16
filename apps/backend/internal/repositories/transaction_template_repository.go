@@ -79,11 +79,11 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 				AND a.deleted_at IS NULL
 				AND c.deleted_at IS NULL
 				AND (da.deleted_at IS NULL OR da.id IS NULL)
-				AND ($3::text IS NULL OR $3::text = '' OR tt.name ILIKE '%' || $3::text || '%')
-				AND ($4::text IS NULL OR tt.type = $4::text)
-				AND ($5::int8 IS NULL OR tt.account_id = $5::int8)
-				AND ($6::int8 IS NULL OR tt.category_id = $6::int8)
-				AND ($7::int8 IS NULL OR tt.destination_account_id = $7::int8)
+				AND ($3::text = '' OR tt.name ILIKE '%' || $3::text || '%')
+				AND ($4::text = '' OR tt.type = $4::text)
+				AND ($5::int8 = 0 OR tt.account_id = $5::int8)
+				AND ($6::int8 = 0 OR tt.category_id = $6::int8)
+				AND ($7::int8 = 0 OR tt.destination_account_id = $7::int8)
 			ORDER BY ` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		)

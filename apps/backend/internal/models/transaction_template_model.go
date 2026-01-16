@@ -13,7 +13,7 @@ type TransactionTemplateModel struct {
 	Note               *string                     `json:"note,omitempty" doc:"Template notes"`
 	Recurrence         string                      `json:"recurrence" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
 	StartDate          time.Time                   `json:"startDate" doc:"Template start date" format:"date-time"`
-	EndDate            *time.Time                  `json:"endDate,omitempty" doc:"Template end date" format:"date-time"`
+	EndDate            *time.Time                  `json:"endDate" doc:"Template end date" format:"date-time"`
 	LastExecutedAt     *time.Time                  `json:"lastExecutedAt,omitempty" doc:"Last execution timestamp" format:"date-time"`
 	CreatedAt          time.Time                   `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
 	UpdatedAt          time.Time                   `json:"updatedAt" doc:"Last update timestamp" format:"date-time"`

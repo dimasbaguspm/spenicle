@@ -13,8 +13,8 @@ CREATE TABLE
         recurrence VARCHAR(20) NOT NULL CHECK (
             recurrence IN ('none', 'weekly', 'monthly', 'yearly')
         ),
-        start_date DATE NOT NULL,
-        end_date DATE,
+        start_date TIMESTAMP NOT NULL,
+        end_date TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT NOW (),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW (),
         deleted_at TIMESTAMP
