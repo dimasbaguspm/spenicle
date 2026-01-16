@@ -7,7 +7,7 @@ type TransactionTagModel struct {
 	TransactionID int64     `json:"transactionId" doc:"ID of the transaction"`
 	TagID         int64     `json:"tagId" doc:"ID of the tag"`
 	TagName       string    `json:"tagName" doc:"Name of the tag"`
-	CreatedAt     time.Time `json:"createdAt" doc:"Creation timestamp"`
+	CreatedAt     time.Time `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
 }
 
 type TransactionTagsSearchModel struct {
