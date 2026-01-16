@@ -508,7 +508,7 @@ export interface paths {
         patch: operations["update-transaction"];
         trace?: never;
     };
-    "/transactions/{transactionId}/relations": {
+    "/transactions/{sourceTransactionId}/relations": {
         parameters: {
             query?: never;
             header?: never;
@@ -532,7 +532,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/transactions/{transactionId}/relations/{relationId}": {
+    "/transactions/{sourceTransactionId}/relations/{relationId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -658,6 +658,30 @@ export interface components {
              */
             updatedAt?: string;
         };
+        AccountsPagedModel: {
+            /** @description List of accounts */
+            items: components["schemas"]["AccountModel"][] | null;
+            /**
+             * Format: int64
+             * @description Current page number
+             */
+            pageNumber: number;
+            /**
+             * Format: int64
+             * @description Items per page
+             */
+            pageSize: number;
+            /**
+             * Format: int64
+             * @description Total number of matching items
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total number of pages
+             */
+            totalPages: number;
+        };
         BudgetModel: {
             /**
              * Format: int64
@@ -753,6 +777,11 @@ export interface components {
              * @description Unique identifier
              */
             id: number;
+            /**
+             * Format: date-time
+             * @description Timestamp of the last execution of this template
+             */
+            lastExecutedAt?: string;
             /** @description Optional note for the template */
             note?: string;
             /**
@@ -770,6 +799,78 @@ export interface components {
              * @description Last update timestamp
              */
             updatedAt?: string;
+        };
+        BudgetTemplatesPagedModel: {
+            /** @description List of budget templates */
+            items: components["schemas"]["BudgetTemplateModel"][] | null;
+            /**
+             * Format: int64
+             * @description Current page number
+             */
+            pageNumber: number;
+            /**
+             * Format: int64
+             * @description Items per page
+             */
+            pageSize: number;
+            /**
+             * Format: int64
+             * @description Total number of matching items
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total number of pages
+             */
+            totalPages: number;
+        };
+        BudgetsPagedModel: {
+            /** @description List of budgets */
+            items: components["schemas"]["BudgetModel"][] | null;
+            /**
+             * Format: int64
+             * @description Current page number
+             */
+            pageNumber: number;
+            /**
+             * Format: int64
+             * @description Items per page
+             */
+            pageSize: number;
+            /**
+             * Format: int64
+             * @description Total number of matching items
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total number of pages
+             */
+            totalPages: number;
+        };
+        CategoriesPagedModel: {
+            /** @description List of categories */
+            items: components["schemas"]["CategoryModel"][] | null;
+            /**
+             * Format: int64
+             * @description Current page number
+             */
+            pageNumber: number;
+            /**
+             * Format: int64
+             * @description Items per page
+             */
+            pageSize: number;
+            /**
+             * Format: int64
+             * @description Total number of matching items
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total number of pages
+             */
+            totalPages: number;
         };
         CategoryModel: {
             /**
@@ -816,12 +917,7 @@ export interface components {
              */
             updatedAt?: string;
         };
-        CreateAccountRequestModel: {
-            /**
-             * Format: int64
-             * @description Initial balance
-             */
-            amount: number;
+        CreateAccountModel: {
             /** @description Icon identifier */
             icon?: string;
             /** @description Icon color code */
@@ -836,57 +932,7 @@ export interface components {
              */
             type: "expense" | "income";
         };
-        CreateAccountResponseModel: {
-            /**
-             * Format: int64
-             * @description Current balance
-             */
-            amount: number;
-            /**
-             * Format: date-time
-             * @description Timestamp when archived (null if active)
-             */
-            archivedAt?: string;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Display order sequence
-             */
-            displayOrder: number;
-            /** @description Icon identifier */
-            icon?: string;
-            /** @description Icon color code */
-            iconColor?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Account name */
-            name: string;
-            /** @description Account notes */
-            note: string;
-            /**
-             * @description Account type (expense or income)
-             * @enum {string}
-             */
-            type: "expense" | "income";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        CreateBudgetRequestModel: {
+        CreateBudgetModel: {
             /**
              * Format: int64
              * @description Account ID to filter transactions
@@ -920,66 +966,7 @@ export interface components {
              */
             templateId?: number;
         };
-        CreateBudgetResponseModel: {
-            /**
-             * Format: int64
-             * @description Account ID to filter transactions
-             */
-            accountId?: number;
-            /**
-             * Format: int64
-             * @description Actual spent amount in cents (computed from transactions)
-             */
-            actualAmount: number;
-            /**
-             * Format: int64
-             * @description Budget limit amount in cents
-             */
-            amountLimit: number;
-            /**
-             * Format: int64
-             * @description Category ID to filter transactions
-             */
-            categoryId?: number;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Optional note for the budget */
-            note?: string;
-            /**
-             * Format: date-time
-             * @description Budget period end date
-             */
-            periodEnd: string;
-            /**
-             * Format: date-time
-             * @description Budget period start date
-             */
-            periodStart: string;
-            /**
-             * Format: int64
-             * @description Budget template ID if generated from template
-             */
-            templateId?: number;
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        CreateBudgetTemplateRequestModel: {
+        CreateBudgetTemplateModel: {
             /**
              * Format: int64
              * @description Account ID to filter transactions
@@ -1013,61 +1000,7 @@ export interface components {
              */
             startDate: string;
         };
-        CreateBudgetTemplateResponseModel: {
-            /**
-             * Format: int64
-             * @description Account ID to filter transactions
-             */
-            accountId?: number;
-            /**
-             * Format: int64
-             * @description Budget limit amount in cents
-             */
-            amountLimit: number;
-            /**
-             * Format: int64
-             * @description Category ID to filter transactions
-             */
-            categoryId?: number;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: date-time
-             * @description Optional end date for recurrence
-             */
-            endDate?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Optional note for the template */
-            note?: string;
-            /**
-             * @description Recurrence pattern
-             * @enum {string}
-             */
-            recurrence: "none" | "weekly" | "monthly" | "yearly";
-            /**
-             * Format: date-time
-             * @description Start date for recurrence
-             */
-            startDate: string;
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        CreateCategoryRequestModel: {
+        CreateCategoryModel: {
             /** @description Icon identifier */
             icon?: string;
             /** @description Icon color code */
@@ -1082,114 +1015,13 @@ export interface components {
              */
             type: "expense" | "income" | "transfer";
         };
-        CreateCategoryResponseModel: {
-            /**
-             * Format: date-time
-             * @description Timestamp when archived (null if active)
-             */
-            archivedAt?: string;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Display order sequence
-             */
-            displayOrder: number;
-            /** @description Icon identifier */
-            icon?: string;
-            /** @description Icon color code */
-            iconColor?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Category name */
-            name: string;
-            /** @description Category notes */
-            note: string;
-            /**
-             * @description Category type
-             * @enum {string}
-             */
-            type: "expense" | "income" | "transfer";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        CreateTagRequestModel: {
+        CreateTagModel: {
+            /** @description Tag color code */
+            color?: string;
             /** @description Tag name */
             name: string;
         };
-        CreateTagResponseModel: {
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Tag name */
-            name: string;
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        CreateTransactionRelationRequestModel: {
-            /**
-             * Format: int64
-             * @description ID of the related transaction
-             */
-            relatedTransactionId: number;
-            /**
-             * Format: int64
-             * @description ID of the primary transaction
-             */
-            transactionId: number;
-        };
-        CreateTransactionRelationResponseModel: {
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /**
-             * Format: int64
-             * @description ID of the related transaction
-             */
-            relatedTransactionId: number;
-            /**
-             * Format: int64
-             * @description ID of the primary transaction
-             */
-            transactionId: number;
-        };
-        CreateTransactionRequestModel: {
+        CreateTransactionModel: {
             /**
              * Format: int64
              * @description Source account ID
@@ -1223,54 +1055,21 @@ export interface components {
              */
             type: "expense" | "income" | "transfer";
         };
-        CreateTransactionResponseModel: {
-            /** @description Source account details */
-            account: components["schemas"]["TransactionAccountEmbedded"];
+        CreateTransactionRelationModel: {
             /**
              * Format: int64
-             * @description Transaction amount
+             * @description ID of the source transaction
              */
-            amount: number;
-            /** @description Category details */
-            category: components["schemas"]["TransactionCategoryEmbedded"];
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Transaction date
-             */
-            date: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /** @description Destination account (transfers only) */
-            destinationAccount?: components["schemas"]["TransactionAccountEmbedded"];
+            SourceTransactionID: number;
             /**
              * Format: int64
-             * @description Unique identifier
+             * @description ID of the related transaction
              */
-            id: number;
-            /** @description Transaction notes */
-            note?: string;
-            /** @description Transaction tags */
-            tags: components["schemas"]["TransactionTagEmbedded"][] | null;
-            /**
-             * @description Transaction type
-             * @enum {string}
-             */
-            type: "expense" | "income" | "transfer";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
+            relatedTransactionId: number;
+            /** @description Type of relation */
+            relationType: string;
         };
-        CreateTransactionTagRequestModel: {
+        CreateTransactionTagModel: {
             /**
              * Format: int64
              * @description ID of the tag
@@ -1282,31 +1081,7 @@ export interface components {
              */
             transactionId: number;
         };
-        CreateTransactionTagResponseModel: {
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /**
-             * Format: int64
-             * @description ID of the tag
-             */
-            tagId: number;
-            /** @description Name of the tag */
-            tagName: string;
-            /**
-             * Format: int64
-             * @description ID of the transaction
-             */
-            transactionId: number;
-        };
-        CreateTransactionTemplateRequestModel: {
+        CreateTransactionTemplateModel: {
             /**
              * Format: int64
              * @description Source account ID
@@ -1327,72 +1102,30 @@ export interface components {
              * @description Destination account ID (transfers only)
              */
             destinationAccountId?: number;
+            /**
+             * Format: date-time
+             * @description Template end date
+             */
+            endDate?: string;
             /** @description Template name */
             name: string;
             /** @description Template notes */
             note?: string;
             /**
-             * @description Transaction type
+             * @description Recurrence pattern
              * @enum {string}
              */
-            type: "expense" | "income" | "transfer";
-        };
-        CreateTransactionTemplateResponseModel: {
-            /** @description Source account details */
-            account?: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Source account ID
-             */
-            accountId: number;
-            /**
-             * Format: int64
-             * @description Template amount
-             */
-            amount: number;
-            /** @description Category details */
-            category?: components["schemas"]["TransactionCategoryEmbedded"];
-            /**
-             * Format: int64
-             * @description Category ID
-             */
-            categoryId: number;
+            recurrence: "none" | "weekly" | "monthly" | "yearly";
             /**
              * Format: date-time
-             * @description Creation timestamp
+             * @description Template start date
              */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /** @description Destination account details (transfers only) */
-            destinationAccount?: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Destination account ID (transfers only)
-             */
-            destinationAccountId?: number;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Template name */
-            name: string;
-            /** @description Template notes */
-            note?: string;
+            startDate: string;
             /**
              * @description Transaction type
              * @enum {string}
              */
             type: "expense" | "income" | "transfer";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
         };
         ErrorDetail: {
             /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -1435,491 +1168,6 @@ export interface components {
              */
             type: string;
         };
-        GetAccountResponseModel: {
-            /**
-             * Format: int64
-             * @description Current balance
-             */
-            amount: number;
-            /**
-             * Format: date-time
-             * @description Timestamp when archived (null if active)
-             */
-            archivedAt?: string;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Display order sequence
-             */
-            displayOrder: number;
-            /** @description Icon identifier */
-            icon?: string;
-            /** @description Icon color code */
-            iconColor?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Account name */
-            name: string;
-            /** @description Account notes */
-            note: string;
-            /**
-             * @description Account type (expense or income)
-             * @enum {string}
-             */
-            type: "expense" | "income";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        GetCategoryResponseModel: {
-            /**
-             * Format: date-time
-             * @description Timestamp when archived (null if active)
-             */
-            archivedAt?: string;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Display order sequence
-             */
-            displayOrder: number;
-            /** @description Icon identifier */
-            icon?: string;
-            /** @description Icon color code */
-            iconColor?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Category name */
-            name: string;
-            /** @description Category notes */
-            note: string;
-            /**
-             * @description Category type
-             * @enum {string}
-             */
-            type: "expense" | "income" | "transfer";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        GetTagResponseModel: {
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Tag name */
-            name: string;
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        GetTransactionRelationResponseModel: {
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /**
-             * Format: int64
-             * @description ID of the related transaction
-             */
-            relatedTransactionId: number;
-            /**
-             * Format: int64
-             * @description ID of the primary transaction
-             */
-            transactionId: number;
-        };
-        GetTransactionResponseModel: {
-            /** @description Source account details */
-            account: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Transaction amount
-             */
-            amount: number;
-            /** @description Category details */
-            category: components["schemas"]["TransactionCategoryEmbedded"];
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Transaction date
-             */
-            date: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /** @description Destination account (transfers only) */
-            destinationAccount?: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Transaction notes */
-            note?: string;
-            /** @description Transaction tags */
-            tags: components["schemas"]["TransactionTagEmbedded"][] | null;
-            /**
-             * @description Transaction type
-             * @enum {string}
-             */
-            type: "expense" | "income" | "transfer";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        GetTransactionTagResponseModel: {
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /**
-             * Format: int64
-             * @description ID of the tag
-             */
-            tagId: number;
-            /** @description Name of the tag */
-            tagName: string;
-            /**
-             * Format: int64
-             * @description ID of the transaction
-             */
-            transactionId: number;
-        };
-        GetTransactionTemplateResponseModel: {
-            /** @description Source account details */
-            account?: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Source account ID
-             */
-            accountId: number;
-            /**
-             * Format: int64
-             * @description Template amount
-             */
-            amount: number;
-            /** @description Category details */
-            category?: components["schemas"]["TransactionCategoryEmbedded"];
-            /**
-             * Format: int64
-             * @description Category ID
-             */
-            categoryId: number;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /** @description Destination account details (transfers only) */
-            destinationAccount?: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Destination account ID (transfers only)
-             */
-            destinationAccountId?: number;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Template name */
-            name: string;
-            /** @description Template notes */
-            note?: string;
-            /**
-             * @description Transaction type
-             * @enum {string}
-             */
-            type: "expense" | "income" | "transfer";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        ListAccountsResponseModel: {
-            /** @description List of accounts */
-            data: components["schemas"]["AccountModel"][] | null;
-            /**
-             * Format: int64
-             * @description Current page number
-             */
-            pageNumber: number;
-            /**
-             * Format: int64
-             * @description Items per page
-             */
-            pageSize: number;
-            /**
-             * Format: int64
-             * @description Total number of matching items
-             */
-            totalCount: number;
-            /**
-             * Format: int64
-             * @description Total number of pages
-             */
-            totalPages: number;
-        };
-        ListBudgetTemplatesResponseModel: {
-            /** @description List of budget templates */
-            data: components["schemas"]["BudgetTemplateModel"][] | null;
-            /**
-             * Format: int64
-             * @description Current page number
-             */
-            pageNumber: number;
-            /**
-             * Format: int64
-             * @description Items per page
-             */
-            pageSize: number;
-            /**
-             * Format: int64
-             * @description Total number of matching items
-             */
-            totalCount: number;
-            /**
-             * Format: int64
-             * @description Total number of pages
-             */
-            totalPages: number;
-        };
-        ListBudgetsResponseModel: {
-            /** @description List of budgets */
-            data: components["schemas"]["BudgetModel"][] | null;
-            /**
-             * Format: int64
-             * @description Current page number
-             */
-            pageNumber: number;
-            /**
-             * Format: int64
-             * @description Items per page
-             */
-            pageSize: number;
-            /**
-             * Format: int64
-             * @description Total number of matching items
-             */
-            totalCount: number;
-            /**
-             * Format: int64
-             * @description Total number of pages
-             */
-            totalPages: number;
-        };
-        ListCategoriesResponseModel: {
-            /** @description List of categories */
-            data: components["schemas"]["CategoryModel"][] | null;
-            /**
-             * Format: int64
-             * @description Current page number
-             */
-            pageNumber: number;
-            /**
-             * Format: int64
-             * @description Items per page
-             */
-            pageSize: number;
-            /**
-             * Format: int64
-             * @description Total number of matching items
-             */
-            totalCount: number;
-            /**
-             * Format: int64
-             * @description Total number of pages
-             */
-            totalPages: number;
-        };
-        ListTagsResponseModel: {
-            /** @description List of tags */
-            data: components["schemas"]["TagModel"][] | null;
-            /**
-             * Format: int64
-             * @description Current page number
-             */
-            pageNumber: number;
-            /**
-             * Format: int64
-             * @description Items per page
-             */
-            pageSize: number;
-            /**
-             * Format: int64
-             * @description Total number of matching items
-             */
-            totalCount: number;
-            /**
-             * Format: int64
-             * @description Total number of pages
-             */
-            totalPages: number;
-        };
-        ListTransactionRelationsResponseModel: {
-            /** @description List of transaction relations */
-            data: components["schemas"]["TransactionRelationModel"][] | null;
-            /**
-             * Format: int64
-             * @description Current page number
-             */
-            pageNumber: number;
-            /**
-             * Format: int64
-             * @description Items per page
-             */
-            pageSize: number;
-            /**
-             * Format: int64
-             * @description Total number of matching items
-             */
-            totalCount: number;
-            /**
-             * Format: int64
-             * @description Total number of pages
-             */
-            totalPages: number;
-        };
-        ListTransactionTagsResponseModel: {
-            /** @description List of transaction tags */
-            data: components["schemas"]["TransactionTagModel"][] | null;
-            /**
-             * Format: int64
-             * @description Current page number
-             */
-            pageNumber: number;
-            /**
-             * Format: int64
-             * @description Items per page
-             */
-            pageSize: number;
-            /**
-             * Format: int64
-             * @description Total number of matching items
-             */
-            totalCount: number;
-            /**
-             * Format: int64
-             * @description Total number of pages
-             */
-            totalPages: number;
-        };
-        ListTransactionTemplatesResponseModel: {
-            /** @description List of transaction templates */
-            data: components["schemas"]["TransactionTemplateModel"][] | null;
-            /**
-             * Format: int64
-             * @description Current page number
-             */
-            pageNumber: number;
-            /**
-             * Format: int64
-             * @description Items per page
-             */
-            pageSize: number;
-            /**
-             * Format: int64
-             * @description Total number of matching items
-             */
-            totalCount: number;
-            /**
-             * Format: int64
-             * @description Total number of pages
-             */
-            totalPages: number;
-        };
-        ListTransactionsResponseModel: {
-            /** @description List of transactions */
-            data: components["schemas"]["TransactionModel"][] | null;
-            /**
-             * Format: int64
-             * @description Current page number
-             */
-            pageNumber: number;
-            /**
-             * Format: int64
-             * @description Items per page
-             */
-            pageSize: number;
-            /**
-             * Format: int64
-             * @description Total number of matching items
-             */
-            totalCount: number;
-            /**
-             * Format: int64
-             * @description Total number of pages
-             */
-            totalPages: number;
-        };
         LoginRequestModel: {
             /** @description Admin password */
             password: string;
@@ -1940,25 +1188,13 @@ export interface components {
             /** @description New access token valid for 7 days */
             access_token: string;
         };
-        ReorderAccountItemModel: {
-            /**
-             * Format: int64
-             * @description New display order
-             */
-            displayOrder: number;
-            /**
-             * Format: int64
-             * @description Account ID
-             */
-            id: number;
-        };
-        ReorderAccountsRequestModel: {
-            /** @description List of accounts to reorder */
-            items: components["schemas"]["ReorderAccountItemModel"][] | null;
+        ReorderAccountsModel: {
+            /** @description Ordered list of account IDs, first item will receive displayOrder 0 */
+            data: number[] | null;
         };
         ReorderCategoriesRequestModel: {
             /** @description List of categories to reorder */
-            items: components["schemas"]["ReorderCategoryItemModel"][] | null;
+            data: components["schemas"]["ReorderCategoryItemModel"][] | null;
         };
         ReorderCategoryItemModel: {
             /**
@@ -1972,24 +1208,11 @@ export interface components {
              */
             id: number;
         };
-        SummaryAccountItem: {
-            /**
-             * Format: int64
-             * @description Account ID
-             * @example 1
-             */
-            accountId: number;
-            /**
-             * @description Account name
-             * @example Cash
-             */
-            accountName: string;
-            /**
-             * @description Account type
-             * @example expense
-             * @enum {string}
-             */
-            accountType: "income" | "expense";
+        SummaryAccountListModel: {
+            /** @description Summary data grouped by account */
+            Data: components["schemas"]["SummaryAccountModel"][] | null;
+        };
+        SummaryAccountModel: {
             /**
              * Format: int64
              * @description Total expense amount
@@ -1998,10 +1221,21 @@ export interface components {
             expenseAmount: number;
             /**
              * Format: int64
+             * @description Account ID
+             * @example 1
+             */
+            id: number;
+            /**
+             * Format: int64
              * @description Total income amount
              * @example 3000000
              */
             incomeAmount: number;
+            /**
+             * @description Account name
+             * @example Cash
+             */
+            name: string;
             /**
              * Format: int64
              * @description Net amount (income - expense)
@@ -2014,29 +1248,18 @@ export interface components {
              * @example 100
              */
             totalCount: number;
-        };
-        SummaryAccountResponseModel: {
-            /** @description Summary data grouped by account */
-            data: components["schemas"]["SummaryAccountItem"][] | null;
-        };
-        SummaryCategoryItem: {
             /**
-             * Format: int64
-             * @description Category ID
-             * @example 1
-             */
-            categoryId: number;
-            /**
-             * @description Category name
-             * @example Food
-             */
-            categoryName: string;
-            /**
-             * @description Category type
+             * @description Account type
              * @example expense
              * @enum {string}
              */
-            categoryType: "income" | "expense" | "transfer";
+            type: "income" | "expense";
+        };
+        SummaryCategoryListModel: {
+            /** @description Summary data grouped by category */
+            data: components["schemas"]["SummaryCategoryModel"][] | null;
+        };
+        SummaryCategoryModel: {
             /**
              * Format: int64
              * @description Total expense amount
@@ -2045,10 +1268,21 @@ export interface components {
             expenseAmount: number;
             /**
              * Format: int64
+             * @description Category ID
+             * @example 1
+             */
+            id: number;
+            /**
+             * Format: int64
              * @description Total income amount
              * @example 0
              */
             incomeAmount: number;
+            /**
+             * @description Category name
+             * @example Food
+             */
+            name: string;
             /**
              * Format: int64
              * @description Net amount (income - expense)
@@ -2061,12 +1295,23 @@ export interface components {
              * @example 75
              */
             totalCount: number;
+            /**
+             * @description Category type
+             * @example expense
+             * @enum {string}
+             */
+            type: "income" | "expense" | "transfer";
         };
-        SummaryCategoryResponseModel: {
-            /** @description Summary data grouped by category */
-            data: components["schemas"]["SummaryCategoryItem"][] | null;
+        SummaryTransactionListModel: {
+            /** @description Summary data grouped by period */
+            data: components["schemas"]["SummaryTransactionModel"][] | null;
+            /**
+             * @description Grouping frequency
+             * @example monthly
+             */
+            frequency: string;
         };
-        SummaryTransactionItem: {
+        SummaryTransactionModel: {
             /**
              * Format: int64
              * @description Total expense amount
@@ -2121,16 +1366,9 @@ export interface components {
              */
             transferCount: number;
         };
-        SummaryTransactionResponseModel: {
-            /** @description Summary data grouped by period */
-            data: components["schemas"]["SummaryTransactionItem"][] | null;
-            /**
-             * @description Grouping frequency
-             * @example monthly
-             */
-            frequency: string;
-        };
         TagModel: {
+            /** @description Tag color code */
+            color?: string;
             /**
              * Format: date-time
              * @description Creation timestamp
@@ -2153,6 +1391,30 @@ export interface components {
              * @description Last update timestamp
              */
             updatedAt?: string;
+        };
+        TagsPagedModel: {
+            /** @description List of tags */
+            items: components["schemas"]["TagModel"][] | null;
+            /**
+             * Format: int64
+             * @description Current page number
+             */
+            pageNumber: number;
+            /**
+             * Format: int64
+             * @description Items per page
+             */
+            pageSize: number;
+            /**
+             * Format: int64
+             * @description Total number of matching items
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total number of pages
+             */
+            totalPages: number;
         };
         TransactionAccountEmbedded: {
             /**
@@ -2249,6 +1511,11 @@ export interface components {
              */
             createdAt: string;
             /**
+             * Format: date-time
+             * @description Deletion timestamp
+             */
+            deletedAt: string | null;
+            /**
              * Format: int64
              * @description Unique identifier
              */
@@ -2258,11 +1525,42 @@ export interface components {
              * @description ID of the related transaction
              */
             relatedTransactionId: number;
+            /** @description Type of relation */
+            relationType: string;
             /**
              * Format: int64
-             * @description ID of the primary transaction
+             * @description ID of the source transaction
              */
-            transactionId: number;
+            sourceTransactionId: number;
+            /**
+             * Format: date-time
+             * @description Last update timestamp
+             */
+            updatedAt: string;
+        };
+        TransactionRelationsPagedModel: {
+            /** @description List of transaction relations */
+            items: components["schemas"]["TransactionRelationModel"][] | null;
+            /**
+             * Format: int64
+             * @description Current page number
+             */
+            pageNumber: number;
+            /**
+             * Format: int64
+             * @description Items per page
+             */
+            pageSize: number;
+            /**
+             * Format: int64
+             * @description Total number of matching items
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total number of pages
+             */
+            totalPages: number;
         };
         TransactionTagEmbedded: {
             /**
@@ -2297,26 +1595,40 @@ export interface components {
              */
             transactionId: number;
         };
-        TransactionTemplateModel: {
-            /** @description Source account details */
-            account?: components["schemas"]["TransactionAccountEmbedded"];
+        TransactionTagsPagedModel: {
+            /** @description List of transaction tags */
+            items: components["schemas"]["TransactionTagModel"][] | null;
             /**
              * Format: int64
-             * @description Source account ID
+             * @description Current page number
              */
-            accountId: number;
+            pageNumber: number;
+            /**
+             * Format: int64
+             * @description Items per page
+             */
+            pageSize: number;
+            /**
+             * Format: int64
+             * @description Total number of matching items
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total number of pages
+             */
+            totalPages: number;
+        };
+        TransactionTemplateModel: {
+            /** @description Source account details */
+            account: components["schemas"]["TransactionAccountEmbedded"];
             /**
              * Format: int64
              * @description Template amount
              */
             amount: number;
             /** @description Category details */
-            category?: components["schemas"]["TransactionCategoryEmbedded"];
-            /**
-             * Format: int64
-             * @description Category ID
-             */
-            categoryId: number;
+            category: components["schemas"]["TransactionCategoryEmbedded"];
             /**
              * Format: date-time
              * @description Creation timestamp
@@ -2330,19 +1642,34 @@ export interface components {
             /** @description Destination account details (transfers only) */
             destinationAccount?: components["schemas"]["TransactionAccountEmbedded"];
             /**
-             * Format: int64
-             * @description Destination account ID (transfers only)
+             * Format: date-time
+             * @description Template end date
              */
-            destinationAccountId?: number;
+            endDate?: string;
             /**
              * Format: int64
              * @description Unique identifier
              */
             id: number;
+            /**
+             * Format: date-time
+             * @description Last execution timestamp
+             */
+            lastExecutedAt?: string;
             /** @description Template name */
             name: string;
             /** @description Template notes */
             note?: string;
+            /**
+             * @description Recurrence pattern
+             * @enum {string}
+             */
+            recurrence: "none" | "weekly" | "monthly" | "yearly";
+            /**
+             * Format: date-time
+             * @description Template start date
+             */
+            startDate: string;
             /**
              * @description Transaction type
              * @enum {string}
@@ -2352,14 +1679,57 @@ export interface components {
              * Format: date-time
              * @description Last update timestamp
              */
-            updatedAt?: string;
+            updatedAt: string;
         };
-        UpdateAccountRequestModel: {
+        TransactionTemplatesPagedModel: {
+            /** @description List of transaction templates */
+            items: components["schemas"]["TransactionTemplateModel"][] | null;
             /**
              * Format: int64
-             * @description Current balance
+             * @description Current page number
              */
-            amount?: number;
+            pageNumber: number;
+            /**
+             * Format: int64
+             * @description Items per page
+             */
+            pageSize: number;
+            /**
+             * Format: int64
+             * @description Total number of matching items
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total number of pages
+             */
+            totalPages: number;
+        };
+        TransactionsPagedModel: {
+            /** @description List of transactions */
+            items: components["schemas"]["TransactionModel"][] | null;
+            /**
+             * Format: int64
+             * @description Current page number
+             */
+            pageNumber: number;
+            /**
+             * Format: int64
+             * @description Items per page
+             */
+            pageSize: number;
+            /**
+             * Format: int64
+             * @description Total number of matching items
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total number of pages
+             */
+            totalPages: number;
+        };
+        UpdateAccountModel: {
             /** @description Archive status (null string to unarchive, any other value to archive) */
             archivedAt?: string;
             /** @description Icon identifier */
@@ -2376,57 +1746,7 @@ export interface components {
              */
             type?: "expense" | "income";
         };
-        UpdateAccountResponseModel: {
-            /**
-             * Format: int64
-             * @description Current balance
-             */
-            amount: number;
-            /**
-             * Format: date-time
-             * @description Timestamp when archived (null if active)
-             */
-            archivedAt?: string;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Display order sequence
-             */
-            displayOrder: number;
-            /** @description Icon identifier */
-            icon?: string;
-            /** @description Icon color code */
-            iconColor?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Account name */
-            name: string;
-            /** @description Account notes */
-            note: string;
-            /**
-             * @description Account type (expense or income)
-             * @enum {string}
-             */
-            type: "expense" | "income";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        UpdateBudgetRequestModel: {
+        UpdateBudgetModel: {
             /**
              * Format: int64
              * @description Account ID to filter transactions
@@ -2455,66 +1775,7 @@ export interface components {
              */
             periodStart?: string;
         };
-        UpdateBudgetResponseModel: {
-            /**
-             * Format: int64
-             * @description Account ID to filter transactions
-             */
-            accountId?: number;
-            /**
-             * Format: int64
-             * @description Actual spent amount in cents (computed from transactions)
-             */
-            actualAmount: number;
-            /**
-             * Format: int64
-             * @description Budget limit amount in cents
-             */
-            amountLimit: number;
-            /**
-             * Format: int64
-             * @description Category ID to filter transactions
-             */
-            categoryId?: number;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Optional note for the budget */
-            note?: string;
-            /**
-             * Format: date-time
-             * @description Budget period end date
-             */
-            periodEnd: string;
-            /**
-             * Format: date-time
-             * @description Budget period start date
-             */
-            periodStart: string;
-            /**
-             * Format: int64
-             * @description Budget template ID if generated from template
-             */
-            templateId?: number;
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        UpdateBudgetTemplateRequestModel: {
+        UpdateBudgetTemplateModel: {
             /**
              * Format: int64
              * @description Account ID to filter transactions
@@ -2548,61 +1809,7 @@ export interface components {
              */
             startDate?: string;
         };
-        UpdateBudgetTemplateResponseModel: {
-            /**
-             * Format: int64
-             * @description Account ID to filter transactions
-             */
-            accountId?: number;
-            /**
-             * Format: int64
-             * @description Budget limit amount in cents
-             */
-            amountLimit: number;
-            /**
-             * Format: int64
-             * @description Category ID to filter transactions
-             */
-            categoryId?: number;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: date-time
-             * @description Optional end date for recurrence
-             */
-            endDate?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Optional note for the template */
-            note?: string;
-            /**
-             * @description Recurrence pattern
-             * @enum {string}
-             */
-            recurrence: "none" | "weekly" | "monthly" | "yearly";
-            /**
-             * Format: date-time
-             * @description Start date for recurrence
-             */
-            startDate: string;
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        UpdateCategoryRequestModel: {
+        UpdateCategoryModel: {
             /** @description Archive status (null string to unarchive, any other value to archive) */
             archivedAt?: string;
             /** @description Icon identifier */
@@ -2619,80 +1826,13 @@ export interface components {
              */
             type?: "expense" | "income" | "transfer";
         };
-        UpdateCategoryResponseModel: {
-            /**
-             * Format: date-time
-             * @description Timestamp when archived (null if active)
-             */
-            archivedAt?: string;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Display order sequence
-             */
-            displayOrder: number;
-            /** @description Icon identifier */
-            icon?: string;
-            /** @description Icon color code */
-            iconColor?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Category name */
-            name: string;
-            /** @description Category notes */
-            note: string;
-            /**
-             * @description Category type
-             * @enum {string}
-             */
-            type: "expense" | "income" | "transfer";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        UpdateTagRequestModel: {
+        UpdateTagModel: {
+            /** @description Tag color code */
+            color?: string;
             /** @description Tag name */
             name?: string;
         };
-        UpdateTagResponseModel: {
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Tag name */
-            name: string;
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
-        };
-        UpdateTransactionRequestModel: {
+        UpdateTransactionModel: {
             /**
              * Format: int64
              * @description Source account ID
@@ -2720,55 +1860,13 @@ export interface components {
             destinationAccountId?: number;
             /** @description Transaction notes */
             note?: string;
-        };
-        UpdateTransactionResponseModel: {
-            /** @description Source account details */
-            account: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Transaction amount
-             */
-            amount: number;
-            /** @description Category details */
-            category: components["schemas"]["TransactionCategoryEmbedded"];
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Transaction date
-             */
-            date: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /** @description Destination account (transfers only) */
-            destinationAccount?: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Transaction notes */
-            note?: string;
-            /** @description Transaction tags */
-            tags: components["schemas"]["TransactionTagEmbedded"][] | null;
             /**
              * @description Transaction type
              * @enum {string}
              */
-            type: "expense" | "income" | "transfer";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
+            type?: "expense" | "income" | "transfer";
         };
-        UpdateTransactionTemplateRequestModel: {
+        UpdateTransactionTemplateModel: {
             /**
              * Format: int64
              * @description Source account ID
@@ -2789,72 +1887,30 @@ export interface components {
              * @description Destination account ID (transfers only)
              */
             destinationAccountId?: number;
+            /**
+             * Format: date-time
+             * @description Template end date
+             */
+            endDate?: string;
             /** @description Template name */
             name?: string;
             /** @description Template notes */
             note?: string;
             /**
+             * @description Recurrence pattern
+             * @enum {string}
+             */
+            recurrence?: "none" | "weekly" | "monthly" | "yearly";
+            /**
+             * Format: date-time
+             * @description Template start date
+             */
+            startDate?: string;
+            /**
              * @description Transaction type
              * @enum {string}
              */
             type?: "expense" | "income" | "transfer";
-        };
-        UpdateTransactionTemplateResponseModel: {
-            /** @description Source account details */
-            account?: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Source account ID
-             */
-            accountId: number;
-            /**
-             * Format: int64
-             * @description Template amount
-             */
-            amount: number;
-            /** @description Category details */
-            category?: components["schemas"]["TransactionCategoryEmbedded"];
-            /**
-             * Format: int64
-             * @description Category ID
-             */
-            categoryId: number;
-            /**
-             * Format: date-time
-             * @description Creation timestamp
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Soft delete timestamp
-             */
-            deletedAt?: string;
-            /** @description Destination account details (transfers only) */
-            destinationAccount?: components["schemas"]["TransactionAccountEmbedded"];
-            /**
-             * Format: int64
-             * @description Destination account ID (transfers only)
-             */
-            destinationAccountId?: number;
-            /**
-             * Format: int64
-             * @description Unique identifier
-             */
-            id: number;
-            /** @description Template name */
-            name: string;
-            /** @description Template notes */
-            note?: string;
-            /**
-             * @description Transaction type
-             * @enum {string}
-             */
-            type: "expense" | "income" | "transfer";
-            /**
-             * Format: date-time
-             * @description Last update timestamp
-             */
-            updatedAt?: string;
         };
     };
     responses: never;
@@ -2897,7 +1953,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListAccountsResponseModel"];
+                    "application/json": components["schemas"]["AccountsPagedModel"];
                 };
             };
             /** @description Error */
@@ -2920,7 +1976,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateAccountRequestModel"];
+                "application/json": components["schemas"]["CreateAccountModel"];
             };
         };
         responses: {
@@ -2930,7 +1986,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CreateAccountResponseModel"];
+                    "application/json": components["schemas"]["AccountModel"];
                 };
             };
             /** @description Error */
@@ -2953,7 +2009,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReorderAccountsRequestModel"];
+                "application/json": components["schemas"]["ReorderAccountsModel"];
             };
         };
         responses: {
@@ -2996,7 +2052,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GetAccountResponseModel"];
+                    "application/json": components["schemas"]["AccountModel"];
                 };
             };
             /** @description Error */
@@ -3058,7 +2114,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateAccountRequestModel"];
+                "application/json": components["schemas"]["UpdateAccountModel"];
             };
         };
         responses: {
@@ -3068,7 +2124,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UpdateAccountResponseModel"];
+                    "application/json": components["schemas"]["AccountModel"];
                 };
             };
             /** @description Error */
@@ -3180,7 +2236,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListBudgetsResponseModel"];
+                    "application/json": components["schemas"]["BudgetsPagedModel"];
                 };
             };
             /** @description Error */
@@ -3203,7 +2259,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateBudgetRequestModel"];
+                "application/json": components["schemas"]["CreateBudgetModel"];
             };
         };
         responses: {
@@ -3213,7 +2269,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CreateBudgetResponseModel"];
+                    "application/json": components["schemas"]["BudgetModel"];
                 };
             };
             /** @description Error */
@@ -3259,7 +2315,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListBudgetTemplatesResponseModel"];
+                    "application/json": components["schemas"]["BudgetTemplatesPagedModel"];
                 };
             };
             /** @description Error */
@@ -3282,7 +2338,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateBudgetTemplateRequestModel"];
+                "application/json": components["schemas"]["CreateBudgetTemplateModel"];
             };
         };
         responses: {
@@ -3292,7 +2348,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CreateBudgetTemplateResponseModel"];
+                    "application/json": components["schemas"]["BudgetTemplateModel"];
                 };
             };
             /** @description Error */
@@ -3380,7 +2436,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateBudgetTemplateRequestModel"];
+                "application/json": components["schemas"]["UpdateBudgetTemplateModel"];
             };
         };
         responses: {
@@ -3390,7 +2446,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UpdateBudgetTemplateResponseModel"];
+                    "application/json": components["schemas"]["BudgetTemplateModel"];
                 };
             };
             /** @description Error */
@@ -3478,7 +2534,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateBudgetRequestModel"];
+                "application/json": components["schemas"]["UpdateBudgetModel"];
             };
         };
         responses: {
@@ -3488,7 +2544,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UpdateBudgetResponseModel"];
+                    "application/json": components["schemas"]["BudgetModel"];
                 };
             };
             /** @description Error */
@@ -3534,7 +2590,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListCategoriesResponseModel"];
+                    "application/json": components["schemas"]["CategoriesPagedModel"];
                 };
             };
             /** @description Error */
@@ -3557,7 +2613,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateCategoryRequestModel"];
+                "application/json": components["schemas"]["CreateCategoryModel"];
             };
         };
         responses: {
@@ -3567,7 +2623,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CreateCategoryResponseModel"];
+                    "application/json": components["schemas"]["CategoryModel"];
                 };
             };
             /** @description Error */
@@ -3633,7 +2689,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GetCategoryResponseModel"];
+                    "application/json": components["schemas"]["CategoryModel"];
                 };
             };
             /** @description Error */
@@ -3695,7 +2751,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateCategoryRequestModel"];
+                "application/json": components["schemas"]["UpdateCategoryModel"];
             };
         };
         responses: {
@@ -3705,7 +2761,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UpdateCategoryResponseModel"];
+                    "application/json": components["schemas"]["CategoryModel"];
                 };
             };
             /** @description Error */
@@ -3721,7 +2777,18 @@ export interface operations {
     };
     "get-account-summary": {
         parameters: {
-            query?: never;
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3734,7 +2801,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SummaryAccountResponseModel"];
+                    "application/json": components["schemas"]["SummaryAccountListModel"];
                 };
             };
             /** @description Error */
@@ -3750,7 +2817,18 @@ export interface operations {
     };
     "get-category-summary": {
         parameters: {
-            query?: never;
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3763,7 +2841,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SummaryCategoryResponseModel"];
+                    "application/json": components["schemas"]["SummaryCategoryListModel"];
                 };
             };
             /** @description Error */
@@ -3779,7 +2857,20 @@ export interface operations {
     };
     "get-transaction-summary": {
         parameters: {
-            query?: never;
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+                /** @description Grouping frequency */
+                frequency?: "daily" | "weekly" | "monthly" | "yearly";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3792,7 +2883,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SummaryTransactionResponseModel"];
+                    "application/json": components["schemas"]["SummaryTransactionListModel"];
                 };
             };
             /** @description Error */
@@ -3832,7 +2923,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListTagsResponseModel"];
+                    "application/json": components["schemas"]["TagsPagedModel"];
                 };
             };
             /** @description Error */
@@ -3855,7 +2946,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateTagRequestModel"];
+                "application/json": components["schemas"]["CreateTagModel"];
             };
         };
         responses: {
@@ -3865,7 +2956,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CreateTagResponseModel"];
+                    "application/json": components["schemas"]["TagModel"];
                 };
             };
             /** @description Error */
@@ -3900,7 +2991,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GetTagResponseModel"];
+                    "application/json": components["schemas"]["TagModel"];
                 };
             };
             /** @description Error */
@@ -3962,7 +3053,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateTagRequestModel"];
+                "application/json": components["schemas"]["UpdateTagModel"];
             };
         };
         responses: {
@@ -3972,7 +3063,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UpdateTagResponseModel"];
+                    "application/json": components["schemas"]["TagModel"];
                 };
             };
             /** @description Error */
@@ -3999,6 +3090,14 @@ export interface operations {
                 sortOrder?: "asc" | "desc";
                 /** @description Search by template name */
                 name?: string;
+                /** @description Filter by transaction type */
+                type?: "expense" | "income" | "transfer";
+                /** @description Filter by source account ID */
+                accountId?: number;
+                /** @description Filter by category ID */
+                categoryId?: number;
+                /** @description Filter by destination account ID */
+                destinationAccountId?: number;
             };
             header?: never;
             path?: never;
@@ -4012,7 +3111,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListTransactionTemplatesResponseModel"];
+                    "application/json": components["schemas"]["TransactionTemplatesPagedModel"];
                 };
             };
             /** @description Error */
@@ -4035,7 +3134,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateTransactionTemplateRequestModel"];
+                "application/json": components["schemas"]["CreateTransactionTemplateModel"];
             };
         };
         responses: {
@@ -4045,7 +3144,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CreateTransactionTemplateResponseModel"];
+                    "application/json": components["schemas"]["TransactionTemplateModel"];
                 };
             };
             /** @description Error */
@@ -4080,7 +3179,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GetTransactionTemplateResponseModel"];
+                    "application/json": components["schemas"]["TransactionTemplateModel"];
                 };
             };
             /** @description Error */
@@ -4142,7 +3241,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateTransactionTemplateRequestModel"];
+                "application/json": components["schemas"]["UpdateTransactionTemplateModel"];
             };
         };
         responses: {
@@ -4152,7 +3251,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UpdateTransactionTemplateResponseModel"];
+                    "application/json": components["schemas"]["TransactionTemplateModel"];
                 };
             };
             /** @description Error */
@@ -4210,7 +3309,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListTransactionsResponseModel"];
+                    "application/json": components["schemas"]["TransactionsPagedModel"];
                 };
             };
             /** @description Error */
@@ -4233,7 +3332,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateTransactionRequestModel"];
+                "application/json": components["schemas"]["CreateTransactionModel"];
             };
         };
         responses: {
@@ -4243,7 +3342,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CreateTransactionResponseModel"];
+                    "application/json": components["schemas"]["TransactionModel"];
                 };
             };
             /** @description Error */
@@ -4278,7 +3377,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GetTransactionResponseModel"];
+                    "application/json": components["schemas"]["TransactionModel"];
                 };
             };
             /** @description Error */
@@ -4340,7 +3439,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateTransactionRequestModel"];
+                "application/json": components["schemas"]["UpdateTransactionModel"];
             };
         };
         responses: {
@@ -4350,7 +3449,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UpdateTransactionResponseModel"];
+                    "application/json": components["schemas"]["TransactionModel"];
                 };
             };
             /** @description Error */
@@ -4374,8 +3473,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Transaction ID */
-                transactionId: number;
+                /** @description Source transaction ID to list relations for */
+                sourceTransactionId: number;
             };
             cookie?: never;
         };
@@ -4387,7 +3486,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListTransactionRelationsResponseModel"];
+                    "application/json": components["schemas"]["TransactionRelationsPagedModel"];
                 };
             };
             /** @description Error */
@@ -4405,15 +3504,12 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Transaction ID */
-                transactionId: number;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateTransactionRelationRequestModel"];
+                "application/json": components["schemas"]["CreateTransactionRelationModel"];
             };
         };
         responses: {
@@ -4423,7 +3519,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CreateTransactionRelationResponseModel"];
+                    "application/json": components["schemas"]["TransactionRelationModel"];
                 };
             };
             /** @description Error */
@@ -4442,8 +3538,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Transaction ID */
-                transactionId: number;
+                /** @description Source transaction ID */
+                sourceTransactionId: number;
                 /** @description Relation ID */
                 relationId: number;
             };
@@ -4457,7 +3553,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GetTransactionRelationResponseModel"];
+                    "application/json": components["schemas"]["TransactionRelationModel"];
                 };
             };
             /** @description Error */
@@ -4476,9 +3572,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Transaction ID */
-                transactionId: number;
-                /** @description Relation ID */
+                /** @description ID of the source transaction */
+                sourceTransactionId: number;
+                /** @description ID of the relation to delete */
                 relationId: number;
             };
             cookie?: never;
@@ -4513,7 +3609,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Transaction ID */
+                /** @description Transaction ID to list tags for */
                 transactionId: number;
             };
             cookie?: never;
@@ -4526,7 +3622,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListTransactionTagsResponseModel"];
+                    "application/json": components["schemas"]["TransactionTagsPagedModel"];
                 };
             };
             /** @description Error */
@@ -4552,7 +3648,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateTransactionTagRequestModel"];
+                "application/json": components["schemas"]["CreateTransactionTagModel"];
             };
         };
         responses: {
@@ -4562,7 +3658,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CreateTransactionTagResponseModel"];
+                    "application/json": components["schemas"]["TransactionTagModel"];
                 };
             };
             /** @description Error */
@@ -4596,7 +3692,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GetTransactionTagResponseModel"];
+                    "application/json": components["schemas"]["TransactionTagModel"];
                 };
             };
             /** @description Error */
