@@ -108,32 +108,32 @@ func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.
 
 func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.SummarySearchModel) (models.SummaryAccountListModel, error) {
 	sql := `
-		WITH filtered AS (
-			SELECT 
-				a.id,
-				a.name,
-				a.type,
-				t.amount
-			FROM transactions t
-			JOIN accounts a ON t.account_id = a.id
-			WHERE t.deleted_at IS NULL 
-				AND a.deleted_at IS NULL
-				AND ($1::timestamp IS NULL OR t.date >= $1)
-				AND ($2::timestamp IS NULL OR t.date <= $2)
+		WITH accounts_cte AS (
+			SELECT id, name, type
+			FROM accounts
+			WHERE deleted_at IS NULL
+		),
+		txs AS (
+			SELECT account_id, type, amount
+			FROM transactions
+			WHERE deleted_at IS NULL
+				AND ($1::timestamp IS NULL OR date >= $1)
+				AND ($2::timestamp IS NULL OR date <= $2)
 		),
 		summary AS (
-			SELECT 
-				id as account_id,
-				name as account_name,
-				type as account_type,
-				COUNT(*) as total_count,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as income_amount,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as expense_amount,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) - COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as net
-			FROM filtered
-			GROUP BY id, name, type
+			SELECT
+				a.id as account_id,
+				a.name as account_name,
+				a.type as account_type,
+				COUNT(t.account_id) as total_count,
+				COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income'), 0) as income_amount,
+				COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense'), 0) as expense_amount,
+				COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income'), 0) - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense'), 0) as net
+			FROM accounts_cte a
+			LEFT JOIN txs t ON t.account_id = a.id
+			GROUP BY a.id, a.name, a.type
 		)
-		SELECT 
+		SELECT
 			account_id,
 			account_name,
 			account_type,
@@ -179,32 +179,32 @@ func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.Summ
 
 func (sr SummaryRepository) GetCategorySummary(ctx context.Context, p models.SummarySearchModel) (models.SummaryCategoryListModel, error) {
 	sql := `
-		WITH filtered AS (
-			SELECT 
-				c.id,
-				c.name,
-				c.type,
-				t.amount
-			FROM transactions t
-			JOIN categories c ON t.category_id = c.id
-			WHERE t.deleted_at IS NULL 
-				AND c.deleted_at IS NULL
-				AND ($1::timestamp IS NULL OR t.date >= $1)
-				AND ($2::timestamp IS NULL OR t.date <= $2)
+		WITH categories_cte AS (
+			SELECT id, name, type
+			FROM categories
+			WHERE deleted_at IS NULL
+		),
+		txs AS (
+			SELECT category_id, type, amount
+			FROM transactions
+			WHERE deleted_at IS NULL
+				AND ($1::timestamp IS NULL OR date >= $1)
+				AND ($2::timestamp IS NULL OR date <= $2)
 		),
 		summary AS (
-			SELECT 
-				id as category_id,
-				name as category_name,
-				type as category_type,
-				COUNT(*) as total_count,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as income_amount,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as expense_amount,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) - COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as net
-			FROM filtered
-			GROUP BY id, name, type
+			SELECT
+				c.id as category_id,
+				c.name as category_name,
+				c.type as category_type,
+				COUNT(t.category_id) as total_count,
+				COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income'), 0) as income_amount,
+				COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense'), 0) as expense_amount,
+				COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income'), 0) - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense'), 0) as net
+			FROM categories_cte c
+			LEFT JOIN txs t ON t.category_id = c.id
+			GROUP BY c.id, c.name, c.type
 		)
-		SELECT 
+		SELECT
 			category_id,
 			category_name,
 			category_type,
