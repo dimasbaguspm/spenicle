@@ -15,32 +15,18 @@ func NewTransactionTagService(repo repositories.TransactionTagRepository) Transa
 	return TransactionTagService{repo}
 }
 
-// List delegates to repository
-func (tts TransactionTagService) List(ctx context.Context, transactionID int64, pageNumber int, pageSize int) (models.ListTransactionTagsResponseModel, error) {
-	return tts.repo.List(ctx, transactionID, pageNumber, pageSize)
+func (tts TransactionTagService) GetPaged(ctx context.Context, q models.TransactionTagsSearchModel) (models.TransactionTagsPagedModel, error) {
+	return tts.repo.GetPaged(ctx, q)
 }
 
-// Get delegates to repository
-func (tts TransactionTagService) Get(ctx context.Context, transactionID int64, tagID int64) (models.TransactionTagModel, error) {
-	return tts.repo.Get(ctx, transactionID, tagID)
+func (tts TransactionTagService) GetDetail(ctx context.Context, ID int64) (models.TransactionTagModel, error) {
+	return tts.repo.GetDetail(ctx, ID)
 }
 
-// Create delegates to repository
-func (tts TransactionTagService) Create(ctx context.Context, payload models.CreateTransactionTagRequestModel) (models.CreateTransactionTagResponseModel, error) {
+func (tts TransactionTagService) Create(ctx context.Context, payload models.CreateTransactionTagModel) (models.TransactionTagModel, error) {
 	return tts.repo.Create(ctx, payload)
 }
 
-// Delete delegates to repository
-func (tts TransactionTagService) Delete(ctx context.Context, transactionID int64, tagID int64) error {
-	return tts.repo.Delete(ctx, transactionID, tagID)
-}
-
-// DeleteByTransactionID delegates to repository
-func (tts TransactionTagService) DeleteByTransactionID(ctx context.Context, transactionID int64) error {
-	return tts.repo.DeleteByTransactionID(ctx, transactionID)
-}
-
-// DeleteByTagID delegates to repository
-func (tts TransactionTagService) DeleteByTagID(ctx context.Context, tagID int64) error {
-	return tts.repo.DeleteByTagID(ctx, tagID)
+func (tts TransactionTagService) Delete(ctx context.Context, ID int64) error {
+	return tts.repo.Delete(ctx, ID)
 }

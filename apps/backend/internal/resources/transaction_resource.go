@@ -407,19 +407,17 @@ func (tr TransactionResource) DeleteRelation(ctx context.Context, input *struct 
 // Transaction Tag Handlers
 
 func (tr TransactionResource) ListTags(ctx context.Context, input *struct {
-	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
-	PageNumber    int   `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
-	PageSize      int   `query:"pageSize" default:"10" minimum:"1" maximum:"100" doc:"Number of items per page"`
+	models.TransactionTagsSearchModel
 }) (*struct {
-	Body models.ListTransactionTagsResponseModel
+	Body models.TransactionTagsPagedModel
 }, error) {
-	resp, err := tr.tts.List(ctx, input.TransactionID, input.PageNumber, input.PageSize)
+	resp, err := tr.tts.GetPaged(ctx, input.TransactionTagsSearchModel)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.ListTransactionTagsResponseModel
+		Body models.TransactionTagsPagedModel
 	}{
 		Body: resp,
 	}, nil
@@ -429,27 +427,26 @@ func (tr TransactionResource) GetTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
 }) (*struct {
-	Body models.GetTransactionTagResponseModel
+	Body models.TransactionTagModel
 }, error) {
-	resp, err := tr.tts.Get(ctx, input.TransactionID, input.TagID)
+	resp, err := tr.tts.GetDetail(ctx, input.TagID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.GetTransactionTagResponseModel
+		Body models.TransactionTagModel
 	}{
-		Body: models.GetTransactionTagResponseModel{TransactionTagModel: resp},
+		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) CreateTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
-	Body          models.CreateTransactionTagRequestModel
+	Body          models.CreateTransactionTagModel
 }) (*struct {
-	Body models.CreateTransactionTagResponseModel
+	Body models.TransactionTagModel
 }, error) {
-	// Override the transaction ID in request body with the path parameter
 	input.Body.TransactionID = input.TransactionID
 
 	resp, err := tr.tts.Create(ctx, input.Body)
@@ -458,7 +455,7 @@ func (tr TransactionResource) CreateTag(ctx context.Context, input *struct {
 	}
 
 	return &struct {
-		Body models.CreateTransactionTagResponseModel
+		Body models.TransactionTagModel
 	}{
 		Body: resp,
 	}, nil
@@ -468,13 +465,7 @@ func (tr TransactionResource) DeleteTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
 }) (*struct{}, error) {
-	// Verify the tag belongs to the transaction before deleting
-	_, err := tr.tts.Get(ctx, input.TransactionID, input.TagID)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tr.tts.Delete(ctx, input.TransactionID, input.TagID); err != nil {
+	if err := tr.tts.Delete(ctx, input.TagID); err != nil {
 		return nil, err
 	}
 
