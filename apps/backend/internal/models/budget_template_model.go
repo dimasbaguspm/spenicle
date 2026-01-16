@@ -19,7 +19,7 @@ type BudgetTemplateModel struct {
 
 type BudgetTemplatesSearchModel struct {
 	PageNumber  int     `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
-	PageSize    int     `query:"pageSize" default:"10" minimum:"1" maximum:"100" doc:"Number of items per page"`
+	PageSize    int     `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Number of items per page"`
 	SortBy      string  `query:"sortBy" default:"createdAt" enum:"id,accountId,categoryId,amountLimit,recurrence,startDate,endDate,createdAt,updatedAt" doc:"Field to sort by"`
 	SortOrder   string  `query:"sortOrder" default:"desc" enum:"asc,desc" doc:"Sort order"`
 	IDs         []int64 `query:"id" doc:"Filter by template IDs"`
