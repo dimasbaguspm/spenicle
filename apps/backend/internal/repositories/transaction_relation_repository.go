@@ -18,52 +18,54 @@ func NewTransactionRelationRepository(pgx *pgxpool.Pool) TransactionRelationRepo
 	return TransactionRelationRepository{pgx}
 }
 
-// List retrieves paginated transaction relations for a specific transaction
-func (trr TransactionRelationRepository) List(ctx context.Context, transactionID int64, pageNumber, pageSize int) (models.ListTransactionRelationsResponseModel, error) {
-	// Enforce page size limits
-	if pageSize <= 0 || pageSize > 100 {
-		pageSize = 10
-	}
-	if pageNumber <= 0 {
-		pageNumber = 1
-	}
+func (trr TransactionRelationRepository) GetPaged(ctx context.Context, q models.TransactionRelationsSearchModel) (models.TransactionRelationsPagedModel, error) {
+	offset := (q.PageNumber - 1) * q.PageSize
 
-	offset := (pageNumber - 1) * pageSize
-
-	// Count total matching relations
-	countSQL := `SELECT COUNT(*) FROM transaction_relations WHERE transaction_id = $1`
-	var totalCount int
-	if err := trr.pgx.QueryRow(ctx, countSQL, transactionID).Scan(&totalCount); err != nil {
-		return models.ListTransactionRelationsResponseModel{}, huma.Error400BadRequest("Unable to count transaction relations", err)
-	}
-
-	// Fetch paginated relations
 	sql := `
-		SELECT id, transaction_id, related_transaction_id, created_at
-		FROM transaction_relations
-		WHERE transaction_id = $1
-		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3`
+		WITH filtered AS (
+			SELECT id, source_transaction_id, related_transaction_id, relation_type, created_at, updated_at, deleted_at
+			FROM transaction_relations
+			WHERE source_transaction_id = $1 AND deleted_at IS NULL
+		),
+		counted AS (
+			SELECT COUNT(*) AS total_count FROM filtered
+		)
+		SELECT
+			f.id,
+			f.source_transaction_id,
+			f.related_transaction_id,
+			f.relation_type,
+			f.created_at,
+			f.updated_at,
+			f.deleted_at,
+			c.total_count
+		FROM filtered f
+		CROSS JOIN counted c
+		ORDER BY f.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
 
-	rows, err := trr.pgx.Query(ctx, sql, transactionID, pageSize, offset)
+	rows, err := trr.pgx.Query(ctx, sql, q.SourceTransactionID, q.PageSize, offset)
 	if err != nil {
-		return models.ListTransactionRelationsResponseModel{}, huma.Error400BadRequest("Unable to query transaction relations", err)
+		return models.TransactionRelationsPagedModel{}, huma.Error400BadRequest("Unable to query transaction relations", err)
 	}
 	defer rows.Close()
 
 	var items []models.TransactionRelationModel
+	var totalCount int
 	for rows.Next() {
 		var item models.TransactionRelationModel
 		if err := rows.Scan(
-			&item.ID, &item.TransactionID, &item.RelatedTransactionID, &item.CreatedAt,
+			&item.ID, &item.SourceTransactionID, &item.RelatedTransactionID, &item.RelationType, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&totalCount,
 		); err != nil {
-			return models.ListTransactionRelationsResponseModel{}, huma.Error400BadRequest("Unable to scan transaction relation data", err)
+			return models.TransactionRelationsPagedModel{}, huma.Error400BadRequest("Unable to scan transaction relation data", err)
 		}
 		items = append(items, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.ListTransactionRelationsResponseModel{}, huma.Error400BadRequest("Error reading transaction relation rows", err)
+		return models.TransactionRelationsPagedModel{}, huma.Error400BadRequest("Error reading transaction relation rows", err)
 	}
 
 	if items == nil {
@@ -72,28 +74,30 @@ func (trr TransactionRelationRepository) List(ctx context.Context, transactionID
 
 	totalPages := 0
 	if totalCount > 0 {
-		totalPages = (totalCount + pageSize - 1) / pageSize
+		totalPages = (totalCount + q.PageSize - 1) / q.PageSize
 	}
 
-	return models.ListTransactionRelationsResponseModel{
-		Data:       items,
-		PageNumber: pageNumber,
-		PageSize:   pageSize,
+	return models.TransactionRelationsPagedModel{
+		Items:      items,
+		PageNumber: q.PageNumber,
+		PageSize:   q.PageSize,
 		TotalCount: totalCount,
 		TotalPages: totalPages,
 	}, nil
 }
 
-// Get retrieves a single transaction relation by ID
-func (trr TransactionRelationRepository) Get(ctx context.Context, id int64) (models.TransactionRelationModel, error) {
+func (trr TransactionRelationRepository) GetDetail(ctx context.Context, p models.TransactionRelationGetModel) (models.TransactionRelationModel, error) {
 	query := `
-		SELECT id, transaction_id, related_transaction_id, created_at
+		SELECT id, source_transaction_id, related_transaction_id, relation_type, created_at, updated_at, deleted_at
 		FROM transaction_relations
-		WHERE id = $1`
+		WHERE id = $1 
+		AND source_transaction_id = $2
+		AND deleted_at IS NULL
+		`
 
 	var item models.TransactionRelationModel
-	err := trr.pgx.QueryRow(ctx, query, id).Scan(
-		&item.ID, &item.TransactionID, &item.RelatedTransactionID, &item.CreatedAt,
+	err := trr.pgx.QueryRow(ctx, query, p.RelationID, p.SourceTransactionID).Scan(
+		&item.ID, &item.SourceTransactionID, &item.RelatedTransactionID, &item.RelationType, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 	)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -106,82 +110,77 @@ func (trr TransactionRelationRepository) Get(ctx context.Context, id int64) (mod
 	return item, nil
 }
 
-// Create creates a new transaction relation
-func (trr TransactionRelationRepository) Create(ctx context.Context, p models.CreateTransactionRelationRequestModel) (models.CreateTransactionRelationResponseModel, error) {
-	// Validate that we're not relating a transaction to itself
-	if p.TransactionID == p.RelatedTransactionID {
-		return models.CreateTransactionRelationResponseModel{}, huma.Error400BadRequest("Cannot relate a transaction to itself", nil)
+func (trr TransactionRelationRepository) Create(ctx context.Context, p models.CreateTransactionRelationModel) (models.TransactionRelationModel, error) {
+	sql := `
+		WITH source_check AS (
+			SELECT 1 FROM transactions WHERE id = $1 AND deleted_at IS NULL
+		),
+		related_check AS (
+			SELECT 1 FROM transactions WHERE id = $2 AND deleted_at IS NULL
+		),
+		duplicate_check AS (
+			SELECT 1 FROM transaction_relations
+			WHERE source_transaction_id = $1 AND related_transaction_id = $2 AND deleted_at IS NULL
+		),
+		validation AS (
+			SELECT
+				CASE 
+					WHEN (SELECT COUNT(*) FROM source_check) = 0 THEN 'source_not_found'
+					WHEN (SELECT COUNT(*) FROM related_check) = 0 THEN 'related_not_found'
+					WHEN (SELECT COUNT(*) FROM duplicate_check) > 0 THEN 'duplicate_exists'
+					ELSE 'valid'
+				END as status
+		)
+		SELECT status FROM validation
+	`
+
+	var validationStatus string
+	err := trr.pgx.QueryRow(ctx, sql, p.SourceTransactionID, p.RelatedTransactionID).Scan(&validationStatus)
+	if err != nil {
+		return models.TransactionRelationModel{}, huma.Error400BadRequest("Unable to validate transaction relation", err)
 	}
 
-	// Verify both transactions exist
-	existsSQL := `SELECT 1 FROM transactions WHERE id = $1 AND deleted_at IS NULL`
-
-	var exists int
-	if err := trr.pgx.QueryRow(ctx, existsSQL, p.TransactionID).Scan(&exists); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return models.CreateTransactionRelationResponseModel{}, huma.Error404NotFound("Source transaction not found")
-		}
-		return models.CreateTransactionRelationResponseModel{}, huma.Error400BadRequest("Unable to verify source transaction", err)
+	switch validationStatus {
+	case "source_not_found":
+		return models.TransactionRelationModel{}, huma.Error404NotFound("Source transaction not found")
+	case "related_not_found":
+		return models.TransactionRelationModel{}, huma.Error404NotFound("Related transaction not found")
+	case "duplicate_exists":
+		return models.TransactionRelationModel{}, huma.Error400BadRequest("Transaction relation already exists", nil)
 	}
 
-	if err := trr.pgx.QueryRow(ctx, existsSQL, p.RelatedTransactionID).Scan(&exists); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return models.CreateTransactionRelationResponseModel{}, huma.Error404NotFound("Related transaction not found")
-		}
-		return models.CreateTransactionRelationResponseModel{}, huma.Error400BadRequest("Unable to verify related transaction", err)
-	}
+	var ID int64
+	var srcID int64
+	insertSQL := `
+		INSERT INTO transaction_relations (source_transaction_id, related_transaction_id, relation_type)
+		VALUES ($1, $2, $3)
+		RETURNING id, source_transaction_id`
 
-	// Check if relation already exists
-	duplicateSQL := `
-		SELECT 1 FROM transaction_relations
-		WHERE transaction_id = $1 AND related_transaction_id = $2`
-
-	if err := trr.pgx.QueryRow(ctx, duplicateSQL, p.TransactionID, p.RelatedTransactionID).Scan(&exists); err == nil {
-		return models.CreateTransactionRelationResponseModel{}, huma.Error400BadRequest("Transaction relation already exists", nil)
-	}
-
-	query := `
-		INSERT INTO transaction_relations (transaction_id, related_transaction_id)
-		VALUES ($1, $2)
-		RETURNING id, transaction_id, related_transaction_id, created_at`
-
-	var item models.TransactionRelationModel
-	err := trr.pgx.QueryRow(
+	insertErr := trr.pgx.QueryRow(
 		ctx,
-		query,
-		p.TransactionID,
+		insertSQL,
+		p.SourceTransactionID,
 		p.RelatedTransactionID,
-	).Scan(
-		&item.ID, &item.TransactionID, &item.RelatedTransactionID, &item.CreatedAt,
-	)
+		p.RelationType,
+	).Scan(&ID, &srcID)
 
-	if err != nil {
-		return models.CreateTransactionRelationResponseModel{}, huma.Error400BadRequest("Unable to create transaction relation", err)
+	if insertErr != nil {
+		return models.TransactionRelationModel{}, huma.Error400BadRequest("Unable to create transaction relation", insertErr)
 	}
 
-	return models.CreateTransactionRelationResponseModel{TransactionRelationModel: item}, nil
+	return trr.GetDetail(ctx, models.TransactionRelationGetModel{
+		SourceTransactionID: srcID,
+		RelationID:          ID,
+	})
 }
 
-// Delete deletes a transaction relation
-func (trr TransactionRelationRepository) Delete(ctx context.Context, id int64) error {
-	sql := `DELETE FROM transaction_relations WHERE id = $1`
+func (trr TransactionRelationRepository) Delete(ctx context.Context, p models.DeleteTransactionRelationModel) error {
+	sql := `UPDATE transaction_relations
+		SET deleted_at = CURRENT_TIMESTAMP,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND source_transaction_id = $2 AND deleted_at IS NULL`
 
-	cmdTag, err := trr.pgx.Exec(ctx, sql, id)
-	if err != nil {
-		return huma.Error400BadRequest("Unable to delete transaction relation", err)
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return huma.Error404NotFound("Transaction relation not found")
-	}
-
-	return nil
-}
-
-// DeleteByTransactionIDs deletes a relation between two transactions
-func (trr TransactionRelationRepository) DeleteByTransactionIDs(ctx context.Context, transactionID, relatedTransactionID int64) error {
-	sql := `DELETE FROM transaction_relations WHERE transaction_id = $1 AND related_transaction_id = $2`
-
-	cmdTag, err := trr.pgx.Exec(ctx, sql, transactionID, relatedTransactionID)
+	cmdTag, err := trr.pgx.Exec(ctx, sql, p.RelationID, p.SourceTransactionID)
 	if err != nil {
 		return huma.Error400BadRequest("Unable to delete transaction relation", err)
 	}

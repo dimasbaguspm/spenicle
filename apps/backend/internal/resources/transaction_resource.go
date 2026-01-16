@@ -143,7 +143,7 @@ func (tr TransactionResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "list-transaction-relations",
 		Method:      "GET",
-		Path:        "/transactions/{transactionId}/relations",
+		Path:        "/transactions/{sourceTransactionId}/relations",
 		Summary:     "List transaction relations",
 		Description: "Get a paginated list of relations for a transaction",
 		Tags:        []string{"Transaction Relations"},
@@ -155,7 +155,7 @@ func (tr TransactionResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "create-transaction-relation",
 		Method:      "POST",
-		Path:        "/transactions/{transactionId}/relations",
+		Path:        "/transactions/{sourceTransactionId}/relations",
 		Summary:     "Create transaction relation",
 		Description: "Create a relation between two transactions",
 		Tags:        []string{"Transaction Relations"},
@@ -167,7 +167,7 @@ func (tr TransactionResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "get-transaction-relation",
 		Method:      "GET",
-		Path:        "/transactions/{transactionId}/relations/{relationId}",
+		Path:        "/transactions/{sourceTransactionId}/relations/{relationId}",
 		Summary:     "Get transaction relation",
 		Description: "Get a specific relation between transactions",
 		Tags:        []string{"Transaction Relations"},
@@ -179,7 +179,7 @@ func (tr TransactionResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-transaction-relation",
 		Method:      "DELETE",
-		Path:        "/transactions/{transactionId}/relations/{relationId}",
+		Path:        "/transactions/{sourceTransactionId}/relations/{relationId}",
 		Summary:     "Delete transaction relation",
 		Description: "Delete a relation between transactions",
 		Tags:        []string{"Transaction Relations"},
@@ -321,87 +321,65 @@ func (tr TransactionResource) Delete(ctx context.Context, input *struct {
 // Transaction Relation Handlers
 
 func (tr TransactionResource) ListRelations(ctx context.Context, input *struct {
-	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
-	PageNumber    int   `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
-	PageSize      int   `query:"pageSize" default:"10" minimum:"1" maximum:"100" doc:"Number of items per page"`
+	models.TransactionRelationsSearchModel
 }) (*struct {
-	Body models.ListTransactionRelationsResponseModel
+	Body models.TransactionRelationsPagedModel
 }, error) {
-	resp, err := tr.trs.List(ctx, input.TransactionID, input.PageNumber, input.PageSize)
+	resp, err := tr.trs.GetPaged(ctx, input.TransactionRelationsSearchModel)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.ListTransactionRelationsResponseModel
+		Body models.TransactionRelationsPagedModel
 	}{
 		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) GetRelation(ctx context.Context, input *struct {
-	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
-	RelationID    int64 `path:"relationId" minimum:"1" doc:"Relation ID"`
+	models.TransactionRelationGetModel
 }) (*struct {
-	Body models.GetTransactionRelationResponseModel
+	Body models.TransactionRelationModel
 }, error) {
-	resp, err := tr.trs.Get(ctx, input.RelationID)
+	resp, err := tr.trs.GetDetail(ctx, input.TransactionRelationGetModel)
 	if err != nil {
 		return nil, err
 	}
 
-	// Verify the relation belongs to the transaction
-	if resp.TransactionID != input.TransactionID {
-		return nil, huma.Error404NotFound("Transaction relation not found")
-	}
-
 	return &struct {
-		Body models.GetTransactionRelationResponseModel
+		Body models.TransactionRelationModel
 	}{
-		Body: models.GetTransactionRelationResponseModel{TransactionRelationModel: resp},
+		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) CreateRelation(ctx context.Context, input *struct {
-	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
-	Body          models.CreateTransactionRelationRequestModel
+	Body models.CreateTransactionRelationModel
 }) (*struct {
-	Body models.CreateTransactionRelationResponseModel
+	Body models.TransactionRelationModel
 }, error) {
-	// Override the transaction ID in request body with the path parameter
-	input.Body.TransactionID = input.TransactionID
-
 	resp, err := tr.trs.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.CreateTransactionRelationResponseModel
+		Body models.TransactionRelationModel
 	}{
 		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) DeleteRelation(ctx context.Context, input *struct {
-	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
-	RelationID    int64 `path:"relationId" minimum:"1" doc:"Relation ID"`
+	models.DeleteTransactionRelationModel
 }) (*struct{}, error) {
-	// Verify the relation belongs to the transaction before deleting
-	relation, err := tr.trs.Get(ctx, input.RelationID)
-	if err != nil {
+
+	if err := tr.trs.Delete(ctx, input.DeleteTransactionRelationModel); err != nil {
 		return nil, err
 	}
 
-	if relation.TransactionID != input.TransactionID {
-		return nil, huma.Error404NotFound("Transaction relation not found")
-	}
-
-	if err := tr.trs.Delete(ctx, input.RelationID); err != nil {
-		return nil, err
-	}
-
-	return &struct{}{}, nil
+	return nil, nil
 }
 
 // Transaction Tag Handlers
