@@ -3,7 +3,10 @@ import { test, expect } from "@fixtures/index";
 test.describe("Accounts - Cases", () => {
   test("POST /accounts/reorder - reorder accounts preserves requested order", async ({
     accountAPI,
+    ensureCleanDB,
   }) => {
+    // Ensure clean database for reordering test
+    await ensureCleanDB();
     const accs = [] as number[];
 
     for (let i = 0; i < 3; i++) {

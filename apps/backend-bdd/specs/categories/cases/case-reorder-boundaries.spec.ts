@@ -3,7 +3,10 @@ import { test, expect } from "@fixtures/index";
 test.describe("Categories - Reorder Boundaries", () => {
   test("POST /categories/reorder - valid reorder updates order", async ({
     categoryAPI,
+    ensureCleanDB,
   }) => {
+    // Ensure clean database for reordering test
+    await ensureCleanDB();
     const accs: number[] = [];
     for (let i = 0; i < 3; i++) {
       const r = await categoryAPI.createCategory({

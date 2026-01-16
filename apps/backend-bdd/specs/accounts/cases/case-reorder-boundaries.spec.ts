@@ -3,7 +3,10 @@ import { test, expect } from "@fixtures/index";
 test.describe("Accounts - Reorder Boundaries", () => {
   test("POST /accounts/reorder - valid reorder updates order", async ({
     accountAPI,
+    ensureCleanDB,
   }) => {
+    // Ensure clean database for reordering test
+    await ensureCleanDB();
     // Create 3 new accounts
     const newIds: number[] = [];
     for (let i = 0; i < 3; i++) {

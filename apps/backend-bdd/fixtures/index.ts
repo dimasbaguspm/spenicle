@@ -27,6 +27,7 @@ type APIFixtures = {
   budgetTemplateAPI: BudgetTemplateAPIClient;
   transactionTemplateAPI: TransactionTemplateAPIClient;
   authenticatedContext: TestContext;
+  ensureCleanDB: () => Promise<void>;
 };
 
 /**
@@ -59,6 +60,50 @@ function loadAuthTokens(): { accessToken?: string; refreshToken?: string } {
     console.warn("Could not load auth tokens from storage state:", error);
   }
   return {};
+}
+
+/**
+ * Cleanup function for tests that require database isolation
+ */
+async function ensureCleanDatabase(request: any, testContext: TestContext) {
+  console.log("Ensuring clean database for isolated test...");
+
+  // Create temporary clients for cleanup
+  const accountAPI = new AccountAPIClient(request, testContext);
+  const categoryAPI = new CategoryAPIClient(request, testContext);
+
+  try {
+    // For reordering tests, we only need to clean accounts/categories
+    // since they affect display_order
+    const allAccounts = await accountAPI.getAccounts({ pageSize: 1000 });
+    if (allAccounts.data?.items) {
+      for (const account of allAccounts.data.items) {
+        try {
+          await accountAPI.deleteAccount(account.id);
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    }
+
+    const allCategories = await categoryAPI.getCategories({ pageSize: 1000 });
+    if (allCategories.data?.items) {
+      for (const category of allCategories.data.items) {
+        try {
+          await categoryAPI.deleteCategory(category.id);
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    }
+
+    console.log("Database cleaned for isolated test");
+  } catch (error) {
+    console.warn(
+      "Database cleanup encountered some errors (this is normal):",
+      error
+    );
+  }
 }
 
 /**
@@ -168,6 +213,15 @@ export const test = base.extend<APIFixtures>({
     }
     await use(testContext);
   },
+
+  /**
+   * Fixture to ensure clean database for tests that require isolation
+   */
+  ensureCleanDB: async ({ request, testContext }, use) => {
+    const cleanupFn = () => ensureCleanDatabase(request, testContext);
+    await use(cleanupFn);
+  },
 });
 
+// Remove the global beforeEach
 export { expect } from "@playwright/test";

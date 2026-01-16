@@ -3,7 +3,10 @@ import { test, expect } from "@fixtures/index";
 test.describe("Accounts - Cases", () => {
   test("DELETE /accounts/:id affects ordering compactly", async ({
     accountAPI,
+    ensureCleanDB,
   }) => {
+    // Ensure clean database for reordering test
+    await ensureCleanDB();
     const ids: number[] = [];
     for (let i = 0; i < 3; i++) {
       const r = await accountAPI.createAccount({
@@ -53,7 +56,10 @@ test.describe("Accounts - Cases", () => {
   });
   test("DELETE /accounts/:id - delete middle compacts order", async ({
     accountAPI,
+    ensureCleanDB,
   }) => {
+    // Ensure clean database for reordering test
+    await ensureCleanDB();
     const ids: number[] = [];
     for (let i = 0; i < 3; i++) {
       const r = await accountAPI.createAccount({
@@ -87,7 +93,10 @@ test.describe("Accounts - Cases", () => {
 
   test("DELETE /accounts/:id - delete first keeps relative order", async ({
     accountAPI,
+    ensureCleanDB,
   }) => {
+    // Ensure clean database for reordering test
+    await ensureCleanDB();
     const ids: number[] = [];
     for (let i = 0; i < 3; i++) {
       const r = await accountAPI.createAccount({
@@ -116,7 +125,10 @@ test.describe("Accounts - Cases", () => {
 
   test("DELETE /accounts/:id - delete single account leaves none", async ({
     accountAPI,
+    ensureCleanDB,
   }) => {
+    // Ensure clean database for reordering test
+    await ensureCleanDB();
     const r = await accountAPI.createAccount({
       name: `delete-single-${Date.now()}`,
       note: "single",
