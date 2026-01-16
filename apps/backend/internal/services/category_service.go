@@ -67,11 +67,11 @@ func (cs CategoryService) Delete(ctx context.Context, id int64) error {
 }
 
 func (cs CategoryService) Reorder(ctx context.Context, p models.ReorderCategoriesModel) error {
-	if len(p.Data) == 0 {
+	if len(p.Items) == 0 {
 		return huma.Error400BadRequest("No category IDs provided for reordering")
 	}
 
-	if err := cs.cr.ValidateIDsExist(ctx, p.Data); err != nil {
+	if err := cs.cr.ValidateIDsExist(ctx, p.Items); err != nil {
 		return err
 	}
 
@@ -85,7 +85,7 @@ func (cs CategoryService) Reorder(ctx context.Context, p models.ReorderCategorie
 		}
 	}()
 
-	if err := cs.cr.ReorderWithTx(ctx, tx, p.Data); err != nil {
+	if err := cs.cr.ReorderWithTx(ctx, tx, p.Items); err != nil {
 		return err
 	}
 

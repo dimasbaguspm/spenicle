@@ -5,7 +5,7 @@ import "time"
 type CategoriesSearchModel struct {
 	PageNumber int      `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
 	PageSize   int      `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Number of items per page"`
-	SortBy     string   `query:"sortBy" default:"createdAt" enum:"name,type,createdAt,updatedAt" doc:"Field to sort by"`
+	SortBy     string   `query:"sortBy" default:"createdAt" enum:"name,type,createdAt,updatedAt,displayOrder" doc:"Field to sort by"`
 	SortOrder  string   `query:"sortOrder" default:"desc" enum:"asc,desc" doc:"Sort order (asc or desc)"`
 	ID         []int    `query:"id" doc:"Filter by category IDs"`
 	Name       string   `query:"name" doc:"Filter by category name (partial match)"`
@@ -53,5 +53,5 @@ type UpdateCategoryModel struct {
 }
 
 type ReorderCategoriesModel struct {
-	Data []int64 `json:"data" doc:"Ordered list of category IDs, first item will receive displayOrder 0"`
+	Items []int64 `json:"items" doc:"Ordered list of category IDs, first item will receive displayOrder 0"`
 }

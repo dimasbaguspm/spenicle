@@ -14,7 +14,7 @@ export type CreateCategoryRequestModel =
 export type UpdateCategoryRequestModel =
   components["schemas"]["UpdateCategoryModel"];
 export type CategoryReorderRequestModel =
-  components["schemas"]["ReorderCategoriesRequestModel"];
+  components["schemas"]["ReorderCategoriesModel"];
 export type PaginatedCategoryResponseModel =
   components["schemas"]["CategoriesPagedModel"];
 

@@ -1192,21 +1192,9 @@ export interface components {
             /** @description Ordered list of account IDs, first item will receive displayOrder 0 */
             data: number[] | null;
         };
-        ReorderCategoriesRequestModel: {
-            /** @description List of categories to reorder */
-            data: components["schemas"]["ReorderCategoryItemModel"][] | null;
-        };
-        ReorderCategoryItemModel: {
-            /**
-             * Format: int64
-             * @description New display order
-             */
-            displayOrder: number;
-            /**
-             * Format: int64
-             * @description Category ID
-             */
-            id: number;
+        ReorderCategoriesModel: {
+            /** @description Ordered list of category IDs, first item will receive displayOrder 0 */
+            items: number[] | null;
         };
         SummaryAccountListModel: {
             /** @description Summary data grouped by account */
@@ -2566,7 +2554,7 @@ export interface operations {
                 /** @description Number of items per page */
                 pageSize?: number;
                 /** @description Field to sort by */
-                sortBy?: "name" | "type" | "createdAt" | "updatedAt";
+                sortBy?: "name" | "type" | "createdAt" | "updatedAt" | "displayOrder";
                 /** @description Sort order (asc or desc) */
                 sortOrder?: "asc" | "desc";
                 /** @description Filter by category IDs */
@@ -2646,7 +2634,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReorderCategoriesRequestModel"];
+                "application/json": components["schemas"]["ReorderCategoriesModel"];
             };
         };
         responses: {
