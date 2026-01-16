@@ -25,7 +25,7 @@ test.describe("Accounts - Cases", () => {
     createdIds.push(a1.data!.id, a2.data!.id, a3.data!.id);
 
     const res = await accountAPI.getAccounts({ name: "apple" });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     const items = res.data!.items || [];
     const found = items.filter((it: any) => String(it.name).includes("apple"));
     expect(found.length).toBeGreaterThanOrEqual(2);
@@ -48,7 +48,7 @@ test.describe("Accounts - Cases", () => {
     const id = r.data!.id as number;
 
     const res = await accountAPI.getAccounts({ name });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     const items = res.data!.items || [];
     const match = items.find((it: any) => it.id === id);
     expect(match).toBeDefined();
@@ -70,12 +70,12 @@ test.describe("Accounts - Cases", () => {
     }
 
     const page1 = await accountAPI.getAccounts({ pageNumber: 1, pageSize: 2 });
-    expect(page1.status).toBeGreaterThanOrEqual(200);
+    expect(page1.status).toBe(200);
     const items1 = page1.data!.items || [];
     expect(items1.length).toBeLessThanOrEqual(2);
 
     const page2 = await accountAPI.getAccounts({ pageNumber: 2, pageSize: 2 });
-    expect(page2.status).toBeGreaterThanOrEqual(200);
+    expect(page2.status).toBe(200);
     const items2 = page2.data!.items || [];
     expect(items2.length).toBeLessThanOrEqual(2);
 
@@ -99,12 +99,12 @@ test.describe("Accounts - Cases", () => {
     const id2 = a2.data!.id as number;
 
     const resE = await accountAPI.getAccounts({ type: ["expense"] });
-    expect(resE.status).toBeGreaterThanOrEqual(200);
+    expect(resE.status).toBe(200);
     const itemsE = resE.data!.items || [];
     expect(itemsE.some((it: any) => it.id === id1)).toBe(true);
 
     const resI = await accountAPI.getAccounts({ type: ["income"] });
-    expect(resI.status).toBeGreaterThanOrEqual(200);
+    expect(resI.status).toBe(200);
     const itemsI = resI.data!.items || [];
     expect(itemsI.some((it: any) => it.id === id2)).toBe(true);
 

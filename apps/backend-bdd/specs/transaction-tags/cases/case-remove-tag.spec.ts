@@ -143,7 +143,7 @@ test.describe("Transaction Tags - Remove Tag Cases", () => {
       tx.data!.id as number,
       tag.data!.id as number
     );
-    expect(remove1Res.status).toBeGreaterThanOrEqual(200);
+    expect(remove1Res.status).toBe(204);
 
     // Try to remove same tag again
     const remove2Res = await transactionAPI.removeTransactionTag(

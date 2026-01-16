@@ -20,7 +20,7 @@ test.describe("Accounts - Special Characters", () => {
     }
 
     const res = await accountAPI.getAccounts({ name: `uni-` });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
 
     for (const id of ids) await accountAPI.deleteAccount(id);
   });

@@ -30,7 +30,7 @@ test.describe("Transactions - Transfer then Category->Income", () => {
       type: "transfer" as const,
       destinationAccountId: a2.data!.id as number,
     } as any);
-    expect(tx.status).toBeGreaterThanOrEqual(200);
+    expect(tx.status).toBe(200);
 
     const b1 = await accountAPI.getAccount(a1.data!.id as number);
     const b2 = await accountAPI.getAccount(a2.data!.id as number);
@@ -40,13 +40,13 @@ test.describe("Transactions - Transfer then Category->Income", () => {
     const updCat = await categoryAPI.updateCategory(cat.data!.id as number, {
       type: "income",
     });
-    expect(updCat.status).toBeGreaterThanOrEqual(200);
+    expect(updCat.status).toBe(200);
 
     const updTx = await transactionAPI.updateTransaction(
       tx.data!.id as number,
       { type: "income" } as any
     );
-    expect(updTx.status).toBeGreaterThanOrEqual(200);
+    expect(updTx.status).toBe(200);
 
     const af1 = await accountAPI.getAccount(a1.data!.id as number);
     const af2 = await accountAPI.getAccount(a2.data!.id as number);

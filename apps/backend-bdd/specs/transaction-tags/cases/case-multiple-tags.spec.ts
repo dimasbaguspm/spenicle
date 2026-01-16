@@ -56,7 +56,7 @@ test.describe("Transaction Tags - Multiple Tags Cases", () => {
     const tagsRes = await transactionAPI.getTransactionTags(
       tx.data!.id as number
     );
-    expect(tagsRes.status).toBeGreaterThanOrEqual(200);
+    expect(tagsRes.status).toBe(200);
     expect(tagsRes.data!.items!.length).toBe(3);
     const tagIds = tagsRes.data!.items!.map((t) => t.tagId);
     expect(tagIds).toContain(tag1.data!.id);
@@ -125,14 +125,14 @@ test.describe("Transaction Tags - Multiple Tags Cases", () => {
     const tags1Res = await transactionAPI.getTransactionTags(
       tx1.data!.id as number
     );
-    expect(tags1Res.status).toBeGreaterThanOrEqual(200);
+    expect(tags1Res.status).toBe(200);
     expect(tags1Res.data!.items!.length).toBe(1);
     expect(tags1Res.data!.items![0].tagName).toBe(tag.data!.name);
 
     const tags2Res = await transactionAPI.getTransactionTags(
       tx2.data!.id as number
     );
-    expect(tags2Res.status).toBeGreaterThanOrEqual(200);
+    expect(tags2Res.status).toBe(200);
     expect(tags2Res.data!.items!.length).toBe(1);
     expect(tags2Res.data!.items![0].tagName).toBe(tag.data!.name);
 
@@ -145,13 +145,13 @@ test.describe("Transaction Tags - Multiple Tags Cases", () => {
     const tags1AfterRes = await transactionAPI.getTransactionTags(
       tx1.data!.id as number
     );
-    expect(tags1AfterRes.status).toBeGreaterThanOrEqual(200);
+    expect(tags1AfterRes.status).toBe(200);
     expect(tags1AfterRes.data!.items!.length).toBe(0);
 
     const tags2AfterRes = await transactionAPI.getTransactionTags(
       tx2.data!.id as number
     );
-    expect(tags2AfterRes.status).toBeGreaterThanOrEqual(200);
+    expect(tags2AfterRes.status).toBe(200);
     expect(tags2AfterRes.data!.items!.length).toBe(1);
 
     // Cleanup
@@ -198,20 +198,20 @@ test.describe("Transaction Tags - Multiple Tags Cases", () => {
       tx.data!.id as number,
       tag.data!.id as number
     );
-    expect(add1Res.status).toBeGreaterThanOrEqual(200);
+    expect(add1Res.status).toBe(200);
 
     // Add same tag again
     const add2Res = await transactionAPI.addTransactionTag(
       tx.data!.id as number,
       tag.data!.id as number
     );
-    expect(add2Res.status).toBeGreaterThanOrEqual(200); // Should succeed (idempotent)
+    expect(add2Res.status).toBe(200); // Should succeed (idempotent)
 
     // Verify only one instance of the tag
     const tagsRes = await transactionAPI.getTransactionTags(
       tx.data!.id as number
     );
-    expect(tagsRes.status).toBeGreaterThanOrEqual(200);
+    expect(tagsRes.status).toBe(200);
     expect(tagsRes.data!.items!.length).toBe(1);
     expect(tagsRes.data!.items![0].tagName).toBe(tag.data!.name);
 
@@ -277,7 +277,7 @@ test.describe("Transaction Tags - Multiple Tags Cases", () => {
     const tagsRes = await transactionAPI.getTransactionTags(
       tx.data!.id as number
     );
-    expect(tagsRes.status).toBeGreaterThanOrEqual(200);
+    expect(tagsRes.status).toBe(200);
     expect(tagsRes.data!.items!.length).toBe(3);
     const tagNames = tagsRes.data!.items!.map((t) => t.tagName);
     expect(tagNames).toContain(tagA.data!.name);

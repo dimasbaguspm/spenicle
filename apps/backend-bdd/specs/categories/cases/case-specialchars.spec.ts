@@ -10,7 +10,7 @@ test.describe("Categories - Special Characters", () => {
       note: "u",
       type: "expense",
     } as any);
-    expect(r.status).toBeGreaterThanOrEqual(200);
+    expect(r.status).toBe(200);
     await categoryAPI.deleteCategory(r.data!.id as number);
   });
 });

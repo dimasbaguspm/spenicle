@@ -12,7 +12,7 @@ test.describe("Accounts - Cases", () => {
         note: "reorder test",
         type: "expense",
       });
-      expect(r.status).toBeGreaterThanOrEqual(200);
+      expect(r.status).toBe(200);
       accs.push(r.data!.id as number);
     }
 
@@ -20,7 +20,7 @@ test.describe("Accounts - Cases", () => {
 
     // Retrieve full active account list so we can provide a complete id array
     const fullListRes = await accountAPI.getAccounts({ pageSize: 100 });
-    expect(fullListRes.status).toBeGreaterThanOrEqual(200);
+    expect(fullListRes.status).toBe(200);
     const fullIds = (fullListRes.data!.items || []).map(
       (it: any) => it.id as number
     );
@@ -44,7 +44,7 @@ test.describe("Accounts - Cases", () => {
       sortOrder: "asc",
       pageSize: 100,
     });
-    expect(listRes.status).toBeGreaterThanOrEqual(200);
+    expect(listRes.status).toBe(200);
     const items = listRes.data!.items || [];
     // Find positions of our created ids in returned items
     const positions = newOrder.map((id) =>

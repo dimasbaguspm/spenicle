@@ -13,11 +13,11 @@ test.describe("Tags - Pagination Cases", () => {
 
     // Test pagination
     const page1 = await tagAPI.getTags({ pageNumber: 1, pageSize: 2 });
-    expect(page1.status).toBeGreaterThanOrEqual(200);
+    expect(page1.status).toBe(200);
     expect(page1.data!.items!.length).toBeLessThanOrEqual(2);
 
     const page2 = await tagAPI.getTags({ pageNumber: 2, pageSize: 2 });
-    expect(page2.status).toBeGreaterThanOrEqual(200);
+    expect(page2.status).toBe(200);
     expect(page2.data!.items!.length).toBeLessThanOrEqual(2);
 
     // Cleanup
@@ -29,7 +29,7 @@ test.describe("Tags - Pagination Cases", () => {
   test("GET /tags - page size limits", async ({ tagAPI }) => {
     // Test maximum page size
     const maxPage = await tagAPI.getTags({ pageSize: 100 });
-    expect(maxPage.status).toBeGreaterThanOrEqual(200);
+    expect(maxPage.status).toBe(200);
 
     // Test page size over limit
     const overLimit = await tagAPI.getTags({ pageSize: 101 });
@@ -47,7 +47,7 @@ test.describe("Tags - Pagination Cases", () => {
 
     // Search for it
     const searchRes = await tagAPI.getTags({ name: uniqueName });
-    expect(searchRes.status).toBeGreaterThanOrEqual(200);
+    expect(searchRes.status).toBe(200);
     expect(searchRes.data!.items!.length).toBeGreaterThanOrEqual(1);
     expect(searchRes.data!.items!.some((tag) => tag.name === uniqueName)).toBe(
       true
@@ -55,7 +55,7 @@ test.describe("Tags - Pagination Cases", () => {
 
     // Search for non-existent
     const noMatch = await tagAPI.getTags({ name: "non-existent-tag-12345" });
-    expect(noMatch.status).toBeGreaterThanOrEqual(200);
+    expect(noMatch.status).toBe(200);
     expect(noMatch.data!.items!.length).toBe(0);
 
     await tagAPI.deleteTag(id);

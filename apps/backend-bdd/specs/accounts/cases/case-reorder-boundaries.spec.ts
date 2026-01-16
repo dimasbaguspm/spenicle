@@ -4,28 +4,40 @@ test.describe("Accounts - Reorder Boundaries", () => {
   test("POST /accounts/reorder - valid reorder updates order", async ({
     accountAPI,
   }) => {
-    const ids: number[] = [];
+    // Create 3 new accounts
+    const newIds: number[] = [];
     for (let i = 0; i < 3; i++) {
       const r = await accountAPI.createAccount({
         name: `r-${Date.now()}-${i}`,
         note: "r",
         type: "expense",
       });
-      ids.push(r.data?.id as number);
+      newIds.push(r.data?.id as number);
     }
 
-    const order = [...ids].reverse();
+    // Get all accounts (including the new ones and any existing ones)
+    const allAccounts = await accountAPI.getAccounts({
+      pageSize: 100,
+      pageNumber: 1,
+    });
+    const allIds = allAccounts.data?.items?.map((acc: any) => acc.id) || [];
+
+    // Create new order: reverse the new accounts, keep other accounts at the end
+    const newOrder = [...newIds].reverse();
+    const otherIds = allIds.filter((id) => !newIds.includes(id));
+    const order = [...newOrder, ...otherIds];
+
     const rr = await accountAPI.reorderAccounts({ data: order });
-    expect(rr.status).toBeGreaterThanOrEqual(200);
+    expect(rr.status).toBe(204);
 
     const res = await accountAPI.getAccounts({});
     const items = res.data?.items || [];
     const found = items
-      .filter((it: any) => order.includes(it.id))
-      .slice(0, order.length);
-    expect(found.map((f: any) => f.id)).toEqual(order);
+      .filter((it: any) => newOrder.includes(it.id))
+      .slice(0, newOrder.length);
+    expect(found.map((f: any) => f.id)).toEqual(newOrder);
 
-    for (const id of ids) await accountAPI.deleteAccount(id);
+    for (const id of newIds) await accountAPI.deleteAccount(id);
   });
 
   test("POST /accounts/reorder - missing ids returns 400", async ({

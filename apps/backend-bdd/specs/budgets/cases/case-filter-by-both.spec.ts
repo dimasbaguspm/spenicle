@@ -68,7 +68,7 @@ test.describe("Budgets - Filter by Both Account and Category Cases", () => {
       accountId: [acc1Id],
       categoryId: [cat1Id],
     });
-    expect(filteredRes.status).toBeGreaterThanOrEqual(200);
+    expect(filteredRes.status).toBe(200);
     const items = filteredRes.data!.items || [];
     expect(items.length).toBe(1);
     expect(items[0].id).toBe(b1Id);

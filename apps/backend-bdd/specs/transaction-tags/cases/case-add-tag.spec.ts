@@ -132,14 +132,14 @@ test.describe("Transaction Tags - Add Tag Cases", () => {
       tx.data!.id as number,
       tag.data!.id as number
     );
-    expect(add1Res.status).toBeGreaterThanOrEqual(200);
+    expect(add1Res.status).toBe(200);
 
     // Try to add same tag again (should be idempotent)
     const add2Res = await transactionAPI.addTransactionTag(
       tx.data!.id as number,
       tag.data!.id as number
     );
-    expect(add2Res.status).toBeGreaterThanOrEqual(200);
+    expect(add2Res.status).toBe(200);
 
     // Cleanup
     await transactionAPI.deleteTransaction(tx.data!.id as number);

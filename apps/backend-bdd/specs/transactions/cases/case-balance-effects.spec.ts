@@ -38,14 +38,14 @@ test.describe("Transactions - Balance Effects", () => {
     };
 
     const r1 = await transactionAPI.createTransaction(expense);
-    expect(r1.status).toBeGreaterThanOrEqual(200);
+    expect(r1.status).toBe(200);
 
     const mid = await accountAPI.getAccount(acc.data!.id as number);
-    expect(mid.status).toBeGreaterThanOrEqual(200);
+    expect(mid.status).toBe(200);
     expect(mid.data!.amount).toBe(-1000);
 
     const r2 = await transactionAPI.createTransaction(inc);
-    expect(r2.status).toBeGreaterThanOrEqual(200);
+    expect(r2.status).toBe(200);
 
     const after = await accountAPI.getAccount(acc.data!.id as number);
     expect(after.data!.amount).toBe(1500); // -1000 + 2500
@@ -137,7 +137,7 @@ test.describe("Transactions - Balance Effects", () => {
       date: future,
       type: "expense" as const,
     });
-    expect(tx.status).toBeGreaterThanOrEqual(200);
+    expect(tx.status).toBe(200);
 
     const accAfter = await accountAPI.getAccount(acc.data!.id as number);
     expect(accAfter.data!.amount).toBe(-500);

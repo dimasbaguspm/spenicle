@@ -37,13 +37,13 @@ test.describe("Transaction Tags - Common CRUD", () => {
       tx.data!.id as number,
       tag.data!.id as number
     );
-    expect(addRes.status).toBeGreaterThanOrEqual(200);
+    expect(addRes.status).toBe(200);
 
     // Verify tag was added
     const tagsRes = await transactionAPI.getTransactionTags(
       tx.data!.id as number
     );
-    expect(tagsRes.status).toBeGreaterThanOrEqual(200);
+    expect(tagsRes.status).toBe(200);
     expect(tagsRes.data!.items!.length).toBeGreaterThan(0);
     expect(tagsRes.data!.items!.some((t) => t.tagName === tag.data!.name)).toBe(
       true
@@ -88,7 +88,7 @@ test.describe("Transaction Tags - Common CRUD", () => {
     const tagsRes = await transactionAPI.getTransactionTags(
       tx.data!.id as number
     );
-    expect(tagsRes.status).toBeGreaterThanOrEqual(200);
+    expect(tagsRes.status).toBe(200);
     expect(Array.isArray(tagsRes.data!.items)).toBe(true);
 
     // Cleanup
@@ -139,13 +139,13 @@ test.describe("Transaction Tags - Common CRUD", () => {
       tx.data!.id as number,
       tag.data!.id as number
     );
-    expect(removeRes.status).toBeGreaterThanOrEqual(200);
+    expect(removeRes.status).toBe(204);
 
     // Verify tag was removed
     const tagsRes = await transactionAPI.getTransactionTags(
       tx.data!.id as number
     );
-    expect(tagsRes.status).toBeGreaterThanOrEqual(200);
+    expect(tagsRes.status).toBe(200);
     expect(tagsRes.data!.items!.some((t) => t.id === tag.data!.id)).toBe(false);
 
     // Cleanup

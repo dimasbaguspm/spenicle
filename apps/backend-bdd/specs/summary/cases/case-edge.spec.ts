@@ -41,7 +41,7 @@ test.describe("Summary - Cases", () => {
       startDate: from,
       endDate: to,
     });
-    expect(catSum.status).toBeGreaterThanOrEqual(200);
+    expect(catSum.status).toBe(200);
     expect(catSum.data).toBeDefined();
     const catItems = catSum.data?.data ?? [];
     expect(Array.isArray(catItems)).toBe(true);
@@ -52,7 +52,7 @@ test.describe("Summary - Cases", () => {
       startDate: now,
       endDate: to,
     });
-    expect(catSum2.status).toBeGreaterThanOrEqual(200);
+    expect(catSum2.status).toBe(200);
     const catItems2 = catSum2.data?.data ?? [];
     expect(Array.isArray(catItems2)).toBe(true);
 
@@ -100,7 +100,7 @@ test.describe("Summary - Cases", () => {
       endDate: endOfDay,
       frequency: "daily",
     });
-    expect(txSum.status).toBeGreaterThanOrEqual(200);
+    expect(txSum.status).toBe(200);
     expect(txSum.data).toBeDefined();
     const txItems = txSum.data?.data ?? [];
     expect(Array.isArray(txItems)).toBe(true);

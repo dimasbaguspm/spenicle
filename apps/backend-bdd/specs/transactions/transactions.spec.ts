@@ -27,18 +27,18 @@ test.describe("Transactions - Common CRUD", () => {
     };
 
     const res = await transactionAPI.createTransaction(payload);
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     const id = res.data!.id as number;
 
     const getRes = await transactionAPI.getTransaction(id);
-    expect(getRes.status).toBeGreaterThanOrEqual(200);
+    expect(getRes.status).toBe(200);
     expect(getRes.data!.id).toBe(id);
 
     const updateRes = await transactionAPI.updateTransaction(id, {
       note: "patched",
     });
-    expect(updateRes.status).toBeGreaterThanOrEqual(200);
+    expect(updateRes.status).toBe(200);
     expect(updateRes.data!.note).toBe("patched");
 
     const delRes = await transactionAPI.deleteTransaction(id);

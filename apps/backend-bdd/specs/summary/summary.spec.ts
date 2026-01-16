@@ -59,7 +59,7 @@ test.describe("Summary - Common", () => {
       startDate: yesterday,
       endDate: tomorrow,
     });
-    expect(accSum.status).toBeGreaterThanOrEqual(200);
+    expect(accSum.status).toBe(200);
     expect(accSum.data).toBeDefined();
     const accItems = accSum.data?.data ?? [];
     expect(Array.isArray(accItems)).toBe(true);
@@ -68,7 +68,7 @@ test.describe("Summary - Common", () => {
       startDate: yesterday,
       endDate: tomorrow,
     });
-    expect(catSum.status).toBeGreaterThanOrEqual(200);
+    expect(catSum.status).toBe(200);
     expect(catSum.data).toBeDefined();
     const catItems = catSum.data?.data ?? [];
     expect(Array.isArray(catItems)).toBe(true);
@@ -78,7 +78,7 @@ test.describe("Summary - Common", () => {
       endDate: tomorrow,
       frequency: "daily",
     });
-    expect(txSum.status).toBeGreaterThanOrEqual(200);
+    expect(txSum.status).toBe(200);
     expect(txSum.data).toBeDefined();
     const txItems = txSum.data?.data ?? [];
     expect(Array.isArray(txItems)).toBe(true);
@@ -103,7 +103,7 @@ test.describe("Summary - Common", () => {
       startDate: farFuture,
       endDate: farFutureEnd,
     });
-    expect(accSum.status).toBeGreaterThanOrEqual(200);
+    expect(accSum.status).toBe(200);
     expect(accSum.data).toBeDefined();
     const items = accSum.data?.data ?? [];
     expect(Array.isArray(items)).toBe(true);

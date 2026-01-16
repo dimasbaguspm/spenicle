@@ -331,9 +331,9 @@ test.describe("Transaction Templates - Duplicate and Business Logic", () => {
     const allTemplates = await transactionTemplateAPI.getTransactionTemplates();
     expect(allTemplates.status).toBe(200);
     expect(allTemplates.data!.items!.length).toBeGreaterThanOrEqual(2);
-    
+
     // Verify our created templates are in the list
-    const templateNames = allTemplates.data!.items!.map(t => t.name);
+    const templateNames = allTemplates.data!.items!.map((t) => t.name);
     expect(templateNames).toContain("Active Template");
     expect(templateNames).toContain("Inactive Template");
 

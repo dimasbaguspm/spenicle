@@ -23,7 +23,7 @@ test.describe("Accounts - Cases", () => {
       note: "edge",
       type: "expense",
     });
-    expect(valid.status).toBeGreaterThanOrEqual(200);
+    expect(valid.status).toBe(200);
     const id = valid.data?.id as number;
 
     const badUpdate = await accountAPI.updateAccount(id, { name: "" });

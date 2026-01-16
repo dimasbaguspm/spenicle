@@ -47,7 +47,7 @@ test.describe("Transaction Relations - Relation Types", () => {
       relatedId,
       "transfer"
     );
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data!.relationType).toBe("transfer");
 
     // Cleanup
@@ -103,7 +103,7 @@ test.describe("Transaction Relations - Relation Types", () => {
       relatedId,
       "split"
     );
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data!.relationType).toBe("split");
 
     // Cleanup
@@ -159,7 +159,7 @@ test.describe("Transaction Relations - Relation Types", () => {
       relatedId,
       "refund"
     );
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data!.relationType).toBe("refund");
 
     // Cleanup
@@ -215,7 +215,7 @@ test.describe("Transaction Relations - Relation Types", () => {
       relatedId,
       "adjustment"
     );
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data!.relationType).toBe("adjustment");
 
     // Cleanup
@@ -271,7 +271,7 @@ test.describe("Transaction Relations - Relation Types", () => {
       relatedId,
       "correction"
     );
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data!.relationType).toBe("correction");
 
     // Cleanup

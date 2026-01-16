@@ -29,7 +29,7 @@ test.describe("Transactions - Update Balance Behavior", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(create.status).toBeGreaterThanOrEqual(200);
+    expect(create.status).toBe(200);
     const tid = create.data!.id as number;
 
     // Update: move to a2 and change amount
@@ -37,7 +37,7 @@ test.describe("Transactions - Update Balance Behavior", () => {
       accountId: a2.data!.id as number,
       amount: 3000,
     });
-    expect(update.status).toBeGreaterThanOrEqual(200);
+    expect(update.status).toBe(200);
 
     const a1After = await accountAPI.getAccount(a1.data!.id as number);
     const a2After = await accountAPI.getAccount(a2.data!.id as number);
@@ -98,12 +98,12 @@ test.describe("Transactions - Update Balance Behavior", () => {
     const up1 = await transactionAPI.updateTransaction(t1.data!.id as number, {
       accountId: a2.data!.id as number,
     });
-    expect(up1.status).toBeGreaterThanOrEqual(200);
+    expect(up1.status).toBe(200);
 
     const up2 = await transactionAPI.updateTransaction(t2.data!.id as number, {
       accountId: a1.data!.id as number,
     });
-    expect(up2.status).toBeGreaterThanOrEqual(200);
+    expect(up2.status).toBe(200);
 
     const afterA1 = await accountAPI.getAccount(a1.data!.id as number);
     const afterA2 = await accountAPI.getAccount(a2.data!.id as number);

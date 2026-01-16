@@ -39,7 +39,7 @@ test.describe("Budgets - Advanced Filter Cases", () => {
 
     // Filter by single acc1Id
     const filteredRes = await budgetAPI.getBudgets({ accountId: [acc1Id] });
-    expect(filteredRes.status).toBeGreaterThanOrEqual(200);
+    expect(filteredRes.status).toBe(200);
     const items = filteredRes.data!.items || [];
     expect(items.length).toBeGreaterThanOrEqual(1);
     expect(items.every((item: any) => item.accountId === acc1Id)).toBe(true);
@@ -91,7 +91,7 @@ test.describe("Budgets - Advanced Filter Cases", () => {
     const filteredRes = await budgetAPI.getBudgets({
       accountId: [acc1Id, acc2Id],
     });
-    expect(filteredRes.status).toBeGreaterThanOrEqual(200);
+    expect(filteredRes.status).toBe(200);
     const items = filteredRes.data!.items || [];
     expect(items.length).toBeGreaterThanOrEqual(2);
     const returnedAccountIds = items.map((item: any) => item.accountId);
@@ -113,7 +113,7 @@ test.describe("Budgets - Advanced Filter Cases", () => {
     const res = await budgetAPI.getBudgets({
       templateId: [1], // Assuming template ID 1 exists
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     // This is more of a smoke test since we don't have template creation in scope
   });
 });

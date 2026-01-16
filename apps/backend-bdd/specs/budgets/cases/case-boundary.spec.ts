@@ -19,7 +19,7 @@ test.describe("Budgets - Boundary Cases", () => {
       periodEnd: date,
       amountLimit: 1000,
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
 
     const budgetId = res.data!.id as number;
@@ -44,7 +44,7 @@ test.describe("Budgets - Boundary Cases", () => {
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 999999999, // Very large amount
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
 
     const budgetId = res.data!.id as number;
@@ -69,7 +69,7 @@ test.describe("Budgets - Boundary Cases", () => {
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1, // Minimum amount
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
 
     const budgetId = res.data!.id as number;

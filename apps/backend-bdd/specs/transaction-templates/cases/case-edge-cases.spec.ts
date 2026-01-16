@@ -204,7 +204,12 @@ test.describe("Transaction Templates - Edge Cases", () => {
     });
 
     expect(template.status).toBe(200);
-    expect(template.data!.startDate).toBe(futureDateStr);
+    // Check that the returned date is approximately the same (allowing for formatting differences)
+    const returnedDate = new Date(template.data!.startDate);
+    const expectedDate = new Date(futureDateStr);
+    expect(
+      Math.abs(returnedDate.getTime() - expectedDate.getTime())
+    ).toBeLessThan(1000); // Within 1 second
 
     // Cleanup
     await transactionTemplateAPI.deleteTransactionTemplate(

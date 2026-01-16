@@ -58,7 +58,7 @@ test.describe("Transaction Relations - Edge Cases", () => {
     const relationsResponse = await transactionAPI.getTransactionRelations(
       sourceId
     );
-    expect(relationsResponse.status).toBeGreaterThanOrEqual(200);
+    expect(relationsResponse.status).toBe(200);
     expect(relationsResponse.data!.items!.length).toBe(3);
 
     // Cleanup
@@ -295,7 +295,7 @@ test.describe("Transaction Relations - Edge Cases", () => {
       relatedId,
       specialRelationType
     );
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data!.relationType).toBe(specialRelationType);
 
     // Cleanup

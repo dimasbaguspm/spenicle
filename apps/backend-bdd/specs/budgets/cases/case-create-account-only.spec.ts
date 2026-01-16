@@ -18,7 +18,7 @@ test.describe("Budgets - Create Account Only Cases", () => {
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     expect(res.data!.accountId).toBe(accountId);
     expect(res.data!.categoryId).toBeUndefined();

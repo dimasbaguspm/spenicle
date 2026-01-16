@@ -50,7 +50,7 @@ test.describe("Transaction Relations - Pagination and Filtering", () => {
 
     // List relations
     const listRes = await transactionAPI.getTransactionRelations(sourceId);
-    expect(listRes.status).toBeGreaterThanOrEqual(200);
+    expect(listRes.status).toBe(200);
     expect(Array.isArray(listRes.data!.items)).toBe(true);
     expect(listRes.data!.items!.length).toBe(5);
 
@@ -100,7 +100,7 @@ test.describe("Transaction Relations - Pagination and Filtering", () => {
 
     // Get relations
     const response = await transactionAPI.getTransactionRelations(isolatedId);
-    expect(response.status).toBeGreaterThanOrEqual(200);
+    expect(response.status).toBe(200);
     expect(Array.isArray(response.data!.items)).toBe(true);
     expect(response.data!.items!.length).toBe(0);
 
@@ -162,7 +162,7 @@ test.describe("Transaction Relations - Pagination and Filtering", () => {
 
     // Get relations
     const response = await transactionAPI.getTransactionRelations(sourceId);
-    expect(response.status).toBeGreaterThanOrEqual(200);
+    expect(response.status).toBe(200);
     expect(response.data!.items!.length).toBe(3);
 
     // Verify relations are ordered by creation date (most recent first)
@@ -228,7 +228,7 @@ test.describe("Transaction Relations - Pagination and Filtering", () => {
 
     // Get relations
     const response = await transactionAPI.getTransactionRelations(sourceId);
-    expect(response.status).toBeGreaterThanOrEqual(200);
+    expect(response.status).toBe(200);
     expect(response.data!.items!.length).toBeGreaterThan(0);
 
     const relation = response.data!.items![0];

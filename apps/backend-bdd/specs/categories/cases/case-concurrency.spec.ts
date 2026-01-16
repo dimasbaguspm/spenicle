@@ -25,7 +25,7 @@ test.describe("Categories - Concurrency Cases", () => {
       name: base,
       pageSize: 20,
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     const items = (res.data as any).items || [];
     expect(items.length).toBeGreaterThanOrEqual(10);
 

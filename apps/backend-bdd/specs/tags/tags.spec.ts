@@ -6,7 +6,7 @@ test.describe("Tags - Common CRUD", () => {
     const res = await tagAPI.createTag({
       name,
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     const id = res.data!.id as number;
 
@@ -21,7 +21,7 @@ test.describe("Tags - Common CRUD", () => {
     const id = created.data!.id as number;
 
     const listRes = await tagAPI.getTags();
-    expect(listRes.status).toBeGreaterThanOrEqual(200);
+    expect(listRes.status).toBe(200);
     const items = listRes.data!.items || [];
     expect(Array.isArray(items)).toBe(true);
 
@@ -36,7 +36,7 @@ test.describe("Tags - Common CRUD", () => {
     const id = created.data!.id as number;
 
     const getRes = await tagAPI.getTag(id);
-    expect(getRes.status).toBeGreaterThanOrEqual(200);
+    expect(getRes.status).toBe(200);
     expect(getRes.data!.id).toBe(id);
 
     await tagAPI.deleteTag(id);
@@ -53,7 +53,7 @@ test.describe("Tags - Common CRUD", () => {
     const updateRes = await tagAPI.updateTag(id, {
       name: newName,
     });
-    expect(updateRes.status).toBeGreaterThanOrEqual(200);
+    expect(updateRes.status).toBe(200);
     expect(updateRes.data!.name).toBe(newName);
 
     await tagAPI.deleteTag(id);

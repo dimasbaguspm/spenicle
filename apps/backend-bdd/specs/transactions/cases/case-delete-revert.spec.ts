@@ -24,7 +24,7 @@ test.describe("Transactions - Delete Revert", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(create.status).toBeGreaterThanOrEqual(200);
+    expect(create.status).toBe(200);
     const tid = create.data!.id as number;
 
     const mid = await accountAPI.getAccount(acc.data!.id as number);
@@ -69,7 +69,7 @@ test.describe("Transactions - Delete Revert", () => {
       type: "transfer" as const,
       destinationAccountId: a2.data!.id as number,
     } as any);
-    expect(create.status).toBeGreaterThanOrEqual(200);
+    expect(create.status).toBe(200);
     const tid = create.data!.id as number;
 
     const mid1 = await accountAPI.getAccount(a1.data!.id as number);

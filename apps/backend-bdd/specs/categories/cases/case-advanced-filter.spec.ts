@@ -5,7 +5,7 @@ test.describe("Categories - Cases", () => {
     categoryAPI,
   }) => {
     const res = await categoryAPI.getCategories({ name: "apple" });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
   });
 
   test("GET /categories - exact match returns correct item", async ({
@@ -18,7 +18,7 @@ test.describe("Categories - Cases", () => {
       type: "expense",
     });
     const res = await categoryAPI.getCategories({ name });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     const items = res.data!.items || [];
     expect(items.some((it) => it.id === created.data!.id)).toBe(true);
     await categoryAPI.deleteCategory(created.data!.id as number);
@@ -29,8 +29,8 @@ test.describe("Categories - Cases", () => {
   }) => {
     const p1 = await categoryAPI.getCategories({ pageNumber: 1, pageSize: 1 });
     const p2 = await categoryAPI.getCategories({ pageNumber: 2, pageSize: 1 });
-    expect(p1.status).toBeGreaterThanOrEqual(200);
-    expect(p2.status).toBeGreaterThanOrEqual(200);
+    expect(p1.status).toBe(200);
+    expect(p2.status).toBe(200);
     const items1 = p1.data!.items || [];
     const items2 = p2.data!.items || [];
     // Items should not overlap
@@ -41,7 +41,7 @@ test.describe("Categories - Cases", () => {
   test("GET /categories - filter by type", async ({ categoryAPI }) => {
     const resE = await categoryAPI.getCategories({ type: ["expense"] });
     const resI = await categoryAPI.getCategories({ type: ["income"] });
-    expect(resE.status).toBeGreaterThanOrEqual(200);
-    expect(resI.status).toBeGreaterThanOrEqual(200);
+    expect(resE.status).toBe(200);
+    expect(resI.status).toBe(200);
   });
 });

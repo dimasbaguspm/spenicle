@@ -211,6 +211,7 @@ test.describe("Transaction Templates - Advanced Filtering", () => {
     const ascResult = await transactionTemplateAPI.getTransactionTemplates({
       sortBy: "name",
       sortOrder: "asc",
+      pageSize: 100,
     });
     expect(ascResult.status).toBe(200);
     const ascNames = ascResult.data!.items!.map((t) => t.name);
@@ -227,6 +228,7 @@ test.describe("Transaction Templates - Advanced Filtering", () => {
     const descResult = await transactionTemplateAPI.getTransactionTemplates({
       sortBy: "name",
       sortOrder: "desc",
+      pageSize: 100,
     });
     expect(descResult.status).toBe(200);
     const descNames = descResult.data!.items!.map((t) => t.name);

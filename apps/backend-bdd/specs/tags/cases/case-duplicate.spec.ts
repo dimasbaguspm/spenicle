@@ -8,7 +8,7 @@ test.describe("Tags - Duplicate Cases", () => {
     const first = await tagAPI.createTag({
       name,
     });
-    expect(first.status).toBeGreaterThanOrEqual(200);
+    expect(first.status).toBe(200);
     const id = first.data!.id as number;
 
     // Try to create duplicate
@@ -29,14 +29,14 @@ test.describe("Tags - Duplicate Cases", () => {
     const first = await tagAPI.createTag({
       name,
     });
-    expect(first.status).toBeGreaterThanOrEqual(200);
+    expect(first.status).toBe(200);
     const id = first.data!.id as number;
 
     // Try to create case variant (should succeed - case sensitive uniqueness)
     const duplicate = await tagAPI.createTag({
       name: name.toUpperCase(),
     });
-    expect(duplicate.status).toBeGreaterThanOrEqual(200);
+    expect(duplicate.status).toBe(200);
 
     await tagAPI.deleteTag(id);
     await tagAPI.deleteTag(duplicate.data!.id as number);

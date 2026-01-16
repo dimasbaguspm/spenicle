@@ -8,7 +8,7 @@ test.describe("Accounts - Common CRUD", () => {
       note: "create test",
       type: "expense",
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     const id = res.data!.id as number;
 
@@ -27,7 +27,7 @@ test.describe("Accounts - Common CRUD", () => {
     const id = created.data!.id as number;
 
     const listRes = await accountAPI.getAccounts();
-    expect(listRes.status).toBeGreaterThanOrEqual(200);
+    expect(listRes.status).toBe(200);
     const items = listRes.data!.items || [];
     expect(Array.isArray(items)).toBe(true);
 
@@ -44,7 +44,7 @@ test.describe("Accounts - Common CRUD", () => {
     const id = created.data!.id as number;
 
     const getRes = await accountAPI.getAccount(id);
-    expect(getRes.status).toBeGreaterThanOrEqual(200);
+    expect(getRes.status).toBe(200);
     expect(getRes.data!.id).toBe(id);
 
     await accountAPI.deleteAccount(id);
@@ -63,7 +63,7 @@ test.describe("Accounts - Common CRUD", () => {
     const updateRes = await accountAPI.updateAccount(id, {
       name: newName,
     });
-    expect(updateRes.status).toBeGreaterThanOrEqual(200);
+    expect(updateRes.status).toBe(200);
     expect(updateRes.data!.name).toBe(newName);
 
     await accountAPI.deleteAccount(id);

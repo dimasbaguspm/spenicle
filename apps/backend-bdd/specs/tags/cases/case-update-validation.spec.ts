@@ -12,7 +12,7 @@ test.describe("Tags - Update Validation Cases", () => {
     const updated = await tagAPI.updateTag(id, {
       name: `updated-${Date.now()}`,
     });
-    expect(updated.status).toBeGreaterThanOrEqual(200);
+    expect(updated.status).toBe(200);
     expect(updated.data!.name).toBeDefined();
 
     await tagAPI.deleteTag(id);

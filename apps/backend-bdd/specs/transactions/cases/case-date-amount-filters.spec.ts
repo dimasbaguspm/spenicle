@@ -55,7 +55,7 @@ test.describe("Transactions - Date and Amount Filters", () => {
       endDate,
       pageSize: 100,
     });
-    expect(byDate.status).toBeGreaterThanOrEqual(200);
+    expect(byDate.status).toBe(200);
     expect(byDate.data).toBeDefined();
     const ids = (byDate.data?.items ?? []).map((it: any) => it.id);
     expect(ids).toContain(r1.data!.id);
@@ -66,7 +66,7 @@ test.describe("Transactions - Date and Amount Filters", () => {
       maxAmount: 200,
       pageSize: 100,
     });
-    expect(byAmount.status).toBeGreaterThanOrEqual(200);
+    expect(byAmount.status).toBe(200);
     const amountIds = (byAmount.data?.items ?? []).map((it: any) => it.id);
     expect(amountIds).toContain(r2.data!.id);
 

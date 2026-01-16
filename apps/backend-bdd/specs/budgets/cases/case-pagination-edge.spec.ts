@@ -8,7 +8,7 @@ test.describe("Budgets - Pagination Edge Cases", () => {
       pageNumber: 999999,
       pageSize: 10,
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     const items = res.data!.items || [];
     expect(items.length).toBe(0);
   });
@@ -20,7 +20,7 @@ test.describe("Budgets - Pagination Edge Cases", () => {
       pageNumber: 1,
       pageSize: 100, // Maximum page size from OpenAPI
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     const items = res.data!.items || [];
     expect(Array.isArray(items)).toBe(true);
     expect(items.length).toBeLessThanOrEqual(100);

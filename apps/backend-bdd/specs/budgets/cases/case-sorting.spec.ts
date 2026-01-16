@@ -30,7 +30,7 @@ test.describe("Budgets - Sorting Cases", () => {
       sortBy: "amountLimit",
       sortOrder: "desc",
     });
-    expect(listRes.status).toBeGreaterThanOrEqual(200);
+    expect(listRes.status).toBe(200);
     const items = listRes.data!.items || [];
     expect(items.length).toBeGreaterThanOrEqual(3);
 

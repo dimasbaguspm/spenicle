@@ -15,8 +15,8 @@ test.describe("Categories - Duplicate Name Cases", () => {
       note: "b",
       type: "expense",
     } as any);
-    expect(r1.status).toBeGreaterThanOrEqual(200);
-    expect(r2.status).toBeGreaterThanOrEqual(200);
+    expect(r1.status).toBe(200);
+    expect(r2.status).toBe(200);
 
     const list = await categoryAPI.getCategories({ name: base });
     const items = list.data!.items || [];

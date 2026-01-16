@@ -19,7 +19,7 @@ test.describe("Accounts - Duplicate Name Cases", () => {
     const id2 = r2.data?.id as number;
 
     const res = await accountAPI.getAccounts({ search: base } as any);
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     const items = (res.data as any).items || [];
     const matches = items.filter((it: any) => it.name === base);
     expect(matches.length).toBeGreaterThanOrEqual(2);

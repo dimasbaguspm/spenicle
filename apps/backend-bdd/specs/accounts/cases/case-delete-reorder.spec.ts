@@ -11,7 +11,7 @@ test.describe("Accounts - Cases", () => {
         note: "delete order test",
         type: "expense",
       });
-      expect(r.status).toBeGreaterThanOrEqual(200);
+      expect(r.status).toBe(200);
       ids.push(r.data!.id as number);
     }
 
@@ -20,7 +20,7 @@ test.describe("Accounts - Cases", () => {
       sortOrder: "asc",
       pageSize: 100,
     });
-    expect(list1.status).toBeGreaterThanOrEqual(200);
+    expect(list1.status).toBe(200);
     const items1 = list1.data!.items || [];
     const positions1 = ids.map((id) =>
       items1.findIndex((it: any) => it.id === id)
@@ -35,7 +35,7 @@ test.describe("Accounts - Cases", () => {
       sortOrder: "asc",
       pageSize: 100,
     });
-    expect(list2.status).toBeGreaterThanOrEqual(200);
+    expect(list2.status).toBe(200);
     const items2 = list2.data!.items || [];
     const remaining = [ids[0], ids[2]];
     const positions2 = remaining.map((id) =>
@@ -61,7 +61,7 @@ test.describe("Accounts - Cases", () => {
         note: "delete order test",
         type: "expense",
       });
-      expect(r.status).toBeGreaterThanOrEqual(200);
+      expect(r.status).toBe(200);
       ids.push(r.data!.id as number);
     }
 
@@ -74,7 +74,7 @@ test.describe("Accounts - Cases", () => {
       sortOrder: "asc",
       pageSize: 100,
     });
-    expect(list2.status).toBeGreaterThanOrEqual(200);
+    expect(list2.status).toBe(200);
     const items2 = list2.data!.items || [];
     const remaining = [ids[0], ids[2]];
     const positions2 = remaining.map((id) =>

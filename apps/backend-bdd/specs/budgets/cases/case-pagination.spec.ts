@@ -37,8 +37,8 @@ test.describe("Budgets - Pagination Cases", () => {
       pageSize: 3,
     });
 
-    expect(p1.status).toBeGreaterThanOrEqual(200);
-    expect(p2.status).toBeGreaterThanOrEqual(200);
+    expect(p1.status).toBe(200);
+    expect(p2.status).toBe(200);
     const i1 = p1.data?.items || [];
     const i2 = p2.data?.items || [];
     const ids1 = i1.map((it: any) => it.id);

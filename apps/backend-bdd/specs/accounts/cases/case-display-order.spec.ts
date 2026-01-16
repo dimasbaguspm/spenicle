@@ -21,7 +21,7 @@ test.describe("Accounts - Display Order After Deletes", () => {
       sortOrder: "asc",
       pageSize: 100,
     });
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     const items = (res.data as any).items || [];
     const remaining = items
       .filter((it: any) => ids.slice(0, 4).includes(it.id))

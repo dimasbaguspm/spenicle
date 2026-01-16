@@ -95,19 +95,19 @@ test.describe("Transactions - Nonexistent References", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(tx.status).toBeGreaterThanOrEqual(200);
+    expect(tx.status).toBe(200);
 
     // change category to income
     const updated = await categoryAPI.updateCategory(cat.data!.id as number, {
       type: "income",
     });
-    expect(updated.status).toBeGreaterThanOrEqual(200);
+    expect(updated.status).toBe(200);
 
     // existing transaction should still be retrievable and balance unaffected
     const detail = await transactionAPI.getTransaction(tx.data!.id as number);
-    expect(detail.status).toBeGreaterThanOrEqual(200);
+    expect(detail.status).toBe(200);
     const accAfter = await accountAPI.getAccount(acc.data!.id as number);
-    expect(accAfter.status).toBeGreaterThanOrEqual(200);
+    expect(accAfter.status).toBe(200);
     // balance still reflects the original expense
     expect(accAfter.data!.amount).toBe(-120);
 
@@ -150,13 +150,13 @@ test.describe("Transactions - Nonexistent References", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(tx.status).toBeGreaterThanOrEqual(200);
+    expect(tx.status).toBe(200);
 
     // change account type to income
     const accUpdated = await accountAPI.updateAccount(acc.data!.id as number, {
       type: "income",
     });
-    expect(accUpdated.status).toBeGreaterThanOrEqual(200);
+    expect(accUpdated.status).toBe(200);
 
     // balance should remain reflecting the earlier expense
     const accAfter = await accountAPI.getAccount(acc.data!.id as number);
@@ -170,7 +170,7 @@ test.describe("Transactions - Nonexistent References", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(tx2.status).toBeGreaterThanOrEqual(200);
+    expect(tx2.status).toBe(200);
 
     // balance should update accordingly
     const accFinal = await accountAPI.getAccount(acc.data!.id as number);

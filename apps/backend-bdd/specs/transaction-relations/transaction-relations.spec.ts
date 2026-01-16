@@ -12,7 +12,7 @@ test.describe("Transaction Relations - Common CRUD", () => {
       note: "test account",
       type: "expense",
     });
-    expect(account.status).toBeGreaterThanOrEqual(200);
+    expect(account.status).toBe(200);
     expect(account.data).toBeDefined();
     const accountId = account.data!.id as number;
 
@@ -21,7 +21,7 @@ test.describe("Transaction Relations - Common CRUD", () => {
       type: "expense",
       note: "test category",
     });
-    expect(category.status).toBeGreaterThanOrEqual(200);
+    expect(category.status).toBe(200);
     expect(category.data).toBeDefined();
     const categoryId = category.data!.id as number;
 
@@ -33,7 +33,7 @@ test.describe("Transaction Relations - Common CRUD", () => {
       type: "expense",
       date: new Date().toISOString(),
     });
-    expect(sourceTx.status).toBeGreaterThanOrEqual(200);
+    expect(sourceTx.status).toBe(200);
     expect(sourceTx.data).toBeDefined();
     const sourceId = sourceTx.data!.id as number;
 
@@ -53,7 +53,7 @@ test.describe("Transaction Relations - Common CRUD", () => {
       relatedId,
       "transfer"
     );
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     expect(res.data!.sourceTransactionId).toBe(sourceId);
     expect(res.data!.relatedTransactionId).toBe(relatedId);
@@ -115,7 +115,7 @@ test.describe("Transaction Relations - Common CRUD", () => {
 
     // List relations
     const listRes = await transactionAPI.getTransactionRelations(sourceId);
-    expect(listRes.status).toBeGreaterThanOrEqual(200);
+    expect(listRes.status).toBe(200);
     expect(Array.isArray(listRes.data!.items)).toBe(true);
     expect(listRes.data!.items!.length).toBeGreaterThan(0);
 
@@ -178,7 +178,7 @@ test.describe("Transaction Relations - Common CRUD", () => {
       relatedId,
       "transfer"
     );
-    expect(createRes.status).toBeGreaterThanOrEqual(200);
+    expect(createRes.status).toBe(200);
     const relationId = createRes.data!.id as number;
 
     // Delete relation
@@ -186,7 +186,7 @@ test.describe("Transaction Relations - Common CRUD", () => {
       sourceId,
       relationId
     );
-    expect(deleteRes.status).toBeGreaterThanOrEqual(200);
+    expect(deleteRes.status).toBe(204);
 
     // Verify relation is deleted
     const listRes = await transactionAPI.getTransactionRelations(sourceId);

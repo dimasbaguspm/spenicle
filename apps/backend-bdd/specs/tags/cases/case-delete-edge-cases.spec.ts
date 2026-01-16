@@ -15,7 +15,7 @@ test.describe("Tags - Delete Edge Cases", () => {
 
     // Delete it once
     const delete1 = await tagAPI.deleteTag(id);
-    expect(delete1.status).toBeGreaterThanOrEqual(200);
+    expect(delete1.status).toBe(204);
 
     // Try to delete again
     const delete2 = await tagAPI.deleteTag(id);
@@ -53,6 +53,6 @@ test.describe("Tags - Delete Edge Cases", () => {
 
     // For now, just test basic delete (assuming no transaction association)
     const deleteRes = await tagAPI.deleteTag(tagId);
-    expect(deleteRes.status).toBeGreaterThanOrEqual(200);
+    expect(deleteRes.status).toBe(204);
   });
 });

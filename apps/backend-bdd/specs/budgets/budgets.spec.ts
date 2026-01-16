@@ -17,7 +17,7 @@ test.describe("Budgets - Common CRUD", () => {
       amountLimit: 1000,
     });
 
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     const budgetId = res.data!.id as number;
 
@@ -42,12 +42,12 @@ test.describe("Budgets - Common CRUD", () => {
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
     });
-    expect(budgetRes.status).toBeGreaterThanOrEqual(200);
+    expect(budgetRes.status).toBe(200);
     expect(budgetRes.data).toBeDefined();
     const budgetId = budgetRes.data!.id as number;
 
     const listRes = await budgetAPI.getBudgets();
-    expect(listRes.status).toBeGreaterThanOrEqual(200);
+    expect(listRes.status).toBe(200);
     const items = listRes.data!.items || [];
     expect(Array.isArray(items)).toBe(true);
 
@@ -72,12 +72,12 @@ test.describe("Budgets - Common CRUD", () => {
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
     });
-    expect(budgetRes.status).toBeGreaterThanOrEqual(200);
+    expect(budgetRes.status).toBe(200);
     expect(budgetRes.data).toBeDefined();
     const budgetId = budgetRes.data!.id as number;
 
     const getRes = await budgetAPI.getBudget(budgetId);
-    expect(getRes.status).toBeGreaterThanOrEqual(200);
+    expect(getRes.status).toBe(200);
     expect(getRes.data!.id).toBe(budgetId);
 
     await budgetAPI.deleteBudget(budgetId);
@@ -106,7 +106,7 @@ test.describe("Budgets - Common CRUD", () => {
     const updateRes = await budgetAPI.updateBudget(budgetId, {
       amountLimit: 2000,
     });
-    expect(updateRes.status).toBeGreaterThanOrEqual(200);
+    expect(updateRes.status).toBe(200);
     expect(updateRes.data!.amountLimit).toBe(2000);
 
     await budgetAPI.deleteBudget(budgetId);
@@ -133,7 +133,7 @@ test.describe("Budgets - Common CRUD", () => {
     const budgetId = budgetRes.data!.id as number;
 
     const deleteRes = await budgetAPI.deleteBudget(budgetId);
-    expect(deleteRes.status).toBeGreaterThanOrEqual(200);
+    expect(deleteRes.status).toBe(204);
 
     await accountAPI.deleteAccount(accountId);
   });

@@ -47,7 +47,7 @@ test.describe("Budgets - Filter by Category Cases", () => {
 
     // Filter by cat1Id
     const filteredRes = await budgetAPI.getBudgets({ categoryId: [cat1Id] });
-    expect(filteredRes.status).toBeGreaterThanOrEqual(200);
+    expect(filteredRes.status).toBe(200);
     const items = filteredRes.data!.items || [];
     expect(items.length).toBeGreaterThanOrEqual(1);
     expect(items.every((item: any) => item.categoryId === cat1Id)).toBe(true);

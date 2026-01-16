@@ -10,12 +10,12 @@ test.describe("Summary - Advanced Filtering", () => {
     const acc = await accountAPI.createAccount({
       name: `adv-acc-${Date.now()}`,
       note: "a",
-      type: "expense",
+      type: "income", // Changed to income to allow income transactions
     });
     const cat = await categoryAPI.createCategory({
       name: `adv-cat-${Date.now()}`,
       note: "c",
-      type: "expense",
+      type: "income", // Changed to income to match
     });
 
     const base = new Date();
@@ -32,9 +32,9 @@ test.describe("Summary - Advanced Filtering", () => {
       amount: 10,
       categoryId: cat.data!.id as number,
       date: s0,
-      type: "expense" as const,
+      type: "income" as const,
     });
-    expect(tx0.status).toBeGreaterThanOrEqual(200);
+    expect(tx0.status).toBe(200);
     const tx1 = await transactionAPI.createTransaction({
       accountId: acc.data!.id as number,
       amount: 20,
@@ -42,15 +42,15 @@ test.describe("Summary - Advanced Filtering", () => {
       date: s1,
       type: "income" as const,
     });
-    expect(tx1.status).toBeGreaterThanOrEqual(200);
+    expect(tx1.status).toBe(200);
     const tx2 = await transactionAPI.createTransaction({
       accountId: acc.data!.id as number,
       amount: 30,
       categoryId: cat.data!.id as number,
       date: s2,
-      type: "expense" as const,
+      type: "income" as const,
     });
-    expect(tx2.status).toBeGreaterThanOrEqual(200);
+    expect(tx2.status).toBe(200);
 
     // daily frequency covering s0..s1 should include two distinct daily periods
     const daily = await summaryAPI.getTransactionSummary({
@@ -58,7 +58,7 @@ test.describe("Summary - Advanced Filtering", () => {
       endDate: s1,
       frequency: "daily",
     });
-    expect(daily.status).toBeGreaterThanOrEqual(200);
+    expect(daily.status).toBe(200);
     const dailyItems = daily.data?.data ?? [];
     expect(dailyItems.length).toBeGreaterThanOrEqual(2);
 
@@ -68,7 +68,7 @@ test.describe("Summary - Advanced Filtering", () => {
       endDate: s2,
       frequency: "monthly",
     });
-    expect(monthly.status).toBeGreaterThanOrEqual(200);
+    expect(monthly.status).toBe(200);
     const monthlyItems = monthly.data?.data ?? [];
     expect(monthlyItems.length).toBeGreaterThanOrEqual(1);
     expect(monthlyItems.length).toBeLessThanOrEqual(3);
@@ -79,7 +79,7 @@ test.describe("Summary - Advanced Filtering", () => {
       endDate: s2,
       frequency: "yearly",
     });
-    expect(yearly.status).toBeGreaterThanOrEqual(200);
+    expect(yearly.status).toBe(200);
     const yearlyItems = yearly.data?.data ?? [];
     expect(yearlyItems.length).toBeGreaterThanOrEqual(1);
 
@@ -205,7 +205,7 @@ test.describe("Summary - Advanced Filtering", () => {
       date: now,
       type: "transfer" as const,
     });
-    expect(t.status).toBeGreaterThanOrEqual(200);
+    expect(t.status).toBe(200);
 
     const catSum = await summaryAPI.getCategorySummary({
       startDate: now,

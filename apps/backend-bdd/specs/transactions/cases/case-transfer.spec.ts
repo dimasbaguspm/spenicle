@@ -33,7 +33,7 @@ test.describe("Transactions - Transfer Cases", () => {
     };
 
     const res = await transactionAPI.createTransaction(payload);
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     const tx = res.data!;
 
     // fetch accounts and check balances changed accordingly

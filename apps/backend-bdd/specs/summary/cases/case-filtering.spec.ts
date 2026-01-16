@@ -41,7 +41,7 @@ test.describe("Summary - Filtering & Calculations", () => {
       startDate: d1,
       endDate: d0,
     });
-    expect(prevAcc.status).toBeGreaterThanOrEqual(200);
+    expect(prevAcc.status).toBe(200);
     const prevAccItems = prevAcc.data?.data ?? [];
 
     const t2 = await transactionAPI.createTransaction({
@@ -74,16 +74,16 @@ test.describe("Summary - Filtering & Calculations", () => {
       type: "transfer",
     });
 
-    expect(t2.status).toBeGreaterThanOrEqual(200);
-    expect(t3.status).toBeGreaterThanOrEqual(200);
-    expect(t4.status).toBeGreaterThanOrEqual(200);
-    expect(t5.status).toBeGreaterThanOrEqual(200);
+    expect(t2.status).toBe(200);
+    expect(t3.status).toBe(200);
+    expect(t4.status).toBe(200);
+    expect(t5.status).toBe(200);
 
     const accSum = await summaryAPI.getAccountSummary({
       startDate: d1,
       endDate: d0,
     });
-    expect(accSum.status).toBeGreaterThanOrEqual(200);
+    expect(accSum.status).toBe(200);
     const accItems = accSum.data?.data ?? [];
     expect(Array.isArray(accItems)).toBe(true);
 
@@ -202,7 +202,7 @@ test.describe("Summary - Filtering & Calculations", () => {
       startDate: from,
       endDate: to,
     });
-    expect(catSum.status).toBeGreaterThanOrEqual(200);
+    expect(catSum.status).toBe(200);
     const items = catSum.data?.data ?? [];
     expect(Array.isArray(items)).toBe(true);
     const byId = (arr: any[]) => new Map(arr.map((it) => [it.id, it]));
@@ -255,7 +255,7 @@ test.describe("Summary - Filtering & Calculations", () => {
       endDate: d0,
       frequency: "daily" as any,
     });
-    expect(prev.status).toBeGreaterThanOrEqual(200);
+    expect(prev.status).toBe(200);
     const prevItems = prev.data?.data ?? [];
 
     const t1 = await transactionAPI.createTransaction({
@@ -286,7 +286,7 @@ test.describe("Summary - Filtering & Calculations", () => {
       endDate: d0,
       frequency: "daily",
     });
-    expect(txSum.status).toBeGreaterThanOrEqual(200);
+    expect(txSum.status).toBe(200);
     const txItems = txSum.data?.data ?? [];
     expect(Array.isArray(txItems)).toBe(true);
     const period = new Date(d1).toISOString().slice(0, 10);

@@ -25,7 +25,7 @@ test.describe("Transactions - Amount Edgecases", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(rBig.status).toBeGreaterThanOrEqual(200);
+    expect(rBig.status).toBe(200);
     const afterBig = await accountAPI.getAccount(acc.data!.id as number);
     expect(afterBig.data!.amount).toBe(-big);
 

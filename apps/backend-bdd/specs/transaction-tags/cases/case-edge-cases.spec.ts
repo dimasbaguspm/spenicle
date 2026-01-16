@@ -45,13 +45,13 @@ test.describe("Transaction Tags - Edge Cases", () => {
         note: "updated note",
       }
     );
-    expect(updateRes.status).toBeGreaterThanOrEqual(200);
+    expect(updateRes.status).toBe(200);
 
     // Verify tag still exists
     const tagsRes = await transactionAPI.getTransactionTags(
       tx.data!.id as number
     );
-    expect(tagsRes.status).toBeGreaterThanOrEqual(200);
+    expect(tagsRes.status).toBe(200);
     expect(tagsRes.data!.items!.length).toBe(1);
     expect(tagsRes.data!.items![0].tagName).toBe(tag.data!.name);
 
@@ -115,14 +115,14 @@ test.describe("Transaction Tags - Edge Cases", () => {
     const tags1Res = await transactionAPI.getTransactionTags(
       tx1.data!.id as number
     );
-    expect(tags1Res.status).toBeGreaterThanOrEqual(200);
+    expect(tags1Res.status).toBe(200);
     expect(tags1Res.data!.items!.length).toBe(1);
     expect(tags1Res.data!.items![0].tagName).toBe(tag.data!.name);
 
     const tags2Res = await transactionAPI.getTransactionTags(
       tx2.data!.id as number
     );
-    expect(tags2Res.status).toBeGreaterThanOrEqual(200);
+    expect(tags2Res.status).toBe(200);
     expect(tags2Res.data!.items!.length).toBe(1);
     expect(tags2Res.data!.items![0].tagName).toBe(tag.data!.name);
 
@@ -135,13 +135,13 @@ test.describe("Transaction Tags - Edge Cases", () => {
     const tags1AfterRes = await transactionAPI.getTransactionTags(
       tx1.data!.id as number
     );
-    expect(tags1AfterRes.status).toBeGreaterThanOrEqual(200);
+    expect(tags1AfterRes.status).toBe(200);
     expect(tags1AfterRes.data!.items!.length).toBe(0);
 
     const tags2AfterRes = await transactionAPI.getTransactionTags(
       tx2.data!.id as number
     );
-    expect(tags2AfterRes.status).toBeGreaterThanOrEqual(200);
+    expect(tags2AfterRes.status).toBe(200);
     expect(tags2AfterRes.data!.items!.length).toBe(1);
 
     // Cleanup
@@ -189,7 +189,7 @@ test.describe("Transaction Tags - Edge Cases", () => {
 
     // Transaction should still exist and be retrievable
     const getTxRes = await transactionAPI.getTransaction(tx.data!.id as number);
-    expect(getTxRes.status).toBeGreaterThanOrEqual(200);
+    expect(getTxRes.status).toBe(200);
 
     // Getting transaction tags might return empty or error, depending on API design
     const tagsRes = await transactionAPI.getTransactionTags(
@@ -255,7 +255,7 @@ test.describe("Transaction Tags - Edge Cases", () => {
     let tagsRes = await transactionAPI.getTransactionTags(
       tx.data!.id as number
     );
-    expect(tagsRes.status).toBeGreaterThanOrEqual(200);
+    expect(tagsRes.status).toBe(200);
     expect(tagsRes.data!.items!.length).toBe(2);
     let tagIds = tagsRes.data!.items!.map((t) => t.tagId);
     expect(tagIds).toContain(tag1.data!.id);
@@ -273,7 +273,7 @@ test.describe("Transaction Tags - Edge Cases", () => {
 
     // Verify final state
     tagsRes = await transactionAPI.getTransactionTags(tx.data!.id as number);
-    expect(tagsRes.status).toBeGreaterThanOrEqual(200);
+    expect(tagsRes.status).toBe(200);
     expect(tagsRes.data!.items!.length).toBe(2);
     tagIds = tagsRes.data!.items!.map((t) => t.tagId);
     expect(tagIds).toContain(tag2.data!.id);

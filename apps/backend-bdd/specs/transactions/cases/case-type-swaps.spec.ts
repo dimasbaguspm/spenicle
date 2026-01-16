@@ -30,7 +30,7 @@ test.describe("Transactions - Cases", () => {
       type: "transfer" as const,
       destinationAccountId: a2.data!.id as number,
     } as any);
-    expect(tx.status).toBeGreaterThanOrEqual(200);
+    expect(tx.status).toBe(200);
 
     const b1 = await accountAPI.getAccount(a1.data!.id as number);
     const b2 = await accountAPI.getAccount(a2.data!.id as number);
@@ -40,13 +40,13 @@ test.describe("Transactions - Cases", () => {
     const updCat = await categoryAPI.updateCategory(cat.data!.id as number, {
       type: "income",
     });
-    expect(updCat.status).toBeGreaterThanOrEqual(200);
+    expect(updCat.status).toBe(200);
 
     const updTx = await transactionAPI.updateTransaction(
       tx.data!.id as number,
       { type: "income" } as any
     );
-    expect(updTx.status).toBeGreaterThanOrEqual(200);
+    expect(updTx.status).toBe(200);
 
     const af1 = await accountAPI.getAccount(a1.data!.id as number);
     const af2 = await accountAPI.getAccount(a2.data!.id as number);
@@ -92,13 +92,13 @@ test.describe("Transactions - Cases", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(tx.status).toBeGreaterThanOrEqual(200);
+    expect(tx.status).toBe(200);
 
     const toTransfer = await transactionAPI.updateTransaction(
       tx.data!.id as number,
       { type: "transfer", destinationAccountId: a2.data!.id as number } as any
     );
-    expect(toTransfer.status).toBeGreaterThanOrEqual(200);
+    expect(toTransfer.status).toBe(200);
     const tA1 = await accountAPI.getAccount(a1.data!.id as number);
     const tA2 = await accountAPI.getAccount(a2.data!.id as number);
     expect(tA1.data!.amount).toBe(-100);
@@ -108,7 +108,7 @@ test.describe("Transactions - Cases", () => {
       tx.data!.id as number,
       { type: "expense", accountId: a1.data!.id as number } as any
     );
-    expect(toExpense.status).toBeGreaterThanOrEqual(200);
+    expect(toExpense.status).toBe(200);
     const teA1 = await accountAPI.getAccount(a1.data!.id as number);
     const teA2 = await accountAPI.getAccount(a2.data!.id as number);
     expect(teA1.data!.amount).toBe(-100);
@@ -117,24 +117,24 @@ test.describe("Transactions - Cases", () => {
     const updCat = await categoryAPI.updateCategory(catE.data!.id as number, {
       type: "income",
     });
-    expect(updCat.status).toBeGreaterThanOrEqual(200);
+    expect(updCat.status).toBe(200);
     const toIncome = await transactionAPI.updateTransaction(
       tx.data!.id as number,
       { type: "income" } as any
     );
-    expect(toIncome.status).toBeGreaterThanOrEqual(200);
+    expect(toIncome.status).toBe(200);
     const tiA1 = await accountAPI.getAccount(a1.data!.id as number);
     expect(tiA1.data!.amount).toBe(100);
 
     const fixCat = await categoryAPI.updateCategory(catE.data!.id as number, {
       type: "expense",
     });
-    expect(fixCat.status).toBeGreaterThanOrEqual(200);
+    expect(fixCat.status).toBe(200);
     const incToExp = await transactionAPI.updateTransaction(
       tx.data!.id as number,
       { type: "expense" } as any
     );
-    expect(incToExp.status).toBeGreaterThanOrEqual(200);
+    expect(incToExp.status).toBe(200);
     const ieA1 = await accountAPI.getAccount(a1.data!.id as number);
     expect(ieA1.data!.amount).toBe(-100);
 
@@ -168,12 +168,12 @@ test.describe("Transactions - Cases", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(tx.status).toBeGreaterThanOrEqual(200);
+    expect(tx.status).toBe(200);
 
     const aUpd = await accountAPI.updateAccount(acc.data!.id as number, {
       type: "income",
     });
-    expect(aUpd.status).toBeGreaterThanOrEqual(200);
+    expect(aUpd.status).toBe(200);
     const after = await accountAPI.getAccount(acc.data!.id as number);
     expect(after.data!.amount).toBe(-75);
 
@@ -184,12 +184,12 @@ test.describe("Transactions - Cases", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(tx2.status).toBeGreaterThanOrEqual(200);
+    expect(tx2.status).toBe(200);
 
     const cUpd = await categoryAPI.updateCategory(cat.data!.id as number, {
       type: "income",
     });
-    expect(cUpd.status).toBeGreaterThanOrEqual(200);
+    expect(cUpd.status).toBe(200);
 
     const tx3 = await transactionAPI.createTransaction({
       accountId: acc.data!.id as number,
@@ -230,7 +230,7 @@ test.describe("Transactions - Cases", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(rBig.status).toBeGreaterThanOrEqual(200);
+    expect(rBig.status).toBe(200);
     const afterBig = await accountAPI.getAccount(acc.data!.id as number);
     expect(afterBig.data!.amount).toBe(-big);
 

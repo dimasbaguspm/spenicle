@@ -25,7 +25,6 @@ test.describe("Tags - Create Invalid Cases", () => {
     const res = await tagAPI.createTag({
       name: "   ",
     });
-    // API allows whitespace-only names (only checks minLength:1)
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(400);
   });
 });

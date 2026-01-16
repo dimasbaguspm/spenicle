@@ -34,13 +34,13 @@ test.describe("Transactions - Transaction Type Swaps", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(tx.status).toBeGreaterThanOrEqual(200);
+    expect(tx.status).toBe(200);
 
     const toTransfer = await transactionAPI.updateTransaction(
       tx.data!.id as number,
       { type: "transfer", destinationAccountId: a2.data!.id as number } as any
     );
-    expect(toTransfer.status).toBeGreaterThanOrEqual(200);
+    expect(toTransfer.status).toBe(200);
     const tA1 = await accountAPI.getAccount(a1.data!.id as number);
     const tA2 = await accountAPI.getAccount(a2.data!.id as number);
     expect(tA1.data!.amount).toBe(-100);
@@ -50,7 +50,7 @@ test.describe("Transactions - Transaction Type Swaps", () => {
       tx.data!.id as number,
       { type: "expense", accountId: a1.data!.id as number } as any
     );
-    expect(toExpense.status).toBeGreaterThanOrEqual(200);
+    expect(toExpense.status).toBe(200);
     const teA1 = await accountAPI.getAccount(a1.data!.id as number);
     const teA2 = await accountAPI.getAccount(a2.data!.id as number);
     expect(teA1.data!.amount).toBe(-100);
@@ -59,24 +59,24 @@ test.describe("Transactions - Transaction Type Swaps", () => {
     const updCat = await categoryAPI.updateCategory(catE.data!.id as number, {
       type: "income",
     });
-    expect(updCat.status).toBeGreaterThanOrEqual(200);
+    expect(updCat.status).toBe(200);
     const toIncome = await transactionAPI.updateTransaction(
       tx.data!.id as number,
       { type: "income" } as any
     );
-    expect(toIncome.status).toBeGreaterThanOrEqual(200);
+    expect(toIncome.status).toBe(200);
     const tiA1 = await accountAPI.getAccount(a1.data!.id as number);
     expect(tiA1.data!.amount).toBe(100);
 
     const fixCat = await categoryAPI.updateCategory(catE.data!.id as number, {
       type: "expense",
     });
-    expect(fixCat.status).toBeGreaterThanOrEqual(200);
+    expect(fixCat.status).toBe(200);
     const incToExp = await transactionAPI.updateTransaction(
       tx.data!.id as number,
       { type: "expense" } as any
     );
-    expect(incToExp.status).toBeGreaterThanOrEqual(200);
+    expect(incToExp.status).toBe(200);
     const ieA1 = await accountAPI.getAccount(a1.data!.id as number);
     expect(ieA1.data!.amount).toBe(-100);
 

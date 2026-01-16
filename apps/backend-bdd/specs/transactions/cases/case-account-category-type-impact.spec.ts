@@ -24,12 +24,12 @@ test.describe("Transactions - Account & Category Type Impact", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(tx.status).toBeGreaterThanOrEqual(200);
+    expect(tx.status).toBe(200);
 
     const aUpd = await accountAPI.updateAccount(acc.data!.id as number, {
       type: "income",
     });
-    expect(aUpd.status).toBeGreaterThanOrEqual(200);
+    expect(aUpd.status).toBe(200);
     const after = await accountAPI.getAccount(acc.data!.id as number);
     expect(after.data!.amount).toBe(-75);
 
@@ -40,12 +40,12 @@ test.describe("Transactions - Account & Category Type Impact", () => {
       date: new Date().toISOString(),
       type: "expense" as const,
     });
-    expect(tx2.status).toBeGreaterThanOrEqual(200);
+    expect(tx2.status).toBe(200);
 
     const cUpd = await categoryAPI.updateCategory(cat.data!.id as number, {
       type: "income",
     });
-    expect(cUpd.status).toBeGreaterThanOrEqual(200);
+    expect(cUpd.status).toBe(200);
 
     const tx3 = await transactionAPI.createTransaction({
       accountId: acc.data!.id as number,

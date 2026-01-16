@@ -245,7 +245,7 @@ test.describe("Transaction Relations - Validation Cases", () => {
       relatedId,
       "" // Empty relation type
     );
-    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.status).toBe(200);
     expect(res.data!.relationType).toBe("");
 
     // Cleanup
