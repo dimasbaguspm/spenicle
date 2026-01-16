@@ -21,10 +21,10 @@ type CategoryModel struct {
 	Icon         *string    `json:"icon,omitempty" doc:"Icon identifier"`
 	IconColor    *string    `json:"iconColor,omitempty" doc:"Icon color code"`
 	DisplayOrder int        `json:"displayOrder" doc:"Display order sequence"`
-	ArchivedAt   *time.Time `json:"archivedAt,omitempty" doc:"Timestamp when archived (null if active)"`
-	CreatedAt    time.Time  `json:"createdAt" doc:"Creation timestamp"`
-	UpdatedAt    *time.Time `json:"updatedAt,omitempty" doc:"Last update timestamp"`
-	DeletedAt    *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
+	ArchivedAt   *time.Time `json:"archivedAt,omitempty" doc:"Timestamp when archived (null if active)" format:"date-time"`
+	CreatedAt    time.Time  `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
+	UpdatedAt    *time.Time `json:"updatedAt,omitempty" doc:"Last update timestamp" format:"date-time"`
+	DeletedAt    *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
 }
 
 type CategoriesPagedModel struct {

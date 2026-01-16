@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -26,7 +25,7 @@ type CronWorker struct {
 	tasks    map[string]*scheduledTask
 	taskMu   sync.RWMutex
 	wg       sync.WaitGroup
-	stopping int32
+	stopping chan struct{}
 }
 
 // scheduledTask represents a task with its ticker
@@ -39,9 +38,10 @@ type scheduledTask struct {
 func NewCronWorker(ctx context.Context) *CronWorker {
 	workerCtx, cancel := context.WithCancel(ctx)
 	return &CronWorker{
-		ctx:    workerCtx,
-		cancel: cancel,
-		tasks:  make(map[string]*scheduledTask),
+		ctx:      workerCtx,
+		cancel:   cancel,
+		tasks:    make(map[string]*scheduledTask),
+		stopping: make(chan struct{}),
 	}
 }
 
@@ -84,12 +84,9 @@ func (cw *CronWorker) runTask(task CronTask, ticker *time.Ticker) {
 		select {
 		case <-cw.ctx.Done():
 			return
+		case <-cw.stopping:
+			return
 		case <-ticker.C:
-			// Skip if worker is stopping
-			if atomic.LoadInt32(&cw.stopping) == 1 {
-				return
-			}
-
 			// Execute the task handler
 			taskCtx, cancel := context.WithTimeout(cw.ctx, 30*time.Second)
 			if err := task.Handler(taskCtx); err != nil {
@@ -104,9 +101,13 @@ func (cw *CronWorker) runTask(task CronTask, ticker *time.Ticker) {
 
 // Stop gracefully shuts down the cron worker and all scheduled tasks
 func (cw *CronWorker) Stop() {
-	if !atomic.CompareAndSwapInt32(&cw.stopping, 0, 1) {
-		return
+	select {
+	case <-cw.stopping:
+		return // Already stopped
+	default:
 	}
+
+	close(cw.stopping)
 
 	cw.taskMu.Lock()
 	for _, st := range cw.tasks {

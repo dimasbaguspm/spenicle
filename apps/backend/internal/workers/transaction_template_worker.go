@@ -93,13 +93,18 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 		"amount", template.Amount,
 	)
 
+	var destAccountID *int64
+	if template.DestinationAccount != nil {
+		destAccountID = &template.DestinationAccount.ID
+	}
+
 	transactionRequest := models.CreateTransactionModel{
 		Type:                 template.Type,
-		Date:                 time.Now(),
+		Date:                 time.Now().Truncate(24 * time.Hour),
 		Amount:               template.Amount,
 		AccountID:            template.Account.ID,
 		CategoryID:           template.Category.ID,
-		DestinationAccountID: &template.DestinationAccount.ID,
+		DestinationAccountID: destAccountID,
 		Note:                 template.Note,
 	}
 

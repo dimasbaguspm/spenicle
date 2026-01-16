@@ -11,14 +11,12 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
-// BudgetTemplateWorker handles processing of pending budgets from templates
 type BudgetTemplateWorker struct {
 	cronWorker    *common.CronWorker
 	templateRepo  repositories.BudgetTemplateRepository
 	budgetService services.BudgetService
 }
 
-// NewBudgetTemplateWorker creates a new budget template worker
 func NewBudgetTemplateWorker(
 	ctx context.Context,
 	templateRepo repositories.BudgetTemplateRepository,
@@ -31,14 +29,13 @@ func NewBudgetTemplateWorker(
 	}
 }
 
-// Start initializes and starts the budget template worker
 func (btw *BudgetTemplateWorker) Start() error {
 	slog.Info("Starting budget template worker")
 
 	err := btw.cronWorker.Register(common.CronTask{
 		ID:       "process-budget-templates",
 		Name:     "Process Budget Templates",
-		Schedule: 24 * time.Hour, // Run every day
+		Schedule: 1 * time.Hour, // Run every hour
 		Handler:  btw.processTemplates,
 	})
 
@@ -48,11 +45,9 @@ func (btw *BudgetTemplateWorker) Start() error {
 	return nil
 }
 
-// processTemplates is the main handler that processes all pending budget templates
 func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 	slog.Debug("Processing budget templates")
 
-	// Get all budget templates that are due for processing
 	dueTemplates, err := btw.templateRepo.GetDueTemplates(ctx)
 	if err != nil {
 		slog.Error("Failed to get due budget templates", "err", err)
@@ -66,7 +61,6 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 
 	slog.Info("Processing budget templates", "count", len(dueTemplates))
 
-	// Process each budget template
 	for _, template := range dueTemplates {
 		if err := btw.processTemplate(ctx, template); err != nil {
 			slog.Error(
@@ -74,7 +68,6 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 				"templateID", template.ID,
 				"err", err,
 			)
-			// Continue processing other templates even if one fails
 			continue
 		}
 
@@ -124,22 +117,15 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 	return nil
 }
 
-// calculateBudgetPeriod determines the budget period based on recurrence type
 func calculateBudgetPeriod(recurrence string) (time.Time, time.Time) {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	switch recurrence {
 	case "weekly":
-		// Week starts on Monday
-		daysUntilMonday := (time.Monday - today.Weekday() + 7) % 7
-		if daysUntilMonday == 0 {
-			daysUntilMonday = 0 // Today is Monday
-		}
-		weekStart := today.AddDate(0, 0, int(daysUntilMonday))
-		if weekStart.After(today) {
-			weekStart = today.AddDate(0, 0, -7) // Last Monday
-		}
+		// Week starts on Monday, calculate days from Monday of current week
+		daysFromMonday := int((today.Weekday() - time.Monday + 7) % 7)
+		weekStart := today.AddDate(0, 0, -daysFromMonday)
 		weekEnd := weekStart.AddDate(0, 0, 6)
 		return weekStart, weekEnd
 
@@ -156,12 +142,10 @@ func calculateBudgetPeriod(recurrence string) (time.Time, time.Time) {
 		return yearStart, yearEnd
 
 	default:
-		// Default to current day
 		return today, today
 	}
 }
 
-// Stop gracefully shuts down the worker
 func (btw *BudgetTemplateWorker) Stop() {
 	slog.Info("Stopping budget template worker")
 	btw.cronWorker.Stop()

@@ -18,14 +18,14 @@ type BudgetModel struct {
 	TemplateID   *int64     `json:"templateId,omitempty" doc:"Budget template ID if generated from template"`
 	AccountID    *int64     `json:"accountId,omitempty" doc:"Account ID to filter transactions"`
 	CategoryID   *int64     `json:"categoryId,omitempty" doc:"Category ID to filter transactions"`
-	PeriodStart  time.Time  `json:"periodStart" doc:"Budget period start date"`
-	PeriodEnd    time.Time  `json:"periodEnd" doc:"Budget period end date"`
+	PeriodStart  time.Time  `json:"periodStart" doc:"Budget period start date" format:"date"`
+	PeriodEnd    time.Time  `json:"periodEnd" doc:"Budget period end date" format:"date"`
 	AmountLimit  int64      `json:"amountLimit" doc:"Budget limit amount in cents" minimum:"1"`
 	ActualAmount int64      `json:"actualAmount" doc:"Actual spent amount in cents (computed from transactions)"`
 	Note         *string    `json:"note,omitempty" doc:"Optional note for the budget" maxLength:"500"`
-	CreatedAt    time.Time  `json:"createdAt" doc:"Creation timestamp"`
-	UpdatedAt    *time.Time `json:"updatedAt,omitempty" doc:"Last update timestamp"`
-	DeletedAt    *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
+	CreatedAt    time.Time  `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
+	UpdatedAt    *time.Time `json:"updatedAt,omitempty" doc:"Last update timestamp" format:"date-time"`
+	DeletedAt    *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
 }
 
 type BudgetsPagedModel struct {
@@ -40,8 +40,8 @@ type CreateBudgetModel struct {
 	TemplateID  *int64    `json:"templateId,omitempty" doc:"Budget template ID if generated from template" minimum:"1"`
 	AccountID   *int64    `json:"accountId,omitempty" doc:"Account ID to filter transactions" minimum:"1"`
 	CategoryID  *int64    `json:"categoryId,omitempty" doc:"Category ID to filter transactions" minimum:"1"`
-	PeriodStart time.Time `json:"periodStart" required:"true" doc:"Budget period start date"`
-	PeriodEnd   time.Time `json:"periodEnd" required:"true" doc:"Budget period end date"`
+	PeriodStart time.Time `json:"periodStart" required:"true" doc:"Budget period start date" format:"date"`
+	PeriodEnd   time.Time `json:"periodEnd" required:"true" doc:"Budget period end date" format:"date"`
 	AmountLimit int64     `json:"amountLimit" required:"true" minimum:"1" doc:"Budget limit amount in cents"`
 	Note        *string   `json:"note,omitempty" doc:"Optional note for the budget" maxLength:"500"`
 }
@@ -49,8 +49,8 @@ type CreateBudgetModel struct {
 type UpdateBudgetModel struct {
 	AccountID   *int64     `json:"accountId,omitempty" doc:"Account ID to filter transactions" minimum:"1"`
 	CategoryID  *int64     `json:"categoryId,omitempty" doc:"Category ID to filter transactions" minimum:"1"`
-	PeriodStart *time.Time `json:"periodStart,omitempty" doc:"Budget period start date"`
-	PeriodEnd   *time.Time `json:"periodEnd,omitempty" doc:"Budget period end date"`
+	PeriodStart *time.Time `json:"periodStart,omitempty" doc:"Budget period start date" format:"date"`
+	PeriodEnd   *time.Time `json:"periodEnd,omitempty" doc:"Budget period end date" format:"date"`
 	AmountLimit *int64     `json:"amountLimit,omitempty" minimum:"1" doc:"Budget limit amount in cents"`
 	Note        *string    `json:"note,omitempty" doc:"Optional note for the budget" maxLength:"500"`
 }

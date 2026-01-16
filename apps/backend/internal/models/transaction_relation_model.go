@@ -7,9 +7,9 @@ type TransactionRelationModel struct {
 	SourceTransactionID  int64      `json:"sourceTransactionId" doc:"ID of the source transaction"`
 	RelatedTransactionID int64      `json:"relatedTransactionId" doc:"ID of the related transaction"`
 	RelationType         string     `json:"relationType" doc:"Type of relation"`
-	CreatedAt            time.Time  `json:"createdAt" doc:"Creation timestamp"`
-	UpdatedAt            time.Time  `json:"updatedAt" doc:"Last update timestamp"`
-	DeletedAt            *time.Time `json:"deletedAt" doc:"Deletion timestamp"`
+	CreatedAt            time.Time  `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
+	UpdatedAt            time.Time  `json:"updatedAt" doc:"Last update timestamp" format:"date-time" `
+	DeletedAt            *time.Time `json:"deletedAt" doc:"Deletion timestamp" format:"date-time"`
 }
 
 type TransactionRelationsSearchModel struct {

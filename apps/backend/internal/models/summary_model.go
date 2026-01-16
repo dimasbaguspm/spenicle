@@ -3,8 +3,8 @@ package models
 import "time"
 
 type SummarySearchModel struct {
-	StartDate *time.Time `query:"startDate" required:"true" doc:"Start date for filtering (ISO 8601 format)" example:"2024-01-01T00:00:00Z"`
-	EndDate   *time.Time `query:"endDate" required:"true" doc:"End date for filtering (ISO 8601 format)" example:"2024-12-31T23:59:59Z"`
+	StartDate *time.Time `query:"startDate" required:"true" doc:"Start date for filtering (ISO 8601 format)" example:"2024-01-01T00:00:00Z" format:"date-time"`
+	EndDate   *time.Time `query:"endDate" required:"true" doc:"End date for filtering (ISO 8601 format)" example:"2024-12-31T23:59:59Z" format:"date-time"`
 }
 
 type SummaryTransactionSearchModel struct {

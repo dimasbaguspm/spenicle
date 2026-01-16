@@ -6,9 +6,9 @@ type TagModel struct {
 	ID        int64      `json:"id" doc:"Unique identifier"`
 	Name      string     `json:"name" doc:"Tag name"`
 	Color     *string    `json:"color,omitempty" doc:"Tag color code"`
-	CreatedAt time.Time  `json:"createdAt" doc:"Creation timestamp"`
-	UpdatedAt *time.Time `json:"updatedAt,omitempty" doc:"Last update timestamp"`
-	DeletedAt *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
+	CreatedAt time.Time  `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty" doc:"Last update timestamp" format:"date-time"`
+	DeletedAt *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
 }
 
 type TagsSearchModel struct {

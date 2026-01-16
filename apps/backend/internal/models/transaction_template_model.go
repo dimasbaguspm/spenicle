@@ -12,12 +12,12 @@ type TransactionTemplateModel struct {
 	DestinationAccount *TransactionAccountEmbedded `json:"destinationAccount,omitempty" doc:"Destination account details (transfers only)"`
 	Note               *string                     `json:"note,omitempty" doc:"Template notes"`
 	Recurrence         string                      `json:"recurrence" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
-	StartDate          time.Time                   `json:"startDate" doc:"Template start date"`
-	EndDate            *time.Time                  `json:"endDate,omitempty" doc:"Template end date"`
-	LastExecutedAt     *time.Time                  `json:"lastExecutedAt,omitempty" doc:"Last execution timestamp"`
-	CreatedAt          time.Time                   `json:"createdAt" doc:"Creation timestamp"`
-	UpdatedAt          time.Time                   `json:"updatedAt" doc:"Last update timestamp"`
-	DeletedAt          *time.Time                  `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
+	StartDate          time.Time                   `json:"startDate" doc:"Template start date" format:"date"`
+	EndDate            *time.Time                  `json:"endDate,omitempty" doc:"Template end date" format:"date"`
+	LastExecutedAt     *time.Time                  `json:"lastExecutedAt,omitempty" doc:"Last execution timestamp" format:"date-time"`
+	CreatedAt          time.Time                   `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
+	UpdatedAt          time.Time                   `json:"updatedAt" doc:"Last update timestamp" format:"date-time"`
+	DeletedAt          *time.Time                  `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
 }
 
 type TransactionTemplatesSearchModel struct {
@@ -49,8 +49,8 @@ type CreateTransactionTemplateModel struct {
 	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
 	Note                 *string    `json:"note,omitempty" doc:"Template notes"`
 	Recurrence           string     `json:"recurrence" required:"true" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
-	StartDate            time.Time  `json:"startDate" required:"true" doc:"Template start date"`
-	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date"`
+	StartDate            time.Time  `json:"startDate" required:"true" doc:"Template start date" format:"date"`
+	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date" format:"date"`
 }
 
 type UpdateTransactionTemplateModel struct {
@@ -62,6 +62,6 @@ type UpdateTransactionTemplateModel struct {
 	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
 	Note                 *string    `json:"note,omitempty" doc:"Template notes"`
 	Recurrence           *string    `json:"recurrence,omitempty" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
-	StartDate            *time.Time `json:"startDate,omitempty" doc:"Template start date"`
-	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date"`
+	StartDate            *time.Time `json:"startDate,omitempty" doc:"Template start date" format:"date"`
+	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date" format:"date"`
 }
