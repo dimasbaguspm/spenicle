@@ -12,8 +12,8 @@ type TransactionTemplateModel struct {
 	DestinationAccount *TransactionAccountEmbedded `json:"destinationAccount,omitempty" doc:"Destination account details (transfers only)"`
 	Note               *string                     `json:"note,omitempty" doc:"Template notes"`
 	Recurrence         string                      `json:"recurrence" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
-	StartDate          time.Time                   `json:"startDate" doc:"Template start date" format:"date"`
-	EndDate            *time.Time                  `json:"endDate,omitempty" doc:"Template end date" format:"date"`
+	StartDate          time.Time                   `json:"startDate" doc:"Template start date" format:"date-time"`
+	EndDate            *time.Time                  `json:"endDate,omitempty" doc:"Template end date" format:"date-time"`
 	LastExecutedAt     *time.Time                  `json:"lastExecutedAt,omitempty" doc:"Last execution timestamp" format:"date-time"`
 	CreatedAt          time.Time                   `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
 	UpdatedAt          time.Time                   `json:"updatedAt" doc:"Last update timestamp" format:"date-time"`
@@ -27,9 +27,9 @@ type TransactionTemplatesSearchModel struct {
 	SortOrder            string `query:"sortOrder" default:"desc" enum:"asc,desc" doc:"Sort order"`
 	Name                 string `query:"name" doc:"Search by template name"`
 	Type                 string `query:"type" enum:"expense,income,transfer" doc:"Filter by transaction type"`
-	AccountID            *int64 `query:"accountId" minimum:"1" doc:"Filter by source account ID"`
-	CategoryID           *int64 `query:"categoryId" minimum:"1" doc:"Filter by category ID"`
-	DestinationAccountID *int64 `query:"destinationAccountId" minimum:"1" doc:"Filter by destination account ID"`
+	AccountID            int64  `query:"accountId" minimum:"1" doc:"Filter by source account ID"`
+	CategoryID           int64  `query:"categoryId" minimum:"1" doc:"Filter by category ID"`
+	DestinationAccountID int64  `query:"destinationAccountId" minimum:"1" doc:"Filter by destination account ID"`
 }
 
 type TransactionTemplatesPagedModel struct {
@@ -49,8 +49,8 @@ type CreateTransactionTemplateModel struct {
 	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
 	Note                 *string    `json:"note,omitempty" doc:"Template notes"`
 	Recurrence           string     `json:"recurrence" required:"true" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
-	StartDate            time.Time  `json:"startDate" required:"true" doc:"Template start date" format:"date"`
-	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date" format:"date"`
+	StartDate            time.Time  `json:"startDate" required:"true" doc:"Template start date" format:"date-time"`
+	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date" format:"date-time"`
 }
 
 type UpdateTransactionTemplateModel struct {
@@ -62,6 +62,6 @@ type UpdateTransactionTemplateModel struct {
 	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
 	Note                 *string    `json:"note,omitempty" doc:"Template notes"`
 	Recurrence           *string    `json:"recurrence,omitempty" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
-	StartDate            *time.Time `json:"startDate,omitempty" doc:"Template start date" format:"date"`
-	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date" format:"date"`
+	StartDate            *time.Time `json:"startDate,omitempty" doc:"Template start date" format:"date-time"`
+	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date" format:"date-time"`
 }

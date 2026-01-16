@@ -21,11 +21,11 @@ func NewCategoryRepository(pgx *pgxpool.Pool) CategoryRepository {
 
 func (cr CategoryRepository) GetPaged(ctx context.Context, query models.CategoriesSearchModel) (models.CategoriesPagedModel, error) {
 	sortByMap := map[string]string{
-		"name":         "c.name",
-		"type":         "c.type",
-		"displayOrder": "c.display_order",
-		"createdAt":    "c.created_at",
-		"updatedAt":    "c.updated_at",
+		"name":         "name",
+		"type":         "type",
+		"displayOrder": "display_order",
+		"createdAt":    "created_at",
+		"updatedAt":    "updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -43,16 +43,16 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 				COUNT(*) OVER() as total_count
 			FROM categories
 			WHERE deleted_at IS NULL
-				AND (array_length($5::int8[], 1) IS NULL OR id = ANY($5::int8[]))
-				AND ($6::text IS NULL OR $6::text = '' OR name ILIKE '%' || $6::text || '%')
-				AND (array_length($7::text[], 1) IS NULL OR type = ANY($7::text[]))
-				AND (
-					$8::text IS NULL OR $8::text = '' OR
-					($8::text = 'true' AND archived_at IS NOT NULL) OR
-					($8::text = 'false' AND archived_at IS NULL)
-				)
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
-			LIMIT $2 OFFSET $3
+					AND (array_length($3::int8[], 1) IS NULL OR id = ANY($3::int8[]))
+					AND ($5::text IS NULL OR $5::text = '' OR name ILIKE '%' || $5::text || '%')
+					AND (array_length($4::text[], 1) IS NULL OR type = ANY($4::text[]))
+					AND (
+						$6::text IS NULL OR $6::text = '' OR
+						($6::text = 'true' AND archived_at IS NOT NULL) OR
+						($6::text = 'false' AND archived_at IS NULL)
+					)
+				ORDER BY ` + sortColumn + ` ` + sortOrder + `
+				LIMIT $1 OFFSET $2
 		)
 		SELECT
 			id,
@@ -155,13 +155,13 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 }
 
 func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCategoryModel) (models.CategoryModel, error) {
-	var data models.CategoryModel
+	var ID int64
 
 	sql := `
 		INSERT INTO categories
 			(name, type, note, icon, icon_color, display_order)
 		VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT MAX(display_order) + 1 FROM categories WHERE deleted_at IS NULL), 0))
-		RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
+		RETURNING id
 	`
 
 	err := cr.pgx.QueryRow(ctx, sql,
@@ -169,28 +169,17 @@ func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCa
 		payload.Type,
 		payload.Note,
 		payload.Icon,
-		payload.IconColor).Scan(
-		&data.ID,
-		&data.Name,
-		&data.Type,
-		&data.Note,
-		&data.Icon,
-		&data.IconColor,
-		&data.DisplayOrder,
-		&data.ArchivedAt,
-		&data.CreatedAt,
-		&data.UpdatedAt,
-		&data.DeletedAt)
+		payload.IconColor).Scan(&ID)
 
 	if err != nil {
 		return models.CategoryModel{}, huma.Error400BadRequest("Unable to create category", err)
 	}
 
-	return data, nil
+	return cr.GetDetail(ctx, ID)
 }
 
 func (cr CategoryRepository) Update(ctx context.Context, id int64, payload models.UpdateCategoryModel) (models.CategoryModel, error) {
-	var data models.CategoryModel
+	var ID int64
 
 	sql := `
 		UPDATE categories
@@ -206,7 +195,7 @@ func (cr CategoryRepository) Update(ctx context.Context, id int64, payload model
 			END,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $7 AND deleted_at IS NULL
-		RETURNING id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
+		RETURNING id
 	`
 
 	err := cr.pgx.QueryRow(
@@ -218,19 +207,7 @@ func (cr CategoryRepository) Update(ctx context.Context, id int64, payload model
 		payload.Icon,
 		payload.IconColor,
 		payload.ArchivedAt,
-		id).Scan(
-		&data.ID,
-		&data.Name,
-		&data.Type,
-		&data.Note,
-		&data.Icon,
-		&data.IconColor,
-		&data.DisplayOrder,
-		&data.ArchivedAt,
-		&data.CreatedAt,
-		&data.UpdatedAt,
-		&data.DeletedAt,
-	)
+		id).Scan(&ID)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -239,14 +216,16 @@ func (cr CategoryRepository) Update(ctx context.Context, id int64, payload model
 		return models.CategoryModel{}, huma.Error400BadRequest("Unable to update category", err)
 	}
 
-	return data, nil
+	return cr.GetDetail(ctx, ID)
 }
 
 func (cr CategoryRepository) Delete(ctx context.Context, id int64) error {
 	sql := `
 		UPDATE categories
 		SET deleted_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND deleted_at IS NULL`
+		WHERE id = $1
+			AND deleted_at IS NULL
+	`
 
 	cmdTag, err := cr.pgx.Exec(ctx, sql, id)
 	if err != nil {

@@ -27,6 +27,7 @@ func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.Tr
 }
 
 func (ts TransactionService) Create(ctx context.Context, p models.CreateTransactionModel) (models.TransactionModel, error) {
+
 	tx, err := ts.tr.Pgx.BeginTx(ctx, pgx.TxOptions{})
 
 	if err != nil {

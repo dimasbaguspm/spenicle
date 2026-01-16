@@ -8,8 +8,8 @@ type BudgetTemplateModel struct {
 	CategoryID     *int64     `json:"categoryId,omitempty" doc:"Category ID to filter transactions"`
 	AmountLimit    int64      `json:"amountLimit" doc:"Budget limit amount in cents" minimum:"1"`
 	Recurrence     string     `json:"recurrence" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
-	StartDate      time.Time  `json:"startDate" doc:"Start date for recurrence" format:"date"`
-	EndDate        *time.Time `json:"endDate,omitempty" doc:"Optional end date for recurrence" format:"date"`
+	StartDate      time.Time  `json:"startDate" doc:"Start date for recurrence" format:"date-time"`
+	EndDate        *time.Time `json:"endDate,omitempty" doc:"Optional end date for recurrence" format:"date-time"`
 	Note           *string    `json:"note,omitempty" doc:"Optional note for the template" maxLength:"500"`
 	LastExecutedAt *time.Time `json:"lastExecutedAt,omitempty" doc:"Timestamp of the last execution of this template" format:"date-time"`
 	CreatedAt      time.Time  `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
@@ -41,8 +41,8 @@ type CreateBudgetTemplateModel struct {
 	CategoryID  *int64     `json:"categoryId,omitempty" doc:"Category ID to filter transactions" minimum:"1"`
 	AmountLimit int64      `json:"amountLimit" required:"true" minimum:"1" doc:"Budget limit amount in cents"`
 	Recurrence  string     `json:"recurrence" required:"true" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
-	StartDate   time.Time  `json:"startDate" required:"true" doc:"Start date for recurrence" format:"date"`
-	EndDate     *time.Time `json:"endDate,omitempty" doc:"Optional end date for recurrence" format:"date"`
+	StartDate   time.Time  `json:"startDate" required:"true" doc:"Start date for recurrence" format:"date-time"`
+	EndDate     *time.Time `json:"endDate,omitempty" doc:"Optional end date for recurrence" format:"date-time"`
 	Note        *string    `json:"note,omitempty" doc:"Optional note for the template" maxLength:"500"`
 }
 
@@ -51,7 +51,7 @@ type UpdateBudgetTemplateModel struct {
 	CategoryID  *int64     `json:"categoryId,omitempty" doc:"Category ID to filter transactions" minimum:"1"`
 	AmountLimit *int64     `json:"amountLimit,omitempty" minimum:"1" doc:"Budget limit amount in cents"`
 	Recurrence  *string    `json:"recurrence,omitempty" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
-	StartDate   *time.Time `json:"startDate,omitempty" doc:"Start date for recurrence" format:"date"`
-	EndDate     *time.Time `json:"endDate,omitempty" doc:"Optional end date for recurrence" format:"date"`
+	StartDate   *time.Time `json:"startDate,omitempty" doc:"Start date for recurrence" format:"date-time"`
+	EndDate     *time.Time `json:"endDate,omitempty" doc:"Optional end date for recurrence" format:"date-time"`
 	Note        *string    `json:"note,omitempty" doc:"Optional note for the template" maxLength:"500"`
 }

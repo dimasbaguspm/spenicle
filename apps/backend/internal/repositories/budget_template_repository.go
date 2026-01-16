@@ -57,6 +57,10 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 				COUNT(*) OVER() as total_count
 			FROM budget_templates b
 			WHERE b.deleted_at IS NULL
+				AND (array_length($3::int8[], 1) IS NULL OR b.id = ANY($3::int8[]))
+				AND (array_length($4::int8[], 1) IS NULL OR b.account_id = ANY($4::int8[]))
+				AND (array_length($5::int8[], 1) IS NULL OR b.category_id = ANY($5::int8[]))
+				AND ($6::text IS NULL OR $6::text = '' OR b.recurrence = $6::text)
 			ORDER BY ` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		)
@@ -77,7 +81,23 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 		FROM filtered_templates
 	`
 
-	rows, err := btr.pgx.Query(ctx, sql, query.PageSize, offset)
+	var (
+		ids         []int64
+		accountIDs  []int64
+		categoryIDs []int64
+	)
+
+	if len(query.IDs) > 0 {
+		ids = query.IDs
+	}
+	if len(query.AccountIDs) > 0 {
+		accountIDs = query.AccountIDs
+	}
+	if len(query.CategoryIDs) > 0 {
+		categoryIDs = query.CategoryIDs
+	}
+
+	rows, err := btr.pgx.Query(ctx, sql, query.PageSize, offset, ids, accountIDs, categoryIDs, query.Recurrence)
 	if err != nil {
 		return models.BudgetTemplatesPagedModel{}, huma.Error400BadRequest("Unable to query budget templates", err)
 	}

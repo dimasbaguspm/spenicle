@@ -20,10 +20,10 @@ func NewTagRepository(pgx *pgxpool.Pool) TagRepository {
 
 func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchModel) (models.TagsPagedModel, error) {
 	sortByMap := map[string]string{
-		"id":        "t.id",
-		"name":      "t.name",
-		"createdAt": "t.created_at",
-		"updatedAt": "t.updated_at",
+		"id":        "id",
+		"name":      "name",
+		"createdAt": "created_at",
+		"updatedAt": "updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",

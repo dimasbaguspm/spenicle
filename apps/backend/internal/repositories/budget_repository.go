@@ -65,12 +65,12 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 				COUNT(*) OVER() as total_count
 			FROM budgets b
 			WHERE b.deleted_at IS NULL
-				AND (array_length($5::int8[], 1) IS NULL OR b.id = ANY($5::int8[]))
-				AND (array_length($6::int8[], 1) IS NULL OR b.template_id = ANY($6::int8[]))
-				AND (array_length($7::int8[], 1) IS NULL OR b.account_id = ANY($7::int8[]))
-				AND (array_length($8::int8[], 1) IS NULL OR b.category_id = ANY($8::int8[]))
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
-			LIMIT $2 OFFSET $3
+					AND (array_length($3::int8[], 1) IS NULL OR b.id = ANY($3::int8[]))
+					AND (array_length($4::int8[], 1) IS NULL OR b.template_id = ANY($4::int8[]))
+					AND (array_length($5::int8[], 1) IS NULL OR b.account_id = ANY($5::int8[]))
+					AND (array_length($6::int8[], 1) IS NULL OR b.category_id = ANY($6::int8[]))
+				ORDER BY ` + sortColumn + ` ` + sortOrder + `
+				LIMIT $1 OFFSET $2
 		)
 		SELECT
 			id,

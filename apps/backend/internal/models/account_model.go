@@ -40,7 +40,6 @@ type CreateAccountModel struct {
 	Name      string  `json:"name" minLength:"1" required:"true" doc:"Account name"`
 	Type      string  `json:"type" minLength:"1" required:"true" enum:"expense,income" doc:"Account type (expense or income)"`
 	Note      string  `json:"note" doc:"Optional account notes"`
-	Amount    int64   `json:"amount" doc:"Initial balance"`
 	Icon      *string `json:"icon,omitempty" doc:"Icon identifier"`
 	IconColor *string `json:"iconColor,omitempty" doc:"Icon color code"`
 }
@@ -49,7 +48,6 @@ type UpdateAccountModel struct {
 	Name       *string `json:"name,omitempty" minLength:"1" doc:"Account name"`
 	Type       *string `json:"type,omitempty" minLength:"1" enum:"expense,income" doc:"Account type (expense or income)"`
 	Note       *string `json:"note,omitempty" doc:"Account notes"`
-	Amount     *int64  `json:"amount,omitempty" doc:"Current balance"`
 	Icon       *string `json:"icon,omitempty" doc:"Icon identifier"`
 	IconColor  *string `json:"iconColor,omitempty" doc:"Icon color code"`
 	ArchivedAt *string `json:"archivedAt,omitempty" doc:"Archive status (null string to unarchive, any other value to archive)"`

@@ -50,20 +50,20 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			LEFT JOIN categories c ON t.category_id = c.id
 			LEFT JOIN accounts da ON t.destination_account_id = da.id
 			WHERE t.deleted_at IS NULL
-				AND (array_length($9::int8[], 1) IS NULL OR t.id = ANY($9::int8[]))
-				AND (array_length($10::text[], 1) IS NULL OR t.type = ANY($10::text[]))
-				AND (array_length($11::int8[], 1) IS NULL OR t.account_id = ANY($11::int8[]))
-				AND (array_length($12::int8[], 1) IS NULL OR t.category_id = ANY($12::int8[]))
-				AND (array_length($13::int8[], 1) IS NULL OR t.destination_account_id = ANY($13::int8[]) OR t.destination_account_id IS NULL)
-				AND ($14::int8 IS NULL OR t.amount >= $14::int8)
-				AND ($15::int8 IS NULL OR t.amount <= $15::int8)
-				AND ($16::date IS NULL OR t.date >= $16::date)
-				AND ($17::date IS NULL OR t.date <= $17::date)
-				AND (array_length($18::int8[], 1) IS NULL OR t.id IN (
-					SELECT DISTINCT tt.transaction_id
-					FROM transaction_tags tt
-					WHERE tt.tag_id = ANY($18::int8[])
-				))
+				AND (array_length($3::int8[], 1) IS NULL OR t.id = ANY($3::int8[]))
+				AND (array_length($4::text[], 1) IS NULL OR t.type = ANY($4::text[]))
+				AND (array_length($5::int8[], 1) IS NULL OR t.account_id = ANY($5::int8[]))
+				AND (array_length($6::int8[], 1) IS NULL OR t.category_id = ANY($6::int8[]))
+				AND (array_length($7::int8[], 1) IS NULL OR t.destination_account_id = ANY($7::int8[]) OR t.destination_account_id IS NULL)
+				AND ($8::int8 IS NULL OR t.amount >= $8::int8)
+				AND ($9::int8 IS NULL OR t.amount <= $9::int8)
+				AND ($10::date IS NULL OR t.date >= $10::date)
+				AND ($11::date IS NULL OR t.date <= $11::date)
+				AND (array_length($12::int8[], 1) IS NULL OR t.id IN (
+						SELECT DISTINCT tt.transaction_id
+						FROM transaction_tags tt
+						WHERE tt.tag_id = ANY($12::int8[])
+					))
 			ORDER BY ` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		),

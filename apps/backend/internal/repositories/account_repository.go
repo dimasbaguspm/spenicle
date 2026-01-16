@@ -21,12 +21,12 @@ func NewAccountRepository(pgx *pgxpool.Pool) AccountRepository {
 
 func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsSearchModel) (models.AccountsPagedModel, error) {
 	sortByMap := map[string]string{
-		"name":         "a.name",
-		"type":         "a.type",
-		"amount":       "a.amount",
-		"displayOrder": "a.display_order",
-		"createdAt":    "a.created_at",
-		"updatedAt":    "a.updated_at",
+		"name":         "name",
+		"type":         "type",
+		"amount":       "amount",
+		"displayOrder": "display_order",
+		"createdAt":    "created_at",
+		"updatedAt":    "updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -45,16 +45,16 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 				COUNT(*) OVER() as total_count
 			FROM accounts
 			WHERE deleted_at IS NULL
-				AND (array_length($5::int8[], 1) IS NULL OR id = ANY($5::int8[]))
-				AND ($6::text IS NULL OR $6::text = '' OR name ILIKE '%' || $6::text || '%')
-				AND (array_length($7::text[], 1) IS NULL OR type = ANY($7::text[]))
+				AND (array_length($3::int8[], 1) IS NULL OR id = ANY($3::int8[]))
+				AND ($5::text IS NULL OR $5::text = '' OR name ILIKE '%' || $5::text || '%')
+				AND (array_length($4::text[], 1) IS NULL OR type = ANY($4::text[]))
 				AND (
-					$8::text IS NULL OR $8::text = '' OR
-					($8::text = 'true' AND archived_at IS NOT NULL) OR
-					($8::text = 'false' AND archived_at IS NULL)
+					$6::text IS NULL OR $6::text = '' OR
+					($6::text = 'true' AND archived_at IS NOT NULL) OR
+					($6::text = 'false' AND archived_at IS NULL)
 				)
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
-			LIMIT $2 OFFSET $3
+				ORDER BY ` + sortColumn + ` ` + sortOrder + `
+				LIMIT $1 OFFSET $2
 		)
 		SELECT
 			id,
@@ -145,41 +145,42 @@ func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.Acc
 }
 
 func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAccountModel) (models.AccountModel, error) {
-	var data models.AccountModel
+	var ID int64
 
-	sql := `INSERT INTO accounts (name, type, note, amount, icon, icon_color, display_order)
-			VALUES ($1, $2, $3, $4, $5, $6, COALESCE((SELECT MAX(display_order) + 1 FROM accounts), 0))
-			RETURNING id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`
+	sql := `
+		INSERT INTO accounts (name, type, note, icon, icon_color, display_order)
+		VALUES ($1, $2, $3, $4, $5,  COALESCE((SELECT MAX(display_order) + 1 FROM accounts), 0))
+		RETURNING id
+	`
 
-	err := ar.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Amount, payload.Icon, payload.IconColor).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+	err := ar.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor).Scan(&ID)
 
 	if err != nil {
 		return models.AccountModel{}, huma.Error400BadRequest("Unable to create account", err)
 	}
 
-	return data, nil
+	return ar.GetDetail(ctx, ID)
 }
 
 func (ar AccountRepository) Update(ctx context.Context, id int64, payload models.UpdateAccountModel) (models.AccountModel, error) {
-	var data models.AccountModel
+	var ID int64
 
 	sql := `UPDATE accounts
 			SET name = COALESCE($1, name),
 				type = COALESCE($2, type),
 				note = COALESCE($3, note),
-				amount = COALESCE($4, amount),
-				icon = COALESCE($5, icon),
-				icon_color = COALESCE($6, icon_color),
+				icon = COALESCE($4, icon),
+				icon_color = COALESCE($5, icon_color),
 				archived_at = CASE
-					WHEN $7::text = '' OR $7::text = 'null' THEN NULL
-					WHEN $7::text IS NOT NULL THEN CURRENT_TIMESTAMP
+					WHEN $6::text = '' OR $6::text = 'null' THEN NULL
+					WHEN $6::text IS NOT NULL THEN CURRENT_TIMESTAMP
 					ELSE archived_at
 				END,
 				updated_at = CURRENT_TIMESTAMP
-			WHERE id = $8 AND deleted_at IS NULL
-			RETURNING id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at`
+			WHERE id = $7 AND deleted_at IS NULL
+			RETURNING id`
 
-	err := ar.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Amount, payload.Icon, payload.IconColor, payload.ArchivedAt, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+	err := ar.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor, payload.ArchivedAt, id).Scan(&ID)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -188,7 +189,7 @@ func (ar AccountRepository) Update(ctx context.Context, id int64, payload models
 		return models.AccountModel{}, huma.Error400BadRequest("Unable to update account", err)
 	}
 
-	return data, nil
+	return ar.GetDetail(ctx, ID)
 }
 
 func (ar AccountRepository) Delete(ctx context.Context, id int64) error {

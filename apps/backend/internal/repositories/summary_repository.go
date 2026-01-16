@@ -173,7 +173,7 @@ func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.Summ
 	}
 
 	return models.SummaryAccountListModel{
-		Items: items,
+		Data: items,
 	}, nil
 }
 
