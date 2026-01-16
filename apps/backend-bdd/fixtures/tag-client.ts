@@ -8,10 +8,8 @@ import type { operations, components } from "../types/openapi";
  */
 export type TagModel = components["schemas"]["TagModel"];
 export type TagSearchSchema = operations["list-tags"]["parameters"]["query"];
-export type CreateTagRequestModel =
-  components["schemas"]["CreateTagRequestModel"];
-export type PaginatedTagResponseModel =
-  components["schemas"]["ListTagsResponseModel"];
+export type CreateTagRequestModel = components["schemas"]["CreateTagModel"];
+export type PaginatedTagResponseModel = components["schemas"]["TagsPagedModel"];
 
 /**
  * Tag API client
@@ -42,5 +40,22 @@ export class TagAPIClient extends BaseAPIClient {
    */
   async deleteTag(id: number): Promise<APIResponse<void>> {
     return this.delete<void>(`/tags/${id}`);
+  }
+
+  /**
+   * Get a single tag by ID
+   */
+  async getTag(id: number): Promise<APIResponse<TagModel>> {
+    return this.get<TagModel>(`/tags/${id}`);
+  }
+
+  /**
+   * Update a tag
+   */
+  async updateTag(
+    id: number,
+    data: components["schemas"]["UpdateTagModel"]
+  ): Promise<APIResponse<TagModel>> {
+    return this.patch<TagModel>(`/tags/${id}`, data);
   }
 }

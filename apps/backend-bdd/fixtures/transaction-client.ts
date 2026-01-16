@@ -10,18 +10,14 @@ export type TransactionModel = components["schemas"]["TransactionModel"];
 export type TransactionSearchSchema =
   operations["list-transactions"]["parameters"]["query"];
 export type CreateTransactionRequestModel =
-  components["schemas"]["CreateTransactionRequestModel"];
+  components["schemas"]["CreateTransactionModel"];
 export type UpdateTransactionRequestModel =
-  components["schemas"]["UpdateTransactionRequestModel"];
-export type ListTransactionsResponseModel =
-  components["schemas"]["ListTransactionsResponseModel"];
+  components["schemas"]["UpdateTransactionModel"];
+export type PaginatedTransactionResponseModel =
+  components["schemas"]["TransactionsPagedModel"];
 export type TransactionTagModel = components["schemas"]["TransactionTagModel"];
-export type CreateTransactionTagRequestModel =
-  components["schemas"]["CreateTransactionTagRequestModel"];
-export type ListTransactionTagsResponseModel =
-  components["schemas"]["ListTransactionTagsResponseModel"];
-
-type TransactionTag = components["schemas"]["TransactionTagModel"];
+export type TransactionTagRequestModel =
+  components["schemas"]["TransactionTagModel"];
 type TransactionRelationCreateSchema =
   components["schemas"]["TransactionRelationModel"];
 /**
@@ -37,8 +33,8 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async getTransactions(
     params?: TransactionSearchSchema
-  ): Promise<APIResponse<ListTransactionsResponseModel>> {
-    return this.get<ListTransactionsResponseModel>("/transactions", params);
+  ): Promise<APIResponse<PaginatedTransactionResponseModel>> {
+    return this.get<PaginatedTransactionResponseModel>("/transactions", params);
   }
 
   /**
@@ -77,8 +73,10 @@ export class TransactionAPIClient extends BaseAPIClient {
   /**
    * Get transaction tags
    */
-  async getTransactionTags(id: number): Promise<APIResponse<TransactionTag>> {
-    return this.get<any>(`/transactions/${id}/tags`);
+  async getTransactionTags(
+    id: number
+  ): Promise<APIResponse<TransactionTagModel[]>> {
+    return this.get<TransactionTagModel[]>(`/transactions/${id}/tags`);
   }
 
   /**
@@ -99,6 +97,16 @@ export class TransactionAPIClient extends BaseAPIClient {
     tagIds: string[]
   ): Promise<APIResponse<void>> {
     return this.put<void>(`/transactions/${id}/tags`, { tagIds });
+  }
+
+  /**
+   * Remove a tag from a transaction
+   */
+  async removeTransactionTag(
+    transactionId: number,
+    tagId: number
+  ): Promise<APIResponse<void>> {
+    return this.delete<void>(`/transactions/${transactionId}/tags/${tagId}`);
   }
 
   /**

@@ -8,7 +8,8 @@
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report",
-    "generate:types": "tsx scripts/generate-openapi-types.ts"
+    "generate:types": "tsx scripts/generate-openapi-types.ts",
+    "check": "tsc --noEmit"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",

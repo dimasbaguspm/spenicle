@@ -1,4 +1,4 @@
-import { test as base, APIRequestContext } from "@playwright/test";
+import { test as base } from "@playwright/test";
 import { AuthAPIClient } from "./auth-client";
 import { AccountAPIClient } from "./account-client";
 import { CategoryAPIClient } from "./category-client";
@@ -6,6 +6,8 @@ import { TransactionAPIClient } from "./transaction-client";
 import { TagAPIClient } from "./tag-client";
 import { SummaryAPIClient } from "./summary-client";
 import { BudgetAPIClient } from "./budget-client";
+import { BudgetTemplateAPIClient } from "./budget-template-client";
+import { TransactionTemplateAPIClient } from "./transaction-template-client";
 import type { TestContext } from "../types/common";
 import * as fs from "fs";
 import * as path from "path";
@@ -22,6 +24,8 @@ type APIFixtures = {
   tagAPI: TagAPIClient;
   summaryAPI: SummaryAPIClient;
   budgetAPI: BudgetAPIClient;
+  budgetTemplateAPI: BudgetTemplateAPIClient;
+  transactionTemplateAPI: TransactionTemplateAPIClient;
   authenticatedContext: TestContext;
 };
 
@@ -131,6 +135,22 @@ export const test = base.extend<APIFixtures>({
    */
   budgetAPI: async ({ request, testContext }, use) => {
     const client = new BudgetAPIClient(request, testContext);
+    await use(client);
+  },
+
+  /**
+   * Budget template API client
+   */
+  budgetTemplateAPI: async ({ request, testContext }, use) => {
+    const client = new BudgetTemplateAPIClient(request, testContext);
+    await use(client);
+  },
+
+  /**
+   * Transaction template API client
+   */
+  transactionTemplateAPI: async ({ request, testContext }, use) => {
+    const client = new TransactionTemplateAPIClient(request, testContext);
     await use(client);
   },
 

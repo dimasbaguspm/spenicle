@@ -7,11 +7,11 @@ import type { operations, components } from "../types/openapi";
  * Summary types from OpenAPI schemas
  */
 export type SummaryAccountResponseModel =
-  components["schemas"]["SummaryAccountResponseModel"];
+  components["schemas"]["SummaryAccountListModel"];
 export type SummaryCategoryResponseModel =
-  components["schemas"]["SummaryCategoryResponseModel"];
+  components["schemas"]["SummaryCategoryListModel"];
 export type SummaryTransactionResponseModel =
-  components["schemas"]["SummaryTransactionResponseModel"];
+  components["schemas"]["SummaryTransactionListModel"];
 
 /**
  * Query parameter types

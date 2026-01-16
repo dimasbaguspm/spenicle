@@ -8,11 +8,11 @@ import type { operations, components } from "../types/openapi";
  */
 export type BudgetModel = components["schemas"]["BudgetModel"];
 export type CreateBudgetRequestModel =
-  components["schemas"]["CreateBudgetRequestModel"];
+  components["schemas"]["CreateBudgetModel"];
 export type UpdateBudgetRequestModel =
-  components["schemas"]["UpdateBudgetRequestModel"];
+  components["schemas"]["UpdateBudgetModel"];
 export type PaginatedBudgetResponseModel =
-  components["schemas"]["ListBudgetsResponseModel"];
+  components["schemas"]["BudgetsPagedModel"];
 
 /**
  * Query parameter types

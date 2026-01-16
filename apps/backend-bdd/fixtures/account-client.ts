@@ -10,13 +10,13 @@ export type AccountModel = components["schemas"]["AccountModel"];
 export type AccountSearchSchema =
   operations["list-accounts"]["parameters"]["query"];
 export type CreateAccountRequestModel =
-  components["schemas"]["CreateAccountRequestModel"];
+  components["schemas"]["CreateAccountModel"];
 export type UpdateAccountRequestModel =
-  components["schemas"]["UpdateAccountRequestModel"];
+  components["schemas"]["UpdateAccountModel"];
 export type AccountReorderRequestModel =
-  components["schemas"]["ReorderAccountsRequestModel"];
+  components["schemas"]["ReorderAccountsModel"];
 export type PaginatedAccountResponseModel =
-  components["schemas"]["ListAccountsResponseModel"];
+  components["schemas"]["AccountsPagedModel"];
 
 /**
  * Account API client

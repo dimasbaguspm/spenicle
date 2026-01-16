@@ -10,13 +10,13 @@ export type CategoryModel = components["schemas"]["CategoryModel"];
 export type CategorySearchSchema =
   operations["list-categories"]["parameters"]["query"];
 export type CreateCategoryRequestModel =
-  components["schemas"]["CreateCategoryRequestModel"];
+  components["schemas"]["CreateCategoryModel"];
 export type UpdateCategoryRequestModel =
-  components["schemas"]["UpdateCategoryRequestModel"];
+  components["schemas"]["UpdateCategoryModel"];
 export type CategoryReorderRequestModel =
   components["schemas"]["ReorderCategoriesRequestModel"];
 export type PaginatedCategoryResponseModel =
-  components["schemas"]["ListCategoriesResponseModel"];
+  components["schemas"]["CategoriesPagedModel"];
 
 /**
  * Category API client
