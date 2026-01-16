@@ -5,9 +5,9 @@ CREATE TABLE
         name VARCHAR(255) NOT NULL,
         type VARCHAR(20) NOT NULL CHECK (type IN ('expense', 'income', 'transfer')),
         amount BIGINT NOT NULL CHECK (amount > 0),
-        account_id BIGINT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
-        category_id BIGINT NOT NULL REFERENCES categories (id) ON DELETE CASCADE,
-        destination_account_id BIGINT REFERENCES accounts (id) ON DELETE CASCADE,
+        account_id BIGINT NOT NULL REFERENCES accounts (id),
+        category_id BIGINT NOT NULL REFERENCES categories (id),
+        destination_account_id BIGINT REFERENCES accounts (id),
         note TEXT,
         last_executed_at TIMESTAMP,
         recurrence VARCHAR(20) NOT NULL CHECK (

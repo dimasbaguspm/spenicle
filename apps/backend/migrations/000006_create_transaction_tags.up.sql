@@ -2,8 +2,8 @@
 CREATE TABLE
     IF NOT EXISTS transaction_tags (
         id BIGSERIAL PRIMARY KEY,
-        transaction_id BIGINT NOT NULL REFERENCES transactions (id) ON DELETE CASCADE,
-        tag_id BIGINT NOT NULL REFERENCES tags (id) ON DELETE CASCADE,
+        transaction_id BIGINT NOT NULL REFERENCES transactions (id),
+        tag_id BIGINT NOT NULL REFERENCES tags (id),
         created_at TIMESTAMP NOT NULL DEFAULT NOW (),
         CONSTRAINT unique_transaction_tag UNIQUE (transaction_id, tag_id)
     );

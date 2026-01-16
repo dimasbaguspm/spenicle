@@ -2,7 +2,7 @@
 CREATE TABLE
     IF NOT EXISTS accounts (
         id BIGSERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL UNIQUE,
+        name VARCHAR(255) NOT NULL,
         type VARCHAR(20) NOT NULL CHECK (type IN ('expense', 'income')),
         note TEXT,
         amount BIGINT NOT NULL DEFAULT 0,

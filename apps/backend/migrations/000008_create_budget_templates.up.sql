@@ -2,8 +2,8 @@
 CREATE TABLE
     IF NOT EXISTS budget_templates (
         id BIGSERIAL PRIMARY KEY,
-        account_id BIGINT REFERENCES accounts (id) ON DELETE CASCADE,
-        category_id BIGINT REFERENCES categories (id) ON DELETE CASCADE,
+        account_id BIGINT REFERENCES accounts (id),
+        category_id BIGINT REFERENCES categories (id),
         amount_limit BIGINT NOT NULL CHECK (amount_limit > 0),
         recurrence VARCHAR(20) NOT NULL CHECK (
             recurrence IN ('none', 'weekly', 'monthly', 'yearly')

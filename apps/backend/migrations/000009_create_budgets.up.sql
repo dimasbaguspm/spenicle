@@ -2,9 +2,9 @@
 CREATE TABLE
     IF NOT EXISTS budgets (
         id BIGSERIAL PRIMARY KEY,
-        template_id BIGINT REFERENCES budget_templates (id) ON DELETE SET NULL,
-        account_id BIGINT REFERENCES accounts (id) ON DELETE CASCADE,
-        category_id BIGINT REFERENCES categories (id) ON DELETE CASCADE,
+        template_id BIGINT REFERENCES budget_templates (id),
+        account_id BIGINT REFERENCES accounts (id),
+        category_id BIGINT REFERENCES categories (id),
         period_start DATE NOT NULL,
         period_end DATE NOT NULL,
         amount_limit BIGINT NOT NULL CHECK (amount_limit > 0),
