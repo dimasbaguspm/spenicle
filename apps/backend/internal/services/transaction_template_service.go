@@ -15,27 +15,22 @@ func NewTransactionTemplateService(repo repositories.TransactionTemplateReposito
 	return TransactionTemplateService{repo}
 }
 
-// List delegates to repository
-func (tts TransactionTemplateService) List(ctx context.Context, query models.ListTransactionTemplatesRequestModel) (models.ListTransactionTemplatesResponseModel, error) {
-	return tts.repo.List(ctx, query)
+func (tts TransactionTemplateService) GetPaged(ctx context.Context, query models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
+	return tts.repo.GetPaged(ctx, query)
 }
 
-// Get delegates to repository
-func (tts TransactionTemplateService) Get(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
-	return tts.repo.Get(ctx, id)
+func (tts TransactionTemplateService) GetDetail(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
+	return tts.repo.GetDetail(ctx, id)
 }
 
-// Create delegates to repository
-func (tts TransactionTemplateService) Create(ctx context.Context, payload models.CreateTransactionTemplateRequestModel) (models.CreateTransactionTemplateResponseModel, error) {
+func (tts TransactionTemplateService) Create(ctx context.Context, payload models.CreateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
 	return tts.repo.Create(ctx, payload)
 }
 
-// Update delegates to repository
-func (tts TransactionTemplateService) Update(ctx context.Context, id int64, payload models.UpdateTransactionTemplateRequestModel) (models.UpdateTransactionTemplateResponseModel, error) {
+func (tts TransactionTemplateService) Update(ctx context.Context, id int64, payload models.UpdateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
 	return tts.repo.Update(ctx, id, payload)
 }
 
-// Delete delegates to repository
 func (tts TransactionTemplateService) Delete(ctx context.Context, id int64) error {
 	return tts.repo.Delete(ctx, id)
 }

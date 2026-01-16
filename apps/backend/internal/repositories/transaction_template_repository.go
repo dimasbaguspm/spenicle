@@ -18,16 +18,7 @@ func NewTransactionTemplateRepository(pgx *pgxpool.Pool) TransactionTemplateRepo
 	return TransactionTemplateRepository{pgx}
 }
 
-// List retrieves paginated transaction templates with filters
-func (ttr TransactionTemplateRepository) List(ctx context.Context, p models.ListTransactionTemplatesRequestModel) (models.ListTransactionTemplatesResponseModel, error) {
-	// Enforce page size limits
-	if p.PageSize <= 0 || p.PageSize > 100 {
-		p.PageSize = 10
-	}
-	if p.PageNumber <= 0 {
-		p.PageNumber = 1
-	}
-
+func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
 	sortByMap := map[string]string{
 		"id":        "id",
 		"name":      "name",
@@ -41,53 +32,145 @@ func (ttr TransactionTemplateRepository) List(ctx context.Context, p models.List
 		"desc": "DESC",
 	}
 
-	sortColumn, ok := sortByMap[p.SortBy]
-	if !ok {
-		sortColumn = "created_at"
-	}
-	sortOrder, ok := sortOrderMap[p.SortOrder]
-	if !ok {
-		sortOrder = "DESC"
-	}
+	sortColumn := sortByMap[p.SortBy]
+	sortOrder := sortOrderMap[p.SortOrder]
 
 	offset := (p.PageNumber - 1) * p.PageSize
 	searchPattern := "%" + p.Name + "%"
 
-	// Count total matching transaction templates
-	countSQL := `SELECT COUNT(*) FROM transaction_templates WHERE deleted_at IS NULL`
-	var totalCount int
-	if err := ttr.pgx.QueryRow(ctx, countSQL).Scan(&totalCount); err != nil {
-		return models.ListTransactionTemplatesResponseModel{}, huma.Error400BadRequest("Unable to count transaction templates", err)
-	}
+	sql := `
+		WITH filtered AS (
+			SELECT
+				tt.id,
+				tt.name,
+				tt.type,
+				tt.amount,
+				a.id as account_id,
+				a.name as account_name,
+				a.type as account_type,
+				a.amount as account_amount,
+				a.icon as account_icon,
+				a.icon_color as account_icon_color,
+				c.id as category_id,
+				c.name as category_name,
+				c.type as category_type,
+				c.icon as category_icon,
+				c.icon_color as category_icon_color,
+				da.id as dest_account_id,
+				da.name as dest_account_name,
+				da.type as dest_account_type,
+				da.amount as dest_account_amount,
+				da.icon as dest_account_icon,
+				da.icon_color as dest_account_icon_color,
+				tt.note,
+				tt.recurrence,
+				tt.start_date,
+				tt.end_date,
+				tt.last_executed_at,
+				tt.created_at,
+				tt.updated_at,
+				tt.deleted_at
+			FROM transaction_templates tt
+			JOIN accounts a ON tt.account_id = a.id
+			JOIN categories c ON tt.category_id = c.id
+			LEFT JOIN accounts da ON tt.destination_account_id = da.id
+			WHERE tt.deleted_at IS NULL
+				AND a.deleted_at IS NULL
+				AND c.deleted_at IS NULL
+				AND (da.deleted_at IS NULL OR da.id IS NULL)
+				AND (tt.name ILIKE $1 OR $1 = '')
+				AND (tt.type = $4 OR $4::text IS NULL)
+				AND (tt.account_id = $5 OR $5 IS NULL)
+				AND (tt.category_id = $6 OR $6 IS NULL)
+				AND (tt.destination_account_id = $7 OR $7 IS NULL)
+		),
+		counted AS (
+			SELECT COUNT(*) AS total_count FROM filtered
+		)
+		SELECT
+			f.id,
+			f.name,
+			f.type,
+			f.amount,
+			f.account_id,
+			f.account_name,
+			f.account_type,
+			f.account_amount,
+			f.account_icon,
+			f.account_icon_color,
+			f.category_id,
+			f.category_name,
+			f.category_type,
+			f.category_icon,
+			f.category_icon_color,
+			f.dest_account_id,
+			f.dest_account_name,
+			f.dest_account_type,
+			f.dest_account_amount,
+			f.dest_account_icon,
+			f.dest_account_icon_color,
+			f.note,
+			f.recurrence,
+			f.start_date,
+			f.end_date,
+			f.last_executed_at,
+			f.created_at,
+			f.updated_at,
+			f.deleted_at,
+			c.total_count
+		FROM filtered f
+		CROSS JOIN counted c
+		ORDER BY ` + sortColumn + ` ` + sortOrder + `
+		LIMIT $2 OFFSET $3
+	`
 
-	// Fetch paginated transaction templates
-	sql := `SELECT id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at
-			FROM transaction_templates
-			WHERE deleted_at IS NULL
-			AND (name ILIKE $1 OR $1 = '%%')
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
-			LIMIT $2 OFFSET $3`
-
-	rows, err := ttr.pgx.Query(ctx, sql, searchPattern, p.PageSize, offset)
+	rows, err := ttr.pgx.Query(ctx, sql, searchPattern, p.PageSize, offset, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID)
 	if err != nil {
-		return models.ListTransactionTemplatesResponseModel{}, huma.Error400BadRequest("Unable to query transaction templates", err)
+		return models.TransactionTemplatesPagedModel{}, huma.Error400BadRequest("Unable to query transaction templates", err)
 	}
 	defer rows.Close()
 
 	var items []models.TransactionTemplateModel
+	var totalCount int
 	for rows.Next() {
 		var item models.TransactionTemplateModel
+		var destAccountID *int64
+		var destAccountName *string
+		var destAccountType *string
+		var destAccountAmount *int64
+		var destAccountIcon *string
+		var destAccountIconColor *string
+
 		if err := rows.Scan(
-			&item.ID, &item.Name, &item.Type, &item.Amount, &item.AccountID, &item.CategoryID,
-			&item.DestinationAccountID, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&item.ID, &item.Name, &item.Type, &item.Amount,
+			&item.Account.ID, &item.Account.Name, &item.Account.Type, &item.Account.Amount,
+			&item.Account.Icon, &item.Account.IconColor,
+			&item.Category.ID, &item.Category.Name, &item.Category.Type, &item.Category.Icon, &item.Category.IconColor,
+			&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountIconColor,
+			&item.Note, &item.Recurrence, &item.StartDate, &item.EndDate, &item.LastExecutedAt,
+			&item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&totalCount,
 		); err != nil {
-			return models.ListTransactionTemplatesResponseModel{}, huma.Error400BadRequest("Unable to scan transaction template data", err)
+			return models.TransactionTemplatesPagedModel{}, huma.Error400BadRequest("Unable to scan transaction template data", err)
 		}
+
+		// Set destination account if present
+		if destAccountID != nil {
+			item.DestinationAccount = &models.TransactionAccountEmbedded{
+				ID:        *destAccountID,
+				Name:      *destAccountName,
+				Type:      *destAccountType,
+				Amount:    *destAccountAmount,
+				Icon:      destAccountIcon,
+				IconColor: destAccountIconColor,
+			}
+		}
+
 		items = append(items, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.ListTransactionTemplatesResponseModel{}, huma.Error400BadRequest("Error reading transaction template rows", err)
+		return models.TransactionTemplatesPagedModel{}, huma.Error400BadRequest("Error reading transaction template rows", err)
 	}
 
 	if items == nil {
@@ -99,8 +182,8 @@ func (ttr TransactionTemplateRepository) List(ctx context.Context, p models.List
 		totalPages = (totalCount + p.PageSize - 1) / p.PageSize
 	}
 
-	return models.ListTransactionTemplatesResponseModel{
-		Data:       items,
+	return models.TransactionTemplatesPagedModel{
+		Items:      items,
 		PageNumber: p.PageNumber,
 		PageSize:   p.PageSize,
 		TotalCount: totalCount,
@@ -108,17 +191,64 @@ func (ttr TransactionTemplateRepository) List(ctx context.Context, p models.List
 	}, nil
 }
 
-// Get retrieves a single transaction template by ID
-func (ttr TransactionTemplateRepository) Get(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
+func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
 	var data models.TransactionTemplateModel
+	var destAccountID *int64
+	var destAccountName *string
+	var destAccountType *string
+	var destAccountAmount *int64
+	var destAccountIcon *string
+	var destAccountIconColor *string
 
-	sql := `SELECT id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at
-			FROM transaction_templates
-			WHERE id = $1 AND deleted_at IS NULL`
+	sql := `
+		SELECT
+			tt.id,
+			tt.name,
+			tt.type,
+			tt.amount,
+			a.id,
+			a.name,
+			a.type,
+			a.amount,
+			a.icon,
+			a.icon_color,
+			c.id,
+			c.name,
+			c.type,
+			c.icon,
+			c.icon_color,
+			da.id,
+			da.name,
+			da.type,
+			da.amount,
+			da.icon,
+			da.icon_color,
+			tt.note,
+			tt.recurrence,
+			tt.start_date,
+			tt.end_date,
+			tt.last_executed_at,
+			tt.created_at,
+			tt.updated_at,
+			tt.deleted_at
+		FROM transaction_templates tt
+		JOIN accounts a ON tt.account_id = a.id
+		JOIN categories c ON tt.category_id = c.id
+		LEFT JOIN accounts da ON tt.destination_account_id = da.id
+		WHERE tt.id = $1 AND tt.deleted_at IS NULL
+			AND a.deleted_at IS NULL
+			AND c.deleted_at IS NULL
+			AND (da.deleted_at IS NULL OR da.id IS NULL)
+	`
 
 	err := ttr.pgx.QueryRow(ctx, sql, id).Scan(
-		&data.ID, &data.Name, &data.Type, &data.Amount, &data.AccountID, &data.CategoryID,
-		&data.DestinationAccountID, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
+		&data.ID, &data.Name, &data.Type, &data.Amount,
+		&data.Account.ID, &data.Account.Name, &data.Account.Type, &data.Account.Amount,
+		&data.Account.Icon, &data.Account.IconColor,
+		&data.Category.ID, &data.Category.Name, &data.Category.Type, &data.Category.Icon, &data.Category.IconColor,
+		&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountIconColor,
+		&data.Note, &data.Recurrence, &data.StartDate, &data.EndDate, &data.LastExecutedAt,
+		&data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
 
 	if err != nil {
@@ -128,61 +258,98 @@ func (ttr TransactionTemplateRepository) Get(ctx context.Context, id int64) (mod
 		return models.TransactionTemplateModel{}, huma.Error400BadRequest("Unable to query transaction template", err)
 	}
 
+	// Set destination account if present
+	if destAccountID != nil {
+		data.DestinationAccount = &models.TransactionAccountEmbedded{
+			ID:        *destAccountID,
+			Name:      *destAccountName,
+			Type:      *destAccountType,
+			Amount:    *destAccountAmount,
+			Icon:      destAccountIcon,
+			IconColor: destAccountIconColor,
+		}
+	}
+
 	return data, nil
 }
 
-// Create creates a new transaction template
-func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload models.CreateTransactionTemplateRequestModel) (models.CreateTransactionTemplateResponseModel, error) {
-	var data models.TransactionTemplateModel
+func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload models.CreateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
+	var ID int64
 
-	sql := `INSERT INTO transaction_templates (name, type, amount, account_id, category_id, destination_account_id, note)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			RETURNING id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at`
+	sql := `
+		INSERT INTO transaction_templates (name, type, amount, account_id, category_id, destination_account_id, note, recurrence, start_date, end_date)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING id
+	`
 
-	err := ttr.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Amount, payload.AccountID, payload.CategoryID, payload.DestinationAccountID, payload.Note).Scan(
-		&data.ID, &data.Name, &data.Type, &data.Amount, &data.AccountID, &data.CategoryID,
-		&data.DestinationAccountID, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
-	)
+	err := ttr.pgx.QueryRow(
+		ctx,
+		sql,
+		payload.Name,
+		payload.Type,
+		payload.Amount,
+		payload.AccountID,
+		payload.CategoryID,
+		payload.DestinationAccountID,
+		payload.Note,
+		payload.Recurrence,
+		payload.StartDate,
+		payload.EndDate,
+	).Scan(&ID)
 
 	if err != nil {
-		return models.CreateTransactionTemplateResponseModel{}, huma.Error400BadRequest("Unable to create transaction template", err)
+		return models.TransactionTemplateModel{}, huma.Error400BadRequest("Unable to create transaction template", err)
 	}
 
-	return models.CreateTransactionTemplateResponseModel{TransactionTemplateModel: data}, nil
+	return ttr.GetDetail(ctx, ID)
 }
 
 // Update updates an existing transaction template
-func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, payload models.UpdateTransactionTemplateRequestModel) (models.UpdateTransactionTemplateResponseModel, error) {
-	var data models.TransactionTemplateModel
+func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, payload models.UpdateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
+	sql := `
+		UPDATE transaction_templates
+		SET name = COALESCE($1, name),
+			type = COALESCE($2, type),
+			amount = COALESCE($3, amount),
+			account_id = COALESCE($4, account_id),
+			category_id = COALESCE($5, category_id),
+			destination_account_id = COALESCE($6, destination_account_id),
+			note = COALESCE($7, note),
+			recurrence = COALESCE($8, recurrence),
+			start_date = COALESCE($9, start_date),
+			end_date = COALESCE($10, end_date),
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $11 AND deleted_at IS NULL
+		RETURNING id
+	`
 
-	sql := `UPDATE transaction_templates
-			SET name = COALESCE($1, name),
-				type = COALESCE($2, type),
-				amount = COALESCE($3, amount),
-				account_id = COALESCE($4, account_id),
-				category_id = COALESCE($5, category_id),
-				destination_account_id = COALESCE($6, destination_account_id),
-				note = $7,
-				updated_at = CURRENT_TIMESTAMP
-			WHERE id = $8 AND deleted_at IS NULL
-			RETURNING id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at`
-
-	err := ttr.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Amount, payload.AccountID, payload.CategoryID, payload.DestinationAccountID, payload.Note, id).Scan(
-		&data.ID, &data.Name, &data.Type, &data.Amount, &data.AccountID, &data.CategoryID,
-		&data.DestinationAccountID, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
-	)
+	var returnedID int64
+	err := ttr.pgx.QueryRow(
+		ctx,
+		sql,
+		payload.Name,
+		payload.Type,
+		payload.Amount,
+		payload.AccountID,
+		payload.CategoryID,
+		payload.DestinationAccountID,
+		payload.Note,
+		payload.Recurrence,
+		payload.StartDate,
+		payload.EndDate,
+		id,
+	).Scan(&returnedID)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.UpdateTransactionTemplateResponseModel{}, huma.Error404NotFound("Transaction template not found")
+			return models.TransactionTemplateModel{}, huma.Error404NotFound("Transaction template not found")
 		}
-		return models.UpdateTransactionTemplateResponseModel{}, huma.Error400BadRequest("Unable to update transaction template", err)
+		return models.TransactionTemplateModel{}, huma.Error400BadRequest("Unable to update transaction template", err)
 	}
 
-	return models.UpdateTransactionTemplateResponseModel{TransactionTemplateModel: data}, nil
+	return ttr.GetDetail(ctx, returnedID)
 }
 
-// Delete soft deletes a transaction template
 func (ttr TransactionTemplateRepository) Delete(ctx context.Context, id int64) error {
 	sql := `UPDATE transaction_templates
 			SET deleted_at = CURRENT_TIMESTAMP
@@ -198,37 +365,76 @@ func (ttr TransactionTemplateRepository) Delete(ctx context.Context, id int64) e
 	return nil
 }
 
-// GetDueTemplates retrieves templates that are due for processing based on their recurrence patterns
 func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([]models.TransactionTemplateModel, error) {
-	// Query templates that:
-	// 1. Are not deleted
-	// 2. Have recurrence set to something other than 'none'
-	// 3. Start date is today or in the past
-	// 4. End date is NULL or today or in the future
-	// 5. Either have never been executed (last_executed_at IS NULL) or are due based on recurrence
 	sql := `
-		SELECT id, name, type, amount, account_id, category_id, destination_account_id, note, created_at, updated_at, deleted_at
-		FROM transaction_templates
-		WHERE deleted_at IS NULL
-		  AND recurrence != 'none'
-		  AND start_date <= CURRENT_DATE
-		  AND (end_date IS NULL OR end_date >= CURRENT_DATE)
-		  AND (
-		    last_executed_at IS NULL
-		    OR (
-		      recurrence = 'daily' AND last_executed_at < NOW() - INTERVAL '1 day'
-		    )
-		    OR (
-		      recurrence = 'weekly' AND last_executed_at < NOW() - INTERVAL '7 days'
-		    )
-		    OR (
-		      recurrence = 'monthly' AND last_executed_at < NOW() - INTERVAL '1 month'
-		    )
-		    OR (
-		      recurrence = 'yearly' AND last_executed_at < NOW() - INTERVAL '1 year'
-		    )
-		  )
-		ORDER BY created_at ASC`
+		WITH active_templates AS (
+			SELECT
+				id,
+				account_id,
+				category_id,
+				destination_account_id,
+				name,
+				type,
+				amount,
+				note,
+				recurrence,
+				start_date,
+				end_date,
+				last_executed_at,
+				created_at,
+				updated_at,
+				deleted_at
+			FROM transaction_templates
+			WHERE deleted_at IS NULL
+				AND recurrence != 'none'
+				AND start_date <= CURRENT_DATE
+				AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+		),
+		due_templates AS (
+			SELECT *
+			FROM active_templates
+			WHERE last_executed_at IS NULL
+				OR (recurrence = 'weekly' AND last_executed_at < NOW() - INTERVAL '7 days')
+				OR (recurrence = 'monthly' AND last_executed_at < NOW() - INTERVAL '1 month')
+				OR (recurrence = 'yearly' AND last_executed_at < NOW() - INTERVAL '1 year')
+		)
+		SELECT
+			dt.id,
+			a.id,
+			a.name,
+			a.type,
+			a.amount,
+			a.icon,
+			a.icon_color,
+			c.id,
+			c.name,
+			c.type,
+			c.icon,
+			c.icon_color,
+			da.id,
+			da.name,
+			da.type,
+			da.amount,
+			da.icon,
+			da.icon_color,
+			dt.name,
+			dt.type,
+			dt.amount,
+			dt.note,
+			dt.recurrence,
+			dt.start_date,
+			dt.end_date,
+			dt.last_executed_at,
+			dt.created_at,
+			dt.updated_at,
+			dt.deleted_at
+		FROM due_templates dt
+		JOIN accounts a ON dt.account_id = a.id
+		JOIN categories c ON dt.category_id = c.id
+		LEFT JOIN accounts da ON dt.destination_account_id = da.id
+		WHERE a.deleted_at IS NULL AND c.deleted_at IS NULL AND (da.deleted_at IS NULL OR da.id IS NULL)
+		ORDER BY dt.created_at ASC
+	`
 
 	rows, err := ttr.pgx.Query(ctx, sql)
 	if err != nil {
@@ -239,12 +445,37 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 	var items []models.TransactionTemplateModel
 	for rows.Next() {
 		var item models.TransactionTemplateModel
+		var destAccountID *int64
+		var destAccountName *string
+		var destAccountType *string
+		var destAccountAmount *int64
+		var destAccountIcon *string
+		var destAccountIconColor *string
+
 		if err := rows.Scan(
-			&item.ID, &item.Name, &item.Type, &item.Amount, &item.AccountID, &item.CategoryID,
-			&item.DestinationAccountID, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&item.ID,
+			&item.Account.ID, &item.Account.Name, &item.Account.Type, &item.Account.Amount,
+			&item.Account.Icon, &item.Account.IconColor,
+			&item.Category.ID, &item.Category.Name, &item.Category.Type, &item.Category.Icon, &item.Category.IconColor,
+			&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountIconColor,
+			&item.Name, &item.Type, &item.Amount, &item.Note,
+			&item.Recurrence, &item.StartDate, &item.EndDate, &item.LastExecutedAt,
+			&item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 		); err != nil {
 			return nil, huma.Error400BadRequest("Unable to scan due transaction template data", err)
 		}
+
+		if destAccountID != nil {
+			item.DestinationAccount = &models.TransactionAccountEmbedded{
+				ID:        *destAccountID,
+				Name:      *destAccountName,
+				Type:      *destAccountType,
+				Amount:    *destAccountAmount,
+				Icon:      destAccountIcon,
+				IconColor: destAccountIconColor,
+			}
+		}
+
 		items = append(items, item)
 	}
 
@@ -259,7 +490,6 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 	return items, nil
 }
 
-// UpdateLastExecuted updates the last_executed_at timestamp for a template
 func (ttr TransactionTemplateRepository) UpdateLastExecuted(ctx context.Context, id int64) error {
 	sql := `
 		UPDATE transaction_templates

@@ -97,9 +97,9 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 		Type:                 template.Type,
 		Date:                 time.Now(),
 		Amount:               template.Amount,
-		AccountID:            template.AccountID,
-		CategoryID:           template.CategoryID,
-		DestinationAccountID: template.DestinationAccountID,
+		AccountID:            template.Account.ID,
+		CategoryID:           template.Category.ID,
+		DestinationAccountID: &template.DestinationAccount.ID,
 		Note:                 template.Note,
 	}
 

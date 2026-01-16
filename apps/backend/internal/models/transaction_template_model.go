@@ -2,94 +2,66 @@ package models
 
 import "time"
 
-// TransactionTemplateModel extends TransactionModel to represent a reusable transaction template
-// Used for recurring or installment payments
 type TransactionTemplateModel struct {
-	ID                   int64                        `json:"id" doc:"Unique identifier"`
-	Name                 string                       `json:"name" doc:"Template name"`
-	Type                 string                       `json:"type" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
-	Amount               int64                        `json:"amount" doc:"Template amount"`
-	AccountID            int64                        `json:"accountId" doc:"Source account ID"`
-	Account              *TransactionAccountEmbedded  `json:"account,omitempty" doc:"Source account details"`
-	CategoryID           int64                        `json:"categoryId" doc:"Category ID"`
-	Category             *TransactionCategoryEmbedded `json:"category,omitempty" doc:"Category details"`
-	DestinationAccountID *int64                       `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
-	DestinationAccount   *TransactionAccountEmbedded  `json:"destinationAccount,omitempty" doc:"Destination account details (transfers only)"`
-	Note                 *string                      `json:"note,omitempty" doc:"Template notes"`
-	CreatedAt            time.Time                    `json:"createdAt" doc:"Creation timestamp"`
-	UpdatedAt            *time.Time                   `json:"updatedAt,omitempty" doc:"Last update timestamp"`
-	DeletedAt            *time.Time                   `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
+	ID                 int64                       `json:"id" doc:"Unique identifier"`
+	Name               string                      `json:"name" doc:"Template name"`
+	Type               string                      `json:"type" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
+	Amount             int64                       `json:"amount" doc:"Template amount"`
+	Account            TransactionAccountEmbedded  `json:"account" doc:"Source account details"`
+	Category           TransactionCategoryEmbedded `json:"category" doc:"Category details"`
+	DestinationAccount *TransactionAccountEmbedded `json:"destinationAccount,omitempty" doc:"Destination account details (transfers only)"`
+	Note               *string                     `json:"note,omitempty" doc:"Template notes"`
+	Recurrence         string                      `json:"recurrence" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
+	StartDate          time.Time                   `json:"startDate" doc:"Template start date"`
+	EndDate            *time.Time                  `json:"endDate,omitempty" doc:"Template end date"`
+	LastExecutedAt     *time.Time                  `json:"lastExecutedAt,omitempty" doc:"Last execution timestamp"`
+	CreatedAt          time.Time                   `json:"createdAt" doc:"Creation timestamp"`
+	UpdatedAt          time.Time                   `json:"updatedAt" doc:"Last update timestamp"`
+	DeletedAt          *time.Time                  `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
 }
 
-// ListTransactionTemplatesRequestModel defines query parameters for listing transaction templates
-type ListTransactionTemplatesRequestModel struct {
-	PageNumber int    `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
-	PageSize   int    `query:"pageSize" default:"10" minimum:"1" maximum:"100" doc:"Number of items per page"`
-	SortBy     string `query:"sortBy" default:"createdAt" enum:"id,name,amount,type,createdAt,updatedAt" doc:"Field to sort by"`
-	SortOrder  string `query:"sortOrder" default:"desc" enum:"asc,desc" doc:"Sort order"`
-	Name       string `query:"name" doc:"Search by template name"`
+type TransactionTemplatesSearchModel struct {
+	PageNumber           int    `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
+	PageSize             int    `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Number of items per page"`
+	SortBy               string `query:"sortBy" default:"createdAt" enum:"id,name,amount,type,createdAt,updatedAt" doc:"Field to sort by"`
+	SortOrder            string `query:"sortOrder" default:"desc" enum:"asc,desc" doc:"Sort order"`
+	Name                 string `query:"name" doc:"Search by template name"`
+	Type                 string `query:"type" enum:"expense,income,transfer" doc:"Filter by transaction type"`
+	AccountID            *int64 `query:"accountId" minimum:"1" doc:"Filter by source account ID"`
+	CategoryID           *int64 `query:"categoryId" minimum:"1" doc:"Filter by category ID"`
+	DestinationAccountID *int64 `query:"destinationAccountId" minimum:"1" doc:"Filter by destination account ID"`
 }
 
-// GetTransactionTemplateRequestModel defines path parameters for getting a single transaction template
-type GetTransactionTemplateRequestModel struct {
-	TemplateID int64 `path:"templateId" minimum:"1" doc:"Transaction template ID"`
-}
-
-// UpdateTransactionTemplatePathModel defines path parameters for updating a transaction template
-type UpdateTransactionTemplatePathModel struct {
-	TemplateID int64 `path:"templateId" minimum:"1" doc:"Transaction template ID"`
-}
-
-// DeleteTransactionTemplatePathModel defines path parameters for deleting a transaction template
-type DeleteTransactionTemplatePathModel struct {
-	TemplateID int64 `path:"templateId" minimum:"1" doc:"Transaction template ID"`
-}
-
-// ListTransactionTemplatesResponseModel represents paginated list of transaction templates
-type ListTransactionTemplatesResponseModel struct {
-	Data       []TransactionTemplateModel `json:"data" doc:"List of transaction templates"`
+type TransactionTemplatesPagedModel struct {
+	Items      []TransactionTemplateModel `json:"items" doc:"List of transaction templates"`
 	PageNumber int                        `json:"pageNumber" doc:"Current page number"`
 	PageSize   int                        `json:"pageSize" doc:"Items per page"`
 	TotalCount int                        `json:"totalCount" doc:"Total number of matching items"`
 	TotalPages int                        `json:"totalPages" doc:"Total number of pages"`
 }
 
-// CreateTransactionTemplateRequestModel represents input for creating a transaction template
-type CreateTransactionTemplateRequestModel struct {
-	Name                 string  `json:"name" required:"true" minLength:"1" maxLength:"100" doc:"Template name"`
-	Type                 string  `json:"type" required:"true" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
-	Amount               int64   `json:"amount" required:"true" minimum:"1" doc:"Template amount"`
-	AccountID            int64   `json:"accountId" required:"true" minimum:"1" doc:"Source account ID"`
-	CategoryID           int64   `json:"categoryId" required:"true" minimum:"1" doc:"Category ID"`
-	DestinationAccountID *int64  `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
-	Note                 *string `json:"note,omitempty" doc:"Template notes"`
+type CreateTransactionTemplateModel struct {
+	Name                 string     `json:"name" required:"true" minLength:"1" maxLength:"100" doc:"Template name"`
+	Type                 string     `json:"type" required:"true" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
+	Amount               int64      `json:"amount" required:"true" minimum:"1" doc:"Template amount"`
+	AccountID            int64      `json:"accountId" required:"true" minimum:"1" doc:"Source account ID"`
+	CategoryID           int64      `json:"categoryId" required:"true" minimum:"1" doc:"Category ID"`
+	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
+	Note                 *string    `json:"note,omitempty" doc:"Template notes"`
+	Recurrence           string     `json:"recurrence" required:"true" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
+	StartDate            time.Time  `json:"startDate" required:"true" doc:"Template start date"`
+	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date"`
 }
 
-// CreateTransactionTemplateResponseModel is the response when creating a transaction template
-type CreateTransactionTemplateResponseModel struct {
-	TransactionTemplateModel
+type UpdateTransactionTemplateModel struct {
+	Name                 *string    `json:"name,omitempty" minLength:"1" maxLength:"100" doc:"Template name"`
+	Type                 *string    `json:"type,omitempty" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
+	Amount               *int64     `json:"amount,omitempty" minimum:"1" doc:"Template amount"`
+	AccountID            *int64     `json:"accountId,omitempty" minimum:"1" doc:"Source account ID"`
+	CategoryID           *int64     `json:"categoryId,omitempty" minimum:"1" doc:"Category ID"`
+	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
+	Note                 *string    `json:"note,omitempty" doc:"Template notes"`
+	Recurrence           *string    `json:"recurrence,omitempty" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
+	StartDate            *time.Time `json:"startDate,omitempty" doc:"Template start date"`
+	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date"`
 }
-
-// GetTransactionTemplateResponseModel is the response for getting a single transaction template
-type GetTransactionTemplateResponseModel struct {
-	TransactionTemplateModel
-}
-
-// UpdateTransactionTemplateRequestModel represents input for updating a transaction template
-type UpdateTransactionTemplateRequestModel struct {
-	Name                 *string `json:"name,omitempty" minLength:"1" maxLength:"100" doc:"Template name"`
-	Type                 *string `json:"type,omitempty" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
-	Amount               *int64  `json:"amount,omitempty" minimum:"1" doc:"Template amount"`
-	AccountID            *int64  `json:"accountId,omitempty" minimum:"1" doc:"Source account ID"`
-	CategoryID           *int64  `json:"categoryId,omitempty" minimum:"1" doc:"Category ID"`
-	DestinationAccountID *int64  `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
-	Note                 *string `json:"note,omitempty" doc:"Template notes"`
-}
-
-// UpdateTransactionTemplateResponseModel is the response when updating a transaction template
-type UpdateTransactionTemplateResponseModel struct {
-	TransactionTemplateModel
-}
-
-// DeleteTransactionTemplateResponseModel is the response for deleting a transaction template
-type DeleteTransactionTemplateResponseModel struct{}

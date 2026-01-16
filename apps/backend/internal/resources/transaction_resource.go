@@ -453,17 +453,17 @@ func (tr TransactionResource) DeleteTag(ctx context.Context, input *struct {
 // Transaction Template Handlers
 
 func (tr TransactionResource) ListTemplates(ctx context.Context, input *struct {
-	models.ListTransactionTemplatesRequestModel
+	models.TransactionTemplatesSearchModel
 }) (*struct {
-	Body models.ListTransactionTemplatesResponseModel
+	Body models.TransactionTemplatesPagedModel
 }, error) {
-	resp, err := tr.ttemps.List(ctx, input.ListTransactionTemplatesRequestModel)
+	resp, err := tr.ttemps.GetPaged(ctx, input.TransactionTemplatesSearchModel)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.ListTransactionTemplatesResponseModel
+		Body models.TransactionTemplatesPagedModel
 	}{
 		Body: resp,
 	}, nil
@@ -472,24 +472,24 @@ func (tr TransactionResource) ListTemplates(ctx context.Context, input *struct {
 func (tr TransactionResource) GetTemplate(ctx context.Context, input *struct {
 	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
 }) (*struct {
-	Body models.GetTransactionTemplateResponseModel
+	Body models.TransactionTemplateModel
 }, error) {
-	resp, err := tr.ttemps.Get(ctx, input.TemplateID)
+	resp, err := tr.ttemps.GetDetail(ctx, input.TemplateID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &struct {
-		Body models.GetTransactionTemplateResponseModel
+		Body models.TransactionTemplateModel
 	}{
-		Body: models.GetTransactionTemplateResponseModel{TransactionTemplateModel: resp},
+		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) CreateTemplate(ctx context.Context, input *struct {
-	Body models.CreateTransactionTemplateRequestModel
+	Body models.CreateTransactionTemplateModel
 }) (*struct {
-	Body models.CreateTransactionTemplateResponseModel
+	Body models.TransactionTemplateModel
 }, error) {
 	resp, err := tr.ttemps.Create(ctx, input.Body)
 	if err != nil {
@@ -497,17 +497,17 @@ func (tr TransactionResource) CreateTemplate(ctx context.Context, input *struct 
 	}
 
 	return &struct {
-		Body models.CreateTransactionTemplateResponseModel
+		Body models.TransactionTemplateModel
 	}{
 		Body: resp,
 	}, nil
 }
 
 func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct {
-	TemplateID int64                                        `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
-	Body       models.UpdateTransactionTemplateRequestModel `json:""`
+	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
+	Body       models.UpdateTransactionTemplateModel
 }) (*struct {
-	Body models.UpdateTransactionTemplateResponseModel
+	Body models.TransactionTemplateModel
 }, error) {
 	resp, err := tr.ttemps.Update(ctx, input.TemplateID, input.Body)
 	if err != nil {
@@ -515,7 +515,7 @@ func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct 
 	}
 
 	return &struct {
-		Body models.UpdateTransactionTemplateResponseModel
+		Body models.TransactionTemplateModel
 	}{
 		Body: resp,
 	}, nil
@@ -529,5 +529,5 @@ func (tr TransactionResource) DeleteTemplate(ctx context.Context, input *struct 
 		return nil, err
 	}
 
-	return &struct{}{}, nil
+	return nil, nil
 }
