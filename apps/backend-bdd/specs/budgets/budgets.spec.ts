@@ -1,0 +1,140 @@
+import { test, expect } from "@fixtures/index";
+
+test.describe("Budgets - Common CRUD", () => {
+  test("POST /budgets - create budget", async ({ budgetAPI, accountAPI }) => {
+    const accountRes = await accountAPI.createAccount({
+      name: `e2e-budget-account-${Date.now()}`,
+      note: "budget test",
+      type: "expense",
+    });
+    expect(accountRes.data).toBeDefined();
+    const accountId = accountRes.data!.id as number;
+
+    const res = await budgetAPI.createBudget({
+      accountId,
+      periodStart: new Date("2026-01-01").toISOString(),
+      periodEnd: new Date("2026-01-31").toISOString(),
+      amountLimit: 1000,
+    });
+
+    expect(res.status).toBeGreaterThanOrEqual(200);
+    expect(res.data).toBeDefined();
+    const budgetId = res.data!.id as number;
+
+    await budgetAPI.deleteBudget(budgetId);
+    await accountAPI.deleteAccount(accountId);
+  });
+
+  test("GET /budgets - list budgets returns items", async ({
+    budgetAPI,
+    accountAPI,
+  }) => {
+    const accountRes = await accountAPI.createAccount({
+      name: `e2e-budget-list-${Date.now()}`,
+      note: "list test",
+      type: "expense",
+    });
+    const accountId = accountRes.data!.id as number;
+
+    const budgetRes = await budgetAPI.createBudget({
+      accountId,
+      periodStart: new Date("2026-01-01").toISOString(),
+      periodEnd: new Date("2026-01-31").toISOString(),
+      amountLimit: 1000,
+    });
+    expect(budgetRes.status).toBeGreaterThanOrEqual(200);
+    expect(budgetRes.data).toBeDefined();
+    const budgetId = budgetRes.data!.id as number;
+
+    const listRes = await budgetAPI.getBudgets();
+    expect(listRes.status).toBeGreaterThanOrEqual(200);
+    const items = listRes.data!.items || [];
+    expect(Array.isArray(items)).toBe(true);
+
+    await budgetAPI.deleteBudget(budgetId);
+    await accountAPI.deleteAccount(accountId);
+  });
+
+  test("GET /budgets/:id - get budget by id", async ({
+    budgetAPI,
+    accountAPI,
+  }) => {
+    const accountRes = await accountAPI.createAccount({
+      name: `e2e-budget-get-${Date.now()}`,
+      note: "get test",
+      type: "expense",
+    });
+    const accountId = accountRes.data!.id as number;
+
+    const budgetRes = await budgetAPI.createBudget({
+      accountId,
+      periodStart: new Date("2026-01-01").toISOString(),
+      periodEnd: new Date("2026-01-31").toISOString(),
+      amountLimit: 1000,
+    });
+    expect(budgetRes.status).toBeGreaterThanOrEqual(200);
+    expect(budgetRes.data).toBeDefined();
+    const budgetId = budgetRes.data!.id as number;
+
+    const getRes = await budgetAPI.getBudget(budgetId);
+    expect(getRes.status).toBeGreaterThanOrEqual(200);
+    expect(getRes.data!.id).toBe(budgetId);
+
+    await budgetAPI.deleteBudget(budgetId);
+    await accountAPI.deleteAccount(accountId);
+  });
+
+  test("PATCH /budgets/:id - update budget", async ({
+    budgetAPI,
+    accountAPI,
+  }) => {
+    const accountRes = await accountAPI.createAccount({
+      name: `e2e-budget-update-${Date.now()}`,
+      note: "update test",
+      type: "expense",
+    });
+    const accountId = accountRes.data!.id as number;
+
+    const budgetRes = await budgetAPI.createBudget({
+      accountId,
+      periodStart: new Date("2026-01-01").toISOString(),
+      periodEnd: new Date("2026-01-31").toISOString(),
+      amountLimit: 1000,
+    });
+    const budgetId = budgetRes.data!.id as number;
+
+    const updateRes = await budgetAPI.updateBudget(budgetId, {
+      amountLimit: 2000,
+    });
+    expect(updateRes.status).toBeGreaterThanOrEqual(200);
+    expect(updateRes.data!.amountLimit).toBe(2000);
+
+    await budgetAPI.deleteBudget(budgetId);
+    await accountAPI.deleteAccount(accountId);
+  });
+
+  test("DELETE /budgets/:id - delete budget", async ({
+    budgetAPI,
+    accountAPI,
+  }) => {
+    const accountRes = await accountAPI.createAccount({
+      name: `e2e-budget-delete-${Date.now()}`,
+      note: "delete test",
+      type: "expense",
+    });
+    const accountId = accountRes.data!.id as number;
+
+    const budgetRes = await budgetAPI.createBudget({
+      accountId,
+      periodStart: new Date("2026-01-01").toISOString(),
+      periodEnd: new Date("2026-01-31").toISOString(),
+      amountLimit: 1000,
+    });
+    const budgetId = budgetRes.data!.id as number;
+
+    const deleteRes = await budgetAPI.deleteBudget(budgetId);
+    expect(deleteRes.status).toBeGreaterThanOrEqual(200);
+
+    await accountAPI.deleteAccount(accountId);
+  });
+});
