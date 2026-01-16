@@ -7,15 +7,17 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/sync/errgroup"
 )
 
 type TransactionService struct {
 	tr repositories.TransactionRepository
 	ar repositories.AccountRepository
+	cr repositories.CategoryRepository
 }
 
-func NewTransactionService(tr repositories.TransactionRepository, ar repositories.AccountRepository) TransactionService {
-	return TransactionService{tr, ar}
+func NewTransactionService(tr repositories.TransactionRepository, ar repositories.AccountRepository, cr repositories.CategoryRepository) TransactionService {
+	return TransactionService{tr, ar, cr}
 }
 
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
@@ -27,6 +29,9 @@ func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.Tr
 }
 
 func (ts TransactionService) Create(ctx context.Context, p models.CreateTransactionModel) (models.TransactionModel, error) {
+	if err := ts.validateReferences(ctx, p.Type, p.AccountID, p.DestinationAccountID, &p.CategoryID); err != nil {
+		return models.TransactionModel{}, err
+	}
 
 	tx, err := ts.tr.Pgx.BeginTx(ctx, pgx.TxOptions{})
 
@@ -87,12 +92,20 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 	if p.AccountID != nil {
 		newAccountID = *p.AccountID
 	}
+	newCategoryID := existing.Category.ID
+	if p.CategoryID != nil {
+		newCategoryID = *p.CategoryID
+	}
 	newDestAccountID := (*int64)(nil)
 	if existing.DestinationAccount != nil {
 		newDestAccountID = &existing.DestinationAccount.ID
 	}
 	if p.DestinationAccountID != nil && *p.DestinationAccountID != 0 {
 		newDestAccountID = p.DestinationAccountID
+	}
+
+	if err := ts.validateReferences(ctx, newType, newAccountID, newDestAccountID, &newCategoryID); err != nil {
+		return models.TransactionModel{}, err
 	}
 
 	if err := ts.applyBalanceChanges(ctx, tx, newType, newAmount, newAccountID, newDestAccountID); err != nil {
@@ -179,6 +192,51 @@ func (ts TransactionService) revertBalanceChanges(ctx context.Context, tx pgx.Tx
 		if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, amount); err != nil {
 			return huma.Error422UnprocessableEntity("failed to revert account balance")
 		}
+	}
+	return nil
+}
+
+func (ts TransactionService) validateReferences(ctx context.Context, txType string, accountID int64, destAccountID *int64, categoryID *int64) error {
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		if _, err := ts.ar.GetDetail(ctx, accountID); err != nil {
+			return huma.Error400BadRequest("Account not found", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		if txType == "transfer" {
+			if destAccountID == nil || *destAccountID == 0 {
+				return huma.Error400BadRequest("Destination account is required for transfer")
+			}
+		}
+		if destAccountID != nil && *destAccountID != 0 {
+			if _, err := ts.ar.GetDetail(ctx, *destAccountID); err != nil {
+				return huma.Error400BadRequest("Destination account not found", err)
+			}
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		if categoryID != nil && *categoryID != 0 {
+			cat, err := ts.cr.GetDetail(ctx, *categoryID)
+			if err != nil {
+				return huma.Error400BadRequest("Category not found", err)
+			}
+			if txType == "income" || txType == "expense" {
+				if cat.Type != txType {
+					return huma.Error400BadRequest("Category type does not match transaction type")
+				}
+			}
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return err
 	}
 	return nil
 }
