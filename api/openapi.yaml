@@ -801,7 +801,7 @@ components:
     SummaryAccountListModel:
       additionalProperties: false
       properties:
-        Data:
+        data:
           description: Summary data grouped by account
           items:
             $ref: "#/components/schemas/SummaryAccountModel"
@@ -809,7 +809,7 @@ components:
             - array
             - "null"
       required:
-        - Data
+        - data
       type: object
     SummaryAccountModel:
       additionalProperties: false

@@ -53,9 +53,9 @@ test.describe("Transactions - Date and Amount Filters", () => {
     const byDate = await transactionAPI.getTransactions({
       startDate,
       endDate,
+      pageSize: 100,
     });
     expect(byDate.status).toBeGreaterThanOrEqual(200);
-    console.log(byDate.error?.errors);
     expect(byDate.data).toBeDefined();
     const ids = (byDate.data?.items ?? []).map((it: any) => it.id);
     expect(ids).toContain(r1.data!.id);
@@ -64,6 +64,7 @@ test.describe("Transactions - Date and Amount Filters", () => {
     const byAmount = await transactionAPI.getTransactions({
       minAmount: 100,
       maxAmount: 200,
+      pageSize: 100,
     });
     expect(byAmount.status).toBeGreaterThanOrEqual(200);
     const amountIds = (byAmount.data?.items ?? []).map((it: any) => it.id);

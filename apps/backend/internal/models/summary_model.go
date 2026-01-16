@@ -40,7 +40,7 @@ type SummaryAccountModel struct {
 }
 
 type SummaryAccountListModel struct {
-	Data []SummaryAccountModel `json:"Data" doc:"Summary data grouped by account"`
+	Data []SummaryAccountModel `json:"data" doc:"Summary data grouped by account"`
 }
 
 type SummaryCategoryModel struct {

@@ -1198,7 +1198,7 @@ export interface components {
         };
         SummaryAccountListModel: {
             /** @description Summary data grouped by account */
-            Data: components["schemas"]["SummaryAccountModel"][] | null;
+            data: components["schemas"]["SummaryAccountModel"][] | null;
         };
         SummaryAccountModel: {
             /**
