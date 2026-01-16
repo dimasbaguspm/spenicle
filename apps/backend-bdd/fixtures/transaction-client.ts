@@ -77,8 +77,10 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async getTransactionTags(
     id: number
-  ): Promise<APIResponse<TransactionTagModel[]>> {
-    return this.get<TransactionTagModel[]>(`/transactions/${id}/tags`);
+  ): Promise<APIResponse<components["schemas"]["TransactionTagsPagedModel"]>> {
+    return this.get<components["schemas"]["TransactionTagsPagedModel"]>(
+      `/transactions/${id}/tags`
+    );
   }
 
   /**
@@ -86,9 +88,12 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async addTransactionTag(
     id: number,
-    tagName: string
+    tagId: number
   ): Promise<APIResponse<void>> {
-    return this.post<void>(`/transactions/${id}/tags`, { tagName });
+    return this.post<void>(`/transactions/${id}/tags`, {
+      tagId: tagId,
+      transactionId: id,
+    });
   }
 
   /**

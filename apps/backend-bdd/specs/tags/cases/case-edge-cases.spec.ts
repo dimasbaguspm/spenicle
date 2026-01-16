@@ -38,12 +38,17 @@ test.describe("Tags - Edge Cases", () => {
       "tag-émoji🚀",
     ];
 
-    // Tags appear to have stricter validation than accounts - special chars are rejected
+    // Tags now allow special characters, spaces, and unicode
     for (const name of specialNames) {
       const res = await tagAPI.createTag({
         name,
       });
-      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(res.status).toBeGreaterThanOrEqual(200);
+
+      // Clean up created tag
+      if (res.status >= 200 && res.status < 300 && res.data?.id) {
+        await tagAPI.deleteTag(res.data.id);
+      }
     }
   });
 

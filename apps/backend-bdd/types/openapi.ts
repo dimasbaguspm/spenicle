@@ -1079,7 +1079,7 @@ export interface components {
              * Format: int64
              * @description ID of the transaction
              */
-            transactionId: number;
+            transactionId?: number;
         };
         CreateTransactionTemplateModel: {
             /**

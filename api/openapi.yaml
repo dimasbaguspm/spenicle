@@ -605,7 +605,6 @@ components:
           minimum: 1
           type: integer
       required:
-        - transactionId
         - tagId
       type: object
     CreateTransactionTemplateModel:

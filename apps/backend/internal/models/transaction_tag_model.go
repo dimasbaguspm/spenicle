@@ -25,6 +25,6 @@ type TransactionTagsPagedModel struct {
 }
 
 type CreateTransactionTagModel struct {
-	TransactionID int64 `json:"transactionId" required:"true" minimum:"1" doc:"ID of the transaction"`
+	TransactionID int64 `json:"transactionId,omitempty" minimum:"1" doc:"ID of the transaction"`
 	TagID         int64 `json:"tagId" required:"true" minimum:"1" doc:"ID of the tag"`
 }

@@ -114,16 +114,21 @@ func (ttr TransactionTagRepository) GetDetail(ctx context.Context, ID int64) (mo
 func (ttr TransactionTagRepository) Create(ctx context.Context, p models.CreateTransactionTagModel) (models.TransactionTagModel, error) {
 	var ID int64
 
-	sql := `
+	insertSQL := `
 		INSERT INTO transaction_tags (
 			transaction_id,
 			tag_id
 		)
 		VALUES ($1, $2)
-		ON CONFLICT (transaction_id, tag_id) DO NOTHING
-		RETURNING id`
+		ON CONFLICT (transaction_id, tag_id) DO NOTHING`
 
-	err := ttr.pgx.QueryRow(ctx, sql, p.TransactionID, p.TagID).Scan(&ID)
+	_, err := ttr.pgx.Exec(ctx, insertSQL, p.TransactionID, p.TagID)
+	if err != nil {
+		return models.TransactionTagModel{}, huma.Error400BadRequest("Unable to add tag to transaction", err)
+	}
+
+	selectSQL := `SELECT id FROM transaction_tags WHERE transaction_id = $1 AND tag_id = $2`
+	err = ttr.pgx.QueryRow(ctx, selectSQL, p.TransactionID, p.TagID).Scan(&ID)
 
 	if err != nil {
 		return models.TransactionTagModel{}, huma.Error400BadRequest("Unable to add tag to transaction", err)
@@ -132,17 +137,17 @@ func (ttr TransactionTagRepository) Create(ctx context.Context, p models.CreateT
 	return ttr.GetDetail(ctx, ID)
 }
 
-func (ttr TransactionTagRepository) Delete(ctx context.Context, ID int64) error {
+func (ttr TransactionTagRepository) Delete(ctx context.Context, transactionID, tagID int64) error {
 	sql := `
 		DELETE FROM transaction_tags
-		WHERE id = $1`
+		WHERE transaction_id = $1 AND tag_id = $2`
 
-	cmdTag, err := ttr.pgx.Exec(ctx, sql, ID)
+	cmdTag, err := ttr.pgx.Exec(ctx, sql, transactionID, tagID)
 	if err != nil {
 		return huma.Error400BadRequest("Unable to remove tag from transaction", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return huma.Error404NotFound("Transaction tag not found")
+		return huma.Error404NotFound("Transaction tag association not found")
 	}
 
 	return nil

@@ -27,6 +27,6 @@ func (tts TransactionTagService) Create(ctx context.Context, payload models.Crea
 	return tts.repo.Create(ctx, payload)
 }
 
-func (tts TransactionTagService) Delete(ctx context.Context, ID int64) error {
-	return tts.repo.Delete(ctx, ID)
+func (tts TransactionTagService) Delete(ctx context.Context, transactionID, tagID int64) error {
+	return tts.repo.Delete(ctx, transactionID, tagID)
 }

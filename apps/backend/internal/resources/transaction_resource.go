@@ -443,7 +443,7 @@ func (tr TransactionResource) DeleteTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
 }) (*struct{}, error) {
-	if err := tr.tts.Delete(ctx, input.TagID); err != nil {
+	if err := tr.tts.Delete(ctx, input.TransactionID, input.TagID); err != nil {
 		return nil, err
 	}
 
