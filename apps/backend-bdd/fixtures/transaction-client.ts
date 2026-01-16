@@ -18,7 +18,9 @@ export type PaginatedTransactionResponseModel =
 export type TransactionTagModel = components["schemas"]["TransactionTagModel"];
 export type TransactionTagRequestModel =
   components["schemas"]["TransactionTagModel"];
-type TransactionRelationCreateSchema =
+export type TransactionRelationsPagedModel =
+  components["schemas"]["TransactionRelationsPagedModel"];
+export type TransactionRelationModel =
   components["schemas"]["TransactionRelationModel"];
 /**
  * Transaction API client
@@ -114,20 +116,28 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async getTransactionRelations(
     id: number
-  ): Promise<APIResponse<TransactionModel[]>> {
-    return this.get<any>(`/transactions/${id}/relations`);
+  ): Promise<APIResponse<TransactionRelationsPagedModel>> {
+    return this.get<TransactionRelationsPagedModel>(
+      `/transactions/${id}/relations`
+    );
   }
 
   /**
    * Create transaction relation
    */
   async createTransactionRelation(
-    id: number,
-    relatedTransactionId: number
-  ): Promise<APIResponse<TransactionRelationCreateSchema>> {
-    return this.post<any>(`/transactions/${id}/relations`, {
-      relatedTransactionId,
-    });
+    sourceId: number,
+    relatedTransactionId: number,
+    relationType: string
+  ): Promise<APIResponse<TransactionRelationModel>> {
+    return this.post<TransactionRelationModel>(
+      `/transactions/${sourceId}/relations`,
+      {
+        SourceTransactionID: sourceId,
+        relatedTransactionId,
+        relationType,
+      }
+    );
   }
 
   /**
