@@ -37,10 +37,10 @@ func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchMod
 
 	sql := `
 		WITH filtered AS (
-			SELECT id, name, created_at, updated_at
+			SELECT id, name, color, created_at, updated_at, deleted_at
 			FROM tags
 			WHERE deleted_at IS NULL
-			AND (name ILIKE $1 OR $1 = '%%')
+			AND (name ILIKE $1 OR $1 = '')
 		),
 		counted AS (
 			SELECT COUNT(*) AS total_count FROM filtered
@@ -48,10 +48,12 @@ func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchMod
 		SELECT
 			f.id,
 			f.name,
+			f.color,
 			f.created_at,
 			f.updated_at,
+			f.deleted_at,
 			c.total_count
-		FROM filtered
+		FROM filtered f
 		CROSS JOIN counted c
 		ORDER BY ` + sortColumn + ` ` + sortOrder + `
 		LIMIT $2 OFFSET $3
@@ -67,7 +69,7 @@ func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchMod
 	var totalCount int
 	for rows.Next() {
 		var item models.TagModel
-		err := rows.Scan(&item.ID, &item.Name, &item.CreatedAt, &item.UpdatedAt, &totalCount)
+		err := rows.Scan(&item.ID, &item.Name, &item.Color, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt, &totalCount)
 		if err != nil {
 			return models.TagsPagedModel{}, huma.Error400BadRequest("Unable to scan tag data", err)
 		}
@@ -101,12 +103,12 @@ func (tr TagRepository) GetDetail(ctx context.Context, id int64) (models.TagMode
 
 	sql := `
 		SELECT
-			id, name, created_at, updated_at
+			id, name, color, created_at, updated_at, deleted_at
 		FROM tags
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
-	err := tr.pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.CreatedAt, &data.UpdatedAt)
+	err := tr.pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Color, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -121,11 +123,11 @@ func (tr TagRepository) GetDetail(ctx context.Context, id int64) (models.TagMode
 func (tr TagRepository) Create(ctx context.Context, payload models.CreateTagModel) (models.TagModel, error) {
 	var ID int64
 
-	sql := `INSERT INTO tags (name)
-			VALUES ($1)
+	sql := `INSERT INTO tags (name, color)
+			VALUES ($1, $2)
 			RETURNING id`
 
-	err := tr.pgx.QueryRow(ctx, sql, payload.Name).Scan(&ID)
+	err := tr.pgx.QueryRow(ctx, sql, payload.Name, payload.Color).Scan(&ID)
 
 	if err != nil {
 		return models.TagModel{}, huma.Error400BadRequest("Unable to create tag", err)
@@ -140,12 +142,13 @@ func (tr TagRepository) Update(ctx context.Context, id int64, payload models.Upd
 	sql := `
 		UPDATE tags
 		SET name = COALESCE($1, name),
+			color = COALESCE($2, color),
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $2 AND deleted_at IS NULL
+		WHERE id = $3 AND deleted_at IS NULL
 		RETURNING id
 	`
 
-	err := tr.pgx.QueryRow(ctx, sql, payload.Name, id).Scan(&ID)
+	err := tr.pgx.QueryRow(ctx, sql, payload.Name, payload.Color, id).Scan(&ID)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

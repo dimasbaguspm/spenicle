@@ -40,9 +40,9 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 	sql := `
 		WITH filtered AS (
 			SELECT t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
-				a.id, a.name, a.type, a.amount, a.icon, a.icon_color,
-				c.id, c.name, c.type, c.icon, c.icon_color,
-				da.id, da.name, da.type, da.amount, da.icon, da.icon_color
+				a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
+				c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
+				da.id as dest_account_id, da.name as dest_account_name, da.type as dest_account_type, da.amount as dest_account_amount, da.icon as dest_account_icon, da.icon_color as dest_account_color
 			FROM transactions t
 			LEFT JOIN accounts a ON t.account_id = a.id
 			LEFT JOIN categories c ON t.category_id = c.id
@@ -54,9 +54,9 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		)
 		SELECT
 			f.id, f.type, f.date, f.amount, f.note, f.created_at, f.updated_at, f.deleted_at,
-			f.id, f.name, f.type, f.amount, f.icon, f.icon_color,
-			f.id, f.name, f.type, f.icon, f.icon_color,
-			f.id, f.name, f.type, f.amount, f.icon, f.icon_color,
+			f.account_id, f.account_name, f.account_type, f.account_amount, f.account_icon, f.account_color,
+			f.category_id, f.category_name, f.category_type, f.category_icon, f.category_color,
+			f.dest_account_id, f.dest_account_name, f.dest_account_type, f.dest_account_amount, f.dest_account_icon, f.dest_account_color,
 			c.total
 		FROM filtered f
 		CROSS JOIN counted c
@@ -225,16 +225,17 @@ func (tr TransactionRepository) CreateWithTx(ctx context.Context, tx pgx.Tx, p m
 
 func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.UpdateTransactionModel) (models.TransactionModel, error) {
 	sql := `UPDATE transactions
-			SET date = COALESCE($1, date),
-				amount = COALESCE($2, amount),
-				account_id = COALESCE($3, account_id),
-				category_id = COALESCE($4, category_id),
-				destination_account_id = COALESCE($5, destination_account_id),
-				note = COALESCE($6, note),
+			SET type = COALESCE($1, type),
+				date = COALESCE($2, date),
+				amount = COALESCE($3, amount),
+				account_id = COALESCE($4, account_id),
+				category_id = COALESCE($5, category_id),
+				destination_account_id = COALESCE($6, destination_account_id),
+				note = COALESCE($7, note),
 				updated_at = CURRENT_TIMESTAMP
-			WHERE id = $7 AND deleted_at IS NULL`
+			WHERE id = $8 AND deleted_at IS NULL`
 
-	cmdTag, err := tr.Pgx.Exec(ctx, sql, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
+	cmdTag, err := tr.Pgx.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
 
 	if err != nil {
 		return models.TransactionModel{}, huma.Error400BadRequest("Unable to update transaction", err)
@@ -250,16 +251,17 @@ func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.U
 // UpdateWithTx updates a transaction within a provided database transaction
 func (tr TransactionRepository) UpdateWithTx(ctx context.Context, tx pgx.Tx, id int64, p models.UpdateTransactionModel) error {
 	sql := `UPDATE transactions
-			SET date = COALESCE($1, date),
-				amount = COALESCE($2, amount),
-				account_id = COALESCE($3, account_id),
-				category_id = COALESCE($4, category_id),
-				destination_account_id = COALESCE($5, destination_account_id),
-				note = COALESCE($6, note),
+			SET type = COALESCE($1, type),
+				date = COALESCE($2, date),
+				amount = COALESCE($3, amount),
+				account_id = COALESCE($4, account_id),
+				category_id = COALESCE($5, category_id),
+				destination_account_id = COALESCE($6, destination_account_id),
+				note = COALESCE($7, note),
 				updated_at = CURRENT_TIMESTAMP
-			WHERE id = $7 AND deleted_at IS NULL`
+			WHERE id = $8 AND deleted_at IS NULL`
 
-	cmdTag, err := tx.Exec(ctx, sql, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
+	cmdTag, err := tx.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
 
 	if err != nil {
 		return huma.Error400BadRequest("Unable to update transaction", err)

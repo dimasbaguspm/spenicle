@@ -52,7 +52,8 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 				last_executed_at,
 				note,
 				created_at,
-				updated_at
+				updated_at,
+				deleted_at
 			FROM budget_templates
 			WHERE deleted_at IS NULL
 		),
@@ -71,6 +72,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 			f.note,
 			f.created_at,
 			f.updated_at,
+			f.deleted_at,
 			c.total_count
 		FROM filtered f
 		CROSS JOIN counted c
@@ -89,7 +91,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 
 	for rows.Next() {
 		var item models.BudgetTemplateModel
-		err := rows.Scan(&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence, &item.StartDate, &item.EndDate, &item.LastExecutedAt, &item.Note, &item.CreatedAt, &item.UpdatedAt, &totalCount)
+		err := rows.Scan(&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence, &item.StartDate, &item.EndDate, &item.LastExecutedAt, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt, &totalCount)
 		if err != nil {
 			return models.BudgetTemplatesPagedModel{}, huma.Error400BadRequest("Unable to scan budget template data", err)
 		}
@@ -121,14 +123,14 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 func (btr BudgetTemplateRepository) GetDetail(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
 	var data models.BudgetTemplateModel
 	query := `
-		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date, last_executed_at, note, created_at, updated_at
+		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date, last_executed_at, note, created_at, updated_at, deleted_at
 		FROM budget_templates
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
 	err := btr.pgx.QueryRow(ctx, query, id).Scan(
 		&data.ID, &data.AccountID, &data.CategoryID, &data.AmountLimit, &data.Recurrence,
-		&data.StartDate, &data.EndDate, &data.LastExecutedAt, &data.Note, &data.CreatedAt, &data.UpdatedAt,
+		&data.StartDate, &data.EndDate, &data.LastExecutedAt, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -266,6 +268,7 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 			note,
 			created_at,
 			updated_at,
+			deleted_at
 		FROM due_templates
 	`
 
@@ -280,7 +283,7 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 		var item models.BudgetTemplateModel
 		if err := rows.Scan(
 			&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence,
-			&item.StartDate, &item.EndDate, &item.LastExecutedAt, &item.Note, &item.CreatedAt, &item.UpdatedAt,
+			&item.StartDate, &item.EndDate, &item.LastExecutedAt, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 		); err != nil {
 			return nil, huma.Error400BadRequest("Unable to scan due budget template data", err)
 		}

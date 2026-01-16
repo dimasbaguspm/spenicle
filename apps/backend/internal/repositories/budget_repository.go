@@ -41,25 +41,29 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 
 	sql := `
 		WITH filtered AS (
-			b.id,
-			b.template_id,
-			b.account_id,
-			b.category_id,
-			b.period_start,
-			b.period_end,
-		    b.amount_limit,
-		    COALESCE((
-		        SELECT SUM(t.amount)
-		        FROM transactions t
-		        WHERE t.deleted_at IS NULL
-		            AND t.date >= b.period_start
-		            AND t.date <= b.period_end
-		            AND (b.account_id IS NULL OR t.account_id = b.account_id)
-		            AND (b.category_id IS NULL OR t.category_id = b.category_id)
-		    ), 0) as actual_amount,
-		    b.note,
-			b.created_at,
-			b.updated_at
+			SELECT
+				b.id,
+				b.template_id,
+				b.account_id,
+				b.category_id,
+				b.period_start,
+				b.period_end,
+				b.amount_limit,
+				COALESCE((
+					SELECT SUM(t.amount)
+					FROM transactions t
+					WHERE t.deleted_at IS NULL
+						AND t.date >= b.period_start
+						AND t.date <= b.period_end
+						AND (b.account_id IS NULL OR t.account_id = b.account_id)
+						AND (b.category_id IS NULL OR t.category_id = b.category_id)
+				), 0) as actual_amount,
+				b.note,
+				b.created_at,
+				b.updated_at,
+				b.deleted_at
+			FROM budgets b
+			WHERE b.deleted_at IS NULL
 		),
 		counted AS (
 			SELECT COUNT(*) as total FROM filtered
@@ -76,6 +80,7 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 			f.note,
 			f.created_at,
 			f.updated_at,
+			f.deleted_at,
 			c.total
 		FROM filtered f
 		CROSS JOIN counted c
@@ -106,6 +111,7 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 			&item.Note,
 			&item.CreatedAt,
 			&item.UpdatedAt,
+			&item.DeletedAt,
 			&totalCount)
 		if err != nil {
 			return models.BudgetsPagedModel{}, huma.Error400BadRequest("Unable to scan budget data", err)
@@ -146,26 +152,27 @@ func (br BudgetRepository) GetDetail(ctx context.Context, id int64) (models.Budg
 			b.category_id,
 			b.period_start,
 			b.period_end,
-		    b.amount_limit,
-		    COALESCE((
-		        SELECT SUM(t.amount)
-		        FROM transactions t
-		        WHERE t.deleted_at IS NULL
-		            AND t.date >= b.period_start
-		            AND t.date <= b.period_end
-		            AND (b.account_id IS NULL OR t.account_id = b.account_id)
-		            AND (b.category_id IS NULL OR t.category_id = b.category_id)
-		    ), 0) as actual_amount,
-		    b.note,
+			b.amount_limit,
+			COALESCE((
+				SELECT SUM(t.amount)
+				FROM transactions t
+				WHERE t.deleted_at IS NULL
+					AND t.date >= b.period_start
+					AND t.date <= b.period_end
+					AND (b.account_id IS NULL OR t.account_id = b.account_id)
+					AND (b.category_id IS NULL OR t.category_id = b.category_id)
+			), 0) as actual_amount,
+			b.note,
 			b.created_at,
-			b.updated_at
+			b.updated_at,
+			b.deleted_at
 		FROM budgets b
 		WHERE b.id = $1
 			AND b.deleted_at IS NULL`
 
 	err := br.pgx.QueryRow(ctx, query, id).Scan(
 		&data.ID, &data.TemplateID, &data.AccountID, &data.CategoryID, &data.PeriodStart, &data.PeriodEnd,
-		&data.AmountLimit, &data.ActualAmount, &data.Note, &data.CreatedAt, &data.UpdatedAt,
+		&data.AmountLimit, &data.ActualAmount, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
 
 	if errors.Is(err, pgx.ErrNoRows) {

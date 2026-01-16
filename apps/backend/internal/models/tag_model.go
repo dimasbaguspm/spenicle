@@ -5,6 +5,7 @@ import "time"
 type TagModel struct {
 	ID        int64      `json:"id" doc:"Unique identifier"`
 	Name      string     `json:"name" doc:"Tag name"`
+	Color     *string    `json:"color,omitempty" doc:"Tag color code"`
 	CreatedAt time.Time  `json:"createdAt" doc:"Creation timestamp"`
 	UpdatedAt *time.Time `json:"updatedAt,omitempty" doc:"Last update timestamp"`
 	DeletedAt *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp"`
@@ -27,9 +28,11 @@ type TagsPagedModel struct {
 }
 
 type CreateTagModel struct {
-	Name string `json:"name" required:"true" minLength:"1" maxLength:"50" doc:"Tag name"`
+	Name  string  `json:"name" required:"true" minLength:"1" maxLength:"50" doc:"Tag name"`
+	Color *string `json:"color,omitempty" maxLength:"7" doc:"Tag color code"`
 }
 
 type UpdateTagModel struct {
-	Name *string `json:"name,omitempty" minLength:"1" maxLength:"50" doc:"Tag name"`
+	Name  *string `json:"name,omitempty" minLength:"1" maxLength:"50" doc:"Tag name"`
+	Color *string `json:"color,omitempty" maxLength:"7" doc:"Tag color code"`
 }

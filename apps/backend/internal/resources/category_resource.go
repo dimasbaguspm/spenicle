@@ -173,7 +173,7 @@ func (cr CategoryResource) Delete(ctx context.Context, input *struct {
 func (cr CategoryResource) Reorder(ctx context.Context, input *struct {
 	Body models.ReorderCategoriesRequestModel
 }) (*struct{}, error) {
-	err := cr.cs.Reorder(ctx, input.Body.Items)
+	err := cr.cs.Reorder(ctx, input.Body.Data)
 	if err != nil {
 		return nil, err
 	}

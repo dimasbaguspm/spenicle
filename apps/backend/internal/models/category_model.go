@@ -28,7 +28,7 @@ type CategoryModel struct {
 }
 
 type CategoriesPagedModel struct {
-	Items      []CategoryModel `json:"Items" doc:"List of categories"`
+	Items      []CategoryModel `json:"items" doc:"List of categories"`
 	PageNumber int             `json:"pageNumber" doc:"Current page number"`
 	PageSize   int             `json:"pageSize" doc:"Items per page"`
 	TotalCount int             `json:"totalCount" doc:"Total number of matching items"`
@@ -58,5 +58,5 @@ type ReorderCategoryItemModel struct {
 }
 
 type ReorderCategoriesRequestModel struct {
-	Items []ReorderCategoryItemModel `json:"items" doc:"List of categories to reorder"`
+	Data []ReorderCategoryItemModel `json:"data" doc:"List of categories to reorder"`
 }
