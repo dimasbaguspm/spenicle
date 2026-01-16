@@ -1,7 +1,7 @@
 import { test, expect } from "@fixtures/index";
 
-test.describe("Summary - Advanced Filtering", () => {
-  test("transaction summary: daily/monthly/yearly frequency consistency", async ({
+test.describe("Summary - Advanced Filtering Cases", () => {
+  test("GET /summary/transactions - daily/monthly/yearly frequency consistency", async ({
     accountAPI,
     categoryAPI,
     transactionAPI,
@@ -105,7 +105,7 @@ test.describe("Summary - Advanced Filtering", () => {
     await accountAPI.deleteAccount(acc.data!.id as number);
   });
 
-  test("account summary: partial range exclusion changes totals", async ({
+  test("GET /summary/accounts - partial range exclusion changes totals", async ({
     accountAPI,
     categoryAPI,
     transactionAPI,
@@ -174,7 +174,7 @@ test.describe("Summary - Advanced Filtering", () => {
     await accountAPI.deleteAccount(a.data!.id as number);
   });
 
-  test("category summary: transfers do not contribute to income/expense sums", async ({
+  test("GET /summary/categories - transfers do not contribute to income/expense sums", async ({
     accountAPI,
     categoryAPI,
     transactionAPI,

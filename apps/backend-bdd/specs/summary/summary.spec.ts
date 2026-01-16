@@ -1,7 +1,7 @@
 import { test, expect } from "@fixtures/index";
 
 test.describe("Summary - Common", () => {
-  test("account, category, transaction summaries return expected shapes", async ({
+  test("GET /summary/* - return expected response shapes", async ({
     accountAPI,
     categoryAPI,
     transactionAPI,
@@ -92,7 +92,9 @@ test.describe("Summary - Common", () => {
     await accountAPI.deleteAccount(a2.data!.id as number);
   });
 
-  test("empty range returns zeroed totals", async ({ summaryAPI }) => {
+  test("GET /summary/* - empty range returns zeroed totals", async ({
+    summaryAPI,
+  }) => {
     const farFuture = new Date(
       Date.now() + 1000 * 60 * 60 * 24 * 365
     ).toISOString();
