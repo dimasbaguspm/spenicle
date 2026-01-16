@@ -20,10 +20,10 @@ func NewTagRepository(pgx *pgxpool.Pool) TagRepository {
 
 func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchModel) (models.TagsPagedModel, error) {
 	sortByMap := map[string]string{
-		"id":        "id",
-		"name":      "name",
-		"createdAt": "created_at",
-		"updatedAt": "updated_at",
+		"id":        "t.id",
+		"name":      "t.name",
+		"createdAt": "t.created_at",
+		"updatedAt": "t.updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -33,33 +33,29 @@ func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchMod
 	sortColumn := sortByMap[query.SortBy]
 	sortOrder := sortOrderMap[query.SortOrder]
 	offset := (query.PageNumber - 1) * query.PageSize
-	searchPattern := "%" + query.Name + "%"
 
 	sql := `
-		WITH filtered AS (
-			SELECT id, name, color, created_at, updated_at, deleted_at
+		WITH filtered_tags AS (
+			SELECT 
+				id, name, color, created_at, updated_at, deleted_at,
+				COUNT(*) OVER() as total_count
 			FROM tags
 			WHERE deleted_at IS NULL
-			AND (name ILIKE $1 OR $1 = '')
-		),
-		counted AS (
-			SELECT COUNT(*) AS total_count FROM filtered
+				AND ($1::text IS NULL OR $1::text = '' OR name ILIKE '%' || $1::text || '%')
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $2 OFFSET $3
 		)
 		SELECT
-			f.id,
-			f.name,
-			f.color,
-			f.created_at,
-			f.updated_at,
-			f.deleted_at,
-			c.total_count
-		FROM filtered f
-		CROSS JOIN counted c
-		ORDER BY ` + sortColumn + ` ` + sortOrder + `
-		LIMIT $2 OFFSET $3
-	`
+			id,
+			name,
+			color,
+			created_at,
+			updated_at,
+			deleted_at,
+			total_count
+		FROM filtered_tags`
 
-	rows, err := tr.pgx.Query(ctx, sql, searchPattern, query.PageSize, offset)
+	rows, err := tr.pgx.Query(ctx, sql, query.Name, query.PageSize, offset)
 	if err != nil {
 		return models.TagsPagedModel{}, huma.Error400BadRequest("Unable to query tags", err)
 	}

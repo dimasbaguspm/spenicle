@@ -21,11 +21,11 @@ func NewCategoryRepository(pgx *pgxpool.Pool) CategoryRepository {
 
 func (cr CategoryRepository) GetPaged(ctx context.Context, query models.CategoriesSearchModel) (models.CategoriesPagedModel, error) {
 	sortByMap := map[string]string{
-		"name":         "name",
-		"type":         "type",
-		"displayOrder": "display_order",
-		"createdAt":    "created_at",
-		"updatedAt":    "updated_at",
+		"name":         "c.name",
+		"type":         "c.type",
+		"displayOrder": "c.display_order",
+		"createdAt":    "c.created_at",
+		"updatedAt":    "c.updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -34,38 +34,55 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 
 	sortColumn := sortByMap[query.SortBy]
 	sortOrder := sortOrderMap[query.SortOrder]
-
 	offset := (query.PageNumber - 1) * query.PageSize
-	searchPattern := "%" + query.Name + "%"
 
 	sql := `
-		WITH filtered AS (
-			SELECT id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at
+		WITH filtered_categories AS (
+			SELECT 
+				id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at,
+				COUNT(*) OVER() as total_count
 			FROM categories
 			WHERE deleted_at IS NULL
-				AND (name ILIKE $1 OR $1 = '')
-		),
-		counted AS (
-			SELECT COUNT(*) as total FROM filtered
-		)
-		SELECT
-			f.id,
-			f.name,
-			f.type,
-			f.note,
-			f.icon,
-			f.icon_color,
-			f.display_order,
-			f.archived_at,
-			f.created_at,
-			f.updated_at,
-			c.total
-		FROM filtered f
-		CROSS JOIN counted c
+				AND (array_length($5::int8[], 1) IS NULL OR id = ANY($5::int8[]))
+				AND ($6::text IS NULL OR $6::text = '' OR name ILIKE '%' || $6::text || '%')
+				AND (array_length($7::text[], 1) IS NULL OR type = ANY($7::text[]))
+				AND (
+					$8::text IS NULL OR $8::text = '' OR
+					($8::text = 'true' AND archived_at IS NOT NULL) OR
+					($8::text = 'false' AND archived_at IS NULL)
+				)
 			ORDER BY ` + sortColumn + ` ` + sortOrder + `
 			LIMIT $2 OFFSET $3
-	`
-	rows, err := cr.pgx.Query(ctx, sql, searchPattern, query.PageSize, offset)
+		)
+		SELECT
+			id,
+			name,
+			type,
+			note,
+			icon,
+			icon_color,
+			display_order,
+			archived_at,
+			created_at,
+			updated_at,
+			total_count
+		FROM filtered_categories`
+
+	var (
+		ids   []int64
+		types []string
+	)
+
+	if len(query.ID) > 0 {
+		for _, id := range query.ID {
+			ids = append(ids, int64(id))
+		}
+	}
+	if len(query.Type) > 0 {
+		types = query.Type
+	}
+
+	rows, err := cr.pgx.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
 	if err != nil {
 		return models.CategoriesPagedModel{}, huma.Error400BadRequest("Unable to query categories", err)
 	}

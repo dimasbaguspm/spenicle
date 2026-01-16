@@ -20,15 +20,15 @@ func NewBudgetTemplateRepository(pgx *pgxpool.Pool) BudgetTemplateRepository {
 
 func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
 	sortByMap := map[string]string{
-		"id":          "id",
-		"accountId":   "account_id",
-		"categoryId":  "category_id",
-		"amountLimit": "amount_limit",
-		"recurrence":  "recurrence",
-		"startDate":   "start_date",
-		"endDate":     "end_date",
-		"createdAt":   "created_at",
-		"updatedAt":   "updated_at",
+		"id":          "b.id",
+		"accountId":   "b.account_id",
+		"categoryId":  "b.category_id",
+		"amountLimit": "b.amount_limit",
+		"recurrence":  "b.recurrence",
+		"startDate":   "b.start_date",
+		"endDate":     "b.end_date",
+		"createdAt":   "b.created_at",
+		"updatedAt":   "b.updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -40,44 +40,41 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 	offset := (query.PageNumber - 1) * query.PageSize
 
 	sql := `
-		WITH filtered AS (
+		WITH filtered_templates AS (
 			SELECT
-				id,
-				account_id,
-				category_id,
-				amount_limit,
-				recurrence,
-				start_date,
-				end_date,
-				last_executed_at,
-				note,
-				created_at,
-				updated_at,
-				deleted_at
-			FROM budget_templates
-			WHERE deleted_at IS NULL
-		),
-		counted AS (
-			SELECT COUNT(*) AS total_count FROM filtered
-		)
-		SELECT
-			f.id,
-			f.account_id,
-			f.category_id,
-			f.amount_limit,
-			f.recurrence,
-			f.start_date,
-			f.end_date,
-			f.last_executed_at,
-			f.note,
-			f.created_at,
-			f.updated_at,
-			f.deleted_at,
-			c.total_count
-		FROM filtered f
-		CROSS JOIN counted c
+				b.id,
+				b.account_id,
+				b.category_id,
+				b.amount_limit,
+				b.recurrence,
+				b.start_date,
+				b.end_date,
+				b.last_executed_at,
+				b.note,
+				b.created_at,
+				b.updated_at,
+				b.deleted_at,
+				COUNT(*) OVER() as total_count
+			FROM budget_templates b
+			WHERE b.deleted_at IS NULL
 			ORDER BY ` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
+		)
+		SELECT
+			id,
+			account_id,
+			category_id,
+			amount_limit,
+			recurrence,
+			start_date,
+			end_date,
+			last_executed_at,
+			note,
+			created_at,
+			updated_at,
+			deleted_at,
+			total_count
+		FROM filtered_templates
 	`
 
 	rows, err := btr.pgx.Query(ctx, sql, query.PageSize, offset)

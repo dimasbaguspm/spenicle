@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -34,36 +35,118 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 
 	sortColumn := sortByMap[p.SortBy]
 	sortOrder := sortOrderMap[p.SortOrder]
-
 	offset := (p.PageNumber - 1) * p.PageSize
 
 	sql := `
-		WITH filtered AS (
-			SELECT t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
+		WITH filtered_transactions AS (
+			SELECT 
+				t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
 				a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
 				c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
-				da.id as dest_account_id, da.name as dest_account_name, da.type as dest_account_type, da.amount as dest_account_amount, da.icon as dest_account_icon, da.icon_color as dest_account_color
+				da.id as dest_account_id, da.name as dest_account_name, da.type as dest_account_type, da.amount as dest_account_amount, da.icon as dest_account_icon, da.icon_color as dest_account_color,
+				COUNT(*) OVER() as total_count
 			FROM transactions t
 			LEFT JOIN accounts a ON t.account_id = a.id
 			LEFT JOIN categories c ON t.category_id = c.id
 			LEFT JOIN accounts da ON t.destination_account_id = da.id
 			WHERE t.deleted_at IS NULL
+				AND (array_length($9::int8[], 1) IS NULL OR t.id = ANY($9::int8[]))
+				AND (array_length($10::text[], 1) IS NULL OR t.type = ANY($10::text[]))
+				AND (array_length($11::int8[], 1) IS NULL OR t.account_id = ANY($11::int8[]))
+				AND (array_length($12::int8[], 1) IS NULL OR t.category_id = ANY($12::int8[]))
+				AND (array_length($13::int8[], 1) IS NULL OR t.destination_account_id = ANY($13::int8[]) OR t.destination_account_id IS NULL)
+				AND ($14::int8 IS NULL OR t.amount >= $14::int8)
+				AND ($15::int8 IS NULL OR t.amount <= $15::int8)
+				AND ($16::date IS NULL OR t.date >= $16::date)
+				AND ($17::date IS NULL OR t.date <= $17::date)
+				AND (array_length($18::int8[], 1) IS NULL OR t.id IN (
+					SELECT DISTINCT tt.transaction_id
+					FROM transaction_tags tt
+					WHERE tt.tag_id = ANY($18::int8[])
+				))
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $1 OFFSET $2
 		),
-		counted AS (
-			SELECT COUNT(*) as total FROM filtered
+		tags_agg AS (
+			SELECT tt.transaction_id,
+				COALESCE(JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'name', t.name) ORDER BY t.name), '[]'::json) as tags_json
+			FROM transaction_tags tt
+			INNER JOIN tags t ON tt.tag_id = t.id
+			WHERE tt.transaction_id IN (SELECT id FROM filtered_transactions)
+			GROUP BY tt.transaction_id
 		)
 		SELECT
-			f.id, f.type, f.date, f.amount, f.note, f.created_at, f.updated_at, f.deleted_at,
-			f.account_id, f.account_name, f.account_type, f.account_amount, f.account_icon, f.account_color,
-			f.category_id, f.category_name, f.category_type, f.category_icon, f.category_color,
-			f.dest_account_id, f.dest_account_name, f.dest_account_type, f.dest_account_amount, f.dest_account_icon, f.dest_account_color,
-			c.total
-		FROM filtered f
-		CROSS JOIN counted c
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
-			LIMIT $1 OFFSET $2`
+			ft.id, ft.type, ft.date, ft.amount, ft.note, ft.created_at, ft.updated_at, ft.deleted_at,
+			ft.account_id, ft.account_name, ft.account_type, ft.account_amount, ft.account_icon, ft.account_color,
+			ft.category_id, ft.category_name, ft.category_type, ft.category_icon, ft.category_color,
+			ft.dest_account_id, ft.dest_account_name, ft.dest_account_type, ft.dest_account_amount, ft.dest_account_icon, ft.dest_account_color,
+			COALESCE(ta.tags_json, '[]'::json) as tags_json,
+			ft.total_count
+		FROM filtered_transactions ft
+		LEFT JOIN tags_agg ta ON ft.id = ta.transaction_id
+	`
 
-	rows, err := tr.Pgx.Query(ctx, sql, p.PageSize, offset)
+	var (
+		ids            []int64
+		types          []string
+		accountIDs     []int64
+		categoryIDs    []int64
+		destAccountIDs []int64
+		tagIDs         []int64
+		minAmountParam *int64
+		maxAmountParam *int64
+		startDateParam *string
+		endDateParam   *string
+	)
+
+	if len(p.IDs) > 0 {
+		for _, id := range p.IDs {
+			ids = append(ids, int64(id))
+		}
+	}
+	if len(p.Type) > 0 {
+		types = p.Type
+	}
+	if len(p.AccountIDs) > 0 {
+		for _, id := range p.AccountIDs {
+			accountIDs = append(accountIDs, int64(id))
+		}
+	}
+	if len(p.CategoryIDs) > 0 {
+		for _, id := range p.CategoryIDs {
+			categoryIDs = append(categoryIDs, int64(id))
+		}
+	}
+	if len(p.DestinationAccountIDs) > 0 {
+		for _, id := range p.DestinationAccountIDs {
+			destAccountIDs = append(destAccountIDs, int64(id))
+		}
+	}
+	if len(p.TagIDs) > 0 {
+		for _, id := range p.TagIDs {
+			tagIDs = append(tagIDs, int64(id))
+		}
+	}
+	if p.MinAmount > 0 {
+		minAmountParam = &p.MinAmount
+	}
+	if p.MaxAmount > 0 {
+		maxAmountParam = &p.MaxAmount
+	}
+	if p.StartDate != "" {
+		startDateParam = &p.StartDate
+	}
+	if p.EndDate != "" {
+		endDateParam = &p.EndDate
+	}
+
+	rows, err := tr.Pgx.Query(ctx, sql,
+		p.PageSize, offset,
+		ids, types, accountIDs, categoryIDs, destAccountIDs,
+		minAmountParam, maxAmountParam,
+		startDateParam, endDateParam,
+		tagIDs,
+	)
 	if err != nil {
 		return models.TransactionsPagedModel{}, huma.Error400BadRequest("Unable to query transactions", err)
 	}
@@ -83,12 +166,14 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		var destAccountAmount *int64
 		var destAccountIcon *string
 		var destAccountColor *string
+		var tagsJSON []byte
 
 		err := rows.Scan(
 			&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 			&account.ID, &account.Name, &account.Type, &account.Amount, &account.Icon, &account.IconColor,
 			&category.ID, &category.Name, &category.Type, &category.Icon, &category.IconColor,
 			&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountColor,
+			&tagsJSON,
 			&totalCount,
 		)
 		if err != nil {
@@ -110,7 +195,12 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			item.DestinationAccount = destAccount
 		}
 
-		// TODO: Fetch tags for transaction from transaction_tags table
+		item.Tags = []models.TransactionTagEmbedded{}
+		if len(tagsJSON) > 0 {
+			if err := json.Unmarshal(tagsJSON, &item.Tags); err != nil {
+				return models.TransactionsPagedModel{}, huma.Error400BadRequest("Unable to parse tags data", err)
+			}
+		}
 
 		items = append(items, item)
 	}
@@ -148,22 +238,43 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 	var destAccountAmount *int64
 	var destAccountIcon *string
 	var destAccountColor *string
+	var tagsJSON []byte
 
-	sql := `SELECT t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
-			a.id, a.name, a.type, a.amount, a.icon, a.icon_color,
-			c.id, c.name, c.type, c.icon, c.icon_color,
-			da.id, da.name, da.type, da.amount, da.icon, da.icon_color
+	sql := `
+		WITH transaction_detail AS (
+			SELECT t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
+				a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
+				c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
+				da.id as dest_account_id, da.name as dest_account_name, da.type as dest_account_type, da.amount as dest_account_amount, da.icon as dest_account_icon, da.icon_color as dest_account_color
 			FROM transactions t
 			LEFT JOIN accounts a ON t.account_id = a.id
 			LEFT JOIN categories c ON t.category_id = c.id
 			LEFT JOIN accounts da ON t.destination_account_id = da.id
-			WHERE t.id = $1 AND t.deleted_at IS NULL`
+			WHERE t.id = $1 AND t.deleted_at IS NULL
+		),
+		tags_agg AS (
+			SELECT tt.transaction_id,
+				COALESCE(JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'name', t.name) ORDER BY t.name), '[]'::json) as tags_json
+			FROM transaction_tags tt
+			INNER JOIN tags t ON tt.tag_id = t.id
+			WHERE tt.transaction_id = $1
+			GROUP BY tt.transaction_id
+		)
+		SELECT
+			td.id, td.type, td.date, td.amount, td.note, td.created_at, td.updated_at, td.deleted_at,
+			td.account_id, td.account_name, td.account_type, td.account_amount, td.account_icon, td.account_color,
+			td.category_id, td.category_name, td.category_type, td.category_icon, td.category_color,
+			td.dest_account_id, td.dest_account_name, td.dest_account_type, td.dest_account_amount, td.dest_account_icon, td.dest_account_color,
+			COALESCE(ta.tags_json, '[]'::json) as tags_json
+		FROM transaction_detail td
+		LEFT JOIN tags_agg ta ON td.id = ta.transaction_id`
 
 	err := tr.Pgx.QueryRow(ctx, sql, id).Scan(
 		&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 		&account.ID, &account.Name, &account.Type, &account.Amount, &account.Icon, &account.IconColor,
 		&category.ID, &category.Name, &category.Type, &category.Icon, &category.IconColor,
 		&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountColor,
+		&tagsJSON,
 	)
 
 	if err != nil {
@@ -186,6 +297,13 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 			IconColor: destAccountColor,
 		}
 		item.DestinationAccount = destAccount
+	}
+
+	item.Tags = []models.TransactionTagEmbedded{}
+	if len(tagsJSON) > 0 {
+		if err := json.Unmarshal(tagsJSON, &item.Tags); err != nil {
+			return models.TransactionModel{}, huma.Error400BadRequest("Unable to parse tags data", err)
+		}
 	}
 
 	return item, nil

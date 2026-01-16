@@ -20,12 +20,12 @@ func NewTransactionTemplateRepository(pgx *pgxpool.Pool) TransactionTemplateRepo
 
 func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
 	sortByMap := map[string]string{
-		"id":        "id",
-		"name":      "name",
-		"amount":    "amount",
-		"type":      "type",
-		"createdAt": "created_at",
-		"updatedAt": "updated_at",
+		"id":        "tt.id",
+		"name":      "tt.name",
+		"amount":    "tt.amount",
+		"type":      "tt.type",
+		"createdAt": "tt.created_at",
+		"updatedAt": "tt.updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -39,7 +39,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 	searchPattern := "%" + p.Name + "%"
 
 	sql := `
-		WITH filtered AS (
+		WITH filtered_templates AS (
 			SELECT
 				tt.id,
 				tt.name,
@@ -69,7 +69,8 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 				tt.last_executed_at,
 				tt.created_at,
 				tt.updated_at,
-				tt.deleted_at
+				tt.deleted_at,
+				COUNT(*) OVER() as total_count
 			FROM transaction_templates tt
 			JOIN accounts a ON tt.account_id = a.id
 			JOIN categories c ON tt.category_id = c.id
@@ -78,53 +79,49 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 				AND a.deleted_at IS NULL
 				AND c.deleted_at IS NULL
 				AND (da.deleted_at IS NULL OR da.id IS NULL)
-				AND (tt.name ILIKE $1 OR $1 = '')
-				AND (tt.type = $4 OR $4::text IS NULL)
-				AND (tt.account_id = $5 OR $5 IS NULL)
-				AND (tt.category_id = $6 OR $6 IS NULL)
-				AND (tt.destination_account_id = $7 OR $7 IS NULL)
-		),
-		counted AS (
-			SELECT COUNT(*) AS total_count FROM filtered
+				AND ($3::text IS NULL OR $3::text = '' OR tt.name ILIKE '%' || $3::text || '%')
+				AND ($4::text IS NULL OR tt.type = $4::text)
+				AND ($5::int8 IS NULL OR tt.account_id = $5::int8)
+				AND ($6::int8 IS NULL OR tt.category_id = $6::int8)
+				AND ($7::int8 IS NULL OR tt.destination_account_id = $7::int8)
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $1 OFFSET $2
 		)
 		SELECT
-			f.id,
-			f.name,
-			f.type,
-			f.amount,
-			f.account_id,
-			f.account_name,
-			f.account_type,
-			f.account_amount,
-			f.account_icon,
-			f.account_icon_color,
-			f.category_id,
-			f.category_name,
-			f.category_type,
-			f.category_icon,
-			f.category_icon_color,
-			f.dest_account_id,
-			f.dest_account_name,
-			f.dest_account_type,
-			f.dest_account_amount,
-			f.dest_account_icon,
-			f.dest_account_icon_color,
-			f.note,
-			f.recurrence,
-			f.start_date,
-			f.end_date,
-			f.last_executed_at,
-			f.created_at,
-			f.updated_at,
-			f.deleted_at,
-			c.total_count
-		FROM filtered f
-		CROSS JOIN counted c
-		ORDER BY ` + sortColumn + ` ` + sortOrder + `
-		LIMIT $2 OFFSET $3
+			id,
+			name,
+			type,
+			amount,
+			account_id,
+			account_name,
+			account_type,
+			account_amount,
+			account_icon,
+			account_icon_color,
+			category_id,
+			category_name,
+			category_type,
+			category_icon,
+			category_icon_color,
+			dest_account_id,
+			dest_account_name,
+			dest_account_type,
+			dest_account_amount,
+			dest_account_icon,
+			dest_account_icon_color,
+			note,
+			recurrence,
+			start_date,
+			end_date,
+			last_executed_at,
+			created_at,
+			updated_at,
+			deleted_at,
+			total_count
+		FROM filtered_templates
 	`
 
-	rows, err := ttr.pgx.Query(ctx, sql, searchPattern, p.PageSize, offset, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID)
+	rows, err := ttr.pgx.Query(ctx, sql, p.PageSize, offset, searchPattern, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID)
 	if err != nil {
 		return models.TransactionTemplatesPagedModel{}, huma.Error400BadRequest("Unable to query transaction templates", err)
 	}
