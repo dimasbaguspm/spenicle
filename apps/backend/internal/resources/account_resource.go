@@ -171,9 +171,9 @@ func (ar AccountResource) Delete(ctx context.Context, input *struct {
 }
 
 func (ar AccountResource) Reorder(ctx context.Context, input *struct {
-	Body models.ReorderAccountsRequestModel
+	Body models.ReorderAccountsModel
 }) (*struct{}, error) {
-	err := ar.as.Reorder(ctx, input.Body.Data)
+	err := ar.as.Reorder(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}

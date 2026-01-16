@@ -208,25 +208,43 @@ func (ar AccountRepository) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (ar AccountRepository) Reorder(ctx context.Context, items []models.ReorderAccountItemModel) error {
-	if len(items) == 0 {
+func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
 		return nil
 	}
 
-	var caseExpr string
-	for i, item := range items {
-		if i > 0 {
-			caseExpr += " "
-		}
-		caseExpr += fmt.Sprintf("WHEN id = %d THEN %d", item.ID, item.DisplayOrder)
+	var count int
+	sql := `SELECT COUNT(1) FROM accounts WHERE id = ANY($1::int8[]) AND deleted_at IS NULL`
+	err := ar.pgx.QueryRow(ctx, sql, ids).Scan(&count)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to validate accounts", err)
 	}
 
-	sql := `UPDATE accounts
-			SET display_order = CASE ` + caseExpr + ` END,
-				updated_at = CURRENT_TIMESTAMP
-			WHERE deleted_at IS NULL`
+	if count != len(ids) {
+		return huma.Error404NotFound("One or more accounts not found")
+	}
 
-	_, err := ar.pgx.Exec(ctx, sql)
+	return nil
+}
+
+func (ar AccountRepository) Reorder(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	sql := `
+		UPDATE accounts
+		SET display_order = v.new_order,
+			updated_at = CURRENT_TIMESTAMP
+		FROM (
+			SELECT id::bigint AS id, ord - 1 AS new_order
+			FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)
+		) v
+		WHERE accounts.id = v.id
+			AND deleted_at IS NULL
+	`
+
+	_, err := ar.pgx.Exec(ctx, sql, ids)
 	if err != nil {
 		return huma.Error400BadRequest("Unable to reorder accounts", err)
 	}

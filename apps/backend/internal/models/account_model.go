@@ -53,11 +53,6 @@ type UpdateAccountModel struct {
 	ArchivedAt *string `json:"archivedAt,omitempty" doc:"Archive status (null string to unarchive, any other value to archive)"`
 }
 
-type ReorderAccountItemModel struct {
-	ID           int64 `json:"id" doc:"Account ID"`
-	DisplayOrder int   `json:"displayOrder" doc:"New display order"`
-}
-
-type ReorderAccountsRequestModel struct {
-	Data []ReorderAccountItemModel `json:"data" doc:"List of accounts to reorder"`
+type ReorderAccountsModel struct {
+	Data []int64 `json:"data" doc:"Ordered list of account IDs, first item will receive displayOrder 0"`
 }
