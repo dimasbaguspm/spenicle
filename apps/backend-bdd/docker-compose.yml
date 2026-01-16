@@ -6,8 +6,7 @@ services:
       POSTGRES_USER: db_user
       POSTGRES_PASSWORD: db_password
       POSTGRES_DB: db_name
-    ports:
-      - "5432:5432"
+
     volumes:
       - spenicle_e2e_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,7 +31,7 @@ services:
       DB_PASSWORD: db_password
       DB_NAME: db_name
       APP_PORT: 8081
-      IS_DEV_ENV: true,
+      IS_DEV_ENV: true
       JWT_SECRET: random-text-to-just-need-to-be-filled-for-jwt-secret
       ADMIN_USERNAME: admin_username
       ADMIN_PASSWORD: admin_password
