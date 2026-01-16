@@ -60,6 +60,39 @@ components:
         - displayOrder
         - createdAt
       type: object
+    AccountsPagedModel:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of accounts
+          items:
+            $ref: "#/components/schemas/AccountModel"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          format: int64
+          type: integer
+        pageSize:
+          description: Items per page
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of matching items
+          format: int64
+          type: integer
+        totalPages:
+          description: Total number of pages
+          format: int64
+          type: integer
+      required:
+        - items
+        - pageNumber
+        - pageSize
+        - totalCount
+        - totalPages
+      type: object
     BudgetModel:
       additionalProperties: false
       properties:
@@ -152,6 +185,10 @@ components:
           description: Unique identifier
           format: int64
           type: integer
+        lastExecutedAt:
+          description: Timestamp of the last execution of this template
+          format: date-time
+          type: string
         note:
           description: Optional note for the template
           maxLength: 500
@@ -178,6 +215,105 @@ components:
         - recurrence
         - startDate
         - createdAt
+      type: object
+    BudgetTemplatesPagedModel:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of budget templates
+          items:
+            $ref: "#/components/schemas/BudgetTemplateModel"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          format: int64
+          type: integer
+        pageSize:
+          description: Items per page
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of matching items
+          format: int64
+          type: integer
+        totalPages:
+          description: Total number of pages
+          format: int64
+          type: integer
+      required:
+        - items
+        - pageNumber
+        - pageSize
+        - totalCount
+        - totalPages
+      type: object
+    BudgetsPagedModel:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of budgets
+          items:
+            $ref: "#/components/schemas/BudgetModel"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          format: int64
+          type: integer
+        pageSize:
+          description: Items per page
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of matching items
+          format: int64
+          type: integer
+        totalPages:
+          description: Total number of pages
+          format: int64
+          type: integer
+      required:
+        - items
+        - pageNumber
+        - pageSize
+        - totalCount
+        - totalPages
+      type: object
+    CategoriesPagedModel:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of categories
+          items:
+            $ref: "#/components/schemas/CategoryModel"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          format: int64
+          type: integer
+        pageSize:
+          description: Items per page
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of matching items
+          format: int64
+          type: integer
+        totalPages:
+          description: Total number of pages
+          format: int64
+          type: integer
+      required:
+        - items
+        - pageNumber
+        - pageSize
+        - totalCount
+        - totalPages
       type: object
     CategoryModel:
       additionalProperties: false
@@ -235,13 +371,9 @@ components:
         - displayOrder
         - createdAt
       type: object
-    CreateAccountRequestModel:
+    CreateAccountModel:
       additionalProperties: false
       properties:
-        amount:
-          description: Initial balance
-          format: int64
-          type: integer
         icon:
           description: Icon identifier
           type: string
@@ -266,69 +398,8 @@ components:
         - name
         - type
         - note
-        - amount
       type: object
-    CreateAccountResponseModel:
-      additionalProperties: false
-      properties:
-        amount:
-          description: Current balance
-          format: int64
-          type: integer
-        archivedAt:
-          description: Timestamp when archived (null if active)
-          format: date-time
-          type: string
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        displayOrder:
-          description: Display order sequence
-          format: int64
-          type: integer
-        icon:
-          description: Icon identifier
-          type: string
-        iconColor:
-          description: Icon color code
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Account name
-          minLength: 1
-          type: string
-        note:
-          description: Account notes
-          type: string
-        type:
-          description: Account type (expense or income)
-          enum:
-            - expense
-            - income
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - type
-        - note
-        - amount
-        - displayOrder
-        - createdAt
-      type: object
-    CreateBudgetRequestModel:
+    CreateBudgetModel:
       additionalProperties: false
       properties:
         accountId:
@@ -368,67 +439,7 @@ components:
         - periodEnd
         - amountLimit
       type: object
-    CreateBudgetResponseModel:
-      additionalProperties: false
-      properties:
-        accountId:
-          description: Account ID to filter transactions
-          format: int64
-          type: integer
-        actualAmount:
-          description: Actual spent amount in cents (computed from transactions)
-          format: int64
-          type: integer
-        amountLimit:
-          description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        categoryId:
-          description: Category ID to filter transactions
-          format: int64
-          type: integer
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        note:
-          description: Optional note for the budget
-          maxLength: 500
-          type: string
-        periodEnd:
-          description: Budget period end date
-          format: date-time
-          type: string
-        periodStart:
-          description: Budget period start date
-          format: date-time
-          type: string
-        templateId:
-          description: Budget template ID if generated from template
-          format: int64
-          type: integer
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - periodStart
-        - periodEnd
-        - amountLimit
-        - actualAmount
-        - createdAt
-      type: object
-    CreateBudgetTemplateRequestModel:
+    CreateBudgetTemplateModel:
       additionalProperties: false
       properties:
         accountId:
@@ -471,66 +482,7 @@ components:
         - recurrence
         - startDate
       type: object
-    CreateBudgetTemplateResponseModel:
-      additionalProperties: false
-      properties:
-        accountId:
-          description: Account ID to filter transactions
-          format: int64
-          type: integer
-        amountLimit:
-          description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        categoryId:
-          description: Category ID to filter transactions
-          format: int64
-          type: integer
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        endDate:
-          description: Optional end date for recurrence
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        note:
-          description: Optional note for the template
-          maxLength: 500
-          type: string
-        recurrence:
-          description: Recurrence pattern
-          enum:
-            - none
-            - weekly
-            - monthly
-            - yearly
-          type: string
-        startDate:
-          description: Start date for recurrence
-          format: date-time
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - amountLimit
-        - recurrence
-        - startDate
-        - createdAt
-      type: object
-    CreateCategoryRequestModel:
+    CreateCategoryModel:
       additionalProperties: false
       properties:
         icon:
@@ -559,65 +511,13 @@ components:
         - type
         - note
       type: object
-    CreateCategoryResponseModel:
+    CreateTagModel:
       additionalProperties: false
       properties:
-        archivedAt:
-          description: Timestamp when archived (null if active)
-          format: date-time
+        color:
+          description: Tag color code
+          maxLength: 7
           type: string
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        displayOrder:
-          description: Display order sequence
-          format: int64
-          type: integer
-        icon:
-          description: Icon identifier
-          type: string
-        iconColor:
-          description: Icon color code
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Category name
-          minLength: 1
-          type: string
-        note:
-          description: Category notes
-          type: string
-        type:
-          description: Category type
-          enum:
-            - expense
-            - income
-            - transfer
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - type
-        - note
-        - displayOrder
-        - createdAt
-      type: object
-    CreateTagRequestModel:
-      additionalProperties: false
-      properties:
         name:
           description: Tag name
           maxLength: 50
@@ -626,76 +526,7 @@ components:
       required:
         - name
       type: object
-    CreateTagResponseModel:
-      additionalProperties: false
-      properties:
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Tag name
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - createdAt
-      type: object
-    CreateTransactionRelationRequestModel:
-      additionalProperties: false
-      properties:
-        relatedTransactionId:
-          description: ID of the related transaction
-          format: int64
-          minimum: 1
-          type: integer
-        transactionId:
-          description: ID of the primary transaction
-          format: int64
-          minimum: 1
-          type: integer
-      required:
-        - transactionId
-        - relatedTransactionId
-      type: object
-    CreateTransactionRelationResponseModel:
-      additionalProperties: false
-      properties:
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        relatedTransactionId:
-          description: ID of the related transaction
-          format: int64
-          type: integer
-        transactionId:
-          description: ID of the primary transaction
-          format: int64
-          type: integer
-      required:
-        - id
-        - transactionId
-        - relatedTransactionId
-        - createdAt
-      type: object
-    CreateTransactionRequestModel:
+    CreateTransactionModel:
       additionalProperties: false
       properties:
         accountId:
@@ -739,71 +570,28 @@ components:
         - accountId
         - categoryId
       type: object
-    CreateTransactionResponseModel:
+    CreateTransactionRelationModel:
       additionalProperties: false
       properties:
-        account:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Source account details
-        amount:
-          description: Transaction amount
+        SourceTransactionID:
+          description: ID of the source transaction
           format: int64
+          minimum: 1
           type: integer
-        category:
-          $ref: "#/components/schemas/TransactionCategoryEmbedded"
-          description: Category details
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        date:
-          description: Transaction date
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        destinationAccount:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Destination account (transfers only)
-        id:
-          description: Unique identifier
+        relatedTransactionId:
+          description: ID of the related transaction
           format: int64
+          minimum: 1
           type: integer
-        note:
-          description: Transaction notes
-          type: string
-        tags:
-          description: Transaction tags
-          items:
-            $ref: "#/components/schemas/TransactionTagEmbedded"
-          type:
-            - array
-            - "null"
-        type:
-          description: Transaction type
-          enum:
-            - expense
-            - income
-            - transfer
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
+        relationType:
+          description: Type of relation
           type: string
       required:
-        - id
-        - type
-        - date
-        - amount
-        - account
-        - category
-        - tags
-        - createdAt
+        - SourceTransactionID
+        - relatedTransactionId
+        - relationType
       type: object
-    CreateTransactionTagRequestModel:
+    CreateTransactionTagModel:
       additionalProperties: false
       properties:
         tagId:
@@ -820,36 +608,7 @@ components:
         - transactionId
         - tagId
       type: object
-    CreateTransactionTagResponseModel:
-      additionalProperties: false
-      properties:
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        tagId:
-          description: ID of the tag
-          format: int64
-          type: integer
-        tagName:
-          description: Name of the tag
-          type: string
-        transactionId:
-          description: ID of the transaction
-          format: int64
-          type: integer
-      required:
-        - id
-        - transactionId
-        - tagId
-        - tagName
-        - createdAt
-      type: object
-    CreateTransactionTemplateRequestModel:
+    CreateTransactionTemplateModel:
       additionalProperties: false
       properties:
         accountId:
@@ -871,6 +630,10 @@ components:
           description: Destination account ID (transfers only)
           format: int64
           type: integer
+        endDate:
+          description: Template end date
+          format: date-time
+          type: string
         name:
           description: Template name
           maxLength: 100
@@ -879,6 +642,18 @@ components:
         note:
           description: Template notes
           type: string
+        recurrence:
+          description: Recurrence pattern
+          enum:
+            - none
+            - weekly
+            - monthly
+            - yearly
+          type: string
+        startDate:
+          description: Template start date
+          format: date-time
+          type: string
         type:
           description: Transaction type
           enum:
@@ -893,73 +668,8 @@ components:
         - amount
         - accountId
         - categoryId
-      type: object
-    CreateTransactionTemplateResponseModel:
-      additionalProperties: false
-      properties:
-        account:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Source account details
-        accountId:
-          description: Source account ID
-          format: int64
-          type: integer
-        amount:
-          description: Template amount
-          format: int64
-          type: integer
-        category:
-          $ref: "#/components/schemas/TransactionCategoryEmbedded"
-          description: Category details
-        categoryId:
-          description: Category ID
-          format: int64
-          type: integer
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        destinationAccount:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Destination account details (transfers only)
-        destinationAccountId:
-          description: Destination account ID (transfers only)
-          format: int64
-          type: integer
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Template name
-          type: string
-        note:
-          description: Template notes
-          type: string
-        type:
-          description: Transaction type
-          enum:
-            - expense
-            - income
-            - transfer
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - type
-        - amount
-        - accountId
-        - categoryId
-        - createdAt
+        - recurrence
+        - startDate
       type: object
     ErrorDetail:
       additionalProperties: false
@@ -1013,631 +723,6 @@ components:
           format: uri
           type: string
       type: object
-    GetAccountResponseModel:
-      additionalProperties: false
-      properties:
-        amount:
-          description: Current balance
-          format: int64
-          type: integer
-        archivedAt:
-          description: Timestamp when archived (null if active)
-          format: date-time
-          type: string
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        displayOrder:
-          description: Display order sequence
-          format: int64
-          type: integer
-        icon:
-          description: Icon identifier
-          type: string
-        iconColor:
-          description: Icon color code
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Account name
-          minLength: 1
-          type: string
-        note:
-          description: Account notes
-          type: string
-        type:
-          description: Account type (expense or income)
-          enum:
-            - expense
-            - income
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - type
-        - note
-        - amount
-        - displayOrder
-        - createdAt
-      type: object
-    GetCategoryResponseModel:
-      additionalProperties: false
-      properties:
-        archivedAt:
-          description: Timestamp when archived (null if active)
-          format: date-time
-          type: string
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        displayOrder:
-          description: Display order sequence
-          format: int64
-          type: integer
-        icon:
-          description: Icon identifier
-          type: string
-        iconColor:
-          description: Icon color code
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Category name
-          minLength: 1
-          type: string
-        note:
-          description: Category notes
-          type: string
-        type:
-          description: Category type
-          enum:
-            - expense
-            - income
-            - transfer
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - type
-        - note
-        - displayOrder
-        - createdAt
-      type: object
-    GetTagResponseModel:
-      additionalProperties: false
-      properties:
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Tag name
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - createdAt
-      type: object
-    GetTransactionRelationResponseModel:
-      additionalProperties: false
-      properties:
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        relatedTransactionId:
-          description: ID of the related transaction
-          format: int64
-          type: integer
-        transactionId:
-          description: ID of the primary transaction
-          format: int64
-          type: integer
-      required:
-        - id
-        - transactionId
-        - relatedTransactionId
-        - createdAt
-      type: object
-    GetTransactionResponseModel:
-      additionalProperties: false
-      properties:
-        account:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Source account details
-        amount:
-          description: Transaction amount
-          format: int64
-          type: integer
-        category:
-          $ref: "#/components/schemas/TransactionCategoryEmbedded"
-          description: Category details
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        date:
-          description: Transaction date
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        destinationAccount:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Destination account (transfers only)
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        note:
-          description: Transaction notes
-          type: string
-        tags:
-          description: Transaction tags
-          items:
-            $ref: "#/components/schemas/TransactionTagEmbedded"
-          type:
-            - array
-            - "null"
-        type:
-          description: Transaction type
-          enum:
-            - expense
-            - income
-            - transfer
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - type
-        - date
-        - amount
-        - account
-        - category
-        - tags
-        - createdAt
-      type: object
-    GetTransactionTagResponseModel:
-      additionalProperties: false
-      properties:
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        tagId:
-          description: ID of the tag
-          format: int64
-          type: integer
-        tagName:
-          description: Name of the tag
-          type: string
-        transactionId:
-          description: ID of the transaction
-          format: int64
-          type: integer
-      required:
-        - id
-        - transactionId
-        - tagId
-        - tagName
-        - createdAt
-      type: object
-    GetTransactionTemplateResponseModel:
-      additionalProperties: false
-      properties:
-        account:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Source account details
-        accountId:
-          description: Source account ID
-          format: int64
-          type: integer
-        amount:
-          description: Template amount
-          format: int64
-          type: integer
-        category:
-          $ref: "#/components/schemas/TransactionCategoryEmbedded"
-          description: Category details
-        categoryId:
-          description: Category ID
-          format: int64
-          type: integer
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        destinationAccount:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Destination account details (transfers only)
-        destinationAccountId:
-          description: Destination account ID (transfers only)
-          format: int64
-          type: integer
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Template name
-          type: string
-        note:
-          description: Template notes
-          type: string
-        type:
-          description: Transaction type
-          enum:
-            - expense
-            - income
-            - transfer
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - type
-        - amount
-        - accountId
-        - categoryId
-        - createdAt
-      type: object
-    ListAccountsResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: List of accounts
-          items:
-            $ref: "#/components/schemas/AccountModel"
-          type:
-            - array
-            - "null"
-        pageNumber:
-          description: Current page number
-          format: int64
-          type: integer
-        pageSize:
-          description: Items per page
-          format: int64
-          type: integer
-        totalCount:
-          description: Total number of matching items
-          format: int64
-          type: integer
-        totalPages:
-          description: Total number of pages
-          format: int64
-          type: integer
-      required:
-        - data
-        - pageNumber
-        - pageSize
-        - totalCount
-        - totalPages
-      type: object
-    ListBudgetTemplatesResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: List of budget templates
-          items:
-            $ref: "#/components/schemas/BudgetTemplateModel"
-          type:
-            - array
-            - "null"
-        pageNumber:
-          description: Current page number
-          format: int64
-          type: integer
-        pageSize:
-          description: Items per page
-          format: int64
-          type: integer
-        totalCount:
-          description: Total number of matching items
-          format: int64
-          type: integer
-        totalPages:
-          description: Total number of pages
-          format: int64
-          type: integer
-      required:
-        - data
-        - pageNumber
-        - pageSize
-        - totalCount
-        - totalPages
-      type: object
-    ListBudgetsResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: List of budgets
-          items:
-            $ref: "#/components/schemas/BudgetModel"
-          type:
-            - array
-            - "null"
-        pageNumber:
-          description: Current page number
-          format: int64
-          type: integer
-        pageSize:
-          description: Items per page
-          format: int64
-          type: integer
-        totalCount:
-          description: Total number of matching items
-          format: int64
-          type: integer
-        totalPages:
-          description: Total number of pages
-          format: int64
-          type: integer
-      required:
-        - data
-        - pageNumber
-        - pageSize
-        - totalCount
-        - totalPages
-      type: object
-    ListCategoriesResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: List of categories
-          items:
-            $ref: "#/components/schemas/CategoryModel"
-          type:
-            - array
-            - "null"
-        pageNumber:
-          description: Current page number
-          format: int64
-          type: integer
-        pageSize:
-          description: Items per page
-          format: int64
-          type: integer
-        totalCount:
-          description: Total number of matching items
-          format: int64
-          type: integer
-        totalPages:
-          description: Total number of pages
-          format: int64
-          type: integer
-      required:
-        - data
-        - pageNumber
-        - pageSize
-        - totalCount
-        - totalPages
-      type: object
-    ListTagsResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: List of tags
-          items:
-            $ref: "#/components/schemas/TagModel"
-          type:
-            - array
-            - "null"
-        pageNumber:
-          description: Current page number
-          format: int64
-          type: integer
-        pageSize:
-          description: Items per page
-          format: int64
-          type: integer
-        totalCount:
-          description: Total number of matching items
-          format: int64
-          type: integer
-        totalPages:
-          description: Total number of pages
-          format: int64
-          type: integer
-      required:
-        - data
-        - pageNumber
-        - pageSize
-        - totalCount
-        - totalPages
-      type: object
-    ListTransactionRelationsResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: List of transaction relations
-          items:
-            $ref: "#/components/schemas/TransactionRelationModel"
-          type:
-            - array
-            - "null"
-        pageNumber:
-          description: Current page number
-          format: int64
-          type: integer
-        pageSize:
-          description: Items per page
-          format: int64
-          type: integer
-        totalCount:
-          description: Total number of matching items
-          format: int64
-          type: integer
-        totalPages:
-          description: Total number of pages
-          format: int64
-          type: integer
-      required:
-        - data
-        - pageNumber
-        - pageSize
-        - totalCount
-        - totalPages
-      type: object
-    ListTransactionTagsResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: List of transaction tags
-          items:
-            $ref: "#/components/schemas/TransactionTagModel"
-          type:
-            - array
-            - "null"
-        pageNumber:
-          description: Current page number
-          format: int64
-          type: integer
-        pageSize:
-          description: Items per page
-          format: int64
-          type: integer
-        totalCount:
-          description: Total number of matching items
-          format: int64
-          type: integer
-        totalPages:
-          description: Total number of pages
-          format: int64
-          type: integer
-      required:
-        - data
-        - pageNumber
-        - pageSize
-        - totalCount
-        - totalPages
-      type: object
-    ListTransactionTemplatesResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: List of transaction templates
-          items:
-            $ref: "#/components/schemas/TransactionTemplateModel"
-          type:
-            - array
-            - "null"
-        pageNumber:
-          description: Current page number
-          format: int64
-          type: integer
-        pageSize:
-          description: Items per page
-          format: int64
-          type: integer
-        totalCount:
-          description: Total number of matching items
-          format: int64
-          type: integer
-        totalPages:
-          description: Total number of pages
-          format: int64
-          type: integer
-      required:
-        - data
-        - pageNumber
-        - pageSize
-        - totalCount
-        - totalPages
-      type: object
-    ListTransactionsResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: List of transactions
-          items:
-            $ref: "#/components/schemas/TransactionModel"
-          type:
-            - array
-            - "null"
-        pageNumber:
-          description: Current page number
-          format: int64
-          type: integer
-        pageSize:
-          description: Items per page
-          format: int64
-          type: integer
-        totalCount:
-          description: Total number of matching items
-          format: int64
-          type: integer
-        totalPages:
-          description: Total number of pages
-          format: int64
-          type: integer
-      required:
-        - data
-        - pageNumber
-        - pageSize
-        - totalCount
-        - totalPages
-      type: object
     LoginRequestModel:
       additionalProperties: false
       properties:
@@ -1685,38 +770,24 @@ components:
       required:
         - access_token
       type: object
-    ReorderAccountItemModel:
+    ReorderAccountsModel:
       additionalProperties: false
       properties:
-        displayOrder:
-          description: New display order
-          format: int64
-          type: integer
-        id:
-          description: Account ID
-          format: int64
-          type: integer
-      required:
-        - id
-        - displayOrder
-      type: object
-    ReorderAccountsRequestModel:
-      additionalProperties: false
-      properties:
-        items:
-          description: List of accounts to reorder
+        data:
+          description: Ordered list of account IDs, first item will receive displayOrder 0
           items:
-            $ref: "#/components/schemas/ReorderAccountItemModel"
+            format: int64
+            type: integer
           type:
             - array
             - "null"
       required:
-        - items
+        - data
       type: object
     ReorderCategoriesRequestModel:
       additionalProperties: false
       properties:
-        items:
+        data:
           description: List of categories to reorder
           items:
             $ref: "#/components/schemas/ReorderCategoryItemModel"
@@ -1724,7 +795,7 @@ components:
             - array
             - "null"
       required:
-        - items
+        - data
       type: object
     ReorderCategoryItemModel:
       additionalProperties: false
@@ -1741,32 +812,32 @@ components:
         - id
         - displayOrder
       type: object
-    SummaryAccountItem:
+    SummaryAccountListModel:
       additionalProperties: false
       properties:
-        accountId:
-          description: Account ID
-          examples:
-            - 1
-          format: int64
-          type: integer
-        accountName:
-          description: Account name
-          examples:
-            - Cash
-          type: string
-        accountType:
-          description: Account type
-          enum:
-            - income
-            - expense
-          examples:
-            - expense
-          type: string
+        Data:
+          description: Summary data grouped by account
+          items:
+            $ref: "#/components/schemas/SummaryAccountModel"
+          type:
+            - array
+            - "null"
+      required:
+        - Data
+      type: object
+    SummaryAccountModel:
+      additionalProperties: false
+      properties:
         expenseAmount:
           description: Total expense amount
           examples:
             - 2500000
+          format: int64
+          type: integer
+        id:
+          description: Account ID
+          examples:
+            - 1
           format: int64
           type: integer
         incomeAmount:
@@ -1775,6 +846,11 @@ components:
             - 3000000
           format: int64
           type: integer
+        name:
+          description: Account name
+          examples:
+            - Cash
+          type: string
         net:
           description: Net amount (income - expense)
           examples:
@@ -1787,55 +863,49 @@ components:
             - 100
           format: int64
           type: integer
+        type:
+          description: Account type
+          enum:
+            - income
+            - expense
+          examples:
+            - expense
+          type: string
       required:
-        - accountId
-        - accountName
-        - accountType
+        - id
+        - name
+        - type
         - totalCount
         - incomeAmount
         - expenseAmount
         - net
       type: object
-    SummaryAccountResponseModel:
+    SummaryCategoryListModel:
       additionalProperties: false
       properties:
         data:
-          description: Summary data grouped by account
+          description: Summary data grouped by category
           items:
-            $ref: "#/components/schemas/SummaryAccountItem"
+            $ref: "#/components/schemas/SummaryCategoryModel"
           type:
             - array
             - "null"
       required:
         - data
       type: object
-    SummaryCategoryItem:
+    SummaryCategoryModel:
       additionalProperties: false
       properties:
-        categoryId:
-          description: Category ID
-          examples:
-            - 1
-          format: int64
-          type: integer
-        categoryName:
-          description: Category name
-          examples:
-            - Food
-          type: string
-        categoryType:
-          description: Category type
-          enum:
-            - income
-            - expense
-            - transfer
-          examples:
-            - expense
-          type: string
         expenseAmount:
           description: Total expense amount
           examples:
             - 1500000
+          format: int64
+          type: integer
+        id:
+          description: Category ID
+          examples:
+            - 1
           format: int64
           type: integer
         incomeAmount:
@@ -1844,6 +914,11 @@ components:
             - 0
           format: int64
           type: integer
+        name:
+          description: Category name
+          examples:
+            - Food
+          type: string
         net:
           description: Net amount (income - expense)
           examples:
@@ -1856,29 +931,44 @@ components:
             - 75
           format: int64
           type: integer
+        type:
+          description: Category type
+          enum:
+            - income
+            - expense
+            - transfer
+          examples:
+            - expense
+          type: string
       required:
-        - categoryId
-        - categoryName
-        - categoryType
+        - id
+        - name
+        - type
         - totalCount
         - incomeAmount
         - expenseAmount
         - net
       type: object
-    SummaryCategoryResponseModel:
+    SummaryTransactionListModel:
       additionalProperties: false
       properties:
         data:
-          description: Summary data grouped by category
+          description: Summary data grouped by period
           items:
-            $ref: "#/components/schemas/SummaryCategoryItem"
+            $ref: "#/components/schemas/SummaryTransactionModel"
           type:
             - array
             - "null"
+        frequency:
+          description: Grouping frequency
+          examples:
+            - monthly
+          type: string
       required:
+        - frequency
         - data
       type: object
-    SummaryTransactionItem:
+    SummaryTransactionModel:
       additionalProperties: false
       properties:
         expenseAmount:
@@ -1945,28 +1035,12 @@ components:
         - transferAmount
         - net
       type: object
-    SummaryTransactionResponseModel:
-      additionalProperties: false
-      properties:
-        data:
-          description: Summary data grouped by period
-          items:
-            $ref: "#/components/schemas/SummaryTransactionItem"
-          type:
-            - array
-            - "null"
-        frequency:
-          description: Grouping frequency
-          examples:
-            - monthly
-          type: string
-      required:
-        - frequency
-        - data
-      type: object
     TagModel:
       additionalProperties: false
       properties:
+        color:
+          description: Tag color code
+          type: string
         createdAt:
           description: Creation timestamp
           format: date-time
@@ -1990,6 +1064,39 @@ components:
         - id
         - name
         - createdAt
+      type: object
+    TagsPagedModel:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of tags
+          items:
+            $ref: "#/components/schemas/TagModel"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          format: int64
+          type: integer
+        pageSize:
+          description: Items per page
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of matching items
+          format: int64
+          type: integer
+        totalPages:
+          description: Total number of pages
+          format: int64
+          type: integer
+      required:
+        - items
+        - pageNumber
+        - pageSize
+        - totalCount
+        - totalPages
       type: object
     TransactionAccountEmbedded:
       additionalProperties: false
@@ -2122,6 +1229,12 @@ components:
           description: Creation timestamp
           format: date-time
           type: string
+        deletedAt:
+          description: Deletion timestamp
+          format: date-time
+          type:
+            - string
+            - "null"
         id:
           description: Unique identifier
           format: int64
@@ -2130,15 +1243,58 @@ components:
           description: ID of the related transaction
           format: int64
           type: integer
-        transactionId:
-          description: ID of the primary transaction
+        relationType:
+          description: Type of relation
+          type: string
+        sourceTransactionId:
+          description: ID of the source transaction
+          format: int64
+          type: integer
+        updatedAt:
+          description: Last update timestamp
+          format: date-time
+          type: string
+      required:
+        - id
+        - sourceTransactionId
+        - relatedTransactionId
+        - relationType
+        - createdAt
+        - updatedAt
+        - deletedAt
+      type: object
+    TransactionRelationsPagedModel:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of transaction relations
+          items:
+            $ref: "#/components/schemas/TransactionRelationModel"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          format: int64
+          type: integer
+        pageSize:
+          description: Items per page
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of matching items
+          format: int64
+          type: integer
+        totalPages:
+          description: Total number of pages
           format: int64
           type: integer
       required:
-        - id
-        - transactionId
-        - relatedTransactionId
-        - createdAt
+        - items
+        - pageNumber
+        - pageSize
+        - totalCount
+        - totalPages
       type: object
     TransactionTagEmbedded:
       additionalProperties: false
@@ -2183,16 +1339,45 @@ components:
         - tagName
         - createdAt
       type: object
+    TransactionTagsPagedModel:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of transaction tags
+          items:
+            $ref: "#/components/schemas/TransactionTagModel"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          format: int64
+          type: integer
+        pageSize:
+          description: Items per page
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of matching items
+          format: int64
+          type: integer
+        totalPages:
+          description: Total number of pages
+          format: int64
+          type: integer
+      required:
+        - items
+        - pageNumber
+        - pageSize
+        - totalCount
+        - totalPages
+      type: object
     TransactionTemplateModel:
       additionalProperties: false
       properties:
         account:
           $ref: "#/components/schemas/TransactionAccountEmbedded"
           description: Source account details
-        accountId:
-          description: Source account ID
-          format: int64
-          type: integer
         amount:
           description: Template amount
           format: int64
@@ -2200,10 +1385,6 @@ components:
         category:
           $ref: "#/components/schemas/TransactionCategoryEmbedded"
           description: Category details
-        categoryId:
-          description: Category ID
-          format: int64
-          type: integer
         createdAt:
           description: Creation timestamp
           format: date-time
@@ -2215,19 +1396,35 @@ components:
         destinationAccount:
           $ref: "#/components/schemas/TransactionAccountEmbedded"
           description: Destination account details (transfers only)
-        destinationAccountId:
-          description: Destination account ID (transfers only)
-          format: int64
-          type: integer
+        endDate:
+          description: Template end date
+          format: date-time
+          type: string
         id:
           description: Unique identifier
           format: int64
           type: integer
+        lastExecutedAt:
+          description: Last execution timestamp
+          format: date-time
+          type: string
         name:
           description: Template name
           type: string
         note:
           description: Template notes
+          type: string
+        recurrence:
+          description: Recurrence pattern
+          enum:
+            - none
+            - weekly
+            - monthly
+            - yearly
+          type: string
+        startDate:
+          description: Template start date
+          format: date-time
           type: string
         type:
           description: Transaction type
@@ -2246,291 +1443,177 @@ components:
         - name
         - type
         - amount
-        - accountId
-        - categoryId
-        - createdAt
-      type: object
-    UpdateAccountRequestModel:
-      additionalProperties: false
-      properties:
-        amount:
-          description: Current balance
-          format: int64
-          type: integer
-        archivedAt:
-          description: Archive status (null string to unarchive, any other value to archive)
-          type: string
-        icon:
-          description: Icon identifier
-          type: string
-        iconColor:
-          description: Icon color code
-          type: string
-        name:
-          description: Account name
-          minLength: 1
-          type: string
-        note:
-          description: Account notes
-          type: string
-        type:
-          description: Account type (expense or income)
-          enum:
-            - expense
-            - income
-          minLength: 1
-          type: string
-      type: object
-    UpdateAccountResponseModel:
-      additionalProperties: false
-      properties:
-        amount:
-          description: Current balance
-          format: int64
-          type: integer
-        archivedAt:
-          description: Timestamp when archived (null if active)
-          format: date-time
-          type: string
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        displayOrder:
-          description: Display order sequence
-          format: int64
-          type: integer
-        icon:
-          description: Icon identifier
-          type: string
-        iconColor:
-          description: Icon color code
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Account name
-          minLength: 1
-          type: string
-        note:
-          description: Account notes
-          type: string
-        type:
-          description: Account type (expense or income)
-          enum:
-            - expense
-            - income
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - type
-        - note
-        - amount
-        - displayOrder
-        - createdAt
-      type: object
-    UpdateBudgetRequestModel:
-      additionalProperties: false
-      properties:
-        accountId:
-          description: Account ID to filter transactions
-          format: int64
-          minimum: 1
-          type: integer
-        amountLimit:
-          description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        categoryId:
-          description: Category ID to filter transactions
-          format: int64
-          minimum: 1
-          type: integer
-        note:
-          description: Optional note for the budget
-          maxLength: 500
-          type: string
-        periodEnd:
-          description: Budget period end date
-          format: date-time
-          type: string
-        periodStart:
-          description: Budget period start date
-          format: date-time
-          type: string
-      type: object
-    UpdateBudgetResponseModel:
-      additionalProperties: false
-      properties:
-        accountId:
-          description: Account ID to filter transactions
-          format: int64
-          type: integer
-        actualAmount:
-          description: Actual spent amount in cents (computed from transactions)
-          format: int64
-          type: integer
-        amountLimit:
-          description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        categoryId:
-          description: Category ID to filter transactions
-          format: int64
-          type: integer
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        note:
-          description: Optional note for the budget
-          maxLength: 500
-          type: string
-        periodEnd:
-          description: Budget period end date
-          format: date-time
-          type: string
-        periodStart:
-          description: Budget period start date
-          format: date-time
-          type: string
-        templateId:
-          description: Budget template ID if generated from template
-          format: int64
-          type: integer
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - periodStart
-        - periodEnd
-        - amountLimit
-        - actualAmount
-        - createdAt
-      type: object
-    UpdateBudgetTemplateRequestModel:
-      additionalProperties: false
-      properties:
-        accountId:
-          description: Account ID to filter transactions
-          format: int64
-          minimum: 1
-          type: integer
-        amountLimit:
-          description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        categoryId:
-          description: Category ID to filter transactions
-          format: int64
-          minimum: 1
-          type: integer
-        endDate:
-          description: Optional end date for recurrence
-          format: date-time
-          type: string
-        note:
-          description: Optional note for the template
-          maxLength: 500
-          type: string
-        recurrence:
-          description: Recurrence pattern
-          enum:
-            - none
-            - weekly
-            - monthly
-            - yearly
-          type: string
-        startDate:
-          description: Start date for recurrence
-          format: date-time
-          type: string
-      type: object
-    UpdateBudgetTemplateResponseModel:
-      additionalProperties: false
-      properties:
-        accountId:
-          description: Account ID to filter transactions
-          format: int64
-          type: integer
-        amountLimit:
-          description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        categoryId:
-          description: Category ID to filter transactions
-          format: int64
-          type: integer
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        endDate:
-          description: Optional end date for recurrence
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        note:
-          description: Optional note for the template
-          maxLength: 500
-          type: string
-        recurrence:
-          description: Recurrence pattern
-          enum:
-            - none
-            - weekly
-            - monthly
-            - yearly
-          type: string
-        startDate:
-          description: Start date for recurrence
-          format: date-time
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - amountLimit
+        - account
+        - category
         - recurrence
         - startDate
         - createdAt
+        - updatedAt
       type: object
-    UpdateCategoryRequestModel:
+    TransactionTemplatesPagedModel:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of transaction templates
+          items:
+            $ref: "#/components/schemas/TransactionTemplateModel"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          format: int64
+          type: integer
+        pageSize:
+          description: Items per page
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of matching items
+          format: int64
+          type: integer
+        totalPages:
+          description: Total number of pages
+          format: int64
+          type: integer
+      required:
+        - items
+        - pageNumber
+        - pageSize
+        - totalCount
+        - totalPages
+      type: object
+    TransactionsPagedModel:
+      additionalProperties: false
+      properties:
+        items:
+          description: List of transactions
+          items:
+            $ref: "#/components/schemas/TransactionModel"
+          type:
+            - array
+            - "null"
+        pageNumber:
+          description: Current page number
+          format: int64
+          type: integer
+        pageSize:
+          description: Items per page
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of matching items
+          format: int64
+          type: integer
+        totalPages:
+          description: Total number of pages
+          format: int64
+          type: integer
+      required:
+        - items
+        - pageNumber
+        - pageSize
+        - totalCount
+        - totalPages
+      type: object
+    UpdateAccountModel:
+      additionalProperties: false
+      properties:
+        archivedAt:
+          description: Archive status (null string to unarchive, any other value to archive)
+          type: string
+        icon:
+          description: Icon identifier
+          type: string
+        iconColor:
+          description: Icon color code
+          type: string
+        name:
+          description: Account name
+          minLength: 1
+          type: string
+        note:
+          description: Account notes
+          type: string
+        type:
+          description: Account type (expense or income)
+          enum:
+            - expense
+            - income
+          minLength: 1
+          type: string
+      type: object
+    UpdateBudgetModel:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID to filter transactions
+          format: int64
+          minimum: 1
+          type: integer
+        amountLimit:
+          description: Budget limit amount in cents
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID to filter transactions
+          format: int64
+          minimum: 1
+          type: integer
+        note:
+          description: Optional note for the budget
+          maxLength: 500
+          type: string
+        periodEnd:
+          description: Budget period end date
+          format: date-time
+          type: string
+        periodStart:
+          description: Budget period start date
+          format: date-time
+          type: string
+      type: object
+    UpdateBudgetTemplateModel:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID to filter transactions
+          format: int64
+          minimum: 1
+          type: integer
+        amountLimit:
+          description: Budget limit amount in cents
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID to filter transactions
+          format: int64
+          minimum: 1
+          type: integer
+        endDate:
+          description: Optional end date for recurrence
+          format: date-time
+          type: string
+        note:
+          description: Optional note for the template
+          maxLength: 500
+          type: string
+        recurrence:
+          description: Recurrence pattern
+          enum:
+            - none
+            - weekly
+            - monthly
+            - yearly
+          type: string
+        startDate:
+          description: Start date for recurrence
+          format: date-time
+          type: string
+      type: object
+    UpdateCategoryModel:
       additionalProperties: false
       properties:
         archivedAt:
@@ -2558,99 +1641,20 @@ components:
           minLength: 1
           type: string
       type: object
-    UpdateCategoryResponseModel:
+    UpdateTagModel:
       additionalProperties: false
       properties:
-        archivedAt:
-          description: Timestamp when archived (null if active)
-          format: date-time
+        color:
+          description: Tag color code
+          maxLength: 7
           type: string
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        displayOrder:
-          description: Display order sequence
-          format: int64
-          type: integer
-        icon:
-          description: Icon identifier
-          type: string
-        iconColor:
-          description: Icon color code
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Category name
-          minLength: 1
-          type: string
-        note:
-          description: Category notes
-          type: string
-        type:
-          description: Category type
-          enum:
-            - expense
-            - income
-            - transfer
-          minLength: 1
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - type
-        - note
-        - displayOrder
-        - createdAt
-      type: object
-    UpdateTagRequestModel:
-      additionalProperties: false
-      properties:
         name:
           description: Tag name
           maxLength: 50
           minLength: 1
           type: string
       type: object
-    UpdateTagResponseModel:
-      additionalProperties: false
-      properties:
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Tag name
-          type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - createdAt
-      type: object
-    UpdateTransactionRequestModel:
+    UpdateTransactionModel:
       additionalProperties: false
       properties:
         accountId:
@@ -2679,49 +1683,6 @@ components:
         note:
           description: Transaction notes
           type: string
-      type: object
-    UpdateTransactionResponseModel:
-      additionalProperties: false
-      properties:
-        account:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Source account details
-        amount:
-          description: Transaction amount
-          format: int64
-          type: integer
-        category:
-          $ref: "#/components/schemas/TransactionCategoryEmbedded"
-          description: Category details
-        createdAt:
-          description: Creation timestamp
-          format: date-time
-          type: string
-        date:
-          description: Transaction date
-          format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        destinationAccount:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Destination account (transfers only)
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        note:
-          description: Transaction notes
-          type: string
-        tags:
-          description: Transaction tags
-          items:
-            $ref: "#/components/schemas/TransactionTagEmbedded"
-          type:
-            - array
-            - "null"
         type:
           description: Transaction type
           enum:
@@ -2730,21 +1691,8 @@ components:
             - transfer
           minLength: 1
           type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - type
-        - date
-        - amount
-        - account
-        - category
-        - tags
-        - createdAt
       type: object
-    UpdateTransactionTemplateRequestModel:
+    UpdateTransactionTemplateModel:
       additionalProperties: false
       properties:
         accountId:
@@ -2766,6 +1714,10 @@ components:
           description: Destination account ID (transfers only)
           format: int64
           type: integer
+        endDate:
+          description: Template end date
+          format: date-time
+          type: string
         name:
           description: Template name
           maxLength: 100
@@ -2774,60 +1726,17 @@ components:
         note:
           description: Template notes
           type: string
-        type:
-          description: Transaction type
+        recurrence:
+          description: Recurrence pattern
           enum:
-            - expense
-            - income
-            - transfer
-          minLength: 1
+            - none
+            - weekly
+            - monthly
+            - yearly
           type: string
-      type: object
-    UpdateTransactionTemplateResponseModel:
-      additionalProperties: false
-      properties:
-        account:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Source account details
-        accountId:
-          description: Source account ID
-          format: int64
-          type: integer
-        amount:
-          description: Template amount
-          format: int64
-          type: integer
-        category:
-          $ref: "#/components/schemas/TransactionCategoryEmbedded"
-          description: Category details
-        categoryId:
-          description: Category ID
-          format: int64
-          type: integer
-        createdAt:
-          description: Creation timestamp
+        startDate:
+          description: Template start date
           format: date-time
-          type: string
-        deletedAt:
-          description: Soft delete timestamp
-          format: date-time
-          type: string
-        destinationAccount:
-          $ref: "#/components/schemas/TransactionAccountEmbedded"
-          description: Destination account details (transfers only)
-        destinationAccountId:
-          description: Destination account ID (transfers only)
-          format: int64
-          type: integer
-        id:
-          description: Unique identifier
-          format: int64
-          type: integer
-        name:
-          description: Template name
-          type: string
-        note:
-          description: Template notes
           type: string
         type:
           description: Transaction type
@@ -2837,18 +1746,6 @@ components:
             - transfer
           minLength: 1
           type: string
-        updatedAt:
-          description: Last update timestamp
-          format: date-time
-          type: string
-      required:
-        - id
-        - name
-        - type
-        - amount
-        - accountId
-        - categoryId
-        - createdAt
       type: object
   securitySchemes:
     bearer:
@@ -2957,7 +1854,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListAccountsResponseModel"
+                $ref: "#/components/schemas/AccountsPagedModel"
           description: OK
         default:
           content:
@@ -2977,14 +1874,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateAccountRequestModel"
+              $ref: "#/components/schemas/CreateAccountModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateAccountResponseModel"
+                $ref: "#/components/schemas/AccountModel"
           description: OK
         default:
           content:
@@ -3005,7 +1902,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReorderAccountsRequestModel"
+              $ref: "#/components/schemas/ReorderAccountsModel"
         required: true
       responses:
         "204":
@@ -3073,7 +1970,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAccountResponseModel"
+                $ref: "#/components/schemas/AccountModel"
           description: OK
         default:
           content:
@@ -3106,14 +2003,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateAccountRequestModel"
+              $ref: "#/components/schemas/UpdateAccountModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UpdateAccountResponseModel"
+                $ref: "#/components/schemas/AccountModel"
           description: OK
         default:
           content:
@@ -3198,7 +2095,7 @@ paths:
           in: query
           name: pageSize
           schema:
-            default: 10
+            default: 25
             description: Number of items per page
             format: int64
             maximum: 100
@@ -3286,7 +2183,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListBudgetsResponseModel"
+                $ref: "#/components/schemas/BudgetsPagedModel"
           description: OK
         default:
           content:
@@ -3306,14 +2203,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateBudgetRequestModel"
+              $ref: "#/components/schemas/CreateBudgetModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateBudgetResponseModel"
+                $ref: "#/components/schemas/BudgetModel"
           description: OK
         default:
           content:
@@ -3346,7 +2243,7 @@ paths:
           in: query
           name: pageSize
           schema:
-            default: 10
+            default: 25
             description: Number of items per page
             format: int64
             maximum: 100
@@ -3434,7 +2331,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListBudgetTemplatesResponseModel"
+                $ref: "#/components/schemas/BudgetTemplatesPagedModel"
           description: OK
         default:
           content:
@@ -3454,14 +2351,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateBudgetTemplateRequestModel"
+              $ref: "#/components/schemas/CreateBudgetTemplateModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateBudgetTemplateResponseModel"
+                $ref: "#/components/schemas/BudgetTemplateModel"
           description: OK
         default:
           content:
@@ -3550,14 +2447,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateBudgetTemplateRequestModel"
+              $ref: "#/components/schemas/UpdateBudgetTemplateModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UpdateBudgetTemplateResponseModel"
+                $ref: "#/components/schemas/BudgetTemplateModel"
           description: OK
         default:
           content:
@@ -3646,14 +2543,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateBudgetRequestModel"
+              $ref: "#/components/schemas/UpdateBudgetModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UpdateBudgetResponseModel"
+                $ref: "#/components/schemas/BudgetModel"
           description: OK
         default:
           content:
@@ -3762,7 +2659,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListCategoriesResponseModel"
+                $ref: "#/components/schemas/CategoriesPagedModel"
           description: OK
         default:
           content:
@@ -3782,14 +2679,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateCategoryRequestModel"
+              $ref: "#/components/schemas/CreateCategoryModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateCategoryResponseModel"
+                $ref: "#/components/schemas/CategoryModel"
           description: OK
         default:
           content:
@@ -3878,7 +2775,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetCategoryResponseModel"
+                $ref: "#/components/schemas/CategoryModel"
           description: OK
         default:
           content:
@@ -3911,14 +2808,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateCategoryRequestModel"
+              $ref: "#/components/schemas/UpdateCategoryModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UpdateCategoryResponseModel"
+                $ref: "#/components/schemas/CategoryModel"
           description: OK
         default:
           content:
@@ -3935,12 +2832,37 @@ paths:
     get:
       description: Returns transaction summary grouped by account
       operationId: get-account-summary
+      parameters:
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SummaryAccountResponseModel"
+                $ref: "#/components/schemas/SummaryAccountListModel"
           description: OK
         default:
           content:
@@ -3957,12 +2879,37 @@ paths:
     get:
       description: Returns transaction summary grouped by category
       operationId: get-category-summary
+      parameters:
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SummaryCategoryResponseModel"
+                $ref: "#/components/schemas/SummaryCategoryListModel"
           description: OK
         default:
           content:
@@ -3979,12 +2926,50 @@ paths:
     get:
       description: Returns transaction summary grouped by frequency (daily, weekly, monthly, yearly)
       operationId: get-transaction-summary
+      parameters:
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+        - description: Grouping frequency
+          explode: false
+          in: query
+          name: frequency
+          schema:
+            default: monthly
+            description: Grouping frequency
+            enum:
+              - daily
+              - weekly
+              - monthly
+              - yearly
+            type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SummaryTransactionResponseModel"
+                $ref: "#/components/schemas/SummaryTransactionListModel"
           description: OK
         default:
           content:
@@ -4017,7 +3002,7 @@ paths:
           in: query
           name: pageSize
           schema:
-            default: 10
+            default: 25
             description: Number of items per page
             format: int64
             maximum: 100
@@ -4059,7 +3044,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListTagsResponseModel"
+                $ref: "#/components/schemas/TagsPagedModel"
           description: OK
         default:
           content:
@@ -4079,14 +3064,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateTagRequestModel"
+              $ref: "#/components/schemas/CreateTagModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateTagResponseModel"
+                $ref: "#/components/schemas/TagModel"
           description: OK
         default:
           content:
@@ -4151,7 +3136,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetTagResponseModel"
+                $ref: "#/components/schemas/TagModel"
           description: OK
         default:
           content:
@@ -4184,14 +3169,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateTagRequestModel"
+              $ref: "#/components/schemas/UpdateTagModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UpdateTagResponseModel"
+                $ref: "#/components/schemas/TagModel"
           description: OK
         default:
           content:
@@ -4224,7 +3209,7 @@ paths:
           in: query
           name: pageSize
           schema:
-            default: 10
+            default: 25
             description: Number of items per page
             format: int64
             maximum: 100
@@ -4263,12 +3248,50 @@ paths:
           schema:
             description: Search by template name
             type: string
+        - description: Filter by transaction type
+          explode: false
+          in: query
+          name: type
+          schema:
+            description: Filter by transaction type
+            enum:
+              - expense
+              - income
+              - transfer
+            type: string
+        - description: Filter by source account ID
+          explode: false
+          in: query
+          name: accountId
+          schema:
+            description: Filter by source account ID
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Filter by category ID
+          explode: false
+          in: query
+          name: categoryId
+          schema:
+            description: Filter by category ID
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Filter by destination account ID
+          explode: false
+          in: query
+          name: destinationAccountId
+          schema:
+            description: Filter by destination account ID
+            format: int64
+            minimum: 1
+            type: integer
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListTransactionTemplatesResponseModel"
+                $ref: "#/components/schemas/TransactionTemplatesPagedModel"
           description: OK
         default:
           content:
@@ -4288,14 +3311,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateTransactionTemplateRequestModel"
+              $ref: "#/components/schemas/CreateTransactionTemplateModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateTransactionTemplateResponseModel"
+                $ref: "#/components/schemas/TransactionTemplateModel"
           description: OK
         default:
           content:
@@ -4360,7 +3383,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetTransactionTemplateResponseModel"
+                $ref: "#/components/schemas/TransactionTemplateModel"
           description: OK
         default:
           content:
@@ -4393,14 +3416,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateTransactionTemplateRequestModel"
+              $ref: "#/components/schemas/UpdateTransactionTemplateModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UpdateTransactionTemplateResponseModel"
+                $ref: "#/components/schemas/TransactionTemplateModel"
           description: OK
         default:
           content:
@@ -4546,6 +3569,7 @@ paths:
           name: startDate
           schema:
             description: Filter by start date (YYYY-MM-DD)
+            format: date-time
             type: string
         - description: Filter by end date (YYYY-MM-DD)
           explode: false
@@ -4553,6 +3577,7 @@ paths:
           name: endDate
           schema:
             description: Filter by end date (YYYY-MM-DD)
+            format: date-time
             type: string
         - description: Filter by minimum amount
           explode: false
@@ -4561,6 +3586,7 @@ paths:
           schema:
             description: Filter by minimum amount
             format: int64
+            minimum: 0
             type: integer
         - description: Filter by maximum amount
           explode: false
@@ -4569,13 +3595,14 @@ paths:
           schema:
             description: Filter by maximum amount
             format: int64
+            minimum: 0
             type: integer
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListTransactionsResponseModel"
+                $ref: "#/components/schemas/TransactionsPagedModel"
           description: OK
         default:
           content:
@@ -4595,14 +3622,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateTransactionRequestModel"
+              $ref: "#/components/schemas/CreateTransactionModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateTransactionResponseModel"
+                $ref: "#/components/schemas/TransactionModel"
           description: OK
         default:
           content:
@@ -4667,7 +3694,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetTransactionResponseModel"
+                $ref: "#/components/schemas/TransactionModel"
           description: OK
         default:
           content:
@@ -4700,14 +3727,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateTransactionRequestModel"
+              $ref: "#/components/schemas/UpdateTransactionModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UpdateTransactionResponseModel"
+                $ref: "#/components/schemas/TransactionModel"
           description: OK
         default:
           content:
@@ -4720,17 +3747,17 @@ paths:
       summary: Update transaction
       tags:
         - Transactions
-  /transactions/{transactionId}/relations:
+  /transactions/{sourceTransactionId}/relations:
     get:
       description: Get a paginated list of relations for a transaction
       operationId: list-transaction-relations
       parameters:
-        - description: Transaction ID
+        - description: Source transaction ID to list relations for
           in: path
-          name: transactionId
+          name: sourceTransactionId
           required: true
           schema:
-            description: Transaction ID
+            description: Source transaction ID to list relations for
             format: int64
             minimum: 1
             type: integer
@@ -4749,7 +3776,7 @@ paths:
           in: query
           name: pageSize
           schema:
-            default: 10
+            default: 25
             description: Number of items per page
             format: int64
             maximum: 100
@@ -4760,7 +3787,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListTransactionRelationsResponseModel"
+                $ref: "#/components/schemas/TransactionRelationsPagedModel"
           description: OK
         default:
           content:
@@ -4776,28 +3803,18 @@ paths:
     post:
       description: Create a relation between two transactions
       operationId: create-transaction-relation
-      parameters:
-        - description: Transaction ID
-          in: path
-          name: transactionId
-          required: true
-          schema:
-            description: Transaction ID
-            format: int64
-            minimum: 1
-            type: integer
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateTransactionRelationRequestModel"
+              $ref: "#/components/schemas/CreateTransactionRelationModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateTransactionRelationResponseModel"
+                $ref: "#/components/schemas/TransactionRelationModel"
           description: OK
         default:
           content:
@@ -4810,26 +3827,26 @@ paths:
       summary: Create transaction relation
       tags:
         - Transaction Relations
-  /transactions/{transactionId}/relations/{relationId}:
+  /transactions/{sourceTransactionId}/relations/{relationId}:
     delete:
       description: Delete a relation between transactions
       operationId: delete-transaction-relation
       parameters:
-        - description: Transaction ID
+        - description: ID of the source transaction
           in: path
-          name: transactionId
+          name: sourceTransactionId
           required: true
           schema:
-            description: Transaction ID
+            description: ID of the source transaction
             format: int64
             minimum: 1
             type: integer
-        - description: Relation ID
+        - description: ID of the relation to delete
           in: path
           name: relationId
           required: true
           schema:
-            description: Relation ID
+            description: ID of the relation to delete
             format: int64
             minimum: 1
             type: integer
@@ -4851,12 +3868,12 @@ paths:
       description: Get a specific relation between transactions
       operationId: get-transaction-relation
       parameters:
-        - description: Transaction ID
+        - description: Source transaction ID
           in: path
-          name: transactionId
+          name: sourceTransactionId
           required: true
           schema:
-            description: Transaction ID
+            description: Source transaction ID
             format: int64
             minimum: 1
             type: integer
@@ -4874,7 +3891,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetTransactionRelationResponseModel"
+                $ref: "#/components/schemas/TransactionRelationModel"
           description: OK
         default:
           content:
@@ -4892,12 +3909,12 @@ paths:
       description: Get a paginated list of tags for a transaction
       operationId: list-transaction-tags
       parameters:
-        - description: Transaction ID
+        - description: Transaction ID to list tags for
           in: path
           name: transactionId
           required: true
           schema:
-            description: Transaction ID
+            description: Transaction ID to list tags for
             format: int64
             minimum: 1
             type: integer
@@ -4916,7 +3933,7 @@ paths:
           in: query
           name: pageSize
           schema:
-            default: 10
+            default: 25
             description: Number of items per page
             format: int64
             maximum: 100
@@ -4927,7 +3944,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListTransactionTagsResponseModel"
+                $ref: "#/components/schemas/TransactionTagsPagedModel"
           description: OK
         default:
           content:
@@ -4957,14 +3974,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateTransactionTagRequestModel"
+              $ref: "#/components/schemas/CreateTransactionTagModel"
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateTransactionTagResponseModel"
+                $ref: "#/components/schemas/TransactionTagModel"
           description: OK
         default:
           content:
@@ -5041,7 +4058,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetTransactionTagResponseModel"
+                $ref: "#/components/schemas/TransactionTagModel"
           description: OK
         default:
           content:
@@ -5056,4 +4073,4 @@ paths:
         - Transaction Tags
 servers:
   - description: Development server
-    url: http://localhost:8081
+    url: http://localhost:8080
