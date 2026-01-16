@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
@@ -12,11 +11,11 @@ import (
 )
 
 type CategoryRepository struct {
-	pgx *pgxpool.Pool
+	Pgx *pgxpool.Pool
 }
 
 func NewCategoryRepository(pgx *pgxpool.Pool) CategoryRepository {
-	return CategoryRepository{pgx}
+	return CategoryRepository{Pgx: pgx}
 }
 
 func (cr CategoryRepository) GetPaged(ctx context.Context, query models.CategoriesSearchModel) (models.CategoriesPagedModel, error) {
@@ -82,7 +81,7 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 		types = query.Type
 	}
 
-	rows, err := cr.pgx.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
+	rows, err := cr.Pgx.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
 	if err != nil {
 		return models.CategoriesPagedModel{}, huma.Error400BadRequest("Unable to query categories", err)
 	}
@@ -142,7 +141,7 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 		FROM categories
 		WHERE id = $1 AND deleted_at IS NULL
 	`
-	err := cr.pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+	err := cr.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -164,7 +163,7 @@ func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCa
 		RETURNING id
 	`
 
-	err := cr.pgx.QueryRow(ctx, sql,
+	err := cr.Pgx.QueryRow(ctx, sql,
 		payload.Name,
 		payload.Type,
 		payload.Note,
@@ -198,7 +197,7 @@ func (cr CategoryRepository) Update(ctx context.Context, id int64, payload model
 		RETURNING id
 	`
 
-	err := cr.pgx.QueryRow(
+	err := cr.Pgx.QueryRow(
 		ctx,
 		sql,
 		payload.Name,
@@ -227,7 +226,7 @@ func (cr CategoryRepository) Delete(ctx context.Context, id int64) error {
 			AND deleted_at IS NULL
 	`
 
-	cmdTag, err := cr.pgx.Exec(ctx, sql, id)
+	cmdTag, err := cr.Pgx.Exec(ctx, sql, id)
 	if err != nil {
 		return huma.Error400BadRequest("Unable to delete category", err)
 	}
@@ -238,28 +237,98 @@ func (cr CategoryRepository) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (cr CategoryRepository) Reorder(ctx context.Context, items []models.ReorderCategoryItemModel) error {
-	if len(items) == 0 {
+func (cr CategoryRepository) Reorder(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
 		return nil
 	}
 
-	var caseExpr string
-	for i, item := range items {
-		if i > 0 {
-			caseExpr += " "
-		}
-		caseExpr += fmt.Sprintf("WHEN id = %d THEN %d", item.ID, item.DisplayOrder)
-	}
-
 	sql := `UPDATE categories
-			SET display_order = CASE ` + caseExpr + ` END,
-				updated_at = CURRENT_TIMESTAMP
-			WHERE deleted_at IS NULL`
+            SET display_order = v.new_order,
+                updated_at = CURRENT_TIMESTAMP
+            FROM (
+                SELECT id::bigint AS id, ord - 1 AS new_order
+                FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)
+            ) v
+            WHERE categories.id = v.id
+                AND deleted_at IS NULL`
 
-	_, err := cr.pgx.Exec(ctx, sql)
+	_, err := cr.Pgx.Exec(ctx, sql, ids)
 	if err != nil {
 		return huma.Error400BadRequest("Unable to reorder categories", err)
 	}
 
+	return nil
+}
+
+// ValidateIDsExist checks provided ids exist and that provided list equals total active categories
+func (cr CategoryRepository) ValidateIDsExist(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
+		return huma.Error400BadRequest("No category IDs provided")
+	}
+
+	var matched int
+	sql := `SELECT COUNT(1) FROM categories WHERE id = ANY($1::int8[]) AND deleted_at IS NULL`
+	if err := cr.Pgx.QueryRow(ctx, sql, ids).Scan(&matched); err != nil {
+		return huma.Error400BadRequest("Unable to validate categories", err)
+	}
+	if matched != len(ids) {
+		return huma.Error404NotFound("One or more categories not found")
+	}
+
+	var totalActive int
+	if err := cr.Pgx.QueryRow(ctx, `SELECT COUNT(1) FROM categories WHERE deleted_at IS NULL`).Scan(&totalActive); err != nil {
+		return huma.Error400BadRequest("Unable to validate category count", err)
+	}
+	if totalActive != len(ids) {
+		return huma.Error400BadRequest("Provided category IDs must include all active categories")
+	}
+
+	return nil
+}
+
+// DeleteWithTx performs a soft delete using provided transaction
+func (cr CategoryRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int64) error {
+	delSQL := `UPDATE categories SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`
+	cmdTag, err := tx.Exec(ctx, delSQL, id)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to delete category", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return huma.Error404NotFound("Category not found")
+	}
+	return nil
+}
+
+// GetActiveIDsOrderedWithTx returns non-deleted category ids ordered by display_order using provided tx
+func (cr CategoryRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx pgx.Tx) ([]int64, error) {
+	rows, err := tx.Query(ctx, `SELECT id FROM categories WHERE deleted_at IS NULL ORDER BY display_order ASC, id ASC`)
+	if err != nil {
+		return nil, huma.Error400BadRequest("Unable to query category ids", err)
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, huma.Error400BadRequest("Unable to scan category id", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, huma.Error400BadRequest("Error reading category ids", err)
+	}
+	return ids, nil
+}
+
+// ReorderWithTx reorders categories using provided tx and ids
+func (cr CategoryRepository) ReorderWithTx(ctx context.Context, tx pgx.Tx, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	reorderSQL := `UPDATE categories SET display_order = v.new_order, updated_at = CURRENT_TIMESTAMP FROM (SELECT id::bigint AS id, ord - 1 AS new_order FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)) v WHERE categories.id = v.id AND deleted_at IS NULL`
+	if _, err := tx.Exec(ctx, reorderSQL, ids); err != nil {
+		return huma.Error400BadRequest("Unable to reorder categories", err)
+	}
 	return nil
 }

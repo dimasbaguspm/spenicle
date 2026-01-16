@@ -12,7 +12,7 @@ import (
 )
 
 type AccountRepository struct {
-	pgx *pgxpool.Pool
+	Pgx *pgxpool.Pool
 }
 
 func NewAccountRepository(pgx *pgxpool.Pool) AccountRepository {
@@ -85,7 +85,7 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 		types = query.Type
 	}
 
-	rows, err := ar.pgx.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
+	rows, err := ar.Pgx.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
 	if err != nil {
 		return models.AccountsPagedModel{}, huma.Error400BadRequest("Unable to query accounts", err)
 	}
@@ -132,7 +132,7 @@ func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.Acc
 			FROM accounts
 			WHERE id = $1 AND deleted_at IS NULL`
 
-	err := ar.pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+	err := ar.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -149,11 +149,11 @@ func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAcc
 
 	sql := `
 		INSERT INTO accounts (name, type, note, icon, icon_color, display_order)
-		VALUES ($1, $2, $3, $4, $5,  COALESCE((SELECT MAX(display_order) + 1 FROM accounts), 0))
+		VALUES ($1, $2, $3, $4, $5,  COALESCE((SELECT MAX(display_order) + 1 FROM accounts WHERE deleted_at IS NULL), 0))
 		RETURNING id
 	`
 
-	err := ar.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor).Scan(&ID)
+	err := ar.Pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor).Scan(&ID)
 
 	if err != nil {
 		return models.AccountModel{}, huma.Error400BadRequest("Unable to create account", err)
@@ -180,7 +180,7 @@ func (ar AccountRepository) Update(ctx context.Context, id int64, payload models
 			WHERE id = $7 AND deleted_at IS NULL
 			RETURNING id`
 
-	err := ar.pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor, payload.ArchivedAt, id).Scan(&ID)
+	err := ar.Pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor, payload.ArchivedAt, id).Scan(&ID)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -192,67 +192,77 @@ func (ar AccountRepository) Update(ctx context.Context, id int64, payload models
 	return ar.GetDetail(ctx, ID)
 }
 
-func (ar AccountRepository) Delete(ctx context.Context, id int64) error {
-	sql := `UPDATE accounts
-			SET deleted_at = CURRENT_TIMESTAMP
-			WHERE id = $1 AND deleted_at IS NULL`
+func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
+		return huma.Error400BadRequest("No account IDs provided")
+	}
 
-	cmdTag, err := ar.pgx.Exec(ctx, sql, id)
+	var matched int
+	sql := `SELECT COUNT(1) FROM accounts WHERE id = ANY($1::int8[]) AND deleted_at IS NULL`
+	if err := ar.Pgx.QueryRow(ctx, sql, ids).Scan(&matched); err != nil {
+		return huma.Error400BadRequest("Unable to validate accounts", err)
+	}
+	if matched != len(ids) {
+		return huma.Error404NotFound("One or more accounts not found")
+	}
+
+	var totalActive int
+	if err := ar.Pgx.QueryRow(ctx, `SELECT COUNT(1) FROM accounts WHERE deleted_at IS NULL`).Scan(&totalActive); err != nil {
+		return huma.Error400BadRequest("Unable to validate account count", err)
+	}
+	if totalActive != len(ids) {
+		return huma.Error400BadRequest("Provided account IDs must include all active accounts")
+	}
+
+	return nil
+}
+
+func (ar AccountRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int64) error {
+	delSQL := `UPDATE accounts SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`
+	cmdTag, err := tx.Exec(ctx, delSQL, id)
 	if err != nil {
 		return huma.Error400BadRequest("Unable to delete account", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Account not found")
 	}
-
 	return nil
 }
 
-func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) error {
-	if len(ids) == 0 {
-		return nil
-	}
-
-	var count int
-	sql := `SELECT COUNT(1) FROM accounts WHERE id = ANY($1::int8[]) AND deleted_at IS NULL`
-	err := ar.pgx.QueryRow(ctx, sql, ids).Scan(&count)
+func (ar AccountRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx pgx.Tx) ([]int64, error) {
+	rows, err := tx.Query(ctx, `SELECT id FROM accounts WHERE deleted_at IS NULL ORDER BY display_order ASC, id ASC`)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to validate accounts", err)
+		return nil, huma.Error400BadRequest("Unable to query account ids", err)
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, huma.Error400BadRequest("Unable to scan account id", err)
+		}
+		ids = append(ids, id)
 	}
 
-	if count != len(ids) {
-		return huma.Error404NotFound("One or more accounts not found")
+	if err := rows.Err(); err != nil {
+		return nil, huma.Error400BadRequest("Error reading account ids", err)
 	}
 
-	return nil
+	return ids, nil
 }
 
-func (ar AccountRepository) Reorder(ctx context.Context, ids []int64) error {
+func (ar AccountRepository) ReorderWithTx(ctx context.Context, tx pgx.Tx, ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
-
-	sql := `
-		UPDATE accounts
-		SET display_order = v.new_order,
-			updated_at = CURRENT_TIMESTAMP
-		FROM (
-			SELECT id::bigint AS id, ord - 1 AS new_order
-			FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)
-		) v
-		WHERE accounts.id = v.id
-			AND deleted_at IS NULL
-	`
-
-	_, err := ar.pgx.Exec(ctx, sql, ids)
-	if err != nil {
+	reorderSQL := `UPDATE accounts SET display_order = v.new_order, updated_at = CURRENT_TIMESTAMP FROM (SELECT id::bigint AS id, ord - 1 AS new_order FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)) v WHERE accounts.id = v.id AND deleted_at IS NULL`
+	if _, err := tx.Exec(ctx, reorderSQL, ids); err != nil {
 		return huma.Error400BadRequest("Unable to reorder accounts", err)
 	}
-
 	return nil
 }
 
-// UpdateBalanceWithTx updates an account's balance within a provided database transaction
 func (ar AccountRepository) UpdateBalanceWithTx(ctx context.Context, tx pgx.Tx, accountID int64, deltaAmount int64) error {
 	sql := `UPDATE accounts
 			SET amount = amount + $1,

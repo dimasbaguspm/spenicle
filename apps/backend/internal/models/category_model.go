@@ -52,11 +52,6 @@ type UpdateCategoryModel struct {
 	ArchivedAt *string `json:"archivedAt,omitempty" doc:"Archive status (null string to unarchive, any other value to archive)"`
 }
 
-type ReorderCategoryItemModel struct {
-	ID           int64 `json:"id" doc:"Category ID"`
-	DisplayOrder int   `json:"displayOrder" doc:"New display order"`
-}
-
-type ReorderCategoriesRequestModel struct {
-	Data []ReorderCategoryItemModel `json:"data" doc:"List of categories to reorder"`
+type ReorderCategoriesModel struct {
+	Data []int64 `json:"data" doc:"Ordered list of category IDs, first item will receive displayOrder 0"`
 }

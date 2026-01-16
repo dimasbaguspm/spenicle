@@ -35,7 +35,35 @@ func (as AccountService) Update(ctx context.Context, id int64, p models.UpdateAc
 }
 
 func (as AccountService) Delete(ctx context.Context, id int64) error {
-	return as.ar.Delete(ctx, id)
+	tx, err := as.ar.Pgx.Begin(ctx)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to start transaction", err)
+	}
+	defer func() {
+		if tx != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	if err := as.ar.DeleteWithTx(ctx, tx, id); err != nil {
+		return err
+	}
+
+	ids, err := as.ar.GetActiveIDsOrderedWithTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+
+	if err := as.ar.ReorderWithTx(ctx, tx, ids); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return huma.Error400BadRequest("Unable to commit transaction", err)
+	}
+	tx = nil
+
+	return nil
 }
 
 func (as AccountService) Reorder(ctx context.Context, p models.ReorderAccountsModel) error {
@@ -47,5 +75,24 @@ func (as AccountService) Reorder(ctx context.Context, p models.ReorderAccountsMo
 		return err
 	}
 
-	return as.ar.Reorder(ctx, p.Data)
+	tx, err := as.ar.Pgx.Begin(ctx)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to start transaction", err)
+	}
+	defer func() {
+		if tx != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	if err := as.ar.ReorderWithTx(ctx, tx, p.Data); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return huma.Error400BadRequest("Unable to commit reorder transaction", err)
+	}
+	tx = nil
+
+	return nil
 }
