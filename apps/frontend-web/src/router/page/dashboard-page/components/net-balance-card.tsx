@@ -49,22 +49,26 @@ export const NetBalanceCard = ({
       })
       .sort((a, b) => dayjs(a.date).unix() - dayjs(b.date).unix());
 
-    let carry = 0;
-    const withRunningBalance = sorted.map((item) => {
-      const runningBalance = carry + item.net;
-      carry = runningBalance;
-      return { ...item, runningBalance };
-    });
+    // Calculate running balance backwards from current balance
+    const reversed = [...sorted].reverse();
+    let cumulative = balance;
+    const withRunningBalance = reversed
+      .map((item) => {
+        const runningBalance = cumulative;
+        cumulative -= item.net;
+        return { ...item, runningBalance };
+      })
+      .reverse(); // reverse back to ascending order
 
     return isMobile ? withRunningBalance.slice(-4) : withRunningBalance;
-  }, [summaryTransactions, isMobile]);
+  }, [summaryTransactions, isMobile, balance]);
 
   const percentageChange = useMemo(() => {
     if (chartData.length < 2) return 0;
     const current = chartData[chartData.length - 1]?.runningBalance ?? 0;
     const previous = chartData[chartData.length - 2]?.runningBalance ?? 0;
-    if (previous === 0) return 0;
-    return ((current - previous) / Math.abs(previous)) * 100;
+    const denominator = Math.abs(previous) || Math.abs(current) || 1;
+    return ((current - previous) / denominator) * 100;
   }, [chartData]);
 
   return (
@@ -83,7 +87,7 @@ export const NetBalanceCard = ({
               {percentageChange >= 0 ? "+" : ""}
               {percentageChange.toFixed(1)}%
             </Badge>
-            <span className="text-primary-light text-xs">vs last month</span>
+            <span className="text-primary-light text-xs">Monthly change</span>
           </div>
         </div>
       </div>

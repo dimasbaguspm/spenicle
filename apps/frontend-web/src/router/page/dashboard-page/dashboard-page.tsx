@@ -35,9 +35,18 @@ const DashboardPage = () => {
   const [transactionViewMode, setTransactionViewMode] =
     useState<DashboardTransactionViewMode>(DashboardTransactionViewMode.Recent);
 
-  const totalIncome = 0;
-  const totalExpense = 0;
-  const netBalance = totalIncome - totalExpense;
+  const totals = useMemo(() => {
+    if (!summaryTransactions?.data)
+      return { totalIncome: 0, totalExpense: 0, netBalance: 0 };
+    let totalIncome = 0;
+    let totalExpense = 0;
+    for (const item of summaryTransactions.data) {
+      totalIncome += item.incomeAmount ?? 0;
+      totalExpense += Math.abs(item.expenseAmount ?? 0);
+    }
+    const netBalance = totalIncome - totalExpense;
+    return { totalIncome, totalExpense, netBalance };
+  }, [summaryTransactions]);
 
   const currentMonthSummary = useMemo(() => {
     if (
@@ -46,7 +55,6 @@ const DashboardPage = () => {
     ) {
       return { income: 0, expense: 0 };
     }
-    // api design show most recent month first
     const latest = summaryTransactions.data[0];
     return {
       income: latest?.incomeAmount ?? 0,
@@ -71,9 +79,9 @@ const DashboardPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               <NetBalanceCard
-                balance={netBalance}
-                totalIncome={totalIncome}
-                totalExpense={totalExpense}
+                balance={totals.netBalance}
+                totalIncome={totals.totalIncome}
+                totalExpense={totals.totalExpense}
                 summaryTransactions={summaryTransactions?.data ?? []}
                 isMobile={isMobile}
               />
