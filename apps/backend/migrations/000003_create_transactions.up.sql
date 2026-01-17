@@ -3,7 +3,7 @@ CREATE TABLE
     IF NOT EXISTS transactions (
         id BIGSERIAL PRIMARY KEY,
         type VARCHAR(20) NOT NULL CHECK (type IN ('expense', 'income', 'transfer')),
-        date DATE NOT NULL,
+        date TIMESTAMP NOT NULL,
         amount BIGINT NOT NULL CHECK (amount > 0),
         account_id BIGINT NOT NULL REFERENCES accounts (id),
         category_id BIGINT NOT NULL REFERENCES categories (id),
