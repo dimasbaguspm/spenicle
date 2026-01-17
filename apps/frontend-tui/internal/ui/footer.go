@@ -10,8 +10,9 @@ func NewFooter() Footer {
 	return Footer{}
 }
 
-func (f Footer) Render() (string, int) {
+func (f Footer) Render(width int) (string, int) {
 	style := lipgloss.NewStyle().
+		Width(width).
 		Align(lipgloss.Center).
 		Foreground(lipgloss.Color("62")).
 		Bold(true)

@@ -23,6 +23,7 @@ type App struct {
 	ui           ui.UIs
 	width        int
 	height       int
+	focus        string
 }
 
 func NewApp(client *http.Client, env configs.Environment) *App {
@@ -32,16 +33,23 @@ func NewApp(client *http.Client, env configs.Environment) *App {
 
 	ui := ui.NewUIs()
 
-	return &App{
+	a := &App{
 		state:        &models.App{},
 		env:          env,
 		clients:      clients,
 		pageRouter:   pageRouter,
 		dialogRouter: dialogRouter,
 		ui:           ui,
-		width:        80, // default
-		height:       24, // default
+		width:        80,
+		height:       24,
+		focus:        "content",
 	}
+
+	a.ui.Sidebar.OnChangePage = func(page string) {
+		a.changePage(page)
+	}
+
+	return a
 }
 
 func (a *App) Init() tea.Cmd {
@@ -62,6 +70,13 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if a.state.Session == nil {
+			return a, nil
+		}
+
+		a.focus = a.ui.Layout.HandleKey(msg, a.focus)
+
+		if a.focus == "sidebar" {
+			a.ui.Sidebar.HandleKey(msg)
 			return a, nil
 		}
 
@@ -101,33 +116,52 @@ func (a *App) View() string {
 		return a.pageRouter.Init.View()
 	}
 
-	var content string
-	content = a.pageRouter.HandleView(a.state.Page)
+	bodyContent := a.pageRouter.HandleView(a.state.Page)
 
-	bodyContent := content
+	headerContent, headerH := a.ui.Header.Render(a.width)
+	headerStr := headerContent
 
-	headerContent, headerH := a.ui.Header.Render()
-	headerStr := lipgloss.NewStyle().Width(a.width).Render(headerContent)
+	footerContent, footerH := a.ui.Footer.Render(a.width)
+	footerStr := footerContent
 
-	footerContent, footerH := a.ui.Footer.Render()
-	footerStr := lipgloss.NewStyle().Width(a.width).Render(footerContent)
-
-	bodyHeight := a.height - headerH - footerH
+	bodyHeight := a.height - headerH - footerH - 2
 	if bodyHeight < 0 {
 		bodyHeight = 0
 	}
 
-	bodyStyle := lipgloss.NewStyle().Width(a.width).Height(bodyHeight)
-	bodyStr := bodyStyle.Render(bodyContent)
+	sidebarWidth := 25
+	sidebarStr := a.ui.Sidebar.Render(sidebarWidth, bodyHeight)
 
-	fullStr := lipgloss.JoinVertical(lipgloss.Top, headerStr, bodyStr, footerStr)
+	contentWidth := a.width - sidebarWidth
+	contentStyle := lipgloss.NewStyle().
+		Width(contentWidth - 2).
+		Height(bodyHeight).
+		Border(lipgloss.RoundedBorder())
+	contentStr := contentStyle.Render(bodyContent)
+
+	fullStr := a.ui.Layout.Render(headerStr, sidebarStr, contentStr, footerStr, a.focus, a.width, a.height, headerH, footerH)
 
 	if a.state.Drawer != nil {
 		if d, ok := a.state.Drawer.Dialog.(interface{ View() string }); ok {
 			dialogStr := d.View()
-			fullStr = overlay.Composite(dialogStr, fullStr, overlay.Center, overlay.Center, 0, -1)
+			fullStr = overlay.Composite(dialogStr, fullStr, overlay.Center, overlay.Center, 0, 2)
 		}
 	}
 
 	return fullStr
+}
+
+func (a *App) changePage(page string) {
+	// Map page name to Page model
+	pageMap := map[string]*models.Page{
+		"Dashboard":    {ID: "dashboard", Name: "Dashboard", Path: "/dashboard"},
+		"Transactions": {ID: "transactions", Name: "Transactions", Path: "/transactions"},
+		"Summary":      {ID: "summary", Name: "Summary", Path: "/summary"},
+		"Accounts":     {ID: "accounts", Name: "Accounts", Path: "/accounts"},
+		"Categories":   {ID: "categories", Name: "Categories", Path: "/categories"},
+		"Budgets":      {ID: "budgets", Name: "Budgets", Path: "/budgets"},
+	}
+	if p, ok := pageMap[page]; ok {
+		a.state.Page = p
+	}
 }
