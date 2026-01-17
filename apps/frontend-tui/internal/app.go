@@ -42,7 +42,7 @@ func NewApp(client *http.Client, env configs.Environment) *App {
 		ui:           ui,
 		width:        80,
 		height:       24,
-		focus:        "content",
+		focus:        "sidebar",
 	}
 
 	a.ui.Sidebar.OnChangePage = func(page string) {
@@ -67,21 +67,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.width = msg.Width
 		a.height = msg.Height
 		return a, nil
-
 	case tea.KeyMsg:
 		if a.state.Session == nil {
 			return a, nil
 		}
-
-		a.focus = a.ui.Layout.HandleKey(msg, a.focus)
-
-		if a.focus == "sidebar" {
-			a.ui.Sidebar.HandleKey(msg)
-			return a, nil
-		}
-
-		newPage, pageCmd := a.pageRouter.HandleKey(msg, a.state.Page)
-		a.state.Page = newPage
 
 		newDrawer, drawerCmd := a.dialogRouter.HandleKey(msg, a.state.Drawer)
 		a.state.Drawer = newDrawer
@@ -90,7 +79,17 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			updatedDrawer, updateCmd := a.dialogRouter.HandleUpdate(msg, a.state.Drawer)
 			a.state.Drawer = updatedDrawer
 			drawerCmd = tea.Batch(drawerCmd, updateCmd)
+			return a, drawerCmd
 		}
+
+		a.focus = a.ui.Layout.HandleKey(msg, a.focus)
+		if a.focus == "sidebar" {
+			a.ui.Sidebar.HandleKey(msg)
+			return a, drawerCmd
+		}
+
+		newPage, pageCmd := a.pageRouter.HandleKey(msg, a.state.Page)
+		a.state.Page = newPage
 
 		return a, tea.Batch(pageCmd, drawerCmd)
 
@@ -152,16 +151,7 @@ func (a *App) View() string {
 }
 
 func (a *App) changePage(page string) {
-	// Map page name to Page model
-	pageMap := map[string]*models.Page{
-		"Dashboard":    {ID: "dashboard", Name: "Dashboard", Path: "/dashboard"},
-		"Transactions": {ID: "transactions", Name: "Transactions", Path: "/transactions"},
-		"Summary":      {ID: "summary", Name: "Summary", Path: "/summary"},
-		"Accounts":     {ID: "accounts", Name: "Accounts", Path: "/accounts"},
-		"Categories":   {ID: "categories", Name: "Categories", Path: "/categories"},
-		"Budgets":      {ID: "budgets", Name: "Budgets", Path: "/budgets"},
-	}
-	if p, ok := pageMap[page]; ok {
+	if p, ok := a.pageRouter.GetPages()[page]; ok {
 		a.state.Page = p
 	}
 }

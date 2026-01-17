@@ -46,3 +46,14 @@ func (pr *PageRouter) HandleView(page *models.Page) string {
 		return "Unknown Page"
 	}
 }
+
+func (pr *PageRouter) GetPages() map[string]*models.Page {
+	return map[string]*models.Page{
+		"Dashboard":    {ID: "dashboard", Name: "Dashboard", Path: "/dashboard"},
+		"Transactions": {ID: "transactions", Name: "Transactions", Path: "/transactions"},
+		"Summary":      {ID: "summary", Name: "Summary", Path: "/summary"},
+		"Accounts":     {ID: "accounts", Name: "Accounts", Path: "/accounts"},
+		"Categories":   {ID: "categories", Name: "Categories", Path: "/categories"},
+		"Budgets":      {ID: "budgets", Name: "Budgets", Path: "/budgets"},
+	}
+}
