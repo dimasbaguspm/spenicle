@@ -20,7 +20,7 @@ func NewAuthService(ar repositories.AuthRepository) AuthService {
 func (s AuthService) Login(p models.LoginRequestModel) (models.LoginResponseModel, error) {
 	env := configs.NewEnvironment()
 
-	if p.Username != env.AdminUsername && p.Password != env.AdminPassword {
+	if p.Username != env.AdminUsername || p.Password != env.AdminPassword {
 		return models.LoginResponseModel{}, huma.Error401Unauthorized("Invalid credentials")
 	}
 
