@@ -90,7 +90,7 @@ export const ThisMonthSummaryCards = ({
                 Income
               </Text>
               <Heading as="h4" color="neutral">
-                {formatPrice(totalIncome, PriceFormat.CURRENCY)}
+                {formatPrice(totalIncome, PriceFormat.CURRENCY_NO_DECIMALS)}
               </Heading>
             </div>
           </div>
@@ -111,7 +111,7 @@ export const ThisMonthSummaryCards = ({
                 Expenses
               </Text>
               <Heading as="h4" color="neutral">
-                {formatPrice(totalExpense, PriceFormat.CURRENCY)}
+                {formatPrice(totalExpense, PriceFormat.CURRENCY_NO_DECIMALS)}
               </Heading>
             </div>
           </div>

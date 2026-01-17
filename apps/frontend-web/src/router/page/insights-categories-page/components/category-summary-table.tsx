@@ -5,7 +5,7 @@ import React from "react";
 
 const formatAccountingValue = (value: number): string => {
   const absValue = Math.abs(value);
-  const formatted = formatPrice(absValue, PriceFormat.CURRENCY);
+  const formatted = formatPrice(absValue, PriceFormat.CURRENCY_NO_DECIMALS);
   return value < 0 ? `(${formatted})` : formatted;
 };
 
@@ -84,17 +84,14 @@ export const CategorySummaryTable = ({
                   return (
                     <tr key={`${category.id}-${idx}`} className="bg-white">
                       <td className="py-3 px-3 sm:px-4 sm:pl-8">
-                        <div className="flex items-center space-x-2">
-                          <span className="size-1.5 rounded-full bg-primary flex-shrink-0" />
-                          <span className="text-xs sm:text-sm font-medium text-gray-900">
-                            {category.name}
-                          </span>
-                        </div>
+                        <span className="text-xs sm:text-sm font-medium text-gray-900">
+                          {category.name}
+                        </span>
                       </td>
                       <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
                         {formatPrice(
                           category.incomeAmount ?? 0,
-                          PriceFormat.CURRENCY,
+                          PriceFormat.CURRENCY_NO_DECIMALS,
                         )}
                       </td>
                       <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
@@ -114,7 +111,10 @@ export const CategorySummaryTable = ({
                     {startCase(type)} Subtotal
                   </td>
                   <td className="text-right py-2 px-2 sm:px-4 text-xs sm:text-sm font-semibold tabular-nums text-gray-900">
-                    {formatPrice(typeTotals.income, PriceFormat.CURRENCY)}
+                    {formatPrice(
+                      typeTotals.income,
+                      PriceFormat.CURRENCY_NO_DECIMALS,
+                    )}
                   </td>
                   <td className="text-right py-2 px-2 sm:px-4 text-xs sm:text-sm font-semibold tabular-nums text-gray-900">
                     {formatAccountingValue(-typeTotals.expense)}
@@ -136,7 +136,10 @@ export const CategorySummaryTable = ({
               Grand Total
             </td>
             <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
-              {formatPrice(grandTotals.income, PriceFormat.CURRENCY)}
+              {formatPrice(
+                grandTotals.income,
+                PriceFormat.CURRENCY_NO_DECIMALS,
+              )}
             </td>
             <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
               {formatAccountingValue(-grandTotals.expense)}

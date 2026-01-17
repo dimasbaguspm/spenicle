@@ -1,5 +1,7 @@
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { PAGE_ROUTES } from "@/constant/page-routes";
+import { useInsightFilter } from "@/hooks/use-filter-state";
+import { DateFormat, formatDate } from "@/lib/format-date";
 import { useDrawerProvider } from "@/providers/drawer-provider";
 import {
   Button,
@@ -19,7 +21,10 @@ const InsightsPage = () => {
   const location = useLocation();
   const { openDrawer } = useDrawerProvider();
 
-  // Determine active tab based on current route
+  const { appliedFilters } = useInsightFilter();
+
+  const { startDate, endDate } = appliedFilters;
+
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes(PAGE_ROUTES.INSIGHTS_ACCOUNTS)) return "accounts";
@@ -61,6 +66,7 @@ const InsightsPage = () => {
       <PageLayout.HeaderRegion>
         <PageHeader
           title="Insights"
+          subtitle={`${formatDate(startDate, DateFormat.MEDIUM_DATE)} - ${formatDate(endDate, DateFormat.MEDIUM_DATE)}`}
           size="wide"
           tabs={
             <Tabs value={activeTab} onValueChange={handleTabChange}>

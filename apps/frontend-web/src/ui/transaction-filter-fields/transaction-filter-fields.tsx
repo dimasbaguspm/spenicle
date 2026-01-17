@@ -95,7 +95,7 @@ export const TransactionFilterFields = ({
                 {control.appliedFilters.startDate
                   ? formatDate(
                       control.appliedFilters.startDate,
-                      DateFormat.COMPACT_DATE
+                      DateFormat.COMPACT_DATE,
                     )
                   : "Start"}
                 <input
@@ -122,7 +122,7 @@ export const TransactionFilterFields = ({
                 {control.appliedFilters.endDate
                   ? formatDate(
                       control.appliedFilters.endDate,
-                      DateFormat.COMPACT_DATE
+                      DateFormat.COMPACT_DATE,
                     )
                   : "End"}
                 <input

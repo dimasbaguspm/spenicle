@@ -133,7 +133,7 @@ const determinePeriodFormat = (frequency?: string): PeriodFormat => {
  */
 const processTransactionData = (
   data: InsightsTransactionModel["data"],
-  periodFormat: PeriodFormat
+  periodFormat: PeriodFormat,
 ): ProcessedRow[] => {
   return (data || [])
     .map((item) => {
@@ -164,7 +164,7 @@ const calculateTotals = (tableData: ProcessedRow[]): Totals => {
       transfer: acc.transfer + row.transfer,
       net: acc.net + row.net,
     }),
-    { income: 0, expense: 0, transfer: 0, net: 0 }
+    { income: 0, expense: 0, transfer: 0, net: 0 },
   );
 };
 
@@ -173,7 +173,7 @@ const calculateTotals = (tableData: ProcessedRow[]): Totals => {
  */
 const formatAccountingValue = (value: number): string => {
   const absValue = Math.abs(value);
-  const formatted = formatPrice(absValue, PriceFormat.CURRENCY);
+  const formatted = formatPrice(absValue, PriceFormat.CURRENCY_NO_DECIMALS);
   return value < 0 ? `(${formatted})` : formatted;
 };
 
@@ -231,7 +231,7 @@ export const HistoricalBreakdownTable = ({
                   {row.period}
                 </td>
                 <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
-                  {formatPrice(row.income, PriceFormat.CURRENCY)}
+                  {formatPrice(row.income, PriceFormat.CURRENCY_NO_DECIMALS)}
                 </td>
                 <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
                   {formatAccountingValue(-row.expense)}
@@ -251,7 +251,7 @@ export const HistoricalBreakdownTable = ({
                 Total
               </td>
               <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
-                {formatPrice(totals.income, PriceFormat.CURRENCY)}
+                {formatPrice(totals.income, PriceFormat.CURRENCY_NO_DECIMALS)}
               </td>
               <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
                 {formatAccountingValue(-totals.expense)}

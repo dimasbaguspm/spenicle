@@ -1,6 +1,7 @@
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { useApiTransactionsInfiniteQuery } from "@/hooks/use-api";
 import { useTransactionFilter } from "@/hooks/use-filter-state";
+import { DateFormat, formatDate } from "@/lib/format-date";
 import { When } from "@/lib/when";
 import { useDrawerProvider } from "@/providers/drawer-provider";
 import type { CategoryModel, TransactionModel } from "@/types/schemas";
@@ -12,6 +13,7 @@ import {
   NoResults,
   PageLoader,
 } from "@dimasbaguspm/versaur";
+import dayjs from "dayjs";
 import { SearchXIcon } from "lucide-react";
 import type { FC } from "react";
 
@@ -32,8 +34,18 @@ export const HistoryTab: FC<HistoryTabProps> = ({ data }) => {
     pageSize: 15,
     sortBy: "date",
     categoryId: [data.id],
-    startDate: filters.appliedFilters.startDate,
-    endDate: filters.appliedFilters.endDate,
+    startDate: filters.appliedFilters.startDate
+      ? formatDate(
+          dayjs(filters.appliedFilters.startDate).startOf("day"),
+          DateFormat.ISO_DATETIME,
+        )
+      : undefined,
+    endDate: filters.appliedFilters.endDate
+      ? formatDate(
+          dayjs(filters.appliedFilters.endDate).endOf("day"),
+          DateFormat.ISO_DATETIME,
+        )
+      : undefined,
     type: filters.appliedFilters.type,
   });
 

@@ -19,7 +19,7 @@ interface ExtractedDateRange {
  * @returns An object containing dateFrom (ISO string), dateTo (ISO string), and frequency
  */
 export const extractDateRangeFromPreset = (
-  preset: FilterInsightDateRangePresets | "custom"
+  preset: FilterInsightDateRangePresets | "custom",
 ): ExtractedDateRange => {
   const now = dayjs();
   let dateFrom: dayjs.Dayjs;
@@ -107,11 +107,10 @@ export const extractDateRangeFromPreset = (
  * @returns FilterInsightFormSchema for form usage
  */
 export const convertInsightFilterToFormSchema = (
-  filters: InsightFilterModel
+  filters: InsightFilterModel,
 ): FilterInsightFormSchema => {
   const hasCustomDates = !!(filters.startDate && filters.endDate);
 
-  // If no dates provided, use default preset
   if (!hasCustomDates) {
     return {
       dateRangePreset: FilterInsightDateRangePresets.Last30Days,
@@ -122,7 +121,6 @@ export const convertInsightFilterToFormSchema = (
     };
   }
 
-  // Check if the dates match any preset
   const allPresets = [
     FilterInsightDateRangePresets.Last7Days,
     FilterInsightDateRangePresets.Last30Days,
@@ -138,7 +136,7 @@ export const convertInsightFilterToFormSchema = (
     const presetRange = extractDateRangeFromPreset(preset);
     const startMatches = dayjs(filters.startDate).isSame(
       presetRange.dateFrom,
-      "day"
+      "day",
     );
     const endMatches = dayjs(filters.endDate).isSame(presetRange.dateTo, "day");
 
@@ -153,12 +151,11 @@ export const convertInsightFilterToFormSchema = (
     }
   }
 
-  // If no preset matches, it's a custom date range
   return {
     dateRangePreset: "custom",
     useCustomDateRange: true,
-    customDateFrom: filters.startDate,
-    customDateTo: filters.endDate,
+    customDateFrom: formatDate(filters.startDate, DateFormat.ISO_DATE),
+    customDateTo: formatDate(filters.endDate, DateFormat.ISO_DATE),
     customFrequency: filters.frequency as FilterInsightFrequency | undefined,
   };
 };

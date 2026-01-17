@@ -51,7 +51,7 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
     endDate: formatDate(startDate.endOf("day"), DateFormat.ISO_DATETIME),
     pageSize: 15,
     sortBy: "date",
-    sortOrder: "asc",
+    sortOrder: "desc",
     type: filters.appliedFilters.type,
   });
 
@@ -67,8 +67,8 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
       DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
         date.year(),
         date.month(),
-        date.date()
-      )
+        date.date(),
+      ),
     );
   };
 
@@ -94,8 +94,8 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
       DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
         date.year(),
         date.month(),
-        date.date()
-      )
+        date.date(),
+      ),
     );
   };
 
@@ -106,8 +106,8 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
         DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
           previousDate.year(),
           previousDate.month(),
-          previousDate.date()
-        )
+          previousDate.date(),
+        ),
       );
     },
     onSwipedLeft: () => {
@@ -116,8 +116,8 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
         DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
           nextDate.year(),
           nextDate.month(),
-          nextDate.date()
-        )
+          nextDate.date(),
+        ),
       );
     },
     trackMouse: false,
@@ -225,7 +225,7 @@ const TransactionsPageWrapper = () => {
         to={DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
           today.year(),
           today.month(),
-          today.date()
+          today.date(),
         )}
         replace
       />

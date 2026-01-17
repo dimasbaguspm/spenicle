@@ -73,7 +73,7 @@ export const InsightsBalanceCard = ({
         <div>
           <p className="text-primary-light text-sm font-medium">Net Balance</p>
           <p className="text-3xl font-bold mt-1">
-            {formatPrice(netBalance, PriceFormat.CURRENCY)}
+            {formatPrice(netBalance, PriceFormat.CURRENCY_NO_DECIMALS)}
           </p>
           <div className="mt-2 flex items-center space-x-2 text-sm">
             <Badge
@@ -133,13 +133,13 @@ export const InsightsBalanceCard = ({
         <div>
           <p className="text-primary-light text-xs">Total Income</p>
           <p className="text-lg font-bold">
-            {formatPrice(totalIncome, PriceFormat.CURRENCY)}
+            {formatPrice(totalIncome, PriceFormat.CURRENCY_NO_DECIMALS)}
           </p>
         </div>
         <div>
           <p className="text-primary-light text-xs">Total Expense</p>
           <p className="text-lg font-bold">
-            {formatPrice(totalExpense, PriceFormat.CURRENCY)}
+            {formatPrice(totalExpense, PriceFormat.CURRENCY_NO_DECIMALS)}
           </p>
         </div>
       </div>

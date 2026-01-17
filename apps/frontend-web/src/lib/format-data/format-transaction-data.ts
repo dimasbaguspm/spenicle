@@ -18,7 +18,10 @@ export const formatTransactionData = (transaction: TransactionModel | null) => {
 
   const variant = isIncome ? "secondary" : isExpense ? "primary" : "tertiary";
   const capitalizedType = capitalize(transaction?.type);
-  const amount = formatPrice(transaction?.amount ?? 0, PriceFormat.CURRENCY);
+  const amount = formatPrice(
+    transaction?.amount ?? 0,
+    PriceFormat.CURRENCY_NO_DECIMALS,
+  );
 
   const relatedAccountName = transaction?.account?.name ?? "";
   const relatedDestinationAccountName =

@@ -16,17 +16,23 @@ const InsightsOverviewPage = () => {
       frequency,
     });
 
-  const totalIncome = 0;
-  const totalExpense = 0;
+  const totalIncome =
+    transactionSummary?.data?.reduce(
+      (sum, item) => sum + item.incomeAmount,
+      0,
+    ) ?? 0;
+  const totalExpense =
+    transactionSummary?.data?.reduce(
+      (sum, item) => sum + item.expenseAmount,
+      0,
+    ) ?? 0;
 
   return (
     <PageContent
       size={isMobile ? "narrow" : "wide"}
       className={isMobile ? "pb-20" : undefined}
     >
-      {/* Main Content */}
       <div className="space-y-6">
-        {/* Balance Card */}
         <div className="grid grid-cols-1 gap-6">
           <InsightsBalanceCard
             totalIncome={totalIncome}
@@ -36,7 +42,6 @@ const InsightsOverviewPage = () => {
           />
         </div>
 
-        {/* Historical Breakdown Table */}
         <div className="grid grid-cols-1 gap-6">
           <HistoricalBreakdownTable
             transactionData={transactionSummary?.data ?? []}
