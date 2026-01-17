@@ -34,15 +34,10 @@ export const AccountSelectSingleDrawer: FC<AccountSelectSingleDrawerProps> = ({
   const isDesktop = useDesktopBreakpoint();
   const { openDrawer } = useDrawerProvider();
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
-    typeof payload?.[payloadId] === "number" ? payload[payloadId] : null
+    typeof payload?.[payloadId] === "number" ? payload[payloadId] : null,
   );
 
   const filter = useAccountFilter({
-    defaultValues: {
-      type: ["expense", "income"].includes(payload?.type as string)
-        ? [payload.type as "expense" | "income"]
-        : [],
-    },
     adapter: "state",
   });
   const [
