@@ -3,8 +3,6 @@ package middleware
 import (
 	"net/http"
 	"strings"
-
-	"github.com/danielgtaylor/huma/v2"
 )
 
 var (
@@ -13,26 +11,31 @@ var (
 	allowedHeaders = []string{"Content-Type", "Authorization"}
 )
 
-func CORS(api huma.API) func(huma.Context, func(huma.Context)) {
-	return func(ctx huma.Context, next func(huma.Context)) {
-		origin := ctx.Header("Origin")
+func CORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		allowOrigin := "*"
 
-		if ctx.Method() == http.MethodOptions {
-			huma.WriteErr(api, ctx, http.StatusNoContent, "Method doesn't allowed")
-			return
-		}
-
-		ctx.SetHeader("Access-Control-Allow-Methods", strings.Join(allowedMethods, ", "))
-		ctx.SetHeader("Access-Control-Allow-Headers", strings.Join(allowedHeaders, ", "))
-		ctx.SetHeader("Access-Control-Allow-Credentials", "true")
-
-		for _, allowedOrigin := range allowedOrigins {
-			if origin == allowedOrigin {
-				ctx.SetHeader("Access-Control-Allow-Origin", origin)
+		// Check if the origin is in the allowed list
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				allowOrigin = origin
 				break
 			}
 		}
 
-		next(ctx)
-	}
+		w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+		w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ", "))
+		w.Header().Set("Access-Control-Allow-Headers", strings.Join(allowedHeaders, ", "))
+		if allowOrigin != "*" {
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

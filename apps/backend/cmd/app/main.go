@@ -13,6 +13,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/dimasbaguspm/spenicle-api/internal"
 	"github.com/dimasbaguspm/spenicle-api/internal/configs"
+	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
 )
 
 func main() {
@@ -34,7 +35,6 @@ func main() {
 
 	humaSvr := humago.New(svr, configs.NewOpenApi(env))
 
-	internal.RegisterMiddlewares(ctx, humaSvr)
 	internal.RegisterPublicRoutes(ctx, humaSvr, pool)
 	internal.RegisterPrivateRoutes(ctx, humaSvr, pool)
 
@@ -42,7 +42,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", env.AppPort),
-		Handler: svr,
+		Handler: middleware.CORS(svr),
 	}
 
 	slog.Info("Server is running at port", "port", env.AppPort)

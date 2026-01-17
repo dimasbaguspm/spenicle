@@ -13,11 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func RegisterMiddlewares(ctx context.Context, huma huma.API) {
-	huma.UseMiddleware(middleware.CORS(huma))
-
-}
-
 func RegisterPublicRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool) {
 	ap := repositories.NewAuthRepository(ctx)
 	as := services.NewAuthService(ap)
