@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -22,6 +21,5 @@ func LoadEnvironment() Environment {
 		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
 	}
 
-	fmt.Printf("Loaded Environment: %+v\n", env)
 	return env
 }
