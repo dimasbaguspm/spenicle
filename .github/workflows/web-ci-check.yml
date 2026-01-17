@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "apps/web/**"
+      - "apps/frontend-web/**"
       - ".github/workflows/web-ci-check.yml"
 
 permissions:
@@ -22,10 +22,10 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd apps/web
+          cd apps/frontend-web
           bun install
 
       - name: Build
         run: |
-          cd apps/web
+          cd apps/frontend-web
           bun run build

@@ -13,9 +13,9 @@ FROM oven/bun:1-alpine AS web-builder
 
 WORKDIR /build
 
-COPY apps/web/package.json apps/web/bun.lock ./
+COPY apps/frontend-web/package.json apps/frontend-web/bun.lock ./
 RUN bun install --frozen-lockfile
-COPY apps/web/ ./
+COPY apps/frontend-web/ ./
 ENV NODE_ENV=production
 RUN bun run build
 
@@ -39,8 +39,8 @@ COPY --from=oven/bun:1-alpine /usr/local/bin/bun /usr/local/bin/bun
 COPY --from=backend-builder /app/spenicle-api /app/spenicle-api
 COPY --from=backend-builder /build/migrations /app/migrations
 
-COPY --from=web-builder /build/dist /app/web/dist
-COPY --from=web-builder /build/package.json /app/web/package.json
+COPY --from=web-builder /build/dist /app/frontend-web/dist
+COPY --from=web-builder /build/package.json /app/frontend-web/package.json
 
 COPY scripts/supervisord.conf /etc/supervisord.conf
 COPY scripts/nginx.conf /etc/nginx/nginx.conf
