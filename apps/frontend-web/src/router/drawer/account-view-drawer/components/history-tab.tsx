@@ -32,7 +32,7 @@ export const HistoryTab: FC<HistoryTabProps> = ({ data }) => {
   ] = useApiTransactionsInfiniteQuery({
     pageSize: 15,
     sortBy: "date",
-    accountIds: [data.id],
+    accountId: [data.id],
     startDate: filters.appliedFilters.startDate,
     endDate: filters.appliedFilters.endDate,
     type: filters.appliedFilters.type,

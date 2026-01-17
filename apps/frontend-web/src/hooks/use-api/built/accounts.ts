@@ -5,8 +5,7 @@ import type {
   AccountCreateModel,
   AccountUpdateModel,
   AccountReorderModel,
-  AccountBudgetPagedModel,
-  AccountBudgetModel,
+  AccountDeleteModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -23,7 +22,7 @@ export const useApiAccountsInfiniteQuery = (
   params: AccountSearchModel,
   options?: Partial<
     UseApiInfiniteQueryOptions<AccountModel, AccountSearchModel, unknown>
-  >
+  >,
 ) => {
   return useApiInfiniteQuery({
     ...options,
@@ -37,7 +36,7 @@ export const useApiAccountsPaginatedQuery = (
   params: AccountSearchModel,
   options?: Partial<
     UseApiQueryOptions<AccountsPagedModel, AccountSearchModel, unknown>
-  >
+  >,
 ) => {
   return useApiQuery<AccountsPagedModel, AccountSearchModel>({
     ...options,
@@ -49,37 +48,12 @@ export const useApiAccountsPaginatedQuery = (
 
 export const useApiAccountQuery = (
   id: number,
-  options?: Partial<UseApiQueryOptions<AccountModel, unknown, unknown>>
+  options?: Partial<UseApiQueryOptions<AccountModel, unknown, unknown>>,
 ) => {
   return useApiQuery<AccountModel, unknown>({
     ...options,
     queryKey: QUERY_KEYS.ACCOUNT_BY_ID(id),
     path: ENDPOINTS.ACCOUNT.BY_ID(id),
-  });
-};
-
-export const useApiAccountBudgetsQuery = (
-  id: number,
-  options?: Partial<
-    UseApiQueryOptions<AccountBudgetPagedModel, unknown, unknown>
-  >
-) => {
-  return useApiQuery<AccountBudgetPagedModel, unknown>({
-    ...options,
-    queryKey: QUERY_KEYS.ACCOUNT_BY_ID(id, { includeBudgets: true }),
-    path: ENDPOINTS.ACCOUNT.BY_ID_BUDGETS(id),
-  });
-};
-
-export const useApiAccountBudgetDetailQuery = (
-  id: number,
-  budgetId: number,
-  options?: Partial<UseApiQueryOptions<AccountBudgetModel, unknown, unknown>>
-) => {
-  return useApiQuery<AccountBudgetModel, unknown>({
-    ...options,
-    queryKey: QUERY_KEYS.ACCOUNT_BY_ID(id, { includeBudgetDetail: budgetId }),
-    path: ENDPOINTS.ACCOUNT.BY_ID_BUDGETS_DETAIL(id, budgetId),
   });
 };
 
@@ -141,7 +115,7 @@ export const useApiReorderAccounts = () => {
 
 export const useApiDeleteAccount = () => {
   const queryClient = useQueryClient();
-  return useApiMutate<{ id: number }, unknown>({
+  return useApiMutate<void, AccountDeleteModel>({
     path: ENDPOINTS.ACCOUNT.BY_ID(":id"),
     method: "DELETE",
     onSuccess: () => {

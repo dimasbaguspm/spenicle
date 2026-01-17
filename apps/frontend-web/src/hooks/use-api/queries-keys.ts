@@ -57,29 +57,14 @@ export const QUERY_KEYS = {
       "accounts-summary",
       JSON.stringify(params ?? {}),
     ],
-    ACCOUNTS_TRENDS: (params: object = {}) => [
-      ...BASE_QUERY_KEYS.INSIGHTS,
-      "accounts-trends",
-      JSON.stringify(params ?? {}),
-    ],
     CATEGORIES_SUMMARY: (params: object = {}) => [
       ...BASE_QUERY_KEYS.INSIGHTS,
       "categories-summary",
       JSON.stringify(params ?? {}),
     ],
-    CATEGORIES_TRENDS: (params: object = {}) => [
-      ...BASE_QUERY_KEYS.INSIGHTS,
-      "categories-trends",
-      JSON.stringify(params ?? {}),
-    ],
     TRANSACTIONS_SUMMARY: (params: object = {}) => [
       ...BASE_QUERY_KEYS.INSIGHTS,
       "transactions-summary",
-      JSON.stringify(params ?? {}),
-    ],
-    TAGS_SUMMARY: (params: object = {}) => [
-      ...BASE_QUERY_KEYS.INSIGHTS,
-      "tags-summary",
       JSON.stringify(params ?? {}),
     ],
     TOTAL_SUMMARY: (params: object = {}) => [

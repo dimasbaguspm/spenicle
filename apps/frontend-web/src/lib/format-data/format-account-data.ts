@@ -28,6 +28,8 @@ export const formatAccountData = (data: AccountModel | null) => {
       ? formatDate(data?.updatedAt, DateFormat.LONG_DATE)
       : "",
     type: capitalize(data?.type),
+    order: data?.displayOrder,
+    amount: data?.amount,
     isExpense,
     variant,
     notes: note,

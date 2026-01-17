@@ -11,11 +11,14 @@ import { useApiLogin } from "@/hooks/use-api/built/auth";
 import { useForm } from "react-hook-form";
 import { type LoginFormSchema } from "./types";
 import { useAuthProvider } from "@/providers/auth-provider";
+import { useNavigate } from "react-router";
+import { DEEP_PAGE_LINKS } from "@/constant/page-routes";
 
 const LoginPage = () => {
   const [login, , { isPending }] = useApiLogin();
   const { handleSetTokens } = useAuthProvider();
   const { register, handleSubmit } = useForm<LoginFormSchema>();
+  const navigate = useNavigate();
 
   const handleOnSubmit = async (data: LoginFormSchema) => {
     const resp = await login({
@@ -23,6 +26,7 @@ const LoginPage = () => {
       password: data.password,
     });
     handleSetTokens(resp);
+    navigate(DEEP_PAGE_LINKS.DASHBOARD.path);
   };
 
   return (

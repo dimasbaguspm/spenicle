@@ -17,19 +17,13 @@ export const ENDPOINTS = {
   },
   ACCOUNT: {
     PAGINATED: "/accounts",
-    REORDER: "/accounts/reorder",
     BY_ID: (id: number | string) => `/accounts/${id}`,
-    BY_ID_BUDGETS: (id: number | string) => `/accounts/${id}/budgets`,
-    BY_ID_BUDGETS_DETAIL: (id: number | string, budgetId: number | string) =>
-      `/accounts/${id}/budgets/${budgetId}`,
+    REORDER: "/accounts/reorder",
   },
   CATEGORIES: {
     PAGINATED: "/categories",
-    REORDER: "/categories/reorder",
     BY_ID: (id: number | string) => `/categories/${id}`,
-    BY_ID_BUDGETS: (id: number | string) => `/categories/${id}/budgets`,
-    BY_ID_BUDGETS_DETAIL: (id: number | string, budgetId: number | string) =>
-      `/categories/${id}/budgets/${budgetId}`,
+    REORDER: "/categories/reorder",
   },
   TRANSACTIONS: {
     PAGINATED: "/transactions",
@@ -47,11 +41,19 @@ export const ENDPOINTS = {
   },
   INSIGHTS: {
     ACCOUNTS_SUMMARY: "/summary/accounts",
-    ACCOUNTS_SPENDING_TRENDS: "/summary/accounts/trends",
     CATEGORIES_SUMMARY: "/summary/categories",
-    CATEGORIES_SPENDING_TRENDS: "/summary/categories/trends",
     TRANSACTIONS_SUMMARY: "/summary/transactions",
-    TAGS_SUMMARY: "/summary/tags",
-    TOTAL_SUMMARY: "/summary/total",
+  },
+  TAGS: {
+    PAGINATED: "/tags",
+    BY_ID: (id: number | string) => `/tags/${id}`,
+  },
+  BUDGETS: {
+    PAGINATED: "/budgets",
+    BY_ID: (id: number | string) => `/budgets/${id}`,
+  },
+  BUDGET_TEMPLATES: {
+    PAGINATED: "/budgets/templates",
+    BY_ID: (id: number | string) => `/budgets/templates/${id}`,
   },
 };

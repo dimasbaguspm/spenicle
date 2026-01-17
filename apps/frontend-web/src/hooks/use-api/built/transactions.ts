@@ -4,6 +4,7 @@ import type {
   TransactionModel,
   TransactionCreateModel,
   TransactionUpdateModel,
+  TransactionDeleteModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -24,7 +25,7 @@ export const useApiTransactionsInfiniteQuery = (
       TransactionSearchModel,
       unknown
     >
-  >
+  >,
 ) => {
   return useApiInfiniteQuery({
     ...options,
@@ -38,7 +39,7 @@ export const useApiTransactionsPaginatedQuery = (
   params: TransactionSearchModel,
   options?: Partial<
     UseApiQueryOptions<TransactionsPagedModel, TransactionSearchModel, unknown>
-  >
+  >,
 ) => {
   return useApiQuery<TransactionsPagedModel, TransactionSearchModel>({
     ...options,
@@ -50,7 +51,7 @@ export const useApiTransactionsPaginatedQuery = (
 
 export const useApiTransactionQuery = (
   id: number,
-  options?: Partial<UseApiQueryOptions<TransactionModel, unknown, unknown>>
+  options?: Partial<UseApiQueryOptions<TransactionModel, unknown, unknown>>,
 ) => {
   return useApiQuery<TransactionModel, unknown>({
     ...options,
@@ -107,7 +108,7 @@ export const useApiUpdateTransaction = () => {
 
 export const useApiDeleteTransaction = () => {
   const queryClient = useQueryClient();
-  return useApiMutate<{ id: number }, unknown>({
+  return useApiMutate<void, TransactionDeleteModel>({
     path: ENDPOINTS.TRANSACTIONS.BY_ID(":id"),
     method: "DELETE",
     onSuccess: () => {

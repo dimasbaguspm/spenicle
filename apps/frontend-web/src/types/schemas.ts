@@ -1,169 +1,166 @@
-import { type operations, type paths } from "./generated/openapi";
+import { type paths } from "./generated/openapi";
 
 export type AccountSearchModel = NonNullable<
-  operations["list-accounts"]["parameters"]["query"]
+  paths["/accounts"]["get"]["parameters"]["query"]
 >;
 export type AccountsPagedModel =
-  operations["list-accounts"]["responses"]["200"]["content"]["application/json"];
+  paths["/accounts"]["get"]["responses"]["200"]["content"]["application/json"];
 export type AccountCreateModel =
-  operations["create-account"]["requestBody"]["content"]["application/json"];
+  paths["/accounts"]["post"]["requestBody"]["content"]["application/json"];
 export type AccountUpdateModel =
-  operations["update-account"]["requestBody"]["content"]["application/json"] &
-    operations["update-account"]["parameters"]["path"];
+  paths["/accounts/{id}"]["patch"]["requestBody"]["content"]["application/json"] &
+    paths["/accounts/{id}"]["patch"]["parameters"]["path"];
 export type AccountModel =
-  operations["get-account"]["responses"]["200"]["content"]["application/json"];
+  paths["/accounts/{id}"]["get"]["responses"]["200"]["content"]["application/json"];
 export type AccountReorderModel =
-  operations["reorder-accounts"]["requestBody"]["content"]["application/json"];
-
-export type AccountBudgetPagedModel =
-  operations["list-account-budgets"]["responses"]["200"]["content"]["application/json"];
-export type AccountBudgetModel =
-  operations["get-account-budget"]["responses"]["200"]["content"]["application/json"];
+  paths["/accounts/reorder"]["post"]["requestBody"]["content"]["application/json"];
+export type AccountDeleteModel =
+  paths["/accounts/{id}"]["delete"]["parameters"]["path"];
 
 export type AuthLoginRequestModel =
-  operations["login"]["requestBody"]["content"]["application/json"];
+  paths["/auth/login"]["post"]["requestBody"]["content"]["application/json"];
 export type AuthLoginResponseModel =
-  operations["login"]["responses"]["200"]["content"]["application/json"];
+  paths["/auth/login"]["post"]["responses"]["200"]["content"]["application/json"];
 export type AuthRefreshTokenRequestModel =
-  operations["refresh"]["requestBody"]["content"]["application/json"];
+  paths["/auth/refresh"]["post"]["requestBody"]["content"]["application/json"];
 export type AuthRefreshTokenResponseModel =
-  operations["refresh"]["responses"]["200"]["content"]["application/json"];
+  paths["/auth/refresh"]["post"]["responses"]["200"]["content"]["application/json"];
 
 export type BudgetSearchModel = NonNullable<
-  operations["list-budgets"]["parameters"]["query"]
+  paths["/budgets"]["get"]["parameters"]["query"]
 >;
 export type BudgetPagedModel =
-  operations["list-budgets"]["responses"]["200"]["content"]["application/json"];
+  paths["/budgets"]["get"]["responses"]["200"]["content"]["application/json"];
 export type BudgetCreateModel =
-  operations["create-budget"]["requestBody"]["content"]["application/json"];
+  paths["/budgets"]["post"]["requestBody"]["content"]["application/json"];
 export type BudgetUpdateModel =
-  operations["update-budget"]["requestBody"]["content"]["application/json"] &
-    operations["update-budget"]["parameters"]["path"];
+  paths["/budgets/{id}"]["patch"]["requestBody"]["content"]["application/json"] &
+    paths["/budgets/{id}"]["patch"]["parameters"]["path"];
+export type BudgetDeleteModel =
+  paths["/budgets/{id}"]["delete"]["parameters"]["path"];
 export type BudgetModel =
-  operations["get-budget"]["responses"]["200"]["content"]["application/json"];
+  paths["/budgets/{id}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type BudgetTemplateSearchModel = NonNullable<
-  operations["list-budget-templates"]["parameters"]["query"]
+  paths["/budgets/templates"]["get"]["parameters"]["query"]
 >;
 export type BudgetTemplatePagedModel =
-  operations["list-budget-templates"]["responses"]["200"]["content"]["application/json"];
+  paths["/budgets/templates"]["get"]["responses"]["200"]["content"]["application/json"];
 export type BudgetTemplateCreateModel =
-  operations["create-budget-template"]["requestBody"]["content"]["application/json"];
-export type BudgetTemplateModel =
-  operations["get-budget-template"]["responses"]["200"]["content"]["application/json"];
+  paths["/budgets/templates"]["post"]["requestBody"]["content"]["application/json"];
 export type BudgetTemplateUpdateModel =
-  operations["update-budget-template"]["requestBody"]["content"]["application/json"] &
-    operations["update-budget-template"]["parameters"]["path"];
+  paths["/budgets/templates/{id}"]["patch"]["requestBody"]["content"]["application/json"] &
+    paths["/budgets/templates/{id}"]["patch"]["parameters"]["path"];
+export type BudgetTemplateDeleteModel =
+  paths["/budgets/templates/{id}"]["delete"]["parameters"]["path"];
+export type BudgetTemplateModel =
+  paths["/budgets/templates/{id}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type CategorySearchModel = NonNullable<
-  operations["list-categories"]["parameters"]["query"]
+  paths["/categories"]["get"]["parameters"]["query"]
 >;
 export type CategoriesPagedModel =
-  operations["list-categories"]["responses"]["200"]["content"]["application/json"];
+  paths["/categories"]["get"]["responses"]["200"]["content"]["application/json"];
 export type CategoryCreateModel =
-  operations["create-category"]["requestBody"]["content"]["application/json"];
+  paths["/categories"]["post"]["requestBody"]["content"]["application/json"];
 export type CategoryReorderModel =
-  operations["reorder-categories"]["requestBody"]["content"]["application/json"];
+  paths["/categories/reorder"]["post"]["requestBody"]["content"]["application/json"];
 export type CategoryUpdateModel =
-  operations["update-category"]["requestBody"]["content"]["application/json"] &
-    operations["update-category"]["parameters"]["path"];
+  paths["/categories/{id}"]["patch"]["requestBody"]["content"]["application/json"] &
+    paths["/categories/{id}"]["patch"]["parameters"]["path"];
+export type CategoryDeleteModel =
+  paths["/categories/{id}"]["delete"]["parameters"]["path"];
 export type CategoryModel =
-  operations["get-category"]["responses"]["200"]["content"]["application/json"];
-export type CategoryBudgetPagedModel =
-  operations["list-category-budgets"]["responses"]["200"]["content"]["application/json"];
-export type CategoryBudgetModel =
-  operations["get-category-budget"]["responses"]["200"]["content"]["application/json"];
+  paths["/categories/{id}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type InsightsAccountSearchModel = NonNullable<
-  operations["get-account-summary"]["parameters"]["query"]
+  paths["/summary/accounts"]["get"]["parameters"]["query"]
 >;
 export type InsightsAccountsModel =
-  operations["get-account-summary"]["responses"]["200"]["content"]["application/json"];
-
-export type InsightsAccountTrendsSearchModel = NonNullable<
-  operations["get-account-trends"]["parameters"]["query"]
->;
-export type InsightsAccountTrendsModel =
-  operations["get-account-trends"]["responses"]["200"]["content"]["application/json"];
+  paths["/summary/accounts"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type InsightsCategorySearchModel = NonNullable<
-  operations["get-category-summary"]["parameters"]["query"]
+  paths["/summary/categories"]["get"]["parameters"]["query"]
 >;
 export type InsightsCategoryModel =
-  operations["get-category-summary"]["responses"]["200"]["content"]["application/json"];
-
-export type InsightsCategoriesTrendsSearchModel = NonNullable<
-  operations["get-category-trends"]["parameters"]["query"]
->;
-export type InsightsCategoriesTrendsModel =
-  operations["get-category-trends"]["responses"]["200"]["content"]["application/json"];
-
-export type InsightsTagsSearchModel = NonNullable<
-  operations["get-tag-summary"]["parameters"]["query"]
->;
-export type InsightsTagsModel =
-  operations["get-tag-summary"]["responses"]["200"]["content"]["application/json"];
+  paths["/summary/categories"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type InsightsTransactionsSearchModel = NonNullable<
-  operations["get-transaction-summary"]["parameters"]["query"]
+  paths["/summary/transactions"]["get"]["parameters"]["query"]
 >;
 export type InsightsTransactionModel =
-  operations["get-transaction-summary"]["responses"]["200"]["content"]["application/json"];
+  paths["/summary/transactions"]["get"]["responses"]["200"]["content"]["application/json"];
 
-export type InsightsTotalSearchModel = NonNullable<
-  operations["get-total-summary"]["parameters"]["query"]
->;
-export type InsightsTotalModel =
-  operations["get-total-summary"]["responses"]["200"]["content"]["application/json"];
+// export type InsightsTotalSearchModel = NonNullable<
+//   paths["/summary/total"]["get"]["parameters"]["query"]
+// >;
+// export type InsightsTotalModel =
+//   paths["/summary/total"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type TagSearchModel = NonNullable<
-  operations["list-tags"]["parameters"]["query"]
+  paths["/tags"]["get"]["parameters"]["query"]
 >;
 export type TagsPagedModel =
-  operations["list-tags"]["responses"]["200"]["content"]["application/json"];
+  paths["/tags"]["get"]["responses"]["200"]["content"]["application/json"];
+export type TagModel =
+  paths["/tags/{id}"]["get"]["responses"]["200"]["content"]["application/json"];
 export type TagCreateModel =
-  operations["create-tag"]["requestBody"]["content"]["application/json"];
+  paths["/tags"]["post"]["requestBody"]["content"]["application/json"];
+export type TagUpdateModel =
+  paths["/tags/{id}"]["patch"]["requestBody"]["content"]["application/json"] &
+    paths["/tags/{id}"]["patch"]["parameters"]["path"];
+export type TagDeleteModel =
+  paths["/tags/{id}"]["delete"]["parameters"]["path"];
 
 export type TransactionSearchModel = NonNullable<
-  operations["list-transactions"]["parameters"]["query"]
+  paths["/transactions"]["get"]["parameters"]["query"]
 >;
 export type TransactionsPagedModel =
-  operations["list-transactions"]["responses"]["200"]["content"]["application/json"];
+  paths["/transactions"]["get"]["responses"]["200"]["content"]["application/json"];
 export type TransactionCreateModel =
-  operations["create-transaction"]["requestBody"]["content"]["application/json"];
+  paths["/transactions"]["post"]["requestBody"]["content"]["application/json"];
 export type TransactionUpdateModel =
-  operations["update-transaction"]["requestBody"]["content"]["application/json"] &
-    operations["update-transaction"]["parameters"]["path"];
+  paths["/transactions/{id}"]["patch"]["requestBody"]["content"]["application/json"] &
+    paths["/transactions/{id}"]["patch"]["parameters"]["path"];
+export type TransactionDeleteModel =
+  paths["/transactions/{id}"]["delete"]["parameters"]["path"];
 export type TransactionModel =
-  operations["get-transaction"]["responses"]["200"]["content"]["application/json"];
+  paths["/transactions/{id}"]["get"]["responses"]["200"]["content"]["application/json"];
 
-export type TransactionRelatedListModel =
-  operations["list-related-transactions"]["responses"]["200"]["content"]["application/json"];
-export type TransctionRelatedCreateModel =
-  operations["create-transaction-relation"]["requestBody"]["content"]["application/json"] &
-    operations["create-transaction-relation"]["parameters"]["path"];
+export type TransactionRelationsPagedModel =
+  paths["/transactions/{sourceTransactionId}/relations"]["get"]["responses"]["200"]["content"]["application/json"];
+export type TransactionRelationCreateModel =
+  paths["/transactions/{sourceTransactionId}/relations"]["post"]["requestBody"]["content"]["application/json"] &
+    paths["/transactions/{sourceTransactionId}/relations"]["post"]["parameters"]["path"];
+export type TransactionRelationDeleteModel =
+  paths["/transactions/{sourceTransactionId}/relations/{relationId}"]["delete"]["parameters"]["path"];
+export type TransactionRelationModel =
+  paths["/transactions/{sourceTransactionId}/relations/{relationId}"]["get"]["responses"]["200"]["content"]["application/json"];
 
-export type TransactionRelatedModel =
-  operations["get-related-transaction"]["responses"]["200"]["content"]["application/json"];
-
-export type TransactionTagListModel =
-  operations["get-transaction-tags"]["responses"]["200"]["content"]["application/json"];
+export type TransactionTagsPagedModel =
+  paths["/transactions/{transactionId}/tags"]["get"]["responses"]["200"]["content"]["application/json"];
 export type TransactionTagUpdateModel =
-  paths["/transactions/{id}/tags"]["post"]["requestBody"]["content"]["application/json"] &
-    paths["/transactions/{id}/tags"]["post"]["parameters"]["path"];
+  paths["/transactions/{transactionId}/tags"]["post"]["requestBody"]["content"]["application/json"] &
+    paths["/transactions/{transactionId}/tags"]["post"]["parameters"]["path"];
 export type TransactionTagCreateModel =
-  operations["add-transaction-tag"]["requestBody"]["content"]["application/json"] &
-    operations["add-transaction-tag"]["parameters"]["path"];
+  paths["/transactions/{transactionId}/tags"]["post"]["requestBody"]["content"]["application/json"] &
+    paths["/transactions/{transactionId}/tags"]["post"]["parameters"]["path"];
+export type TransactionTagDeleteModel =
+  paths["/transactions/{transactionId}/tags/{tagId}"]["delete"]["parameters"]["path"];
+export type TransactionTagModel =
+  paths["/transactions/{transactionId}/tags/{tagId}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type TransactionTemplateSearchModel = NonNullable<
-  operations["list-transaction-templates"]["parameters"]["query"]
+  paths["/transaction-templates"]["get"]["parameters"]["query"]
 >;
 export type TransactionTemplatePagedModel =
-  operations["list-transaction-templates"]["responses"]["200"]["content"]["application/json"];
+  paths["/transaction-templates"]["get"]["responses"]["200"]["content"]["application/json"];
 export type TransactionTemplateCreateModel =
-  operations["create-transaction-template"]["requestBody"]["content"]["application/json"];
+  paths["/transaction-templates"]["post"]["requestBody"]["content"]["application/json"];
 export type TransactionTemplateUpdateModel =
-  operations["update-transaction-template"]["requestBody"]["content"]["application/json"] &
-    operations["update-transaction-template"]["parameters"]["path"];
+  paths["/transaction-templates/{templateId}"]["patch"]["requestBody"]["content"]["application/json"] &
+    paths["/transaction-templates/{templateId}"]["patch"]["parameters"]["path"];
+export type TransactionTemplateDeleteModel =
+  paths["/transaction-templates/{templateId}"]["delete"]["parameters"]["path"];
 export type TransactionTemplateModel =
-  operations["get-transaction-template"]["responses"]["200"]["content"]["application/json"];
+  paths["/transaction-templates/{templateId}"]["get"]["responses"]["200"]["content"]["application/json"];

@@ -5,8 +5,7 @@ import type {
   CategoryCreateModel,
   CategoryUpdateModel,
   CategoryReorderModel,
-  CategoryBudgetPagedModel,
-  CategoryBudgetModel,
+  CategoryDeleteModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -23,7 +22,7 @@ export const useApiCategoriesInfiniteQuery = (
   params: CategorySearchModel,
   options?: Partial<
     UseApiInfiniteQueryOptions<CategoryModel, CategorySearchModel, unknown>
-  >
+  >,
 ) => {
   return useApiInfiniteQuery({
     ...options,
@@ -37,7 +36,7 @@ export const useApiCategoriesPaginatedQuery = (
   params: CategorySearchModel,
   options?: Partial<
     UseApiQueryOptions<CategoriesPagedModel, CategorySearchModel, unknown>
-  >
+  >,
 ) => {
   return useApiQuery<CategoriesPagedModel, CategorySearchModel>({
     ...options,
@@ -49,37 +48,12 @@ export const useApiCategoriesPaginatedQuery = (
 
 export const useApiCategoryQuery = (
   id: number,
-  options?: Partial<UseApiQueryOptions<CategoryModel, unknown, unknown>>
+  options?: Partial<UseApiQueryOptions<CategoryModel, unknown, unknown>>,
 ) => {
   return useApiQuery<CategoryModel, unknown>({
     ...options,
     queryKey: QUERY_KEYS.CATEGORY_BY_ID(id),
     path: ENDPOINTS.CATEGORIES.BY_ID(id),
-  });
-};
-
-export const useApiCategoryBudgetsQuery = (
-  id: number,
-  options?: Partial<
-    UseApiQueryOptions<CategoryBudgetPagedModel, unknown, unknown>
-  >
-) => {
-  return useApiQuery<CategoryBudgetPagedModel, unknown>({
-    ...options,
-    queryKey: QUERY_KEYS.CATEGORY_BY_ID(id, { includeBudgets: true }),
-    path: ENDPOINTS.CATEGORIES.BY_ID_BUDGETS(id),
-  });
-};
-
-export const useApiCategoryBudgetDetailQuery = (
-  id: number,
-  budgetId: number,
-  options?: Partial<UseApiQueryOptions<CategoryBudgetModel, unknown, unknown>>
-) => {
-  return useApiQuery<CategoryBudgetModel, unknown>({
-    ...options,
-    queryKey: QUERY_KEYS.CATEGORY_BY_ID(id, { includeBudgetDetail: budgetId }),
-    path: ENDPOINTS.CATEGORIES.BY_ID_BUDGETS_DETAIL(id, budgetId),
   });
 };
 
@@ -141,7 +115,7 @@ export const useApiReorderCategories = () => {
 
 export const useApiDeleteCategory = () => {
   const queryClient = useQueryClient();
-  return useApiMutate<{ id: number }, unknown>({
+  return useApiMutate<void, CategoryDeleteModel>({
     path: ENDPOINTS.CATEGORIES.BY_ID(":id"),
     method: "DELETE",
     onSuccess: () => {

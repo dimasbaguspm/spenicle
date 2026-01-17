@@ -1,4 +1,4 @@
-import { useApiInsightsAccountSummaryQuery } from "@/hooks/use-api";
+import { useApiInsightsAccountsSummaryQuery } from "@/hooks/use-api";
 import { PageContent, useMobileBreakpoint } from "@dimasbaguspm/versaur";
 import { useInsightFilter } from "@/hooks/use-filter-state/built/use-insight-filter";
 import { AccountSummaryTable } from "./components";
@@ -9,7 +9,7 @@ const InsightsAccountsPage = () => {
 
   const { startDate, endDate } = appliedFilters;
 
-  const [accountSummary] = useApiInsightsAccountSummaryQuery({
+  const [accountSummary] = useApiInsightsAccountsSummaryQuery({
     startDate,
     endDate,
   });

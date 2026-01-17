@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "generate:openapi-types": "bun run scripts/generate-openapi-types.ts"
+    "check": "tsc --noEmit",
+    "generate:types": "bun run scripts/generate-openapi-types.ts"
   },
   "dependencies": {
     "@dimasbaguspm/versaur": "^0.0.63",
@@ -21,7 +22,7 @@
     "query-string": "^9.3.1",
     "react": "^19",
     "react-dom": "^19",
-    "react-hook-form": "^7.69.0",
+    "react-hook-form": "^7.71.1",
     "react-router": "^7.11.0",
     "react-swipeable": "^7.0.2",
     "recharts": "^3.6.0"
@@ -33,7 +34,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.1.11",
-    "typescript": "^5.7.2",
+    "typescript": "^5.9.3",
     "vite": "^6.0.7"
   }
 }

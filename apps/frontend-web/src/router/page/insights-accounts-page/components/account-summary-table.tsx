@@ -17,14 +17,17 @@ export const AccountSummaryTable = ({
   accountData,
 }: AccountSummaryTableProps) => {
   // Group accounts by type
-  const groupedAccounts = (accountData ?? []).reduce((acc, account) => {
-    const type = account.accountType;
-    if (!acc[type]) {
-      acc[type] = [];
-    }
-    acc[type].push(account);
-    return acc;
-  }, {} as Record<string, typeof accountData>);
+  const groupedAccounts = (accountData ?? []).reduce(
+    (acc, account) => {
+      const type = account.type;
+      if (!acc[type]) {
+        acc[type] = [];
+      }
+      acc[type].push(account);
+      return acc;
+    },
+    {} as Record<string, typeof accountData>,
+  );
 
   const calculateTotals = (accounts: typeof accountData) => {
     if (!accounts) return { income: 0, expense: 0, net: 0 };
@@ -35,7 +38,7 @@ export const AccountSummaryTable = ({
         totals.net += account.net ?? 0;
         return totals;
       },
-      { income: 0, expense: 0, net: 0 }
+      { income: 0, expense: 0, net: 0 },
     );
   };
 
@@ -79,22 +82,19 @@ export const AccountSummaryTable = ({
                 </tr>
                 {accounts?.map((account, idx) => {
                   return (
-                    <tr
-                      key={`${account.accountId}-${idx}`}
-                      className="bg-white"
-                    >
+                    <tr key={`${account.id}-${idx}`} className="bg-white">
                       <td className="py-3 px-3 sm:px-4 sm:pl-8">
                         <div className="flex items-center space-x-2">
                           <span className="size-1.5 rounded-full bg-primary flex-shrink-0" />
                           <span className="text-xs sm:text-sm font-medium text-gray-900">
-                            {account.accountName}
+                            {account.name}
                           </span>
                         </div>
                       </td>
                       <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
                         {formatPrice(
                           account.incomeAmount ?? 0,
-                          PriceFormat.CURRENCY
+                          PriceFormat.CURRENCY,
                         )}
                       </td>
                       <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">

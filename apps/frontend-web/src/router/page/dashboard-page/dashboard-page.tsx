@@ -1,5 +1,4 @@
 import {
-  useApiInsightsTotalSummaryQuery,
   useApiInsightsTransactionsSummaryQuery,
   useApiTransactionsPaginatedQuery,
 } from "@/hooks/use-api";
@@ -21,7 +20,6 @@ import { RecentTransactions } from "./components/recent-transactions";
 const DashboardPage = () => {
   const isMobile = useMobileBreakpoint();
 
-  const [totalSummary] = useApiInsightsTotalSummaryQuery({});
   // Fetch transaction summary for the last 6 months to show trends
   const [summaryTransactions] = useApiInsightsTransactionsSummaryQuery({
     frequency: "monthly",
@@ -37,8 +35,8 @@ const DashboardPage = () => {
   const [transactionViewMode, setTransactionViewMode] =
     useState<DashboardTransactionViewMode>(DashboardTransactionViewMode.Recent);
 
-  const totalIncome = totalSummary?.income ?? 0;
-  const totalExpense = Math.abs(totalSummary?.expense ?? 0);
+  const totalIncome = 0;
+  const totalExpense = 0;
   const netBalance = totalIncome - totalExpense;
 
   const currentMonthSummary = useMemo(() => {

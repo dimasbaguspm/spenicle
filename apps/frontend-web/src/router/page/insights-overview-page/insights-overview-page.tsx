@@ -1,7 +1,4 @@
-import {
-  useApiInsightsTotalSummaryQuery,
-  useApiInsightsTransactionsSummaryQuery,
-} from "@/hooks/use-api";
+import { useApiInsightsTransactionsSummaryQuery } from "@/hooks/use-api";
 import { PageContent, useMobileBreakpoint } from "@dimasbaguspm/versaur";
 import { useInsightFilter } from "@/hooks/use-filter-state/built/use-insight-filter";
 import { HistoricalBreakdownTable, InsightsBalanceCard } from "./components";
@@ -12,13 +9,6 @@ const InsightsOverviewPage = () => {
 
   const { startDate, endDate, frequency } = appliedFilters;
 
-  // Fetch total summary
-  const [totalSummary] = useApiInsightsTotalSummaryQuery({
-    startDate,
-    endDate,
-  });
-
-  // Fetch transaction summary for the period
   const [transactionSummary, isLoadingTransactions] =
     useApiInsightsTransactionsSummaryQuery({
       startDate,
@@ -26,8 +16,8 @@ const InsightsOverviewPage = () => {
       frequency,
     });
 
-  const totalIncome = totalSummary?.income ?? 0;
-  const totalExpense = Math.abs(totalSummary?.expense ?? 0);
+  const totalIncome = 0;
+  const totalExpense = 0;
 
   return (
     <PageContent

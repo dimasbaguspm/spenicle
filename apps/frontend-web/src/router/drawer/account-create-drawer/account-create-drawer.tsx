@@ -24,7 +24,6 @@ export const AccountCreateDrawer: FC = () => {
       name: data.name,
       type: data.type,
       note: data.notes || "",
-      amount: 0,
     });
     showSnack("success", "Account created successfully");
     closeDrawer();

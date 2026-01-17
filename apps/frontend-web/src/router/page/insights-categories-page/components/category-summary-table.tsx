@@ -17,14 +17,17 @@ export const CategorySummaryTable = ({
   categoryData,
 }: CategorySummaryTableProps) => {
   // Group categories by type
-  const groupedCategories = (categoryData ?? []).reduce((acc, category) => {
-    const type = category.categoryType;
-    if (!acc[type]) {
-      acc[type] = [];
-    }
-    acc[type].push(category);
-    return acc;
-  }, {} as Record<string, typeof categoryData>);
+  const groupedCategories = (categoryData ?? []).reduce(
+    (acc, category) => {
+      const type = category.type;
+      if (!acc[type]) {
+        acc[type] = [];
+      }
+      acc[type].push(category);
+      return acc;
+    },
+    {} as Record<string, typeof categoryData>,
+  );
 
   const calculateTotals = (categories: typeof categoryData) => {
     if (!categories) return { income: 0, expense: 0, transfer: 0, net: 0 };
@@ -35,7 +38,7 @@ export const CategorySummaryTable = ({
         totals.net += category.net ?? 0;
         return totals;
       },
-      { income: 0, expense: 0, transfer: 0, net: 0 }
+      { income: 0, expense: 0, transfer: 0, net: 0 },
     );
   };
 
@@ -79,22 +82,19 @@ export const CategorySummaryTable = ({
                 </tr>
                 {categories?.map((category, idx) => {
                   return (
-                    <tr
-                      key={`${category.categoryId}-${idx}`}
-                      className="bg-white"
-                    >
+                    <tr key={`${category.id}-${idx}`} className="bg-white">
                       <td className="py-3 px-3 sm:px-4 sm:pl-8">
                         <div className="flex items-center space-x-2">
                           <span className="size-1.5 rounded-full bg-primary flex-shrink-0" />
                           <span className="text-xs sm:text-sm font-medium text-gray-900">
-                            {category.categoryName}
+                            {category.name}
                           </span>
                         </div>
                       </td>
                       <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
                         {formatPrice(
                           category.incomeAmount ?? 0,
-                          PriceFormat.CURRENCY
+                          PriceFormat.CURRENCY,
                         )}
                       </td>
                       <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">

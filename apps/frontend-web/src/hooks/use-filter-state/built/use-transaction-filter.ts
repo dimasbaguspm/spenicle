@@ -12,18 +12,17 @@ export interface TransactionFilterModel {
   endDate?: TransactionSearchModel["endDate"];
   minAmount?: TransactionSearchModel["minAmount"];
   maxAmount?: TransactionSearchModel["maxAmount"];
-  accountIds?: TransactionSearchModel["accountIds"];
-  destinationAccountIds?: TransactionSearchModel["destinationAccountIds"];
-  categoryIds?: TransactionSearchModel["categoryIds"];
-  tagIds?: TransactionSearchModel["tagIds"];
+  accountIds?: TransactionSearchModel["accountId"];
+  destinationAccountIds?: TransactionSearchModel["destinationAccountId"];
+  categoryIds?: TransactionSearchModel["categoryId"];
+  tagIds?: TransactionSearchModel["tagId"];
   sortBy?: TransactionSearchModel["sortBy"];
   sortOrder?: TransactionSearchModel["sortOrder"];
   pageNumber?: TransactionSearchModel["pageNumber"];
   pageSize?: TransactionSearchModel["pageSize"];
 }
 
-export interface UseTransactionFilterReturn
-  extends UseFilterStateReturn<TransactionFilterModel> {
+export interface UseTransactionFilterReturn extends UseFilterStateReturn<TransactionFilterModel> {
   appliedFilters: TransactionFilterModel;
   humanizedFilters: [keyof TransactionFilterModel, string][];
 }
@@ -46,11 +45,11 @@ const transactionFilterModel = new Map<keyof TransactionFilterModel, string>([
 ] as const);
 
 export const transactionFilterModelKeys = Array.from(
-  transactionFilterModel.keys()
+  transactionFilterModel.keys(),
 ) as (keyof TransactionFilterModel)[];
 
 export const useTransactionFilter = (
-  opts?: UseFilterStateOptions<TransactionFilterModel>
+  opts?: UseFilterStateOptions<TransactionFilterModel>,
 ): UseTransactionFilterReturn => {
   const filters = useFilterState<TransactionFilterModel>(opts);
 
@@ -71,7 +70,7 @@ export const useTransactionFilter = (
     tagIds: filters.getAll("tagIds").map(Number),
     sortBy: filters.getSingle("sortBy") as TransactionSearchModel["sortBy"],
     sortOrder: filters.getSingle(
-      "sortOrder"
+      "sortOrder",
     ) as TransactionSearchModel["sortOrder"],
     pageNumber: filters.getSingle("pageNumber")
       ? Number(filters.getSingle("pageNumber"))
@@ -81,72 +80,75 @@ export const useTransactionFilter = (
       : undefined,
   };
 
-  const humanizedFilters = transactionFilterModelKeys.reduce((acc, [key]) => {
-    const typedKey = key as keyof TransactionFilterModel;
-    switch (typedKey) {
-      case "id":
-        if (appliedFilters?.id?.length) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "type":
-        if (appliedFilters?.type?.length) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "startDate":
-        if (appliedFilters?.startDate) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "endDate":
-        if (appliedFilters?.endDate) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "minAmount":
-        if (appliedFilters?.minAmount) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "maxAmount":
-        if (appliedFilters?.maxAmount) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "accountIds":
-        if (appliedFilters?.accountIds?.length) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "destinationAccountIds":
-        if (appliedFilters?.destinationAccountIds?.length) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "sortBy":
-        if (appliedFilters?.sortBy) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "sortOrder":
-        if (appliedFilters?.sortOrder) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "pageNumber":
-        if (appliedFilters?.pageNumber) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-      case "pageSize":
-        if (appliedFilters?.pageSize) {
-          acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
-        }
-        break;
-    }
-    return acc;
-  }, [] as [keyof TransactionFilterModel, string][]);
+  const humanizedFilters = transactionFilterModelKeys.reduce(
+    (acc, [key]) => {
+      const typedKey = key as keyof TransactionFilterModel;
+      switch (typedKey) {
+        case "id":
+          if (appliedFilters?.id?.length) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "type":
+          if (appliedFilters?.type?.length) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "startDate":
+          if (appliedFilters?.startDate) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "endDate":
+          if (appliedFilters?.endDate) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "minAmount":
+          if (appliedFilters?.minAmount) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "maxAmount":
+          if (appliedFilters?.maxAmount) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "accountIds":
+          if (appliedFilters?.accountIds?.length) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "destinationAccountIds":
+          if (appliedFilters?.destinationAccountIds?.length) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "sortBy":
+          if (appliedFilters?.sortBy) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "sortOrder":
+          if (appliedFilters?.sortOrder) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "pageNumber":
+          if (appliedFilters?.pageNumber) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "pageSize":
+          if (appliedFilters?.pageSize) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+      }
+      return acc;
+    },
+    [] as [keyof TransactionFilterModel, string][],
+  );
 
   return {
     ...filters,
