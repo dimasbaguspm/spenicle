@@ -53,7 +53,9 @@ func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchMod
 			updated_at,
 			deleted_at,
 			total_count
-		FROM filtered_tags`
+		FROM filtered_tags
+		ORDER BY ` + sortColumn + ` ` + sortOrder + `
+		`
 
 	rows, err := tr.pgx.Query(ctx, sql, query.Name, query.PageSize, offset)
 	if err != nil {

@@ -21,12 +21,12 @@ func NewTransactionRepository(pgx *pgxpool.Pool) TransactionRepository {
 
 func (tr TransactionRepository) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
 	sortByMap := map[string]string{
-		"id":        "t.id",
-		"type":      "t.type",
-		"date":      "t.date",
-		"amount":    "t.amount",
-		"createdAt": "t.created_at",
-		"updatedAt": "t.updated_at",
+		"id":        "id",
+		"type":      "type",
+		"date":      "date",
+		"amount":    "amount",
+		"createdAt": "created_at",
+		"updatedAt": "updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -64,7 +64,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 						FROM transaction_tags tt
 						WHERE tt.tag_id = ANY($12::int8[])
 					))
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			ORDER BY t.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		),
 		tags_agg AS (
@@ -84,6 +84,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			ft.total_count
 		FROM filtered_transactions ft
 		LEFT JOIN tags_agg ta ON ft.id = ta.transaction_id
+		ORDER BY ft.` + sortColumn + ` ` + sortOrder + `
 	`
 
 	var (

@@ -50,8 +50,8 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 						($6::text = 'true' AND archived_at IS NOT NULL) OR
 						($6::text = 'false' AND archived_at IS NULL)
 					)
-				ORDER BY ` + sortColumn + ` ` + sortOrder + `
-				LIMIT $1 OFFSET $2
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $1 OFFSET $2
 		)
 		SELECT
 			id,
@@ -65,7 +65,9 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 			created_at,
 			updated_at,
 			total_count
-		FROM filtered_categories`
+		FROM filtered_categories
+		ORDER BY ` + sortColumn + ` ` + sortOrder + `
+		`
 
 	var (
 		ids   []int64

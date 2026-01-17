@@ -20,15 +20,15 @@ func NewBudgetTemplateRepository(pgx *pgxpool.Pool) BudgetTemplateRepository {
 
 func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
 	sortByMap := map[string]string{
-		"id":          "b.id",
-		"accountId":   "b.account_id",
-		"categoryId":  "b.category_id",
-		"amountLimit": "b.amount_limit",
-		"recurrence":  "b.recurrence",
-		"startDate":   "b.start_date",
-		"endDate":     "b.end_date",
-		"createdAt":   "b.created_at",
-		"updatedAt":   "b.updated_at",
+		"id":          "id",
+		"accountId":   "account_id",
+		"categoryId":  "category_id",
+		"amountLimit": "amount_limit",
+		"recurrence":  "recurrence",
+		"startDate":   "start_date",
+		"endDate":     "end_date",
+		"createdAt":   "created_at",
+		"updatedAt":   "updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -61,7 +61,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 				AND (array_length($4::int8[], 1) IS NULL OR b.account_id = ANY($4::int8[]))
 				AND (array_length($5::int8[], 1) IS NULL OR b.category_id = ANY($5::int8[]))
 				AND ($6::text IS NULL OR $6::text = '' OR b.recurrence = $6::text)
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			ORDER BY b.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		)
 		SELECT
@@ -79,6 +79,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 			deleted_at,
 			total_count
 		FROM filtered_templates
+		ORDER BY ` + sortColumn + ` ` + sortOrder + `
 	`
 
 	var (

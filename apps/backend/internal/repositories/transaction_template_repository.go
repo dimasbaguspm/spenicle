@@ -20,12 +20,12 @@ func NewTransactionTemplateRepository(pgx *pgxpool.Pool) TransactionTemplateRepo
 
 func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
 	sortByMap := map[string]string{
-		"id":        "tt.id",
-		"name":      "tt.name",
-		"amount":    "tt.amount",
-		"type":      "tt.type",
-		"createdAt": "tt.created_at",
-		"updatedAt": "tt.updated_at",
+		"id":        "id",
+		"name":      "name",
+		"amount":    "amount",
+		"type":      "type",
+		"createdAt": "created_at",
+		"updatedAt": "updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -84,7 +84,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 				AND ($5::int8 = 0 OR tt.account_id = $5::int8)
 				AND ($6::int8 = 0 OR tt.category_id = $6::int8)
 				AND ($7::int8 = 0 OR tt.destination_account_id = $7::int8)
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			ORDER BY tt.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		)
 		SELECT
@@ -119,6 +119,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 			deleted_at,
 			total_count
 		FROM filtered_templates
+		ORDER BY ` + sortColumn + ` ` + sortOrder + `
 	`
 
 	rows, err := ttr.pgx.Query(ctx, sql, p.PageSize, offset, searchPattern, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID)

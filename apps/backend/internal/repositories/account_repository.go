@@ -53,8 +53,8 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 					($6::text = 'true' AND archived_at IS NOT NULL) OR
 					($6::text = 'false' AND archived_at IS NULL)
 				)
-				ORDER BY ` + sortColumn + ` ` + sortOrder + `
-				LIMIT $1 OFFSET $2
+			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			LIMIT $1 OFFSET $2
 		)
 		SELECT
 			id,
@@ -69,7 +69,9 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 			created_at,
 			updated_at,
 			total_count
-		FROM filtered_accounts`
+		FROM filtered_accounts
+		ORDER BY ` + sortColumn + ` ` + sortOrder + `
+	`
 
 	var (
 		ids   []int64

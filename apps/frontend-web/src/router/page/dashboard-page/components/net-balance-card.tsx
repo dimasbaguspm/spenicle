@@ -28,7 +28,6 @@ export const NetBalanceCard = ({
   summaryTransactions,
   isMobile,
 }: NetBalanceCardProps) => {
-  // Process chart data as cumulative balance - mobile shows last 4 months (current + 3 previous), desktop shows full range
   const chartData = useMemo(() => {
     if (!Array.isArray(summaryTransactions) || summaryTransactions.length === 0)
       return [];
@@ -49,7 +48,6 @@ export const NetBalanceCard = ({
       })
       .sort((a, b) => dayjs(a.date).unix() - dayjs(b.date).unix());
 
-    // Calculate running balance backwards from current balance
     const reversed = [...sorted].reverse();
     let cumulative = balance;
     const withRunningBalance = reversed
@@ -58,7 +56,7 @@ export const NetBalanceCard = ({
         cumulative -= item.net;
         return { ...item, runningBalance };
       })
-      .reverse(); // reverse back to ascending order
+      .reverse();
 
     return isMobile ? withRunningBalance.slice(-4) : withRunningBalance;
   }, [summaryTransactions, isMobile, balance]);

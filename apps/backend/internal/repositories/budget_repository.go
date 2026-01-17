@@ -20,15 +20,15 @@ func NewBudgetRepository(pgx *pgxpool.Pool) BudgetRepository {
 
 func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSearchModel) (models.BudgetsPagedModel, error) {
 	sortByMap := map[string]string{
-		"id":          "b.id",
-		"templateId":  "b.template_id",
-		"accountId":   "b.account_id",
-		"categoryId":  "b.category_id",
-		"periodStart": "b.period_start",
-		"periodEnd":   "b.period_end",
-		"amountLimit": "b.amount_limit",
-		"createdAt":   "b.created_at",
-		"updatedAt":   "b.updated_at",
+		"id":          "id",
+		"templateId":  "template_id",
+		"accountId":   "account_id",
+		"categoryId":  "category_id",
+		"periodStart": "period_start",
+		"periodEnd":   "period_end",
+		"amountLimit": "amount_limit",
+		"createdAt":   "created_at",
+		"updatedAt":   "updated_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -69,8 +69,8 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 					AND (array_length($4::int8[], 1) IS NULL OR b.template_id = ANY($4::int8[]))
 					AND (array_length($5::int8[], 1) IS NULL OR b.account_id = ANY($5::int8[]))
 					AND (array_length($6::int8[], 1) IS NULL OR b.category_id = ANY($6::int8[]))
-				ORDER BY ` + sortColumn + ` ` + sortOrder + `
-				LIMIT $1 OFFSET $2
+			ORDER BY b.` + sortColumn + ` ` + sortOrder + `
+			LIMIT $1 OFFSET $2
 		)
 		SELECT
 			id,
@@ -86,7 +86,9 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 			updated_at,
 			deleted_at,
 			total_count
-		FROM filtered_budgets`
+		FROM filtered_budgets
+		ORDER BY ` + sortColumn + ` ` + sortOrder + `
+		`
 
 	var (
 		ids         []int64
