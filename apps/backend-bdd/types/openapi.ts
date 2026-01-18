@@ -1717,6 +1717,11 @@ export interface components {
             lastExecutedAt?: string;
             /** @description Template name */
             name: string;
+            /**
+             * Format: date-time
+             * @description Next due date for recurring transactions
+             */
+            nextDueAt?: string;
             /** @description Template notes */
             note?: string;
             /**
@@ -1724,6 +1729,8 @@ export interface components {
              * @enum {string}
              */
             recurrence: "none" | "weekly" | "monthly" | "yearly";
+            /** @description Recurring transaction statistics */
+            recurringStats: components["schemas"]["TransactionTemplateRecurringStats"];
             /**
              * Format: date-time
              * @description Template start date
@@ -1739,6 +1746,23 @@ export interface components {
              * @description Last update timestamp
              */
             updatedAt: string;
+        };
+        TransactionTemplateRecurringStats: {
+            /**
+             * Format: int64
+             * @description Number of related transactions created
+             */
+            occurrences: number;
+            /**
+             * Format: int64
+             * @description Number of remaining occurrences (null if no end date)
+             */
+            remaining: number | null;
+            /**
+             * Format: int64
+             * @description Total amount spent from related transactions
+             */
+            totalSpent: number;
         };
         TransactionTemplatesPagedModel: {
             /** @description List of transaction templates */
@@ -1960,11 +1984,6 @@ export interface components {
              * @enum {string}
              */
             recurrence?: "none" | "weekly" | "monthly" | "yearly";
-            /**
-             * Format: date-time
-             * @description Template start date
-             */
-            startDate?: string;
             /**
              * @description Transaction type
              * @enum {string}
@@ -3191,7 +3210,7 @@ export interface operations {
                 /** @description Number of items per page */
                 pageSize?: number;
                 /** @description Field to sort by */
-                sortBy?: "id" | "name" | "amount" | "type" | "createdAt" | "updatedAt";
+                sortBy?: "id" | "name" | "amount" | "type" | "createdAt" | "updatedAt" | "nextDueAt";
                 /** @description Sort order */
                 sortOrder?: "asc" | "desc";
                 /** @description Search by template name */

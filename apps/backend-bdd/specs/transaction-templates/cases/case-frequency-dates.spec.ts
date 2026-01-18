@@ -37,7 +37,7 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
         startDate: new Date(
           new Date().getFullYear(),
           new Date().getMonth(),
-          new Date().getDate()
+          new Date().getDate(),
         ).toISOString(),
         recurrence: frequency as any,
       });
@@ -51,7 +51,7 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
     const listResponse = await transactionTemplateAPI.getTransactionTemplates();
     expect(listResponse.status).toBe(200);
     expect(listResponse.data!.items!.length).toBeGreaterThanOrEqual(
-      frequencies.length
+      frequencies.length,
     );
 
     // Cleanup
@@ -82,7 +82,7 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
     const today = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
-      new Date().getDate()
+      new Date().getDate(),
     );
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -101,7 +101,7 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
       endDate: new Date(
         nextMonth.getFullYear(),
         nextMonth.getMonth(),
-        nextMonth.getDate()
+        nextMonth.getDate(),
       ).toISOString(),
       recurrence: "weekly",
     });
@@ -110,7 +110,7 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
     const expectedEndDate = new Date(
       nextMonth.getFullYear(),
       nextMonth.getMonth(),
-      nextMonth.getDate()
+      nextMonth.getDate(),
     )
       .toISOString()
       .replace(".000Z", "Z");
@@ -132,10 +132,10 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
     expect(template3.data!.endDate).toBeNull();
 
     await transactionTemplateAPI.deleteTransactionTemplate(
-      template2.data!.id as number
+      template2.data!.id as number,
     );
     await transactionTemplateAPI.deleteTransactionTemplate(
-      template3.data!.id as number
+      template3.data!.id as number,
     );
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
@@ -174,21 +174,18 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
     const updateFreqResponse =
       await transactionTemplateAPI.updateTransactionTemplate(
         template.data!.id as number,
-        { recurrence: "weekly" }
+        { recurrence: "weekly" },
       );
     expect(updateFreqResponse.status).toBe(200);
 
     // Verify frequency updated
     const getAfterFreqUpdate =
       await transactionTemplateAPI.getTransactionTemplate(
-        template.data!.id as number
+        template.data!.id as number,
       );
     expect(getAfterFreqUpdate.data!.recurrence).toBe("weekly");
 
-    // Update dates
-    const newStartDate = new Date("2024-06-01")
-      .toISOString()
-      .replace(".000Z", "Z");
+    // Update dates (only endDate is updatable)
     const newEndDate = new Date("2024-12-31")
       .toISOString()
       .replace(".000Z", "Z");
@@ -196,23 +193,21 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
       await transactionTemplateAPI.updateTransactionTemplate(
         template.data!.id as number,
         {
-          startDate: newStartDate,
           endDate: newEndDate,
-        }
+        },
       );
     expect(updateDatesResponse.status).toBe(200);
 
     // Verify dates updated
     const getAfterDatesUpdate =
       await transactionTemplateAPI.getTransactionTemplate(
-        template.data!.id as number
+        template.data!.id as number,
       );
-    expect(getAfterDatesUpdate.data!.startDate).toBe(newStartDate);
     expect(getAfterDatesUpdate.data!.endDate).toBe(newEndDate);
 
     // Cleanup
     await transactionTemplateAPI.deleteTransactionTemplate(
-      template.data!.id as number
+      template.data!.id as number,
     );
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
@@ -256,7 +251,7 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
 
     // Cleanup
     await transactionTemplateAPI.deleteTransactionTemplate(
-      template.data!.id as number
+      template.data!.id as number,
     );
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
@@ -282,7 +277,7 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
     const today = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
-      new Date().getDate()
+      new Date().getDate(),
     )
       .toISOString()
       .replace(".000Z", "Z");
@@ -304,7 +299,7 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
     const expectedToday = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
-      new Date().getDate()
+      new Date().getDate(),
     )
       .toISOString()
       .replace(".000Z", "Z");
@@ -313,7 +308,7 @@ test.describe("Transaction Templates - Frequency and Date Scenarios", () => {
 
     // Cleanup
     await transactionTemplateAPI.deleteTransactionTemplate(
-      template.data!.id as number
+      template.data!.id as number,
     );
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);

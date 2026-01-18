@@ -71,14 +71,6 @@ func (ttw *TransactionTemplateWorker) processTemplates(ctx context.Context) erro
 			)
 			continue
 		}
-
-		if err := ttw.templateRepo.UpdateLastExecuted(ctx, template.ID); err != nil {
-			slog.Error(
-				"Failed to update template execution time",
-				"templateID", template.ID,
-				"err", err,
-			)
-		}
 	}
 
 	return nil
@@ -123,6 +115,14 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 		slog.Error(
 			"Failed to create transaction template relation",
 			"transactionID", transaction.ID,
+			"templateID", template.ID,
+			"err", err,
+		)
+	}
+
+	if err := ttw.templateRepo.UpdateLastExecuted(ctx, template.ID); err != nil {
+		slog.Error(
+			"Failed to update template execution time",
 			"templateID", template.ID,
 			"err", err,
 		)

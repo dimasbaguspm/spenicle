@@ -1442,6 +1442,10 @@ components:
         name:
           description: Template name
           type: string
+        nextDueAt:
+          description: Next due date for recurring transactions
+          format: date-time
+          type: string
         note:
           description: Template notes
           type: string
@@ -1453,6 +1457,9 @@ components:
             - monthly
             - yearly
           type: string
+        recurringStats:
+          $ref: "#/components/schemas/TransactionTemplateRecurringStats"
+          description: Recurring transaction statistics
         startDate:
           description: Template start date
           format: date-time
@@ -1479,8 +1486,31 @@ components:
         - recurrence
         - startDate
         - endDate
+        - recurringStats
         - createdAt
         - updatedAt
+      type: object
+    TransactionTemplateRecurringStats:
+      additionalProperties: false
+      properties:
+        occurrences:
+          description: Number of related transactions created
+          format: int64
+          type: integer
+        remaining:
+          description: Number of remaining occurrences (null if no end date)
+          format: int64
+          type:
+            - integer
+            - "null"
+        totalSpent:
+          description: Total amount spent from related transactions
+          format: int64
+          type: integer
+      required:
+        - occurrences
+        - remaining
+        - totalSpent
       type: object
     TransactionTemplatesPagedModel:
       additionalProperties: false
@@ -1765,10 +1795,6 @@ components:
             - weekly
             - monthly
             - yearly
-          type: string
-        startDate:
-          description: Template start date
-          format: date-time
           type: string
         type:
           description: Transaction type
@@ -3380,6 +3406,7 @@ paths:
               - type
               - createdAt
               - updatedAt
+              - nextDueAt
             type: string
         - description: Sort order
           explode: false

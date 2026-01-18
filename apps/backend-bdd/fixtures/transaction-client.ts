@@ -34,7 +34,7 @@ export class TransactionAPIClient extends BaseAPIClient {
    * Get all transactions with optional filters
    */
   async getTransactions(
-    params?: TransactionSearchSchema
+    params?: TransactionSearchSchema,
   ): Promise<APIResponse<PaginatedTransactionResponseModel>> {
     return this.get<PaginatedTransactionResponseModel>("/transactions", params);
   }
@@ -50,7 +50,7 @@ export class TransactionAPIClient extends BaseAPIClient {
    * Create a new transaction
    */
   async createTransaction(
-    data: CreateTransactionRequestModel
+    data: CreateTransactionRequestModel,
   ): Promise<APIResponse<TransactionModel>> {
     return this.post<TransactionModel>("/transactions", data);
   }
@@ -60,7 +60,7 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async updateTransaction(
     id: number,
-    data: UpdateTransactionRequestModel
+    data: UpdateTransactionRequestModel,
   ): Promise<APIResponse<TransactionModel>> {
     return this.patch<TransactionModel>(`/transactions/${id}`, data);
   }
@@ -76,10 +76,10 @@ export class TransactionAPIClient extends BaseAPIClient {
    * Get transaction tags
    */
   async getTransactionTags(
-    id: number
+    id: number,
   ): Promise<APIResponse<components["schemas"]["TransactionTagsPagedModel"]>> {
     return this.get<components["schemas"]["TransactionTagsPagedModel"]>(
-      `/transactions/${id}/tags`
+      `/transactions/${id}/tags`,
     );
   }
 
@@ -88,7 +88,7 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async addTransactionTag(
     id: number,
-    tagId: number
+    tagId: number,
   ): Promise<APIResponse<void>> {
     return this.post<void>(`/transactions/${id}/tags`, {
       tagId: tagId,
@@ -101,7 +101,7 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async updateTransactionTags(
     id: number,
-    tagIds: string[]
+    tagIds: string[],
   ): Promise<APIResponse<void>> {
     return this.put<void>(`/transactions/${id}/tags`, { tagIds });
   }
@@ -111,7 +111,7 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async removeTransactionTag(
     transactionId: number,
-    tagId: number
+    tagId: number,
   ): Promise<APIResponse<void>> {
     return this.delete<void>(`/transactions/${transactionId}/tags/${tagId}`);
   }
@@ -120,10 +120,10 @@ export class TransactionAPIClient extends BaseAPIClient {
    * Get transaction relations
    */
   async getTransactionRelations(
-    id: number
+    id: number,
   ): Promise<APIResponse<TransactionRelationsPagedModel>> {
     return this.get<TransactionRelationsPagedModel>(
-      `/transactions/${id}/relations`
+      `/transactions/${id}/relations`,
     );
   }
 
@@ -133,7 +133,7 @@ export class TransactionAPIClient extends BaseAPIClient {
   async createTransactionRelation(
     sourceId: number,
     relatedTransactionId: number,
-    relationType: string
+    relationType: string,
   ): Promise<APIResponse<TransactionRelationModel>> {
     return this.post<TransactionRelationModel>(
       `/transactions/${sourceId}/relations`,
@@ -141,7 +141,7 @@ export class TransactionAPIClient extends BaseAPIClient {
         SourceTransactionID: sourceId,
         relatedTransactionId,
         relationType,
-      }
+      },
     );
   }
 
@@ -150,8 +150,20 @@ export class TransactionAPIClient extends BaseAPIClient {
    */
   async deleteTransactionRelation(
     id: number,
-    relatedId: number
+    relatedId: number,
   ): Promise<APIResponse<void>> {
     return this.delete<void>(`/transactions/${id}/relations/${relatedId}`);
+  }
+
+  /**
+   * Link transaction to template
+   */
+  async linkTransactionToTemplate(
+    transactionId: number,
+    templateId: number,
+  ): Promise<APIResponse<void>> {
+    return this.post<void>(`/transactions/${transactionId}/link-template`, {
+      templateId,
+    });
   }
 }

@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
@@ -26,6 +27,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 		"type":      "type",
 		"createdAt": "created_at",
 		"updatedAt": "updated_at",
+		"nextDueAt": "next_due_at",
 	}
 	sortOrderMap := map[string]string{
 		"asc":  "ASC",
@@ -66,26 +68,38 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 				tt.recurrence,
 				tt.start_date,
 				tt.end_date,
+				tt.next_due_at,
 				tt.last_executed_at,
 				tt.created_at,
 				tt.updated_at,
 				tt.deleted_at,
+				COUNT(r.transaction_id) as occurrences,
+				COALESCE(SUM(t.amount), 0) as total_spent,
+				CASE
+					WHEN tt.end_date IS NULL THEN NULL
+					WHEN tt.recurrence = 'none' THEN NULL
+					WHEN tt.recurrence = 'weekly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 604800)::bigint)
+					WHEN tt.recurrence = 'monthly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 2629746)::bigint)
+					WHEN tt.recurrence = 'yearly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 31556952)::bigint)
+					ELSE NULL
+				END as remaining,
 				COUNT(*) OVER() as total_count
 			FROM transaction_templates tt
 			JOIN accounts a ON tt.account_id = a.id
 			JOIN categories c ON tt.category_id = c.id
 			LEFT JOIN accounts da ON tt.destination_account_id = da.id
+			LEFT JOIN transaction_template_relations r ON r.template_id = tt.id
+			LEFT JOIN transactions t ON r.transaction_id = t.id AND t.deleted_at IS NULL
 			WHERE tt.deleted_at IS NULL
 				AND a.deleted_at IS NULL
 				AND c.deleted_at IS NULL
 				AND (da.deleted_at IS NULL OR da.id IS NULL)
-				AND ($3::text = '' OR tt.name ILIKE '%' || $3::text || '%')
-				AND ($4::text = '' OR tt.type = $4::text)
-				AND ($5::int8 = 0 OR tt.account_id = $5::int8)
-				AND ($6::int8 = 0 OR tt.category_id = $6::int8)
-				AND ($7::int8 = 0 OR tt.destination_account_id = $7::int8)
-			ORDER BY tt.` + sortColumn + ` ` + sortOrder + `
-			LIMIT $1 OFFSET $2
+				AND ($1::text = '' OR tt.name ILIKE '%' || $1::text || '%')
+				AND ($2::text = '' OR tt.type = $2::text)
+				AND ($3::int8 = 0 OR tt.account_id = $3::int8)
+				AND ($4::int8 = 0 OR tt.category_id = $4::int8)
+				AND ($5::int8 = 0 OR tt.destination_account_id = $5::int8)
+			GROUP BY tt.id, a.id, a.name, a.type, a.amount, a.icon, a.icon_color, c.id, c.name, c.type, c.icon, c.icon_color, da.id, da.name, da.type, da.amount, da.icon, da.icon_color, tt.name, tt.type, tt.amount, tt.note, tt.recurrence, tt.start_date, tt.end_date, tt.next_due_at, tt.last_executed_at, tt.created_at, tt.updated_at, tt.deleted_at
 		)
 		SELECT
 			id,
@@ -113,16 +127,21 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 			recurrence,
 			start_date,
 			end_date,
+			next_due_at,
 			last_executed_at,
 			created_at,
 			updated_at,
 			deleted_at,
+			occurrences,
+			total_spent,
+			remaining,
 			total_count
 		FROM filtered_templates
 		ORDER BY ` + sortColumn + ` ` + sortOrder + `
+		LIMIT $6::bigint OFFSET $7::bigint
 	`
 
-	rows, err := ttr.pgx.Query(ctx, sql, p.PageSize, offset, searchPattern, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID)
+	rows, err := ttr.pgx.Query(ctx, sql, searchPattern, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID, p.PageSize, offset)
 	if err != nil {
 		return models.TransactionTemplatesPagedModel{}, huma.Error400BadRequest("Unable to query transaction templates", err)
 	}
@@ -145,9 +164,9 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 			&item.Account.Icon, &item.Account.IconColor,
 			&item.Category.ID, &item.Category.Name, &item.Category.Type, &item.Category.Icon, &item.Category.IconColor,
 			&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountIconColor,
-			&item.Note, &item.Recurrence, &item.StartDate, &item.EndDate, &item.LastExecutedAt,
+			&item.Note, &item.Recurrence, &item.StartDate, &item.EndDate, &item.NextDueAt, &item.LastExecutedAt,
 			&item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
-			&totalCount,
+			&item.RecurringStats.Occurrences, &item.RecurringStats.TotalSpent, &item.RecurringStats.Remaining, &totalCount,
 		); err != nil {
 			return models.TransactionTemplatesPagedModel{}, huma.Error400BadRequest("Unable to scan transaction template data", err)
 		}
@@ -198,6 +217,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 	var destAccountIcon *string
 	var destAccountIconColor *string
 
+	// First get the basic template data
 	sql := `
 		SELECT
 			tt.id,
@@ -225,6 +245,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 			tt.recurrence,
 			tt.start_date,
 			tt.end_date,
+			tt.next_due_at,
 			tt.last_executed_at,
 			tt.created_at,
 			tt.updated_at,
@@ -245,7 +266,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 		&data.Account.Icon, &data.Account.IconColor,
 		&data.Category.ID, &data.Category.Name, &data.Category.Type, &data.Category.Icon, &data.Category.IconColor,
 		&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountIconColor,
-		&data.Note, &data.Recurrence, &data.StartDate, &data.EndDate, &data.LastExecutedAt,
+		&data.Note, &data.Recurrence, &data.StartDate, &data.EndDate, &data.NextDueAt, &data.LastExecutedAt,
 		&data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
 
@@ -268,15 +289,75 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 		}
 	}
 
+	// Calculate recurring stats
+	statsSQL := `
+		SELECT
+			COUNT(r.transaction_id) as occurrences,
+			COALESCE(SUM(t.amount), 0) as total_spent
+		FROM transaction_template_relations r
+		LEFT JOIN transactions t ON r.transaction_id = t.id AND t.deleted_at IS NULL
+		WHERE r.template_id = $1
+	`
+
+	err = ttr.pgx.QueryRow(ctx, statsSQL, id).Scan(
+		&data.RecurringStats.Occurrences,
+		&data.RecurringStats.TotalSpent,
+	)
+
+	if err != nil {
+		return models.TransactionTemplateModel{}, huma.Error400BadRequest("Unable to query transaction template stats", err)
+	}
+
+	// Calculate remaining
+	if data.EndDate != nil && data.Recurrence != "none" {
+		var intervalSeconds int64
+		switch data.Recurrence {
+		case "weekly":
+			intervalSeconds = 604800
+		case "monthly":
+			intervalSeconds = 2629746
+		case "yearly":
+			intervalSeconds = 31556952
+		default:
+			data.RecurringStats.Remaining = nil
+			return data, nil
+		}
+
+		baseTime := data.StartDate
+		if data.LastExecutedAt != nil {
+			baseTime = *data.LastExecutedAt
+		}
+
+		timeDiff := data.EndDate.Sub(baseTime)
+		if timeDiff > 0 {
+			remaining := int64(timeDiff.Seconds()) / intervalSeconds
+			if remaining < 0 {
+				remaining = 0
+			}
+			data.RecurringStats.Remaining = &remaining
+		} else {
+			remaining := int64(0)
+			data.RecurringStats.Remaining = &remaining
+		}
+	} else {
+		data.RecurringStats.Remaining = nil
+	}
+
 	return data, nil
 }
 
 func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload models.CreateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
 	var ID int64
 
+	// Calculate next_due_at
+	var nextDueAt *time.Time
+	if payload.Recurrence != "none" {
+		nextDueAt = &payload.StartDate
+	}
+
 	sql := `
-		INSERT INTO transaction_templates (name, type, amount, account_id, category_id, destination_account_id, note, recurrence, start_date, end_date)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO transaction_templates (name, type, amount, account_id, category_id, destination_account_id, note, recurrence, start_date, end_date, next_due_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id
 	`
 
@@ -293,6 +374,7 @@ func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload mod
 		payload.Recurrence,
 		payload.StartDate,
 		payload.EndDate,
+		nextDueAt,
 	).Scan(&ID)
 
 	if err != nil {
@@ -314,10 +396,26 @@ func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, p
 			destination_account_id = COALESCE($6, destination_account_id),
 			note = COALESCE($7, note),
 			recurrence = COALESCE($8, recurrence),
-			start_date = COALESCE($9, start_date),
-			end_date = COALESCE($10, end_date),
+			end_date = COALESCE($9, end_date),
+			next_due_at = CASE 
+				WHEN COALESCE($8, recurrence) != recurrence OR COALESCE($9, end_date) != end_date THEN 
+					CASE 
+						WHEN COALESCE($8, recurrence) = 'none' THEN NULL
+						ELSE CASE
+							WHEN last_executed_at IS NOT NULL THEN 
+								CASE COALESCE($8, recurrence)
+									WHEN 'weekly' THEN last_executed_at + INTERVAL '7 days'
+									WHEN 'monthly' THEN last_executed_at + INTERVAL '1 month'
+									WHEN 'yearly' THEN last_executed_at + INTERVAL '1 year'
+									ELSE last_executed_at
+								END
+							ELSE start_date
+						END
+					END
+				ELSE next_due_at
+			END,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $11 AND deleted_at IS NULL
+		WHERE id = $10 AND deleted_at IS NULL
 		RETURNING id
 	`
 
@@ -333,7 +431,6 @@ func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, p
 		payload.DestinationAccountID,
 		payload.Note,
 		payload.Recurrence,
-		payload.StartDate,
 		payload.EndDate,
 		id,
 	).Scan(&returnedID)
@@ -365,39 +462,8 @@ func (ttr TransactionTemplateRepository) Delete(ctx context.Context, id int64) e
 
 func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([]models.TransactionTemplateModel, error) {
 	sql := `
-		WITH active_templates AS (
-			SELECT
-				id,
-				account_id,
-				category_id,
-				destination_account_id,
-				name,
-				type,
-				amount,
-				note,
-				recurrence,
-				start_date,
-				end_date,
-				last_executed_at,
-				created_at,
-				updated_at,
-				deleted_at
-			FROM transaction_templates
-			WHERE deleted_at IS NULL
-				AND recurrence != 'none'
-				AND start_date <= CURRENT_DATE
-				AND (end_date IS NULL OR end_date >= CURRENT_DATE)
-		),
-		due_templates AS (
-			SELECT *
-			FROM active_templates
-			WHERE last_executed_at IS NULL
-				OR (recurrence = 'weekly' AND last_executed_at < NOW() - INTERVAL '7 days')
-				OR (recurrence = 'monthly' AND last_executed_at < NOW() - INTERVAL '1 month')
-				OR (recurrence = 'yearly' AND last_executed_at < NOW() - INTERVAL '1 year')
-		)
 		SELECT
-			dt.id,
+			tt.id,
 			a.id,
 			a.name,
 			a.type,
@@ -415,23 +481,41 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 			da.amount,
 			da.icon,
 			da.icon_color,
-			dt.name,
-			dt.type,
-			dt.amount,
-			dt.note,
-			dt.recurrence,
-			dt.start_date,
-			dt.end_date,
-			dt.last_executed_at,
-			dt.created_at,
-			dt.updated_at,
-			dt.deleted_at
-		FROM due_templates dt
-		JOIN accounts a ON dt.account_id = a.id
-		JOIN categories c ON dt.category_id = c.id
-		LEFT JOIN accounts da ON dt.destination_account_id = da.id
-		WHERE a.deleted_at IS NULL AND c.deleted_at IS NULL AND (da.deleted_at IS NULL OR da.id IS NULL)
-		ORDER BY dt.created_at ASC
+			tt.name,
+			tt.type,
+			tt.amount,
+			tt.note,
+			tt.recurrence,
+			tt.start_date,
+			tt.end_date,
+			tt.next_due_at,
+			tt.last_executed_at,
+			tt.created_at,
+			tt.updated_at,
+			tt.deleted_at,
+			COUNT(r.transaction_id) as occurrences,
+			COALESCE(SUM(t.amount), 0) as total_spent,
+			CASE
+				WHEN tt.end_date IS NULL THEN NULL
+				WHEN tt.recurrence = 'none' THEN NULL
+				WHEN tt.recurrence = 'weekly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 604800)::bigint)
+				WHEN tt.recurrence = 'monthly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 2629746)::bigint)
+				WHEN tt.recurrence = 'yearly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 31556952)::bigint)
+				ELSE NULL
+			END as remaining
+		FROM transaction_templates tt
+		JOIN accounts a ON tt.account_id = a.id
+		JOIN categories c ON tt.category_id = c.id
+		LEFT JOIN accounts da ON tt.destination_account_id = da.id
+		LEFT JOIN transaction_template_relations r ON r.template_id = tt.id
+		LEFT JOIN transactions t ON r.transaction_id = t.id AND t.deleted_at IS NULL
+		WHERE tt.deleted_at IS NULL
+			AND tt.next_due_at <= CURRENT_DATE
+			AND a.deleted_at IS NULL
+			AND c.deleted_at IS NULL
+			AND (da.deleted_at IS NULL OR da.id IS NULL)
+		GROUP BY tt.id, a.id, a.name, a.type, a.amount, a.icon, a.icon_color, c.id, c.name, c.type, c.icon, c.icon_color, da.id, da.name, da.type, da.amount, da.icon, da.icon_color, tt.name, tt.type, tt.amount, tt.note, tt.recurrence, tt.start_date, tt.end_date, tt.next_due_at, tt.last_executed_at, tt.created_at, tt.updated_at, tt.deleted_at
+		ORDER BY tt.next_due_at ASC
 	`
 
 	rows, err := ttr.pgx.Query(ctx, sql)
@@ -457,8 +541,9 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 			&item.Category.ID, &item.Category.Name, &item.Category.Type, &item.Category.Icon, &item.Category.IconColor,
 			&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountIconColor,
 			&item.Name, &item.Type, &item.Amount, &item.Note,
-			&item.Recurrence, &item.StartDate, &item.EndDate, &item.LastExecutedAt,
+			&item.Recurrence, &item.StartDate, &item.EndDate, &item.NextDueAt, &item.LastExecutedAt,
 			&item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&item.RecurringStats.Occurrences, &item.RecurringStats.TotalSpent, &item.RecurringStats.Remaining,
 		); err != nil {
 			return nil, huma.Error400BadRequest("Unable to scan due transaction template data", err)
 		}
@@ -492,6 +577,12 @@ func (ttr TransactionTemplateRepository) UpdateLastExecuted(ctx context.Context,
 	sql := `
 		UPDATE transaction_templates
 		SET last_executed_at = NOW(),
+		    next_due_at = CASE
+		        WHEN recurrence = 'weekly' THEN NOW() + INTERVAL '7 days'
+		        WHEN recurrence = 'monthly' THEN NOW() + INTERVAL '1 month'
+		        WHEN recurrence = 'yearly' THEN NOW() + INTERVAL '1 year'
+		        ELSE next_due_at
+		    END,
 		    updated_at = NOW()
 		WHERE id = $1 AND deleted_at IS NULL`
 
