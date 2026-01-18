@@ -1481,6 +1481,8 @@ export interface components {
             note?: string;
             /** @description Transaction tags */
             tags: components["schemas"]["TransactionTagEmbedded"][] | null;
+            /** @description Associated transaction template details */
+            template: components["schemas"]["TransactionTemplateEmbedded"];
             /**
              * @description Transaction type
              * @enum {string}
@@ -1607,6 +1609,35 @@ export interface components {
              */
             totalPages: number;
         };
+        TransactionTemplateEmbedded: {
+            /**
+             * Format: int64
+             * @description Template amount
+             */
+            amount: number;
+            /**
+             * Format: date-time
+             * @description Template end date
+             */
+            endDate: string | null;
+            /**
+             * Format: int64
+             * @description Template ID
+             */
+            id: number;
+            /** @description Template name */
+            name: string;
+            /**
+             * @description Recurrence pattern
+             * @enum {string}
+             */
+            recurrence: "none" | "weekly" | "monthly" | "yearly";
+            /**
+             * Format: date-time
+             * @description Template start date
+             */
+            startDate: string;
+        };
         TransactionTemplateModel: {
             /** @description Source account details */
             account: components["schemas"]["TransactionAccountEmbedded"];
@@ -1633,7 +1664,7 @@ export interface components {
              * Format: date-time
              * @description Template end date
              */
-            endDate?: string;
+            endDate: string | null;
             /**
              * Format: int64
              * @description Unique identifier

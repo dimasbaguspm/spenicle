@@ -41,19 +41,29 @@ type TransactionTagEmbedded struct {
 	Name string `json:"name" doc:"Tag name"`
 }
 
+type TransactionTemplateEmbedded struct {
+	ID         int64      `json:"id" doc:"Template ID"`
+	Name       string     `json:"name" doc:"Template name"`
+	Amount     int64      `json:"amount" doc:"Template amount"`
+	Recurrence string     `json:"recurrence" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
+	StartDate  time.Time  `json:"startDate" doc:"Template start date" format:"date-time"`
+	EndDate    *time.Time `json:"endDate" doc:"Template end date" format:"date-time"`
+}
+
 type TransactionModel struct {
-	ID                 int64                       `json:"id" doc:"Unique identifier"`
-	Type               string                      `json:"type" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
-	Date               time.Time                   `json:"date" doc:"Transaction date" format:"date-time"`
-	Amount             int64                       `json:"amount" doc:"Transaction amount"`
-	Account            TransactionAccountEmbedded  `json:"account" doc:"Source account details"`
-	Category           TransactionCategoryEmbedded `json:"category" doc:"Category details"`
-	DestinationAccount *TransactionAccountEmbedded `json:"destinationAccount,omitempty" doc:"Destination account (transfers only)"`
-	Tags               []TransactionTagEmbedded    `json:"tags" doc:"Transaction tags"`
-	Note               *string                     `json:"note,omitempty" doc:"Transaction notes"`
-	CreatedAt          time.Time                   `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
-	UpdatedAt          *time.Time                  `json:"updatedAt,omitempty" doc:"Last update timestamp" format:"date-time"`
-	DeletedAt          *time.Time                  `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
+	ID                 int64                        `json:"id" doc:"Unique identifier"`
+	Type               string                       `json:"type" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
+	Date               time.Time                    `json:"date" doc:"Transaction date" format:"date-time"`
+	Amount             int64                        `json:"amount" doc:"Transaction amount"`
+	Account            TransactionAccountEmbedded   `json:"account" doc:"Source account details"`
+	Category           TransactionCategoryEmbedded  `json:"category" doc:"Category details"`
+	DestinationAccount *TransactionAccountEmbedded  `json:"destinationAccount,omitempty" doc:"Destination account (transfers only)"`
+	Tags               []TransactionTagEmbedded     `json:"tags" doc:"Transaction tags"`
+	Template           *TransactionTemplateEmbedded `json:"template" doc:"Associated transaction template details"`
+	Note               *string                      `json:"note,omitempty" doc:"Transaction notes"`
+	CreatedAt          time.Time                    `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
+	UpdatedAt          *time.Time                   `json:"updatedAt,omitempty" doc:"Last update timestamp" format:"date-time"`
+	DeletedAt          *time.Time                   `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
 }
 
 type TransactionsPagedModel struct {

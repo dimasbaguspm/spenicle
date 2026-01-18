@@ -501,3 +501,13 @@ func (ttr TransactionTemplateRepository) UpdateLastExecuted(ctx context.Context,
 	}
 	return nil
 }
+
+func (ttr TransactionTemplateRepository) CreateRelation(ctx context.Context, transactionID, templateID int64) error {
+	sql := `INSERT INTO transaction_template_relations (transaction_id, template_id) VALUES ($1, $2) ON CONFLICT (transaction_id) DO NOTHING`
+
+	_, err := ttr.pgx.Exec(ctx, sql, transactionID, templateID)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to create transaction template relation", err)
+	}
+	return nil
+}

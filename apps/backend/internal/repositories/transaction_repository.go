@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
@@ -41,11 +42,14 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		WITH filtered_transactions AS (
 			SELECT 
 				t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
+				tt.id as template_id, tt.name as template_name, tt.amount as template_amount, tt.recurrence as template_recurrence, tt.start_date as template_start_date, tt.end_date as template_end_date,
 				a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
 				c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
 				da.id as dest_account_id, da.name as dest_account_name, da.type as dest_account_type, da.amount as dest_account_amount, da.icon as dest_account_icon, da.icon_color as dest_account_color,
 				COUNT(*) OVER() as total_count
 			FROM transactions t
+			LEFT JOIN transaction_template_relations r ON r.transaction_id = t.id
+			LEFT JOIN transaction_templates tt ON r.template_id = tt.id
 			LEFT JOIN accounts a ON t.account_id = a.id
 			LEFT JOIN categories c ON t.category_id = c.id
 			LEFT JOIN accounts da ON t.destination_account_id = da.id
@@ -77,6 +81,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		)
 		SELECT
 			ft.id, ft.type, ft.date, ft.amount, ft.note, ft.created_at, ft.updated_at, ft.deleted_at,
+			ft.template_id, ft.template_name, ft.template_amount, ft.template_recurrence, ft.template_start_date, ft.template_end_date,
 			ft.account_id, ft.account_name, ft.account_type, ft.account_amount, ft.account_icon, ft.account_color,
 			ft.category_id, ft.category_name, ft.category_type, ft.category_icon, ft.category_color,
 			ft.dest_account_id, ft.dest_account_name, ft.dest_account_type, ft.dest_account_amount, ft.dest_account_icon, ft.dest_account_color,
@@ -168,9 +173,16 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		var destAccountIcon *string
 		var destAccountColor *string
 		var tagsJSON []byte
+		var templateID *int64
+		var templateName *string
+		var templateAmount *int64
+		var templateRecurrence *string
+		var templateStartDate *time.Time
+		var templateEndDate *time.Time
 
 		err := rows.Scan(
 			&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
 			&account.ID, &account.Name, &account.Type, &account.Amount, &account.Icon, &account.IconColor,
 			&category.ID, &category.Name, &category.Type, &category.Icon, &category.IconColor,
 			&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountColor,
@@ -200,6 +212,17 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		if len(tagsJSON) > 0 {
 			if err := json.Unmarshal(tagsJSON, &item.Tags); err != nil {
 				return models.TransactionsPagedModel{}, huma.Error400BadRequest("Unable to parse tags data", err)
+			}
+		}
+
+		if templateID != nil {
+			item.Template = &models.TransactionTemplateEmbedded{
+				ID:         *templateID,
+				Name:       *templateName,
+				Amount:     *templateAmount,
+				Recurrence: *templateRecurrence,
+				StartDate:  *templateStartDate,
+				EndDate:    templateEndDate,
 			}
 		}
 
@@ -240,14 +263,23 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 	var destAccountIcon *string
 	var destAccountColor *string
 	var tagsJSON []byte
+	var templateID *int64
+	var templateName *string
+	var templateAmount *int64
+	var templateRecurrence *string
+	var templateStartDate *time.Time
+	var templateEndDate *time.Time
 
 	sql := `
 		WITH transaction_detail AS (
 			SELECT t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
+				tt.id as template_id, tt.name as template_name, tt.amount as template_amount, tt.recurrence as template_recurrence, tt.start_date as template_start_date, tt.end_date as template_end_date,
 				a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
 				c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
 				da.id as dest_account_id, da.name as dest_account_name, da.type as dest_account_type, da.amount as dest_account_amount, da.icon as dest_account_icon, da.icon_color as dest_account_color
 			FROM transactions t
+			LEFT JOIN transaction_template_relations r ON r.transaction_id = t.id
+			LEFT JOIN transaction_templates tt ON r.template_id = tt.id
 			LEFT JOIN accounts a ON t.account_id = a.id
 			LEFT JOIN categories c ON t.category_id = c.id
 			LEFT JOIN accounts da ON t.destination_account_id = da.id
@@ -263,6 +295,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 		)
 		SELECT
 			td.id, td.type, td.date, td.amount, td.note, td.created_at, td.updated_at, td.deleted_at,
+			td.template_id, td.template_name, td.template_amount, td.template_recurrence, td.template_start_date, td.template_end_date,
 			td.account_id, td.account_name, td.account_type, td.account_amount, td.account_icon, td.account_color,
 			td.category_id, td.category_name, td.category_type, td.category_icon, td.category_color,
 			td.dest_account_id, td.dest_account_name, td.dest_account_type, td.dest_account_amount, td.dest_account_icon, td.dest_account_color,
@@ -272,6 +305,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 
 	err := tr.Pgx.QueryRow(ctx, sql, id).Scan(
 		&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+		&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
 		&account.ID, &account.Name, &account.Type, &account.Amount, &account.Icon, &account.IconColor,
 		&category.ID, &category.Name, &category.Type, &category.Icon, &category.IconColor,
 		&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountColor,
@@ -304,6 +338,17 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 	if len(tagsJSON) > 0 {
 		if err := json.Unmarshal(tagsJSON, &item.Tags); err != nil {
 			return models.TransactionModel{}, huma.Error400BadRequest("Unable to parse tags data", err)
+		}
+	}
+
+	if templateID != nil {
+		item.Template = &models.TransactionTemplateEmbedded{
+			ID:         *templateID,
+			Name:       *templateName,
+			Amount:     *templateAmount,
+			Recurrence: *templateRecurrence,
+			StartDate:  *templateStartDate,
+			EndDate:    templateEndDate,
 		}
 	}
 

@@ -1185,6 +1185,9 @@ components:
           type:
             - array
             - "null"
+        template:
+          $ref: "#/components/schemas/TransactionTemplateEmbedded"
+          description: Associated transaction template details
         type:
           description: Transaction type
           enum:
@@ -1205,6 +1208,7 @@ components:
         - account
         - category
         - tags
+        - template
         - createdAt
       type: object
     TransactionRelationModel:
@@ -1357,6 +1361,46 @@ components:
         - totalCount
         - totalPages
       type: object
+    TransactionTemplateEmbedded:
+      additionalProperties: false
+      properties:
+        amount:
+          description: Template amount
+          format: int64
+          type: integer
+        endDate:
+          description: Template end date
+          format: date-time
+          type:
+            - string
+            - "null"
+        id:
+          description: Template ID
+          format: int64
+          type: integer
+        name:
+          description: Template name
+          type: string
+        recurrence:
+          description: Recurrence pattern
+          enum:
+            - none
+            - weekly
+            - monthly
+            - yearly
+          type: string
+        startDate:
+          description: Template start date
+          format: date-time
+          type: string
+      required:
+        - id
+        - name
+        - amount
+        - recurrence
+        - startDate
+        - endDate
+      type: object
     TransactionTemplateModel:
       additionalProperties: false
       properties:
@@ -1384,7 +1428,9 @@ components:
         endDate:
           description: Template end date
           format: date-time
-          type: string
+          type:
+            - string
+            - "null"
         id:
           description: Unique identifier
           format: int64
@@ -1432,6 +1478,7 @@ components:
         - category
         - recurrence
         - startDate
+        - endDate
         - createdAt
         - updatedAt
       type: object

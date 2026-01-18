@@ -108,9 +108,24 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 		Note:                 template.Note,
 	}
 
-	_, err := ttw.transactionService.Create(ctx, transactionRequest)
+	transaction, err := ttw.transactionService.Create(ctx, transactionRequest)
 	if err != nil {
+		slog.Error(
+			"Failed to create transaction from template",
+			"templateID", template.ID,
+			"templateName", template.Name,
+			"err", err,
+		)
 		return err
+	}
+
+	if err := ttw.templateRepo.CreateRelation(ctx, transaction.ID, template.ID); err != nil {
+		slog.Error(
+			"Failed to create transaction template relation",
+			"transactionID", transaction.ID,
+			"templateID", template.ID,
+			"err", err,
+		)
 	}
 
 	slog.Info(
