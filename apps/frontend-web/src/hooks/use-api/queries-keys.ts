@@ -51,6 +51,24 @@ export const QUERY_KEYS = {
       JSON.stringify(params ?? {}),
     ],
   },
+  TRANSACTION_TEMPLATES: {
+    INFINITE: (params: object = {}) => [
+      ...BASE_QUERY_KEYS.TRANSACTION_TEMPLATES,
+      "infinite",
+      JSON.stringify(params ?? {}),
+    ],
+    PAGINATED: (params: object = {}) => [
+      ...BASE_QUERY_KEYS.TRANSACTION_TEMPLATES,
+      "paginated",
+      JSON.stringify(params ?? {}),
+    ],
+    BY_ID: (id: number, params: object = {}) => [
+      ...BASE_QUERY_KEYS.TRANSACTION_TEMPLATES,
+      "by-id",
+      id,
+      JSON.stringify(params ?? {}),
+    ],
+  },
   INSIGHTS: {
     ACCOUNTS_SUMMARY: (params: object = {}) => [
       ...BASE_QUERY_KEYS.INSIGHTS,

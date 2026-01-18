@@ -6,7 +6,7 @@ export const BASE_QUERY_KEYS = {
   ACCOUNTS: ["accounts"],
   CATEGORIES: ["categories"],
   TRANSACTIONS: ["transactions"],
-  TRANSACTIONS_TEMPLATES: ["transactions-templates"],
+  TRANSACTION_TEMPLATES: ["transaction-templates"],
   INSIGHTS: ["insights"],
 };
 
@@ -31,13 +31,13 @@ export const ENDPOINTS = {
     BY_ID_RELATIONS: (id: number | string) => `/transactions/${id}/relations`,
     BY_ID_RELATIONS_DETAIL: (
       id: number | string,
-      relationId: number | string
+      relationId: number | string,
     ) => `/transactions/${id}/relations/${relationId}`,
     BY_ID_TAGS: (id: number | string) => `/transactions/${id}/tags`,
   },
-  TRANSACTIONS_TEMPLATES: {
-    PAGINATED: "/transactions/templates",
-    BY_ID: (id: number | string) => `/transactions/templates/${id}`,
+  TRANSACTION_TEMPLATES: {
+    PAGINATED: "/transaction-templates",
+    BY_ID: (id: number | string) => `/transaction-templates/${id}`,
   },
   INSIGHTS: {
     ACCOUNTS_SUMMARY: "/summary/accounts",

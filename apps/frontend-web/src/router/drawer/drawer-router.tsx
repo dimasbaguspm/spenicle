@@ -15,11 +15,21 @@ import { CategoryUpdateDrawer } from "./category-update-drawer";
 import { TransactionUpdateDrawer } from "./transaction-update-drawer";
 import { TransactionViewDrawer } from "./transaction-view-drawer";
 import { InsightFilterDrawer } from "./insight-filter-drawer/insight-filter-drawer";
+import {
+  TransactionInstallmentCreateDrawer,
+  TransactionRecurringCreateDrawer,
+} from "./transaction-template-create-drawer";
+import {
+  TransactionInstallmentUpdateDrawer,
+  TransactionRecurringUpdateDrawer,
+} from "./transaction-template-update-drawer";
+import { TransactionTemplateViewDrawer } from "./transaction-template-view-drawer";
 
 interface DrawerParams {
   accountId?: number;
   categoryId?: number;
   transactionId?: number;
+  transactionTemplateId?: number;
   payloadId?: string;
   tabId?: string;
 }
@@ -90,6 +100,35 @@ export const DrawerRouter = () => {
           payload={state?.payload}
         />
       )}
+      {/** Transaction Template */}
+      {is(DRAWER_ROUTES.TRANSACTION_INSTALLMENT_CREATE) && (
+        <TransactionInstallmentCreateDrawer payload={state?.payload} />
+      )}
+      {is(DRAWER_ROUTES.TRANSACTION_RECURRING_UPDATE) &&
+        hasParam("transactionTemplateId") && (
+          <TransactionRecurringUpdateDrawer
+            transactionTemplateId={params.transactionTemplateId!}
+            payload={state?.payload}
+          />
+        )}
+      {is(DRAWER_ROUTES.TRANSACTION_RECURRING_CREATE) && (
+        <TransactionRecurringCreateDrawer payload={state?.payload} />
+      )}
+      {is(DRAWER_ROUTES.TRANSACTION_INSTALLMENT_UPDATE) &&
+        hasParam("transactionTemplateId") && (
+          <TransactionInstallmentUpdateDrawer
+            transactionTemplateId={params.transactionTemplateId!}
+            payload={state?.payload}
+          />
+        )}
+      {is(DRAWER_ROUTES.TRANSACTION_TEMPLATE_VIEW) &&
+        hasParam("transactionTemplateId") && (
+          <TransactionTemplateViewDrawer
+            transactionTemplateId={params.transactionTemplateId!}
+          />
+        )}
+
+      {/** Insight Filter */}
       {is(DRAWER_ROUTES.INSIGHTS_FILTER) && (
         <InsightFilterDrawer payload={state?.payload} />
       )}
