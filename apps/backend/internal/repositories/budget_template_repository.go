@@ -332,3 +332,45 @@ func (btr BudgetTemplateRepository) UpdateLastExecuted(ctx context.Context, id i
 	}
 	return nil
 }
+
+func (btr BudgetTemplateRepository) GetRelatedBudgets(ctx context.Context, templateID int64, p models.BudgetTemplateRelatedBudgetsSearchModel) ([]int64, error) {
+	sql := `
+		SELECT b.id
+		FROM budgets b
+		JOIN budget_template_relations r ON b.id = r.budget_id
+		WHERE b.deleted_at IS NULL
+			AND r.template_id = $1
+		ORDER BY b.id
+	`
+
+	rows, err := btr.pgx.Query(ctx, sql, templateID)
+	if err != nil {
+		return nil, huma.Error400BadRequest("Unable to query related budget IDs", err)
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, huma.Error400BadRequest("Unable to scan budget ID", err)
+		}
+		ids = append(ids, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, huma.Error400BadRequest("Error reading budget ID rows", err)
+	}
+
+	return ids, nil
+}
+
+func (btr BudgetTemplateRepository) CreateRelation(ctx context.Context, budgetID, templateID int64) error {
+	sql := `INSERT INTO budget_template_relations (budget_id, template_id) VALUES ($1, $2) ON CONFLICT (budget_id) DO NOTHING`
+
+	_, err := btr.pgx.Exec(ctx, sql, budgetID, templateID)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to create budget template relation", err)
+	}
+	return nil
+}

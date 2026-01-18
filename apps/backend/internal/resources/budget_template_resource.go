@@ -77,6 +77,18 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, btr.Delete)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "list-budget-template-related-budgets",
+		Method:      http.MethodGet,
+		Path:        "/budgets/templates/{id}/relations",
+		Summary:     "Get budget template related budgets",
+		Description: "Get budgets related to a budget template",
+		Tags:        []string{"Budget Templates"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, btr.GetRelatedBudgets)
 }
 
 func (btr BudgetTemplateResource) GetPaged(ctx context.Context, input *struct {
@@ -143,4 +155,19 @@ func (btr BudgetTemplateResource) Delete(ctx context.Context, input *struct {
 		return nil, err
 	}
 	return &struct{}{}, nil
+}
+
+func (btr BudgetTemplateResource) GetRelatedBudgets(ctx context.Context, input *struct {
+	ID int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
+	models.BudgetTemplateRelatedBudgetsSearchModel
+}) (*struct {
+	Body models.BudgetsPagedModel
+}, error) {
+	resp, err := btr.bts.GetRelatedBudgets(ctx, input.ID, input.BudgetTemplateRelatedBudgetsSearchModel)
+	if err != nil {
+		return nil, err
+	}
+	return &struct {
+		Body models.BudgetsPagedModel
+	}{Body: resp}, nil
 }

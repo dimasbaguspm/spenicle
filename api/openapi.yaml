@@ -2499,6 +2499,124 @@ paths:
       summary: Update budget template
       tags:
         - Budget Templates
+  /budgets/templates/{id}/relations:
+    get:
+      description: Get budgets related to a budget template
+      operationId: list-budget-template-related-budgets
+      parameters:
+        - description: Budget Template ID
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Budget Template ID
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Page number for pagination
+          explode: false
+          in: query
+          name: pageNumber
+          schema:
+            default: 1
+            description: Page number for pagination
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Number of items per page
+          explode: false
+          in: query
+          name: pageSize
+          schema:
+            default: 25
+            description: Number of items per page
+            format: int64
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: Field to sort by
+          explode: false
+          in: query
+          name: sortBy
+          schema:
+            default: createdAt
+            description: Field to sort by
+            enum:
+              - id
+              - templateId
+              - accountId
+              - categoryId
+              - periodStart
+              - periodEnd
+              - amountLimit
+              - createdAt
+              - updatedAt
+            type: string
+        - description: Sort order
+          explode: false
+          in: query
+          name: sortOrder
+          schema:
+            default: desc
+            description: Sort order
+            enum:
+              - asc
+              - desc
+            type: string
+        - description: Filter by template IDs
+          explode: false
+          in: query
+          name: templateId
+          schema:
+            description: Filter by template IDs
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by account IDs
+          explode: false
+          in: query
+          name: accountId
+          schema:
+            description: Filter by account IDs
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by category IDs
+          explode: false
+          in: query
+          name: categoryId
+          schema:
+            description: Filter by category IDs
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetsPagedModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get budget template related budgets
+      tags:
+        - Budget Templates
   /budgets/{id}:
     delete:
       description: Soft delete a budget

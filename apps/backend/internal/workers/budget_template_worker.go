@@ -104,9 +104,18 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 		Note:        template.Note,
 	}
 
-	_, err := btw.budgetService.Create(ctx, budgetRequest)
+	budget, err := btw.budgetService.Create(ctx, budgetRequest)
 	if err != nil {
 		return err
+	}
+
+	if err := btw.templateRepo.CreateRelation(ctx, budget.ID, template.ID); err != nil {
+		slog.Error(
+			"Failed to create budget template relation",
+			"budgetID", budget.ID,
+			"templateID", template.ID,
+			"err", err,
+		)
 	}
 
 	slog.Info(

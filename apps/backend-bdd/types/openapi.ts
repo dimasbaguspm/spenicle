@@ -192,6 +192,26 @@ export interface paths {
         patch: operations["update-budget-template"];
         trace?: never;
     };
+    "/budgets/templates/{id}/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get budget template related budgets
+         * @description Get budgets related to a budget template
+         */
+        get: operations["list-budget-template-related-budgets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/budgets/{id}": {
         parameters: {
             query?: never;
@@ -2486,6 +2506,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BudgetTemplateModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-budget-template-related-budgets": {
+        parameters: {
+            query?: {
+                /** @description Page number for pagination */
+                pageNumber?: number;
+                /** @description Number of items per page */
+                pageSize?: number;
+                /** @description Field to sort by */
+                sortBy?: "id" | "templateId" | "accountId" | "categoryId" | "periodStart" | "periodEnd" | "amountLimit" | "createdAt" | "updatedAt";
+                /** @description Sort order */
+                sortOrder?: "asc" | "desc";
+                /** @description Filter by template IDs */
+                templateId?: number[] | null;
+                /** @description Filter by account IDs */
+                accountId?: number[] | null;
+                /** @description Filter by category IDs */
+                categoryId?: number[] | null;
+            };
+            header?: never;
+            path: {
+                /** @description Budget Template ID */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetsPagedModel"];
                 };
             };
             /** @description Error */

@@ -17,40 +17,56 @@ export type PaginatedBudgetTemplatesResponseModel =
 export type BudgetTemplateSearchParams =
   operations["list-budget-templates"]["parameters"]["query"];
 
+export type BudgetTemplateRelatedBudgetsSearchParams =
+  operations["list-budget-template-related-budgets"]["parameters"]["query"];
+
+export type PaginatedBudgetsResponseModel =
+  components["schemas"]["BudgetsPagedModel"];
+
 export class BudgetTemplateAPIClient extends BaseAPIClient {
   constructor(request: APIRequestContext, context: TestContext) {
     super(request, context);
   }
 
   async getBudgetTemplates(
-    params?: BudgetTemplateSearchParams
+    params?: BudgetTemplateSearchParams,
   ): Promise<APIResponse<PaginatedBudgetTemplatesResponseModel>> {
     return this.get<PaginatedBudgetTemplatesResponseModel>(
       "/budgets/templates",
-      params
+      params,
     );
   }
 
   async getBudgetTemplate(
-    id: number
+    id: number,
   ): Promise<APIResponse<BudgetTemplateModel>> {
     return this.get<BudgetTemplateModel>(`/budgets/templates/${id}`);
   }
 
   async createBudgetTemplate(
-    data: CreateBudgetTemplateRequestModel
+    data: CreateBudgetTemplateRequestModel,
   ): Promise<APIResponse<BudgetTemplateModel>> {
     return this.post<BudgetTemplateModel>("/budgets/templates", data);
   }
 
   async updateBudgetTemplate(
     id: number,
-    data: UpdateBudgetTemplateRequestModel
+    data: UpdateBudgetTemplateRequestModel,
   ): Promise<APIResponse<BudgetTemplateModel>> {
     return this.patch<BudgetTemplateModel>(`/budgets/templates/${id}`, data);
   }
 
   async deleteBudgetTemplate(id: number): Promise<APIResponse<void>> {
     return this.delete<void>(`/budgets/templates/${id}`);
+  }
+
+  async getBudgetTemplateRelatedBudgets(
+    templateId: number,
+    params?: BudgetTemplateRelatedBudgetsSearchParams,
+  ): Promise<APIResponse<PaginatedBudgetsResponseModel>> {
+    return this.get<PaginatedBudgetsResponseModel>(
+      `/budgets/templates/${templateId}/relations`,
+      params,
+    );
   }
 }

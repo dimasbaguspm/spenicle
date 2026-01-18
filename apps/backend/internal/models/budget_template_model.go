@@ -55,3 +55,21 @@ type UpdateBudgetTemplateModel struct {
 	EndDate     *time.Time `json:"endDate,omitempty" doc:"Optional end date for recurrence" format:"date-time"`
 	Note        *string    `json:"note,omitempty" doc:"Optional note for the template" maxLength:"500"`
 }
+
+type BudgetTemplateRelatedBudgetsSearchModel struct {
+	PageNumber  int     `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
+	PageSize    int     `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Number of items per page"`
+	SortBy      string  `query:"sortBy" default:"createdAt" enum:"id,templateId,accountId,categoryId,periodStart,periodEnd,amountLimit,createdAt,updatedAt" doc:"Field to sort by"`
+	SortOrder   string  `query:"sortOrder" default:"desc" enum:"asc,desc" doc:"Sort order"`
+	TemplateIDs []int64 `query:"templateId" doc:"Filter by template IDs"`
+	AccountIDs  []int64 `query:"accountId" doc:"Filter by account IDs"`
+	CategoryIDs []int64 `query:"categoryId" doc:"Filter by category IDs"`
+}
+
+type BudgetTemplateRelatedBudgetsPagedModel struct {
+	Items      []BudgetModel `json:"items" doc:"List of related budgets"`
+	PageNumber int           `json:"pageNumber" doc:"Current page number"`
+	PageSize   int           `json:"pageSize" doc:"Items per page"`
+	TotalCount int           `json:"totalCount" doc:"Total number of matching items"`
+	TotalPages int           `json:"totalPages" doc:"Total number of pages"`
+}

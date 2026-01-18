@@ -9,10 +9,11 @@ import (
 
 type BudgetTemplateService struct {
 	btr repositories.BudgetTemplateRepository
+	br  repositories.BudgetRepository
 }
 
-func NewBudgetTemplateService(btr repositories.BudgetTemplateRepository) BudgetTemplateService {
-	return BudgetTemplateService{btr}
+func NewBudgetTemplateService(btr repositories.BudgetTemplateRepository, br repositories.BudgetRepository) BudgetTemplateService {
+	return BudgetTemplateService{btr, br}
 }
 
 func (bts BudgetTemplateService) GetPaged(ctx context.Context, p models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
@@ -33,4 +34,36 @@ func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.
 
 func (bts BudgetTemplateService) Delete(ctx context.Context, id int64) error {
 	return bts.btr.Delete(ctx, id)
+}
+
+func (bts BudgetTemplateService) GetRelatedBudgets(ctx context.Context, templateID int64, query models.BudgetTemplateRelatedBudgetsSearchModel) (models.BudgetsPagedModel, error) {
+	ids, err := bts.btr.GetRelatedBudgets(ctx, templateID, query)
+	if err != nil {
+		return models.BudgetsPagedModel{}, err
+	}
+
+	if len(ids) == 0 {
+		return models.BudgetsPagedModel{
+			Items:      []models.BudgetModel{},
+			PageNumber: query.PageNumber,
+			PageSize:   query.PageSize,
+			TotalCount: 0,
+			TotalPages: 0,
+		}, nil
+	}
+
+	var intIDs []int64
+	for _, id := range ids {
+		intIDs = append(intIDs, id)
+	}
+
+	searchModel := models.BudgetsSearchModel{
+		PageNumber: query.PageNumber,
+		PageSize:   query.PageSize,
+		SortBy:     query.SortBy,
+		SortOrder:  query.SortOrder,
+		IDs:        intIDs,
+	}
+
+	return bts.br.GetPaged(ctx, searchModel)
 }

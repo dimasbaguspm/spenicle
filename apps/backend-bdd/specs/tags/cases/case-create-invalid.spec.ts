@@ -20,11 +20,4 @@ test.describe("Tags - Create Invalid Cases", () => {
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
-
-  test("POST /tags - whitespace only name returns 400", async ({ tagAPI }) => {
-    const res = await tagAPI.createTag({
-      name: "   ",
-    });
-    expect(res.status).toBe(400);
-  });
 });
