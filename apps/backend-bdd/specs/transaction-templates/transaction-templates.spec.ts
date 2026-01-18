@@ -29,9 +29,8 @@ test.describe("Transaction Templates - Common CRUD", () => {
       recurrence: "monthly" as const,
     };
 
-    const res = await transactionTemplateAPI.createTransactionTemplate(
-      templateData
-    );
+    const res =
+      await transactionTemplateAPI.createTransactionTemplate(templateData);
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     expect(res.data!.name).toBe(templateData.name);
@@ -166,7 +165,7 @@ test.describe("Transaction Templates - Common CRUD", () => {
         name: newName,
         amount: newAmount,
         note: "Updated description",
-      }
+      },
     );
     expect(updateRes.status).toBe(200);
     expect(updateRes.data!.name).toBe(newName);
@@ -215,6 +214,52 @@ test.describe("Transaction Templates - Common CRUD", () => {
     expect(afterGet.status).not.toBe(200);
 
     // Cleanup
+    await categoryAPI.deleteCategory(category.data!.id as number);
+    await accountAPI.deleteAccount(account.data!.id as number);
+  });
+
+  test("GET /transaction-templates/:templateId/related - get related transactions for template", async ({
+    transactionTemplateAPI,
+    accountAPI,
+    categoryAPI,
+  }) => {
+    // Create dependencies
+    const account = await accountAPI.createAccount({
+      name: `tt-related-account-${Date.now()}`,
+      note: "test account",
+      type: "expense",
+    });
+    const category = await categoryAPI.createCategory({
+      name: `tt-related-category-${Date.now()}`,
+      note: "test category",
+      type: "expense",
+    });
+
+    const template = await transactionTemplateAPI.createTransactionTemplate({
+      name: `Rent ${Date.now()}`,
+      note: "Monthly rent",
+      amount: 150000,
+      type: "expense" as const,
+      accountId: account.data!.id as number,
+      categoryId: category.data!.id as number,
+      startDate: new Date().toISOString(),
+      recurrence: "monthly" as const,
+    });
+    const templateId = template.data!.id as number;
+
+    // Get related transactions (should be empty initially)
+    const relatedRes =
+      await transactionTemplateAPI.getTransactionTemplateRelatedTransactions(
+        templateId,
+      );
+    expect(relatedRes.status).toBe(200);
+    expect(relatedRes.data).toBeDefined();
+    expect(Array.isArray(relatedRes.data!.items)).toBe(true);
+    expect(relatedRes.data!.items!.length).toBe(0); // No related transactions yet
+    expect(relatedRes.data!.totalCount).toBe(0);
+
+    // Cleanup
+    await transactionTemplateAPI.deleteTransactionTemplate(templateId);
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });

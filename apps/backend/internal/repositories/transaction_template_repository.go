@@ -511,3 +511,35 @@ func (ttr TransactionTemplateRepository) CreateRelation(ctx context.Context, tra
 	}
 	return nil
 }
+
+func (ttr TransactionTemplateRepository) GetRelatedTransactions(ctx context.Context, templateID int64, p models.TransactionTemplateRelatedTransactionsSearchModel) ([]int64, error) {
+	sql := `
+		SELECT t.id
+		FROM transactions t
+		JOIN transaction_template_relations r ON t.id = r.transaction_id
+		WHERE t.deleted_at IS NULL
+			AND r.template_id = $1
+		ORDER BY t.id
+	`
+
+	rows, err := ttr.pgx.Query(ctx, sql, templateID)
+	if err != nil {
+		return nil, huma.Error400BadRequest("Unable to query related transaction IDs", err)
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, huma.Error400BadRequest("Unable to scan transaction ID", err)
+		}
+		ids = append(ids, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, huma.Error400BadRequest("Error reading transaction ID rows", err)
+	}
+
+	return ids, nil
+}

@@ -65,3 +65,27 @@ type UpdateTransactionTemplateModel struct {
 	StartDate            *time.Time `json:"startDate,omitempty" doc:"Template start date" format:"date-time"`
 	EndDate              *time.Time `json:"endDate,omitempty" doc:"Template end date" format:"date-time"`
 }
+
+type TransactionTemplateRelatedTransactionsSearchModel struct {
+	PageNumber            int      `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
+	PageSize              int      `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Number of items per page"`
+	SortBy                string   `query:"sortBy" default:"date" enum:"id,type,date,amount,createdAt,updatedAt" doc:"Field to sort by"`
+	SortOrder             string   `query:"sortOrder" default:"desc" enum:"asc,desc" doc:"Sort order (asc or desc)"`
+	Type                  []string `query:"type" enum:"expense,income,transfer" doc:"Filter by transaction type"`
+	AccountIDs            []int    `query:"accountId" doc:"Filter by source account IDs"`
+	CategoryIDs           []int    `query:"categoryId" doc:"Filter by category IDs"`
+	DestinationAccountIDs []int    `query:"destinationAccountId" doc:"Filter by destination account IDs (transfers)"`
+	TagIDs                []int    `query:"tagId" doc:"Filter by tag IDs"`
+	StartDate             string   `query:"startDate" doc:"Filter by start date (YYYY-MM-DD)" format:"date-time"`
+	EndDate               string   `query:"endDate" doc:"Filter by end date (YYYY-MM-DD)" format:"date-time"`
+	MinAmount             int64    `query:"minAmount" doc:"Filter by minimum amount" minimum:"0"`
+	MaxAmount             int64    `query:"maxAmount" doc:"Filter by maximum amount" minimum:"0"`
+}
+
+type TransactionTemplateRelatedTransactionsPagedModel struct {
+	Items      []TransactionModel `json:"items" doc:"List of related transactions"`
+	PageNumber int                `json:"pageNumber" doc:"Current page number"`
+	PageSize   int                `json:"pageSize" doc:"Items per page"`
+	TotalCount int                `json:"totalCount" doc:"Total number of matching items"`
+	TotalPages int                `json:"totalPages" doc:"Total number of pages"`
+}

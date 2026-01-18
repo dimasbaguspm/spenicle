@@ -14,9 +14,12 @@ export type UpdateTransactionTemplateRequestModel =
   components["schemas"]["UpdateTransactionTemplateModel"];
 export type PaginatedTransactionTemplatesResponseModel =
   components["schemas"]["TransactionTemplatesPagedModel"];
-
 export type TransactionTemplateSearchParams =
   operations["list-transaction-templates"]["parameters"]["query"];
+export type TransactionTemplateRelatedTransactionsSearchParams =
+  operations["list-transaction-template-related-transactions"]["parameters"]["query"];
+export type PaginatedTransactionsResponseModel =
+  components["schemas"]["TransactionsPagedModel"];
 
 export class TransactionTemplateAPIClient extends BaseAPIClient {
   constructor(request: APIRequestContext, context: TestContext) {
@@ -24,37 +27,47 @@ export class TransactionTemplateAPIClient extends BaseAPIClient {
   }
 
   async getTransactionTemplates(
-    params?: TransactionTemplateSearchParams
+    params?: TransactionTemplateSearchParams,
   ): Promise<APIResponse<PaginatedTransactionTemplatesResponseModel>> {
     return this.get<PaginatedTransactionTemplatesResponseModel>(
       "/transaction-templates",
-      params
+      params,
     );
   }
 
   async getTransactionTemplate(
-    id: number
+    id: number,
   ): Promise<APIResponse<TransactionTemplateModel>> {
     return this.get<TransactionTemplateModel>(`/transaction-templates/${id}`);
   }
 
   async createTransactionTemplate(
-    data: CreateTransactionTemplateRequestModel
+    data: CreateTransactionTemplateRequestModel,
   ): Promise<APIResponse<TransactionTemplateModel>> {
     return this.post<TransactionTemplateModel>("/transaction-templates", data);
   }
 
   async updateTransactionTemplate(
     id: number,
-    data: UpdateTransactionTemplateRequestModel
+    data: UpdateTransactionTemplateRequestModel,
   ): Promise<APIResponse<TransactionTemplateModel>> {
     return this.patch<TransactionTemplateModel>(
       `/transaction-templates/${id}`,
-      data
+      data,
     );
   }
 
   async deleteTransactionTemplate(id: number): Promise<APIResponse<void>> {
     return this.delete<void>(`/transaction-templates/${id}`);
+  }
+
+  async getTransactionTemplateRelatedTransactions(
+    templateId: number,
+    params?: TransactionTemplateRelatedTransactionsSearchParams,
+  ): Promise<APIResponse<PaginatedTransactionsResponseModel>> {
+    return this.get<PaginatedTransactionsResponseModel>(
+      `/transaction-templates/${templateId}/related`,
+      params,
+    );
   }
 }

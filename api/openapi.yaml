@@ -3469,6 +3469,185 @@ paths:
       summary: Update transaction template
       tags:
         - Transaction Templates
+  /transaction-templates/{templateId}/related:
+    get:
+      description: Get a paginated list of transactions related to a template
+      operationId: list-transaction-template-related-transactions
+      parameters:
+        - description: Unique identifier of the transaction template
+          example: 1
+          in: path
+          name: templateId
+          required: true
+          schema:
+            description: Unique identifier of the transaction template
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Page number for pagination
+          explode: false
+          in: query
+          name: pageNumber
+          schema:
+            default: 1
+            description: Page number for pagination
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Number of items per page
+          explode: false
+          in: query
+          name: pageSize
+          schema:
+            default: 25
+            description: Number of items per page
+            format: int64
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: Field to sort by
+          explode: false
+          in: query
+          name: sortBy
+          schema:
+            default: date
+            description: Field to sort by
+            enum:
+              - id
+              - type
+              - date
+              - amount
+              - createdAt
+              - updatedAt
+            type: string
+        - description: Sort order (asc or desc)
+          explode: false
+          in: query
+          name: sortOrder
+          schema:
+            default: desc
+            description: Sort order (asc or desc)
+            enum:
+              - asc
+              - desc
+            type: string
+        - description: Filter by transaction type
+          explode: false
+          in: query
+          name: type
+          schema:
+            description: Filter by transaction type
+            items:
+              enum:
+                - expense
+                - income
+                - transfer
+              type: string
+            type:
+              - array
+              - "null"
+        - description: Filter by source account IDs
+          explode: false
+          in: query
+          name: accountId
+          schema:
+            description: Filter by source account IDs
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by category IDs
+          explode: false
+          in: query
+          name: categoryId
+          schema:
+            description: Filter by category IDs
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by destination account IDs (transfers)
+          explode: false
+          in: query
+          name: destinationAccountId
+          schema:
+            description: Filter by destination account IDs (transfers)
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by tag IDs
+          explode: false
+          in: query
+          name: tagId
+          schema:
+            description: Filter by tag IDs
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by start date (YYYY-MM-DD)
+          explode: false
+          in: query
+          name: startDate
+          schema:
+            description: Filter by start date (YYYY-MM-DD)
+            format: date-time
+            type: string
+        - description: Filter by end date (YYYY-MM-DD)
+          explode: false
+          in: query
+          name: endDate
+          schema:
+            description: Filter by end date (YYYY-MM-DD)
+            format: date-time
+            type: string
+        - description: Filter by minimum amount
+          explode: false
+          in: query
+          name: minAmount
+          schema:
+            description: Filter by minimum amount
+            format: int64
+            minimum: 0
+            type: integer
+        - description: Filter by maximum amount
+          explode: false
+          in: query
+          name: maxAmount
+          schema:
+            description: Filter by maximum amount
+            format: int64
+            minimum: 0
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionsPagedModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: List related transactions
+      tags:
+        - Transaction Templates
   /transactions:
     get:
       description: Get a paginated list of transactions with optional filters

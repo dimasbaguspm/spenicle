@@ -43,7 +43,7 @@ func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Poo
 	trs := services.NewTransactionRelationService(trr, tr)
 	tags := services.NewTagService(tagr)
 	ttags := services.NewTransactionTagService(ttagr)
-	tts := services.NewTransactionTemplateService(ttr)
+	tts := services.NewTransactionTemplateService(ttr, tr)
 
 	resources.NewAccountResource(as).Routes(huma)
 	resources.NewCategoryResource(cs).Routes(huma)

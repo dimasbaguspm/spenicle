@@ -456,6 +456,26 @@ export interface paths {
         patch: operations["update-transaction-template"];
         trace?: never;
     };
+    "/transaction-templates/{templateId}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List related transactions
+         * @description Get a paginated list of transactions related to a template
+         */
+        get: operations["list-transaction-template-related-transactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transactions": {
         parameters: {
             query?: never;
@@ -3271,6 +3291,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionTemplateModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-transaction-template-related-transactions": {
+        parameters: {
+            query?: {
+                /** @description Page number for pagination */
+                pageNumber?: number;
+                /** @description Number of items per page */
+                pageSize?: number;
+                /** @description Field to sort by */
+                sortBy?: "id" | "type" | "date" | "amount" | "createdAt" | "updatedAt";
+                /** @description Sort order (asc or desc) */
+                sortOrder?: "asc" | "desc";
+                /** @description Filter by transaction type */
+                type?: ("expense" | "income" | "transfer")[] | null;
+                /** @description Filter by source account IDs */
+                accountId?: number[] | null;
+                /** @description Filter by category IDs */
+                categoryId?: number[] | null;
+                /** @description Filter by destination account IDs (transfers) */
+                destinationAccountId?: number[] | null;
+                /** @description Filter by tag IDs */
+                tagId?: number[] | null;
+                /** @description Filter by start date (YYYY-MM-DD) */
+                startDate?: string;
+                /** @description Filter by end date (YYYY-MM-DD) */
+                endDate?: string;
+                /** @description Filter by minimum amount */
+                minAmount?: number;
+                /** @description Filter by maximum amount */
+                maxAmount?: number;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Unique identifier of the transaction template
+                 * @example 1
+                 */
+                templateId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionsPagedModel"];
                 };
             };
             /** @description Error */

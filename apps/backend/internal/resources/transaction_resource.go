@@ -141,6 +141,18 @@ func (tr TransactionResource) Routes(api huma.API) {
 	}, tr.DeleteTemplate)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "list-transaction-template-related-transactions",
+		Method:      "GET",
+		Path:        "/transaction-templates/{templateId}/related",
+		Summary:     "List related transactions",
+		Description: "Get a paginated list of transactions related to a template",
+		Tags:        []string{"Transaction Templates"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, tr.ListTemplateRelatedTransactions)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "list-transaction-relations",
 		Method:      "GET",
 		Path:        "/transactions/{sourceTransactionId}/relations",
@@ -530,4 +542,22 @@ func (tr TransactionResource) DeleteTemplate(ctx context.Context, input *struct 
 	}
 
 	return nil, nil
+}
+
+func (tr TransactionResource) ListTemplateRelatedTransactions(ctx context.Context, input *struct {
+	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
+	models.TransactionTemplateRelatedTransactionsSearchModel
+}) (*struct {
+	Body models.TransactionsPagedModel
+}, error) {
+	result, err := tr.ttemps.GetRelatedTransactions(ctx, input.TemplateID, input.TransactionTemplateRelatedTransactionsSearchModel)
+	if err != nil {
+		return nil, err
+	}
+
+	return &struct {
+		Body models.TransactionsPagedModel
+	}{
+		Body: result,
+	}, nil
 }
