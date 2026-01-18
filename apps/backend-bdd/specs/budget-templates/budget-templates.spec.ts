@@ -18,16 +18,19 @@ test.describe("Budget Templates - Common CRUD", () => {
       type: "expense",
     });
 
+    const startDate = new Date().toISOString();
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
       categoryId: category.data!.id as number,
       amountLimit: 100000, // $1000.00
       recurrence: "monthly",
-      startDate: new Date().toISOString(),
+      startDate: startDate,
       note: "create test",
     });
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
+    expect(res.data!.nextRunAt).toBeDefined();
+    expect(res.data!.nextRunAt).toBe(startDate); // Initially set to startDate
     const id = res.data!.id as number;
 
     // Cleanup

@@ -203,7 +203,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       template.data!.id as number,
       {
         recurrence: "yearly",
-      }
+      },
     );
     expect(updated.status).toBe(200);
     expect(updated.data!.recurrence).toBe("yearly");
@@ -246,7 +246,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       template.data!.id as number,
       {
         endDate: endDate.toISOString(),
-      }
+      },
     );
     expect(updated.status).toBe(200);
     expect(updated.data!.endDate).toBeDefined();
@@ -290,7 +290,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       template.data!.id as number,
       {
         endDate: undefined,
-      }
+      },
     );
     expect(updated.status).toBe(200);
     // Note: API may not support removing endDate, so we check it still has the original value
@@ -401,6 +401,73 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     for (const id of templates) {
       await budgetTemplateAPI.deleteBudgetTemplate(id as number);
     }
+    await categoryAPI.deleteCategory(category.data!.id as number);
+    await accountAPI.deleteAccount(account.data!.id as number);
+  });
+
+  test("POST /budgets/templates - nextRunAt is null for none recurrence", async ({
+    budgetTemplateAPI,
+    accountAPI,
+    categoryAPI,
+  }) => {
+    // Create dependencies
+    const account = await accountAPI.createAccount({
+      name: `bt-none-nextrun-account-${Date.now()}`,
+      note: "test account",
+      type: "expense",
+    });
+    const category = await categoryAPI.createCategory({
+      name: `bt-none-nextrun-category-${Date.now()}`,
+      note: "test category",
+      type: "expense",
+    });
+
+    const res = await budgetTemplateAPI.createBudgetTemplate({
+      accountId: account.data!.id as number,
+      categoryId: category.data!.id as number,
+      amountLimit: 100000,
+      recurrence: "none",
+      startDate: new Date().toISOString(),
+    });
+    expect(res.status).toBe(200);
+    expect(res.data!.nextRunAt).toBeUndefined();
+
+    // Cleanup
+    await budgetTemplateAPI.deleteBudgetTemplate(res.data!.id as number);
+    await categoryAPI.deleteCategory(category.data!.id as number);
+    await accountAPI.deleteAccount(account.data!.id as number);
+  });
+
+  test("POST /budgets/templates - nextRunAt is set to startDate for recurring templates", async ({
+    budgetTemplateAPI,
+    accountAPI,
+    categoryAPI,
+  }) => {
+    // Create dependencies
+    const account = await accountAPI.createAccount({
+      name: `bt-nextrun-account-${Date.now()}`,
+      note: "test account",
+      type: "expense",
+    });
+    const category = await categoryAPI.createCategory({
+      name: `bt-nextrun-category-${Date.now()}`,
+      note: "test category",
+      type: "expense",
+    });
+
+    const startDate = new Date().toISOString();
+    const res = await budgetTemplateAPI.createBudgetTemplate({
+      accountId: account.data!.id as number,
+      categoryId: category.data!.id as number,
+      amountLimit: 100000,
+      recurrence: "monthly",
+      startDate: startDate,
+    });
+    expect(res.status).toBe(200);
+    expect(res.data!.nextRunAt).toBe(startDate);
+
+    // Cleanup
+    await budgetTemplateAPI.deleteBudgetTemplate(res.data!.id as number);
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });

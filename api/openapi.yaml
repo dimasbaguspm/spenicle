@@ -189,6 +189,10 @@ components:
           description: Timestamp of the last execution of this template
           format: date-time
           type: string
+        nextRunAt:
+          description: Next run date for recurring budget creation
+          format: date-time
+          type: string
         note:
           description: Optional note for the template
           maxLength: 500
@@ -2322,6 +2326,7 @@ paths:
               - recurrence
               - startDate
               - endDate
+              - nextRunAt
               - createdAt
               - updatedAt
             type: string

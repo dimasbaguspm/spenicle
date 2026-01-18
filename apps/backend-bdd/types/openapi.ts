@@ -822,6 +822,11 @@ export interface components {
              * @description Timestamp of the last execution of this template
              */
             lastExecutedAt?: string;
+            /**
+             * Format: date-time
+             * @description Next run date for recurring budget creation
+             */
+            nextRunAt?: string;
             /** @description Optional note for the template */
             note?: string;
             /**
@@ -2369,7 +2374,7 @@ export interface operations {
                 /** @description Number of items per page */
                 pageSize?: number;
                 /** @description Field to sort by */
-                sortBy?: "id" | "accountId" | "categoryId" | "amountLimit" | "recurrence" | "startDate" | "endDate" | "createdAt" | "updatedAt";
+                sortBy?: "id" | "accountId" | "categoryId" | "amountLimit" | "recurrence" | "startDate" | "endDate" | "nextRunAt" | "createdAt" | "updatedAt";
                 /** @description Sort order */
                 sortOrder?: "asc" | "desc";
                 /** @description Filter by template IDs */
