@@ -395,6 +395,9 @@ components:
             - transfer
           minLength: 1
           type: string
+        budget:
+          $ref: "#/components/schemas/EmbeddedBudget"
+          description: Currently active budget for this category
         updatedAt:
           description: Last update timestamp
           format: date-time

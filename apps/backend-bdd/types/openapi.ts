@@ -972,6 +972,8 @@ export interface components {
              * @enum {string}
              */
             type: "expense" | "income" | "transfer";
+            /** @description Currently active budget for this category */
+            budget?: components["schemas"]["EmbeddedBudget"];
             /**
              * Format: date-time
              * @description Last update timestamp

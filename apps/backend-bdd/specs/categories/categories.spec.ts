@@ -83,4 +83,89 @@ test.describe("Categories - Common CRUD", () => {
     const afterGet = await categoryAPI.getCategory(created.data?.id as number);
     expect(afterGet.status).not.toBe(200);
   });
+
+  test("GET /categories - list categories includes embedded budgets", async ({
+    categoryAPI,
+    budgetAPI,
+  }) => {
+    const categoryName = `e2e-category-list-budget-${Date.now()}`;
+    const categoryRes = await categoryAPI.createCategory({
+      name: categoryName,
+      note: "list with budget test",
+      type: "expense",
+    });
+    const categoryId = categoryRes.data!.id as number;
+
+    // Create active budget
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    const budgetRes = await budgetAPI.createBudget({
+      categoryId,
+      name: "List Category Budget",
+      periodStart: startOfMonth.toISOString(),
+      periodEnd: endOfMonth.toISOString(),
+      amountLimit: 300,
+    });
+    const budgetId = budgetRes.data!.id;
+
+    const listRes = await categoryAPI.getCategories();
+    expect(listRes.status).toBe(200);
+    const items = listRes.data!.items || [];
+    const categoryWithBudget = items.find((item) => item.id === categoryId);
+    expect(categoryWithBudget).toBeDefined();
+    expect(categoryWithBudget!.budget).toBeDefined();
+    expect(categoryWithBudget!.budget!.id).toBe(budgetId);
+
+    // Clean up
+    await budgetAPI.deleteBudget(budgetId);
+    await categoryAPI.deleteCategory(categoryId);
+  });
+
+  test("GET /categories/:id - category with active budget includes embedded budget", async ({
+    categoryAPI,
+    budgetAPI,
+  }) => {
+    const name = `e2e-category-embedded-budget-${Date.now()}`;
+    const categoryRes = await categoryAPI.createCategory({
+      name,
+      note: "embedded budget test",
+      type: "expense",
+    });
+    expect(categoryRes.status).toBe(200);
+    const categoryId = categoryRes.data!.id as number;
+
+    // Initially, no embedded budget
+    const initialGet = await categoryAPI.getCategory(categoryId);
+    expect(initialGet.status).toBe(200);
+    expect(initialGet.data!.budget).toBeUndefined();
+
+    // Create an active budget for today
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    const budgetRes = await budgetAPI.createBudget({
+      categoryId,
+      name: "Active Category Budget",
+      periodStart: startOfMonth.toISOString(),
+      periodEnd: endOfMonth.toISOString(),
+      amountLimit: 200,
+    });
+    expect(budgetRes.status).toBe(200);
+    const budgetId = budgetRes.data!.id;
+
+    // Now get category again, should have embedded budget
+    const withBudgetGet = await categoryAPI.getCategory(categoryId);
+    expect(withBudgetGet.status).toBe(200);
+    expect(withBudgetGet.data!.budget).toBeDefined();
+    expect(withBudgetGet.data!.budget!.id).toBe(budgetId);
+    expect(withBudgetGet.data!.budget!.name).toBe("Active Category Budget");
+    expect(withBudgetGet.data!.budget!.amountLimit).toBe(200);
+
+    // Clean up
+    await budgetAPI.deleteBudget(budgetId);
+    await categoryAPI.deleteCategory(categoryId);
+  });
 });

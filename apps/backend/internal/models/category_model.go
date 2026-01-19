@@ -14,17 +14,18 @@ type CategoriesSearchModel struct {
 }
 
 type CategoryModel struct {
-	ID           int64      `json:"id" doc:"Unique identifier"`
-	Name         string     `json:"name" minLength:"1" doc:"Category name"`
-	Type         string     `json:"type" minLength:"1" enum:"expense,income,transfer" doc:"Category type"`
-	Note         string     `json:"note" doc:"Category notes"`
-	Icon         *string    `json:"icon,omitempty" doc:"Icon identifier"`
-	IconColor    *string    `json:"iconColor,omitempty" doc:"Icon color code"`
-	DisplayOrder int        `json:"displayOrder" doc:"Display order sequence"`
-	ArchivedAt   *time.Time `json:"archivedAt,omitempty" doc:"Timestamp when archived (null if active)" format:"date-time"`
-	CreatedAt    time.Time  `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
-	UpdatedAt    *time.Time `json:"updatedAt,omitempty" doc:"Last update timestamp" format:"date-time"`
-	DeletedAt    *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
+	ID             int64           `json:"id" doc:"Unique identifier"`
+	Name           string          `json:"name" minLength:"1" doc:"Category name"`
+	Type           string          `json:"type" minLength:"1" enum:"expense,income,transfer" doc:"Category type"`
+	Note           string          `json:"note" doc:"Category notes"`
+	Icon           *string         `json:"icon,omitempty" doc:"Icon identifier"`
+	IconColor      *string         `json:"iconColor,omitempty" doc:"Icon color code"`
+	DisplayOrder   int             `json:"displayOrder" doc:"Display order sequence"`
+	ArchivedAt     *time.Time      `json:"archivedAt,omitempty" doc:"Timestamp when archived (null if active)" format:"date-time"`
+	CreatedAt      time.Time       `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
+	UpdatedAt      *time.Time      `json:"updatedAt,omitempty" doc:"Last update timestamp" format:"date-time"`
+	DeletedAt      *time.Time      `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
+	EmbeddedBudget *EmbeddedBudget `json:"budget,omitempty" doc:"Currently active budget for this category"`
 }
 
 type CategoriesPagedModel struct {

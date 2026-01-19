@@ -192,6 +192,26 @@ export interface paths {
     patch: operations["update-budget-template"];
     trace?: never;
   };
+  "/budgets/templates/{id}/relations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get budget template related budgets
+     * @description Get budgets related to a budget template
+     */
+    get: operations["list-budget-template-related-budgets"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/budgets/{id}": {
     parameters: {
       query?: never;
@@ -456,6 +476,26 @@ export interface paths {
     patch: operations["update-transaction-template"];
     trace?: never;
   };
+  "/transaction-templates/{templateId}/related": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List related transactions
+     * @description Get a paginated list of transactions related to a template
+     */
+    get: operations["list-transaction-template-related-transactions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/transactions": {
     parameters: {
       query?: never;
@@ -619,6 +659,8 @@ export interface components {
        * @description Timestamp when archived (null if active)
        */
       archivedAt?: string;
+      /** @description Currently active budget for this account */
+      budget?: components["schemas"]["EmbeddedBudget"];
       /**
        * Format: date-time
        * @description Creation timestamp
@@ -718,8 +760,10 @@ export interface components {
        * @description Unique identifier
        */
       id: number;
+      /** @description Budget name */
+      name: string;
       /** @description Optional note for the budget */
-      note?: string;
+      note: string | null;
       /**
        * Format: date-time
        * @description Budget period end date
@@ -730,6 +774,16 @@ export interface components {
        * @description Budget period start date
        */
       periodStart: string;
+      /**
+       * @description Budget period type
+       * @enum {string}
+       */
+      periodType: "weekly" | "monthly" | "yearly" | "custom";
+      /**
+       * @description Budget status (active or inactive)
+       * @enum {string}
+       */
+      status: "active" | "inactive";
       /**
        * Format: int64
        * @description Budget template ID if generated from template
@@ -782,6 +836,13 @@ export interface components {
        * @description Timestamp of the last execution of this template
        */
       lastExecutedAt?: string;
+      /** @description Template name */
+      name: string;
+      /**
+       * Format: date-time
+       * @description Next run date for recurring budget creation
+       */
+      nextRunAt?: string;
       /** @description Optional note for the template */
       note?: string;
       /**
@@ -911,6 +972,8 @@ export interface components {
        * @enum {string}
        */
       type: "expense" | "income" | "transfer";
+      /** @description Currently active budget for this category */
+      budget?: components["schemas"]["EmbeddedBudget"];
       /**
        * Format: date-time
        * @description Last update timestamp
@@ -948,6 +1011,8 @@ export interface components {
        * @description Category ID to filter transactions
        */
       categoryId?: number;
+      /** @description Budget name */
+      name: string;
       /** @description Optional note for the budget */
       note?: string;
       /**
@@ -987,6 +1052,8 @@ export interface components {
        * @description Optional end date for recurrence
        */
       endDate?: string;
+      /** @description Template name */
+      name: string;
       /** @description Optional note for the template */
       note?: string;
       /**
@@ -1126,6 +1193,42 @@ export interface components {
        * @enum {string}
        */
       type: "expense" | "income" | "transfer";
+    };
+    EmbeddedBudget: {
+      /**
+       * Format: int64
+       * @description Actual spent amount in cents
+       */
+      actualAmount: number;
+      /**
+       * Format: int64
+       * @description Budget limit amount in cents
+       */
+      amountLimit: number;
+      /**
+       * Format: int64
+       * @description Budget unique identifier
+       */
+      id: number;
+      /** @description Budget name */
+      name: string;
+      /**
+       * Format: date-time
+       * @description Budget period end date
+       */
+      periodEnd: string;
+      /**
+       * Format: date-time
+       * @description Budget period start date
+       */
+      periodStart: string;
+      /** @description Budget period type */
+      periodType: string;
+      /**
+       * Format: int64
+       * @description Budget template ID if generated from template
+       */
+      templateId?: number;
     };
     ErrorDetail: {
       /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -1481,6 +1584,8 @@ export interface components {
       note?: string;
       /** @description Transaction tags */
       tags: components["schemas"]["TransactionTagEmbedded"][] | null;
+      /** @description Associated transaction template details */
+      template: components["schemas"]["TransactionTemplateEmbedded"];
       /**
        * @description Transaction type
        * @enum {string}
@@ -1607,6 +1712,35 @@ export interface components {
        */
       totalPages: number;
     };
+    TransactionTemplateEmbedded: {
+      /**
+       * Format: int64
+       * @description Template amount
+       */
+      amount: number;
+      /**
+       * Format: date-time
+       * @description Template end date
+       */
+      endDate: string | null;
+      /**
+       * Format: int64
+       * @description Template ID
+       */
+      id: number;
+      /** @description Template name */
+      name: string;
+      /**
+       * @description Recurrence pattern
+       * @enum {string}
+       */
+      recurrence: "none" | "weekly" | "monthly" | "yearly";
+      /**
+       * Format: date-time
+       * @description Template start date
+       */
+      startDate: string;
+    };
     TransactionTemplateModel: {
       /** @description Source account details */
       account: components["schemas"]["TransactionAccountEmbedded"];
@@ -1633,7 +1767,7 @@ export interface components {
        * Format: date-time
        * @description Template end date
        */
-      endDate?: string;
+      endDate: string | null;
       /**
        * Format: int64
        * @description Unique identifier
@@ -1646,6 +1780,11 @@ export interface components {
       lastExecutedAt?: string;
       /** @description Template name */
       name: string;
+      /**
+       * Format: date-time
+       * @description Next due date for recurring transactions
+       */
+      nextDueAt?: string;
       /** @description Template notes */
       note?: string;
       /**
@@ -1653,6 +1792,8 @@ export interface components {
        * @enum {string}
        */
       recurrence: "none" | "weekly" | "monthly" | "yearly";
+      /** @description Recurring transaction statistics */
+      recurringStats: components["schemas"]["TransactionTemplateRecurringStats"];
       /**
        * Format: date-time
        * @description Template start date
@@ -1668,6 +1809,23 @@ export interface components {
        * @description Last update timestamp
        */
       updatedAt: string;
+    };
+    TransactionTemplateRecurringStats: {
+      /**
+       * Format: int64
+       * @description Number of related transactions created
+       */
+      occurrences: number;
+      /**
+       * Format: int64
+       * @description Number of remaining occurrences (null if no end date)
+       */
+      remaining: number | null;
+      /**
+       * Format: int64
+       * @description Total amount spent from related transactions
+       */
+      totalSpent: number;
     };
     TransactionTemplatesPagedModel: {
       /** @description List of transaction templates */
@@ -1737,19 +1895,11 @@ export interface components {
     UpdateBudgetModel: {
       /**
        * Format: int64
-       * @description Account ID to filter transactions
-       */
-      accountId?: number;
-      /**
-       * Format: int64
        * @description Budget limit amount in cents
        */
       amountLimit?: number;
-      /**
-       * Format: int64
-       * @description Category ID to filter transactions
-       */
-      categoryId?: number;
+      /** @description Budget name */
+      name?: string;
       /** @description Optional note for the budget */
       note?: string;
       /**
@@ -1762,28 +1912,25 @@ export interface components {
        * @description Budget period start date
        */
       periodStart?: string;
+      /**
+       * @description Budget status
+       * @enum {string}
+       */
+      status?: "active" | "inactive";
     };
     UpdateBudgetTemplateModel: {
-      /**
-       * Format: int64
-       * @description Account ID to filter transactions
-       */
-      accountId?: number;
       /**
        * Format: int64
        * @description Budget limit amount in cents
        */
       amountLimit?: number;
       /**
-       * Format: int64
-       * @description Category ID to filter transactions
-       */
-      categoryId?: number;
-      /**
        * Format: date-time
        * @description Optional end date for recurrence
        */
       endDate?: string;
+      /** @description Template name */
+      name?: string;
       /** @description Optional note for the template */
       note?: string;
       /**
@@ -1889,11 +2036,6 @@ export interface components {
        * @enum {string}
        */
       recurrence?: "none" | "weekly" | "monthly" | "yearly";
-      /**
-       * Format: date-time
-       * @description Template start date
-       */
-      startDate?: string;
       /**
        * @description Transaction type
        * @enum {string}
@@ -2214,6 +2356,8 @@ export interface operations {
           | "periodStart"
           | "periodEnd"
           | "amountLimit"
+          | "status"
+          | "name"
           | "createdAt"
           | "updatedAt";
         /** @description Sort order */
@@ -2226,6 +2370,10 @@ export interface operations {
         accountId?: number[] | null;
         /** @description Filter by category IDs */
         categoryId?: number[] | null;
+        /** @description Filter by budget status */
+        status?: "active" | "inactive";
+        /** @description Filter by budget name (partial match) */
+        name?: string;
       };
       header?: never;
       path?: never;
@@ -2302,6 +2450,8 @@ export interface operations {
           | "recurrence"
           | "startDate"
           | "endDate"
+          | "name"
+          | "nextRunAt"
           | "createdAt"
           | "updatedAt";
         /** @description Sort order */
@@ -2459,6 +2609,62 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["BudgetTemplateModel"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-budget-template-related-budgets": {
+    parameters: {
+      query?: {
+        /** @description Page number for pagination */
+        pageNumber?: number;
+        /** @description Number of items per page */
+        pageSize?: number;
+        /** @description Field to sort by */
+        sortBy?:
+          | "id"
+          | "templateId"
+          | "accountId"
+          | "categoryId"
+          | "periodStart"
+          | "periodEnd"
+          | "amountLimit"
+          | "createdAt"
+          | "updatedAt";
+        /** @description Sort order */
+        sortOrder?: "asc" | "desc";
+        /** @description Filter by template IDs */
+        templateId?: number[] | null;
+        /** @description Filter by account IDs */
+        accountId?: number[] | null;
+        /** @description Filter by category IDs */
+        categoryId?: number[] | null;
+      };
+      header?: never;
+      path: {
+        /** @description Budget Template ID */
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BudgetsPagedModel"];
         };
       };
       /** @description Error */
@@ -3097,7 +3303,14 @@ export interface operations {
         /** @description Number of items per page */
         pageSize?: number;
         /** @description Field to sort by */
-        sortBy?: "id" | "name" | "amount" | "type" | "createdAt" | "updatedAt";
+        sortBy?:
+          | "id"
+          | "name"
+          | "amount"
+          | "type"
+          | "createdAt"
+          | "updatedAt"
+          | "nextDueAt";
         /** @description Sort order */
         sortOrder?: "asc" | "desc";
         /** @description Search by template name */
@@ -3264,6 +3477,68 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["TransactionTemplateModel"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-transaction-template-related-transactions": {
+    parameters: {
+      query?: {
+        /** @description Page number for pagination */
+        pageNumber?: number;
+        /** @description Number of items per page */
+        pageSize?: number;
+        /** @description Field to sort by */
+        sortBy?: "id" | "type" | "date" | "amount" | "createdAt" | "updatedAt";
+        /** @description Sort order (asc or desc) */
+        sortOrder?: "asc" | "desc";
+        /** @description Filter by transaction type */
+        type?: ("expense" | "income" | "transfer")[] | null;
+        /** @description Filter by source account IDs */
+        accountId?: number[] | null;
+        /** @description Filter by category IDs */
+        categoryId?: number[] | null;
+        /** @description Filter by destination account IDs (transfers) */
+        destinationAccountId?: number[] | null;
+        /** @description Filter by tag IDs */
+        tagId?: number[] | null;
+        /** @description Filter by start date (YYYY-MM-DD) */
+        startDate?: string;
+        /** @description Filter by end date (YYYY-MM-DD) */
+        endDate?: string;
+        /** @description Filter by minimum amount */
+        minAmount?: number;
+        /** @description Filter by maximum amount */
+        maxAmount?: number;
+      };
+      header?: never;
+      path: {
+        /**
+         * @description Unique identifier of the transaction template
+         * @example 1
+         */
+        templateId: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TransactionsPagedModel"];
         };
       };
       /** @description Error */

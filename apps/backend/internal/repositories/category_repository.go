@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
@@ -38,19 +39,23 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 	sql := `
 		WITH filtered_categories AS (
 			SELECT 
-				id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at,
+				c.id, c.name, c.type, c.note, c.icon, c.icon_color, c.display_order, c.archived_at, c.created_at, c.updated_at,
+				b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, 
+				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.category_id = c.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+				b.period_type, b.name as budget_name,
 				COUNT(*) OVER() as total_count
-			FROM categories
-			WHERE deleted_at IS NULL
-					AND (array_length($3::int8[], 1) IS NULL OR id = ANY($3::int8[]))
-					AND ($5::text IS NULL OR $5::text = '' OR name ILIKE '%' || $5::text || '%')
-					AND (array_length($4::text[], 1) IS NULL OR type = ANY($4::text[]))
+			FROM categories c
+			LEFT JOIN budgets b ON b.category_id = c.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
+			WHERE c.deleted_at IS NULL
+					AND (array_length($3::int8[], 1) IS NULL OR c.id = ANY($3::int8[]))
+					AND ($5::text IS NULL OR $5::text = '' OR c.name ILIKE '%' || $5::text || '%')
+					AND (array_length($4::text[], 1) IS NULL OR c.type = ANY($4::text[]))
 					AND (
 						$6::text IS NULL OR $6::text = '' OR
-						($6::text = 'true' AND archived_at IS NOT NULL) OR
-						($6::text = 'false' AND archived_at IS NULL)
+						($6::text = 'true' AND c.archived_at IS NOT NULL) OR
+						($6::text = 'false' AND c.archived_at IS NULL)
 					)
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			ORDER BY c.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		)
 		SELECT
@@ -64,6 +69,14 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 			archived_at,
 			created_at,
 			updated_at,
+			budget_id,
+			period_start,
+			period_end,
+			template_id,
+			amount_limit,
+			actual_amount,
+			period_type,
+			budget_name,
 			total_count
 		FROM filtered_categories
 		ORDER BY ` + sortColumn + ` ` + sortOrder + `
@@ -94,6 +107,14 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 
 	for rows.Next() {
 		var item models.CategoryModel
+		var budgetID *int64
+		var periodStart *time.Time
+		var periodEnd *time.Time
+		var templateID *int64
+		var amountLimit *int64
+		var actualAmount *int64
+		var periodType *string
+		var budgetName *string
 		err := rows.Scan(
 			&item.ID,
 			&item.Name,
@@ -105,9 +126,29 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 			&item.ArchivedAt,
 			&item.CreatedAt,
 			&item.UpdatedAt,
+			&budgetID,
+			&periodStart,
+			&periodEnd,
+			&templateID,
+			&amountLimit,
+			&actualAmount,
+			&periodType,
+			&budgetName,
 			&totalCount)
 		if err != nil {
 			return models.CategoriesPagedModel{}, huma.Error400BadRequest("Unable to scan category data", err)
+		}
+		if budgetID != nil {
+			item.EmbeddedBudget = &models.EmbeddedBudget{
+				ID:           *budgetID,
+				PeriodStart:  *periodStart,
+				PeriodEnd:    *periodEnd,
+				TemplateID:   templateID,
+				AmountLimit:  *amountLimit,
+				ActualAmount: *actualAmount,
+				PeriodType:   *periodType,
+				Name:         *budgetName,
+			}
 		}
 		items = append(items, item)
 	}
@@ -136,20 +177,45 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 
 func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.CategoryModel, error) {
 	var data models.CategoryModel
+	var budgetID *int64
+	var periodStart *time.Time
+	var periodEnd *time.Time
+	var templateID *int64
+	var amountLimit *int64
+	var actualAmount *int64
+	var periodType *string
+	var budgetName *string
 
 	sql := `
 		SELECT
-			id, name, type, note, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
-		FROM categories
-		WHERE id = $1 AND deleted_at IS NULL
+			c.id, c.name, c.type, c.note, c.icon, c.icon_color, c.display_order, c.archived_at, c.created_at, c.updated_at, c.deleted_at,
+			b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, 
+			COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.category_id = c.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+			b.period_type, b.name as budget_name
+		FROM categories c
+		LEFT JOIN budgets b ON b.category_id = c.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
+		WHERE c.id = $1 AND c.deleted_at IS NULL
 	`
-	err := cr.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+	err := cr.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &actualAmount, &periodType, &budgetName)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.CategoryModel{}, huma.Error404NotFound("Category not found")
 		}
 		return models.CategoryModel{}, huma.Error400BadRequest("Unable to query category", err)
+	}
+
+	if budgetID != nil {
+		data.EmbeddedBudget = &models.EmbeddedBudget{
+			ID:           *budgetID,
+			PeriodStart:  *periodStart,
+			PeriodEnd:    *periodEnd,
+			TemplateID:   templateID,
+			AmountLimit:  *amountLimit,
+			ActualAmount: *actualAmount,
+			PeriodType:   *periodType,
+			Name:         *budgetName,
+		}
 	}
 
 	return data, nil
