@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
@@ -41,19 +42,23 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 	sql := `
 		WITH filtered_accounts AS (
 			SELECT 
-				id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at,
+				a.id, a.name, a.type, a.note, a.amount, a.icon, a.icon_color, a.display_order, a.archived_at, a.created_at, a.updated_at,
+				b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, 
+				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = a.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+				b.period_type, b.name as budget_name,
 				COUNT(*) OVER() as total_count
-			FROM accounts
-			WHERE deleted_at IS NULL
-				AND (array_length($3::int8[], 1) IS NULL OR id = ANY($3::int8[]))
-				AND ($5::text IS NULL OR $5::text = '' OR name ILIKE '%' || $5::text || '%')
-				AND (array_length($4::text[], 1) IS NULL OR type = ANY($4::text[]))
+			FROM accounts a
+			LEFT JOIN budgets b ON b.account_id = a.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
+			WHERE a.deleted_at IS NULL
+				AND (array_length($3::int8[], 1) IS NULL OR a.id = ANY($3::int8[]))
+				AND ($5::text IS NULL OR $5::text = '' OR a.name ILIKE '%' || $5::text || '%')
+				AND (array_length($4::text[], 1) IS NULL OR a.type = ANY($4::text[]))
 				AND (
 					$6::text IS NULL OR $6::text = '' OR
-					($6::text = 'true' AND archived_at IS NOT NULL) OR
-					($6::text = 'false' AND archived_at IS NULL)
+					($6::text = 'true' AND a.archived_at IS NOT NULL) OR
+					($6::text = 'false' AND a.archived_at IS NULL)
 				)
-			ORDER BY ` + sortColumn + ` ` + sortOrder + `
+			ORDER BY a.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		)
 		SELECT
@@ -68,6 +73,14 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 			archived_at,
 			created_at,
 			updated_at,
+			budget_id,
+			period_start,
+			period_end,
+			template_id,
+			amount_limit,
+			actual_amount,
+			period_type,
+			budget_name,
 			total_count
 		FROM filtered_accounts
 		ORDER BY ` + sortColumn + ` ` + sortOrder + `
@@ -98,9 +111,29 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 
 	for rows.Next() {
 		var item models.AccountModel
-		err := rows.Scan(&item.ID, &item.Name, &item.Type, &item.Note, &item.Amount, &item.Icon, &item.IconColor, &item.DisplayOrder, &item.ArchivedAt, &item.CreatedAt, &item.UpdatedAt, &totalCount)
+		var budgetID *int64
+		var periodStart *time.Time
+		var periodEnd *time.Time
+		var templateID *int64
+		var amountLimit *int64
+		var actualAmount *int64
+		var periodType *string
+		var budgetName *string
+		err := rows.Scan(&item.ID, &item.Name, &item.Type, &item.Note, &item.Amount, &item.Icon, &item.IconColor, &item.DisplayOrder, &item.ArchivedAt, &item.CreatedAt, &item.UpdatedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &actualAmount, &periodType, &budgetName, &totalCount)
 		if err != nil {
 			return models.AccountsPagedModel{}, huma.Error400BadRequest("Unable to scan account data", err)
+		}
+		if budgetID != nil {
+			item.EmbeddedBudget = &models.EmbeddedBudget{
+				ID:           *budgetID,
+				PeriodStart:  *periodStart,
+				PeriodEnd:    *periodEnd,
+				TemplateID:   templateID,
+				AmountLimit:  *amountLimit,
+				ActualAmount: *actualAmount,
+				PeriodType:   *periodType,
+				Name:         *budgetName,
+			}
 		}
 		items = append(items, item)
 	}
@@ -129,18 +162,43 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 
 func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.AccountModel, error) {
 	var data models.AccountModel
+	var budgetID *int64
+	var periodStart *time.Time
+	var periodEnd *time.Time
+	var templateID *int64
+	var amountLimit *int64
+	var actualAmount *int64
+	var periodType *string
+	var budgetName *string
 
-	sql := `SELECT id, name, type, note, amount, icon, icon_color, display_order, archived_at, created_at, updated_at, deleted_at
-			FROM accounts
-			WHERE id = $1 AND deleted_at IS NULL`
+	sql := `SELECT a.id, a.name, a.type, a.note, a.amount, a.icon, a.icon_color, a.display_order, a.archived_at, a.created_at, a.updated_at, a.deleted_at,
+			b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, 
+			COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = a.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+			b.period_type, b.name as budget_name
+			FROM accounts a
+			LEFT JOIN budgets b ON b.account_id = a.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
+			WHERE a.id = $1 AND a.deleted_at IS NULL`
 
-	err := ar.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+	err := ar.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &actualAmount, &periodType, &budgetName)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.AccountModel{}, huma.Error404NotFound("Account not found")
 		}
 		return models.AccountModel{}, huma.Error400BadRequest("Unable to query account", err)
+	}
+
+	if budgetID != nil {
+		data.EmbeddedBudget = &models.EmbeddedBudget{
+			ID:           *budgetID,
+			PeriodStart:  *periodStart,
+			PeriodEnd:    *periodEnd,
+			TemplateID:   templateID,
+			AmountLimit:  *amountLimit,
+			ActualAmount: *actualAmount,
+			PeriodType:   *periodType,
+			Name:         *budgetName,
+		}
 	}
 
 	return data, nil

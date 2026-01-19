@@ -2,6 +2,17 @@ package models
 
 import "time"
 
+type EmbeddedBudget struct {
+	ID           int64     `json:"id" doc:"Budget unique identifier"`
+	PeriodStart  time.Time `json:"periodStart" doc:"Budget period start date" format:"date-time"`
+	PeriodEnd    time.Time `json:"periodEnd" doc:"Budget period end date" format:"date-time"`
+	TemplateID   *int64    `json:"templateId,omitempty" doc:"Budget template ID if generated from template"`
+	AmountLimit  int64     `json:"amountLimit" doc:"Budget limit amount in cents"`
+	ActualAmount int64     `json:"actualAmount" doc:"Actual spent amount in cents"`
+	PeriodType   string    `json:"periodType" doc:"Budget period type"`
+	Name         string    `json:"name" doc:"Budget name"`
+}
+
 type AccountsSearchModel struct {
 	PageNumber int      `query:"pageNumber" default:"1" minimum:"1" doc:"Page number for pagination"`
 	PageSize   int      `query:"pageSize" default:"25" minimum:"1" maximum:"100" doc:"Number of items per page"`
@@ -14,18 +25,19 @@ type AccountsSearchModel struct {
 }
 
 type AccountModel struct {
-	ID           int64      `json:"id" doc:"Unique identifier"`
-	Name         string     `json:"name" minLength:"1" doc:"Account name"`
-	Type         string     `json:"type" minLength:"1" enum:"expense,income" doc:"Account type (expense or income)"`
-	Note         string     `json:"note" doc:"Account notes"`
-	Amount       int64      `json:"amount" doc:"Current balance"`
-	Icon         *string    `json:"icon,omitempty" doc:"Icon identifier"`
-	IconColor    *string    `json:"iconColor,omitempty" doc:"Icon color code"`
-	DisplayOrder int        `json:"displayOrder" doc:"Display order sequence"`
-	ArchivedAt   *time.Time `json:"archivedAt,omitempty" doc:"Timestamp when archived (null if active)"`
-	CreatedAt    time.Time  `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
-	UpdatedAt    *time.Time `json:"updatedAt,omitempty" doc:"Last update timestamp" format:"date-time"`
-	DeletedAt    *time.Time `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
+	ID             int64           `json:"id" doc:"Unique identifier"`
+	Name           string          `json:"name" minLength:"1" doc:"Account name"`
+	Type           string          `json:"type" minLength:"1" enum:"expense,income" doc:"Account type (expense or income)"`
+	Note           string          `json:"note" doc:"Account notes"`
+	Amount         int64           `json:"amount" doc:"Current balance"`
+	Icon           *string         `json:"icon,omitempty" doc:"Icon identifier"`
+	IconColor      *string         `json:"iconColor,omitempty" doc:"Icon color code"`
+	DisplayOrder   int             `json:"displayOrder" doc:"Display order sequence"`
+	ArchivedAt     *time.Time      `json:"archivedAt,omitempty" doc:"Timestamp when archived (null if active)"`
+	CreatedAt      time.Time       `json:"createdAt" doc:"Creation timestamp" format:"date-time"`
+	UpdatedAt      *time.Time      `json:"updatedAt,omitempty" doc:"Last update timestamp" format:"date-time"`
+	DeletedAt      *time.Time      `json:"deletedAt,omitempty" doc:"Soft delete timestamp" format:"date-time"`
+	EmbeddedBudget *EmbeddedBudget `json:"budget,omitempty" doc:"Currently active budget for this account"`
 }
 
 type AccountsPagedModel struct {

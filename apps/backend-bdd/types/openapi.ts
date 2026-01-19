@@ -659,6 +659,8 @@ export interface components {
              * @description Timestamp when archived (null if active)
              */
             archivedAt?: string;
+            /** @description Currently active budget for this account */
+            budget?: components["schemas"]["EmbeddedBudget"];
             /**
              * Format: date-time
              * @description Creation timestamp
@@ -1189,6 +1191,42 @@ export interface components {
              * @enum {string}
              */
             type: "expense" | "income" | "transfer";
+        };
+        EmbeddedBudget: {
+            /**
+             * Format: int64
+             * @description Actual spent amount in cents
+             */
+            actualAmount: number;
+            /**
+             * Format: int64
+             * @description Budget limit amount in cents
+             */
+            amountLimit: number;
+            /**
+             * Format: int64
+             * @description Budget unique identifier
+             */
+            id: number;
+            /** @description Budget name */
+            name: string;
+            /**
+             * Format: date-time
+             * @description Budget period end date
+             */
+            periodEnd: string;
+            /**
+             * Format: date-time
+             * @description Budget period start date
+             */
+            periodStart: string;
+            /** @description Budget period type */
+            periodType: string;
+            /**
+             * Format: int64
+             * @description Budget template ID if generated from template
+             */
+            templateId?: number;
         };
         ErrorDetail: {
             /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
