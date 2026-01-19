@@ -21,12 +21,14 @@ test.describe("Budget Templates - Common CRUD", () => {
     const startDate = new Date().toISOString();
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
+      // categoryId: category.data!.id as number, // Removed - cannot have both account and category
       amountLimit: 100000, // $1000.00
       recurrence: "monthly",
       startDate: startDate,
+      name: "Monthly Budget Template",
       note: "create test",
     });
+
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     expect(res.data!.nextRunAt).toBeDefined();
@@ -59,10 +61,11 @@ test.describe("Budget Templates - Common CRUD", () => {
     // Create a budget template
     const created = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
+      // categoryId: category.data!.id as number, // Removed - cannot have both
       amountLimit: 50000, // $500.00
       recurrence: "weekly",
       startDate: new Date().toISOString(),
+      name: "Weekly Budget Template",
       note: "list test",
     });
     const id = created.data!.id as number;
@@ -99,10 +102,11 @@ test.describe("Budget Templates - Common CRUD", () => {
     // Create a budget template
     const created = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
+      // categoryId: category.data!.id as number, // Removed - cannot have both
       amountLimit: 75000, // $750.00
       recurrence: "yearly",
       startDate: new Date().toISOString(),
+      name: "Yearly Budget Template",
       note: "get test",
     });
     const id = created.data!.id as number;
@@ -139,10 +143,11 @@ test.describe("Budget Templates - Common CRUD", () => {
     // Create a budget template
     const created = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
+      // categoryId: category.data!.id as number, // Removed - cannot have both
       amountLimit: 100000, // $1000.00
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Monthly Update Test Template",
       note: "update test",
     });
     const id = created.data!.id as number;
@@ -183,10 +188,11 @@ test.describe("Budget Templates - Common CRUD", () => {
     // Create a budget template
     const created = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
+      // categoryId: category.data!.id as number, // Removed - cannot have both
       amountLimit: 200000, // $2000.00
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Monthly Delete Test Template",
       note: "delete test",
     });
     const templateId = created.data!.id as number;

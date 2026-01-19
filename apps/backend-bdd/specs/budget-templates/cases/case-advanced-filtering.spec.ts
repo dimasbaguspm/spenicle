@@ -33,17 +33,17 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     // Create budget templates
     const template1 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account1.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 50000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Monthly Filter Template 1",
     });
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account2.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 75000,
       recurrence: "weekly",
       startDate: new Date().toISOString(),
+      name: "Weekly Filter Template 2",
     });
 
     // Filter by account1
@@ -94,18 +94,20 @@ test.describe("Budget Templates - Advanced Filtering", () => {
 
     // Create budget templates
     const template1 = await budgetTemplateAPI.createBudgetTemplate({
-      accountId: account.data!.id as number,
+      // accountId: account.data!.id as number, // Removed for category filtering test
       categoryId: category1.data!.id as number,
       amountLimit: 50000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Monthly Category Filter Template 1",
     });
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
-      accountId: account.data!.id as number,
+      // accountId: account.data!.id as number, // Removed for category filtering test
       categoryId: category2.data!.id as number,
       amountLimit: 75000,
       recurrence: "weekly",
       startDate: new Date().toISOString(),
+      name: "Weekly Category Filter Template 2",
     });
 
     // Filter by category1
@@ -152,24 +154,24 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     // Create budget templates with different recurrences
     const template1 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 50000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Monthly Recurrence Template",
     });
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 75000,
       recurrence: "weekly",
       startDate: new Date().toISOString(),
+      name: "Weekly Recurrence Template",
     });
     const template3 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "yearly",
       startDate: new Date().toISOString(),
+      name: "Yearly Recurrence Template",
     });
 
     // Filter by monthly
@@ -229,24 +231,24 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     // Create budget templates
     const template1 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account1.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 50000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Combined Filter Template 1",
     });
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account1.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 75000,
       recurrence: "weekly",
       startDate: new Date().toISOString(),
+      name: "Combined Filter Template 2",
     });
     const template3 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account2.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 60000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Combined Filter Template 3",
     });
 
     // Combined filter: account1 + monthly recurrence

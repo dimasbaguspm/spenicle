@@ -58,11 +58,11 @@ test.describe("Budget Templates - Sorting Cases", () => {
     for (const templateData of templates) {
       const res = await budgetTemplateAPI.createBudgetTemplate({
         accountId: account.data!.id as number,
-        categoryId: category.data!.id as number,
         amountLimit: 100000,
         recurrence: templateData.recurrence,
         startDate: templateData.startDate,
         note: templateData.note,
+        name: `Sorting Test ${templateData.note}`,
       });
       createdTemplates.push({
         id: res.data!.id as number,
@@ -145,11 +145,12 @@ test.describe("Budget Templates - Sorting Cases", () => {
     for (const amount of amounts) {
       const res = await budgetTemplateAPI.createBudgetTemplate({
         accountId,
-        categoryId,
+        // categoryId, // Removed - cannot have both
         amountLimit: amount,
         recurrence: "monthly",
         startDate: new Date().toISOString(),
         note: "amount sort test",
+        name: `Amount Sort Test ${amount}`,
       });
       templates.push({ id: res.data!.id as number, amount });
     }

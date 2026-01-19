@@ -834,6 +834,8 @@ export interface components {
              * @description Timestamp of the last execution of this template
              */
             lastExecutedAt?: string;
+            /** @description Template name */
+            name: string;
             /**
              * Format: date-time
              * @description Next run date for recurring budget creation
@@ -1046,6 +1048,8 @@ export interface components {
              * @description Optional end date for recurrence
              */
             endDate?: string;
+            /** @description Template name */
+            name: string;
             /** @description Optional note for the template */
             note?: string;
             /**
@@ -1877,24 +1881,16 @@ export interface components {
         UpdateBudgetTemplateModel: {
             /**
              * Format: int64
-             * @description Account ID to filter transactions
-             */
-            accountId?: number;
-            /**
-             * Format: int64
              * @description Budget limit amount in cents
              */
             amountLimit?: number;
-            /**
-             * Format: int64
-             * @description Category ID to filter transactions
-             */
-            categoryId?: number;
             /**
              * Format: date-time
              * @description Optional end date for recurrence
              */
             endDate?: string;
+            /** @description Template name */
+            name?: string;
             /** @description Optional note for the template */
             note?: string;
             /**
@@ -2389,7 +2385,7 @@ export interface operations {
                 /** @description Number of items per page */
                 pageSize?: number;
                 /** @description Field to sort by */
-                sortBy?: "id" | "accountId" | "categoryId" | "amountLimit" | "recurrence" | "startDate" | "endDate" | "nextRunAt" | "createdAt" | "updatedAt";
+                sortBy?: "id" | "accountId" | "categoryId" | "amountLimit" | "recurrence" | "startDate" | "endDate" | "name" | "nextRunAt" | "createdAt" | "updatedAt";
                 /** @description Sort order */
                 sortOrder?: "asc" | "desc";
                 /** @description Filter by template IDs */

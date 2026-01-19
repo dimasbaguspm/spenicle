@@ -43,3 +43,7 @@ func (bs BudgetService) Update(ctx context.Context, id int64, p models.UpdateBud
 func (bs BudgetService) Delete(ctx context.Context, id int64) error {
 	return bs.br.Delete(ctx, id)
 }
+
+func (bs BudgetService) DeactivateExistingActiveBudgets(ctx context.Context, accountID, categoryID *int64, periodType string) error {
+	return bs.br.DeactivateExistingActiveBudgets(ctx, accountID, categoryID, periodType)
+}

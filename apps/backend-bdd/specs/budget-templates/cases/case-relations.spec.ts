@@ -20,10 +20,11 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
+      // categoryId: category.data!.id as number, // Removed - cannot have both
       amountLimit: 500000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Income Category Test",
     });
     expect(res.status).toBe(200);
     expect(res.data!.accountId).toBe(account.data!.id);
@@ -53,10 +54,11 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
+      // categoryId: category.data!.id as number, // Removed - cannot have both
       amountLimit: 1000000,
       recurrence: "yearly",
       startDate: new Date().toISOString(),
+      name: "Asset Account Test",
     });
     expect(res.status).toBe(200);
     expect(res.data!.accountId).toBe(account.data!.id);
@@ -87,20 +89,20 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     // Create template
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       note: "Test template for relations",
+      name: "Relations Test Template",
     });
 
     // Get template and verify relations
     const retrieved = await budgetTemplateAPI.getBudgetTemplate(
-      template.data!.id as number
+      template.data!.id as number,
     );
     expect(retrieved.status).toBe(200);
     expect(retrieved.data!.accountId).toBe(account.data!.id);
-    expect(retrieved.data!.categoryId).toBe(category.data!.id);
+    expect(retrieved.data!.categoryId).toBeUndefined(); // Template has accountId only
     expect(retrieved.data!.note).toBe("Test template for relations");
 
     // Cleanup
@@ -129,15 +131,15 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     // Create template
     await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Delete Account Test",
     });
 
     // Try to delete account - should succeed (no foreign key constraints)
     const deleteResult = await accountAPI.deleteAccount(
-      account.data!.id as number
+      account.data!.id as number,
     );
     expect(deleteResult.status).toBe(204);
 
@@ -172,15 +174,15 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     // Create template
     await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Delete Category Test",
     });
 
     // Try to delete category - should succeed (no foreign key constraints)
     const deleteResult = await categoryAPI.deleteCategory(
-      category.data!.id as number
+      category.data!.id as number,
     );
     expect(deleteResult.status).toBe(204);
 
@@ -220,21 +222,20 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     // Create template with account1
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account1.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Update Account Test",
     });
 
-    // Update to account2
+    // Update to account2 - should fail (accountId updates not allowed)
     const updated = await budgetTemplateAPI.updateBudgetTemplate(
       template.data!.id as number,
       {
         accountId: account2.data!.id as number,
-      }
+      },
     );
-    expect(updated.status).toBe(200);
-    expect(updated.data!.accountId).toBe(account2.data!.id);
+    expect(updated.status).toBe(422); // Validation failed - accountId not allowed in updates
 
     // Cleanup
     await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
@@ -267,22 +268,22 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
 
     // Create template with category1
     const template = await budgetTemplateAPI.createBudgetTemplate({
-      accountId: account.data!.id as number,
+      // accountId: account.data!.id as number, // Removed for category test
       categoryId: category1.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Update Category Test",
     });
 
-    // Update to category2
+    // Update to category2 - should fail (categoryId updates not allowed)
     const updated = await budgetTemplateAPI.updateBudgetTemplate(
       template.data!.id as number,
       {
         categoryId: category2.data!.id as number,
-      }
+      },
     );
-    expect(updated.status).toBe(200);
-    expect(updated.data!.categoryId).toBe(category2.data!.id);
+    expect(updated.status).toBe(422); // Validation failed - categoryId not allowed in updates
 
     // Cleanup
     await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
@@ -311,10 +312,10 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     // Create template
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Invalid Update Test",
     });
 
     // Try to update to non-existent account
@@ -322,7 +323,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       template.data!.id as number,
       {
         accountId: 999999,
-      }
+      },
     );
     expect(updated.status).toBeGreaterThanOrEqual(400);
 
@@ -352,10 +353,10 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     // Create template
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Invalid Category Update Test",
     });
 
     // Try to update to non-existent category
@@ -363,7 +364,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       template.data!.id as number,
       {
         categoryId: 999999,
-      }
+      },
     );
     expect(updated.status).toBeGreaterThanOrEqual(400);
 

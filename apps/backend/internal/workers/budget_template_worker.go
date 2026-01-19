@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -93,6 +94,22 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 	)
 
 	periodStart, periodEnd := calculateBudgetPeriod(template.Recurrence)
+	periodType := calculatePeriodType(periodStart, periodEnd)
+
+	// For recurring templates, deactivate any existing active budgets for the same account/category/period type
+	if template.Recurrence != "none" {
+		if err := btw.budgetService.DeactivateExistingActiveBudgets(ctx, template.AccountID, template.CategoryID, periodType); err != nil {
+			slog.Error(
+				"Failed to deactivate existing active budgets",
+				"templateID", template.ID,
+				"accountID", template.AccountID,
+				"categoryID", template.CategoryID,
+				"periodType", periodType,
+				"err", err,
+			)
+			return err
+		}
+	}
 
 	budgetRequest := models.CreateBudgetModel{
 		TemplateID:  &template.ID,
@@ -101,6 +118,7 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 		PeriodStart: periodStart,
 		PeriodEnd:   periodEnd,
 		AmountLimit: template.AmountLimit,
+		Name:        fmt.Sprintf("%s (%s)", template.Name, periodStart.Format("2006-01-02")),
 		Note:        template.Note,
 	}
 
@@ -121,6 +139,8 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 	slog.Info(
 		"Successfully created budget from template",
 		"templateID", template.ID,
+		"budgetID", budget.ID,
+		"periodType", periodType,
 	)
 
 	return nil
@@ -158,4 +178,27 @@ func calculateBudgetPeriod(recurrence string) (time.Time, time.Time) {
 func (btw *BudgetTemplateWorker) Stop() {
 	slog.Info("Stopping budget template worker")
 	btw.cronWorker.Stop()
+}
+
+// calculatePeriodType determines the period type based on start and end dates
+func calculatePeriodType(start, end time.Time) string {
+	duration := end.Sub(start)
+	days := int(duration.Hours()/24) + 1 // +1 to include both start and end dates
+
+	// Check for weekly (7 days)
+	if days == 7 {
+		return "weekly"
+	}
+
+	// Check for monthly (28-31 days)
+	if days >= 28 && days <= 31 {
+		return "monthly"
+	}
+
+	// Check for yearly (365-366 days)
+	if days >= 365 && days <= 366 {
+		return "yearly"
+	}
+
+	return "custom"
 }

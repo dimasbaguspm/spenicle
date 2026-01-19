@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 )
@@ -25,6 +26,14 @@ func (bts BudgetTemplateService) GetDetail(ctx context.Context, id int64) (model
 }
 
 func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
+	if p.AccountID == nil && p.CategoryID == nil {
+		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Budget template must be associated with either an account or category")
+	}
+
+	if p.AccountID != nil && p.CategoryID != nil {
+		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Budget template cannot be associated with both account and category")
+	}
+
 	return bts.btr.Create(ctx, p)
 }
 

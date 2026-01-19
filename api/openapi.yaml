@@ -213,6 +213,10 @@ components:
           description: Timestamp of the last execution of this template
           format: date-time
           type: string
+        name:
+          description: Template name
+          maxLength: 100
+          type: string
         nextRunAt:
           description: Next run date for recurring budget creation
           format: date-time
@@ -242,6 +246,7 @@ components:
         - amountLimit
         - recurrence
         - startDate
+        - name
         - createdAt
       type: object
     BudgetTemplatesPagedModel:
@@ -494,6 +499,10 @@ components:
           description: Optional end date for recurrence
           format: date-time
           type: string
+        name:
+          description: Template name
+          maxLength: 100
+          type: string
         note:
           description: Optional note for the template
           maxLength: 500
@@ -514,6 +523,7 @@ components:
         - amountLimit
         - recurrence
         - startDate
+        - name
       type: object
     CreateCategoryModel:
       additionalProperties: false
@@ -1672,24 +1682,18 @@ components:
     UpdateBudgetTemplateModel:
       additionalProperties: false
       properties:
-        accountId:
-          description: Account ID to filter transactions
-          format: int64
-          minimum: 1
-          type: integer
         amountLimit:
           description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        categoryId:
-          description: Category ID to filter transactions
           format: int64
           minimum: 1
           type: integer
         endDate:
           description: Optional end date for recurrence
           format: date-time
+          type: string
+        name:
+          description: Template name
+          maxLength: 100
           type: string
         note:
           description: Optional note for the template
@@ -2374,6 +2378,7 @@ paths:
               - recurrence
               - startDate
               - endDate
+              - name
               - nextRunAt
               - createdAt
               - updatedAt

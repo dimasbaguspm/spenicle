@@ -400,3 +400,21 @@ func (br BudgetRepository) validateUniqueActiveBudget(ctx context.Context, accou
 
 	return nil
 }
+
+func (br BudgetRepository) DeactivateExistingActiveBudgets(ctx context.Context, accountID, categoryID *int64, periodType string) error {
+	query := `
+		UPDATE budgets
+		SET status = 'inactive', updated_at = CURRENT_TIMESTAMP
+		WHERE deleted_at IS NULL
+			AND status = 'active'
+			AND account_id IS NOT DISTINCT FROM $1
+			AND category_id IS NOT DISTINCT FROM $2
+			AND period_type = $3`
+
+	_, err := br.pgx.Exec(ctx, query, accountID, categoryID, periodType)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to deactivate existing active budgets", err)
+	}
+
+	return nil
+}

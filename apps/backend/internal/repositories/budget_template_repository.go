@@ -28,6 +28,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 		"recurrence":  "recurrence",
 		"startDate":   "start_date",
 		"endDate":     "end_date",
+		"name":        "name",
 		"nextRunAt":   "next_run_at",
 		"createdAt":   "created_at",
 		"updatedAt":   "updated_at",
@@ -51,6 +52,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 				b.recurrence,
 				b.start_date,
 				b.end_date,
+				b.name,
 				b.next_run_at,
 				b.last_executed_at,
 				b.note,
@@ -75,6 +77,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 			recurrence,
 			start_date,
 			end_date,
+			name,
 			next_run_at,
 			last_executed_at,
 			note,
@@ -113,7 +116,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 
 	for rows.Next() {
 		var item models.BudgetTemplateModel
-		err := rows.Scan(&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence, &item.StartDate, &item.EndDate, &item.NextRunAt, &item.LastExecutedAt, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt, &totalCount)
+		err := rows.Scan(&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence, &item.StartDate, &item.EndDate, &item.Name, &item.NextRunAt, &item.LastExecutedAt, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt, &totalCount)
 		if err != nil {
 			return models.BudgetTemplatesPagedModel{}, huma.Error400BadRequest("Unable to scan budget template data", err)
 		}
@@ -145,14 +148,14 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 func (btr BudgetTemplateRepository) GetDetail(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
 	var data models.BudgetTemplateModel
 	query := `
-		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date, next_run_at, last_executed_at, note, created_at, updated_at, deleted_at
+		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date, name, next_run_at, last_executed_at, note, created_at, updated_at, deleted_at
 		FROM budget_templates
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
 	err := btr.pgx.QueryRow(ctx, query, id).Scan(
 		&data.ID, &data.AccountID, &data.CategoryID, &data.AmountLimit, &data.Recurrence,
-		&data.StartDate, &data.EndDate, &data.NextRunAt, &data.LastExecutedAt, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
+		&data.StartDate, &data.EndDate, &data.Name, &data.NextRunAt, &data.LastExecutedAt, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -174,8 +177,8 @@ func (btr BudgetTemplateRepository) Create(ctx context.Context, p models.CreateB
 	}
 
 	query := `
-		INSERT INTO budget_templates (account_id, category_id, amount_limit, recurrence, start_date, end_date, next_run_at, note)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO budget_templates (account_id, category_id, amount_limit, recurrence, start_date, end_date, name, next_run_at, note)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id`
 
 	err := btr.pgx.QueryRow(
@@ -187,6 +190,7 @@ func (btr BudgetTemplateRepository) Create(ctx context.Context, p models.CreateB
 		p.Recurrence,
 		p.StartDate,
 		p.EndDate,
+		p.Name,
 		nextRunAt,
 		p.Note,
 	).Scan(&ID)
@@ -202,43 +206,41 @@ func (btr BudgetTemplateRepository) Update(ctx context.Context, id int64, p mode
 	var ID int64
 	query := `
 		UPDATE budget_templates
-		SET account_id = COALESCE($1, account_id),
-		    category_id = COALESCE($2, category_id),
-		    amount_limit = COALESCE($3, amount_limit),
-		    recurrence = COALESCE($4, recurrence),
-		    start_date = COALESCE($5, start_date),
-		    end_date = COALESCE($6, end_date),
+		SET amount_limit = COALESCE($1, amount_limit),
+		    recurrence = COALESCE($2, recurrence),
+		    start_date = COALESCE($3, start_date),
+		    end_date = COALESCE($4, end_date),
+		    name = COALESCE($5, name),
 		    next_run_at = CASE 
-				WHEN COALESCE($4, recurrence) != recurrence OR COALESCE($5, start_date) != start_date THEN 
+				WHEN COALESCE($2, recurrence) != recurrence OR COALESCE($3, start_date) != start_date THEN 
 					CASE 
-						WHEN COALESCE($4, recurrence) = 'none' THEN NULL
+						WHEN COALESCE($2, recurrence) = 'none' THEN NULL
 						ELSE CASE
 							WHEN last_executed_at IS NOT NULL THEN 
-								CASE COALESCE($4, recurrence)
+								CASE COALESCE($2, recurrence)
 									WHEN 'weekly' THEN last_executed_at + INTERVAL '7 days'
 									WHEN 'monthly' THEN last_executed_at + INTERVAL '1 month'
 									WHEN 'yearly' THEN last_executed_at + INTERVAL '1 year'
 									ELSE last_executed_at
 								END
-							ELSE COALESCE($5, start_date)
+							ELSE COALESCE($3, start_date)
 						END
 					END
 				ELSE next_run_at
 			END,
-		    note = COALESCE($7, note),
+		    note = COALESCE($6, note),
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = $8 AND deleted_at IS NULL
+		WHERE id = $7 AND deleted_at IS NULL
 		RETURNING id`
 
 	err := btr.pgx.QueryRow(
 		ctx,
 		query,
-		p.AccountID,
-		p.CategoryID,
 		p.AmountLimit,
 		p.Recurrence,
 		p.StartDate,
 		p.EndDate,
+		p.Name,
 		p.Note,
 		id,
 	).Scan(&ID)
@@ -282,6 +284,7 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 				recurrence,
 				start_date,
 				end_date,
+				name,
 				next_run_at,
 				last_executed_at,
 				note,
@@ -307,6 +310,7 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 			recurrence,
 			start_date,
 			end_date,
+			name,
 			next_run_at,
 			last_executed_at,
 			note,
@@ -327,7 +331,7 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 		var item models.BudgetTemplateModel
 		if err := rows.Scan(
 			&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence,
-			&item.StartDate, &item.EndDate, &item.NextRunAt, &item.LastExecutedAt, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&item.StartDate, &item.EndDate, &item.Name, &item.NextRunAt, &item.LastExecutedAt, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 		); err != nil {
 			return nil, huma.Error400BadRequest("Unable to scan due budget template data", err)
 		}

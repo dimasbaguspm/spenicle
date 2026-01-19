@@ -22,10 +22,10 @@ test.describe("Budget Templates - Related Budgets Cases", () => {
 
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Related Budgets Test",
     });
     const templateId = template.data!.id as number;
 
@@ -82,10 +82,10 @@ test.describe("Budget Templates - Related Budgets Cases", () => {
 
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 50000,
       recurrence: "none",
       startDate: new Date().toISOString(),
+      name: "Empty Related Budgets Test",
     });
     const templateId = template.data!.id as number;
 

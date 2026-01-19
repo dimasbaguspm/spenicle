@@ -23,11 +23,11 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
+      name: "Past End Date Test",
     });
     expect(res.status).toBe(200); // API allows end date in past
 
@@ -58,11 +58,11 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
+      name: "Past Start Date Test",
     });
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
@@ -92,10 +92,10 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 999999999999, // Very large amount
       recurrence: "yearly",
       startDate: new Date().toISOString(),
+      name: "Large Amount Test",
     });
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
@@ -128,11 +128,11 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       note: longNote,
+      name: "Long Note Test",
     });
     expect(res.status).toBe(422); // Validation error for too long note
     // No cleanup needed since creation failed
@@ -157,10 +157,10 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "none",
       startDate: new Date().toISOString(),
+      name: "None Recurrence Test",
     });
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
@@ -192,10 +192,10 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     // Create template
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Update Recurrence Test",
     });
 
     // Update recurrence
@@ -234,10 +234,10 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     // Create template without endDate
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Add End Date Test",
     });
 
     // Update to add endDate
@@ -278,11 +278,11 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     const endDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       endDate: endDate.toISOString(),
+      name: "Remove End Date Test",
     });
 
     // Update to remove endDate
@@ -322,19 +322,19 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     // Create first template
     const template1 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Duplicate Template 1",
     });
 
     // Create duplicate template (same data)
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Duplicate Template 2",
     });
 
     expect(template2.status).toBe(200);
@@ -374,10 +374,10 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     for (let i = 0; i < 5; i++) {
       const template = await budgetTemplateAPI.createBudgetTemplate({
         accountId: account.data!.id as number,
-        categoryId: category.data!.id as number,
         amountLimit: 10000 * (i + 1),
         recurrence: "monthly",
         startDate: new Date().toISOString(),
+        name: `Pagination Template ${i + 1}`,
       });
       templates.push(template.data!.id);
     }
@@ -424,10 +424,10 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "none",
       startDate: new Date().toISOString(),
+      name: "None NextRun Test",
     });
     expect(res.status).toBe(200);
     expect(res.data!.nextRunAt).toBeUndefined();
@@ -458,10 +458,10 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     const startDate = new Date().toISOString();
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: startDate,
+      name: "NextRun StartDate Test",
     });
     expect(res.status).toBe(200);
     expect(res.data!.nextRunAt).toBe(startDate);

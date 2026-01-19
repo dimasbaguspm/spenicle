@@ -27,9 +27,9 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Missing Amount Test",
     } as any);
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -57,9 +57,9 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       startDate: new Date().toISOString(),
+      name: "Missing Recurrence Test",
     } as any);
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -87,9 +87,9 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
+      name: "Missing Start Date Test",
     } as any);
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -117,10 +117,10 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "invalid",
       startDate: new Date().toISOString(),
+      name: "Invalid Recurrence Test",
     } as any);
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -148,10 +148,10 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 0,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Zero Amount Test",
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -179,10 +179,10 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: -1000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Negative Amount Test",
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -207,6 +207,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Non-existent Account Test",
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -230,6 +231,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
+      name: "Non-existent Category Test",
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -259,11 +261,11 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
 
     const res = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
-      categoryId: category.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
+      name: "End Before Start Test",
     });
     expect(res.status).toBe(200); // API allows end date before start date
 
