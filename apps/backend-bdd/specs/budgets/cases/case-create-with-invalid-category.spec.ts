@@ -5,7 +5,8 @@ test.describe("Budgets - Create with Invalid Category Cases", () => {
     budgetAPI,
   }) => {
     const res = await budgetAPI.createBudget({
-      categoryId: 999999, // Non-existent category
+      categoryId: 999999,
+      name: "Invalid Category Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,

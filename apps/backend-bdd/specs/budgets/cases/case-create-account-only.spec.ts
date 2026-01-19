@@ -14,6 +14,7 @@ test.describe("Budgets - Create Account Only Cases", () => {
 
     const res = await budgetAPI.createBudget({
       accountId,
+      name: "Account Only Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,

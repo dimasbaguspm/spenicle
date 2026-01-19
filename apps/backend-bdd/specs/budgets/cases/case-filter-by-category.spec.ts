@@ -31,6 +31,7 @@ test.describe("Budgets - Filter by Category Cases", () => {
     // Create budgets for each category
     const b1Res = await budgetAPI.createBudget({
       categoryId: cat1Id,
+      name: "Category 1 Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
@@ -39,6 +40,7 @@ test.describe("Budgets - Filter by Category Cases", () => {
 
     const b2Res = await budgetAPI.createBudget({
       categoryId: cat2Id,
+      name: "Category 2 Budget",
       periodStart: new Date("2026-02-01").toISOString(),
       periodEnd: new Date("2026-02-28").toISOString(),
       amountLimit: 2000,

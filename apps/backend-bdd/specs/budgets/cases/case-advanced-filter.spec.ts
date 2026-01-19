@@ -23,6 +23,7 @@ test.describe("Budgets - Advanced Filter Cases", () => {
     // Create budgets for each
     const b1Res = await budgetAPI.createBudget({
       accountId: acc1Id,
+      name: "Account 1 Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
@@ -31,6 +32,7 @@ test.describe("Budgets - Advanced Filter Cases", () => {
 
     const b2Res = await budgetAPI.createBudget({
       accountId: acc2Id,
+      name: "Account 2 Budget",
       periodStart: new Date("2026-02-01").toISOString(),
       periodEnd: new Date("2026-02-28").toISOString(),
       amountLimit: 2000,
@@ -73,6 +75,7 @@ test.describe("Budgets - Advanced Filter Cases", () => {
     // Create budgets for each
     const b1Res = await budgetAPI.createBudget({
       accountId: acc1Id,
+      name: "Account 1 Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
@@ -81,6 +84,7 @@ test.describe("Budgets - Advanced Filter Cases", () => {
 
     const b2Res = await budgetAPI.createBudget({
       accountId: acc2Id,
+      name: "Account 2 Budget",
       periodStart: new Date("2026-02-01").toISOString(),
       periodEnd: new Date("2026-02-28").toISOString(),
       amountLimit: 2000,

@@ -3,6 +3,8 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
@@ -18,6 +20,32 @@ func NewBudgetRepository(pgx *pgxpool.Pool) BudgetRepository {
 	return BudgetRepository{pgx}
 }
 
+// calculatePeriodType determines the period type based on start and end dates
+func calculatePeriodType(start, end time.Time) string {
+	duration := end.Sub(start)
+	days := int(duration.Hours()/24) + 1 // +1 to include both start and end dates
+
+	// Debug logging
+	fmt.Printf("DEBUG: start=%v, end=%v, duration=%v, hours=%v, days=%d\n", start, end, duration, duration.Hours(), days)
+
+	// Check for weekly (7 days)
+	if days == 7 {
+		return "weekly"
+	}
+
+	// Check for monthly (28-31 days)
+	if days >= 28 && days <= 31 {
+		return "monthly"
+	}
+
+	// Check for yearly (365-366 days)
+	if days >= 365 && days <= 366 {
+		return "yearly"
+	}
+
+	return "custom"
+}
+
 func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSearchModel) (models.BudgetsPagedModel, error) {
 	sortByMap := map[string]string{
 		"id":          "id",
@@ -27,6 +55,8 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 		"periodStart": "period_start",
 		"periodEnd":   "period_end",
 		"amountLimit": "amount_limit",
+		"status":      "status",
+		"name":        "name",
 		"createdAt":   "created_at",
 		"updatedAt":   "updated_at",
 	}
@@ -49,6 +79,9 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 				b.period_start,
 				b.period_end,
 				b.amount_limit,
+				b.status,
+				b.period_type,
+				b.name,
 				COALESCE((
 					SELECT SUM(t.amount)
 					FROM transactions t
@@ -69,6 +102,8 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 					AND (array_length($4::int8[], 1) IS NULL OR b.template_id = ANY($4::int8[]))
 					AND (array_length($5::int8[], 1) IS NULL OR b.account_id = ANY($5::int8[]))
 					AND (array_length($6::int8[], 1) IS NULL OR b.category_id = ANY($6::int8[]))
+					AND ($7::text IS NULL OR $7::text = '' OR b.status = $7::text)
+					AND ($8::text IS NULL OR $8::text = '' OR b.name ILIKE '%' || $8::text || '%')
 			ORDER BY b.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		)
@@ -80,6 +115,9 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 			period_start,
 			period_end,
 			amount_limit,
+			status,
+			period_type,
+			name,
 			actual_amount,
 			note,
 			created_at,
@@ -110,7 +148,7 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 		categoryIDs = query.CategoryIDs
 	}
 
-	rows, err := br.pgx.Query(ctx, sql, query.PageSize, offset, ids, templateIDs, accountIDs, categoryIDs)
+	rows, err := br.pgx.Query(ctx, sql, query.PageSize, offset, ids, templateIDs, accountIDs, categoryIDs, query.Status, query.Name)
 	if err != nil {
 		return models.BudgetsPagedModel{}, huma.Error400BadRequest("Unable to query budgets", err)
 	}
@@ -129,6 +167,9 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 			&item.PeriodStart,
 			&item.PeriodEnd,
 			&item.AmountLimit,
+			&item.Status,
+			&item.PeriodType,
+			&item.Name,
 			&item.ActualAmount,
 			&item.Note,
 			&item.CreatedAt,
@@ -176,6 +217,9 @@ func (br BudgetRepository) GetDetail(ctx context.Context, id int64) (models.Budg
 			b.period_start,
 			b.period_end,
 			b.amount_limit,
+			b.status,
+			b.period_type,
+			b.name,
 			COALESCE((
 				SELECT SUM(t.amount)
 				FROM transactions t
@@ -195,7 +239,7 @@ func (br BudgetRepository) GetDetail(ctx context.Context, id int64) (models.Budg
 
 	err := br.pgx.QueryRow(ctx, query, id).Scan(
 		&data.ID, &data.TemplateID, &data.AccountID, &data.CategoryID, &data.PeriodStart, &data.PeriodEnd,
-		&data.AmountLimit, &data.ActualAmount, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
+		&data.AmountLimit, &data.Status, &data.PeriodType, &data.Name, &data.ActualAmount, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -209,6 +253,14 @@ func (br BudgetRepository) GetDetail(ctx context.Context, id int64) (models.Budg
 }
 
 func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetModel) (models.BudgetModel, error) {
+	// Calculate period type based on dates
+	periodType := calculatePeriodType(p.PeriodStart, p.PeriodEnd)
+
+	// Validate that only one active budget exists per account/category combination
+	if err := br.validateUniqueActiveBudget(ctx, p.AccountID, p.CategoryID, periodType); err != nil {
+		return models.BudgetModel{}, err
+	}
+
 	query := `
 		INSERT INTO budgets (
 			template_id,
@@ -217,8 +269,11 @@ func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetMode
 			period_start,
 			period_end,
 			amount_limit,
+			status,
+			period_type,
+			name,
 			note)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9)
 		RETURNING id`
 
 	var ID int64
@@ -231,6 +286,8 @@ func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetMode
 		p.PeriodStart,
 		p.PeriodEnd,
 		p.AmountLimit,
+		periodType,
+		p.Name,
 		p.Note,
 	).Scan(&ID)
 
@@ -242,35 +299,61 @@ func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetMode
 }
 
 func (br BudgetRepository) Update(ctx context.Context, id int64, p models.UpdateBudgetModel) (models.BudgetModel, error) {
+
+	current, err := br.GetDetail(ctx, id)
+	if err != nil {
+		return models.BudgetModel{}, err
+	}
+
+	periodType := current.PeriodType
+	periodStart := current.PeriodStart
+	periodEnd := current.PeriodEnd
+
+	if p.PeriodStart != nil {
+		periodStart = *p.PeriodStart
+	}
+	if p.PeriodEnd != nil {
+		periodEnd = *p.PeriodEnd
+	}
+
+	if p.PeriodStart != nil || p.PeriodEnd != nil {
+		periodType = calculatePeriodType(periodStart, periodEnd)
+	}
+
+	if p.Status != nil && *p.Status == "active" {
+		if err := br.validateUniqueActiveBudget(ctx, current.AccountID, current.CategoryID, periodType); err != nil {
+			return models.BudgetModel{}, err
+		}
+	}
+
 	query := `
 		UPDATE budgets
-		SET account_id = COALESCE($1, account_id),
-		    category_id = COALESCE($2, category_id),
-		    period_start = COALESCE($3, period_start),
-		    period_end = COALESCE($4, period_end),
-		    amount_limit = COALESCE($5, amount_limit),
-		    note = COALESCE($6, note),
+		SET period_start = COALESCE($1, period_start),
+		    period_end = COALESCE($2, period_end),
+		    amount_limit = COALESCE($3, amount_limit),
+		    status = COALESCE($4, status),
+		    period_type = $5,
+		    name = COALESCE($6, name),
+		    note = COALESCE($7, note),
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = $7 AND deleted_at IS NULL
+		WHERE id = $8 AND deleted_at IS NULL
 		RETURNING id`
 
 	var ID int64
-	err := br.pgx.QueryRow(
+	err = br.pgx.QueryRow(
 		ctx,
 		query,
-		p.AccountID,
-		p.CategoryID,
 		p.PeriodStart,
 		p.PeriodEnd,
 		p.AmountLimit,
+		p.Status,
+		periodType,
+		p.Name,
 		p.Note,
 		id,
 	).Scan(&ID)
 
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return models.BudgetModel{}, huma.Error404NotFound("Budget not found")
-		}
 		return models.BudgetModel{}, huma.Error400BadRequest("Unable to update budget", err)
 	}
 
@@ -289,6 +372,30 @@ func (br BudgetRepository) Delete(ctx context.Context, id int64) error {
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Budget not found")
+	}
+
+	return nil
+}
+
+// validateUniqueActiveBudget ensures only one active budget exists per account/category/period_type combination
+func (br BudgetRepository) validateUniqueActiveBudget(ctx context.Context, accountID, categoryID *int64, periodType string) error {
+	query := `
+		SELECT COUNT(1)
+		FROM budgets
+		WHERE deleted_at IS NULL
+			AND status = 'active'
+			AND account_id IS NOT DISTINCT FROM $1
+			AND category_id IS NOT DISTINCT FROM $2
+			AND period_type = $3`
+
+	var count int
+	err := br.pgx.QueryRow(ctx, query, accountID, categoryID, periodType).Scan(&count)
+	if err != nil {
+		return huma.Error400BadRequest("Unable to validate budget uniqueness", err)
+	}
+
+	if count > 0 {
+		return huma.Error400BadRequest("An active budget already exists for this account/category/period combination")
 	}
 
 	return nil

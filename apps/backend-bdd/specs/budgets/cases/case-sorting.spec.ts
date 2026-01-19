@@ -12,17 +12,22 @@ test.describe("Budgets - Sorting Cases", () => {
     });
     const accountId = accountRes.data!.id as number;
 
-    // Create budgets with different amounts
+    // Create budgets with different amounts and periods
     const budgets = [];
-    const amounts = [500, 1500, 1000];
-    for (const amount of amounts) {
+    const budgetConfigs = [
+      { amount: 500, periodStart: "2026-01-01", periodEnd: "2026-01-31" }, // monthly
+      { amount: 1500, periodStart: "2026-02-01", periodEnd: "2026-02-07" }, // weekly
+      { amount: 1000, periodStart: "2026-03-01", periodEnd: "2026-12-31" }, // yearly
+    ];
+    for (const config of budgetConfigs) {
       const res = await budgetAPI.createBudget({
         accountId,
-        periodStart: new Date("2026-01-01").toISOString(),
-        periodEnd: new Date("2026-01-31").toISOString(),
-        amountLimit: amount,
+        name: `Budget ${config.amount}`,
+        periodStart: new Date(config.periodStart).toISOString(),
+        periodEnd: new Date(config.periodEnd).toISOString(),
+        amountLimit: config.amount,
       });
-      budgets.push({ id: res.data!.id as number, amount });
+      budgets.push({ id: res.data!.id as number, amount: config.amount });
     }
 
     // Sort by amountLimit desc

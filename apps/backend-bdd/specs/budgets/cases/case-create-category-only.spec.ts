@@ -14,6 +14,7 @@ test.describe("Budgets - Create Category Only Cases", () => {
 
     const res = await budgetAPI.createBudget({
       categoryId,
+      name: "Category Only Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,

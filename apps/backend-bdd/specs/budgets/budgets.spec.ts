@@ -12,16 +12,21 @@ test.describe("Budgets - Common CRUD", () => {
 
     const res = await budgetAPI.createBudget({
       accountId,
+      name: "Monthly Expense Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
+      note: "Test budget for monthly expenses",
     });
 
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
-    const budgetId = res.data!.id as number;
+    expect(res.data!.name).toBe("Monthly Expense Budget");
+    expect(res.data!.periodType).toBe("monthly");
+    expect(res.data!.status).toBe("active");
+    expect(res.data!.note).toBe("Test budget for monthly expenses");
 
-    await budgetAPI.deleteBudget(budgetId);
+    await budgetAPI.deleteBudget(res.data!.id);
     await accountAPI.deleteAccount(accountId);
   });
 
@@ -38,6 +43,7 @@ test.describe("Budgets - Common CRUD", () => {
 
     const budgetRes = await budgetAPI.createBudget({
       accountId,
+      name: "List Test Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
@@ -50,6 +56,12 @@ test.describe("Budgets - Common CRUD", () => {
     expect(listRes.status).toBe(200);
     const items = listRes.data!.items || [];
     expect(Array.isArray(items)).toBe(true);
+    expect(items.length).toBeGreaterThan(0);
+
+    // Check that our budget is in the list
+    const ourBudget = items.find((b) => b.id === budgetId);
+    expect(ourBudget).toBeDefined();
+    expect(ourBudget!.name).toBe("List Test Budget");
 
     await budgetAPI.deleteBudget(budgetId);
     await accountAPI.deleteAccount(accountId);
@@ -68,6 +80,7 @@ test.describe("Budgets - Common CRUD", () => {
 
     const budgetRes = await budgetAPI.createBudget({
       accountId,
+      name: "Get Test Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
@@ -79,6 +92,9 @@ test.describe("Budgets - Common CRUD", () => {
     const getRes = await budgetAPI.getBudget(budgetId);
     expect(getRes.status).toBe(200);
     expect(getRes.data!.id).toBe(budgetId);
+    expect(getRes.data!.name).toBe("Get Test Budget");
+    expect(getRes.data!.periodType).toBe("monthly");
+    expect(getRes.data!.status).toBe("active");
 
     await budgetAPI.deleteBudget(budgetId);
     await accountAPI.deleteAccount(accountId);
@@ -97,6 +113,7 @@ test.describe("Budgets - Common CRUD", () => {
 
     const budgetRes = await budgetAPI.createBudget({
       accountId,
+      name: "Update Test Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
@@ -104,10 +121,14 @@ test.describe("Budgets - Common CRUD", () => {
     const budgetId = budgetRes.data!.id as number;
 
     const updateRes = await budgetAPI.updateBudget(budgetId, {
+      name: "Updated Budget Name",
       amountLimit: 2000,
+      status: "inactive",
     });
     expect(updateRes.status).toBe(200);
+    expect(updateRes.data!.name).toBe("Updated Budget Name");
     expect(updateRes.data!.amountLimit).toBe(2000);
+    expect(updateRes.data!.status).toBe("inactive");
 
     await budgetAPI.deleteBudget(budgetId);
     await accountAPI.deleteAccount(accountId);
@@ -126,6 +147,7 @@ test.describe("Budgets - Common CRUD", () => {
 
     const budgetRes = await budgetAPI.createBudget({
       accountId,
+      name: "Delete Test Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,

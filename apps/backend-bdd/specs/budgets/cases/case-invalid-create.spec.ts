@@ -5,7 +5,7 @@ test.describe("Budgets - Invalid Create Cases", () => {
     budgetAPI,
   }) => {
     const res = await budgetAPI.createBudget({
-      accountId: 999999, // Non-existent account
+      accountId: 999999,
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,

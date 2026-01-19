@@ -125,10 +125,16 @@ components:
           description: Unique identifier
           format: int64
           type: integer
+        name:
+          description: Budget name
+          maxLength: 100
+          type: string
         note:
           description: Optional note for the budget
           maxLength: 500
-          type: string
+          type:
+            - string
+            - "null"
         periodEnd:
           description: Budget period end date
           format: date-time
@@ -136,6 +142,20 @@ components:
         periodStart:
           description: Budget period start date
           format: date-time
+          type: string
+        periodType:
+          description: Budget period type
+          enum:
+            - weekly
+            - monthly
+            - yearly
+            - custom
+          type: string
+        status:
+          description: Budget status (active or inactive)
+          enum:
+            - active
+            - inactive
           type: string
         templateId:
           description: Budget template ID if generated from template
@@ -151,6 +171,10 @@ components:
         - periodEnd
         - amountLimit
         - actualAmount
+        - status
+        - periodType
+        - name
+        - note
         - createdAt
       type: object
     BudgetTemplateModel:
@@ -421,6 +445,10 @@ components:
           format: int64
           minimum: 1
           type: integer
+        name:
+          description: Budget name
+          maxLength: 100
+          type: string
         note:
           description: Optional note for the budget
           maxLength: 500
@@ -442,6 +470,7 @@ components:
         - periodStart
         - periodEnd
         - amountLimit
+        - name
       type: object
     CreateBudgetTemplateModel:
       additionalProperties: false
@@ -1612,21 +1641,15 @@ components:
     UpdateBudgetModel:
       additionalProperties: false
       properties:
-        accountId:
-          description: Account ID to filter transactions
-          format: int64
-          minimum: 1
-          type: integer
         amountLimit:
           description: Budget limit amount in cents
           format: int64
           minimum: 1
           type: integer
-        categoryId:
-          description: Category ID to filter transactions
-          format: int64
-          minimum: 1
-          type: integer
+        name:
+          description: Budget name
+          maxLength: 100
+          type: string
         note:
           description: Optional note for the budget
           maxLength: 500
@@ -1638,6 +1661,12 @@ components:
         periodStart:
           description: Budget period start date
           format: date-time
+          type: string
+        status:
+          description: Budget status
+          enum:
+            - active
+            - inactive
           type: string
       type: object
     UpdateBudgetTemplateModel:
@@ -2178,6 +2207,8 @@ paths:
               - periodStart
               - periodEnd
               - amountLimit
+              - status
+              - name
               - createdAt
               - updatedAt
             type: string
@@ -2240,6 +2271,23 @@ paths:
             type:
               - array
               - "null"
+        - description: Filter by budget status
+          explode: false
+          in: query
+          name: status
+          schema:
+            description: Filter by budget status
+            enum:
+              - active
+              - inactive
+            type: string
+        - description: Filter by budget name (partial match)
+          explode: false
+          in: query
+          name: name
+          schema:
+            description: Filter by budget name (partial match)
+            type: string
       responses:
         "200":
           content:

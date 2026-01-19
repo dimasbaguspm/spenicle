@@ -1,7 +1,7 @@
 import { test, expect } from "@fixtures/index";
 
 test.describe("Budgets - Create Both Account and Category Cases", () => {
-  test("POST /budgets - create budget with both accountId and categoryId succeeds", async ({
+  test("POST /budgets - fails with both accountId and categoryId", async ({
     budgetAPI,
     accountAPI,
     categoryAPI,
@@ -23,17 +23,14 @@ test.describe("Budgets - Create Both Account and Category Cases", () => {
     const res = await budgetAPI.createBudget({
       accountId,
       categoryId,
+      name: "Both Account and Category Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1000,
     });
-    expect(res.status).toBe(200);
-    expect(res.data).toBeDefined();
-    expect(res.data!.accountId).toBe(accountId);
-    expect(res.data!.categoryId).toBe(categoryId);
+    expect(res.status).toBe(400); // Business logic prevents both account and category
+    expect(res.error?.detail).toContain("cannot be associated with both");
 
-    const budgetId = res.data!.id as number;
-    await budgetAPI.deleteBudget(budgetId);
     await categoryAPI.deleteCategory(categoryId);
     await accountAPI.deleteAccount(accountId);
   });

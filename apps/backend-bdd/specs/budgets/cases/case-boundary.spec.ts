@@ -15,6 +15,7 @@ test.describe("Budgets - Boundary Cases", () => {
     const date = new Date("2026-01-15").toISOString();
     const res = await budgetAPI.createBudget({
       accountId,
+      name: "Same Date Budget",
       periodStart: date,
       periodEnd: date,
       amountLimit: 1000,
@@ -40,6 +41,7 @@ test.describe("Budgets - Boundary Cases", () => {
 
     const res = await budgetAPI.createBudget({
       accountId,
+      name: "Large Amount Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 999999999, // Very large amount
@@ -65,6 +67,7 @@ test.describe("Budgets - Boundary Cases", () => {
 
     const res = await budgetAPI.createBudget({
       accountId,
+      name: "Minimum Amount Budget",
       periodStart: new Date("2026-01-01").toISOString(),
       periodEnd: new Date("2026-01-31").toISOString(),
       amountLimit: 1, // Minimum amount

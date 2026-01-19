@@ -758,8 +758,10 @@ export interface components {
              * @description Unique identifier
              */
             id: number;
+            /** @description Budget name */
+            name: string;
             /** @description Optional note for the budget */
-            note?: string;
+            note: string | null;
             /**
              * Format: date-time
              * @description Budget period end date
@@ -770,6 +772,16 @@ export interface components {
              * @description Budget period start date
              */
             periodStart: string;
+            /**
+             * @description Budget period type
+             * @enum {string}
+             */
+            periodType: "weekly" | "monthly" | "yearly" | "custom";
+            /**
+             * @description Budget status (active or inactive)
+             * @enum {string}
+             */
+            status: "active" | "inactive";
             /**
              * Format: int64
              * @description Budget template ID if generated from template
@@ -993,6 +1005,8 @@ export interface components {
              * @description Category ID to filter transactions
              */
             categoryId?: number;
+            /** @description Budget name */
+            name: string;
             /** @description Optional note for the budget */
             note?: string;
             /**
@@ -1837,19 +1851,11 @@ export interface components {
         UpdateBudgetModel: {
             /**
              * Format: int64
-             * @description Account ID to filter transactions
-             */
-            accountId?: number;
-            /**
-             * Format: int64
              * @description Budget limit amount in cents
              */
             amountLimit?: number;
-            /**
-             * Format: int64
-             * @description Category ID to filter transactions
-             */
-            categoryId?: number;
+            /** @description Budget name */
+            name?: string;
             /** @description Optional note for the budget */
             note?: string;
             /**
@@ -1862,6 +1868,11 @@ export interface components {
              * @description Budget period start date
              */
             periodStart?: string;
+            /**
+             * @description Budget status
+             * @enum {string}
+             */
+            status?: "active" | "inactive";
         };
         UpdateBudgetTemplateModel: {
             /**
@@ -2295,7 +2306,7 @@ export interface operations {
                 /** @description Number of items per page */
                 pageSize?: number;
                 /** @description Field to sort by */
-                sortBy?: "id" | "templateId" | "accountId" | "categoryId" | "periodStart" | "periodEnd" | "amountLimit" | "createdAt" | "updatedAt";
+                sortBy?: "id" | "templateId" | "accountId" | "categoryId" | "periodStart" | "periodEnd" | "amountLimit" | "status" | "name" | "createdAt" | "updatedAt";
                 /** @description Sort order */
                 sortOrder?: "asc" | "desc";
                 /** @description Filter by budget IDs */
@@ -2306,6 +2317,10 @@ export interface operations {
                 accountId?: number[] | null;
                 /** @description Filter by category IDs */
                 categoryId?: number[] | null;
+                /** @description Filter by budget status */
+                status?: "active" | "inactive";
+                /** @description Filter by budget name (partial match) */
+                name?: string;
             };
             header?: never;
             path?: never;

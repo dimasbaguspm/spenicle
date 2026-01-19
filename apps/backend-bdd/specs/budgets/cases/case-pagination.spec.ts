@@ -17,11 +17,12 @@ test.describe("Budgets - Pagination Cases", () => {
     for (let i = 0; i < 6; i++) {
       const r = await budgetAPI.createBudget({
         accountId,
+        name: `${base}-${i + 1}`,
         periodStart: new Date(
-          `2026-01-${String(i + 1).padStart(2, "0")}`
+          `2026-01-${String(i + 1).padStart(2, "0")}`,
         ).toISOString(),
         periodEnd: new Date(
-          `2026-01-${String(i + 2).padStart(2, "0")}`
+          `2026-01-${String(i + 2).padStart(2, "0")}`,
         ).toISOString(),
         amountLimit: 1000 + i * 100,
       });
