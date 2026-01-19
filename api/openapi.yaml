@@ -358,6 +358,9 @@ components:
           description: Timestamp when archived (null if active)
           format: date-time
           type: string
+        budget:
+          $ref: "#/components/schemas/EmbeddedBudget"
+          description: Currently active budget for this category
         createdAt:
           description: Creation timestamp
           format: date-time
@@ -395,9 +398,6 @@ components:
             - transfer
           minLength: 1
           type: string
-        budget:
-          $ref: "#/components/schemas/EmbeddedBudget"
-          description: Currently active budget for this category
         updatedAt:
           description: Last update timestamp
           format: date-time
@@ -722,12 +722,20 @@ components:
     EmbeddedBudget:
       additionalProperties: false
       properties:
+        accountId:
+          description: Account ID to filter transactions
+          format: int64
+          type: integer
         actualAmount:
           description: Actual spent amount in cents
           format: int64
           type: integer
         amountLimit:
           description: Budget limit amount in cents
+          format: int64
+          type: integer
+        categoryId:
+          description: Category ID to filter transactions
           format: int64
           type: integer
         id:

@@ -67,6 +67,8 @@ test.describe("Accounts - Common CRUD", () => {
     expect(accountWithBudget).toBeDefined();
     expect(accountWithBudget!.budget).toBeDefined();
     expect(accountWithBudget!.budget!.id).toBe(budgetId);
+    expect(accountWithBudget!.budget!.accountId).toBe(accountId);
+    expect(accountWithBudget!.budget!.categoryId).toBeUndefined();
 
     // Clean up
     await budgetAPI.deleteBudget(budgetId);
@@ -163,6 +165,8 @@ test.describe("Accounts - Common CRUD", () => {
     expect(withBudgetGet.data!.budget!.id).toBe(budgetId);
     expect(withBudgetGet.data!.budget!.name).toBe("Active Budget");
     expect(withBudgetGet.data!.budget!.amountLimit).toBe(1000);
+    expect(withBudgetGet.data!.budget!.accountId).toBe(accountId);
+    expect(withBudgetGet.data!.budget!.categoryId).toBeUndefined();
 
     // Clean up
     await budgetAPI.deleteBudget(budgetId);

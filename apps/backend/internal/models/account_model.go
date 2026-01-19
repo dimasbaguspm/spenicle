@@ -4,9 +4,11 @@ import "time"
 
 type EmbeddedBudget struct {
 	ID           int64     `json:"id" doc:"Budget unique identifier"`
+	TemplateID   *int64    `json:"templateId,omitempty" doc:"Budget template ID if generated from template"`
+	AccountID    *int64    `json:"accountId,omitempty" doc:"Account ID to filter transactions"`
+	CategoryID   *int64    `json:"categoryId,omitempty" doc:"Category ID to filter transactions"`
 	PeriodStart  time.Time `json:"periodStart" doc:"Budget period start date" format:"date-time"`
 	PeriodEnd    time.Time `json:"periodEnd" doc:"Budget period end date" format:"date-time"`
-	TemplateID   *int64    `json:"templateId,omitempty" doc:"Budget template ID if generated from template"`
 	AmountLimit  int64     `json:"amountLimit" doc:"Budget limit amount in cents"`
 	ActualAmount int64     `json:"actualAmount" doc:"Actual spent amount in cents"`
 	PeriodType   string    `json:"periodType" doc:"Budget period type"`

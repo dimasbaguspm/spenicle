@@ -43,7 +43,7 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 		WITH filtered_accounts AS (
 			SELECT 
 				a.id, a.name, a.type, a.note, a.amount, a.icon, a.icon_color, a.display_order, a.archived_at, a.created_at, a.updated_at,
-				b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, 
+				b.id as budget_id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end, b.amount_limit, 
 				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = a.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
 				b.period_type, b.name as budget_name,
 				COUNT(*) OVER() as total_count
@@ -74,9 +74,11 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 			created_at,
 			updated_at,
 			budget_id,
+			template_id,
+			account_id,
+			category_id,
 			period_start,
 			period_end,
-			template_id,
 			amount_limit,
 			actual_amount,
 			period_type,
@@ -112,23 +114,27 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 	for rows.Next() {
 		var item models.AccountModel
 		var budgetID *int64
+		var templateID *int64
+		var accountID *int64
+		var categoryID *int64
 		var periodStart *time.Time
 		var periodEnd *time.Time
-		var templateID *int64
 		var amountLimit *int64
 		var actualAmount *int64
 		var periodType *string
 		var budgetName *string
-		err := rows.Scan(&item.ID, &item.Name, &item.Type, &item.Note, &item.Amount, &item.Icon, &item.IconColor, &item.DisplayOrder, &item.ArchivedAt, &item.CreatedAt, &item.UpdatedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &actualAmount, &periodType, &budgetName, &totalCount)
+		err := rows.Scan(&item.ID, &item.Name, &item.Type, &item.Note, &item.Amount, &item.Icon, &item.IconColor, &item.DisplayOrder, &item.ArchivedAt, &item.CreatedAt, &item.UpdatedAt, &budgetID, &templateID, &accountID, &categoryID, &periodStart, &periodEnd, &amountLimit, &actualAmount, &periodType, &budgetName, &totalCount)
 		if err != nil {
 			return models.AccountsPagedModel{}, huma.Error400BadRequest("Unable to scan account data", err)
 		}
 		if budgetID != nil {
 			item.EmbeddedBudget = &models.EmbeddedBudget{
 				ID:           *budgetID,
+				TemplateID:   templateID,
+				AccountID:    accountID,
+				CategoryID:   categoryID,
 				PeriodStart:  *periodStart,
 				PeriodEnd:    *periodEnd,
-				TemplateID:   templateID,
 				AmountLimit:  *amountLimit,
 				ActualAmount: *actualAmount,
 				PeriodType:   *periodType,
@@ -163,23 +169,25 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.AccountModel, error) {
 	var data models.AccountModel
 	var budgetID *int64
+	var templateID *int64
+	var accountID *int64
+	var categoryID *int64
 	var periodStart *time.Time
 	var periodEnd *time.Time
-	var templateID *int64
 	var amountLimit *int64
 	var actualAmount *int64
 	var periodType *string
 	var budgetName *string
 
 	sql := `SELECT a.id, a.name, a.type, a.note, a.amount, a.icon, a.icon_color, a.display_order, a.archived_at, a.created_at, a.updated_at, a.deleted_at,
-			b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, 
+			b.id as budget_id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end, b.amount_limit, 
 			COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = a.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
 			b.period_type, b.name as budget_name
 			FROM accounts a
 			LEFT JOIN budgets b ON b.account_id = a.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
 			WHERE a.id = $1 AND a.deleted_at IS NULL`
 
-	err := ar.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &actualAmount, &periodType, &budgetName)
+	err := ar.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &templateID, &accountID, &categoryID, &periodStart, &periodEnd, &amountLimit, &actualAmount, &periodType, &budgetName)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -191,9 +199,11 @@ func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.Acc
 	if budgetID != nil {
 		data.EmbeddedBudget = &models.EmbeddedBudget{
 			ID:           *budgetID,
+			TemplateID:   templateID,
+			AccountID:    accountID,
+			CategoryID:   categoryID,
 			PeriodStart:  *periodStart,
 			PeriodEnd:    *periodEnd,
-			TemplateID:   templateID,
 			AmountLimit:  *amountLimit,
 			ActualAmount: *actualAmount,
 			PeriodType:   *periodType,

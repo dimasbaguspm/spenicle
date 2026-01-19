@@ -40,7 +40,7 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 		WITH filtered_categories AS (
 			SELECT 
 				c.id, c.name, c.type, c.note, c.icon, c.icon_color, c.display_order, c.archived_at, c.created_at, c.updated_at,
-				b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, 
+				b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, b.account_id, b.category_id,
 				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.category_id = c.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
 				b.period_type, b.name as budget_name,
 				COUNT(*) OVER() as total_count
@@ -74,6 +74,8 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 			period_end,
 			template_id,
 			amount_limit,
+			account_id,
+			category_id,
 			actual_amount,
 			period_type,
 			budget_name,
@@ -112,6 +114,8 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 		var periodEnd *time.Time
 		var templateID *int64
 		var amountLimit *int64
+		var accountID *int64
+		var categoryID *int64
 		var actualAmount *int64
 		var periodType *string
 		var budgetName *string
@@ -131,6 +135,8 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 			&periodEnd,
 			&templateID,
 			&amountLimit,
+			&accountID,
+			&categoryID,
 			&actualAmount,
 			&periodType,
 			&budgetName,
@@ -141,9 +147,11 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 		if budgetID != nil {
 			item.EmbeddedBudget = &models.EmbeddedBudget{
 				ID:           *budgetID,
+				TemplateID:   templateID,
+				AccountID:    accountID,
+				CategoryID:   categoryID,
 				PeriodStart:  *periodStart,
 				PeriodEnd:    *periodEnd,
-				TemplateID:   templateID,
 				AmountLimit:  *amountLimit,
 				ActualAmount: *actualAmount,
 				PeriodType:   *periodType,
@@ -182,6 +190,8 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 	var periodEnd *time.Time
 	var templateID *int64
 	var amountLimit *int64
+	var accountID *int64
+	var categoryID *int64
 	var actualAmount *int64
 	var periodType *string
 	var budgetName *string
@@ -189,14 +199,14 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 	sql := `
 		SELECT
 			c.id, c.name, c.type, c.note, c.icon, c.icon_color, c.display_order, c.archived_at, c.created_at, c.updated_at, c.deleted_at,
-			b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, 
+			b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, b.account_id, b.category_id,
 			COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.category_id = c.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
 			b.period_type, b.name as budget_name
 		FROM categories c
 		LEFT JOIN budgets b ON b.category_id = c.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
 		WHERE c.id = $1 AND c.deleted_at IS NULL
 	`
-	err := cr.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &actualAmount, &periodType, &budgetName)
+	err := cr.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &accountID, &categoryID, &actualAmount, &periodType, &budgetName)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -208,9 +218,11 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 	if budgetID != nil {
 		data.EmbeddedBudget = &models.EmbeddedBudget{
 			ID:           *budgetID,
+			TemplateID:   templateID,
+			AccountID:    accountID,
+			CategoryID:   categoryID,
 			PeriodStart:  *periodStart,
 			PeriodEnd:    *periodEnd,
-			TemplateID:   templateID,
 			AmountLimit:  *amountLimit,
 			ActualAmount: *actualAmount,
 			PeriodType:   *periodType,
