@@ -2,6 +2,7 @@ import { formatTransactionTemplateData } from "@/lib/format-data";
 import { When } from "@/lib/when";
 import type { TransactionTemplateModel } from "@/types/schemas";
 import { Badge, BadgeGroup, Card, type CardProps } from "@dimasbaguspm/versaur";
+import dayjs from "dayjs";
 import type { FC } from "react";
 
 interface TransactionTemplateCardProps extends Omit<CardProps, "onClick"> {
@@ -53,7 +54,12 @@ export const TransactionTemplateCard: FC<TransactionTemplateCardProps> = ({
           </When>
           <When condition={isInstallment}>
             <Card.ListItem>
-              {occurrences - remainingOccurrences} of {occurrences} installments
+              <When condition={occurrences >= remainingOccurrences}>
+                All installments completed
+              </When>
+              <When condition={remainingOccurrences > 0}>
+                {remainingOccurrences} payments remaining
+              </When>
             </Card.ListItem>
           </When>
           <When condition={!isInstallment}>
@@ -62,12 +68,16 @@ export const TransactionTemplateCard: FC<TransactionTemplateCardProps> = ({
         </Card.List>
       }
       supplementaryInfo={
-        useDateTime ? `Next run at ${nextRunDateTime}` : `${nextRunHumanized}`
+        dayjs().isAfter(dayjs(transactionTemplate.nextDueAt))
+          ? "Processing soon"
+          : useDateTime
+            ? `Next run at ${nextRunDateTime}`
+            : `${nextRunHumanized}`
       }
       badge={
         <BadgeGroup>
           <Badge color={variant}>{capitalizedType}</Badge>
-          <Badge color="neutral">
+          <Badge color="accent_2">
             {isInstallment ? "Installment" : "Recurring"}
           </Badge>
         </BadgeGroup>

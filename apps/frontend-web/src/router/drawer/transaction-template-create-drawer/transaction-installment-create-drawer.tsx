@@ -18,6 +18,7 @@ import {
 } from "@/hooks/use-api";
 import { formatDefaultValues } from "./helpers";
 import { When } from "@/lib/when";
+import { DateFormat, formatDate } from "@/lib/format-date";
 
 interface TransactionInstallmentCreateDrawerProps {
   payload?: Record<string, string>;
@@ -58,8 +59,8 @@ export const TransactionInstallmentCreateDrawer: FC<
     await createTemplate({
       name: data.name,
       recurrence: data.recurrence,
-      startDate: data.startDate,
-      endDate: data.endDate,
+      startDate: formatDate(data.startDate, DateFormat.ISO_DATETIME),
+      endDate: formatDate(data.endDate!, DateFormat.ISO_DATETIME),
       type: data.type,
       accountId: data.accountId,
       destinationAccountId:
