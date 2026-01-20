@@ -1,6 +1,5 @@
-import { DateFormat, formatDate } from "@/lib/format-date";
 import type { TransactionTemplateUpdateFormSchema } from "./types";
-import dayjs from "dayjs";
+
 import { TransactionTemplateModel } from "@/types/schemas";
 
 export const formatDefaultValues = (
@@ -12,14 +11,6 @@ export const formatDefaultValues = (
   if (isPayloadExist) {
     return {
       name: typeof payload?.name === "string" ? payload?.name : "",
-      startDate:
-        payload?.startDate && typeof payload?.startDate === "string"
-          ? payload.startDate
-          : formatDate(dayjs(), DateFormat.ISO_DATE),
-      endDate:
-        payload?.endDate && typeof payload?.endDate === "string"
-          ? payload.endDate
-          : undefined,
       recurrence:
         payload?.recurrence === "none" ||
         payload?.recurrence === "weekly" ||
@@ -63,14 +54,6 @@ export const formatDefaultValues = (
   } else {
     return {
       name: templateData ? templateData.name : "",
-      startDate: templateData
-        ? formatDate(dayjs(templateData.startDate), DateFormat.ISO_DATE)
-        : formatDate(dayjs(), DateFormat.ISO_DATE),
-      endDate: templateData
-        ? templateData.endDate
-          ? formatDate(dayjs(templateData.endDate), DateFormat.ISO_DATE)
-          : undefined
-        : undefined,
       recurrence: templateData
         ? (templateData.recurrence as TransactionTemplateUpdateFormSchema["recurrence"])
         : "none",

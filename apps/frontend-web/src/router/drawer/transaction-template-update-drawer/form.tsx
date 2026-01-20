@@ -1,6 +1,5 @@
 import {
   ChipSingleInput,
-  DateSinglePickerInput,
   FormLayout,
   Icon,
   PriceInput,
@@ -90,43 +89,6 @@ export const Form = ({
             )}
           />
         </FormLayout.Column>
-        <FormLayout.Column span={isInstallment ? 6 : 12}>
-          <Controller
-            name="startDate"
-            control={control}
-            rules={{
-              required: "Start Date is required",
-            }}
-            render={({ field, fieldState }) => (
-              <DateSinglePickerInput
-                label="Start Date"
-                helperText="When the transaction template will start"
-                {...field}
-                error={fieldState.error?.message}
-              />
-            )}
-          />
-        </FormLayout.Column>
-        {isInstallment && (
-          <FormLayout.Column span={6}>
-            <Controller
-              name="endDate"
-              control={control}
-              rules={{
-                required: "End Date is required",
-              }}
-              render={({ field, fieldState }) => (
-                <DateSinglePickerInput
-                  label="End Date"
-                  helperText="When the transaction template will end"
-                  {...field}
-                  value={field.value || ""}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-          </FormLayout.Column>
-        )}
         <FormLayout.Column span={12}>
           <Controller
             control={control}

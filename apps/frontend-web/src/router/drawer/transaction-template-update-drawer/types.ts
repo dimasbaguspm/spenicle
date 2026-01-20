@@ -7,6 +7,4 @@ export interface TransactionTemplateUpdateFormSchema {
   notes: string;
   name: string;
   recurrence: "none" | "weekly" | "monthly" | "yearly";
-  startDate: string;
-  endDate: string | undefined;
 }
