@@ -1,4 +1,4 @@
-import { PAGE_ROUTES } from "@/constant/page-routes";
+import { DEEP_PAGE_LINKS } from "@/constant/page-routes";
 import {
   ActionCard,
   Icon,
@@ -6,23 +6,23 @@ import {
   PageHeader,
   PageLayout,
 } from "@dimasbaguspm/versaur";
-import { TagsIcon, WalletCardsIcon } from "lucide-react";
 import { useNavigate } from "react-router";
 
 const SETTINGS_ITEMS = [
   {
     id: "accounts",
-    title: "Accounts",
     description: "Manage your expense, income, and investment accounts",
-    icon: WalletCardsIcon,
-    path: `${PAGE_ROUTES.SETTINGS}/${PAGE_ROUTES.SETTINGS_ACCOUNTS}`,
+    ...DEEP_PAGE_LINKS.SETTINGS_ACCOUNTS,
   },
   {
     id: "categories",
-    title: "Categories",
     description: "Organize transactions with custom categories",
-    icon: TagsIcon,
-    path: `${PAGE_ROUTES.SETTINGS}/${PAGE_ROUTES.SETTINGS_CATEGORIES}`,
+    ...DEEP_PAGE_LINKS.SETTINGS_CATEGORIES,
+  },
+  {
+    id: "subscriptions",
+    description: "Manage your recurring and installment transactions",
+    ...DEEP_PAGE_LINKS.SETTINGS_SUBSCRIPTIONS,
   },
 ];
 

@@ -64,7 +64,6 @@ export const TransactionRecurringUpdateDrawer: FC<
       templateId: transactionTemplateId,
       name: data.name,
       recurrence: data.recurrence,
-      startDate: data.startDate,
       type: data.type,
       accountId: data.accountId,
       destinationAccountId:

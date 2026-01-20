@@ -18,6 +18,7 @@ export const PAGE_ROUTES = {
   SETTINGS: "/settings",
   SETTINGS_ACCOUNTS: "accounts",
   SETTINGS_CATEGORIES: "categories",
+  SETTINGS_SUBSCRIPTIONS: "subscriptions",
 } as const;
 
 export const DEEP_PAGE_LINKS = {
@@ -67,6 +68,11 @@ export const DEEP_PAGE_LINKS = {
     path: `${PAGE_ROUTES.SETTINGS}/${PAGE_ROUTES.SETTINGS_CATEGORIES}`,
     title: "Categories",
     icon: TagsIcon,
+  },
+  SETTINGS_SUBSCRIPTIONS: {
+    path: `${PAGE_ROUTES.SETTINGS}/${PAGE_ROUTES.SETTINGS_SUBSCRIPTIONS}`,
+    title: "Subscriptions",
+    icon: BoltIcon,
   },
 } as const;
 

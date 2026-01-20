@@ -1,10 +1,10 @@
 import type {
-  TransactionsPagedModel,
   TransactionTemplateSearchModel,
   TransactionTemplateModel,
   TransactionTemplateCreateModel,
   TransactionTemplateUpdateModel,
   TransactionTemplateDeleteModel,
+  TransactionTemplatePagedModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -39,13 +39,16 @@ export const useApiTransactionTemplatesPaginatedQuery = (
   params: TransactionTemplateSearchModel,
   options?: Partial<
     UseApiQueryOptions<
-      TransactionsPagedModel,
+      TransactionTemplatePagedModel,
       TransactionTemplateSearchModel,
       unknown
     >
   >,
 ) => {
-  return useApiQuery<TransactionsPagedModel, TransactionTemplateSearchModel>({
+  return useApiQuery<
+    TransactionTemplatePagedModel,
+    TransactionTemplateSearchModel
+  >({
     ...options,
     queryKey: QUERY_KEYS.TRANSACTION_TEMPLATES.PAGINATED(params),
     queryParams: params,

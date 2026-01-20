@@ -27,7 +27,7 @@ export const CategoryFilterFields = ({
       debounce((value: string) => {
         control.replaceSingle("name", value || undefined);
       }, 300),
-    [control]
+    [control],
   );
 
   const handleOnTypeFilterClick = (name: string) => {
@@ -45,11 +45,13 @@ export const CategoryFilterFields = ({
         .getAll("type")
         .every((t) => ["expense", "income", "transfer"].includes(t))
     : false;
+
   return (
     <FormLayout className="mb-4">
       <When condition={!hideSearch}>
         <FormLayout.Column span={12}>
           <SearchInput
+            defaultValue={control.appliedFilters.name}
             onChange={(ev) => handleOnSearchChange(ev.target.value)}
             placeholder="Search notes"
           />

@@ -4,32 +4,32 @@ import { DateFormat, formatDate } from "../format-date";
 import type { TransactionTemplateModel } from "@/types/schemas";
 
 export const formatTransactionTemplateData = (
-  transactionTemplate: TransactionTemplateModel | null,
+  data: TransactionTemplateModel | null,
 ) => {
-  const isIncome = transactionTemplate?.type === "income";
-  const isExpense = transactionTemplate?.type === "expense";
-  const isTransfer = transactionTemplate?.type === "transfer";
-  const isInstallment = !!transactionTemplate?.endDate;
+  const isIncome = data?.type === "income";
+  const isExpense = data?.type === "expense";
+  const isTransfer = data?.type === "transfer";
+  const isInstallment = !!data?.endDate;
 
-  const trimmedNotes = transactionTemplate?.note
-    ? `${
-        transactionTemplate.note.slice(0, 25) +
-        (transactionTemplate.note.length > 25 ? "..." : "")
-      }`
+  const trimmedNotes = data?.note
+    ? `${data.note.slice(0, 25) + (data.note.length > 25 ? "..." : "")}`
     : "";
-  const note = transactionTemplate?.note;
+  const note = data?.note;
 
   const variant = isIncome ? "secondary" : isExpense ? "primary" : "tertiary";
-  const capitalizedType = capitalize(transactionTemplate?.type);
+  const capitalizedType = capitalize(data?.type);
   const amount = formatPrice(
-    transactionTemplate?.amount ?? 0,
+    data?.amount ?? 0,
     PriceFormat.CURRENCY_NO_DECIMALS,
   );
 
-  const relatedAccountName = transactionTemplate?.account?.name ?? "";
-  const relatedDestinationAccountName =
-    transactionTemplate?.destinationAccount?.name ?? "";
-  const relatedCategoryName = transactionTemplate?.category?.name ?? "";
+  const relatedAccountName = data?.account?.name ?? "";
+  const relatedDestinationAccountName = data?.destinationAccount?.name ?? "";
+  const relatedCategoryName = data?.category?.name ?? "";
+
+  const occurrences = data?.recurringStats?.occurrences ?? 0;
+  const remainingOccurrences = data?.recurringStats?.remaining ?? 0;
+  const isCompleted = remainingOccurrences === 0 && occurrences > 0;
 
   return {
     isIncome,
@@ -44,23 +44,35 @@ export const formatTransactionTemplateData = (
     relatedAccountName,
     relatedDestinationAccountName,
     relatedCategoryName,
-    startDate: transactionTemplate?.startDate
-      ? formatDate(transactionTemplate.startDate, DateFormat.LONG_DATE)
+    occurrences,
+    remainingOccurrences,
+    isCompleted,
+    nextRunDate: data?.nextDueAt
+      ? formatDate(data.nextDueAt, DateFormat.LONG_DATE)
       : "",
-    endDate: transactionTemplate?.endDate
-      ? formatDate(transactionTemplate.endDate, DateFormat.LONG_DATE)
+    nextRunDateTime: data?.nextDueAt
+      ? formatDate(data.nextDueAt, DateFormat.MEDIUM_DATETIME)
       : "",
-    startDateTime: transactionTemplate?.startDate
-      ? formatDate(transactionTemplate.startDate, DateFormat.MEDIUM_DATETIME)
+    nextRunHumanized: data?.nextDueAt
+      ? formatDate(data.nextDueAt, DateFormat.RELATIVE)
       : "",
-    endDateTime: transactionTemplate?.endDate
-      ? formatDate(transactionTemplate.endDate, DateFormat.MEDIUM_DATETIME)
+    startDate: data?.startDate
+      ? formatDate(data.startDate, DateFormat.LONG_DATE)
       : "",
-    createdAt: transactionTemplate?.createdAt
-      ? formatDate(transactionTemplate.createdAt, DateFormat.LONG_DATE)
+    endDate: data?.endDate
+      ? formatDate(data.endDate, DateFormat.LONG_DATE)
       : "",
-    updatedAt: transactionTemplate?.updatedAt
-      ? formatDate(transactionTemplate.updatedAt, DateFormat.LONG_DATE)
+    startDateTime: data?.startDate
+      ? formatDate(data.startDate, DateFormat.MEDIUM_DATETIME)
+      : "",
+    endDateTime: data?.endDate
+      ? formatDate(data.endDate, DateFormat.MEDIUM_DATETIME)
+      : "",
+    createdAt: data?.createdAt
+      ? formatDate(data.createdAt, DateFormat.LONG_DATE)
+      : "",
+    updatedAt: data?.updatedAt
+      ? formatDate(data.updatedAt, DateFormat.LONG_DATE)
       : "",
   } as const;
 };

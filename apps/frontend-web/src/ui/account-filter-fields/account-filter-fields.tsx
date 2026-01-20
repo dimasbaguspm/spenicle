@@ -27,7 +27,7 @@ export const AccountFilterFields = ({
       debounce((value: string) => {
         control.replaceSingle("name", value || undefined);
       }, 300),
-    [control]
+    [control],
   );
 
   const handleOnTypeFilterClick = (name: string) => {
@@ -48,6 +48,7 @@ export const AccountFilterFields = ({
       <When condition={!hideSearch}>
         <FormLayout.Column span={12}>
           <SearchInput
+            defaultValue={control.appliedFilters.name}
             onChange={(ev) => handleOnSearchChange(ev.target.value)}
             placeholder="Search notes"
           />

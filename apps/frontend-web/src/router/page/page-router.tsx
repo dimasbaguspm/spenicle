@@ -171,6 +171,26 @@ const router = createBrowserRouter([
                     },
                     Component: lazy(() => import("./settings-categories-page")),
                   },
+                  {
+                    path: PAGE_ROUTES.SETTINGS_SUBSCRIPTIONS,
+                    handle: {
+                      floatingActionButton: [
+                        {
+                          label: "Add Recurring",
+                          link: DRAWER_ROUTES.TRANSACTION_RECURRING_CREATE,
+                          type: PAGE_HANDLES.DRAWER,
+                        },
+                        {
+                          label: "Add Installment",
+                          link: DRAWER_ROUTES.TRANSACTION_INSTALLMENT_CREATE,
+                          type: PAGE_HANDLES.DRAWER,
+                        },
+                      ],
+                    },
+                    Component: lazy(
+                      () => import("./settings-subscriptions-page"),
+                    ),
+                  },
                 ],
               },
             ],

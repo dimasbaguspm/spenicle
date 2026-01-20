@@ -16,11 +16,11 @@ import { DashboardTransactionViewMode } from "./types";
 import { NetBalanceCard } from "./components/net-balance-card";
 import { ThisMonthSummaryCards } from "./components/this-month-summary-card";
 import { RecentTransactions } from "./components/recent-transactions";
+import { ScheduledTransactionsWidget } from "./components/scheduled-transaction-widget";
 
 const DashboardPage = () => {
   const isMobile = useMobileBreakpoint();
 
-  // Fetch transaction summary for the last 6 months to show trends
   const [summaryTransactions] = useApiInsightsTransactionsSummaryQuery({
     frequency: "monthly",
     startDate: dayjs().subtract(5, "month").startOf("month").toISOString(),
@@ -109,18 +109,14 @@ const DashboardPage = () => {
                   Upcoming Bills
                 </ChipSingleInput.Option>
               </ChipSingleInput>
-              {/* <When
+              <When
                 condition={
                   transactionViewMode === DashboardTransactionViewMode.Upcoming
                 }
               >
-                <ScheduledTransactions
-                  scheduledTransactions={scheduledTransactions?.items ?? []}
-                  onScheduledTransactionClick={handleScheduledTransactionClick}
-                  onViewAll={handleViewAllScheduled}
-                />
+                <ScheduledTransactionsWidget />
               </When>
-              */}
+
               <When
                 condition={
                   transactionViewMode === DashboardTransactionViewMode.Recent

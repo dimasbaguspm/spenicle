@@ -939,6 +939,8 @@ export interface components {
        * @description Timestamp when archived (null if active)
        */
       archivedAt?: string;
+      /** @description Currently active budget for this category */
+      budget?: components["schemas"]["EmbeddedBudget"];
       /**
        * Format: date-time
        * @description Creation timestamp
@@ -972,8 +974,6 @@ export interface components {
        * @enum {string}
        */
       type: "expense" | "income" | "transfer";
-      /** @description Currently active budget for this category */
-      budget?: components["schemas"]["EmbeddedBudget"];
       /**
        * Format: date-time
        * @description Last update timestamp
@@ -1197,6 +1197,11 @@ export interface components {
     EmbeddedBudget: {
       /**
        * Format: int64
+       * @description Account ID to filter transactions
+       */
+      accountId?: number;
+      /**
+       * Format: int64
        * @description Actual spent amount in cents
        */
       actualAmount: number;
@@ -1205,6 +1210,11 @@ export interface components {
        * @description Budget limit amount in cents
        */
       amountLimit: number;
+      /**
+       * Format: int64
+       * @description Category ID to filter transactions
+       */
+      categoryId?: number;
       /**
        * Format: int64
        * @description Budget unique identifier
