@@ -53,7 +53,7 @@ func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.
 				COALESCE(SUM(amount) FILTER (WHERE type = 'transfer'), 0) as transfer_amount,
 				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) - COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as net
 			FROM transactions
-			WHERE deleted_at IS NULL AND date::date >= $1::date AND date::date <= $2::date
+			WHERE deleted_at IS NULL AND date >= $1::timestamptz AND date <= $2::timestamptz
 			GROUP BY period
 		)
 		SELECT
@@ -118,8 +118,8 @@ func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.Summ
 			FROM transactions
 			WHERE deleted_at IS NULL
 				AND type != 'transfer'
-				AND ($1::timestamp IS NULL OR date::date >= $1::date)
-				AND ($2::timestamp IS NULL OR date::date <= $2::date)
+				AND ($1::timestamptz IS NULL OR date >= $1::timestamptz)
+				AND ($2::timestamptz IS NULL OR date <= $2::timestamptz)
 		),
 		summary AS (
 			SELECT
@@ -190,8 +190,8 @@ func (sr SummaryRepository) GetCategorySummary(ctx context.Context, p models.Sum
 			FROM transactions
 			WHERE deleted_at IS NULL
 				AND type != 'transfer'
-				AND ($1::timestamp IS NULL OR date::date >= $1::date)
-				AND ($2::timestamp IS NULL OR date::date <= $2::date)
+				AND ($1::timestamptz IS NULL OR date >= $1::timestamptz)
+				AND ($2::timestamptz IS NULL OR date <= $2::timestamptz)
 		),
 		summary AS (
 			SELECT

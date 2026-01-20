@@ -61,8 +61,8 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 				AND (array_length($7::int8[], 1) IS NULL OR t.destination_account_id = ANY($7::int8[]) OR t.destination_account_id IS NULL)
 				AND ($8::int8 IS NULL OR t.amount >= $8::int8)
 				AND ($9::int8 IS NULL OR t.amount <= $9::int8)
-				AND ($10::date IS NULL OR t.date >= $10::date)
-				AND ($11::date IS NULL OR t.date <= $11::date)
+				AND ($10::timestamptz IS NULL OR t.date >= $10::timestamptz)
+				AND ($11::timestamptz IS NULL OR t.date <= $11::timestamptz)
 				AND (array_length($12::int8[], 1) IS NULL OR t.id IN (
 						SELECT DISTINCT tt.transaction_id
 						FROM transaction_tags tt
