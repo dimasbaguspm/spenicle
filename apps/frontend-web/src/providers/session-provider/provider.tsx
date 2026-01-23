@@ -1,8 +1,6 @@
 import type { FC, PropsWithChildren } from "react";
 import { SessionContext } from "./context";
-import { BrowserSession } from "./browser-session";
-
-const browserSession = new BrowserSession();
+import { browserSession } from "./browser-session";
 
 export const SessionProvider: FC<PropsWithChildren> = ({ children }) => {
   return (

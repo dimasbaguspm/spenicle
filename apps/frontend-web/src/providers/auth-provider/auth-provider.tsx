@@ -30,8 +30,8 @@ export const AuthProvider: FC<PropsWithChildren> = ({ children }) => {
         accessToken,
         refreshToken,
         isAuthenticated,
-        handleSetTokens: setTokens,
-        handleClearSession: clearSession,
+        handleSetTokens: setTokens.bind(browserSession),
+        handleClearSession: clearSession.bind(browserSession),
       }}
     >
       {children}
