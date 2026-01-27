@@ -14,59 +14,33 @@ import (
 )
 
 func RegisterPublicRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool) {
-	ap := repositories.NewAuthRepository(ctx)
-	as := services.NewAuthService(ap)
+	rpts := repositories.NewRootRepository(ctx, pool)
+	sevs := services.NewRootService(rpts)
 
-	resources.NewAuthResource(as).Routes(huma)
+	resources.NewAuthResource(sevs.Ath).Routes(huma)
 }
 
 func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool) {
 	huma.UseMiddleware(middleware.SessionMiddleware(huma))
 
-	ar := repositories.NewAccountRepository(pool)
-	cr := repositories.NewCategoryRepository(pool)
-	tr := repositories.NewTransactionRepository(pool)
-	sr := repositories.NewSummaryRepository(pool)
-	br := repositories.NewBudgetRepository(pool)
-	btr := repositories.NewBudgetTemplateRepository(pool)
-	trr := repositories.NewTransactionRelationRepository(pool)
-	tagr := repositories.NewTagRepository(pool)
-	ttagr := repositories.NewTransactionTagRepository(pool)
-	ttr := repositories.NewTransactionTemplateRepository(pool)
+	rpts := repositories.NewRootRepository(ctx, pool)
+	sevs := services.NewRootService(rpts)
 
-	as := services.NewAccountService(ar)
-	cs := services.NewCategoryService(cr)
-	ts := services.NewTransactionService(tr, ar, cr)
-	ss := services.NewSummaryService(sr)
-	bs := services.NewBudgetService(br)
-	bts := services.NewBudgetTemplateService(btr, br)
-	trs := services.NewTransactionRelationService(trr, tr)
-	tags := services.NewTagService(tagr)
-	ttags := services.NewTransactionTagService(ttagr)
-	tts := services.NewTransactionTemplateService(ttr, tr)
-
-	resources.NewAccountResource(as).Routes(huma)
-	resources.NewCategoryResource(cs).Routes(huma)
-	resources.NewTransactionResource(ts, trs, ttags, tts).Routes(huma)
-	resources.NewSummaryResource(ss).Routes(huma)
-	resources.NewBudgetResource(bs).Routes(huma)
-	resources.NewBudgetTemplateResource(bts).Routes(huma)
-	resources.NewTagResource(tags).Routes(huma)
+	resources.NewAccountResource(sevs.Acc).Routes(huma)
+	resources.NewCategoryResource(sevs.Cat).Routes(huma)
+	resources.NewTransactionResource(sevs.Tsct, sevs.TsctRel, sevs.TsctTag, sevs.TsctTem).Routes(huma)
+	resources.NewSummaryResource(sevs.Sum).Routes(huma)
+	resources.NewBudgetResource(sevs.Budg).Routes(huma)
+	resources.NewBudgetTemplateResource(sevs.BudgTem).Routes(huma)
+	resources.NewTagResource(sevs.Tag).Routes(huma)
 }
 
 func RegisterWorkers(ctx context.Context, pool *pgxpool.Pool) func() {
-	ar := repositories.NewAccountRepository(pool)
-	ttr := repositories.NewTransactionTemplateRepository(pool)
-	tr := repositories.NewTransactionRepository(pool)
-	br := repositories.NewBudgetRepository(pool)
-	btr := repositories.NewBudgetTemplateRepository(pool)
-	cr := repositories.NewCategoryRepository(pool)
+	rpts := repositories.NewRootRepository(ctx, pool)
+	sevs := services.NewRootService(rpts)
 
-	ts := services.NewTransactionService(tr, ar, cr)
-	bs := services.NewBudgetService(br)
-
-	ttWorker := workers.NewTransactionTemplateWorker(ctx, ttr, ts)
-	btWorker := workers.NewBudgetTemplateWorker(ctx, btr, bs)
+	ttWorker := workers.NewTransactionTemplateWorker(ctx, rpts.TsctTem, sevs.Tsct)
+	btWorker := workers.NewBudgetTemplateWorker(ctx, rpts.BudgTem, sevs.Budg)
 
 	ttWorker.Start()
 	btWorker.Start()
