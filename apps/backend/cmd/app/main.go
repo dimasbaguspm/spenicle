@@ -20,19 +20,21 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	svr := http.NewServeMux()
 	env := configs.NewEnvironment()
 	pool := configs.NewDatabase(ctx, env)
+
+	svr := http.NewServeMux()
+	corsMiddleware := middleware.CORS(svr)
 
 	humaSvr := humago.New(svr, configs.NewOpenApi(svr, env))
 
 	internal.RegisterPublicRoutes(ctx, humaSvr, pool)
 	internal.RegisterPrivateRoutes(ctx, humaSvr, pool)
-	cleanup := internal.RegisterWorkers(ctx, pool)
+	cleanupWorkers := internal.RegisterWorkers(ctx, pool)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", env.AppPort),
-		Handler: middleware.CORS(svr),
+		Handler: corsMiddleware,
 	}
 
 	slog.Info("Server is running at port", "port", env.AppPort)
@@ -48,7 +50,7 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	defer cleanup()
+	defer cleanupWorkers()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("Graceful shutdown failed, forcing exit", "err", err)
