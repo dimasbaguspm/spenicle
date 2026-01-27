@@ -22,23 +22,13 @@ func main() {
 
 	svr := http.NewServeMux()
 	env := configs.NewEnvironment()
-	db := configs.NewDatabase(env)
+	pool := configs.NewDatabase(ctx, env)
 
-	pool, err := db.Connect(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := configs.RunMigration(env); err != nil {
-		panic(err)
-	}
-
-	humaSvr := humago.New(svr, configs.NewOpenApi(env))
+	humaSvr := humago.New(svr, configs.NewOpenApi(svr, env))
 
 	internal.RegisterPublicRoutes(ctx, humaSvr, pool)
 	internal.RegisterPrivateRoutes(ctx, humaSvr, pool)
-
-	stopWorkers := internal.RegisterWorkers(ctx, pool)
+	cleanup := internal.RegisterWorkers(ctx, pool)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", env.AppPort),
@@ -56,10 +46,10 @@ func main() {
 	<-ctx.Done()
 	slog.Info("Shutting down HTTP server")
 
-	stopWorkers()
-
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	defer cleanup()
+
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("Graceful shutdown failed, forcing exit", "err", err)
 	} else {
