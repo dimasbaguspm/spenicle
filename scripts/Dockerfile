@@ -5,7 +5,7 @@ WORKDIR /build
 RUN apk add --no-cache git
 
 COPY apps/backend/go.mod apps/backend/go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY apps/backend/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/spenicle-api ./cmd/app
 
@@ -14,7 +14,7 @@ FROM oven/bun:1-alpine AS web-builder
 WORKDIR /build
 
 COPY apps/frontend-web/package.json apps/frontend-web/bun.lock ./
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 COPY apps/frontend-web/ ./
 ENV NODE_ENV=production
 RUN bun run build

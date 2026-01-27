@@ -19,8 +19,8 @@ services:
 
   spenicle-e2e-api:
     build:
-      context: ../backend
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: scripts/Dockerfile
     container_name: spenicle-e2e-api
     ports:
       - "8081:8081"
@@ -31,7 +31,8 @@ services:
       DB_PASSWORD: db_password
       DB_NAME: db_name
       APP_PORT: 8081
-      IS_DEV_ENV: true
+      WEB_PORT: 3000
+      IS_DEV_ENV: false
       JWT_SECRET: random-text-to-just-need-to-be-filled-for-jwt-secret
       ADMIN_USERNAME: admin_username
       ADMIN_PASSWORD: admin_password
