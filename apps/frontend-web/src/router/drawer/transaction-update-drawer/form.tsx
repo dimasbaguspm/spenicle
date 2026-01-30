@@ -57,9 +57,9 @@ export const Form = ({
           replace: true,
           state: {
             payload: watchedValues,
-            returnToDrawer: DRAWER_ROUTES.TRANSACTION_CREATE,
+            returnToDrawer: DRAWER_ROUTES.TRANSACTION_UPDATE,
           },
-        }
+        },
       );
     };
 
@@ -165,7 +165,7 @@ export const Form = ({
                 <TextInputAsButton
                   onClick={handleOnOpenSelectDrawer(
                     DRAWER_ROUTES.SELECT_SINGLE_ACCOUNT,
-                    "accountId"
+                    "accountId",
                   )}
                   label="Source"
                   placeholder="Select account"
@@ -201,7 +201,7 @@ export const Form = ({
                 <TextInputAsButton
                   onClick={handleOnOpenSelectDrawer(
                     DRAWER_ROUTES.SELECT_SINGLE_ACCOUNT,
-                    "accountId"
+                    "accountId",
                   )}
                   label="Source"
                   placeholder="Select account"
@@ -233,7 +233,7 @@ export const Form = ({
                 <TextInputAsButton
                   onClick={handleOnOpenSelectDrawer(
                     DRAWER_ROUTES.SELECT_SINGLE_ACCOUNT,
-                    "destinationAccountId"
+                    "destinationAccountId",
                   )}
                   label="Destination"
                   placeholder="Select account"
@@ -263,7 +263,7 @@ export const Form = ({
                 label="Category"
                 onClick={handleOnOpenSelectDrawer(
                   DRAWER_ROUTES.SELECT_SINGLE_CATEGORY,
-                  "categoryId"
+                  "categoryId",
                 )}
                 placeholder="Select category"
                 displayValue={categoryData?.name ?? ""}
