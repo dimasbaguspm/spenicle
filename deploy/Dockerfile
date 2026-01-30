@@ -1,53 +1,35 @@
 FROM golang:1.25-alpine AS backend-builder
-
 WORKDIR /build
-
 RUN apk add --no-cache git
-
 COPY apps/backend/go.mod apps/backend/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY apps/backend/ ./
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/spenicle-api ./cmd/app
+RUN CGO_ENABLED=0 GOOS=linux IS_DEV_ENV=false go build -a -installsuffix cgo -ldflags="-w -s" -o /app/spenicle-api ./cmd/app
+
+FROM golang:1.25-alpine AS proxy-builder
+WORKDIR /build
+COPY deploy/ ./
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o /app/proxy main.go
 
 FROM oven/bun:1-alpine AS web-builder
-
 WORKDIR /build
-
 COPY apps/frontend-web/package.json apps/frontend-web/bun.lock ./
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 COPY apps/frontend-web/ ./
 ENV NODE_ENV=production
 RUN bun run build
 
-FROM alpine:3.19
-
+FROM gcr.io/distroless/static
 WORKDIR /app
-
-RUN apk add --no-cache \
-    ca-certificates \
-    curl \
-    tzdata \
-    supervisor \
-    nginx \
-    && rm -rf /var/cache/apk/*
-
-ENV APP_PORT=8080
 ENV WEB_PORT=3000
-
-COPY --from=oven/bun:1-alpine /usr/local/bin/bun /usr/local/bin/bun
+ENV APP_PORT=8080
+ENV DIST_PATH=/app/frontend-web/dist
+ENV BACKEND_PATH=/app/spenicle-api
 
 COPY --from=backend-builder /app/spenicle-api /app/spenicle-api
 COPY --from=backend-builder /build/migrations /app/migrations
-
+COPY --from=proxy-builder /app/proxy /app/proxy
 COPY --from=web-builder /build/dist /app/frontend-web/dist
-COPY --from=web-builder /build/package.json /app/frontend-web/package.json
-
-COPY scripts/supervisord.conf /etc/supervisord.conf
-COPY scripts/nginx.conf /etc/nginx/nginx.conf
-
-COPY scripts/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
 
 EXPOSE ${WEB_PORT}
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["/app/proxy"]

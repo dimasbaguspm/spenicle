@@ -21,7 +21,7 @@ services:
   spenicle-build-api:
     build:
       context: ..
-      dockerfile: scripts/Dockerfile
+      dockerfile: deploy/Dockerfile
     container_name: spenicle-build-api
     ports:
       - "3000:3000"

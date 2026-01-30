@@ -32,9 +32,7 @@ services:
       DB_USER: db_user
       DB_PASSWORD: db_password
       DB_NAME: spenicle-backend
-      APP_PORT: "8080"
       JWT_SECRET: local-development-jwt-for-testing-purpose
-      IS_DEV_ENV: true,
       ADMIN_USERNAME: my-username
       ADMIN_PASSWORD: my-password
     volumes:

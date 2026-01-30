@@ -29,7 +29,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Start Docker services
-        working-directory: scripts
+        working-directory: deploy
         run: docker compose up --build -d
 
       - name: Run smoke checks

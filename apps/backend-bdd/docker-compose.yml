@@ -20,7 +20,7 @@ services:
   spenicle-e2e-api:
     build:
       context: ../..
-      dockerfile: scripts/Dockerfile
+      dockerfile: deploy/Dockerfile
     container_name: spenicle-e2e-api
     ports:
       - "8081:8081"
