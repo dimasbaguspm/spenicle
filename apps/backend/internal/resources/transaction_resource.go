@@ -9,14 +9,11 @@ import (
 )
 
 type TransactionResource struct {
-	ts     services.TransactionService
-	trs    services.TransactionRelationService
-	tts    services.TransactionTagService
-	ttemps services.TransactionTemplateService
+	sevs services.RootService
 }
 
-func NewTransactionResource(ts services.TransactionService, trs services.TransactionRelationService, tts services.TransactionTagService, ttemps services.TransactionTemplateService) TransactionResource {
-	return TransactionResource{ts, trs, tts, ttemps}
+func NewTransactionResource(sevs services.RootService) TransactionResource {
+	return TransactionResource{sevs}
 }
 
 func (tr TransactionResource) Routes(api huma.API) {
@@ -255,7 +252,7 @@ func (tr TransactionResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionsPagedModel
 }, error) {
-	resp, err := tr.ts.GetPaged(ctx, input.TransactionsSearchModel)
+	resp, err := tr.sevs.Tsct.GetPaged(ctx, input.TransactionsSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +269,7 @@ func (tr TransactionResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
-	resp, err := tr.ts.GetDetail(ctx, input.ID)
+	resp, err := tr.sevs.Tsct.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +286,7 @@ func (tr TransactionResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
-	resp, err := tr.ts.Create(ctx, input.Body)
+	resp, err := tr.sevs.Tsct.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +304,7 @@ func (tr TransactionResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
-	resp, err := tr.ts.Update(ctx, input.ID, input.Body)
+	resp, err := tr.sevs.Tsct.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +319,7 @@ func (tr TransactionResource) Update(ctx context.Context, input *struct {
 func (tr TransactionResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
 }) (*struct{}, error) {
-	err := tr.ts.Delete(ctx, input.ID)
+	err := tr.sevs.Tsct.Delete(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +334,7 @@ func (tr TransactionResource) ListRelations(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionRelationsPagedModel
 }, error) {
-	resp, err := tr.trs.GetPaged(ctx, input.TransactionRelationsSearchModel)
+	resp, err := tr.sevs.TsctRel.GetPaged(ctx, input.TransactionRelationsSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +351,7 @@ func (tr TransactionResource) GetRelation(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionRelationModel
 }, error) {
-	resp, err := tr.trs.GetDetail(ctx, input.TransactionRelationGetModel)
+	resp, err := tr.sevs.TsctRel.GetDetail(ctx, input.TransactionRelationGetModel)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +368,7 @@ func (tr TransactionResource) CreateRelation(ctx context.Context, input *struct 
 }) (*struct {
 	Body models.TransactionRelationModel
 }, error) {
-	resp, err := tr.trs.Create(ctx, input.Body)
+	resp, err := tr.sevs.TsctRel.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +384,7 @@ func (tr TransactionResource) DeleteRelation(ctx context.Context, input *struct 
 	models.DeleteTransactionRelationModel
 }) (*struct{}, error) {
 
-	if err := tr.trs.Delete(ctx, input.DeleteTransactionRelationModel); err != nil {
+	if err := tr.sevs.TsctRel.Delete(ctx, input.DeleteTransactionRelationModel); err != nil {
 		return nil, err
 	}
 
@@ -401,7 +398,7 @@ func (tr TransactionResource) ListTags(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionTagsPagedModel
 }, error) {
-	resp, err := tr.tts.GetPaged(ctx, input.TransactionTagsSearchModel)
+	resp, err := tr.sevs.TsctTag.GetPaged(ctx, input.TransactionTagsSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +416,7 @@ func (tr TransactionResource) GetTag(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionTagModel
 }, error) {
-	resp, err := tr.tts.GetDetail(ctx, input.TagID)
+	resp, err := tr.sevs.TsctTag.GetDetail(ctx, input.TagID)
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +436,7 @@ func (tr TransactionResource) CreateTag(ctx context.Context, input *struct {
 }, error) {
 	input.Body.TransactionID = input.TransactionID
 
-	resp, err := tr.tts.Create(ctx, input.Body)
+	resp, err := tr.sevs.TsctTag.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +452,7 @@ func (tr TransactionResource) DeleteTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
 }) (*struct{}, error) {
-	if err := tr.tts.Delete(ctx, input.TransactionID, input.TagID); err != nil {
+	if err := tr.sevs.TsctTag.Delete(ctx, input.TransactionID, input.TagID); err != nil {
 		return nil, err
 	}
 
@@ -469,7 +466,7 @@ func (tr TransactionResource) ListTemplates(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionTemplatesPagedModel
 }, error) {
-	resp, err := tr.ttemps.GetPaged(ctx, input.TransactionTemplatesSearchModel)
+	resp, err := tr.sevs.TsctTem.GetPaged(ctx, input.TransactionTemplatesSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -486,7 +483,7 @@ func (tr TransactionResource) GetTemplate(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionTemplateModel
 }, error) {
-	resp, err := tr.ttemps.GetDetail(ctx, input.TemplateID)
+	resp, err := tr.sevs.TsctTem.GetDetail(ctx, input.TemplateID)
 	if err != nil {
 		return nil, err
 	}
@@ -503,7 +500,7 @@ func (tr TransactionResource) CreateTemplate(ctx context.Context, input *struct 
 }) (*struct {
 	Body models.TransactionTemplateModel
 }, error) {
-	resp, err := tr.ttemps.Create(ctx, input.Body)
+	resp, err := tr.sevs.TsctTem.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -521,7 +518,7 @@ func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct 
 }) (*struct {
 	Body models.TransactionTemplateModel
 }, error) {
-	resp, err := tr.ttemps.Update(ctx, input.TemplateID, input.Body)
+	resp, err := tr.sevs.TsctTem.Update(ctx, input.TemplateID, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -536,7 +533,7 @@ func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct 
 func (tr TransactionResource) DeleteTemplate(ctx context.Context, input *struct {
 	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
 }) (*struct{}, error) {
-	err := tr.ttemps.Delete(ctx, input.TemplateID)
+	err := tr.sevs.TsctTem.Delete(ctx, input.TemplateID)
 	if err != nil {
 		return nil, err
 	}
@@ -550,7 +547,7 @@ func (tr TransactionResource) ListTemplateRelatedTransactions(ctx context.Contex
 }) (*struct {
 	Body models.TransactionsPagedModel
 }, error) {
-	result, err := tr.ttemps.GetRelatedTransactions(ctx, input.TemplateID, input.TransactionTemplateRelatedTransactionsSearchModel)
+	result, err := tr.sevs.TsctTem.GetRelatedTransactions(ctx, input.TemplateID, input.TransactionTemplateRelatedTransactionsSearchModel)
 	if err != nil {
 		return nil, err
 	}

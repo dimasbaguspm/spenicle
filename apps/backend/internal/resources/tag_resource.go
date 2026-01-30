@@ -9,11 +9,11 @@ import (
 )
 
 type TagResource struct {
-	ts services.TagService
+	sevs services.RootService
 }
 
-func NewTagResource(ts services.TagService) TagResource {
-	return TagResource{ts}
+func NewTagResource(sevs services.RootService) TagResource {
+	return TagResource{sevs}
 }
 
 func (tr TagResource) Routes(api huma.API) {
@@ -83,7 +83,7 @@ func (tr TagResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TagsPagedModel
 }, error) {
-	resp, err := tr.ts.GetPaged(ctx, input.TagsSearchModel)
+	resp, err := tr.sevs.Tag.GetPaged(ctx, input.TagsSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (tr TagResource) List(ctx context.Context, input *struct {
 func (tr TagResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
 }) (*struct{ Body models.TagModel }, error) {
-	resp, err := tr.ts.GetDetail(ctx, input.ID)
+	resp, err := tr.sevs.Tag.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (tr TagResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TagModel
 }, error) {
-	resp, err := tr.ts.Create(ctx, input.Body)
+	resp, err := tr.sevs.Tag.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (tr TagResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TagModel
 }, error) {
-	resp, err := tr.ts.Update(ctx, input.ID, input.Body)
+	resp, err := tr.sevs.Tag.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (tr TagResource) Update(ctx context.Context, input *struct {
 func (tr TagResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
 }) (*struct{}, error) {
-	err := tr.ts.Delete(ctx, input.ID)
+	err := tr.sevs.Tag.Delete(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}

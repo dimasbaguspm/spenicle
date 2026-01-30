@@ -9,11 +9,11 @@ import (
 )
 
 type CategoryResource struct {
-	cs services.CategoryService
+	sevs services.RootService
 }
 
-func NewCategoryResource(cs services.CategoryService) CategoryResource {
-	return CategoryResource{cs}
+func NewCategoryResource(sevs services.RootService) CategoryResource {
+	return CategoryResource{sevs}
 }
 
 func (cr CategoryResource) Routes(api huma.API) {
@@ -95,7 +95,7 @@ func (cr CategoryResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoriesPagedModel
 }, error) {
-	resp, err := cr.cs.GetPaged(ctx, input.CategoriesSearchModel)
+	resp, err := cr.sevs.Cat.GetPaged(ctx, input.CategoriesSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (cr CategoryResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoryModel
 }, error) {
-	resp, err := cr.cs.GetDetail(ctx, input.ID)
+	resp, err := cr.sevs.Cat.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (cr CategoryResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoryModel
 }, error) {
-	resp, err := cr.cs.Create(ctx, input.Body)
+	resp, err := cr.sevs.Cat.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (cr CategoryResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoryModel
 }, error) {
-	resp, err := cr.cs.Update(ctx, input.ID, input.Body)
+	resp, err := cr.sevs.Cat.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (cr CategoryResource) Update(ctx context.Context, input *struct {
 func (cr CategoryResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the category" example:"1"`
 }) (*struct{}, error) {
-	err := cr.cs.Delete(ctx, input.ID)
+	err := cr.sevs.Cat.Delete(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (cr CategoryResource) Delete(ctx context.Context, input *struct {
 func (cr CategoryResource) Reorder(ctx context.Context, input *struct {
 	Body models.ReorderCategoriesModel
 }) (*struct{}, error) {
-	err := cr.cs.Reorder(ctx, input.Body)
+	err := cr.sevs.Cat.Reorder(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}

@@ -10,11 +10,11 @@ import (
 )
 
 type SummaryResource struct {
-	service services.SummaryService
+	sevs services.RootService
 }
 
-func NewSummaryResource(service services.SummaryService) SummaryResource {
-	return SummaryResource{service}
+func NewSummaryResource(sevs services.RootService) SummaryResource {
+	return SummaryResource{sevs}
 }
 
 // Routes registers all summary routes
@@ -61,7 +61,7 @@ func (sr SummaryResource) GetTransactionSummary(ctx context.Context, input *stru
 }) (*struct {
 	Body models.SummaryTransactionListModel
 }, error) {
-	resp, err := sr.service.GetTransactionSummary(ctx, input.SummaryTransactionSearchModel)
+	resp, err := sr.sevs.Sum.GetTransactionSummary(ctx, input.SummaryTransactionSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (sr SummaryResource) GetAccountSummary(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.SummaryAccountListModel
 }, error) {
-	resp, err := sr.service.GetAccountSummary(ctx, input.SummarySearchModel)
+	resp, err := sr.sevs.Sum.GetAccountSummary(ctx, input.SummarySearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (sr SummaryResource) GetCategorySummary(ctx context.Context, input *struct 
 }) (*struct {
 	Body models.SummaryCategoryListModel
 }, error) {
-	resp, err := sr.service.GetCategorySummary(ctx, input.SummarySearchModel)
+	resp, err := sr.sevs.Sum.GetCategorySummary(ctx, input.SummarySearchModel)
 	if err != nil {
 		return nil, err
 	}

@@ -26,13 +26,13 @@ func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Poo
 	rpts := repositories.NewRootRepository(ctx, pool)
 	sevs := services.NewRootService(rpts)
 
-	resources.NewAccountResource(sevs.Acc).Routes(huma)
-	resources.NewCategoryResource(sevs.Cat).Routes(huma)
-	resources.NewTransactionResource(sevs.Tsct, sevs.TsctRel, sevs.TsctTag, sevs.TsctTem).Routes(huma)
-	resources.NewSummaryResource(sevs.Sum).Routes(huma)
-	resources.NewBudgetResource(sevs.Budg).Routes(huma)
-	resources.NewBudgetTemplateResource(sevs.BudgTem).Routes(huma)
-	resources.NewTagResource(sevs.Tag).Routes(huma)
+	resources.NewAccountResource(sevs).Routes(huma)
+	resources.NewCategoryResource(sevs).Routes(huma)
+	resources.NewTransactionResource(sevs).Routes(huma)
+	resources.NewSummaryResource(sevs).Routes(huma)
+	resources.NewBudgetResource(sevs).Routes(huma)
+	resources.NewBudgetTemplateResource(sevs).Routes(huma)
+	resources.NewTagResource(sevs).Routes(huma)
 }
 
 func RegisterWorkers(ctx context.Context, pool *pgxpool.Pool) func() {

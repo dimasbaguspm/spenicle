@@ -10,11 +10,11 @@ import (
 )
 
 type BudgetTemplateResource struct {
-	bts services.BudgetTemplateService
+	sevs services.RootService
 }
 
-func NewBudgetTemplateResource(bts services.BudgetTemplateService) BudgetTemplateResource {
-	return BudgetTemplateResource{bts}
+func NewBudgetTemplateResource(sevs services.RootService) BudgetTemplateResource {
+	return BudgetTemplateResource{sevs}
 }
 
 func (btr BudgetTemplateResource) Routes(api huma.API) {
@@ -96,7 +96,7 @@ func (btr BudgetTemplateResource) GetPaged(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplatesPagedModel
 }, error) {
-	resp, err := btr.bts.GetPaged(ctx, input.BudgetTemplatesSearchModel)
+	resp, err := btr.sevs.BudgTem.GetPaged(ctx, input.BudgetTemplatesSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (btr BudgetTemplateResource) GetDetail(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
-	item, err := btr.bts.GetDetail(ctx, input.ID)
+	item, err := btr.sevs.BudgTem.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Budget template not found")
 	}
@@ -124,7 +124,7 @@ func (btr BudgetTemplateResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
-	resp, err := btr.bts.Create(ctx, input.Body)
+	resp, err := btr.sevs.BudgTem.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (btr BudgetTemplateResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
-	resp, err := btr.bts.Update(ctx, input.ID, input.Body)
+	resp, err := btr.sevs.BudgTem.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (btr BudgetTemplateResource) Update(ctx context.Context, input *struct {
 func (btr BudgetTemplateResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
 }) (*struct{}, error) {
-	if err := btr.bts.Delete(ctx, input.ID); err != nil {
+	if err := btr.sevs.BudgTem.Delete(ctx, input.ID); err != nil {
 		return nil, err
 	}
 	return &struct{}{}, nil
@@ -163,7 +163,7 @@ func (btr BudgetTemplateResource) GetRelatedBudgets(ctx context.Context, input *
 }) (*struct {
 	Body models.BudgetsPagedModel
 }, error) {
-	resp, err := btr.bts.GetRelatedBudgets(ctx, input.ID, input.BudgetTemplateRelatedBudgetsSearchModel)
+	resp, err := btr.sevs.BudgTem.GetRelatedBudgets(ctx, input.ID, input.BudgetTemplateRelatedBudgetsSearchModel)
 	if err != nil {
 		return nil, err
 	}

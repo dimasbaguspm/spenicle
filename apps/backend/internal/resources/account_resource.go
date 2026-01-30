@@ -9,11 +9,11 @@ import (
 )
 
 type AccountResource struct {
-	as services.AccountService
+	sevs services.RootService
 }
 
-func NewAccountResource(as services.AccountService) AccountResource {
-	return AccountResource{as}
+func NewAccountResource(sevs services.RootService) AccountResource {
+	return AccountResource{sevs}
 }
 
 func (ar AccountResource) Routes(api huma.API) {
@@ -95,7 +95,7 @@ func (ar AccountResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountsPagedModel
 }, error) {
-	resp, err := ar.as.GetPaged(ctx, input.AccountsSearchModel)
+	resp, err := ar.sevs.Acc.GetPaged(ctx, input.AccountsSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (ar AccountResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountModel
 }, error) {
-	resp, err := ar.as.GetDetail(ctx, input.ID)
+	resp, err := ar.sevs.Acc.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (ar AccountResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountModel
 }, error) {
-	resp, err := ar.as.Create(ctx, input.Body)
+	resp, err := ar.sevs.Acc.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (ar AccountResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountModel
 }, error) {
-	resp, err := ar.as.Update(ctx, input.ID, input.Body)
+	resp, err := ar.sevs.Acc.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (ar AccountResource) Update(ctx context.Context, input *struct {
 func (ar AccountResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
 }) (*struct{}, error) {
-	err := ar.as.Delete(ctx, input.ID)
+	err := ar.sevs.Acc.Delete(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (ar AccountResource) Delete(ctx context.Context, input *struct {
 func (ar AccountResource) Reorder(ctx context.Context, input *struct {
 	Body models.ReorderAccountsModel
 }) (*struct{}, error) {
-	err := ar.as.Reorder(ctx, input.Body)
+	err := ar.sevs.Acc.Reorder(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}

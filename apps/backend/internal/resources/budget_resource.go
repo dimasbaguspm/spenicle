@@ -10,11 +10,11 @@ import (
 )
 
 type BudgetResource struct {
-	bs services.BudgetService
+	sevs services.RootService
 }
 
-func NewBudgetResource(bs services.BudgetService) BudgetResource {
-	return BudgetResource{bs}
+func NewBudgetResource(sevs services.RootService) BudgetResource {
+	return BudgetResource{sevs}
 }
 
 func (br BudgetResource) Routes(api huma.API) {
@@ -84,7 +84,7 @@ func (br BudgetResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetsPagedModel
 }, error) {
-	resp, err := br.bs.GetPaged(ctx, input.BudgetsSearchModel)
+	resp, err := br.sevs.Budg.GetPaged(ctx, input.BudgetsSearchModel)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (br BudgetResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetModel
 }, error) {
-	item, err := br.bs.GetDetail(ctx, input.ID)
+	item, err := br.sevs.Budg.GetDetail(ctx, input.ID)
 	if err != nil {
 		return nil, huma.Error404NotFound("Budget not found")
 	}
@@ -112,7 +112,7 @@ func (br BudgetResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetModel
 }, error) {
-	resp, err := br.bs.Create(ctx, input.Body)
+	resp, err := br.sevs.Budg.Create(ctx, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (br BudgetResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetModel
 }, error) {
-	resp, err := br.bs.Update(ctx, input.ID, input.Body)
+	resp, err := br.sevs.Budg.Update(ctx, input.ID, input.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (br BudgetResource) Update(ctx context.Context, input *struct {
 func (br BudgetResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget ID"`
 }) (*struct{}, error) {
-	if err := br.bs.Delete(ctx, input.ID); err != nil {
+	if err := br.sevs.Budg.Delete(ctx, input.ID); err != nil {
 		return nil, err
 	}
 	return nil, nil
