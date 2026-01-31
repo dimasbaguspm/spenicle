@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -15,7 +16,6 @@ type AccountResource struct {
 func NewAccountResource(sevs services.RootService) AccountResource {
 	return AccountResource{sevs}
 }
-
 func (ar AccountResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "list-accounts",
@@ -28,7 +28,6 @@ func (ar AccountResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, ar.List)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "create-account",
 		Method:      "POST",
@@ -40,7 +39,6 @@ func (ar AccountResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, ar.Create)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "get-account",
 		Method:      "GET",
@@ -52,7 +50,6 @@ func (ar AccountResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, ar.Get)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "update-account",
 		Method:      "PATCH",
@@ -64,7 +61,6 @@ func (ar AccountResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, ar.Update)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-account",
 		Method:      "DELETE",
@@ -76,7 +72,6 @@ func (ar AccountResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, ar.Delete)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "reorder-accounts",
 		Method:      "POST",
@@ -89,94 +84,106 @@ func (ar AccountResource) Routes(api huma.API) {
 		},
 	}, ar.Reorder)
 }
-
 func (ar AccountResource) List(ctx context.Context, input *struct {
 	models.AccountsSearchModel
 }) (*struct {
 	Body models.AccountsPagedModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.List")
+	logger.Info("start")
 	resp, err := ar.sevs.Acc.GetPaged(ctx, input.AccountsSearchModel)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("success", "count", len(resp.Items))
 	return &struct {
 		Body models.AccountsPagedModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (ar AccountResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
 }) (*struct {
 	Body models.AccountModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Get", "account_id", input.ID)
+	logger.Info("start")
 	resp, err := ar.sevs.Acc.GetDetail(ctx, input.ID)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("success")
 	return &struct {
 		Body models.AccountModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (ar AccountResource) Create(ctx context.Context, input *struct {
 	Body models.CreateAccountModel
 }) (*struct {
 	Body models.AccountModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Create", "name", input.Body.Name)
+	logger.Info("start")
 	resp, err := ar.sevs.Acc.Create(ctx, input.Body)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("success", "account_id", resp.ID)
 	return &struct {
 		Body models.AccountModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (ar AccountResource) Update(ctx context.Context, input *struct {
 	ID   int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
 	Body models.UpdateAccountModel
 }) (*struct {
 	Body models.AccountModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Update", "account_id", input.ID)
+	logger.Info("start")
 	resp, err := ar.sevs.Acc.Update(ctx, input.ID, input.Body)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("success")
 	return &struct {
 		Body models.AccountModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (ar AccountResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
 }) (*struct{}, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Delete", "account_id", input.ID)
+	logger.Info("start")
 	err := ar.sevs.Acc.Delete(ctx, input.ID)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("success")
 	return nil, nil
 }
-
 func (ar AccountResource) Reorder(ctx context.Context, input *struct {
 	Body models.ReorderAccountsModel
 }) (*struct{}, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Reorder")
+	logger.Info("start")
 	err := ar.sevs.Acc.Reorder(ctx, input.Body)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("success")
 	return &struct{}{}, nil
 }

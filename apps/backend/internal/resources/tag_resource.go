@@ -1,21 +1,17 @@
 package resources
-
 import (
 	"context"
-
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
-
 type TagResource struct {
 	sevs services.RootService
 }
-
 func NewTagResource(sevs services.RootService) TagResource {
 	return TagResource{sevs}
 }
-
 func (tr TagResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "list-tags",
@@ -28,7 +24,6 @@ func (tr TagResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.List)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "create-tag",
 		Method:      "POST",
@@ -40,7 +35,6 @@ func (tr TagResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.Create)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "get-tag",
 		Method:      "GET",
@@ -52,7 +46,6 @@ func (tr TagResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.Get)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "update-tag",
 		Method:      "PATCH",
@@ -64,7 +57,6 @@ func (tr TagResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.Update)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-tag",
 		Method:      "DELETE",
@@ -77,79 +69,89 @@ func (tr TagResource) Routes(api huma.API) {
 		},
 	}, tr.Delete)
 }
-
 func (tr TagResource) List(ctx context.Context, input *struct {
 	models.TagsSearchModel
 }) (*struct {
 	Body models.TagsPagedModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start")
 	resp, err := tr.sevs.Tag.GetPaged(ctx, input.TagsSearchModel)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("start")
 	return &struct {
 		Body models.TagsPagedModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TagResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
 }) (*struct{ Body models.TagModel }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "tag_id", input.ID)
 	resp, err := tr.sevs.Tag.GetDetail(ctx, input.ID)
 	if err != nil {
+		logger.Error("error", "tag_id", input.ID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "tag_id", input.ID)
 	return &struct{ Body models.TagModel }{
 		Body: resp,
 	}, nil
 }
-
 func (tr TagResource) Create(ctx context.Context, input *struct {
 	Body models.CreateTagModel
 }) (*struct {
 	Body models.TagModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start")
 	resp, err := tr.sevs.Tag.Create(ctx, input.Body)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("start")
 	return &struct {
 		Body models.TagModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TagResource) Update(ctx context.Context, input *struct {
 	ID   int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
 	Body models.UpdateTagModel
 }) (*struct {
 	Body models.TagModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "tag_id", input.ID)
 	resp, err := tr.sevs.Tag.Update(ctx, input.ID, input.Body)
 	if err != nil {
+		logger.Error("error", "tag_id", input.ID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "tag_id", input.ID)
 	return &struct {
 		Body models.TagModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TagResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
 }) (*struct{}, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "tag_id", input.ID)
 	err := tr.sevs.Tag.Delete(ctx, input.ID)
 	if err != nil {
+		logger.Error("error", "tag_id", input.ID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "tag_id", input.ID)
 	return nil, nil
 }

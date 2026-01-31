@@ -1,22 +1,18 @@
 package resources
-
 import (
 	"context"
 	"net/http"
-
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
-
 type BudgetTemplateResource struct {
 	sevs services.RootService
 }
-
 func NewBudgetTemplateResource(sevs services.RootService) BudgetTemplateResource {
 	return BudgetTemplateResource{sevs}
 }
-
 func (btr BudgetTemplateResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "list-budget-templates",
@@ -29,7 +25,6 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, btr.GetPaged)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "create-budget-template",
 		Method:      http.MethodPost,
@@ -41,7 +36,6 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, btr.Create)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "get-budget-template",
 		Method:      http.MethodGet,
@@ -53,7 +47,6 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, btr.GetDetail)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "update-budget-template",
 		Method:      http.MethodPatch,
@@ -65,7 +58,6 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, btr.Update)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-budget-template",
 		Method:      http.MethodDelete,
@@ -77,7 +69,6 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, btr.Delete)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "list-budget-template-related-budgets",
 		Method:      http.MethodGet,
@@ -90,83 +81,101 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 		},
 	}, btr.GetRelatedBudgets)
 }
-
 func (btr BudgetTemplateResource) GetPaged(ctx context.Context, input *struct {
 	models.BudgetTemplatesSearchModel
 }) (*struct {
 	Body models.BudgetTemplatesPagedModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start")
 	resp, err := btr.sevs.BudgTem.GetPaged(ctx, input.BudgetTemplatesSearchModel)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
+	logger.Info("start")
 	return &struct {
 		Body models.BudgetTemplatesPagedModel
 	}{Body: resp}, nil
 }
-
 func (btr BudgetTemplateResource) GetDetail(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "template_id", input.ID)
 	item, err := btr.sevs.BudgTem.GetDetail(ctx, input.ID)
 	if err != nil {
+		logger.Error("error", "template_id", input.ID, "error", err)
 		return nil, huma.Error404NotFound("Budget template not found")
 	}
+	logger.Info("start", "template_id", input.ID)
 	return &struct {
 		Body models.BudgetTemplateModel
 	}{Body: item}, nil
 }
-
 func (btr BudgetTemplateResource) Create(ctx context.Context, input *struct {
 	Body models.CreateBudgetTemplateModel
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start")
 	resp, err := btr.sevs.BudgTem.Create(ctx, input.Body)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
+	logger.Info("start")
 	return &struct {
 		Body models.BudgetTemplateModel
 	}{Body: resp}, nil
 }
-
 func (btr BudgetTemplateResource) Update(ctx context.Context, input *struct {
 	ID   int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
 	Body models.UpdateBudgetTemplateModel
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "template_id", input.ID)
 	resp, err := btr.sevs.BudgTem.Update(ctx, input.ID, input.Body)
 	if err != nil {
+		logger.Error("error", "template_id", input.ID, "error", err)
 		return nil, err
 	}
+	logger.Info("start", "template_id", input.ID)
 	return &struct {
 		Body models.BudgetTemplateModel
 	}{Body: resp}, nil
 }
-
 func (btr BudgetTemplateResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
 }) (*struct{}, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "template_id", input.ID)
 	if err := btr.sevs.BudgTem.Delete(ctx, input.ID); err != nil {
+		logger.Error("error", "template_id", input.ID, "error", err)
 		return nil, err
 	}
+	logger.Info("start", "template_id", input.ID)
 	return &struct{}{}, nil
 }
-
 func (btr BudgetTemplateResource) GetRelatedBudgets(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
 	models.BudgetTemplateRelatedBudgetsSearchModel
 }) (*struct {
 	Body models.BudgetsPagedModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "template_id", input.ID)
 	resp, err := btr.sevs.BudgTem.GetRelatedBudgets(ctx, input.ID, input.BudgetTemplateRelatedBudgetsSearchModel)
 	if err != nil {
+		logger.Error("error", "template_id", input.ID, "error", err)
 		return nil, err
 	}
+	logger.Info("start", "template_id", input.ID)
 	return &struct {
 		Body models.BudgetsPagedModel
 	}{Body: resp}, nil

@@ -1,21 +1,17 @@
 package resources
-
 import (
 	"context"
-
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
-
 type TransactionResource struct {
 	sevs services.RootService
 }
-
 func NewTransactionResource(sevs services.RootService) TransactionResource {
 	return TransactionResource{sevs}
 }
-
 func (tr TransactionResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "list-transactions",
@@ -28,7 +24,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.List)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "create-transaction",
 		Method:      "POST",
@@ -40,7 +35,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.Create)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "get-transaction",
 		Method:      "GET",
@@ -52,7 +46,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.Get)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "update-transaction",
 		Method:      "PATCH",
@@ -64,7 +57,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.Update)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-transaction",
 		Method:      "DELETE",
@@ -76,7 +68,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.Delete)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "list-transaction-templates",
 		Method:      "GET",
@@ -88,7 +79,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.ListTemplates)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "create-transaction-template",
 		Method:      "POST",
@@ -100,7 +90,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.CreateTemplate)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "get-transaction-template",
 		Method:      "GET",
@@ -112,7 +101,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.GetTemplate)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "update-transaction-template",
 		Method:      "PATCH",
@@ -124,7 +112,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.UpdateTemplate)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-transaction-template",
 		Method:      "DELETE",
@@ -136,7 +123,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.DeleteTemplate)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "list-transaction-template-related-transactions",
 		Method:      "GET",
@@ -148,7 +134,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.ListTemplateRelatedTransactions)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "list-transaction-relations",
 		Method:      "GET",
@@ -160,7 +145,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.ListRelations)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "create-transaction-relation",
 		Method:      "POST",
@@ -172,7 +156,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.CreateRelation)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "get-transaction-relation",
 		Method:      "GET",
@@ -184,7 +167,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.GetRelation)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-transaction-relation",
 		Method:      "DELETE",
@@ -196,7 +178,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.DeleteRelation)
-
 	// Transaction Tags
 	huma.Register(api, huma.Operation{
 		OperationID: "list-transaction-tags",
@@ -209,7 +190,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.ListTags)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "create-transaction-tag",
 		Method:      "POST",
@@ -221,7 +201,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.CreateTag)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "get-transaction-tag",
 		Method:      "GET",
@@ -233,7 +212,6 @@ func (tr TransactionResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, tr.GetTag)
-
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-transaction-tag",
 		Method:      "DELETE",
@@ -246,312 +224,345 @@ func (tr TransactionResource) Routes(api huma.API) {
 		},
 	}, tr.DeleteTag)
 }
-
 func (tr TransactionResource) List(ctx context.Context, input *struct {
 	models.TransactionsSearchModel
 }) (*struct {
 	Body models.TransactionsPagedModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start")
 	resp, err := tr.sevs.Tsct.GetPaged(ctx, input.TransactionsSearchModel)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("start")
 	return &struct {
 		Body models.TransactionsPagedModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "transaction_id", input.ID)
 	resp, err := tr.sevs.Tsct.GetDetail(ctx, input.ID)
 	if err != nil {
+		logger.Error("error", "transaction_id", input.ID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "transaction_id", input.ID)
 	return &struct {
 		Body models.TransactionModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) Create(ctx context.Context, input *struct {
 	Body models.CreateTransactionModel
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start")
 	resp, err := tr.sevs.Tsct.Create(ctx, input.Body)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("start")
 	return &struct {
 		Body models.TransactionModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) Update(ctx context.Context, input *struct {
 	ID   int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
 	Body models.UpdateTransactionModel
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "transaction_id", input.ID)
 	resp, err := tr.sevs.Tsct.Update(ctx, input.ID, input.Body)
 	if err != nil {
+		logger.Error("error", "transaction_id", input.ID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "transaction_id", input.ID)
 	return &struct {
 		Body models.TransactionModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
 }) (*struct{}, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "transaction_id", input.ID)
 	err := tr.sevs.Tsct.Delete(ctx, input.ID)
 	if err != nil {
+		logger.Error("error", "transaction_id", input.ID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "transaction_id", input.ID)
 	return &struct{}{}, nil
 }
-
 // Transaction Relation Handlers
-
 func (tr TransactionResource) ListRelations(ctx context.Context, input *struct {
 	models.TransactionRelationsSearchModel
 }) (*struct {
 	Body models.TransactionRelationsPagedModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "source_transaction_id", input.SourceTransactionID)
 	resp, err := tr.sevs.TsctRel.GetPaged(ctx, input.TransactionRelationsSearchModel)
 	if err != nil {
+		logger.Error("error", "source_transaction_id", input.SourceTransactionID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "source_transaction_id", input.SourceTransactionID)
 	return &struct {
 		Body models.TransactionRelationsPagedModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) GetRelation(ctx context.Context, input *struct {
 	models.TransactionRelationGetModel
 }) (*struct {
 	Body models.TransactionRelationModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID)
 	resp, err := tr.sevs.TsctRel.GetDetail(ctx, input.TransactionRelationGetModel)
 	if err != nil {
+		logger.Error("error", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID)
 	return &struct {
 		Body models.TransactionRelationModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) CreateRelation(ctx context.Context, input *struct {
 	Body models.CreateTransactionRelationModel
 }) (*struct {
 	Body models.TransactionRelationModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "source_transaction_id", input.Body.SourceTransactionID)
 	resp, err := tr.sevs.TsctRel.Create(ctx, input.Body)
 	if err != nil {
+		logger.Error("error", "source_transaction_id", input.Body.SourceTransactionID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "source_transaction_id", input.Body.SourceTransactionID)
 	return &struct {
 		Body models.TransactionRelationModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) DeleteRelation(ctx context.Context, input *struct {
 	models.DeleteTransactionRelationModel
 }) (*struct{}, error) {
-
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID)
 	if err := tr.sevs.TsctRel.Delete(ctx, input.DeleteTransactionRelationModel); err != nil {
+		logger.Error("error", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID)
 	return nil, nil
 }
-
 // Transaction Tag Handlers
-
 func (tr TransactionResource) ListTags(ctx context.Context, input *struct {
 	models.TransactionTagsSearchModel
 }) (*struct {
 	Body models.TransactionTagsPagedModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "transaction_id", input.TransactionID)
 	resp, err := tr.sevs.TsctTag.GetPaged(ctx, input.TransactionTagsSearchModel)
 	if err != nil {
+		logger.Error("error", "transaction_id", input.TransactionID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "transaction_id", input.TransactionID)
 	return &struct {
 		Body models.TransactionTagsPagedModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) GetTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
 }) (*struct {
 	Body models.TransactionTagModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "transaction_id", input.TransactionID, "tag_id", input.TagID)
 	resp, err := tr.sevs.TsctTag.GetDetail(ctx, input.TagID)
 	if err != nil {
+		logger.Error("error", "transaction_id", input.TransactionID, "tag_id", input.TagID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "transaction_id", input.TransactionID, "tag_id", input.TagID)
 	return &struct {
 		Body models.TransactionTagModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) CreateTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	Body          models.CreateTransactionTagModel
 }) (*struct {
 	Body models.TransactionTagModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "transaction_id", input.TransactionID)
 	input.Body.TransactionID = input.TransactionID
-
 	resp, err := tr.sevs.TsctTag.Create(ctx, input.Body)
 	if err != nil {
+		logger.Error("error", "transaction_id", input.TransactionID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "transaction_id", input.TransactionID)
 	return &struct {
 		Body models.TransactionTagModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) DeleteTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
 }) (*struct{}, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "transaction_id", input.TransactionID, "tag_id", input.TagID)
 	if err := tr.sevs.TsctTag.Delete(ctx, input.TransactionID, input.TagID); err != nil {
+		logger.Error("error", "transaction_id", input.TransactionID, "tag_id", input.TagID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "transaction_id", input.TransactionID, "tag_id", input.TagID)
 	return &struct{}{}, nil
 }
-
 // Transaction Template Handlers
-
 func (tr TransactionResource) ListTemplates(ctx context.Context, input *struct {
 	models.TransactionTemplatesSearchModel
 }) (*struct {
 	Body models.TransactionTemplatesPagedModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start")
 	resp, err := tr.sevs.TsctTem.GetPaged(ctx, input.TransactionTemplatesSearchModel)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("start")
 	return &struct {
 		Body models.TransactionTemplatesPagedModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) GetTemplate(ctx context.Context, input *struct {
 	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
 }) (*struct {
 	Body models.TransactionTemplateModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "template_id", input.TemplateID)
 	resp, err := tr.sevs.TsctTem.GetDetail(ctx, input.TemplateID)
 	if err != nil {
+		logger.Error("error", "template_id", input.TemplateID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "template_id", input.TemplateID)
 	return &struct {
 		Body models.TransactionTemplateModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) CreateTemplate(ctx context.Context, input *struct {
 	Body models.CreateTransactionTemplateModel
 }) (*struct {
 	Body models.TransactionTemplateModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start")
 	resp, err := tr.sevs.TsctTem.Create(ctx, input.Body)
 	if err != nil {
+		logger.Error("error", "error", err)
 		return nil, err
 	}
-
+	logger.Info("start")
 	return &struct {
 		Body models.TransactionTemplateModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct {
 	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
 	Body       models.UpdateTransactionTemplateModel
 }) (*struct {
 	Body models.TransactionTemplateModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "template_id", input.TemplateID)
 	resp, err := tr.sevs.TsctTem.Update(ctx, input.TemplateID, input.Body)
 	if err != nil {
+		logger.Error("error", "template_id", input.TemplateID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "template_id", input.TemplateID)
 	return &struct {
 		Body models.TransactionTemplateModel
 	}{
 		Body: resp,
 	}, nil
 }
-
 func (tr TransactionResource) DeleteTemplate(ctx context.Context, input *struct {
 	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
 }) (*struct{}, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "template_id", input.TemplateID)
 	err := tr.sevs.TsctTem.Delete(ctx, input.TemplateID)
 	if err != nil {
+		logger.Error("error", "template_id", input.TemplateID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "template_id", input.TemplateID)
 	return nil, nil
 }
-
 func (tr TransactionResource) ListTemplateRelatedTransactions(ctx context.Context, input *struct {
 	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
 	models.TransactionTemplateRelatedTransactionsSearchModel
 }) (*struct {
 	Body models.TransactionsPagedModel
 }, error) {
+	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger.Info("start", "template_id", input.TemplateID)
 	result, err := tr.sevs.TsctTem.GetRelatedTransactions(ctx, input.TemplateID, input.TransactionTemplateRelatedTransactionsSearchModel)
 	if err != nil {
+		logger.Error("error", "template_id", input.TemplateID, "error", err)
 		return nil, err
 	}
-
+	logger.Info("start", "template_id", input.TemplateID)
 	return &struct {
 		Body models.TransactionsPagedModel
 	}{

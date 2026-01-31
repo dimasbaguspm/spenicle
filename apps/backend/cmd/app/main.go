@@ -20,12 +20,16 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
+
 	env := configs.NewEnvironment()
 	db := configs.NewDatabase(ctx, env)
 	rdb := configs.NewRedisClient(ctx, env)
 
 	svr := http.NewServeMux()
-	corsMiddleware := middleware.CORS(svr)
 
 	humaSvr := humago.New(svr, configs.NewOpenApi(svr, env))
 
@@ -35,7 +39,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", env.AppPort),
-		Handler: corsMiddleware,
+		Handler: middleware.ObservabilityMiddleware(middleware.CORS(svr)),
 	}
 
 	slog.Info("Server is running at port", "port", env.AppPort)
