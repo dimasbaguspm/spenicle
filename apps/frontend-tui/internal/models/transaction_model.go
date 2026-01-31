@@ -9,7 +9,7 @@ type TransactionsSearchModel struct {
 	SortOrder             string   `query:"sortOrder" default:"desc" enum:"asc,desc" doc:"Sort order (asc or desc)"`
 	IDs                   []int    `query:"id" doc:"Filter by transaction IDs"`
 	Type                  []string `query:"type" enum:"expense,income,transfer" doc:"Filter by transaction type"`
-	AccountIDs            []int    `query:"accountId" doc:"Filter by source account IDs"`
+	AccountIDs            []int    `query:"accountId" doc:"Filter by account IDs (source or destination)"`
 	CategoryIDs           []int    `query:"categoryId" doc:"Filter by category IDs"`
 	DestinationAccountIDs []int    `query:"destinationAccountId" doc:"Filter by destination account IDs (transfers)"`
 	TagIDs                []int    `query:"tagId" doc:"Filter by tag IDs"`

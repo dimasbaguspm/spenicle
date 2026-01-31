@@ -59,7 +59,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			WHERE t.deleted_at IS NULL
 				AND (array_length($3::int8[], 1) IS NULL OR t.id = ANY($3::int8[]))
 				AND (array_length($4::text[], 1) IS NULL OR t.type = ANY($4::text[]))
-				AND (array_length($5::int8[], 1) IS NULL OR t.account_id = ANY($5::int8[]))
+				AND (array_length($5::int8[], 1) IS NULL OR t.account_id = ANY($5::int8[]) OR t.destination_account_id = ANY($5::int8[]))
 				AND (array_length($6::int8[], 1) IS NULL OR t.category_id = ANY($6::int8[]))
 				AND (array_length($7::int8[], 1) IS NULL OR t.destination_account_id = ANY($7::int8[]) OR t.destination_account_id IS NULL)
 				AND ($8::int8 IS NULL OR t.amount >= $8::int8)
