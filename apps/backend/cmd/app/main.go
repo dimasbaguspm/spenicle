@@ -39,7 +39,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", env.AppPort),
-		Handler: middleware.ObservabilityMiddleware(middleware.CORS(svr)),
+		Handler: middleware.RateLimitMiddleware(rdb)(middleware.ObservabilityMiddleware(middleware.CORS(svr))),
 	}
 
 	slog.Info("Server is running at port", "port", env.AppPort)
