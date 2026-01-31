@@ -44,10 +44,10 @@ function loadAuthTokens(): { accessToken?: string; refreshToken?: string } {
       for (const origin of origins) {
         if (origin.localStorage) {
           const accessToken = origin.localStorage.find(
-            (item: any) => item.name === "access_token"
+            (item: any) => item.name === "access_token",
           )?.value;
           const refreshToken = origin.localStorage.find(
-            (item: any) => item.name === "refresh_token"
+            (item: any) => item.name === "refresh_token",
           )?.value;
 
           if (accessToken && refreshToken) {
@@ -101,7 +101,7 @@ async function ensureCleanDatabase(request: any, testContext: TestContext) {
   } catch (error) {
     console.warn(
       "Database cleanup encountered some errors (this is normal):",
-      error
+      error,
     );
   }
 }
@@ -118,7 +118,7 @@ export const test = base.extend<APIFixtures>({
     const { accessToken, refreshToken } = loadAuthTokens();
 
     const context: TestContext = {
-      baseURL: `http://localhost:8081`,
+      baseURL: `http://localhost:8080`,
       accessToken,
       refreshToken,
     };
@@ -208,7 +208,7 @@ export const test = base.extend<APIFixtures>({
     // Tokens are already loaded from storage state in testContext
     if (!testContext.accessToken) {
       throw new Error(
-        "No authentication tokens found. Make sure global setup completed successfully."
+        "No authentication tokens found. Make sure global setup completed successfully.",
       );
     }
     await use(testContext);

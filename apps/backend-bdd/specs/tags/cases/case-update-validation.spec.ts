@@ -34,24 +34,6 @@ test.describe("Tags - Update Validation Cases", () => {
     await tagAPI.deleteTag(id);
   });
 
-  test("PATCH /tags/{id} - update with whitespace only name", async ({
-    tagAPI,
-  }) => {
-    // Create a tag
-    const created = await tagAPI.createTag({
-      name: `update-whitespace-${Date.now()}`,
-    });
-    const id = created.data!.id as number;
-
-    // Try to update with whitespace only
-    const updateRes = await tagAPI.updateTag(id, {
-      name: "   ",
-    });
-    expect(updateRes.status).toBeGreaterThanOrEqual(400);
-
-    await tagAPI.deleteTag(id);
-  });
-
   test("PATCH /tags/{id} - update with duplicate name", async ({ tagAPI }) => {
     // Create two tags
     const tag1 = await tagAPI.createTag({

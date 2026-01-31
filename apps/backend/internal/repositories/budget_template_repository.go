@@ -9,15 +9,14 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type BudgetTemplateRepository struct {
-	pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewBudgetTemplateRepository(pgx *pgxpool.Pool) BudgetTemplateRepository {
-	return BudgetTemplateRepository{pgx}
+func NewBudgetTemplateRepository(db DBQuerier) BudgetTemplateRepository {
+	return BudgetTemplateRepository{db}
 }
 
 func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
@@ -109,7 +108,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 		categoryIDs = query.CategoryIDs
 	}
 
-	rows, err := btr.pgx.Query(ctx, sql, query.PageSize, offset, ids, accountIDs, categoryIDs, query.Recurrence)
+	rows, err := btr.db.Query(ctx, sql, query.PageSize, offset, ids, accountIDs, categoryIDs, query.Recurrence)
 	if err != nil {
 		return models.BudgetTemplatesPagedModel{}, huma.Error400BadRequest("Unable to query budget templates", err)
 	}
@@ -160,7 +159,7 @@ func (btr BudgetTemplateRepository) GetDetail(ctx context.Context, id int64) (mo
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
-	err := btr.pgx.QueryRow(ctx, query, id).Scan(
+	err := btr.db.QueryRow(ctx, query, id).Scan(
 		&data.ID, &data.AccountID, &data.CategoryID, &data.AmountLimit, &data.Recurrence,
 		&data.StartDate, &data.EndDate, &data.Name, &data.NextRunAt, &data.LastExecutedAt, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
@@ -191,7 +190,7 @@ func (btr BudgetTemplateRepository) Create(ctx context.Context, p models.CreateB
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id`
 
-	err := btr.pgx.QueryRow(
+	err := btr.db.QueryRow(
 		ctx,
 		query,
 		p.AccountID,
@@ -246,7 +245,7 @@ func (btr BudgetTemplateRepository) Update(ctx context.Context, id int64, p mode
 		WHERE id = $7 AND deleted_at IS NULL
 		RETURNING id`
 
-	err := btr.pgx.QueryRow(
+	err := btr.db.QueryRow(
 		ctx,
 		query,
 		p.AmountLimit,
@@ -278,7 +277,7 @@ func (btr BudgetTemplateRepository) Delete(ctx context.Context, id int64) error 
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
-	cmdTag, err := btr.pgx.Exec(ctx, sql, id)
+	cmdTag, err := btr.db.Exec(ctx, sql, id)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to delete budget template", err)
 	}
@@ -339,7 +338,7 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 		FROM due_templates
 	`
 
-	rows, err := btr.pgx.Query(ctx, sql)
+	rows, err := btr.db.Query(ctx, sql)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Unable to query due budget templates", err)
 	}
@@ -384,7 +383,7 @@ func (btr BudgetTemplateRepository) UpdateLastExecuted(ctx context.Context, id i
 		    updated_at = NOW()
 		WHERE id = $1 AND deleted_at IS NULL`
 
-	_, err := btr.pgx.Exec(ctx, sql, id)
+	_, err := btr.db.Exec(ctx, sql, id)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to update budget template execution time", err)
 	}
@@ -404,7 +403,7 @@ func (btr BudgetTemplateRepository) GetRelatedBudgets(ctx context.Context, templ
 		ORDER BY b.id
 	`
 
-	rows, err := btr.pgx.Query(ctx, sql, templateID)
+	rows, err := btr.db.Query(ctx, sql, templateID)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Unable to query related budget IDs", err)
 	}
@@ -432,7 +431,7 @@ func (btr BudgetTemplateRepository) CreateRelation(ctx context.Context, budgetID
 
 	sql := `INSERT INTO budget_template_relations (budget_id, template_id) VALUES ($1, $2) ON CONFLICT (budget_id) DO NOTHING`
 
-	_, err := btr.pgx.Exec(ctx, sql, budgetID, templateID)
+	_, err := btr.db.Exec(ctx, sql, budgetID, templateID)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to create budget template relation", err)
 	}

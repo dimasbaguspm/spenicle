@@ -10,15 +10,14 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AccountRepository struct {
-	Pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewAccountRepository(pgx *pgxpool.Pool) AccountRepository {
-	return AccountRepository{pgx}
+func NewAccountRepository(db DBQuerier) AccountRepository {
+	return AccountRepository{db}
 }
 
 func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsSearchModel) (models.AccountsPagedModel, error) {
@@ -106,7 +105,7 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 		types = query.Type
 	}
 
-	rows, err := ar.Pgx.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
+	rows, err := ar.db.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
 	if err != nil {
 		return models.AccountsPagedModel{}, huma.Error500InternalServerError("Unable to query accounts", err)
 	}
@@ -194,7 +193,7 @@ func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.Acc
 			LEFT JOIN budgets b ON b.account_id = a.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
 			WHERE a.id = $1 AND a.deleted_at IS NULL`
 
-	err := ar.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &templateID, &accountID, &categoryID, &periodStart, &periodEnd, &amountLimit, &actualAmount, &periodType, &budgetName)
+	err := ar.db.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &templateID, &accountID, &categoryID, &periodStart, &periodEnd, &amountLimit, &actualAmount, &periodType, &budgetName)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -233,7 +232,7 @@ func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAcc
 		RETURNING id
 	`
 
-	err := ar.Pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor).Scan(&ID)
+	err := ar.db.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor).Scan(&ID)
 
 	if err != nil {
 		return models.AccountModel{}, huma.Error500InternalServerError("Unable to create account", err)
@@ -263,7 +262,7 @@ func (ar AccountRepository) Update(ctx context.Context, id int64, payload models
 			WHERE id = $7 AND deleted_at IS NULL
 			RETURNING id`
 
-	err := ar.Pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor, payload.ArchivedAt, id).Scan(&ID)
+	err := ar.db.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor, payload.ArchivedAt, id).Scan(&ID)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -285,7 +284,7 @@ func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) e
 
 	var matched int
 	sql := `SELECT COUNT(1) FROM accounts WHERE id = ANY($1::int8[]) AND deleted_at IS NULL`
-	if err := ar.Pgx.QueryRow(ctx, sql, ids).Scan(&matched); err != nil {
+	if err := ar.db.QueryRow(ctx, sql, ids).Scan(&matched); err != nil {
 		return huma.Error500InternalServerError("Unable to validate accounts", err)
 	}
 	if matched != len(ids) {
@@ -293,7 +292,7 @@ func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) e
 	}
 
 	var totalActive int
-	if err := ar.Pgx.QueryRow(ctx, `SELECT COUNT(1) FROM accounts WHERE deleted_at IS NULL`).Scan(&totalActive); err != nil {
+	if err := ar.db.QueryRow(ctx, `SELECT COUNT(1) FROM accounts WHERE deleted_at IS NULL`).Scan(&totalActive); err != nil {
 		return huma.Error500InternalServerError("Unable to validate account count", err)
 	}
 	if totalActive != len(ids) {
@@ -303,12 +302,12 @@ func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) e
 	return nil
 }
 
-func (ar AccountRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int64) error {
+func (ar AccountRepository) Delete(ctx context.Context, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
 	delSQL := `UPDATE accounts SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`
-	cmdTag, err := tx.Exec(ctx, delSQL, id)
+	cmdTag, err := ar.db.Exec(ctx, delSQL, id)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to delete account", err)
 	}
@@ -318,11 +317,11 @@ func (ar AccountRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int6
 	return nil
 }
 
-func (ar AccountRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx pgx.Tx) ([]int64, error) {
+func (ar AccountRepository) GetActiveIDsOrdered(ctx context.Context) ([]int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
-	rows, err := tx.Query(ctx, `SELECT id FROM accounts WHERE deleted_at IS NULL ORDER BY display_order ASC, id ASC`)
+	rows, err := ar.db.Query(ctx, `SELECT id FROM accounts WHERE deleted_at IS NULL ORDER BY display_order ASC, id ASC`)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Unable to query account ids", err)
 	}
@@ -344,7 +343,7 @@ func (ar AccountRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx pg
 	return ids, nil
 }
 
-func (ar AccountRepository) ReorderWithTx(ctx context.Context, tx pgx.Tx, ids []int64) error {
+func (ar AccountRepository) Reorder(ctx context.Context, ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -353,13 +352,13 @@ func (ar AccountRepository) ReorderWithTx(ctx context.Context, tx pgx.Tx, ids []
 	defer cancel()
 
 	reorderSQL := `UPDATE accounts SET display_order = v.new_order, updated_at = CURRENT_TIMESTAMP FROM (SELECT id::bigint AS id, ord - 1 AS new_order FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)) v WHERE accounts.id = v.id AND deleted_at IS NULL`
-	if _, err := tx.Exec(ctx, reorderSQL, ids); err != nil {
+	if _, err := ar.db.Exec(ctx, reorderSQL, ids); err != nil {
 		return huma.Error500InternalServerError("Unable to reorder accounts", err)
 	}
 	return nil
 }
 
-func (ar AccountRepository) UpdateBalanceWithTx(ctx context.Context, tx pgx.Tx, accountID int64, deltaAmount int64) error {
+func (ar AccountRepository) UpdateBalance(ctx context.Context, accountID int64, deltaAmount int64) error {
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
@@ -368,7 +367,7 @@ func (ar AccountRepository) UpdateBalanceWithTx(ctx context.Context, tx pgx.Tx, 
 				updated_at = CURRENT_TIMESTAMP
 			WHERE id = $2 AND deleted_at IS NULL`
 
-	cmdTag, err := tx.Exec(ctx, sql, deltaAmount, accountID)
+	cmdTag, err := ar.db.Exec(ctx, sql, deltaAmount, accountID)
 	if err != nil {
 		return fmt.Errorf("unable to update account balance: %w", err)
 	}

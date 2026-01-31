@@ -18,12 +18,12 @@ const (
 )
 
 type SummaryService struct {
-	sr  repositories.SummaryRepository
-	rdb *redis.Client
+	rpts *repositories.RootRepository
+	rdb  *redis.Client
 }
 
-func NewSummaryService(sr repositories.SummaryRepository, rdb *redis.Client) SummaryService {
-	return SummaryService{sr, rdb}
+func NewSummaryService(rpts *repositories.RootRepository, rdb *redis.Client) SummaryService {
+	return SummaryService{rpts, rdb}
 }
 
 func (ss SummaryService) GetTransactionSummary(ctx context.Context, p models.SummaryTransactionSearchModel) (models.SummaryTransactionListModel, error) {
@@ -39,7 +39,7 @@ func (ss SummaryService) GetTransactionSummary(ctx context.Context, p models.Sum
 		return summary, nil
 	}
 
-	summary, err = ss.sr.GetTransactionSummary(ctx, p)
+	summary, err = ss.rpts.Sum.GetTransactionSummary(ctx, p)
 	if err != nil {
 		return summary, err
 	}
@@ -62,7 +62,7 @@ func (ss SummaryService) GetAccountSummary(ctx context.Context, p models.Summary
 		return summary, nil
 	}
 
-	summary, err = ss.sr.GetAccountSummary(ctx, p)
+	summary, err = ss.rpts.Sum.GetAccountSummary(ctx, p)
 	if err != nil {
 		return summary, err
 	}
@@ -85,7 +85,7 @@ func (ss SummaryService) GetCategorySummary(ctx context.Context, p models.Summar
 		return summary, nil
 	}
 
-	summary, err = ss.sr.GetCategorySummary(ctx, p)
+	summary, err = ss.rpts.Sum.GetCategorySummary(ctx, p)
 	if err != nil {
 		return summary, err
 	}

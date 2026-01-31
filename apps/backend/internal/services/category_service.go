@@ -19,13 +19,13 @@ const (
 )
 
 type CategoryService struct {
-	cr  repositories.CategoryRepository
-	rdb *redis.Client
+	rpts *repositories.RootRepository
+	rdb  *redis.Client
 }
 
-func NewCategoryService(cr repositories.CategoryRepository, rdb *redis.Client) CategoryService {
+func NewCategoryService(rpts *repositories.RootRepository, rdb *redis.Client) CategoryService {
 	return CategoryService{
-		cr,
+		rpts,
 		rdb,
 	}
 }
@@ -39,7 +39,7 @@ func (cs CategoryService) GetPaged(ctx context.Context, p models.CategoriesSearc
 		return paged, nil
 	}
 
-	paged, err = cs.cr.GetPaged(ctx, p)
+	paged, err = cs.rpts.Cat.GetPaged(ctx, p)
 	if err != nil {
 		return paged, err
 	}
@@ -57,7 +57,7 @@ func (cs CategoryService) GetDetail(ctx context.Context, id int64) (models.Categ
 		return category, nil
 	}
 
-	category, err = cs.cr.GetDetail(ctx, id)
+	category, err = cs.rpts.Cat.GetDetail(ctx, id)
 	if err != nil {
 		return category, err
 	}
@@ -68,7 +68,7 @@ func (cs CategoryService) GetDetail(ctx context.Context, id int64) (models.Categ
 }
 
 func (cs CategoryService) Create(ctx context.Context, p models.CreateCategoryModel) (models.CategoryModel, error) {
-	category, err := cs.cr.Create(ctx, p)
+	category, err := cs.rpts.Cat.Create(ctx, p)
 	if err != nil {
 		return category, err
 	}
@@ -81,7 +81,7 @@ func (cs CategoryService) Create(ctx context.Context, p models.CreateCategoryMod
 }
 
 func (cs CategoryService) Update(ctx context.Context, id int64, p models.UpdateCategoryModel) (models.CategoryModel, error) {
-	category, err := cs.cr.Update(ctx, id, p)
+	category, err := cs.rpts.Cat.Update(ctx, id, p)
 	if err != nil {
 		return category, err
 	}
@@ -95,7 +95,7 @@ func (cs CategoryService) Update(ctx context.Context, id int64, p models.UpdateC
 }
 
 func (cs CategoryService) Delete(ctx context.Context, id int64) error {
-	tx, err := cs.cr.Pgx.Begin(ctx)
+	tx, err := cs.rpts.Pool.Begin(ctx)
 	if err != nil {
 		return huma.Error400BadRequest("Unable to start transaction", err)
 	}
@@ -105,16 +105,17 @@ func (cs CategoryService) Delete(ctx context.Context, id int64) error {
 		}
 	}()
 
-	if err := cs.cr.DeleteWithTx(ctx, tx, id); err != nil {
+	rootTx := cs.rpts.WithTx(ctx, tx)
+	if err := rootTx.Cat.Delete(ctx, id); err != nil {
 		return err
 	}
 
-	ids, err := cs.cr.GetActiveIDsOrderedWithTx(ctx, tx)
+	ids, err := rootTx.Cat.GetActiveIDsOrdered(ctx)
 	if err != nil {
 		return err
 	}
 
-	if err := cs.cr.ReorderWithTx(ctx, tx, ids); err != nil {
+	if err := rootTx.Cat.Reorder(ctx, ids); err != nil {
 		return err
 	}
 
@@ -135,11 +136,11 @@ func (cs CategoryService) Reorder(ctx context.Context, p models.ReorderCategorie
 		return huma.Error400BadRequest("No category IDs provided for reordering")
 	}
 
-	if err := cs.cr.ValidateIDsExist(ctx, p.Items); err != nil {
+	if err := cs.rpts.Cat.ValidateIDsExist(ctx, p.Items); err != nil {
 		return err
 	}
 
-	tx, err := cs.cr.Pgx.Begin(ctx)
+	tx, err := cs.rpts.Pool.Begin(ctx)
 	if err != nil {
 		return huma.Error400BadRequest("Unable to start transaction", err)
 	}
@@ -149,7 +150,8 @@ func (cs CategoryService) Reorder(ctx context.Context, p models.ReorderCategorie
 		}
 	}()
 
-	if err := cs.cr.ReorderWithTx(ctx, tx, p.Items); err != nil {
+	rootTx := cs.rpts.WithTx(ctx, tx)
+	if err := rootTx.Cat.Reorder(ctx, p.Items); err != nil {
 		return err
 	}
 

@@ -9,15 +9,14 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TransactionTemplateRepository struct {
-	pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewTransactionTemplateRepository(pgx *pgxpool.Pool) TransactionTemplateRepository {
-	return TransactionTemplateRepository{pgx}
+func NewTransactionTemplateRepository(db DBQuerier) TransactionTemplateRepository {
+	return TransactionTemplateRepository{db}
 }
 
 func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
@@ -145,7 +144,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 		LIMIT $6::bigint OFFSET $7::bigint
 	`
 
-	rows, err := ttr.pgx.Query(ctx, sql, searchPattern, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID, p.PageSize, offset)
+	rows, err := ttr.db.Query(ctx, sql, searchPattern, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID, p.PageSize, offset)
 	if err != nil {
 		return models.TransactionTemplatesPagedModel{}, huma.Error500InternalServerError("Unable to query transaction templates", err)
 	}
@@ -267,7 +266,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 			AND (da.deleted_at IS NULL OR da.id IS NULL)
 	`
 
-	err := ttr.pgx.QueryRow(ctx, sql, id).Scan(
+	err := ttr.db.QueryRow(ctx, sql, id).Scan(
 		&data.ID, &data.Name, &data.Type, &data.Amount,
 		&data.Account.ID, &data.Account.Name, &data.Account.Type, &data.Account.Amount,
 		&data.Account.Icon, &data.Account.IconColor,
@@ -306,7 +305,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 		WHERE r.template_id = $1
 	`
 
-	err = ttr.pgx.QueryRow(ctx, statsSQL, id).Scan(
+	err = ttr.db.QueryRow(ctx, statsSQL, id).Scan(
 		&data.RecurringStats.Occurrences,
 		&data.RecurringStats.TotalSpent,
 	)
@@ -371,7 +370,7 @@ func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload mod
 		RETURNING id
 	`
 
-	err := ttr.pgx.QueryRow(
+	err := ttr.db.QueryRow(
 		ctx,
 		sql,
 		payload.Name,
@@ -433,7 +432,7 @@ func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, p
 	`
 
 	var returnedID int64
-	err := ttr.pgx.QueryRow(
+	err := ttr.db.QueryRow(
 		ctx,
 		sql,
 		payload.Name,
@@ -466,7 +465,7 @@ func (ttr TransactionTemplateRepository) Delete(ctx context.Context, id int64) e
 			SET deleted_at = CURRENT_TIMESTAMP
 			WHERE id = $1 AND deleted_at IS NULL`
 
-	cmdTag, err := ttr.pgx.Exec(ctx, sql, id)
+	cmdTag, err := ttr.db.Exec(ctx, sql, id)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to delete transaction template", err)
 	}
@@ -537,7 +536,7 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 		ORDER BY tt.next_due_at ASC
 	`
 
-	rows, err := ttr.pgx.Query(ctx, sql)
+	rows, err := ttr.db.Query(ctx, sql)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Unable to query due transaction templates", err)
 	}
@@ -608,7 +607,7 @@ func (ttr TransactionTemplateRepository) UpdateLastExecuted(ctx context.Context,
 		    updated_at = NOW()
 		WHERE id = $1 AND deleted_at IS NULL`
 
-	_, err := ttr.pgx.Exec(ctx, sql, id)
+	_, err := ttr.db.Exec(ctx, sql, id)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to update template execution time", err)
 	}
@@ -621,7 +620,7 @@ func (ttr TransactionTemplateRepository) CreateRelation(ctx context.Context, tra
 
 	sql := `INSERT INTO transaction_template_relations (transaction_id, template_id) VALUES ($1, $2) ON CONFLICT (transaction_id) DO NOTHING`
 
-	_, err := ttr.pgx.Exec(ctx, sql, transactionID, templateID)
+	_, err := ttr.db.Exec(ctx, sql, transactionID, templateID)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to create transaction template relation", err)
 	}
@@ -641,7 +640,7 @@ func (ttr TransactionTemplateRepository) GetRelatedTransactions(ctx context.Cont
 		ORDER BY t.id
 	`
 
-	rows, err := ttr.pgx.Query(ctx, sql, templateID)
+	rows, err := ttr.db.Query(ctx, sql, templateID)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Unable to query related transaction IDs", err)
 	}

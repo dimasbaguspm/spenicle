@@ -10,15 +10,14 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type BudgetRepository struct {
-	pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewBudgetRepository(pgx *pgxpool.Pool) BudgetRepository {
-	return BudgetRepository{pgx}
+func NewBudgetRepository(db DBQuerier) BudgetRepository {
+	return BudgetRepository{db}
 }
 
 // calculatePeriodType determines the period type based on start and end dates
@@ -152,7 +151,7 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 		categoryIDs = query.CategoryIDs
 	}
 
-	rows, err := br.pgx.Query(ctx, sql, query.PageSize, offset, ids, templateIDs, accountIDs, categoryIDs, query.Status, query.Name)
+	rows, err := br.db.Query(ctx, sql, query.PageSize, offset, ids, templateIDs, accountIDs, categoryIDs, query.Status, query.Name)
 	if err != nil {
 		return models.BudgetsPagedModel{}, huma.Error400BadRequest("Unable to query budgets", err)
 	}
@@ -244,7 +243,7 @@ func (br BudgetRepository) GetDetail(ctx context.Context, id int64) (models.Budg
 		WHERE b.id = $1
 			AND b.deleted_at IS NULL`
 
-	err := br.pgx.QueryRow(ctx, query, id).Scan(
+	err := br.db.QueryRow(ctx, query, id).Scan(
 		&data.ID, &data.TemplateID, &data.AccountID, &data.CategoryID, &data.PeriodStart, &data.PeriodEnd,
 		&data.AmountLimit, &data.Status, &data.PeriodType, &data.Name, &data.ActualAmount, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
@@ -287,7 +286,7 @@ func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetMode
 		RETURNING id`
 
 	var ID int64
-	err := br.pgx.QueryRow(
+	err := br.db.QueryRow(
 		ctx,
 		query,
 		p.TemplateID,
@@ -352,7 +351,7 @@ func (br BudgetRepository) Update(ctx context.Context, id int64, p models.Update
 		RETURNING id`
 
 	var ID int64
-	err = br.pgx.QueryRow(
+	err = br.db.QueryRow(
 		ctx,
 		query,
 		p.PeriodStart,
@@ -381,7 +380,7 @@ func (br BudgetRepository) Delete(ctx context.Context, id int64) error {
 		SET deleted_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND deleted_at IS NULL`
 
-	cmdTag, err := br.pgx.Exec(ctx, sql, id)
+	cmdTag, err := br.db.Exec(ctx, sql, id)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to delete budget", err)
 	}
@@ -407,7 +406,7 @@ func (br BudgetRepository) validateUniqueActiveBudget(ctx context.Context, accou
 			AND period_type = $3`
 
 	var count int
-	err := br.pgx.QueryRow(ctx, query, accountID, categoryID, periodType).Scan(&count)
+	err := br.db.QueryRow(ctx, query, accountID, categoryID, periodType).Scan(&count)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to validate budget uniqueness", err)
 	}
@@ -432,7 +431,7 @@ func (br BudgetRepository) DeactivateExistingActiveBudgets(ctx context.Context, 
 			AND category_id IS NOT DISTINCT FROM $2
 			AND period_type = $3`
 
-	_, err := br.pgx.Exec(ctx, query, accountID, categoryID, periodType)
+	_, err := br.db.Exec(ctx, query, accountID, categoryID, periodType)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to deactivate existing active budgets", err)
 	}

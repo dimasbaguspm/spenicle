@@ -9,15 +9,14 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CategoryRepository struct {
-	Pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewCategoryRepository(pgx *pgxpool.Pool) CategoryRepository {
-	return CategoryRepository{Pgx: pgx}
+func NewCategoryRepository(db DBQuerier) CategoryRepository {
+	return CategoryRepository{db}
 }
 
 func (cr CategoryRepository) GetPaged(ctx context.Context, query models.CategoriesSearchModel) (models.CategoriesPagedModel, error) {
@@ -99,7 +98,7 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 		types = query.Type
 	}
 
-	rows, err := cr.Pgx.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
+	rows, err := cr.db.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
 	if err != nil {
 		return models.CategoriesPagedModel{}, huma.Error500InternalServerError("Unable to query categories", err)
 	}
@@ -210,7 +209,7 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 		LEFT JOIN budgets b ON b.category_id = c.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
 		WHERE c.id = $1 AND c.deleted_at IS NULL
 	`
-	err := cr.Pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &accountID, &categoryID, &actualAmount, &periodType, &budgetName)
+	err := cr.db.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &accountID, &categoryID, &actualAmount, &periodType, &budgetName)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -250,7 +249,7 @@ func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCa
 		RETURNING id
 	`
 
-	err := cr.Pgx.QueryRow(ctx, sql,
+	err := cr.db.QueryRow(ctx, sql,
 		payload.Name,
 		payload.Type,
 		payload.Note,
@@ -287,7 +286,7 @@ func (cr CategoryRepository) Update(ctx context.Context, id int64, payload model
 		RETURNING id
 	`
 
-	err := cr.Pgx.QueryRow(
+	err := cr.db.QueryRow(
 		ctx,
 		sql,
 		payload.Name,
@@ -319,7 +318,7 @@ func (cr CategoryRepository) Delete(ctx context.Context, id int64) error {
 			AND deleted_at IS NULL
 	`
 
-	cmdTag, err := cr.Pgx.Exec(ctx, sql, id)
+	cmdTag, err := cr.db.Exec(ctx, sql, id)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to delete category", err)
 	}
@@ -348,7 +347,7 @@ func (cr CategoryRepository) Reorder(ctx context.Context, ids []int64) error {
             WHERE categories.id = v.id
                 AND deleted_at IS NULL`
 
-	_, err := cr.Pgx.Exec(ctx, sql, ids)
+	_, err := cr.db.Exec(ctx, sql, ids)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to reorder categories", err)
 	}
@@ -367,7 +366,7 @@ func (cr CategoryRepository) ValidateIDsExist(ctx context.Context, ids []int64) 
 
 	var matched int
 	sql := `SELECT COUNT(1) FROM categories WHERE id = ANY($1::int8[]) AND deleted_at IS NULL`
-	if err := cr.Pgx.QueryRow(ctx, sql, ids).Scan(&matched); err != nil {
+	if err := cr.db.QueryRow(ctx, sql, ids).Scan(&matched); err != nil {
 		return huma.Error500InternalServerError("Unable to validate categories", err)
 	}
 	if matched != len(ids) {
@@ -375,7 +374,7 @@ func (cr CategoryRepository) ValidateIDsExist(ctx context.Context, ids []int64) 
 	}
 
 	var totalActive int
-	if err := cr.Pgx.QueryRow(ctx, `SELECT COUNT(1) FROM categories WHERE deleted_at IS NULL`).Scan(&totalActive); err != nil {
+	if err := cr.db.QueryRow(ctx, `SELECT COUNT(1) FROM categories WHERE deleted_at IS NULL`).Scan(&totalActive); err != nil {
 		return huma.Error500InternalServerError("Unable to validate category count", err)
 	}
 	if totalActive != len(ids) {
@@ -385,28 +384,14 @@ func (cr CategoryRepository) ValidateIDsExist(ctx context.Context, ids []int64) 
 	return nil
 }
 
-// DeleteWithTx performs a soft delete using provided transaction
-func (cr CategoryRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int64) error {
+// Delete performs a soft delete
+
+// GetActiveIDsOrdered returns non-deleted category ids ordered by display_order
+func (cr CategoryRepository) GetActiveIDsOrdered(ctx context.Context) ([]int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
-	delSQL := `UPDATE categories SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`
-	cmdTag, err := tx.Exec(ctx, delSQL, id)
-	if err != nil {
-		return huma.Error500InternalServerError("Unable to delete category", err)
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return huma.Error404NotFound("Category not found")
-	}
-	return nil
-}
-
-// GetActiveIDsOrderedWithTx returns non-deleted category ids ordered by display_order using provided tx
-func (cr CategoryRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx pgx.Tx) ([]int64, error) {
-	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
-	defer cancel()
-
-	rows, err := tx.Query(ctx, `SELECT id FROM categories WHERE deleted_at IS NULL ORDER BY display_order ASC, id ASC`)
+	rows, err := cr.db.Query(ctx, `SELECT id FROM categories WHERE deleted_at IS NULL ORDER BY display_order ASC, id ASC`)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Unable to query category ids", err)
 	}
@@ -424,20 +409,4 @@ func (cr CategoryRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx p
 		return nil, huma.Error500InternalServerError("Error reading category ids", err)
 	}
 	return ids, nil
-}
-
-// ReorderWithTx reorders categories using provided tx and ids
-func (cr CategoryRepository) ReorderWithTx(ctx context.Context, tx pgx.Tx, ids []int64) error {
-	if len(ids) == 0 {
-		return nil
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
-	defer cancel()
-
-	reorderSQL := `UPDATE categories SET display_order = v.new_order, updated_at = CURRENT_TIMESTAMP FROM (SELECT id::bigint AS id, ord - 1 AS new_order FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)) v WHERE categories.id = v.id AND deleted_at IS NULL`
-	if _, err := tx.Exec(ctx, reorderSQL, ids); err != nil {
-		return huma.Error500InternalServerError("Unable to reorder categories", err)
-	}
-	return nil
 }

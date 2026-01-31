@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle-api/internal/configs"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -49,11 +50,17 @@ func (rl *RateLimiter) IsAllowed(ctx context.Context, key string) (bool, int, ti
 	return true, int(count), resetDuration, nil
 }
 
-func RateLimitMiddleware(rdb *redis.Client) func(http.Handler) http.Handler {
+func RateLimitMiddleware(env configs.Environment, rdb *redis.Client) func(http.Handler) http.Handler {
 	rl := NewRateLimiter(rdb)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// only apply rate limiting in production
+			if env.AppStage != configs.AppStageProd {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			logger := GetLogger(r.Context())
 
 			clientIP := r.RemoteAddr

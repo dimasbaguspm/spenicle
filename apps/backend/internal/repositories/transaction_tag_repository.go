@@ -8,15 +8,14 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TransactionTagRepository struct {
-	pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewTransactionTagRepository(pgx *pgxpool.Pool) TransactionTagRepository {
-	return TransactionTagRepository{pgx}
+func NewTransactionTagRepository(db DBQuerier) TransactionTagRepository {
+	return TransactionTagRepository{db}
 }
 
 func (ttr TransactionTagRepository) GetPaged(ctx context.Context, q models.TransactionTagsSearchModel) (models.TransactionTagsPagedModel, error) {
@@ -49,7 +48,7 @@ func (ttr TransactionTagRepository) GetPaged(ctx context.Context, q models.Trans
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := ttr.pgx.Query(ctx, sql, q.TransactionID, q.PageSize, offset)
+	rows, err := ttr.db.Query(ctx, sql, q.TransactionID, q.PageSize, offset)
 	if err != nil {
 		return models.TransactionTagsPagedModel{}, huma.Error500InternalServerError("Unable to query transaction tags", err)
 	}
@@ -105,7 +104,7 @@ func (ttr TransactionTagRepository) GetDetail(ctx context.Context, ID int64) (mo
 		INNER JOIN tags t ON tt.tag_id = t.id
 		WHERE tt.id = $1 AND t.deleted_at IS NULL`
 
-	err := ttr.pgx.QueryRow(ctx, sql, ID).Scan(&data.ID, &data.TransactionID, &data.TagID, &data.TagName, &data.CreatedAt)
+	err := ttr.db.QueryRow(ctx, sql, ID).Scan(&data.ID, &data.TransactionID, &data.TagID, &data.TagName, &data.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -131,13 +130,13 @@ func (ttr TransactionTagRepository) Create(ctx context.Context, p models.CreateT
 		VALUES ($1, $2)
 		ON CONFLICT (transaction_id, tag_id) DO NOTHING`
 
-	_, err := ttr.pgx.Exec(ctx, insertSQL, p.TransactionID, p.TagID)
+	_, err := ttr.db.Exec(ctx, insertSQL, p.TransactionID, p.TagID)
 	if err != nil {
 		return models.TransactionTagModel{}, huma.Error500InternalServerError("Unable to add tag to transaction", err)
 	}
 
 	selectSQL := `SELECT id FROM transaction_tags WHERE transaction_id = $1 AND tag_id = $2`
-	err = ttr.pgx.QueryRow(ctx, selectSQL, p.TransactionID, p.TagID).Scan(&ID)
+	err = ttr.db.QueryRow(ctx, selectSQL, p.TransactionID, p.TagID).Scan(&ID)
 
 	if err != nil {
 		return models.TransactionTagModel{}, huma.Error500InternalServerError("Unable to add tag to transaction", err)
@@ -154,7 +153,7 @@ func (ttr TransactionTagRepository) Delete(ctx context.Context, transactionID, t
 		DELETE FROM transaction_tags
 		WHERE transaction_id = $1 AND tag_id = $2`
 
-	cmdTag, err := ttr.pgx.Exec(ctx, sql, transactionID, tagID)
+	cmdTag, err := ttr.db.Exec(ctx, sql, transactionID, tagID)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to remove tag from transaction", err)
 	}

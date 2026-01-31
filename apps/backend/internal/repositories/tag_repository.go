@@ -8,15 +8,14 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TagRepository struct {
-	pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewTagRepository(pgx *pgxpool.Pool) TagRepository {
-	return TagRepository{pgx}
+func NewTagRepository(db DBQuerier) TagRepository {
+	return TagRepository{db}
 }
 
 func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchModel) (models.TagsPagedModel, error) {
@@ -61,7 +60,7 @@ func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchMod
 		ORDER BY ` + sortColumn + ` ` + sortOrder + `
 		`
 
-	rows, err := tr.pgx.Query(ctx, sql, query.Name, query.PageSize, offset)
+	rows, err := tr.db.Query(ctx, sql, query.Name, query.PageSize, offset)
 	if err != nil {
 		return models.TagsPagedModel{}, huma.Error400BadRequest("Unable to query tags", err)
 	}
@@ -113,7 +112,7 @@ func (tr TagRepository) GetDetail(ctx context.Context, id int64) (models.TagMode
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
-	err := tr.pgx.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Color, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
+	err := tr.db.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Color, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -135,7 +134,7 @@ func (tr TagRepository) Create(ctx context.Context, payload models.CreateTagMode
 			VALUES ($1, $2)
 			RETURNING id`
 
-	err := tr.pgx.QueryRow(ctx, sql, payload.Name, payload.Color).Scan(&ID)
+	err := tr.db.QueryRow(ctx, sql, payload.Name, payload.Color).Scan(&ID)
 
 	if err != nil {
 		return models.TagModel{}, huma.Error500InternalServerError("Unable to create tag", err)
@@ -159,7 +158,7 @@ func (tr TagRepository) Update(ctx context.Context, id int64, payload models.Upd
 		RETURNING id
 	`
 
-	err := tr.pgx.QueryRow(ctx, sql, payload.Name, payload.Color, id).Scan(&ID)
+	err := tr.db.QueryRow(ctx, sql, payload.Name, payload.Color, id).Scan(&ID)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -181,7 +180,7 @@ func (tr TagRepository) Delete(ctx context.Context, id int64) error {
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
-	cmdTag, err := tr.pgx.Exec(ctx, sql, id)
+	cmdTag, err := tr.db.Exec(ctx, sql, id)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to delete tag", err)
 	}

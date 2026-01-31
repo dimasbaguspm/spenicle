@@ -18,17 +18,12 @@ const (
 )
 
 type TransactionRelationService struct {
-	trr repositories.TransactionRelationRepository
-	tr  repositories.TransactionRepository
-	rdb *redis.Client
+	rpts *repositories.RootRepository
+	rdb  *redis.Client
 }
 
-func NewTransactionRelationService(
-	trr repositories.TransactionRelationRepository,
-	tr repositories.TransactionRepository,
-	rdb *redis.Client,
-) TransactionRelationService {
-	return TransactionRelationService{trr, tr, rdb}
+func NewTransactionRelationService(rpts *repositories.RootRepository, rdb *redis.Client) TransactionRelationService {
+	return TransactionRelationService{rpts, rdb}
 }
 
 func (trs TransactionRelationService) GetPaged(ctx context.Context, q models.TransactionRelationsSearchModel) (models.TransactionRelationsPagedModel, error) {
@@ -40,7 +35,7 @@ func (trs TransactionRelationService) GetPaged(ctx context.Context, q models.Tra
 		return paged, nil
 	}
 
-	paged, err = trs.trr.GetPaged(ctx, q)
+	paged, err = trs.rpts.TsctRel.GetPaged(ctx, q)
 	if err != nil {
 		return paged, err
 	}
@@ -58,7 +53,7 @@ func (trs TransactionRelationService) GetDetail(ctx context.Context, p models.Tr
 		return relation, nil
 	}
 
-	relation, err = trs.trr.GetDetail(ctx, p)
+	relation, err = trs.rpts.TsctRel.GetDetail(ctx, p)
 	if err != nil {
 		return relation, err
 	}
@@ -69,7 +64,7 @@ func (trs TransactionRelationService) GetDetail(ctx context.Context, p models.Tr
 }
 
 func (trs TransactionRelationService) Create(ctx context.Context, p models.CreateTransactionRelationModel) (models.TransactionRelationModel, error) {
-	relation, err := trs.trr.Create(ctx, p)
+	relation, err := trs.rpts.TsctRel.Create(ctx, p)
 	if err != nil {
 		return relation, err
 	}
@@ -87,7 +82,7 @@ func (trs TransactionRelationService) Create(ctx context.Context, p models.Creat
 
 func (trs TransactionRelationService) Delete(ctx context.Context, p models.DeleteTransactionRelationModel) error {
 	// Get relation details before deletion to know which transaction caches to invalidate
-	relation, err := trs.trr.GetDetail(ctx, models.TransactionRelationGetModel{
+	relation, err := trs.rpts.TsctRel.GetDetail(ctx, models.TransactionRelationGetModel{
 		SourceTransactionID: p.SourceTransactionID,
 		RelationID:          p.RelationID,
 	})
@@ -95,7 +90,7 @@ func (trs TransactionRelationService) Delete(ctx context.Context, p models.Delet
 		return err
 	}
 
-	err = trs.trr.Delete(ctx, p)
+	err = trs.rpts.TsctRel.Delete(ctx, p)
 	if err != nil {
 		return err
 	}

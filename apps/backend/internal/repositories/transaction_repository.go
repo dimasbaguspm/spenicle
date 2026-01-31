@@ -10,15 +10,14 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TransactionRepository struct {
-	Pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewTransactionRepository(pgx *pgxpool.Pool) TransactionRepository {
-	return TransactionRepository{Pgx: pgx}
+func NewTransactionRepository(db DBQuerier) TransactionRepository {
+	return TransactionRepository{db: db}
 }
 
 func (tr TransactionRepository) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
@@ -150,7 +149,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		endDateParam = &p.EndDate
 	}
 
-	rows, err := tr.Pgx.Query(ctx, sql,
+	rows, err := tr.db.Query(ctx, sql,
 		p.PageSize, offset,
 		ids, types, accountIDs, categoryIDs, destAccountIDs,
 		minAmountParam, maxAmountParam,
@@ -310,7 +309,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 		FROM transaction_detail td
 		LEFT JOIN tags_agg ta ON td.id = ta.transaction_id`
 
-	err := tr.Pgx.QueryRow(ctx, sql, id).Scan(
+	err := tr.db.QueryRow(ctx, sql, id).Scan(
 		&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 		&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
 		&account.ID, &account.Name, &account.Type, &account.Amount, &account.Icon, &account.IconColor,
@@ -372,32 +371,13 @@ func (tr TransactionRepository) Create(ctx context.Context, p models.CreateTrans
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id`
 
-	err := tr.Pgx.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note).Scan(&id)
+	err := tr.db.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note).Scan(&id)
 
 	if err != nil {
 		return models.TransactionModel{}, huma.Error500InternalServerError("Unable to create transaction", err)
 	}
 
 	return tr.GetDetail(ctx, id)
-}
-
-func (tr TransactionRepository) CreateWithTx(ctx context.Context, tx pgx.Tx, p models.CreateTransactionModel) (int64, error) {
-	var id int64
-
-	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
-	defer cancel()
-
-	sql := `INSERT INTO transactions (type, date, amount, account_id, category_id, destination_account_id, note)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			RETURNING id`
-
-	err := tx.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note).Scan(&id)
-
-	if err != nil {
-		return 0, huma.Error500InternalServerError("Unable to create transaction", err)
-	}
-
-	return id, nil
 }
 
 func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.UpdateTransactionModel) (models.TransactionModel, error) {
@@ -415,7 +395,7 @@ func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.U
 				updated_at = CURRENT_TIMESTAMP
 			WHERE id = $8 AND deleted_at IS NULL`
 
-	cmdTag, err := tr.Pgx.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
+	cmdTag, err := tr.db.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
 
 	if err != nil {
 		return models.TransactionModel{}, huma.Error500InternalServerError("Unable to update transaction", err)
@@ -428,35 +408,6 @@ func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.U
 	return tr.GetDetail(ctx, id)
 }
 
-// UpdateWithTx updates a transaction within a provided database transaction
-func (tr TransactionRepository) UpdateWithTx(ctx context.Context, tx pgx.Tx, id int64, p models.UpdateTransactionModel) error {
-	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
-	defer cancel()
-
-	sql := `UPDATE transactions
-			SET type = COALESCE($1, type),
-				date = COALESCE($2, date),
-				amount = COALESCE($3, amount),
-				account_id = COALESCE($4, account_id),
-				category_id = COALESCE($5, category_id),
-				destination_account_id = COALESCE($6, destination_account_id),
-				note = COALESCE($7, note),
-				updated_at = CURRENT_TIMESTAMP
-			WHERE id = $8 AND deleted_at IS NULL`
-
-	cmdTag, err := tx.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
-
-	if err != nil {
-		return huma.Error500InternalServerError("Unable to update transaction", err)
-	}
-
-	if cmdTag.RowsAffected() == 0 {
-		return huma.Error404NotFound("Transaction not found")
-	}
-
-	return nil
-}
-
 func (tr TransactionRepository) Delete(ctx context.Context, id int64) error {
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
@@ -464,27 +415,7 @@ func (tr TransactionRepository) Delete(ctx context.Context, id int64) error {
 			SET deleted_at = CURRENT_TIMESTAMP
 			WHERE id = $1 AND deleted_at IS NULL`
 
-	cmdTag, err := tr.Pgx.Exec(ctx, sql, id)
-	if err != nil {
-		return huma.Error500InternalServerError("Unable to delete transaction", err)
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return huma.Error404NotFound("Transaction not found")
-	}
-
-	return nil
-}
-
-// DeleteWithTx deletes a transaction within a provided database transaction
-func (tr TransactionRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int64) error {
-	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
-	defer cancel()
-
-	sql := `UPDATE transactions
-			SET deleted_at = CURRENT_TIMESTAMP
-			WHERE id = $1 AND deleted_at IS NULL`
-
-	cmdTag, err := tx.Exec(ctx, sql, id)
+	cmdTag, err := tr.db.Exec(ctx, sql, id)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to delete transaction", err)
 	}
@@ -503,7 +434,7 @@ func (tr TransactionRepository) UpdateAccountBalance(ctx context.Context, accoun
 			SET amount = amount + $1
 			WHERE id = $2 AND deleted_at IS NULL`
 
-	cmdTag, err := tr.Pgx.Exec(ctx, sql, deltaAmount, accountID)
+	cmdTag, err := tr.db.Exec(ctx, sql, deltaAmount, accountID)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to update account balance", err)
 	}

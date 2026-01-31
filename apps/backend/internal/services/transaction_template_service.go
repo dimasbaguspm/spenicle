@@ -18,13 +18,12 @@ const (
 )
 
 type TransactionTemplateService struct {
-	ttr repositories.TransactionTemplateRepository
-	tr  repositories.TransactionRepository
-	rdb *redis.Client
+	rpts *repositories.RootRepository
+	rdb  *redis.Client
 }
 
-func NewTransactionTemplateService(ttr repositories.TransactionTemplateRepository, tr repositories.TransactionRepository, rdb *redis.Client) TransactionTemplateService {
-	return TransactionTemplateService{ttr: ttr, tr: tr, rdb: rdb}
+func NewTransactionTemplateService(rpts *repositories.RootRepository, rdb *redis.Client) TransactionTemplateService {
+	return TransactionTemplateService{rpts, rdb}
 }
 
 func (tts TransactionTemplateService) GetPaged(ctx context.Context, query models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
@@ -36,7 +35,7 @@ func (tts TransactionTemplateService) GetPaged(ctx context.Context, query models
 		return paged, nil
 	}
 
-	paged, err = tts.ttr.GetPaged(ctx, query)
+	paged, err = tts.rpts.TsctTem.GetPaged(ctx, query)
 	if err != nil {
 		return paged, err
 	}
@@ -54,7 +53,7 @@ func (tts TransactionTemplateService) GetDetail(ctx context.Context, id int64) (
 		return template, nil
 	}
 
-	template, err = tts.ttr.GetDetail(ctx, id)
+	template, err = tts.rpts.TsctTem.GetDetail(ctx, id)
 	if err != nil {
 		return template, err
 	}
@@ -65,7 +64,7 @@ func (tts TransactionTemplateService) GetDetail(ctx context.Context, id int64) (
 }
 
 func (tts TransactionTemplateService) Create(ctx context.Context, payload models.CreateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
-	template, err := tts.ttr.Create(ctx, payload)
+	template, err := tts.rpts.TsctTem.Create(ctx, payload)
 	if err != nil {
 		return template, err
 	}
@@ -77,7 +76,7 @@ func (tts TransactionTemplateService) Create(ctx context.Context, payload models
 }
 
 func (tts TransactionTemplateService) Update(ctx context.Context, id int64, payload models.UpdateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
-	template, err := tts.ttr.Update(ctx, id, payload)
+	template, err := tts.rpts.TsctTem.Update(ctx, id, payload)
 	if err != nil {
 		return template, err
 	}
@@ -90,7 +89,7 @@ func (tts TransactionTemplateService) Update(ctx context.Context, id int64, payl
 }
 
 func (tts TransactionTemplateService) Delete(ctx context.Context, id int64) error {
-	err := tts.ttr.Delete(ctx, id)
+	err := tts.rpts.TsctTem.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -102,7 +101,7 @@ func (tts TransactionTemplateService) Delete(ctx context.Context, id int64) erro
 }
 
 func (tts TransactionTemplateService) GetRelatedTransactions(ctx context.Context, templateID int64, query models.TransactionTemplateRelatedTransactionsSearchModel) (models.TransactionsPagedModel, error) {
-	ids, err := tts.ttr.GetRelatedTransactions(ctx, templateID, query)
+	ids, err := tts.rpts.TsctTem.GetRelatedTransactions(ctx, templateID, query)
 	if err != nil {
 		return models.TransactionsPagedModel{}, err
 	}
@@ -139,5 +138,5 @@ func (tts TransactionTemplateService) GetRelatedTransactions(ctx context.Context
 		MaxAmount:             query.MaxAmount,
 	}
 
-	return tts.tr.GetPaged(ctx, searchModel)
+	return tts.rpts.Tsct.GetPaged(ctx, searchModel)
 }

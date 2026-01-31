@@ -8,15 +8,14 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TransactionRelationRepository struct {
-	pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewTransactionRelationRepository(pgx *pgxpool.Pool) TransactionRelationRepository {
-	return TransactionRelationRepository{pgx}
+func NewTransactionRelationRepository(db DBQuerier) TransactionRelationRepository {
+	return TransactionRelationRepository{db}
 }
 
 func (trr TransactionRelationRepository) GetPaged(ctx context.Context, q models.TransactionRelationsSearchModel) (models.TransactionRelationsPagedModel, error) {
@@ -49,7 +48,7 @@ func (trr TransactionRelationRepository) GetPaged(ctx context.Context, q models.
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := trr.pgx.Query(ctx, sql, q.SourceTransactionID, q.PageSize, offset)
+	rows, err := trr.db.Query(ctx, sql, q.SourceTransactionID, q.PageSize, offset)
 	if err != nil {
 		return models.TransactionRelationsPagedModel{}, huma.Error500InternalServerError("Unable to query transaction relations", err)
 	}
@@ -103,7 +102,7 @@ func (trr TransactionRelationRepository) GetDetail(ctx context.Context, p models
 		`
 
 	var item models.TransactionRelationModel
-	err := trr.pgx.QueryRow(ctx, query, p.RelationID, p.SourceTransactionID).Scan(
+	err := trr.db.QueryRow(ctx, query, p.RelationID, p.SourceTransactionID).Scan(
 		&item.ID, &item.SourceTransactionID, &item.RelatedTransactionID, &item.RelationType, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 	)
 
@@ -145,7 +144,7 @@ func (trr TransactionRelationRepository) Create(ctx context.Context, p models.Cr
 	`
 
 	var validationStatus string
-	err := trr.pgx.QueryRow(ctx, sql, p.SourceTransactionID, p.RelatedTransactionID).Scan(&validationStatus)
+	err := trr.db.QueryRow(ctx, sql, p.SourceTransactionID, p.RelatedTransactionID).Scan(&validationStatus)
 	if err != nil {
 		return models.TransactionRelationModel{}, huma.Error500InternalServerError("Unable to validate transaction relation", err)
 	}
@@ -166,7 +165,7 @@ func (trr TransactionRelationRepository) Create(ctx context.Context, p models.Cr
 		VALUES ($1, $2, $3)
 		RETURNING id, source_transaction_id`
 
-	insertErr := trr.pgx.QueryRow(
+	insertErr := trr.db.QueryRow(
 		ctx,
 		insertSQL,
 		p.SourceTransactionID,
@@ -193,7 +192,7 @@ func (trr TransactionRelationRepository) Delete(ctx context.Context, p models.De
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND source_transaction_id = $2 AND deleted_at IS NULL`
 
-	cmdTag, err := trr.pgx.Exec(ctx, sql, p.RelationID, p.SourceTransactionID)
+	cmdTag, err := trr.db.Exec(ctx, sql, p.RelationID, p.SourceTransactionID)
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to delete transaction relation", err)
 	}

@@ -3,10 +3,20 @@ package repositories
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type DBQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
 type RootRepository struct {
+	Pool    *pgxpool.Pool
+	db      DBQuerier
 	Acc     AccountRepository
 	Ath     AuthRepository
 	Budg    BudgetRepository
@@ -21,17 +31,38 @@ type RootRepository struct {
 }
 
 func NewRootRepository(ctx context.Context, pgx *pgxpool.Pool) RootRepository {
+	db := DBQuerier(pgx)
 	return RootRepository{
-		Acc:     NewAccountRepository(pgx),
+		Pool:    pgx,
+		db:      db,
+		Acc:     NewAccountRepository(db),
 		Ath:     NewAuthRepository(ctx),
-		Budg:    NewBudgetRepository(pgx),
-		BudgTem: NewBudgetTemplateRepository(pgx),
-		Cat:     NewCategoryRepository(pgx),
-		Sum:     NewSummaryRepository(pgx),
-		Tag:     NewTagRepository(pgx),
-		Tsct:    NewTransactionRepository(pgx),
-		TsctRel: NewTransactionRelationRepository(pgx),
-		TsctTag: NewTransactionTagRepository(pgx),
-		TsctTem: NewTransactionTemplateRepository(pgx),
+		Budg:    NewBudgetRepository(db),
+		BudgTem: NewBudgetTemplateRepository(db),
+		Cat:     NewCategoryRepository(db),
+		Sum:     NewSummaryRepository(db),
+		Tag:     NewTagRepository(db),
+		Tsct:    NewTransactionRepository(db),
+		TsctRel: NewTransactionRelationRepository(db),
+		TsctTag: NewTransactionTagRepository(db),
+		TsctTem: NewTransactionTemplateRepository(db),
+	}
+}
+
+func (r RootRepository) WithTx(ctx context.Context, tx pgx.Tx) RootRepository {
+	return RootRepository{
+		Pool:    r.Pool,
+		db:      tx,
+		Acc:     NewAccountRepository(tx),
+		Ath:     NewAuthRepository(ctx),
+		Budg:    NewBudgetRepository(tx),
+		BudgTem: NewBudgetTemplateRepository(tx),
+		Cat:     NewCategoryRepository(tx),
+		Sum:     NewSummaryRepository(tx),
+		Tag:     NewTagRepository(tx),
+		Tsct:    NewTransactionRepository(tx),
+		TsctRel: NewTransactionRelationRepository(tx),
+		TsctTag: NewTransactionTagRepository(tx),
+		TsctTem: NewTransactionTemplateRepository(tx),
 	}
 }

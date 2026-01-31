@@ -6,15 +6,14 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type SummaryRepository struct {
-	pgx *pgxpool.Pool
+	db DBQuerier
 }
 
-func NewSummaryRepository(pgx *pgxpool.Pool) SummaryRepository {
-	return SummaryRepository{pgx}
+func NewSummaryRepository(db DBQuerier) SummaryRepository {
+	return SummaryRepository{db}
 }
 
 func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.SummaryTransactionSearchModel) (models.SummaryTransactionListModel, error) {
@@ -75,7 +74,7 @@ func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.
 		ORDER BY ap.period DESC
 	`
 
-	rows, err := sr.pgx.Query(ctx, sql, p.StartDate, p.EndDate)
+	rows, err := sr.db.Query(ctx, sql, p.StartDate, p.EndDate)
 	if err != nil {
 		return models.SummaryTransactionListModel{}, huma.Error500InternalServerError("query transaction summary: %w", err)
 	}
@@ -153,7 +152,7 @@ func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.Summ
 		ORDER BY total_count DESC
 	`
 
-	rows, err := sr.pgx.Query(ctx, sql, p.StartDate, p.EndDate)
+	rows, err := sr.db.Query(ctx, sql, p.StartDate, p.EndDate)
 	if err != nil {
 		return models.SummaryAccountListModel{}, huma.Error500InternalServerError("query account summary: %w", err)
 	}
@@ -228,7 +227,7 @@ func (sr SummaryRepository) GetCategorySummary(ctx context.Context, p models.Sum
 		ORDER BY total_count DESC
 	`
 
-	rows, err := sr.pgx.Query(ctx, sql, p.StartDate, p.EndDate)
+	rows, err := sr.db.Query(ctx, sql, p.StartDate, p.EndDate)
 	if err != nil {
 		return models.SummaryCategoryListModel{}, huma.Error500InternalServerError("query category summary: %w", err)
 	}

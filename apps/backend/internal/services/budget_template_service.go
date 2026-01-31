@@ -19,13 +19,12 @@ const (
 )
 
 type BudgetTemplateService struct {
-	btr repositories.BudgetTemplateRepository
-	br  repositories.BudgetRepository
-	rdb *redis.Client
+	rpts *repositories.RootRepository
+	rdb  *redis.Client
 }
 
-func NewBudgetTemplateService(btr repositories.BudgetTemplateRepository, br repositories.BudgetRepository, rdb *redis.Client) BudgetTemplateService {
-	return BudgetTemplateService{btr, br, rdb}
+func NewBudgetTemplateService(rpts *repositories.RootRepository, rdb *redis.Client) BudgetTemplateService {
+	return BudgetTemplateService{rpts, rdb}
 }
 
 func (bts BudgetTemplateService) GetPaged(ctx context.Context, p models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
@@ -37,7 +36,7 @@ func (bts BudgetTemplateService) GetPaged(ctx context.Context, p models.BudgetTe
 		return paged, nil
 	}
 
-	paged, err = bts.btr.GetPaged(ctx, p)
+	paged, err = bts.rpts.BudgTem.GetPaged(ctx, p)
 	if err != nil {
 		return paged, err
 	}
@@ -55,7 +54,7 @@ func (bts BudgetTemplateService) GetDetail(ctx context.Context, id int64) (model
 		return template, nil
 	}
 
-	template, err = bts.btr.GetDetail(ctx, id)
+	template, err = bts.rpts.BudgTem.GetDetail(ctx, id)
 	if err != nil {
 		return template, err
 	}
@@ -74,7 +73,7 @@ func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudg
 		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Budget template cannot be associated with both account and category")
 	}
 
-	template, err := bts.btr.Create(ctx, p)
+	template, err := bts.rpts.BudgTem.Create(ctx, p)
 	if err != nil {
 		return template, err
 	}
@@ -86,7 +85,7 @@ func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudg
 }
 
 func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.UpdateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
-	template, err := bts.btr.Update(ctx, id, p)
+	template, err := bts.rpts.BudgTem.Update(ctx, id, p)
 	if err != nil {
 		return template, err
 	}
@@ -99,7 +98,7 @@ func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.
 }
 
 func (bts BudgetTemplateService) Delete(ctx context.Context, id int64) error {
-	err := bts.btr.Delete(ctx, id)
+	err := bts.rpts.BudgTem.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -111,7 +110,7 @@ func (bts BudgetTemplateService) Delete(ctx context.Context, id int64) error {
 }
 
 func (bts BudgetTemplateService) GetRelatedBudgets(ctx context.Context, templateID int64, query models.BudgetTemplateRelatedBudgetsSearchModel) (models.BudgetsPagedModel, error) {
-	ids, err := bts.btr.GetRelatedBudgets(ctx, templateID, query)
+	ids, err := bts.rpts.BudgTem.GetRelatedBudgets(ctx, templateID, query)
 	if err != nil {
 		return models.BudgetsPagedModel{}, err
 	}
@@ -139,5 +138,5 @@ func (bts BudgetTemplateService) GetRelatedBudgets(ctx context.Context, template
 		IDs:        intIDs,
 	}
 
-	return bts.br.GetPaged(ctx, searchModel)
+	return bts.rpts.Budg.GetPaged(ctx, searchModel)
 }

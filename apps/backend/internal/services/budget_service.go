@@ -19,12 +19,12 @@ const (
 )
 
 type BudgetService struct {
-	br  repositories.BudgetRepository
-	rdb *redis.Client
+	rpts *repositories.RootRepository
+	rdb  *redis.Client
 }
 
-func NewBudgetService(br repositories.BudgetRepository, rdb *redis.Client) BudgetService {
-	return BudgetService{br, rdb}
+func NewBudgetService(rpts *repositories.RootRepository, rdb *redis.Client) BudgetService {
+	return BudgetService{rpts, rdb}
 }
 
 func (bs BudgetService) GetPaged(ctx context.Context, p models.BudgetsSearchModel) (models.BudgetsPagedModel, error) {
@@ -36,7 +36,7 @@ func (bs BudgetService) GetPaged(ctx context.Context, p models.BudgetsSearchMode
 		return paged, nil
 	}
 
-	paged, err = bs.br.GetPaged(ctx, p)
+	paged, err = bs.rpts.Budg.GetPaged(ctx, p)
 	if err != nil {
 		return paged, err
 	}
@@ -54,7 +54,7 @@ func (bs BudgetService) GetDetail(ctx context.Context, id int64) (models.BudgetM
 		return budget, nil
 	}
 
-	budget, err = bs.br.GetDetail(ctx, id)
+	budget, err = bs.rpts.Budg.GetDetail(ctx, id)
 	if err != nil {
 		return budget, err
 	}
@@ -73,7 +73,7 @@ func (bs BudgetService) Create(ctx context.Context, p models.CreateBudgetModel) 
 		return models.BudgetModel{}, huma.Error400BadRequest("Budget cannot be associated with both account and category")
 	}
 
-	budget, err := bs.br.Create(ctx, p)
+	budget, err := bs.rpts.Budg.Create(ctx, p)
 	if err != nil {
 		return budget, err
 	}
@@ -94,7 +94,7 @@ func (bs BudgetService) Create(ctx context.Context, p models.CreateBudgetModel) 
 }
 
 func (bs BudgetService) Update(ctx context.Context, id int64, p models.UpdateBudgetModel) (models.BudgetModel, error) {
-	budget, err := bs.br.Update(ctx, id, p)
+	budget, err := bs.rpts.Budg.Update(ctx, id, p)
 	if err != nil {
 		return budget, err
 	}
@@ -117,12 +117,12 @@ func (bs BudgetService) Update(ctx context.Context, id int64, p models.UpdateBud
 
 func (bs BudgetService) Delete(ctx context.Context, id int64) error {
 	// Get budget details before deletion to know which caches to invalidate
-	budget, err := bs.br.GetDetail(ctx, id)
+	budget, err := bs.rpts.Budg.GetDetail(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	err = bs.br.Delete(ctx, id)
+	err = bs.rpts.Budg.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -143,5 +143,5 @@ func (bs BudgetService) Delete(ctx context.Context, id int64) error {
 }
 
 func (bs BudgetService) DeactivateExistingActiveBudgets(ctx context.Context, accountID, categoryID *int64, periodType string) error {
-	return bs.br.DeactivateExistingActiveBudgets(ctx, accountID, categoryID, periodType)
+	return bs.rpts.Budg.DeactivateExistingActiveBudgets(ctx, accountID, categoryID, periodType)
 }

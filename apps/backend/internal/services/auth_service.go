@@ -8,12 +8,12 @@ import (
 )
 
 type AuthService struct {
-	ar repositories.AuthRepository
+	rpts *repositories.RootRepository
 }
 
-func NewAuthService(ar repositories.AuthRepository) AuthService {
+func NewAuthService(rpts *repositories.RootRepository) AuthService {
 	return AuthService{
-		ar,
+		rpts,
 	}
 }
 
@@ -24,9 +24,9 @@ func (s AuthService) Login(p models.LoginRequestModel) (models.LoginResponseMode
 		return models.LoginResponseModel{}, huma.Error401Unauthorized("Invalid credentials")
 	}
 
-	return s.ar.Login(p)
+	return s.rpts.Ath.Login(p)
 }
 
 func (s AuthService) Refresh(p models.RefreshRequestModel) (models.RefreshResponseModel, error) {
-	return s.ar.Refresh(p)
+	return s.rpts.Ath.Refresh(p)
 }

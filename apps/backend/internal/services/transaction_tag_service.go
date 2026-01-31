@@ -18,12 +18,12 @@ const (
 )
 
 type TransactionTagService struct {
-	repo repositories.TransactionTagRepository
+	rpts *repositories.RootRepository
 	rdb  *redis.Client
 }
 
-func NewTransactionTagService(repo repositories.TransactionTagRepository, rdb *redis.Client) TransactionTagService {
-	return TransactionTagService{repo, rdb}
+func NewTransactionTagService(rpts *repositories.RootRepository, rdb *redis.Client) TransactionTagService {
+	return TransactionTagService{rpts, rdb}
 }
 
 func (tts TransactionTagService) GetPaged(ctx context.Context, q models.TransactionTagsSearchModel) (models.TransactionTagsPagedModel, error) {
@@ -35,7 +35,7 @@ func (tts TransactionTagService) GetPaged(ctx context.Context, q models.Transact
 		return paged, nil
 	}
 
-	paged, err = tts.repo.GetPaged(ctx, q)
+	paged, err = tts.rpts.TsctTag.GetPaged(ctx, q)
 	if err != nil {
 		return paged, err
 	}
@@ -53,7 +53,7 @@ func (tts TransactionTagService) GetDetail(ctx context.Context, ID int64) (model
 		return tag, nil
 	}
 
-	tag, err = tts.repo.GetDetail(ctx, ID)
+	tag, err = tts.rpts.TsctTag.GetDetail(ctx, ID)
 	if err != nil {
 		return tag, err
 	}
@@ -64,7 +64,7 @@ func (tts TransactionTagService) GetDetail(ctx context.Context, ID int64) (model
 }
 
 func (tts TransactionTagService) Create(ctx context.Context, payload models.CreateTransactionTagModel) (models.TransactionTagModel, error) {
-	tag, err := tts.repo.Create(ctx, payload)
+	tag, err := tts.rpts.TsctTag.Create(ctx, payload)
 	if err != nil {
 		return tag, err
 	}
@@ -78,7 +78,7 @@ func (tts TransactionTagService) Create(ctx context.Context, payload models.Crea
 }
 
 func (tts TransactionTagService) Delete(ctx context.Context, transactionID, tagID int64) error {
-	err := tts.repo.Delete(ctx, transactionID, tagID)
+	err := tts.rpts.TsctTag.Delete(ctx, transactionID, tagID)
 	if err != nil {
 		return err
 	}

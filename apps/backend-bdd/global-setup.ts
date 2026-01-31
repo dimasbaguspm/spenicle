@@ -11,7 +11,7 @@ async function globalSetup(config: FullConfig) {
   // Load environment variables
   dotenv.config();
 
-  const baseURL = `http://localhost:8081`;
+  const baseURL = `http://localhost:8080`;
   const username = "admin_username";
   const password = "admin_password";
 
@@ -36,7 +36,7 @@ async function globalSetup(config: FullConfig) {
     if (!response.ok()) {
       const error = await response.json();
       throw new Error(
-        `Authentication failed: ${error.detail || response.statusText()}`
+        `Authentication failed: ${error.detail || response.statusText()}`,
       );
     }
 

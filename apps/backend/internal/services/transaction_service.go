@@ -11,7 +11,6 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
-	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/errgroup"
 )
@@ -21,14 +20,15 @@ const (
 )
 
 type TransactionService struct {
-	tr  repositories.TransactionRepository
-	ar  repositories.AccountRepository
-	cr  repositories.CategoryRepository
-	rdb *redis.Client
+	rpts *repositories.RootRepository
+	rdb  *redis.Client
 }
 
-func NewTransactionService(tr repositories.TransactionRepository, ar repositories.AccountRepository, cr repositories.CategoryRepository, rdb *redis.Client) TransactionService {
-	return TransactionService{tr, ar, cr, rdb}
+func NewTransactionService(rpts *repositories.RootRepository, rdb *redis.Client) TransactionService {
+	return TransactionService{
+		rpts,
+		rdb,
+	}
 }
 
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
@@ -40,7 +40,7 @@ func (ts TransactionService) GetPaged(ctx context.Context, p models.Transactions
 		return paged, nil
 	}
 
-	paged, err = ts.tr.GetPaged(ctx, p)
+	paged, err = ts.rpts.Tsct.GetPaged(ctx, p)
 	if err != nil {
 		return paged, err
 	}
@@ -58,7 +58,7 @@ func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.Tr
 		return transaction, nil
 	}
 
-	transaction, err = ts.tr.GetDetail(ctx, id)
+	transaction, err = ts.rpts.Tsct.GetDetail(ctx, id)
 	if err != nil {
 		return transaction, err
 	}
@@ -73,29 +73,25 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, err
 	}
 
-	tx, err := ts.tr.Pgx.BeginTx(ctx, pgx.TxOptions{})
+	tx, err := ts.rpts.Pool.Begin(ctx)
 
 	if err != nil {
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("Unable to start transaction")
 	}
 	defer tx.Rollback(ctx)
 
-	transactionID, err := ts.tr.CreateWithTx(ctx, tx, p)
+	rootTx := ts.rpts.WithTx(ctx, tx)
+	transaction, err := rootTx.Tsct.Create(ctx, p)
 	if err != nil {
 		return models.TransactionModel{}, err
 	}
 
-	if err := ts.applyBalanceChanges(ctx, tx, p.Type, p.Amount, p.AccountID, p.DestinationAccountID); err != nil {
+	if err := ts.applyBalanceChanges(ctx, rootTx, p.Type, p.Amount, p.AccountID, p.DestinationAccountID); err != nil {
 		return models.TransactionModel{}, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
-	}
-
-	transaction, err := ts.tr.GetDetail(ctx, transactionID)
-	if err != nil {
-		return models.TransactionModel{}, err
 	}
 
 	common.SetCache(ctx, ts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", transaction.ID), transaction, TransactionCacheTTL)
@@ -107,13 +103,14 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 }
 
 func (ts TransactionService) Update(ctx context.Context, id int64, p models.UpdateTransactionModel) (models.TransactionModel, error) {
-	tx, err := ts.tr.Pgx.BeginTx(ctx, pgx.TxOptions{})
+	tx, err := ts.rpts.Pool.Begin(ctx)
 	if err != nil {
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to start transaction")
 	}
 	defer tx.Rollback(ctx)
 
-	existing, err := ts.tr.GetDetail(ctx, id)
+	rootTx := ts.rpts.WithTx(ctx, tx)
+	existing, err := rootTx.Tsct.GetDetail(ctx, id)
 	if err != nil {
 		return models.TransactionModel{}, err
 	}
@@ -122,11 +119,12 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 	if existing.DestinationAccount != nil {
 		oldDestAccountID = &existing.DestinationAccount.ID
 	}
-	if err := ts.revertBalanceChanges(ctx, tx, existing.Type, existing.Amount, existing.Account.ID, oldDestAccountID); err != nil {
+	if err := ts.revertBalanceChanges(ctx, rootTx, existing.Type, existing.Amount, existing.Account.ID, oldDestAccountID); err != nil {
 		return models.TransactionModel{}, err
 	}
 
-	if err := ts.tr.UpdateWithTx(ctx, tx, id, p); err != nil {
+	transaction, err := rootTx.Tsct.Update(ctx, id, p)
+	if err != nil {
 		return models.TransactionModel{}, err
 	}
 
@@ -158,17 +156,12 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 		return models.TransactionModel{}, err
 	}
 
-	if err := ts.applyBalanceChanges(ctx, tx, newType, newAmount, newAccountID, newDestAccountID); err != nil {
+	if err := ts.applyBalanceChanges(ctx, rootTx, newType, newAmount, newAccountID, newDestAccountID); err != nil {
 		return models.TransactionModel{}, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
-	}
-
-	transaction, err := ts.tr.GetDetail(ctx, id)
-	if err != nil {
-		return models.TransactionModel{}, err
 	}
 
 	common.SetCache(ctx, ts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", id), transaction, TransactionCacheTTL)
@@ -180,13 +173,14 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 }
 
 func (ts TransactionService) Delete(ctx context.Context, id int64) error {
-	tx, err := ts.tr.Pgx.BeginTx(ctx, pgx.TxOptions{})
+	tx, err := ts.rpts.Pool.Begin(ctx)
 	if err != nil {
 		return huma.Error422UnprocessableEntity("failed to start transaction")
 	}
 	defer tx.Rollback(ctx)
 
-	existing, err := ts.tr.GetDetail(ctx, id)
+	rootTx := ts.rpts.WithTx(ctx, tx)
+	existing, err := rootTx.Tsct.GetDetail(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -195,11 +189,11 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 	if existing.DestinationAccount != nil {
 		oldDestAccountID = &existing.DestinationAccount.ID
 	}
-	if err := ts.revertBalanceChanges(ctx, tx, existing.Type, existing.Amount, existing.Account.ID, oldDestAccountID); err != nil {
+	if err := ts.revertBalanceChanges(ctx, rootTx, existing.Type, existing.Amount, existing.Account.ID, oldDestAccountID); err != nil {
 		return err
 	}
 
-	if err := ts.tr.DeleteWithTx(ctx, tx, id); err != nil {
+	if err := rootTx.Tsct.Delete(ctx, id); err != nil {
 		return err
 	}
 
@@ -215,46 +209,46 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (ts TransactionService) applyBalanceChanges(ctx context.Context, tx pgx.Tx, txType string, amount int64, accountID int64, destAccountID *int64) error {
+func (ts TransactionService) applyBalanceChanges(ctx context.Context, root repositories.RootRepository, txType string, amount int64, accountID int64, destAccountID *int64) error {
 	switch txType {
 	case "transfer":
 		if destAccountID != nil {
-			if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, -amount); err != nil {
+			if err := root.Acc.UpdateBalance(ctx, accountID, -amount); err != nil {
 				return huma.Error422UnprocessableEntity("failed to update source account balance")
 			}
-			if err := ts.ar.UpdateBalanceWithTx(ctx, tx, *destAccountID, amount); err != nil {
+			if err := root.Acc.UpdateBalance(ctx, *destAccountID, amount); err != nil {
 				return huma.Error422UnprocessableEntity("failed to update destination account balance")
 			}
 		}
 	case "income":
-		if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, amount); err != nil {
+		if err := root.Acc.UpdateBalance(ctx, accountID, amount); err != nil {
 			return huma.Error422UnprocessableEntity("failed to update account balance")
 		}
 	case "expense":
-		if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, -amount); err != nil {
+		if err := root.Acc.UpdateBalance(ctx, accountID, -amount); err != nil {
 			return huma.Error422UnprocessableEntity("failed to update account balance")
 		}
 	}
 	return nil
 }
 
-func (ts TransactionService) revertBalanceChanges(ctx context.Context, tx pgx.Tx, txType string, amount int64, accountID int64, destAccountID *int64) error {
+func (ts TransactionService) revertBalanceChanges(ctx context.Context, root repositories.RootRepository, txType string, amount int64, accountID int64, destAccountID *int64) error {
 	switch txType {
 	case "transfer":
 		if destAccountID != nil {
-			if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, amount); err != nil {
+			if err := root.Acc.UpdateBalance(ctx, accountID, amount); err != nil {
 				return huma.Error422UnprocessableEntity("failed to revert source account balance")
 			}
-			if err := ts.ar.UpdateBalanceWithTx(ctx, tx, *destAccountID, -amount); err != nil {
+			if err := root.Acc.UpdateBalance(ctx, *destAccountID, -amount); err != nil {
 				return huma.Error422UnprocessableEntity("failed to revert destination account balance")
 			}
 		}
 	case "income":
-		if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, -amount); err != nil {
+		if err := root.Acc.UpdateBalance(ctx, accountID, -amount); err != nil {
 			return huma.Error422UnprocessableEntity("failed to revert account balance")
 		}
 	case "expense":
-		if err := ts.ar.UpdateBalanceWithTx(ctx, tx, accountID, amount); err != nil {
+		if err := root.Acc.UpdateBalance(ctx, accountID, amount); err != nil {
 			return huma.Error422UnprocessableEntity("failed to revert account balance")
 		}
 	}
@@ -265,7 +259,7 @@ func (ts TransactionService) validateReferences(ctx context.Context, txType stri
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		if _, err := ts.ar.GetDetail(ctx, accountID); err != nil {
+		if _, err := ts.rpts.Acc.GetDetail(ctx, accountID); err != nil {
 			return huma.Error400BadRequest("Account not found", err)
 		}
 		return nil
@@ -278,7 +272,7 @@ func (ts TransactionService) validateReferences(ctx context.Context, txType stri
 			}
 		}
 		if destAccountID != nil && *destAccountID != 0 {
-			if _, err := ts.ar.GetDetail(ctx, *destAccountID); err != nil {
+			if _, err := ts.rpts.Acc.GetDetail(ctx, *destAccountID); err != nil {
 				return huma.Error400BadRequest("Destination account not found", err)
 			}
 		}
@@ -287,7 +281,7 @@ func (ts TransactionService) validateReferences(ctx context.Context, txType stri
 
 	g.Go(func() error {
 		if categoryID != nil && *categoryID != 0 {
-			cat, err := ts.cr.GetDetail(ctx, *categoryID)
+			cat, err := ts.rpts.Cat.GetDetail(ctx, *categoryID)
 			if err != nil {
 				return huma.Error400BadRequest("Category not found", err)
 			}

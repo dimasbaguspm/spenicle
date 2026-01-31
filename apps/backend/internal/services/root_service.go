@@ -21,16 +21,16 @@ type RootService struct {
 
 func NewRootService(repos repositories.RootRepository, rdb *redis.Client) RootService {
 	return RootService{
-		Acc:     NewAccountService(repos.Acc, rdb),
-		Ath:     NewAuthService(repos.Ath),
-		Budg:    NewBudgetService(repos.Budg, rdb),
-		BudgTem: NewBudgetTemplateService(repos.BudgTem, repos.Budg, rdb),
-		Cat:     NewCategoryService(repos.Cat, rdb),
-		Sum:     NewSummaryService(repos.Sum, rdb),
-		Tag:     NewTagService(repos.Tag, rdb),
-		Tsct:    NewTransactionService(repos.Tsct, repos.Acc, repos.Cat, rdb),
-		TsctRel: NewTransactionRelationService(repos.TsctRel, repos.Tsct, rdb),
-		TsctTag: NewTransactionTagService(repos.TsctTag, rdb),
-		TsctTem: NewTransactionTemplateService(repos.TsctTem, repos.Tsct, rdb),
+		Acc:     NewAccountService(&repos, rdb),
+		Ath:     NewAuthService(&repos),
+		Budg:    NewBudgetService(&repos, rdb),
+		BudgTem: NewBudgetTemplateService(&repos, rdb),
+		Cat:     NewCategoryService(&repos, rdb),
+		Sum:     NewSummaryService(&repos, rdb),
+		Tag:     NewTagService(&repos, rdb),
+		Tsct:    NewTransactionService(&repos, rdb),
+		TsctRel: NewTransactionRelationService(&repos, rdb),
+		TsctTag: NewTransactionTagService(&repos, rdb),
+		TsctTem: NewTransactionTemplateService(&repos, rdb),
 	}
 }

@@ -35,7 +35,7 @@ export default defineConfig({
   /* Shared settings for all the projects below */
   use: {
     /* Base URL for API requests */
-    baseURL: `http://localhost:8081`,
+    baseURL: `http://localhost:8080`,
 
     /* Collect trace when retrying the failed test */
     trace: "on-first-retry",

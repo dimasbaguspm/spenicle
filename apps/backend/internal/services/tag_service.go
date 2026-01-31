@@ -18,12 +18,12 @@ const (
 )
 
 type TagService struct {
-	repo repositories.TagRepository
+	rpts *repositories.RootRepository
 	rdb  *redis.Client
 }
 
-func NewTagService(repo repositories.TagRepository, rdb *redis.Client) TagService {
-	return TagService{repo, rdb}
+func NewTagService(rpts *repositories.RootRepository, rdb *redis.Client) TagService {
+	return TagService{rpts, rdb}
 }
 
 func (ts TagService) GetPaged(ctx context.Context, query models.TagsSearchModel) (models.TagsPagedModel, error) {
@@ -35,7 +35,7 @@ func (ts TagService) GetPaged(ctx context.Context, query models.TagsSearchModel)
 		return paged, nil
 	}
 
-	paged, err = ts.repo.GetPaged(ctx, query)
+	paged, err = ts.rpts.Tag.GetPaged(ctx, query)
 	if err != nil {
 		return paged, err
 	}
@@ -53,7 +53,7 @@ func (ts TagService) GetDetail(ctx context.Context, id int64) (models.TagModel, 
 		return tag, nil
 	}
 
-	tag, err = ts.repo.GetDetail(ctx, id)
+	tag, err = ts.rpts.Tag.GetDetail(ctx, id)
 	if err != nil {
 		return tag, err
 	}
@@ -64,7 +64,7 @@ func (ts TagService) GetDetail(ctx context.Context, id int64) (models.TagModel, 
 }
 
 func (ts TagService) Create(ctx context.Context, payload models.CreateTagModel) (models.TagModel, error) {
-	tag, err := ts.repo.Create(ctx, payload)
+	tag, err := ts.rpts.Tag.Create(ctx, payload)
 	if err != nil {
 		return tag, err
 	}
@@ -76,7 +76,7 @@ func (ts TagService) Create(ctx context.Context, payload models.CreateTagModel) 
 }
 
 func (ts TagService) Update(ctx context.Context, id int64, payload models.UpdateTagModel) (models.TagModel, error) {
-	tag, err := ts.repo.Update(ctx, id, payload)
+	tag, err := ts.rpts.Tag.Update(ctx, id, payload)
 	if err != nil {
 		return tag, err
 	}
@@ -89,7 +89,7 @@ func (ts TagService) Update(ctx context.Context, id int64, payload models.Update
 }
 
 func (ts TagService) Delete(ctx context.Context, id int64) error {
-	err := ts.repo.Delete(ctx, id)
+	err := ts.rpts.Tag.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
