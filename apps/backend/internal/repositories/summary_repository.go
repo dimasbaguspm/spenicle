@@ -37,7 +37,7 @@ func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.
 			SELECT
 				date,
 				` + groupingFunc + ` as period
-			FROM generate_series($1::date, $2::date, INTERVAL '1 day') as date
+			FROM generate_series($1::timestamptz, $2::timestamptz, INTERVAL '1 day') as date
 		),
 		all_periods AS (
 			SELECT DISTINCT period 

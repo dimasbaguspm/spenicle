@@ -96,7 +96,7 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 
 	common.SetCache(ctx, ts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", transaction.ID), transaction, TransactionCacheTTL)
 	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, "account:*")
+	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
 
 	return transaction, nil
