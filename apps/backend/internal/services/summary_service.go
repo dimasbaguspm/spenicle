@@ -7,6 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -31,7 +32,7 @@ func (ss SummaryService) GetTransactionSummary(ctx context.Context, p models.Sum
 	}
 
 	data, _ := json.Marshal(p)
-	cacheKey := common.SummaryTransactionCacheKeyPrefix + string(data)
+	cacheKey := constants.SummaryTransactionCacheKeyPrefix + string(data)
 
 	summary, err := common.GetCache[models.SummaryTransactionListModel](ctx, ss.rdb, cacheKey)
 	if err == nil {
@@ -54,7 +55,7 @@ func (ss SummaryService) GetAccountSummary(ctx context.Context, p models.Summary
 	}
 
 	data, _ := json.Marshal(p)
-	cacheKey := common.SummaryAccountCacheKeyPrefix + string(data)
+	cacheKey := constants.SummaryAccountCacheKeyPrefix + string(data)
 
 	summary, err := common.GetCache[models.SummaryAccountListModel](ctx, ss.rdb, cacheKey)
 	if err == nil {
@@ -77,7 +78,7 @@ func (ss SummaryService) GetCategorySummary(ctx context.Context, p models.Summar
 	}
 
 	data, _ := json.Marshal(p)
-	cacheKey := common.SummaryCategoryCacheKeyPrefix + string(data)
+	cacheKey := constants.SummaryCategoryCacheKeyPrefix + string(data)
 
 	summary, err := common.GetCache[models.SummaryCategoryListModel](ctx, ss.rdb, cacheKey)
 	if err == nil {

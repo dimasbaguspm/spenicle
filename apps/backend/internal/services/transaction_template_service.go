@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -28,7 +29,7 @@ func NewTransactionTemplateService(ttr repositories.TransactionTemplateRepositor
 
 func (tts TransactionTemplateService) GetPaged(ctx context.Context, query models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
 	data, _ := json.Marshal(query)
-	cacheKey := common.TransactionTemplatesPagedCacheKeyPrefix + string(data)
+	cacheKey := constants.TransactionTemplatesPagedCacheKeyPrefix + string(data)
 
 	paged, err := common.GetCache[models.TransactionTemplatesPagedModel](ctx, tts.rdb, cacheKey)
 	if err == nil {
@@ -46,7 +47,7 @@ func (tts TransactionTemplateService) GetPaged(ctx context.Context, query models
 }
 
 func (tts TransactionTemplateService) GetDetail(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
-	cacheKey := fmt.Sprintf(common.TransactionTemplateCacheKeyPrefix+"%d", id)
+	cacheKey := fmt.Sprintf(constants.TransactionTemplateCacheKeyPrefix+"%d", id)
 
 	template, err := common.GetCache[models.TransactionTemplateModel](ctx, tts.rdb, cacheKey)
 	if err == nil {
@@ -69,8 +70,8 @@ func (tts TransactionTemplateService) Create(ctx context.Context, payload models
 		return template, err
 	}
 
-	common.SetCache(ctx, tts.rdb, fmt.Sprintf(common.TransactionTemplateCacheKeyPrefix+"%d", template.ID), template, TransactionTemplateCacheTTL)
-	common.InvalidateCache(ctx, tts.rdb, common.TransactionTemplatesPagedCacheKeyPrefix+"*")
+	common.SetCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionTemplateCacheKeyPrefix+"%d", template.ID), template, TransactionTemplateCacheTTL)
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*")
 
 	return template, nil
 }
@@ -81,9 +82,9 @@ func (tts TransactionTemplateService) Update(ctx context.Context, id int64, payl
 		return template, err
 	}
 
-	cacheKey := fmt.Sprintf(common.TransactionTemplateCacheKeyPrefix+"%d", id)
+	cacheKey := fmt.Sprintf(constants.TransactionTemplateCacheKeyPrefix+"%d", id)
 	common.SetCache(ctx, tts.rdb, cacheKey, template, TransactionTemplateCacheTTL)
-	common.InvalidateCache(ctx, tts.rdb, common.TransactionTemplatesPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*")
 
 	return template, nil
 }
@@ -94,8 +95,8 @@ func (tts TransactionTemplateService) Delete(ctx context.Context, id int64) erro
 		return err
 	}
 
-	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(common.TransactionTemplateCacheKeyPrefix+"%d", id))
-	common.InvalidateCache(ctx, tts.rdb, common.TransactionTemplatesPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionTemplateCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*")
 
 	return nil
 }

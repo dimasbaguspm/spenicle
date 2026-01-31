@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -27,7 +28,7 @@ func NewTransactionTagService(repo repositories.TransactionTagRepository, rdb *r
 
 func (tts TransactionTagService) GetPaged(ctx context.Context, q models.TransactionTagsSearchModel) (models.TransactionTagsPagedModel, error) {
 	data, _ := json.Marshal(q)
-	cacheKey := common.TransactionTagsPagedCacheKeyPrefix + string(data)
+	cacheKey := constants.TransactionTagsPagedCacheKeyPrefix + string(data)
 
 	paged, err := common.GetCache[models.TransactionTagsPagedModel](ctx, tts.rdb, cacheKey)
 	if err == nil {
@@ -45,7 +46,7 @@ func (tts TransactionTagService) GetPaged(ctx context.Context, q models.Transact
 }
 
 func (tts TransactionTagService) GetDetail(ctx context.Context, ID int64) (models.TransactionTagModel, error) {
-	cacheKey := fmt.Sprintf(common.TransactionTagCacheKeyPrefix+"%d", ID)
+	cacheKey := fmt.Sprintf(constants.TransactionTagCacheKeyPrefix+"%d", ID)
 
 	tag, err := common.GetCache[models.TransactionTagModel](ctx, tts.rdb, cacheKey)
 	if err == nil {
@@ -68,12 +69,11 @@ func (tts TransactionTagService) Create(ctx context.Context, payload models.Crea
 		return tag, err
 	}
 
-	common.SetCache(ctx, tts.rdb, fmt.Sprintf(common.TransactionTagCacheKeyPrefix+"%d", tag.ID), tag, TransactionTagCacheTTL)
-	common.InvalidateCache(ctx, tts.rdb, common.TransactionTagsPagedCacheKeyPrefix+"*")
+	common.SetCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionTagCacheKeyPrefix+"%d", tag.ID), tag, TransactionTagCacheTTL)
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagsPagedCacheKeyPrefix+"*")
 	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", payload.TransactionID))
-	common.InvalidateCache(ctx, tts.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
-
+	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", payload.TransactionID))
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	return tag, nil
 }
 
@@ -83,11 +83,10 @@ func (tts TransactionTagService) Delete(ctx context.Context, transactionID, tagI
 		return err
 	}
 
-	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(common.TransactionTagCacheKeyPrefix+"%d", tagID))
-	common.InvalidateCache(ctx, tts.rdb, common.TransactionTagsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionTagCacheKeyPrefix+"%d", tagID))
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagsPagedCacheKeyPrefix+"*")
 	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", transactionID))
-	common.InvalidateCache(ctx, tts.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
-
+	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", transactionID))
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -29,7 +30,7 @@ func NewBudgetTemplateService(btr repositories.BudgetTemplateRepository, br repo
 
 func (bts BudgetTemplateService) GetPaged(ctx context.Context, p models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
 	data, _ := json.Marshal(p)
-	cacheKey := common.BudgetTemplatesPagedCacheKeyPrefix + string(data)
+	cacheKey := constants.BudgetTemplatesPagedCacheKeyPrefix + string(data)
 
 	paged, err := common.GetCache[models.BudgetTemplatesPagedModel](ctx, bts.rdb, cacheKey)
 	if err == nil {
@@ -47,7 +48,7 @@ func (bts BudgetTemplateService) GetPaged(ctx context.Context, p models.BudgetTe
 }
 
 func (bts BudgetTemplateService) GetDetail(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
-	cacheKey := fmt.Sprintf(common.BudgetTemplateCacheKeyPrefix+"%d", id)
+	cacheKey := fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", id)
 
 	template, err := common.GetCache[models.BudgetTemplateModel](ctx, bts.rdb, cacheKey)
 	if err == nil {
@@ -78,8 +79,8 @@ func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudg
 		return template, err
 	}
 
-	common.SetCache(ctx, bts.rdb, fmt.Sprintf(common.BudgetTemplateCacheKeyPrefix+"%d", template.ID), template, BudgetTemplateCacheTTL)
-	common.InvalidateCache(ctx, bts.rdb, common.BudgetTemplatesPagedCacheKeyPrefix+"*")
+	common.SetCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", template.ID), template, BudgetTemplateCacheTTL)
+	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
 
 	return template, nil
 }
@@ -90,9 +91,9 @@ func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.
 		return template, err
 	}
 
-	cacheKey := fmt.Sprintf(common.BudgetTemplateCacheKeyPrefix+"%d", id)
+	cacheKey := fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", id)
 	common.SetCache(ctx, bts.rdb, cacheKey, template, BudgetTemplateCacheTTL)
-	common.InvalidateCache(ctx, bts.rdb, common.BudgetTemplatesPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
 
 	return template, nil
 }
@@ -103,8 +104,8 @@ func (bts BudgetTemplateService) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(common.BudgetTemplateCacheKeyPrefix+"%d", id))
-	common.InvalidateCache(ctx, bts.rdb, common.BudgetTemplatesPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
 
 	return nil
 }

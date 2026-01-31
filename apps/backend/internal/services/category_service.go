@@ -8,6 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -31,7 +32,7 @@ func NewCategoryService(cr repositories.CategoryRepository, rdb *redis.Client) C
 
 func (cs CategoryService) GetPaged(ctx context.Context, p models.CategoriesSearchModel) (models.CategoriesPagedModel, error) {
 	data, _ := json.Marshal(p)
-	cacheKey := common.CategoriesPagedCacheKeyPrefix + string(data)
+	cacheKey := constants.CategoriesPagedCacheKeyPrefix + string(data)
 
 	paged, err := common.GetCache[models.CategoriesPagedModel](ctx, cs.rdb, cacheKey)
 	if err == nil {
@@ -49,7 +50,7 @@ func (cs CategoryService) GetPaged(ctx context.Context, p models.CategoriesSearc
 }
 
 func (cs CategoryService) GetDetail(ctx context.Context, id int64) (models.CategoryModel, error) {
-	cacheKey := fmt.Sprintf(common.CategoryCacheKeyPrefix+"%d", id)
+	cacheKey := fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", id)
 
 	category, err := common.GetCache[models.CategoryModel](ctx, cs.rdb, cacheKey)
 	if err == nil {
@@ -72,9 +73,9 @@ func (cs CategoryService) Create(ctx context.Context, p models.CreateCategoryMod
 		return category, err
 	}
 
-	common.SetCache(ctx, cs.rdb, fmt.Sprintf(common.CategoryCacheKeyPrefix+"%d", category.ID), category, CategoryCacheTTL)
-	common.InvalidateCache(ctx, cs.rdb, common.CategoriesPagedCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, cs.rdb, common.SummaryCategoryCacheKeyPrefix+"*")
+	common.SetCache(ctx, cs.rdb, fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", category.ID), category, CategoryCacheTTL)
+	common.InvalidateCache(ctx, cs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, cs.rdb, constants.SummaryCategoryCacheKeyPrefix+"*")
 
 	return category, nil
 }
@@ -85,10 +86,10 @@ func (cs CategoryService) Update(ctx context.Context, id int64, p models.UpdateC
 		return category, err
 	}
 
-	cacheKey := fmt.Sprintf(common.CategoryCacheKeyPrefix+"%d", id)
+	cacheKey := fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", id)
 	common.SetCache(ctx, cs.rdb, cacheKey, category, CategoryCacheTTL)
-	common.InvalidateCache(ctx, cs.rdb, common.CategoriesPagedCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, cs.rdb, common.SummaryCategoryCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, cs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, cs.rdb, constants.SummaryCategoryCacheKeyPrefix+"*")
 
 	return category, nil
 }
@@ -122,9 +123,9 @@ func (cs CategoryService) Delete(ctx context.Context, id int64) error {
 	}
 	tx = nil
 
-	common.InvalidateCache(ctx, cs.rdb, fmt.Sprintf(common.CategoryCacheKeyPrefix+"%d", id))
-	common.InvalidateCache(ctx, cs.rdb, common.CategoriesPagedCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, cs.rdb, common.SummaryCategoryCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, cs.rdb, fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, cs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, cs.rdb, constants.SummaryCategoryCacheKeyPrefix+"*")
 
 	return nil
 }
@@ -157,9 +158,9 @@ func (cs CategoryService) Reorder(ctx context.Context, p models.ReorderCategorie
 	}
 	tx = nil
 
-	common.InvalidateCache(ctx, cs.rdb, common.CategoryCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, cs.rdb, common.CategoriesPagedCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, cs.rdb, common.SummaryCategoryCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, cs.rdb, constants.CategoryCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, cs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, cs.rdb, constants.SummaryCategoryCacheKeyPrefix+"*")
 
 	return nil
 }

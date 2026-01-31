@@ -8,6 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/jackc/pgx/v5"
@@ -32,7 +33,7 @@ func NewTransactionService(tr repositories.TransactionRepository, ar repositorie
 
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
 	data, _ := json.Marshal(p)
-	cacheKey := common.TransactionsPagedCacheKeyPrefix + string(data)
+	cacheKey := constants.TransactionsPagedCacheKeyPrefix + string(data)
 
 	paged, err := common.GetCache[models.TransactionsPagedModel](ctx, ts.rdb, cacheKey)
 	if err == nil {
@@ -50,7 +51,7 @@ func (ts TransactionService) GetPaged(ctx context.Context, p models.Transactions
 }
 
 func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.TransactionModel, error) {
-	cacheKey := fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", id)
+	cacheKey := fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", id)
 
 	transaction, err := common.GetCache[models.TransactionModel](ctx, ts.rdb, cacheKey)
 	if err == nil {
@@ -97,10 +98,10 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, err
 	}
 
-	common.SetCache(ctx, ts.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", transaction.ID), transaction, TransactionCacheTTL)
-	common.InvalidateCache(ctx, ts.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
+	common.SetCache(ctx, ts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", transaction.ID), transaction, TransactionCacheTTL)
+	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, "account:*")
-	common.InvalidateCache(ctx, ts.rdb, common.SummaryTransactionCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
 
 	return transaction, nil
 }
@@ -170,12 +171,11 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 		return models.TransactionModel{}, err
 	}
 
-	common.SetCache(ctx, ts.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", id), transaction, TransactionCacheTTL)
-	common.InvalidateCache(ctx, ts.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
+	common.SetCache(ctx, ts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", id), transaction, TransactionCacheTTL)
+	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	// Invalidate account caches since balances changed
-	common.InvalidateCache(ctx, ts.rdb, "account:*")
-	common.InvalidateCache(ctx, ts.rdb, common.SummaryTransactionCacheKeyPrefix+"*")
-
+	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
 	return transaction, nil
 }
 
@@ -207,12 +207,11 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 		return huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", id))
-	common.InvalidateCache(ctx, ts.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	// Invalidate account caches since balances changed
-	common.InvalidateCache(ctx, ts.rdb, "account:*")
-	common.InvalidateCache(ctx, ts.rdb, common.SummaryTransactionCacheKeyPrefix+"*")
-
+	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
 	return nil
 }
 

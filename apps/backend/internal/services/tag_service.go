@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -27,7 +28,7 @@ func NewTagService(repo repositories.TagRepository, rdb *redis.Client) TagServic
 
 func (ts TagService) GetPaged(ctx context.Context, query models.TagsSearchModel) (models.TagsPagedModel, error) {
 	data, _ := json.Marshal(query)
-	cacheKey := common.TagsPagedCacheKeyPrefix + string(data)
+	cacheKey := constants.TagsPagedCacheKeyPrefix + string(data)
 
 	paged, err := common.GetCache[models.TagsPagedModel](ctx, ts.rdb, cacheKey)
 	if err == nil {
@@ -45,7 +46,7 @@ func (ts TagService) GetPaged(ctx context.Context, query models.TagsSearchModel)
 }
 
 func (ts TagService) GetDetail(ctx context.Context, id int64) (models.TagModel, error) {
-	cacheKey := fmt.Sprintf(common.TagCacheKeyPrefix+"%d", id)
+	cacheKey := fmt.Sprintf(constants.TagCacheKeyPrefix+"%d", id)
 
 	tag, err := common.GetCache[models.TagModel](ctx, ts.rdb, cacheKey)
 	if err == nil {
@@ -68,8 +69,8 @@ func (ts TagService) Create(ctx context.Context, payload models.CreateTagModel) 
 		return tag, err
 	}
 
-	common.SetCache(ctx, ts.rdb, fmt.Sprintf(common.TagCacheKeyPrefix+"%d", tag.ID), tag, TagCacheTTL)
-	common.InvalidateCache(ctx, ts.rdb, common.TagsPagedCacheKeyPrefix+"*")
+	common.SetCache(ctx, ts.rdb, fmt.Sprintf(constants.TagCacheKeyPrefix+"%d", tag.ID), tag, TagCacheTTL)
+	common.InvalidateCache(ctx, ts.rdb, constants.TagsPagedCacheKeyPrefix+"*")
 
 	return tag, nil
 }
@@ -80,9 +81,9 @@ func (ts TagService) Update(ctx context.Context, id int64, payload models.Update
 		return tag, err
 	}
 
-	cacheKey := fmt.Sprintf(common.TagCacheKeyPrefix+"%d", id)
+	cacheKey := fmt.Sprintf(constants.TagCacheKeyPrefix+"%d", id)
 	common.SetCache(ctx, ts.rdb, cacheKey, tag, TagCacheTTL)
-	common.InvalidateCache(ctx, ts.rdb, common.TagsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, constants.TagsPagedCacheKeyPrefix+"*")
 
 	return tag, nil
 }
@@ -93,8 +94,8 @@ func (ts TagService) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, fmt.Sprintf(common.TagCacheKeyPrefix+"%d", id))
-	common.InvalidateCache(ctx, ts.rdb, common.TagsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, fmt.Sprintf(constants.TagCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, ts.rdb, constants.TagsPagedCacheKeyPrefix+"*")
 
 	return nil
 }

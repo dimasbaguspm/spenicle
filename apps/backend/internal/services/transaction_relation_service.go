@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -32,7 +33,7 @@ func NewTransactionRelationService(
 
 func (trs TransactionRelationService) GetPaged(ctx context.Context, q models.TransactionRelationsSearchModel) (models.TransactionRelationsPagedModel, error) {
 	data, _ := json.Marshal(q)
-	cacheKey := common.TransactionRelationsPagedCacheKeyPrefix + string(data)
+	cacheKey := constants.TransactionRelationsPagedCacheKeyPrefix + string(data)
 
 	paged, err := common.GetCache[models.TransactionRelationsPagedModel](ctx, trs.rdb, cacheKey)
 	if err == nil {
@@ -50,7 +51,7 @@ func (trs TransactionRelationService) GetPaged(ctx context.Context, q models.Tra
 }
 
 func (trs TransactionRelationService) GetDetail(ctx context.Context, p models.TransactionRelationGetModel) (models.TransactionRelationModel, error) {
-	cacheKey := fmt.Sprintf(common.TransactionRelationCacheKeyPrefix+"%d-%d", p.SourceTransactionID, p.RelationID)
+	cacheKey := fmt.Sprintf(constants.TransactionRelationCacheKeyPrefix+"%d-%d", p.SourceTransactionID, p.RelationID)
 
 	relation, err := common.GetCache[models.TransactionRelationModel](ctx, trs.rdb, cacheKey)
 	if err == nil {
@@ -73,13 +74,13 @@ func (trs TransactionRelationService) Create(ctx context.Context, p models.Creat
 		return relation, err
 	}
 
-	cacheKey := fmt.Sprintf(common.TransactionRelationCacheKeyPrefix+"%d-%d", p.SourceTransactionID, relation.ID)
+	cacheKey := fmt.Sprintf(constants.TransactionRelationCacheKeyPrefix+"%d-%d", p.SourceTransactionID, relation.ID)
 	common.SetCache(ctx, trs.rdb, cacheKey, relation, TransactionRelationCacheTTL)
-	common.InvalidateCache(ctx, trs.rdb, common.TransactionRelationsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, trs.rdb, constants.TransactionRelationsPagedCacheKeyPrefix+"*")
 	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", p.SourceTransactionID))
-	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", p.RelatedTransactionID))
-	common.InvalidateCache(ctx, trs.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", p.SourceTransactionID))
+	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", p.RelatedTransactionID))
+	common.InvalidateCache(ctx, trs.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 
 	return relation, nil
 }
@@ -99,13 +100,13 @@ func (trs TransactionRelationService) Delete(ctx context.Context, p models.Delet
 		return err
 	}
 
-	cacheKey := fmt.Sprintf(common.TransactionRelationCacheKeyPrefix+"%d-%d", p.SourceTransactionID, p.RelationID)
+	cacheKey := fmt.Sprintf(constants.TransactionRelationCacheKeyPrefix+"%d-%d", p.SourceTransactionID, p.RelationID)
 	common.InvalidateCache(ctx, trs.rdb, cacheKey)
-	common.InvalidateCache(ctx, trs.rdb, common.TransactionRelationsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, trs.rdb, constants.TransactionRelationsPagedCacheKeyPrefix+"*")
 	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", p.SourceTransactionID))
-	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", relation.RelatedTransactionID))
-	common.InvalidateCache(ctx, trs.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", p.SourceTransactionID))
+	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", relation.RelatedTransactionID))
+	common.InvalidateCache(ctx, trs.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 
 	return nil
 }
