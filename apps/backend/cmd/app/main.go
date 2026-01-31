@@ -14,7 +14,6 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal"
 	"github.com/dimasbaguspm/spenicle-api/internal/configs"
 	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -32,11 +31,9 @@ func main() {
 
 	svr := http.NewServeMux()
 
-	svr.Handle("/metrics", promhttp.Handler())
-
 	humaSvr := humago.New(svr, configs.NewOpenApi(svr, env))
 
-	internal.RegisterPublicRoutes(ctx, humaSvr, db, rdb)
+	internal.RegisterPublicRoutes(ctx, svr, humaSvr, db, rdb)
 	internal.RegisterPrivateRoutes(ctx, humaSvr, db, rdb)
 	cleanupWorkers := internal.RegisterWorkers(ctx, db, rdb)
 
