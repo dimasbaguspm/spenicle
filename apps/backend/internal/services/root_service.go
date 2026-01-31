@@ -29,8 +29,8 @@ func NewRootService(repos repositories.RootRepository, rdb *redis.Client) RootSe
 		Sum:     NewSummaryService(repos.Sum, rdb),
 		Tag:     NewTagService(repos.Tag, rdb),
 		Tsct:    NewTransactionService(repos.Tsct, repos.Acc, repos.Cat, rdb),
-		TsctRel: NewTransactionRelationService(repos.TsctRel, repos.Tsct),
-		TsctTag: NewTransactionTagService(repos.TsctTag),
+		TsctRel: NewTransactionRelationService(repos.TsctRel, repos.Tsct, rdb),
+		TsctTag: NewTransactionTagService(repos.TsctTag, rdb),
 		TsctTem: NewTransactionTemplateService(repos.TsctTem, repos.Tsct, rdb),
 	}
 }
