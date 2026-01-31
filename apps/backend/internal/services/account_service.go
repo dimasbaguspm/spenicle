@@ -2,36 +2,97 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/common"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
+	"github.com/redis/go-redis/v9"
+)
+
+const (
+	AccountCacheTTL = 10 * time.Minute
 )
 
 type AccountService struct {
-	ar repositories.AccountRepository
+	ar  repositories.AccountRepository
+	rdb *redis.Client
 }
 
-func NewAccountService(ar repositories.AccountRepository) AccountService {
+func NewAccountService(ar repositories.AccountRepository, rdb *redis.Client) AccountService {
 	return AccountService{
 		ar,
+		rdb,
 	}
 }
 
 func (as AccountService) GetPaged(ctx context.Context, p models.AccountsSearchModel) (models.AccountsPagedModel, error) {
-	return as.ar.GetPaged(ctx, p)
+	data, _ := json.Marshal(p)
+	cacheKey := common.AccountsPagedCacheKeyPrefix + string(data)
+
+	paged, err := common.GetCache[models.AccountsPagedModel](ctx, as.rdb, cacheKey)
+	if err == nil {
+		return paged, nil
+	}
+
+	paged, err = as.ar.GetPaged(ctx, p)
+	if err != nil {
+		return paged, err
+	}
+
+	common.SetCache(ctx, as.rdb, cacheKey, paged, AccountCacheTTL)
+
+	return paged, nil
 }
 
 func (as AccountService) GetDetail(ctx context.Context, id int64) (models.AccountModel, error) {
-	return as.ar.GetDetail(ctx, id)
+	cacheKey := fmt.Sprintf(common.AccountCacheKeyPrefix+"%d", id)
+
+	account, err := common.GetCache[models.AccountModel](ctx, as.rdb, cacheKey)
+	if err == nil {
+		return account, nil
+	}
+
+	account, err = as.ar.GetDetail(ctx, id)
+	if err != nil {
+		return account, err
+	}
+
+	common.SetCache(ctx, as.rdb, cacheKey, account, AccountCacheTTL)
+
+	return account, nil
 }
 
 func (as AccountService) Create(ctx context.Context, p models.CreateAccountModel) (models.AccountModel, error) {
-	return as.ar.Create(ctx, p)
+	account, err := as.ar.Create(ctx, p)
+	if err != nil {
+		return account, err
+	}
+
+	common.SetCache(ctx, as.rdb, fmt.Sprintf(common.AccountCacheKeyPrefix+"%d", account.ID), account, AccountCacheTTL)
+	common.InvalidateCache(ctx, as.rdb, common.AccountsPagedCacheKeyPrefix+"*")
+	// Invalidate account summaries
+	common.InvalidateCache(ctx, as.rdb, common.SummaryAccountCacheKeyPrefix+"*")
+
+	return account, nil
 }
 
 func (as AccountService) Update(ctx context.Context, id int64, p models.UpdateAccountModel) (models.AccountModel, error) {
-	return as.ar.Update(ctx, id, p)
+	account, err := as.ar.Update(ctx, id, p)
+	if err != nil {
+		return account, err
+	}
+
+	cacheKey := fmt.Sprintf(common.AccountCacheKeyPrefix+"%d", id)
+	common.SetCache(ctx, as.rdb, cacheKey, account, AccountCacheTTL)
+	common.InvalidateCache(ctx, as.rdb, common.AccountsPagedCacheKeyPrefix+"*")
+	// Invalidate account summaries
+	common.InvalidateCache(ctx, as.rdb, common.SummaryAccountCacheKeyPrefix+"*")
+
+	return account, nil
 }
 
 func (as AccountService) Delete(ctx context.Context, id int64) error {
@@ -63,6 +124,11 @@ func (as AccountService) Delete(ctx context.Context, id int64) error {
 	}
 	tx = nil
 
+	common.InvalidateCache(ctx, as.rdb, fmt.Sprintf(common.AccountCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, as.rdb, common.AccountsPagedCacheKeyPrefix+"*")
+	// Invalidate account summaries
+	common.InvalidateCache(ctx, as.rdb, common.SummaryAccountCacheKeyPrefix+"*")
+
 	return nil
 }
 
@@ -93,6 +159,11 @@ func (as AccountService) Reorder(ctx context.Context, p models.ReorderAccountsMo
 		return huma.Error400BadRequest("Unable to commit reorder transaction", err)
 	}
 	tx = nil
+
+	common.InvalidateCache(ctx, as.rdb, common.AccountCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, as.rdb, common.AccountsPagedCacheKeyPrefix+"*")
+	// Invalidate account summaries
+	common.InvalidateCache(ctx, as.rdb, common.SummaryAccountCacheKeyPrefix+"*")
 
 	return nil
 }

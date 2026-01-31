@@ -2,30 +2,69 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/common"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/jackc/pgx/v5"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/errgroup"
 )
 
+const (
+	TransactionCacheTTL = 10 * time.Minute
+)
+
 type TransactionService struct {
-	tr repositories.TransactionRepository
-	ar repositories.AccountRepository
-	cr repositories.CategoryRepository
+	tr  repositories.TransactionRepository
+	ar  repositories.AccountRepository
+	cr  repositories.CategoryRepository
+	rdb *redis.Client
 }
 
-func NewTransactionService(tr repositories.TransactionRepository, ar repositories.AccountRepository, cr repositories.CategoryRepository) TransactionService {
-	return TransactionService{tr, ar, cr}
+func NewTransactionService(tr repositories.TransactionRepository, ar repositories.AccountRepository, cr repositories.CategoryRepository, rdb *redis.Client) TransactionService {
+	return TransactionService{tr, ar, cr, rdb}
 }
 
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
-	return ts.tr.GetPaged(ctx, p)
+	data, _ := json.Marshal(p)
+	cacheKey := common.TransactionsPagedCacheKeyPrefix + string(data)
+
+	paged, err := common.GetCache[models.TransactionsPagedModel](ctx, ts.rdb, cacheKey)
+	if err == nil {
+		return paged, nil
+	}
+
+	paged, err = ts.tr.GetPaged(ctx, p)
+	if err != nil {
+		return paged, err
+	}
+
+	common.SetCache(ctx, ts.rdb, cacheKey, paged, TransactionCacheTTL)
+
+	return paged, nil
 }
 
 func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.TransactionModel, error) {
-	return ts.tr.GetDetail(ctx, id)
+	cacheKey := fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", id)
+
+	transaction, err := common.GetCache[models.TransactionModel](ctx, ts.rdb, cacheKey)
+	if err == nil {
+		return transaction, nil
+	}
+
+	transaction, err = ts.tr.GetDetail(ctx, id)
+	if err != nil {
+		return transaction, err
+	}
+
+	common.SetCache(ctx, ts.rdb, cacheKey, transaction, TransactionCacheTTL)
+
+	return transaction, nil
 }
 
 func (ts TransactionService) Create(ctx context.Context, p models.CreateTransactionModel) (models.TransactionModel, error) {
@@ -53,7 +92,17 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	return ts.tr.GetDetail(ctx, transactionID)
+	transaction, err := ts.tr.GetDetail(ctx, transactionID)
+	if err != nil {
+		return models.TransactionModel{}, err
+	}
+
+	common.SetCache(ctx, ts.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", transaction.ID), transaction, TransactionCacheTTL)
+	common.InvalidateCache(ctx, ts.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, "account:*")
+	common.InvalidateCache(ctx, ts.rdb, common.SummaryTransactionCacheKeyPrefix+"*")
+
+	return transaction, nil
 }
 
 func (ts TransactionService) Update(ctx context.Context, id int64, p models.UpdateTransactionModel) (models.TransactionModel, error) {
@@ -116,7 +165,18 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	return ts.tr.GetDetail(ctx, id)
+	transaction, err := ts.tr.GetDetail(ctx, id)
+	if err != nil {
+		return models.TransactionModel{}, err
+	}
+
+	common.SetCache(ctx, ts.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", id), transaction, TransactionCacheTTL)
+	common.InvalidateCache(ctx, ts.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
+	// Invalidate account caches since balances changed
+	common.InvalidateCache(ctx, ts.rdb, "account:*")
+	common.InvalidateCache(ctx, ts.rdb, common.SummaryTransactionCacheKeyPrefix+"*")
+
+	return transaction, nil
 }
 
 func (ts TransactionService) Delete(ctx context.Context, id int64) error {
@@ -146,6 +206,12 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 	if err := tx.Commit(ctx); err != nil {
 		return huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
+
+	common.InvalidateCache(ctx, ts.rdb, fmt.Sprintf(common.TransactionCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, ts.rdb, common.TransactionsPagedCacheKeyPrefix+"*")
+	// Invalidate account caches since balances changed
+	common.InvalidateCache(ctx, ts.rdb, "account:*")
+	common.InvalidateCache(ctx, ts.rdb, common.SummaryTransactionCacheKeyPrefix+"*")
 
 	return nil
 }

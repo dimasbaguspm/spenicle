@@ -11,20 +11,21 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 	"github.com/dimasbaguspm/spenicle-api/internal/workers"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
-func RegisterPublicRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool) {
-	rpts := repositories.NewRootRepository(ctx, pool)
-	sevs := services.NewRootService(rpts)
+func RegisterPublicRoutes(ctx context.Context, huma huma.API, db *pgxpool.Pool, rdb *redis.Client) {
+	rpts := repositories.NewRootRepository(ctx, db)
+	sevs := services.NewRootService(rpts, rdb)
 
 	resources.NewAuthResource(sevs.Ath).Routes(huma)
 }
 
-func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool) {
+func RegisterPrivateRoutes(ctx context.Context, huma huma.API, db *pgxpool.Pool, rdb *redis.Client) {
 	huma.UseMiddleware(middleware.SessionMiddleware(huma))
 
-	rpts := repositories.NewRootRepository(ctx, pool)
-	sevs := services.NewRootService(rpts)
+	rpts := repositories.NewRootRepository(ctx, db)
+	sevs := services.NewRootService(rpts, rdb)
 
 	resources.NewAccountResource(sevs).Routes(huma)
 	resources.NewCategoryResource(sevs).Routes(huma)
@@ -35,9 +36,9 @@ func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Poo
 	resources.NewTagResource(sevs).Routes(huma)
 }
 
-func RegisterWorkers(ctx context.Context, pool *pgxpool.Pool) func() {
-	rpts := repositories.NewRootRepository(ctx, pool)
-	sevs := services.NewRootService(rpts)
+func RegisterWorkers(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client) func() {
+	rpts := repositories.NewRootRepository(ctx, db)
+	sevs := services.NewRootService(rpts, rdb)
 
 	ttWorker := workers.NewTransactionTemplateWorker(ctx, rpts.TsctTem, sevs.Tsct)
 	btWorker := workers.NewBudgetTemplateWorker(ctx, rpts.BudgTem, sevs.Budg)

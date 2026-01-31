@@ -35,11 +35,20 @@ services:
       JWT_SECRET: local-development-jwt-for-testing-purpose
       ADMIN_USERNAME: my-username
       ADMIN_PASSWORD: my-password
+      REDIS_URL: spenicle-backend-redis:6379
     volumes:
       - .:/app
     depends_on:
       spenicle-backend-postgres:
         condition: service_healthy
+    networks:
+      - spenicle-backend
+
+  spenicle-backend-redis:
+    image: redis:8.4.0-alpine
+    container_name: spenicle-backend-redis
+    ports:
+      - "6379:6379"
     networks:
       - spenicle-backend
 

@@ -36,6 +36,7 @@ type Environment struct {
 	DBPassword    string
 	DBName        string
 	DatabaseURL   string
+	RedisURL      string
 	AdminUsername string
 	AdminPassword string
 }
@@ -46,9 +47,10 @@ func NewEnvironment() Environment {
 	dbUser := os.Getenv(DB_USER_ENV)
 	dbPassword := os.Getenv(DB_PASSWORD_ENV)
 	dbName := os.Getenv(DB_NAME_ENV)
-
 	databaseURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		dbUser, dbPassword, dbHost, dbPort, dbName)
+
+	redisURL := os.Getenv("REDIS_URL")
 
 	var stage string
 	_, isExist := os.LookupEnv(IS_DEV_ENV)
@@ -67,6 +69,7 @@ func NewEnvironment() Environment {
 		DBPassword:    dbPassword,
 		DBName:        dbName,
 		DatabaseURL:   databaseURL,
+		RedisURL:      redisURL,
 		AdminUsername: os.Getenv(ADMIN_USERNAME_ENV),
 		AdminPassword: os.Getenv(ADMIN_PASSWORD_ENV),
 	}

@@ -2,38 +2,102 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
+	"github.com/dimasbaguspm/spenicle-api/internal/common"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
+	"github.com/redis/go-redis/v9"
+)
+
+const (
+	TransactionTemplateCacheTTL = 10 * time.Minute
 )
 
 type TransactionTemplateService struct {
 	ttr repositories.TransactionTemplateRepository
 	tr  repositories.TransactionRepository
+	rdb *redis.Client
 }
 
-func NewTransactionTemplateService(ttr repositories.TransactionTemplateRepository, tr repositories.TransactionRepository) TransactionTemplateService {
-	return TransactionTemplateService{ttr: ttr, tr: tr}
+func NewTransactionTemplateService(ttr repositories.TransactionTemplateRepository, tr repositories.TransactionRepository, rdb *redis.Client) TransactionTemplateService {
+	return TransactionTemplateService{ttr: ttr, tr: tr, rdb: rdb}
 }
 
 func (tts TransactionTemplateService) GetPaged(ctx context.Context, query models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
-	return tts.ttr.GetPaged(ctx, query)
+	data, _ := json.Marshal(query)
+	cacheKey := common.TransactionTemplatesPagedCacheKeyPrefix + string(data)
+
+	paged, err := common.GetCache[models.TransactionTemplatesPagedModel](ctx, tts.rdb, cacheKey)
+	if err == nil {
+		return paged, nil
+	}
+
+	paged, err = tts.ttr.GetPaged(ctx, query)
+	if err != nil {
+		return paged, err
+	}
+
+	common.SetCache(ctx, tts.rdb, cacheKey, paged, TransactionTemplateCacheTTL)
+
+	return paged, nil
 }
 
 func (tts TransactionTemplateService) GetDetail(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
-	return tts.ttr.GetDetail(ctx, id)
+	cacheKey := fmt.Sprintf(common.TransactionTemplateCacheKeyPrefix+"%d", id)
+
+	template, err := common.GetCache[models.TransactionTemplateModel](ctx, tts.rdb, cacheKey)
+	if err == nil {
+		return template, nil
+	}
+
+	template, err = tts.ttr.GetDetail(ctx, id)
+	if err != nil {
+		return template, err
+	}
+
+	common.SetCache(ctx, tts.rdb, cacheKey, template, TransactionTemplateCacheTTL)
+
+	return template, nil
 }
 
 func (tts TransactionTemplateService) Create(ctx context.Context, payload models.CreateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
-	return tts.ttr.Create(ctx, payload)
+	template, err := tts.ttr.Create(ctx, payload)
+	if err != nil {
+		return template, err
+	}
+
+	common.SetCache(ctx, tts.rdb, fmt.Sprintf(common.TransactionTemplateCacheKeyPrefix+"%d", template.ID), template, TransactionTemplateCacheTTL)
+	common.InvalidateCache(ctx, tts.rdb, common.TransactionTemplatesPagedCacheKeyPrefix+"*")
+
+	return template, nil
 }
 
 func (tts TransactionTemplateService) Update(ctx context.Context, id int64, payload models.UpdateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
-	return tts.ttr.Update(ctx, id, payload)
+	template, err := tts.ttr.Update(ctx, id, payload)
+	if err != nil {
+		return template, err
+	}
+
+	cacheKey := fmt.Sprintf(common.TransactionTemplateCacheKeyPrefix+"%d", id)
+	common.SetCache(ctx, tts.rdb, cacheKey, template, TransactionTemplateCacheTTL)
+	common.InvalidateCache(ctx, tts.rdb, common.TransactionTemplatesPagedCacheKeyPrefix+"*")
+
+	return template, nil
 }
 
 func (tts TransactionTemplateService) Delete(ctx context.Context, id int64) error {
-	return tts.ttr.Delete(ctx, id)
+	err := tts.ttr.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(common.TransactionTemplateCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, tts.rdb, common.TransactionTemplatesPagedCacheKeyPrefix+"*")
+
+	return nil
 }
 
 func (tts TransactionTemplateService) GetRelatedTransactions(ctx context.Context, templateID int64, query models.TransactionTemplateRelatedTransactionsSearchModel) (models.TransactionsPagedModel, error) {

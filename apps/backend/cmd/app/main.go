@@ -21,16 +21,17 @@ func main() {
 	defer stop()
 
 	env := configs.NewEnvironment()
-	pool := configs.NewDatabase(ctx, env)
+	db := configs.NewDatabase(ctx, env)
+	rdb := configs.NewRedisClient(ctx, env)
 
 	svr := http.NewServeMux()
 	corsMiddleware := middleware.CORS(svr)
 
 	humaSvr := humago.New(svr, configs.NewOpenApi(svr, env))
 
-	internal.RegisterPublicRoutes(ctx, humaSvr, pool)
-	internal.RegisterPrivateRoutes(ctx, humaSvr, pool)
-	cleanupWorkers := internal.RegisterWorkers(ctx, pool)
+	internal.RegisterPublicRoutes(ctx, humaSvr, db, rdb)
+	internal.RegisterPrivateRoutes(ctx, humaSvr, db, rdb)
+	cleanupWorkers := internal.RegisterWorkers(ctx, db, rdb)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", env.AppPort),

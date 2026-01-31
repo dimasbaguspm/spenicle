@@ -2,27 +2,66 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/common"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
+	"github.com/redis/go-redis/v9"
+)
+
+const (
+	BudgetTemplateCacheTTL = 10 * time.Minute
 )
 
 type BudgetTemplateService struct {
 	btr repositories.BudgetTemplateRepository
 	br  repositories.BudgetRepository
+	rdb *redis.Client
 }
 
-func NewBudgetTemplateService(btr repositories.BudgetTemplateRepository, br repositories.BudgetRepository) BudgetTemplateService {
-	return BudgetTemplateService{btr, br}
+func NewBudgetTemplateService(btr repositories.BudgetTemplateRepository, br repositories.BudgetRepository, rdb *redis.Client) BudgetTemplateService {
+	return BudgetTemplateService{btr, br, rdb}
 }
 
 func (bts BudgetTemplateService) GetPaged(ctx context.Context, p models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
-	return bts.btr.GetPaged(ctx, p)
+	data, _ := json.Marshal(p)
+	cacheKey := common.BudgetTemplatesPagedCacheKeyPrefix + string(data)
+
+	paged, err := common.GetCache[models.BudgetTemplatesPagedModel](ctx, bts.rdb, cacheKey)
+	if err == nil {
+		return paged, nil
+	}
+
+	paged, err = bts.btr.GetPaged(ctx, p)
+	if err != nil {
+		return paged, err
+	}
+
+	common.SetCache(ctx, bts.rdb, cacheKey, paged, BudgetTemplateCacheTTL)
+
+	return paged, nil
 }
 
 func (bts BudgetTemplateService) GetDetail(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
-	return bts.btr.GetDetail(ctx, id)
+	cacheKey := fmt.Sprintf(common.BudgetTemplateCacheKeyPrefix+"%d", id)
+
+	template, err := common.GetCache[models.BudgetTemplateModel](ctx, bts.rdb, cacheKey)
+	if err == nil {
+		return template, nil
+	}
+
+	template, err = bts.btr.GetDetail(ctx, id)
+	if err != nil {
+		return template, err
+	}
+
+	common.SetCache(ctx, bts.rdb, cacheKey, template, BudgetTemplateCacheTTL)
+
+	return template, nil
 }
 
 func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
@@ -34,15 +73,40 @@ func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudg
 		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Budget template cannot be associated with both account and category")
 	}
 
-	return bts.btr.Create(ctx, p)
+	template, err := bts.btr.Create(ctx, p)
+	if err != nil {
+		return template, err
+	}
+
+	common.SetCache(ctx, bts.rdb, fmt.Sprintf(common.BudgetTemplateCacheKeyPrefix+"%d", template.ID), template, BudgetTemplateCacheTTL)
+	common.InvalidateCache(ctx, bts.rdb, common.BudgetTemplatesPagedCacheKeyPrefix+"*")
+
+	return template, nil
 }
 
 func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.UpdateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
-	return bts.btr.Update(ctx, id, p)
+	template, err := bts.btr.Update(ctx, id, p)
+	if err != nil {
+		return template, err
+	}
+
+	cacheKey := fmt.Sprintf(common.BudgetTemplateCacheKeyPrefix+"%d", id)
+	common.SetCache(ctx, bts.rdb, cacheKey, template, BudgetTemplateCacheTTL)
+	common.InvalidateCache(ctx, bts.rdb, common.BudgetTemplatesPagedCacheKeyPrefix+"*")
+
+	return template, nil
 }
 
 func (bts BudgetTemplateService) Delete(ctx context.Context, id int64) error {
-	return bts.btr.Delete(ctx, id)
+	err := bts.btr.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(common.BudgetTemplateCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, bts.rdb, common.BudgetTemplatesPagedCacheKeyPrefix+"*")
+
+	return nil
 }
 
 func (bts BudgetTemplateService) GetRelatedBudgets(ctx context.Context, templateID int64, query models.BudgetTemplateRelatedBudgetsSearchModel) (models.BudgetsPagedModel, error) {
