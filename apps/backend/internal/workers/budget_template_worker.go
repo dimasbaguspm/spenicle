@@ -9,6 +9,31 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	budgetTemplatesProcessed = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "worker_budget_templates_processed_total",
+			Help: "Total number of budget templates processed successfully",
+		},
+	)
+
+	budgetTemplatesFailed = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "worker_budget_templates_failed_total",
+			Help: "Total number of budget templates that failed processing",
+		},
+	)
+
+	budgetWorkerLastRun = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "worker_budget_templates_last_run_timestamp",
+			Help: "Timestamp of the last budget template worker run",
+		},
+	)
 )
 
 type BudgetTemplateWorker struct {
@@ -70,6 +95,7 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 
 		if err := btw.processTemplate(ctx, template); err != nil {
 			templateLogger.Error("failed to process template", "error", err)
+			budgetTemplatesFailed.Inc()
 			continue
 		}
 
@@ -82,6 +108,8 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 	}
 
 	logger.Info("completed", "processed_count", len(dueTemplates))
+	budgetTemplatesProcessed.Add(float64(len(dueTemplates)))
+	budgetWorkerLastRun.Set(float64(time.Now().Unix()))
 	return nil
 }
 
