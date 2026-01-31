@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,6 +21,9 @@ func NewTransactionTemplateRepository(pgx *pgxpool.Pool) TransactionTemplateRepo
 }
 
 func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sortByMap := map[string]string{
 		"id":        "id",
 		"name":      "name",
@@ -143,7 +147,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 
 	rows, err := ttr.pgx.Query(ctx, sql, searchPattern, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID, p.PageSize, offset)
 	if err != nil {
-		return models.TransactionTemplatesPagedModel{}, huma.Error400BadRequest("Unable to query transaction templates", err)
+		return models.TransactionTemplatesPagedModel{}, huma.Error500InternalServerError("Unable to query transaction templates", err)
 	}
 	defer rows.Close()
 
@@ -168,7 +172,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 			&item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 			&item.RecurringStats.Occurrences, &item.RecurringStats.TotalSpent, &item.RecurringStats.Remaining, &totalCount,
 		); err != nil {
-			return models.TransactionTemplatesPagedModel{}, huma.Error400BadRequest("Unable to scan transaction template data", err)
+			return models.TransactionTemplatesPagedModel{}, huma.Error500InternalServerError("Unable to scan transaction template data", err)
 		}
 
 		// Set destination account if present
@@ -187,7 +191,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.TransactionTemplatesPagedModel{}, huma.Error400BadRequest("Error reading transaction template rows", err)
+		return models.TransactionTemplatesPagedModel{}, huma.Error500InternalServerError("Error reading transaction template rows", err)
 	}
 
 	if items == nil {
@@ -209,6 +213,9 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 }
 
 func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var data models.TransactionTemplateModel
 	var destAccountID *int64
 	var destAccountName *string
@@ -274,7 +281,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TransactionTemplateModel{}, huma.Error404NotFound("Transaction template not found")
 		}
-		return models.TransactionTemplateModel{}, huma.Error400BadRequest("Unable to query transaction template", err)
+		return models.TransactionTemplateModel{}, huma.Error500InternalServerError("Unable to query transaction template", err)
 	}
 
 	// Set destination account if present
@@ -305,7 +312,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 	)
 
 	if err != nil {
-		return models.TransactionTemplateModel{}, huma.Error400BadRequest("Unable to query transaction template stats", err)
+		return models.TransactionTemplateModel{}, huma.Error500InternalServerError("Unable to query transaction template stats", err)
 	}
 
 	// Calculate remaining
@@ -347,6 +354,9 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 }
 
 func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload models.CreateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var ID int64
 
 	// Calculate next_due_at
@@ -378,7 +388,7 @@ func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload mod
 	).Scan(&ID)
 
 	if err != nil {
-		return models.TransactionTemplateModel{}, huma.Error400BadRequest("Unable to create transaction template", err)
+		return models.TransactionTemplateModel{}, huma.Error500InternalServerError("Unable to create transaction template", err)
 	}
 
 	return ttr.GetDetail(ctx, ID)
@@ -386,6 +396,9 @@ func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload mod
 
 // Update updates an existing transaction template
 func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, payload models.UpdateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		UPDATE transaction_templates
 		SET name = COALESCE($1, name),
@@ -439,20 +452,23 @@ func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, p
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TransactionTemplateModel{}, huma.Error404NotFound("Transaction template not found")
 		}
-		return models.TransactionTemplateModel{}, huma.Error400BadRequest("Unable to update transaction template", err)
+		return models.TransactionTemplateModel{}, huma.Error500InternalServerError("Unable to update transaction template", err)
 	}
 
 	return ttr.GetDetail(ctx, returnedID)
 }
 
 func (ttr TransactionTemplateRepository) Delete(ctx context.Context, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `UPDATE transaction_templates
 			SET deleted_at = CURRENT_TIMESTAMP
 			WHERE id = $1 AND deleted_at IS NULL`
 
 	cmdTag, err := ttr.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to delete transaction template", err)
+		return huma.Error500InternalServerError("Unable to delete transaction template", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Transaction template not found")
@@ -461,6 +477,9 @@ func (ttr TransactionTemplateRepository) Delete(ctx context.Context, id int64) e
 }
 
 func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([]models.TransactionTemplateModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		SELECT
 			tt.id,
@@ -520,7 +539,7 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 
 	rows, err := ttr.pgx.Query(ctx, sql)
 	if err != nil {
-		return nil, huma.Error400BadRequest("Unable to query due transaction templates", err)
+		return nil, huma.Error500InternalServerError("Unable to query due transaction templates", err)
 	}
 	defer rows.Close()
 
@@ -545,7 +564,7 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 			&item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 			&item.RecurringStats.Occurrences, &item.RecurringStats.TotalSpent, &item.RecurringStats.Remaining,
 		); err != nil {
-			return nil, huma.Error400BadRequest("Unable to scan due transaction template data", err)
+			return nil, huma.Error500InternalServerError("Unable to scan due transaction template data", err)
 		}
 
 		if destAccountID != nil {
@@ -563,7 +582,7 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, huma.Error400BadRequest("Error reading due transaction template rows", err)
+		return nil, huma.Error500InternalServerError("Error reading due transaction template rows", err)
 	}
 
 	if items == nil {
@@ -574,6 +593,9 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 }
 
 func (ttr TransactionTemplateRepository) UpdateLastExecuted(ctx context.Context, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		UPDATE transaction_templates
 		SET last_executed_at = NOW(),
@@ -588,22 +610,28 @@ func (ttr TransactionTemplateRepository) UpdateLastExecuted(ctx context.Context,
 
 	_, err := ttr.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to update template execution time", err)
+		return huma.Error500InternalServerError("Unable to update template execution time", err)
 	}
 	return nil
 }
 
 func (ttr TransactionTemplateRepository) CreateRelation(ctx context.Context, transactionID, templateID int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `INSERT INTO transaction_template_relations (transaction_id, template_id) VALUES ($1, $2) ON CONFLICT (transaction_id) DO NOTHING`
 
 	_, err := ttr.pgx.Exec(ctx, sql, transactionID, templateID)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to create transaction template relation", err)
+		return huma.Error500InternalServerError("Unable to create transaction template relation", err)
 	}
 	return nil
 }
 
 func (ttr TransactionTemplateRepository) GetRelatedTransactions(ctx context.Context, templateID int64, p models.TransactionTemplateRelatedTransactionsSearchModel) ([]int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		SELECT t.id
 		FROM transactions t
@@ -615,7 +643,7 @@ func (ttr TransactionTemplateRepository) GetRelatedTransactions(ctx context.Cont
 
 	rows, err := ttr.pgx.Query(ctx, sql, templateID)
 	if err != nil {
-		return nil, huma.Error400BadRequest("Unable to query related transaction IDs", err)
+		return nil, huma.Error500InternalServerError("Unable to query related transaction IDs", err)
 	}
 	defer rows.Close()
 
@@ -623,13 +651,13 @@ func (ttr TransactionTemplateRepository) GetRelatedTransactions(ctx context.Cont
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			return nil, huma.Error400BadRequest("Unable to scan transaction ID", err)
+			return nil, huma.Error500InternalServerError("Unable to scan transaction ID", err)
 		}
 		ids = append(ids, id)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, huma.Error400BadRequest("Error reading transaction ID rows", err)
+		return nil, huma.Error500InternalServerError("Error reading transaction ID rows", err)
 	}
 
 	return ids, nil

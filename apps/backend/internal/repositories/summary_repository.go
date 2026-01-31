@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -17,6 +18,9 @@ func NewSummaryRepository(pgx *pgxpool.Pool) SummaryRepository {
 }
 
 func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.SummaryTransactionSearchModel) (models.SummaryTransactionListModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var groupingFunc string
 	switch p.Frequency {
 	case "daily":
@@ -73,7 +77,7 @@ func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.
 
 	rows, err := sr.pgx.Query(ctx, sql, p.StartDate, p.EndDate)
 	if err != nil {
-		return models.SummaryTransactionListModel{}, huma.Error422UnprocessableEntity("query transaction summary: %w", err)
+		return models.SummaryTransactionListModel{}, huma.Error500InternalServerError("query transaction summary: %w", err)
 	}
 	defer rows.Close()
 
@@ -91,7 +95,7 @@ func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.
 			&item.TransferAmount,
 			&item.Net,
 		); err != nil {
-			return models.SummaryTransactionListModel{}, huma.Error422UnprocessableEntity("scan transaction summary: %w", err)
+			return models.SummaryTransactionListModel{}, huma.Error500InternalServerError("scan transaction summary: %w", err)
 		}
 		items = append(items, item)
 	}
@@ -107,6 +111,9 @@ func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.
 }
 
 func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.SummarySearchModel) (models.SummaryAccountListModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		WITH accounts_cte AS (
 			SELECT id, name, type
@@ -148,7 +155,7 @@ func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.Summ
 
 	rows, err := sr.pgx.Query(ctx, sql, p.StartDate, p.EndDate)
 	if err != nil {
-		return models.SummaryAccountListModel{}, huma.Error422UnprocessableEntity("query account summary: %w", err)
+		return models.SummaryAccountListModel{}, huma.Error500InternalServerError("query account summary: %w", err)
 	}
 	defer rows.Close()
 
@@ -164,7 +171,7 @@ func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.Summ
 			&item.ExpenseAmount,
 			&item.Net,
 		); err != nil {
-			return models.SummaryAccountListModel{}, huma.Error422UnprocessableEntity("scan account summary: %w", err)
+			return models.SummaryAccountListModel{}, huma.Error500InternalServerError("scan account summary: %w", err)
 		}
 		items = append(items, item)
 	}
@@ -179,6 +186,9 @@ func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.Summ
 }
 
 func (sr SummaryRepository) GetCategorySummary(ctx context.Context, p models.SummarySearchModel) (models.SummaryCategoryListModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		WITH categories_cte AS (
 			SELECT id, name, type
@@ -220,7 +230,7 @@ func (sr SummaryRepository) GetCategorySummary(ctx context.Context, p models.Sum
 
 	rows, err := sr.pgx.Query(ctx, sql, p.StartDate, p.EndDate)
 	if err != nil {
-		return models.SummaryCategoryListModel{}, huma.Error422UnprocessableEntity("query category summary: %w", err)
+		return models.SummaryCategoryListModel{}, huma.Error500InternalServerError("query category summary: %w", err)
 	}
 	defer rows.Close()
 
@@ -236,7 +246,7 @@ func (sr SummaryRepository) GetCategorySummary(ctx context.Context, p models.Sum
 			&item.ExpenseAmount,
 			&item.Net,
 		); err != nil {
-			return models.SummaryCategoryListModel{}, huma.Error422UnprocessableEntity("scan category summary: %w", err)
+			return models.SummaryCategoryListModel{}, huma.Error500InternalServerError("scan category summary: %w", err)
 		}
 		items = append(items, item)
 	}

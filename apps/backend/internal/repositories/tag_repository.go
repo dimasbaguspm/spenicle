@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,6 +20,9 @@ func NewTagRepository(pgx *pgxpool.Pool) TagRepository {
 }
 
 func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchModel) (models.TagsPagedModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sortByMap := map[string]string{
 		"id":        "id",
 		"name":      "name",
@@ -97,6 +101,9 @@ func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchMod
 }
 
 func (tr TagRepository) GetDetail(ctx context.Context, id int64) (models.TagModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var data models.TagModel
 
 	sql := `
@@ -112,13 +119,16 @@ func (tr TagRepository) GetDetail(ctx context.Context, id int64) (models.TagMode
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TagModel{}, huma.Error404NotFound("Tag not found")
 		}
-		return models.TagModel{}, huma.Error400BadRequest("Unable to query tag", err)
+		return models.TagModel{}, huma.Error500InternalServerError("Unable to query tag", err)
 	}
 
 	return data, nil
 }
 
 func (tr TagRepository) Create(ctx context.Context, payload models.CreateTagModel) (models.TagModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var ID int64
 
 	sql := `INSERT INTO tags (name, color)
@@ -128,13 +138,16 @@ func (tr TagRepository) Create(ctx context.Context, payload models.CreateTagMode
 	err := tr.pgx.QueryRow(ctx, sql, payload.Name, payload.Color).Scan(&ID)
 
 	if err != nil {
-		return models.TagModel{}, huma.Error400BadRequest("Unable to create tag", err)
+		return models.TagModel{}, huma.Error500InternalServerError("Unable to create tag", err)
 	}
 
 	return tr.GetDetail(ctx, ID)
 }
 
 func (tr TagRepository) Update(ctx context.Context, id int64, payload models.UpdateTagModel) (models.TagModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var ID int64
 
 	sql := `
@@ -152,13 +165,16 @@ func (tr TagRepository) Update(ctx context.Context, id int64, payload models.Upd
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TagModel{}, huma.Error404NotFound("Tag not found")
 		}
-		return models.TagModel{}, huma.Error400BadRequest("Unable to update tag", err)
+		return models.TagModel{}, huma.Error500InternalServerError("Unable to update tag", err)
 	}
 
 	return tr.GetDetail(ctx, ID)
 }
 
 func (tr TagRepository) Delete(ctx context.Context, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		UPDATE tags
 		SET deleted_at = CURRENT_TIMESTAMP
@@ -167,7 +183,7 @@ func (tr TagRepository) Delete(ctx context.Context, id int64) error {
 
 	cmdTag, err := tr.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to delete tag", err)
+		return huma.Error500InternalServerError("Unable to delete tag", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Tag not found")

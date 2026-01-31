@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,6 +22,9 @@ func NewAccountRepository(pgx *pgxpool.Pool) AccountRepository {
 }
 
 func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsSearchModel) (models.AccountsPagedModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sortByMap := map[string]string{
 		"name":         "name",
 		"type":         "type",
@@ -104,7 +108,7 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 
 	rows, err := ar.Pgx.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
 	if err != nil {
-		return models.AccountsPagedModel{}, huma.Error400BadRequest("Unable to query accounts", err)
+		return models.AccountsPagedModel{}, huma.Error500InternalServerError("Unable to query accounts", err)
 	}
 	defer rows.Close()
 
@@ -125,7 +129,7 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 		var budgetName *string
 		err := rows.Scan(&item.ID, &item.Name, &item.Type, &item.Note, &item.Amount, &item.Icon, &item.IconColor, &item.DisplayOrder, &item.ArchivedAt, &item.CreatedAt, &item.UpdatedAt, &budgetID, &templateID, &accountID, &categoryID, &periodStart, &periodEnd, &amountLimit, &actualAmount, &periodType, &budgetName, &totalCount)
 		if err != nil {
-			return models.AccountsPagedModel{}, huma.Error400BadRequest("Unable to scan account data", err)
+			return models.AccountsPagedModel{}, huma.Error500InternalServerError("Unable to scan account data", err)
 		}
 		if budgetID != nil {
 			item.EmbeddedBudget = &models.EmbeddedBudget{
@@ -145,7 +149,7 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.AccountsPagedModel{}, huma.Error400BadRequest("Error reading account rows", err)
+		return models.AccountsPagedModel{}, huma.Error500InternalServerError("Error reading account rows", err)
 	}
 
 	if items == nil {
@@ -167,6 +171,9 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 }
 
 func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.AccountModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var data models.AccountModel
 	var budgetID *int64
 	var templateID *int64
@@ -193,7 +200,7 @@ func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.Acc
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.AccountModel{}, huma.Error404NotFound("Account not found")
 		}
-		return models.AccountModel{}, huma.Error400BadRequest("Unable to query account", err)
+		return models.AccountModel{}, huma.Error500InternalServerError("Unable to query account", err)
 	}
 
 	if budgetID != nil {
@@ -217,6 +224,9 @@ func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.Acc
 func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAccountModel) (models.AccountModel, error) {
 	var ID int64
 
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		INSERT INTO accounts (name, type, note, icon, icon_color, display_order)
 		VALUES ($1, $2, $3, $4, $5,  COALESCE((SELECT MAX(display_order) + 1 FROM accounts WHERE deleted_at IS NULL), 0))
@@ -226,7 +236,7 @@ func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAcc
 	err := ar.Pgx.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor).Scan(&ID)
 
 	if err != nil {
-		return models.AccountModel{}, huma.Error400BadRequest("Unable to create account", err)
+		return models.AccountModel{}, huma.Error500InternalServerError("Unable to create account", err)
 	}
 
 	return ar.GetDetail(ctx, ID)
@@ -234,6 +244,9 @@ func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAcc
 
 func (ar AccountRepository) Update(ctx context.Context, id int64, payload models.UpdateAccountModel) (models.AccountModel, error) {
 	var ID int64
+
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
 
 	sql := `UPDATE accounts
 			SET name = COALESCE($1, name),
@@ -256,13 +269,16 @@ func (ar AccountRepository) Update(ctx context.Context, id int64, payload models
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.AccountModel{}, huma.Error404NotFound("Account not found")
 		}
-		return models.AccountModel{}, huma.Error400BadRequest("Unable to update account", err)
+		return models.AccountModel{}, huma.Error500InternalServerError("Unable to update account", err)
 	}
 
 	return ar.GetDetail(ctx, ID)
 }
 
 func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	if len(ids) == 0 {
 		return huma.Error400BadRequest("No account IDs provided")
 	}
@@ -270,7 +286,7 @@ func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) e
 	var matched int
 	sql := `SELECT COUNT(1) FROM accounts WHERE id = ANY($1::int8[]) AND deleted_at IS NULL`
 	if err := ar.Pgx.QueryRow(ctx, sql, ids).Scan(&matched); err != nil {
-		return huma.Error400BadRequest("Unable to validate accounts", err)
+		return huma.Error500InternalServerError("Unable to validate accounts", err)
 	}
 	if matched != len(ids) {
 		return huma.Error404NotFound("One or more accounts not found")
@@ -278,7 +294,7 @@ func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) e
 
 	var totalActive int
 	if err := ar.Pgx.QueryRow(ctx, `SELECT COUNT(1) FROM accounts WHERE deleted_at IS NULL`).Scan(&totalActive); err != nil {
-		return huma.Error400BadRequest("Unable to validate account count", err)
+		return huma.Error500InternalServerError("Unable to validate account count", err)
 	}
 	if totalActive != len(ids) {
 		return huma.Error400BadRequest("Provided account IDs must include all active accounts")
@@ -288,10 +304,13 @@ func (ar AccountRepository) ValidateIDsExist(ctx context.Context, ids []int64) e
 }
 
 func (ar AccountRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	delSQL := `UPDATE accounts SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`
 	cmdTag, err := tx.Exec(ctx, delSQL, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to delete account", err)
+		return huma.Error500InternalServerError("Unable to delete account", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Account not found")
@@ -300,9 +319,12 @@ func (ar AccountRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int6
 }
 
 func (ar AccountRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx pgx.Tx) ([]int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	rows, err := tx.Query(ctx, `SELECT id FROM accounts WHERE deleted_at IS NULL ORDER BY display_order ASC, id ASC`)
 	if err != nil {
-		return nil, huma.Error400BadRequest("Unable to query account ids", err)
+		return nil, huma.Error500InternalServerError("Unable to query account ids", err)
 	}
 	defer rows.Close()
 
@@ -310,13 +332,13 @@ func (ar AccountRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx pg
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			return nil, huma.Error400BadRequest("Unable to scan account id", err)
+			return nil, huma.Error500InternalServerError("Unable to scan account id", err)
 		}
 		ids = append(ids, id)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, huma.Error400BadRequest("Error reading account ids", err)
+		return nil, huma.Error500InternalServerError("Error reading account ids", err)
 	}
 
 	return ids, nil
@@ -326,14 +348,21 @@ func (ar AccountRepository) ReorderWithTx(ctx context.Context, tx pgx.Tx, ids []
 	if len(ids) == 0 {
 		return nil
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	reorderSQL := `UPDATE accounts SET display_order = v.new_order, updated_at = CURRENT_TIMESTAMP FROM (SELECT id::bigint AS id, ord - 1 AS new_order FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)) v WHERE accounts.id = v.id AND deleted_at IS NULL`
 	if _, err := tx.Exec(ctx, reorderSQL, ids); err != nil {
-		return huma.Error400BadRequest("Unable to reorder accounts", err)
+		return huma.Error500InternalServerError("Unable to reorder accounts", err)
 	}
 	return nil
 }
 
 func (ar AccountRepository) UpdateBalanceWithTx(ctx context.Context, tx pgx.Tx, accountID int64, deltaAmount int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `UPDATE accounts
 			SET amount = amount + $1,
 				updated_at = CURRENT_TIMESTAMP

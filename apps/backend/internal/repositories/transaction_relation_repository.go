@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,6 +20,9 @@ func NewTransactionRelationRepository(pgx *pgxpool.Pool) TransactionRelationRepo
 }
 
 func (trr TransactionRelationRepository) GetPaged(ctx context.Context, q models.TransactionRelationsSearchModel) (models.TransactionRelationsPagedModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	offset := (q.PageNumber - 1) * q.PageSize
 
 	sql := `
@@ -47,7 +51,7 @@ func (trr TransactionRelationRepository) GetPaged(ctx context.Context, q models.
 
 	rows, err := trr.pgx.Query(ctx, sql, q.SourceTransactionID, q.PageSize, offset)
 	if err != nil {
-		return models.TransactionRelationsPagedModel{}, huma.Error400BadRequest("Unable to query transaction relations", err)
+		return models.TransactionRelationsPagedModel{}, huma.Error500InternalServerError("Unable to query transaction relations", err)
 	}
 	defer rows.Close()
 
@@ -59,13 +63,13 @@ func (trr TransactionRelationRepository) GetPaged(ctx context.Context, q models.
 			&item.ID, &item.SourceTransactionID, &item.RelatedTransactionID, &item.RelationType, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 			&totalCount,
 		); err != nil {
-			return models.TransactionRelationsPagedModel{}, huma.Error400BadRequest("Unable to scan transaction relation data", err)
+			return models.TransactionRelationsPagedModel{}, huma.Error500InternalServerError("Unable to scan transaction relation data", err)
 		}
 		items = append(items, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.TransactionRelationsPagedModel{}, huma.Error400BadRequest("Error reading transaction relation rows", err)
+		return models.TransactionRelationsPagedModel{}, huma.Error500InternalServerError("Error reading transaction relation rows", err)
 	}
 
 	if items == nil {
@@ -87,6 +91,9 @@ func (trr TransactionRelationRepository) GetPaged(ctx context.Context, q models.
 }
 
 func (trr TransactionRelationRepository) GetDetail(ctx context.Context, p models.TransactionRelationGetModel) (models.TransactionRelationModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	query := `
 		SELECT id, source_transaction_id, related_transaction_id, relation_type, created_at, updated_at, deleted_at
 		FROM transaction_relations
@@ -104,13 +111,16 @@ func (trr TransactionRelationRepository) GetDetail(ctx context.Context, p models
 		return models.TransactionRelationModel{}, huma.Error404NotFound("Transaction relation not found")
 	}
 	if err != nil {
-		return models.TransactionRelationModel{}, huma.Error400BadRequest("Unable to query transaction relation", err)
+		return models.TransactionRelationModel{}, huma.Error500InternalServerError("Unable to query transaction relation", err)
 	}
 
 	return item, nil
 }
 
 func (trr TransactionRelationRepository) Create(ctx context.Context, p models.CreateTransactionRelationModel) (models.TransactionRelationModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		WITH source_check AS (
 			SELECT 1 FROM transactions WHERE id = $1 AND deleted_at IS NULL
@@ -137,7 +147,7 @@ func (trr TransactionRelationRepository) Create(ctx context.Context, p models.Cr
 	var validationStatus string
 	err := trr.pgx.QueryRow(ctx, sql, p.SourceTransactionID, p.RelatedTransactionID).Scan(&validationStatus)
 	if err != nil {
-		return models.TransactionRelationModel{}, huma.Error400BadRequest("Unable to validate transaction relation", err)
+		return models.TransactionRelationModel{}, huma.Error500InternalServerError("Unable to validate transaction relation", err)
 	}
 
 	switch validationStatus {
@@ -165,7 +175,7 @@ func (trr TransactionRelationRepository) Create(ctx context.Context, p models.Cr
 	).Scan(&ID, &srcID)
 
 	if insertErr != nil {
-		return models.TransactionRelationModel{}, huma.Error400BadRequest("Unable to create transaction relation", insertErr)
+		return models.TransactionRelationModel{}, huma.Error500InternalServerError("Unable to create transaction relation", insertErr)
 	}
 
 	return trr.GetDetail(ctx, models.TransactionRelationGetModel{
@@ -175,6 +185,9 @@ func (trr TransactionRelationRepository) Create(ctx context.Context, p models.Cr
 }
 
 func (trr TransactionRelationRepository) Delete(ctx context.Context, p models.DeleteTransactionRelationModel) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `UPDATE transaction_relations
 		SET deleted_at = CURRENT_TIMESTAMP,
 			updated_at = CURRENT_TIMESTAMP
@@ -182,7 +195,7 @@ func (trr TransactionRelationRepository) Delete(ctx context.Context, p models.De
 
 	cmdTag, err := trr.pgx.Exec(ctx, sql, p.RelationID, p.SourceTransactionID)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to delete transaction relation", err)
+		return huma.Error500InternalServerError("Unable to delete transaction relation", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Transaction relation not found")

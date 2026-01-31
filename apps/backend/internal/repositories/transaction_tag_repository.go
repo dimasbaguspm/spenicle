@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,6 +20,8 @@ func NewTransactionTagRepository(pgx *pgxpool.Pool) TransactionTagRepository {
 }
 
 func (ttr TransactionTagRepository) GetPaged(ctx context.Context, q models.TransactionTagsSearchModel) (models.TransactionTagsPagedModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
 
 	offset := (q.PageNumber - 1) * q.PageSize
 
@@ -48,7 +51,7 @@ func (ttr TransactionTagRepository) GetPaged(ctx context.Context, q models.Trans
 
 	rows, err := ttr.pgx.Query(ctx, sql, q.TransactionID, q.PageSize, offset)
 	if err != nil {
-		return models.TransactionTagsPagedModel{}, huma.Error400BadRequest("Unable to query transaction tags", err)
+		return models.TransactionTagsPagedModel{}, huma.Error500InternalServerError("Unable to query transaction tags", err)
 	}
 	defer rows.Close()
 
@@ -58,13 +61,13 @@ func (ttr TransactionTagRepository) GetPaged(ctx context.Context, q models.Trans
 		var item models.TransactionTagModel
 		err := rows.Scan(&item.ID, &item.TransactionID, &item.TagID, &item.TagName, &item.CreatedAt, &totalCount)
 		if err != nil {
-			return models.TransactionTagsPagedModel{}, huma.Error400BadRequest("Unable to scan transaction tag data", err)
+			return models.TransactionTagsPagedModel{}, huma.Error500InternalServerError("Unable to scan transaction tag data", err)
 		}
 		items = append(items, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.TransactionTagsPagedModel{}, huma.Error400BadRequest("Error reading transaction tag rows", err)
+		return models.TransactionTagsPagedModel{}, huma.Error500InternalServerError("Error reading transaction tag rows", err)
 	}
 
 	if items == nil {
@@ -86,6 +89,9 @@ func (ttr TransactionTagRepository) GetPaged(ctx context.Context, q models.Trans
 }
 
 func (ttr TransactionTagRepository) GetDetail(ctx context.Context, ID int64) (models.TransactionTagModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var data models.TransactionTagModel
 
 	sql := `
@@ -105,13 +111,16 @@ func (ttr TransactionTagRepository) GetDetail(ctx context.Context, ID int64) (mo
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TransactionTagModel{}, huma.Error404NotFound("Transaction tag not found")
 		}
-		return models.TransactionTagModel{}, huma.Error400BadRequest("Unable to query transaction tag", err)
+		return models.TransactionTagModel{}, huma.Error500InternalServerError("Unable to query transaction tag", err)
 	}
 
 	return data, nil
 }
 
 func (ttr TransactionTagRepository) Create(ctx context.Context, p models.CreateTransactionTagModel) (models.TransactionTagModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var ID int64
 
 	insertSQL := `
@@ -124,27 +133,30 @@ func (ttr TransactionTagRepository) Create(ctx context.Context, p models.CreateT
 
 	_, err := ttr.pgx.Exec(ctx, insertSQL, p.TransactionID, p.TagID)
 	if err != nil {
-		return models.TransactionTagModel{}, huma.Error400BadRequest("Unable to add tag to transaction", err)
+		return models.TransactionTagModel{}, huma.Error500InternalServerError("Unable to add tag to transaction", err)
 	}
 
 	selectSQL := `SELECT id FROM transaction_tags WHERE transaction_id = $1 AND tag_id = $2`
 	err = ttr.pgx.QueryRow(ctx, selectSQL, p.TransactionID, p.TagID).Scan(&ID)
 
 	if err != nil {
-		return models.TransactionTagModel{}, huma.Error400BadRequest("Unable to add tag to transaction", err)
+		return models.TransactionTagModel{}, huma.Error500InternalServerError("Unable to add tag to transaction", err)
 	}
 
 	return ttr.GetDetail(ctx, ID)
 }
 
 func (ttr TransactionTagRepository) Delete(ctx context.Context, transactionID, tagID int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		DELETE FROM transaction_tags
 		WHERE transaction_id = $1 AND tag_id = $2`
 
 	cmdTag, err := ttr.pgx.Exec(ctx, sql, transactionID, tagID)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to remove tag from transaction", err)
+		return huma.Error500InternalServerError("Unable to remove tag from transaction", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Transaction tag association not found")

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,6 +22,9 @@ func NewTransactionRepository(pgx *pgxpool.Pool) TransactionRepository {
 }
 
 func (tr TransactionRepository) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sortByMap := map[string]string{
 		"id":        "id",
 		"type":      "type",
@@ -154,7 +158,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		tagIDs,
 	)
 	if err != nil {
-		return models.TransactionsPagedModel{}, huma.Error400BadRequest("Unable to query transactions", err)
+		return models.TransactionsPagedModel{}, huma.Error500InternalServerError("Unable to query transactions", err)
 	}
 	defer rows.Close()
 
@@ -190,7 +194,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			&totalCount,
 		)
 		if err != nil {
-			return models.TransactionsPagedModel{}, huma.Error400BadRequest("Unable to scan transaction data", err)
+			return models.TransactionsPagedModel{}, huma.Error500InternalServerError("Unable to scan transaction data", err)
 		}
 
 		item.Account = account
@@ -211,7 +215,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		item.Tags = []models.TransactionTagEmbedded{}
 		if len(tagsJSON) > 0 {
 			if err := json.Unmarshal(tagsJSON, &item.Tags); err != nil {
-				return models.TransactionsPagedModel{}, huma.Error400BadRequest("Unable to parse tags data", err)
+				return models.TransactionsPagedModel{}, huma.Error500InternalServerError("Unable to parse tags data", err)
 			}
 		}
 
@@ -230,7 +234,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.TransactionsPagedModel{}, huma.Error400BadRequest("Error reading transaction rows", err)
+		return models.TransactionsPagedModel{}, huma.Error500InternalServerError("Error reading transaction rows", err)
 	}
 
 	if items == nil {
@@ -252,6 +256,9 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 }
 
 func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models.TransactionModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var item models.TransactionModel
 	var account models.TransactionAccountEmbedded
 	var category models.TransactionCategoryEmbedded
@@ -316,7 +323,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TransactionModel{}, huma.Error404NotFound("Transaction not found")
 		}
-		return models.TransactionModel{}, huma.Error400BadRequest("Unable to query transaction", err)
+		return models.TransactionModel{}, huma.Error500InternalServerError("Unable to query transaction", err)
 	}
 
 	item.Account = account
@@ -337,7 +344,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 	item.Tags = []models.TransactionTagEmbedded{}
 	if len(tagsJSON) > 0 {
 		if err := json.Unmarshal(tagsJSON, &item.Tags); err != nil {
-			return models.TransactionModel{}, huma.Error400BadRequest("Unable to parse tags data", err)
+			return models.TransactionModel{}, huma.Error500InternalServerError("Unable to parse tags data", err)
 		}
 	}
 
@@ -358,6 +365,9 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 func (tr TransactionRepository) Create(ctx context.Context, p models.CreateTransactionModel) (models.TransactionModel, error) {
 	var id int64
 
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `INSERT INTO transactions (type, date, amount, account_id, category_id, destination_account_id, note)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id`
@@ -365,7 +375,7 @@ func (tr TransactionRepository) Create(ctx context.Context, p models.CreateTrans
 	err := tr.Pgx.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note).Scan(&id)
 
 	if err != nil {
-		return models.TransactionModel{}, huma.Error400BadRequest("Unable to create transaction", err)
+		return models.TransactionModel{}, huma.Error500InternalServerError("Unable to create transaction", err)
 	}
 
 	return tr.GetDetail(ctx, id)
@@ -374,6 +384,9 @@ func (tr TransactionRepository) Create(ctx context.Context, p models.CreateTrans
 func (tr TransactionRepository) CreateWithTx(ctx context.Context, tx pgx.Tx, p models.CreateTransactionModel) (int64, error) {
 	var id int64
 
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `INSERT INTO transactions (type, date, amount, account_id, category_id, destination_account_id, note)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id`
@@ -381,13 +394,16 @@ func (tr TransactionRepository) CreateWithTx(ctx context.Context, tx pgx.Tx, p m
 	err := tx.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note).Scan(&id)
 
 	if err != nil {
-		return 0, huma.Error400BadRequest("Unable to create transaction", err)
+		return 0, huma.Error500InternalServerError("Unable to create transaction", err)
 	}
 
 	return id, nil
 }
 
 func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.UpdateTransactionModel) (models.TransactionModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `UPDATE transactions
 			SET type = COALESCE($1, type),
 				date = COALESCE($2, date),
@@ -402,7 +418,7 @@ func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.U
 	cmdTag, err := tr.Pgx.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
 
 	if err != nil {
-		return models.TransactionModel{}, huma.Error400BadRequest("Unable to update transaction", err)
+		return models.TransactionModel{}, huma.Error500InternalServerError("Unable to update transaction", err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
@@ -414,6 +430,9 @@ func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.U
 
 // UpdateWithTx updates a transaction within a provided database transaction
 func (tr TransactionRepository) UpdateWithTx(ctx context.Context, tx pgx.Tx, id int64, p models.UpdateTransactionModel) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `UPDATE transactions
 			SET type = COALESCE($1, type),
 				date = COALESCE($2, date),
@@ -428,7 +447,7 @@ func (tr TransactionRepository) UpdateWithTx(ctx context.Context, tx pgx.Tx, id 
 	cmdTag, err := tx.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
 
 	if err != nil {
-		return huma.Error400BadRequest("Unable to update transaction", err)
+		return huma.Error500InternalServerError("Unable to update transaction", err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
@@ -439,13 +458,15 @@ func (tr TransactionRepository) UpdateWithTx(ctx context.Context, tx pgx.Tx, id 
 }
 
 func (tr TransactionRepository) Delete(ctx context.Context, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
 	sql := `UPDATE transactions
 			SET deleted_at = CURRENT_TIMESTAMP
 			WHERE id = $1 AND deleted_at IS NULL`
 
 	cmdTag, err := tr.Pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to delete transaction", err)
+		return huma.Error500InternalServerError("Unable to delete transaction", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Transaction not found")
@@ -456,13 +477,16 @@ func (tr TransactionRepository) Delete(ctx context.Context, id int64) error {
 
 // DeleteWithTx deletes a transaction within a provided database transaction
 func (tr TransactionRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `UPDATE transactions
 			SET deleted_at = CURRENT_TIMESTAMP
 			WHERE id = $1 AND deleted_at IS NULL`
 
 	cmdTag, err := tx.Exec(ctx, sql, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to delete transaction", err)
+		return huma.Error500InternalServerError("Unable to delete transaction", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Transaction not found")
@@ -472,13 +496,16 @@ func (tr TransactionRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id 
 }
 
 func (tr TransactionRepository) UpdateAccountBalance(ctx context.Context, accountID int64, deltaAmount int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `UPDATE accounts
 			SET amount = amount + $1
 			WHERE id = $2 AND deleted_at IS NULL`
 
 	cmdTag, err := tr.Pgx.Exec(ctx, sql, deltaAmount, accountID)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to update account balance", err)
+		return huma.Error500InternalServerError("Unable to update account balance", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Account not found")

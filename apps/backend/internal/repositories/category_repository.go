@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -100,7 +101,7 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 
 	rows, err := cr.Pgx.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
 	if err != nil {
-		return models.CategoriesPagedModel{}, huma.Error400BadRequest("Unable to query categories", err)
+		return models.CategoriesPagedModel{}, huma.Error500InternalServerError("Unable to query categories", err)
 	}
 	defer rows.Close()
 
@@ -142,7 +143,7 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 			&budgetName,
 			&totalCount)
 		if err != nil {
-			return models.CategoriesPagedModel{}, huma.Error400BadRequest("Unable to scan category data", err)
+			return models.CategoriesPagedModel{}, huma.Error500InternalServerError("Unable to scan category data", err)
 		}
 		if budgetID != nil {
 			item.EmbeddedBudget = &models.EmbeddedBudget{
@@ -162,7 +163,7 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 	}
 
 	if err := rows.Err(); err != nil {
-		return models.CategoriesPagedModel{}, huma.Error400BadRequest("Error reading category rows", err)
+		return models.CategoriesPagedModel{}, huma.Error500InternalServerError("Error reading category rows", err)
 	}
 
 	if items == nil {
@@ -184,6 +185,9 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 }
 
 func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.CategoryModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var data models.CategoryModel
 	var budgetID *int64
 	var periodStart *time.Time
@@ -212,7 +216,7 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.CategoryModel{}, huma.Error404NotFound("Category not found")
 		}
-		return models.CategoryModel{}, huma.Error400BadRequest("Unable to query category", err)
+		return models.CategoryModel{}, huma.Error500InternalServerError("Unable to query category", err)
 	}
 
 	if budgetID != nil {
@@ -236,6 +240,9 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCategoryModel) (models.CategoryModel, error) {
 	var ID int64
 
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		INSERT INTO categories
 			(name, type, note, icon, icon_color, display_order)
@@ -251,7 +258,7 @@ func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCa
 		payload.IconColor).Scan(&ID)
 
 	if err != nil {
-		return models.CategoryModel{}, huma.Error400BadRequest("Unable to create category", err)
+		return models.CategoryModel{}, huma.Error500InternalServerError("Unable to create category", err)
 	}
 
 	return cr.GetDetail(ctx, ID)
@@ -259,6 +266,9 @@ func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCa
 
 func (cr CategoryRepository) Update(ctx context.Context, id int64, payload models.UpdateCategoryModel) (models.CategoryModel, error) {
 	var ID int64
+
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
 
 	sql := `
 		UPDATE categories
@@ -292,13 +302,16 @@ func (cr CategoryRepository) Update(ctx context.Context, id int64, payload model
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.CategoryModel{}, huma.Error404NotFound("Category not found")
 		}
-		return models.CategoryModel{}, huma.Error400BadRequest("Unable to update category", err)
+		return models.CategoryModel{}, huma.Error500InternalServerError("Unable to update category", err)
 	}
 
 	return cr.GetDetail(ctx, ID)
 }
 
 func (cr CategoryRepository) Delete(ctx context.Context, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		UPDATE categories
 		SET deleted_at = CURRENT_TIMESTAMP
@@ -308,7 +321,7 @@ func (cr CategoryRepository) Delete(ctx context.Context, id int64) error {
 
 	cmdTag, err := cr.Pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to delete category", err)
+		return huma.Error500InternalServerError("Unable to delete category", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Category not found")
@@ -322,6 +335,9 @@ func (cr CategoryRepository) Reorder(ctx context.Context, ids []int64) error {
 		return nil
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `UPDATE categories
             SET display_order = v.new_order,
                 updated_at = CURRENT_TIMESTAMP
@@ -334,7 +350,7 @@ func (cr CategoryRepository) Reorder(ctx context.Context, ids []int64) error {
 
 	_, err := cr.Pgx.Exec(ctx, sql, ids)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to reorder categories", err)
+		return huma.Error500InternalServerError("Unable to reorder categories", err)
 	}
 
 	return nil
@@ -346,10 +362,13 @@ func (cr CategoryRepository) ValidateIDsExist(ctx context.Context, ids []int64) 
 		return huma.Error400BadRequest("No category IDs provided")
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var matched int
 	sql := `SELECT COUNT(1) FROM categories WHERE id = ANY($1::int8[]) AND deleted_at IS NULL`
 	if err := cr.Pgx.QueryRow(ctx, sql, ids).Scan(&matched); err != nil {
-		return huma.Error400BadRequest("Unable to validate categories", err)
+		return huma.Error500InternalServerError("Unable to validate categories", err)
 	}
 	if matched != len(ids) {
 		return huma.Error404NotFound("One or more categories not found")
@@ -357,7 +376,7 @@ func (cr CategoryRepository) ValidateIDsExist(ctx context.Context, ids []int64) 
 
 	var totalActive int
 	if err := cr.Pgx.QueryRow(ctx, `SELECT COUNT(1) FROM categories WHERE deleted_at IS NULL`).Scan(&totalActive); err != nil {
-		return huma.Error400BadRequest("Unable to validate category count", err)
+		return huma.Error500InternalServerError("Unable to validate category count", err)
 	}
 	if totalActive != len(ids) {
 		return huma.Error400BadRequest("Provided category IDs must include all active categories")
@@ -368,10 +387,13 @@ func (cr CategoryRepository) ValidateIDsExist(ctx context.Context, ids []int64) 
 
 // DeleteWithTx performs a soft delete using provided transaction
 func (cr CategoryRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	delSQL := `UPDATE categories SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`
 	cmdTag, err := tx.Exec(ctx, delSQL, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to delete category", err)
+		return huma.Error500InternalServerError("Unable to delete category", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Category not found")
@@ -381,9 +403,12 @@ func (cr CategoryRepository) DeleteWithTx(ctx context.Context, tx pgx.Tx, id int
 
 // GetActiveIDsOrderedWithTx returns non-deleted category ids ordered by display_order using provided tx
 func (cr CategoryRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx pgx.Tx) ([]int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	rows, err := tx.Query(ctx, `SELECT id FROM categories WHERE deleted_at IS NULL ORDER BY display_order ASC, id ASC`)
 	if err != nil {
-		return nil, huma.Error400BadRequest("Unable to query category ids", err)
+		return nil, huma.Error500InternalServerError("Unable to query category ids", err)
 	}
 	defer rows.Close()
 
@@ -391,12 +416,12 @@ func (cr CategoryRepository) GetActiveIDsOrderedWithTx(ctx context.Context, tx p
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			return nil, huma.Error400BadRequest("Unable to scan category id", err)
+			return nil, huma.Error500InternalServerError("Unable to scan category id", err)
 		}
 		ids = append(ids, id)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, huma.Error400BadRequest("Error reading category ids", err)
+		return nil, huma.Error500InternalServerError("Error reading category ids", err)
 	}
 	return ids, nil
 }
@@ -406,9 +431,13 @@ func (cr CategoryRepository) ReorderWithTx(ctx context.Context, tx pgx.Tx, ids [
 	if len(ids) == 0 {
 		return nil
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	reorderSQL := `UPDATE categories SET display_order = v.new_order, updated_at = CURRENT_TIMESTAMP FROM (SELECT id::bigint AS id, ord - 1 AS new_order FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)) v WHERE categories.id = v.id AND deleted_at IS NULL`
 	if _, err := tx.Exec(ctx, reorderSQL, ids); err != nil {
-		return huma.Error400BadRequest("Unable to reorder categories", err)
+		return huma.Error500InternalServerError("Unable to reorder categories", err)
 	}
 	return nil
 }

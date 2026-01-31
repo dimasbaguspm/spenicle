@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,6 +21,9 @@ func NewBudgetTemplateRepository(pgx *pgxpool.Pool) BudgetTemplateRepository {
 }
 
 func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sortByMap := map[string]string{
 		"id":          "id",
 		"accountId":   "account_id",
@@ -146,6 +150,9 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 }
 
 func (btr BudgetTemplateRepository) GetDetail(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var data models.BudgetTemplateModel
 	query := `
 		SELECT id, account_id, category_id, amount_limit, recurrence, start_date, end_date, name, next_run_at, last_executed_at, note, created_at, updated_at, deleted_at
@@ -162,13 +169,16 @@ func (btr BudgetTemplateRepository) GetDetail(ctx context.Context, id int64) (mo
 		return models.BudgetTemplateModel{}, huma.Error404NotFound("Budget template not found")
 	}
 	if err != nil {
-		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Unable to query budget template", err)
+		return models.BudgetTemplateModel{}, huma.Error500InternalServerError("Unable to query budget template", err)
 	}
 
 	return data, nil
 }
 
 func (btr BudgetTemplateRepository) Create(ctx context.Context, p models.CreateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var ID int64
 
 	var nextRunAt *time.Time
@@ -196,13 +206,16 @@ func (btr BudgetTemplateRepository) Create(ctx context.Context, p models.CreateB
 	).Scan(&ID)
 
 	if err != nil {
-		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Unable to create budget template", err)
+		return models.BudgetTemplateModel{}, huma.Error500InternalServerError("Unable to create budget template", err)
 	}
 
 	return btr.GetDetail(ctx, ID)
 }
 
 func (btr BudgetTemplateRepository) Update(ctx context.Context, id int64, p models.UpdateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	var ID int64
 	query := `
 		UPDATE budget_templates
@@ -249,13 +262,16 @@ func (btr BudgetTemplateRepository) Update(ctx context.Context, id int64, p mode
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.BudgetTemplateModel{}, huma.Error404NotFound("Budget template not found")
 		}
-		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Unable to update budget template", err)
+		return models.BudgetTemplateModel{}, huma.Error500InternalServerError("Unable to update budget template", err)
 	}
 
 	return btr.GetDetail(ctx, ID)
 }
 
 func (btr BudgetTemplateRepository) Delete(ctx context.Context, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		UPDATE budget_templates
 		SET deleted_at = CURRENT_TIMESTAMP
@@ -264,7 +280,7 @@ func (btr BudgetTemplateRepository) Delete(ctx context.Context, id int64) error 
 
 	cmdTag, err := btr.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to delete budget template", err)
+		return huma.Error500InternalServerError("Unable to delete budget template", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Budget template not found")
@@ -274,6 +290,9 @@ func (btr BudgetTemplateRepository) Delete(ctx context.Context, id int64) error 
 }
 
 func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]models.BudgetTemplateModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		WITH active_templates AS (
 			SELECT
@@ -322,7 +341,7 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 
 	rows, err := btr.pgx.Query(ctx, sql)
 	if err != nil {
-		return nil, huma.Error400BadRequest("Unable to query due budget templates", err)
+		return nil, huma.Error500InternalServerError("Unable to query due budget templates", err)
 	}
 	defer rows.Close()
 
@@ -333,13 +352,13 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 			&item.ID, &item.AccountID, &item.CategoryID, &item.AmountLimit, &item.Recurrence,
 			&item.StartDate, &item.EndDate, &item.Name, &item.NextRunAt, &item.LastExecutedAt, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 		); err != nil {
-			return nil, huma.Error400BadRequest("Unable to scan due budget template data", err)
+			return nil, huma.Error500InternalServerError("Unable to scan due budget template data", err)
 		}
 		items = append(items, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, huma.Error400BadRequest("Error reading due budget template rows", err)
+		return nil, huma.Error500InternalServerError("Error reading due budget template rows", err)
 	}
 
 	if items == nil {
@@ -350,6 +369,9 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 }
 
 func (btr BudgetTemplateRepository) UpdateLastExecuted(ctx context.Context, id int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		UPDATE budget_templates
 		SET last_executed_at = NOW(),
@@ -364,12 +386,15 @@ func (btr BudgetTemplateRepository) UpdateLastExecuted(ctx context.Context, id i
 
 	_, err := btr.pgx.Exec(ctx, sql, id)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to update budget template execution time", err)
+		return huma.Error500InternalServerError("Unable to update budget template execution time", err)
 	}
 	return nil
 }
 
 func (btr BudgetTemplateRepository) GetRelatedBudgets(ctx context.Context, templateID int64, p models.BudgetTemplateRelatedBudgetsSearchModel) ([]int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `
 		SELECT b.id
 		FROM budgets b
@@ -381,7 +406,7 @@ func (btr BudgetTemplateRepository) GetRelatedBudgets(ctx context.Context, templ
 
 	rows, err := btr.pgx.Query(ctx, sql, templateID)
 	if err != nil {
-		return nil, huma.Error400BadRequest("Unable to query related budget IDs", err)
+		return nil, huma.Error500InternalServerError("Unable to query related budget IDs", err)
 	}
 	defer rows.Close()
 
@@ -389,24 +414,27 @@ func (btr BudgetTemplateRepository) GetRelatedBudgets(ctx context.Context, templ
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			return nil, huma.Error400BadRequest("Unable to scan budget ID", err)
+			return nil, huma.Error500InternalServerError("Unable to scan budget ID", err)
 		}
 		ids = append(ids, id)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, huma.Error400BadRequest("Error reading budget ID rows", err)
+		return nil, huma.Error500InternalServerError("Error reading budget ID rows", err)
 	}
 
 	return ids, nil
 }
 
 func (btr BudgetTemplateRepository) CreateRelation(ctx context.Context, budgetID, templateID int64) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
 	sql := `INSERT INTO budget_template_relations (budget_id, template_id) VALUES ($1, $2) ON CONFLICT (budget_id) DO NOTHING`
 
 	_, err := btr.pgx.Exec(ctx, sql, budgetID, templateID)
 	if err != nil {
-		return huma.Error400BadRequest("Unable to create budget template relation", err)
+		return huma.Error500InternalServerError("Unable to create budget template relation", err)
 	}
 	return nil
 }
