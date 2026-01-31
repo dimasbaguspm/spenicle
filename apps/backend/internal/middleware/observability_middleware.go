@@ -2,22 +2,16 @@ package middleware
 
 import (
 	"context"
-	"crypto/rand"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/dimasbaguspm/spenicle-api/internal/common"
 )
 
 type contextKey string
 
 const RequestIDKey contextKey = "request_id"
-
-func generateRequestID() string {
-	bytes := make([]byte, 8)
-	rand.Read(bytes)
-	return fmt.Sprintf("%x", bytes)
-}
 
 type responseWriter struct {
 	http.ResponseWriter
@@ -38,7 +32,7 @@ func (rw *responseWriter) Write(data []byte) (int, error) {
 
 func ObservabilityMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestID := generateRequestID()
+		requestID := common.GenerateID()
 
 		ctx := context.WithValue(r.Context(), RequestIDKey, requestID)
 		r = r.WithContext(ctx)
@@ -73,5 +67,5 @@ func GetRequestID(ctx context.Context) string {
 
 func GetLogger(ctx context.Context) *slog.Logger {
 	requestID := GetRequestID(ctx)
-	return slog.With("request_id", requestID)
+	return common.NewLogger("request_id", requestID)
 }

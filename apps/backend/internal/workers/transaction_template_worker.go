@@ -2,7 +2,6 @@ package workers
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
@@ -30,7 +29,8 @@ func NewTransactionTemplateWorker(
 }
 
 func (ttw *TransactionTemplateWorker) Start() error {
-	slog.Info("Starting transaction template worker")
+	logger := common.NewLogger("worker", "TransactionTemplateWorker")
+	logger.Info("starting")
 
 	err := ttw.cronWorker.Register(common.CronTask{
 		ID:       "process-transaction-templates",
@@ -40,50 +40,48 @@ func (ttw *TransactionTemplateWorker) Start() error {
 	})
 
 	if err != nil {
-		slog.Error("Failed to start transaction template worker", "err", err)
+		logger.Error("failed to start", "error", err)
 	}
 	return nil
 }
 
 func (ttw *TransactionTemplateWorker) processTemplates(ctx context.Context) error {
-	slog.Debug("Processing transaction templates")
+	runID := common.GenerateID()
+	logger := common.NewLogger("worker", "TransactionTemplateWorker", "run_id", runID, "task", "processTemplates")
+	logger.Info("start")
 
 	dueTemplates, err := ttw.templateRepo.GetDueTemplates(ctx)
 	if err != nil {
-		slog.Error("Failed to get due templates", "err", err)
+		logger.Error("failed to get due templates", "error", err)
 		return err
 	}
 
 	if len(dueTemplates) == 0 {
-		slog.Debug("No templates due for processing")
+		logger.Info("no templates due")
 		return nil
 	}
 
-	slog.Info("Processing templates", "count", len(dueTemplates))
+	logger.Info("processing templates", "count", len(dueTemplates))
 
 	for _, template := range dueTemplates {
+		templateLogger := logger.With("template_id", template.ID)
+		templateLogger.Info("processing template")
+
 		if err := ttw.processTemplate(ctx, template); err != nil {
-			slog.Error(
-				"Failed to process template",
-				"templateID", template.ID,
-				"templateName", template.Name,
-				"err", err,
-			)
+			templateLogger.Error("failed to process template", "error", err, "template_name", template.Name)
 			continue
 		}
+
+		templateLogger.Info("template processed successfully")
 	}
 
+	logger.Info("completed", "processed_count", len(dueTemplates))
 	return nil
 }
 
 func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, template models.TransactionTemplateModel) error {
-	slog.Debug(
-		"Processing individual template",
-		"templateID", template.ID,
-		"templateName", template.Name,
-		"type", template.Type,
-		"amount", template.Amount,
-	)
+	logger := common.NewLogger("worker", "TransactionTemplateWorker", "template_id", template.ID)
+	logger.Info("start processing", "template_name", template.Name, "type", template.Type, "amount", template.Amount)
 
 	var destAccountID *int64
 	if template.DestinationAccount != nil {
@@ -102,42 +100,27 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 
 	transaction, err := ttw.transactionService.Create(ctx, transactionRequest)
 	if err != nil {
-		slog.Error(
-			"Failed to create transaction from template",
-			"templateID", template.ID,
-			"templateName", template.Name,
-			"err", err,
-		)
+		logger.Error("failed to create transaction", "error", err)
 		return err
 	}
 
+	logger.Info("transaction created", "transaction_id", transaction.ID)
+
 	if err := ttw.templateRepo.CreateRelation(ctx, transaction.ID, template.ID); err != nil {
-		slog.Error(
-			"Failed to create transaction template relation",
-			"transactionID", transaction.ID,
-			"templateID", template.ID,
-			"err", err,
-		)
+		logger.Error("failed to create relation", "error", err, "transaction_id", transaction.ID)
 	}
 
 	if err := ttw.templateRepo.UpdateLastExecuted(ctx, template.ID); err != nil {
-		slog.Error(
-			"Failed to update template execution time",
-			"templateID", template.ID,
-			"err", err,
-		)
+		logger.Error("failed to update execution time", "error", err)
 	}
 
-	slog.Info(
-		"Successfully created transaction from template",
-		"templateID", template.ID,
-		"templateName", template.Name,
-	)
+	logger.Info("success", "transaction_id", transaction.ID)
 
 	return nil
 }
 
 func (ttw *TransactionTemplateWorker) Stop() {
-	slog.Info("Stopping transaction template worker")
+	logger := common.NewLogger("worker", "TransactionTemplateWorker")
+	logger.Info("stopping")
 	ttw.cronWorker.Stop()
 }

@@ -3,7 +3,6 @@ package workers
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
@@ -31,7 +30,8 @@ func NewBudgetTemplateWorker(
 }
 
 func (btw *BudgetTemplateWorker) Start() error {
-	slog.Info("Starting budget template worker")
+	logger := common.NewLogger("worker", "BudgetTemplateWorker")
+	logger.Info("starting")
 
 	err := btw.cronWorker.Register(common.CronTask{
 		ID:       "process-budget-templates",
@@ -41,57 +41,53 @@ func (btw *BudgetTemplateWorker) Start() error {
 	})
 
 	if err != nil {
-		slog.Error("Failed to start budget template worker", "err", err)
+		logger.Error("failed to start", "error", err)
 	}
 	return nil
 }
 
 func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
-	slog.Debug("Processing budget templates")
+	runID := common.GenerateID()
+	logger := common.NewLogger("worker", "BudgetTemplateWorker", "run_id", runID, "task", "processTemplates")
+	logger.Info("start")
 
 	dueTemplates, err := btw.templateRepo.GetDueTemplates(ctx)
 	if err != nil {
-		slog.Error("Failed to get due budget templates", "err", err)
+		logger.Error("failed to get due templates", "error", err)
 		return err
 	}
 
 	if len(dueTemplates) == 0 {
-		slog.Debug("No budget templates due for processing")
+		logger.Info("no templates due")
 		return nil
 	}
 
-	slog.Info("Processing budget templates", "count", len(dueTemplates))
+	logger.Info("processing templates", "count", len(dueTemplates))
 
 	for _, template := range dueTemplates {
+		templateLogger := logger.With("template_id", template.ID)
+		templateLogger.Info("processing template")
+
 		if err := btw.processTemplate(ctx, template); err != nil {
-			slog.Error(
-				"Failed to process budget template",
-				"templateID", template.ID,
-				"err", err,
-			)
+			templateLogger.Error("failed to process template", "error", err)
 			continue
 		}
 
+		templateLogger.Info("template processed successfully")
+
 		// Update last_executed_at timestamp
 		if err := btw.templateRepo.UpdateLastExecuted(ctx, template.ID); err != nil {
-			slog.Error(
-				"Failed to update budget template execution time",
-				"templateID", template.ID,
-				"err", err,
-			)
+			templateLogger.Error("failed to update execution time", "error", err)
 		}
 	}
 
+	logger.Info("completed", "processed_count", len(dueTemplates))
 	return nil
 }
 
 func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template models.BudgetTemplateModel) error {
-	slog.Debug(
-		"Processing individual budget template",
-		"templateID", template.ID,
-		"amountLimit", template.AmountLimit,
-		"recurrence", template.Recurrence,
-	)
+	logger := common.NewLogger("worker", "BudgetTemplateWorker", "template_id", template.ID)
+	logger.Info("start processing", "amount_limit", template.AmountLimit, "recurrence", template.Recurrence)
 
 	periodStart, periodEnd := calculateBudgetPeriod(template.Recurrence)
 	periodType := calculatePeriodType(periodStart, periodEnd)
@@ -99,16 +95,10 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 	// For recurring templates, deactivate any existing active budgets for the same account/category/period type
 	if template.Recurrence != "none" {
 		if err := btw.budgetService.DeactivateExistingActiveBudgets(ctx, template.AccountID, template.CategoryID, periodType); err != nil {
-			slog.Error(
-				"Failed to deactivate existing active budgets",
-				"templateID", template.ID,
-				"accountID", template.AccountID,
-				"categoryID", template.CategoryID,
-				"periodType", periodType,
-				"err", err,
-			)
+			logger.Error("failed to deactivate existing budgets", "error", err, "account_id", template.AccountID, "category_id", template.CategoryID, "period_type", periodType)
 			return err
 		}
+		logger.Info("deactivated existing budgets")
 	}
 
 	budgetRequest := models.CreateBudgetModel{
@@ -124,24 +114,17 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 
 	budget, err := btw.budgetService.Create(ctx, budgetRequest)
 	if err != nil {
+		logger.Error("failed to create budget", "error", err)
 		return err
 	}
 
+	logger.Info("budget created", "budget_id", budget.ID)
+
 	if err := btw.templateRepo.CreateRelation(ctx, budget.ID, template.ID); err != nil {
-		slog.Error(
-			"Failed to create budget template relation",
-			"budgetID", budget.ID,
-			"templateID", template.ID,
-			"err", err,
-		)
+		logger.Error("failed to create relation", "error", err, "budget_id", budget.ID)
 	}
 
-	slog.Info(
-		"Successfully created budget from template",
-		"templateID", template.ID,
-		"budgetID", budget.ID,
-		"periodType", periodType,
-	)
+	logger.Info("success", "budget_id", budget.ID, "period_type", periodType)
 
 	return nil
 }
@@ -176,7 +159,8 @@ func calculateBudgetPeriod(recurrence string) (time.Time, time.Time) {
 }
 
 func (btw *BudgetTemplateWorker) Stop() {
-	slog.Info("Stopping budget template worker")
+	logger := common.NewLogger("worker", "BudgetTemplateWorker")
+	logger.Info("stopping")
 	btw.cronWorker.Stop()
 }
 
