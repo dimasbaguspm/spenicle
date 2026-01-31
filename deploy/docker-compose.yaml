@@ -18,6 +18,14 @@ services:
     networks:
       - spenicle-build
 
+  spenicle-build-redis:
+    image: redis:8.4.0-alpine
+    container_name: spenicle-build-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - spenicle-build
+
   spenicle-build-api:
     build:
       context: ..
@@ -34,9 +42,12 @@ services:
       JWT_SECRET: long-text-to-just-filled-out-the-jwt-secret-variable
       ADMIN_USERNAME: admin_username
       ADMIN_PASSWORD: admin_password
+      REDIS_URL: spenicle-build-redis:6379
     depends_on:
       spenicle-build-postgres:
         condition: service_healthy
+      spenicle-build-redis:
+        condition: service_started
     networks:
       - spenicle-build
 

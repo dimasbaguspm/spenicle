@@ -17,6 +17,14 @@ services:
     networks:
       - spenicle_e2e
 
+  spenicle-e2e-redis:
+    image: redis:8.4.0-alpine
+    container_name: spenicle-e2e-redis
+    ports:
+      - "6380:6379"
+    networks:
+      - spenicle_e2e
+
   spenicle-e2e-api:
     build:
       context: ../..
@@ -32,6 +40,7 @@ services:
       DB_NAME: db_name
       APP_PORT: 8081
       WEB_PORT: 3000
+      REDIS_URL: spenicle-e2e-redis:6379
       IS_DEV_ENV: false
       JWT_SECRET: random-text-to-just-need-to-be-filled-for-jwt-secret
       ADMIN_USERNAME: admin_username
