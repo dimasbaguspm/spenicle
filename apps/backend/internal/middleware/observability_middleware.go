@@ -5,51 +5,11 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 )
-
-var (
-	requestsTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "http_requests_total",
-			Help: "Total number of HTTP requests",
-		},
-		[]string{"method", "status", "endpoint"},
-	)
-
-	requestDuration = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
-			Help:    "HTTP request duration in seconds",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"method", "endpoint"},
-	)
-
-	lastRequestTime = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "http_last_request_timestamp",
-			Help: "Timestamp of the last HTTP request per endpoint",
-		},
-		[]string{"method", "endpoint"},
-	)
-)
-
-func extractEndpoint(path string) string {
-	if path == "/metrics" {
-		return "metrics"
-	}
-	parts := strings.Split(strings.Trim(path, "/"), "/")
-	if len(parts) > 0 {
-		return parts[0]
-	}
-	return "unknown"
-}
 
 type contextKey string
 
@@ -92,10 +52,9 @@ func ObservabilityMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(rw, r)
 
 		duration := time.Since(start)
-		endpoint := extractEndpoint(r.URL.Path)
-		requestsTotal.WithLabelValues(r.Method, strconv.Itoa(rw.statusCode), endpoint).Inc()
-		requestDuration.WithLabelValues(r.Method, endpoint).Observe(duration.Seconds())
-		lastRequestTime.WithLabelValues(r.Method, endpoint).Set(float64(time.Now().Unix()))
+		observability.RequestsTotal.WithLabelValues(r.Method, strconv.Itoa(rw.statusCode), r.URL.Path).Inc()
+		observability.RequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration.Seconds())
+		observability.LastRequestTime.WithLabelValues(r.Method, r.URL.Path).Set(float64(time.Now().Unix()))
 
 		slog.Info("Request completed",
 			"request_id", requestID,

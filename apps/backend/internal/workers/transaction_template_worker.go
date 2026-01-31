@@ -6,33 +6,9 @@ import (
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-)
-
-var (
-	transactionTemplatesProcessed = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "worker_transaction_templates_processed_total",
-			Help: "Total number of transaction templates processed successfully",
-		},
-	)
-
-	transactionTemplatesFailed = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "worker_transaction_templates_failed_total",
-			Help: "Total number of transaction templates that failed processing",
-		},
-	)
-
-	transactionWorkerLastRun = promauto.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "worker_transaction_templates_last_run_timestamp",
-			Help: "Timestamp of the last transaction template worker run",
-		},
-	)
 )
 
 type TransactionTemplateWorker struct {
@@ -94,7 +70,7 @@ func (ttw *TransactionTemplateWorker) processTemplates(ctx context.Context) erro
 
 		if err := ttw.processTemplate(ctx, template); err != nil {
 			templateLogger.Error("failed to process template", "error", err, "template_name", template.Name)
-			transactionTemplatesFailed.Inc()
+			observability.TransactionTemplatesFailed.Inc()
 			continue
 		}
 
@@ -102,8 +78,8 @@ func (ttw *TransactionTemplateWorker) processTemplates(ctx context.Context) erro
 	}
 
 	logger.Info("completed", "processed_count", len(dueTemplates))
-	transactionTemplatesProcessed.Add(float64(len(dueTemplates)))
-	transactionWorkerLastRun.Set(float64(time.Now().Unix()))
+	observability.TransactionTemplatesProcessed.Add(float64(len(dueTemplates)))
+	observability.TransactionWorkerLastRun.Set(float64(time.Now().Unix()))
 	return nil
 }
 
