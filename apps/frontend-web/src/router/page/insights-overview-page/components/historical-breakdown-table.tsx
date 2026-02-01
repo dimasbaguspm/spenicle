@@ -13,6 +13,7 @@ interface HistoricalBreakdownTableProps {
   transactionData: InsightsTransactionModel["data"];
   frequency?: InsightsTransactionModel["frequency"];
   isLoading?: boolean;
+  showPercentage?: boolean;
 }
 
 type FrequencyType = "daily" | "weekly" | "monthly" | "yearly";
@@ -171,6 +172,7 @@ const calculateTotals = (tableData: ProcessedRow[]): Totals => {
 export const HistoricalBreakdownTable = ({
   transactionData,
   frequency,
+  showPercentage = false,
 }: HistoricalBreakdownTableProps) => {
   const { tableData, periodLabel } = useMemo(() => {
     if (!Array.isArray(transactionData) || transactionData.length === 0) {
@@ -184,6 +186,14 @@ export const HistoricalBreakdownTable = ({
   }, [transactionData, frequency]);
 
   const totals = useMemo(() => calculateTotals(tableData), [tableData]);
+
+  const formatDisplayValue = (value: number, total: number) => {
+    if (showPercentage && total > 0) {
+      const percentage = (value / total) * 100;
+      return `${percentage.toFixed(1)}%`;
+    }
+    return formatPrice(value, PriceFormat.CURRENCY_NO_DECIMALS);
+  };
 
   return (
     <div className="space-y-6">
@@ -218,29 +228,22 @@ export const HistoricalBreakdownTable = ({
                 </td>
                 <td className="py-3 px-4">
                   <Text as="small" color="ghost">
-                    {formatPrice(row.income, PriceFormat.CURRENCY_NO_DECIMALS)}
+                    {formatDisplayValue(row.income, totals.income)}
                   </Text>
                 </td>
                 <td className="py-3 px-4">
                   <Text as="small" color="ghost">
-                    (
-                    {formatPrice(row.expense, PriceFormat.CURRENCY_NO_DECIMALS)}
-                    )
+                    ({formatDisplayValue(row.expense, totals.expense)})
                   </Text>
                 </td>
                 <td className="py-3 px-4">
                   <Text as="small" color="ghost">
-                    (
-                    {formatPrice(
-                      row.transfer,
-                      PriceFormat.CURRENCY_NO_DECIMALS,
-                    )}
-                    )
+                    ({formatDisplayValue(row.transfer, totals.transfer)})
                   </Text>
                 </td>
                 <td className="py-3 px-4">
                   <Text as="small" color="black" fontWeight="medium">
-                    {formatPrice(row.net, PriceFormat.CURRENCY_NO_DECIMALS)}
+                    {formatDisplayValue(row.net, totals.net)}
                   </Text>
                 </td>
               </tr>
@@ -252,19 +255,37 @@ export const HistoricalBreakdownTable = ({
                 Total
               </td>
               <td className="text-left py-4 px-4 text-sm font-bold ">
-                {formatPrice(totals.income, PriceFormat.CURRENCY_NO_DECIMALS)}
+                {showPercentage
+                  ? "100.0%"
+                  : formatPrice(
+                      totals.income,
+                      PriceFormat.CURRENCY_NO_DECIMALS,
+                    )}
               </td>
               <td className="text-left py-4 px-4 text-sm font-bold">
-                ({formatPrice(totals.expense, PriceFormat.CURRENCY_NO_DECIMALS)}
+                (
+                {showPercentage
+                  ? "100.0%"
+                  : formatPrice(
+                      totals.expense,
+                      PriceFormat.CURRENCY_NO_DECIMALS,
+                    )}
                 )
               </td>
               <td className="text-left py-4 px-4 text-sm font-bold">
                 (
-                {formatPrice(totals.transfer, PriceFormat.CURRENCY_NO_DECIMALS)}
+                {showPercentage
+                  ? "100.0%"
+                  : formatPrice(
+                      totals.transfer,
+                      PriceFormat.CURRENCY_NO_DECIMALS,
+                    )}
                 )
               </td>
               <td className={`text-left py-4 px-4 text-sm font-bold`}>
-                {formatPrice(totals.net, PriceFormat.CURRENCY_NO_DECIMALS)}
+                {showPercentage
+                  ? "100.0%"
+                  : formatPrice(totals.net, PriceFormat.CURRENCY_NO_DECIMALS)}
               </td>
             </tr>
           </tfoot>

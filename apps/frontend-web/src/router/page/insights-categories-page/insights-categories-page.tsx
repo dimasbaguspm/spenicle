@@ -1,11 +1,17 @@
 import { useApiInsightsCategoriesSummaryQuery } from "@/hooks/use-api";
-import { PageContent, useMobileBreakpoint } from "@dimasbaguspm/versaur";
+import {
+  PageContent,
+  SwitchInput,
+  useMobileBreakpoint,
+} from "@dimasbaguspm/versaur";
 import { useInsightFilter } from "@/hooks/use-filter-state/built/use-insight-filter";
+import { useState } from "react";
 import { CategorySummaryTable } from "./components";
 
 const InsightsCategoriesPage = () => {
   const isMobile = useMobileBreakpoint();
   const { appliedFilters } = useInsightFilter();
+  const [showPercentage, setShowPercentage] = useState(false);
 
   const { startDate, endDate } = appliedFilters;
 
@@ -19,7 +25,17 @@ const InsightsCategoriesPage = () => {
       size={isMobile ? "narrow" : "wide"}
       className={isMobile ? "pb-20" : undefined}
     >
-      <CategorySummaryTable categoryData={categorySummary?.data ?? []} />
+      <div className="flex items-center justify-end mb-4">
+        <SwitchInput
+          value={showPercentage}
+          onChange={setShowPercentage}
+          label={showPercentage ? "Percentage" : "Value"}
+        />
+      </div>
+      <CategorySummaryTable
+        categoryData={categorySummary?.data ?? []}
+        showPercentage={showPercentage}
+      />
     </PageContent>
   );
 };

@@ -6,11 +6,19 @@ import React from "react";
 
 interface CategorySummaryTableProps {
   categoryData: InsightsCategoryModel["data"];
+  showPercentage?: boolean;
 }
 
 export const CategorySummaryTable = ({
   categoryData,
+  showPercentage = false,
 }: CategorySummaryTableProps) => {
+  const formatDisplayValue = (value: number, total: number) => {
+    if (showPercentage && total > 0) {
+      return ((value / total) * 100).toFixed(1) + "%";
+    }
+    return formatPrice(value, PriceFormat.CURRENCY_NO_DECIMALS);
+  };
   // Group categories by type
   const groupedCategories = (categoryData ?? []).reduce(
     (acc, category) => {
@@ -88,18 +96,18 @@ export const CategorySummaryTable = ({
                       </td>
                       <td className="py-3 px-4">
                         <Text as="small" color="ghost">
-                          {formatPrice(
+                          {formatDisplayValue(
                             category.incomeAmount ?? 0,
-                            PriceFormat.CURRENCY_NO_DECIMALS,
+                            grandTotals.income,
                           )}
                         </Text>
                       </td>
                       <td className="py-3 px-4">
                         <Text as="small" color="ghost">
                           (
-                          {formatPrice(
+                          {formatDisplayValue(
                             Math.abs(category.expenseAmount ?? 0),
-                            PriceFormat.CURRENCY_NO_DECIMALS,
+                            grandTotals.expense,
                           )}
                           )
                         </Text>
@@ -111,9 +119,9 @@ export const CategorySummaryTable = ({
                       </td>
                       <td className="py-3 px-4">
                         <Text as="small" color="black" fontWeight="medium">
-                          {formatPrice(
+                          {formatDisplayValue(
                             category.net ?? 0,
-                            PriceFormat.CURRENCY_NO_DECIMALS,
+                            grandTotals.net,
                           )}
                         </Text>
                       </td>
@@ -128,18 +136,18 @@ export const CategorySummaryTable = ({
                   </td>
                   <td className="py-3 px-4 text-sm font-semibold">
                     <Text as="small" color="black" fontWeight="medium">
-                      {formatPrice(
+                      {formatDisplayValue(
                         typeTotals.income,
-                        PriceFormat.CURRENCY_NO_DECIMALS,
+                        grandTotals.income,
                       )}
                     </Text>
                   </td>
                   <td className="py-3 px-4 text-sm font-semibold">
                     <Text as="small" color="black" fontWeight="medium">
                       (
-                      {formatPrice(
+                      {formatDisplayValue(
                         typeTotals.expense,
-                        PriceFormat.CURRENCY_NO_DECIMALS,
+                        grandTotals.expense,
                       )}
                       )
                     </Text>
@@ -151,10 +159,7 @@ export const CategorySummaryTable = ({
                   </td>
                   <td className="py-3 px-4 text-sm font-semibold">
                     <Text as="small" color="black" fontWeight="medium">
-                      {formatPrice(
-                        typeTotals.net,
-                        PriceFormat.CURRENCY_NO_DECIMALS,
-                      )}
+                      {formatDisplayValue(typeTotals.net, grandTotals.net)}
                     </Text>
                   </td>
                 </tr>
@@ -169,20 +174,28 @@ export const CategorySummaryTable = ({
             </td>
             <td className="py-4 px-4 text-sm font-bold">
               <Text as="small" color="black" fontWeight="medium">
-                {formatPrice(
-                  grandTotals.income,
-                  PriceFormat.CURRENCY_NO_DECIMALS,
-                )}
+                {showPercentage
+                  ? "100.0%"
+                  : formatPrice(
+                      grandTotals.income,
+                      PriceFormat.CURRENCY_NO_DECIMALS,
+                    )}
               </Text>
             </td>
             <td className="py-4 px-4 text-sm font-bold">
               <Text as="small" color="black" fontWeight="medium">
-                (
-                {formatPrice(
-                  grandTotals.expense,
-                  PriceFormat.CURRENCY_NO_DECIMALS,
+                {showPercentage ? (
+                  "100.0%"
+                ) : (
+                  <>
+                    (
+                    {formatPrice(
+                      grandTotals.expense,
+                      PriceFormat.CURRENCY_NO_DECIMALS,
+                    )}
+                    )
+                  </>
                 )}
-                )
               </Text>
             </td>
             <td className="py-4 px-4 text-sm font-bold">
@@ -192,7 +205,12 @@ export const CategorySummaryTable = ({
             </td>
             <td className="py-4 px-4 text-sm font-bold">
               <Text as="small" color="black" fontWeight="medium">
-                {formatPrice(grandTotals.net, PriceFormat.CURRENCY_NO_DECIMALS)}
+                {showPercentage
+                  ? "100.0%"
+                  : formatPrice(
+                      grandTotals.net,
+                      PriceFormat.CURRENCY_NO_DECIMALS,
+                    )}
               </Text>
             </td>
           </tr>
