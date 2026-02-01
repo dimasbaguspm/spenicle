@@ -20,8 +20,16 @@ interface AccountCardProps extends Omit<CardProps, "onClick"> {
 
 export const AccountCard: FC<AccountCardProps> = (props) => {
   const { account, onClick, hideGroup, hideAmount, hideType, ...rest } = props;
-  const { formattedAmount, name, initialName, type, variant } =
-    formatAccountData(account);
+  const {
+    formattedAmount,
+    name,
+    initialName,
+    type,
+    variant,
+    hasBudget,
+    budgetIntent,
+    budgetText,
+  } = formatAccountData(account);
 
   const handleClick = () => {
     onClick?.(account);
@@ -36,6 +44,9 @@ export const AccountCard: FC<AccountCardProps> = (props) => {
         <BadgeGroup>
           <When condition={!hideType}>
             <Badge color={variant}>{type}</Badge>
+          </When>
+          <When condition={hasBudget}>
+            <Badge color={budgetIntent}>{budgetText}</Badge>
           </When>
         </BadgeGroup>
       }

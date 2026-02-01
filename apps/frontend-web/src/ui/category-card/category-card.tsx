@@ -24,7 +24,15 @@ export const CategoryCard: FC<CategoryCardProps> = ({
   hideType,
   ...rest
 }) => {
-  const { variant, name, initialName, type } = formatCategoryData(category);
+  const {
+    variant,
+    name,
+    initialName,
+    type,
+    hasBudget,
+    budgetIntent,
+    budgetText,
+  } = formatCategoryData(category);
 
   const handleClick = () => {
     onClick?.(category);
@@ -39,6 +47,9 @@ export const CategoryCard: FC<CategoryCardProps> = ({
         <BadgeGroup>
           <When condition={!hideType}>
             <Badge color={variant}>{type}</Badge>
+          </When>
+          <When condition={hasBudget}>
+            <Badge color={budgetIntent}>{budgetText}</Badge>
           </When>
         </BadgeGroup>
       }
