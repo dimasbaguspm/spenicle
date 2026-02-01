@@ -1,7 +1,7 @@
 import { formatDate, DateFormat } from "@/lib/format-date";
 import { formatPrice, PriceFormat } from "@/lib/format-price";
 import type { InsightsTransactionModel } from "@/types/schemas";
-import { Heading } from "@dimasbaguspm/versaur";
+import { Text } from "@dimasbaguspm/versaur";
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { useMemo } from "react";
@@ -168,15 +168,6 @@ const calculateTotals = (tableData: ProcessedRow[]): Totals => {
   );
 };
 
-/**
- * Pure function to format accounting values with parentheses for negatives
- */
-const formatAccountingValue = (value: number): string => {
-  const absValue = Math.abs(value);
-  const formatted = formatPrice(absValue, PriceFormat.CURRENCY_NO_DECIMALS);
-  return value < 0 ? `(${formatted})` : formatted;
-};
-
 export const HistoricalBreakdownTable = ({
   transactionData,
   frequency,
@@ -195,72 +186,85 @@ export const HistoricalBreakdownTable = ({
   const totals = useMemo(() => calculateTotals(tableData), [tableData]);
 
   return (
-    <div>
-      <div className="mb-4">
-        <Heading as="h5">Historical Breakdown</Heading>
-        <p className="text-xs sm:text-sm text-gray-500 mt-1">
-          Income and expense breakdown by period
-        </p>
-      </div>
-
-      <div className="overflow-x-auto">
+    <div className="space-y-6">
+      <div className="overflow-x-auto border border-border rounded-lg">
         <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+          <thead className="border-b border-border">
+            <tr>
+              <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
                 {periodLabel}
               </th>
-              <th className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+              <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
                 Income
               </th>
-              <th className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+              <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
                 Expense
               </th>
-              <th className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+              <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
                 Transfer
               </th>
-              <th className="text-right py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+              <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
                 Net
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {tableData.map((row, idx) => (
-              <tr key={`${row.date}-${idx}`} className="bg-white">
-                <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">
-                  {row.period}
+          <tbody className="divide-y divide-border">
+            {tableData.map((row) => (
+              <tr key={row.date}>
+                <td className="py-3 px-4 whitespace-nowrap">
+                  <Text as="small" color="black">
+                    {row.period}
+                  </Text>
                 </td>
-                <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
-                  {formatPrice(row.income, PriceFormat.CURRENCY_NO_DECIMALS)}
+                <td className="py-3 px-4">
+                  <Text as="small" color="ghost">
+                    {formatPrice(row.income, PriceFormat.CURRENCY_NO_DECIMALS)}
+                  </Text>
                 </td>
-                <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
-                  {formatAccountingValue(-row.expense)}
+                <td className="py-3 px-4">
+                  <Text as="small" color="ghost">
+                    (
+                    {formatPrice(row.expense, PriceFormat.CURRENCY_NO_DECIMALS)}
+                    )
+                  </Text>
                 </td>
-                <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
-                  {formatAccountingValue(-row.transfer)}
+                <td className="py-3 px-4">
+                  <Text as="small" color="ghost">
+                    (
+                    {formatPrice(
+                      row.transfer,
+                      PriceFormat.CURRENCY_NO_DECIMALS,
+                    )}
+                    )
+                  </Text>
                 </td>
-                <td className="text-right py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium tabular-nums text-gray-900">
-                  {formatAccountingValue(row.net)}
+                <td className="py-3 px-4">
+                  <Text as="small" color="black" fontWeight="medium">
+                    {formatPrice(row.net, PriceFormat.CURRENCY_NO_DECIMALS)}
+                  </Text>
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-orange-200">
-              <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold text-gray-900">
+            <tr className="border-t border-border">
+              <td className="py-4 px-4 text-sm font-bold text-foreground">
                 Total
               </td>
-              <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
+              <td className="text-left py-4 px-4 text-sm font-bold ">
                 {formatPrice(totals.income, PriceFormat.CURRENCY_NO_DECIMALS)}
               </td>
-              <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
-                {formatAccountingValue(-totals.expense)}
+              <td className="text-left py-4 px-4 text-sm font-bold">
+                ({formatPrice(totals.expense, PriceFormat.CURRENCY_NO_DECIMALS)}
+                )
               </td>
-              <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
-                {formatAccountingValue(-totals.transfer)}
+              <td className="text-left py-4 px-4 text-sm font-bold">
+                (
+                {formatPrice(totals.transfer, PriceFormat.CURRENCY_NO_DECIMALS)}
+                )
               </td>
-              <td className="text-right py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
-                {formatAccountingValue(totals.net)}
+              <td className={`text-left py-4 px-4 text-sm font-bold`}>
+                {formatPrice(totals.net, PriceFormat.CURRENCY_NO_DECIMALS)}
               </td>
             </tr>
           </tfoot>
