@@ -97,7 +97,7 @@ export const useApiUpdateTransactionTemplate = () => {
   const queryClient = useQueryClient();
   return useApiMutate<TransactionTemplateModel, TransactionTemplateUpdateModel>(
     {
-      path: ENDPOINTS.TRANSACTION_TEMPLATES.BY_ID(":id"),
+      path: ENDPOINTS.TRANSACTION_TEMPLATES.BY_ID(":templateId"),
       method: "PATCH",
       onSuccess: (data) => {
         queryClient.invalidateQueries({
@@ -120,7 +120,7 @@ export const useApiUpdateTransactionTemplate = () => {
 export const useApiDeleteTransactionTemplate = () => {
   const queryClient = useQueryClient();
   return useApiMutate<void, TransactionTemplateDeleteModel>({
-    path: ENDPOINTS.TRANSACTION_TEMPLATES.BY_ID(":id"),
+    path: ENDPOINTS.TRANSACTION_TEMPLATES.BY_ID(":templateId"),
     method: "DELETE",
     onSuccess: () => {
       queryClient.invalidateQueries({

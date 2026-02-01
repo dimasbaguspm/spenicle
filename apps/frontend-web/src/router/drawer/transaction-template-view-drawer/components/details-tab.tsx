@@ -42,13 +42,18 @@ export const DetailsTab: FC<DetailsTabProps> = ({ data }) => {
   } = formatTransactionTemplateData(data);
 
   const handleOnEditClick = () => {
-    openDrawer(DRAWER_ROUTES.TRANSACTION_RECURRING_UPDATE, {
-      transactionTemplateId: data.id,
-    });
+    openDrawer(
+      isInstallment
+        ? DRAWER_ROUTES.TRANSACTION_INSTALLMENT_UPDATE
+        : DRAWER_ROUTES.TRANSACTION_RECURRING_UPDATE,
+      {
+        transactionTemplateId: data.id,
+      },
+    );
   };
 
   const handleDeleteClick = () => {
-    openModal(MODAL_ROUTES.TRANSACTION_DELETE_CONFIRMATION, {
+    openModal(MODAL_ROUTES.TRANSACTION_TEMPLATE_DELETE_CONFIRMATION, {
       transactionTemplateId: data.id,
     });
   };

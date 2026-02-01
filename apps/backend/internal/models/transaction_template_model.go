@@ -20,7 +20,7 @@ type TransactionTemplateModel struct {
 	Recurrence         string                            `json:"recurrence" enum:"none,weekly,monthly,yearly" doc:"Recurrence pattern"`
 	StartDate          time.Time                         `json:"startDate" doc:"Template start date" format:"date-time"`
 	EndDate            *time.Time                        `json:"endDate" doc:"Template end date" format:"date-time"`
-	NextDueAt          *time.Time                        `json:"nextDueAt,omitempty" doc:"Next due date for recurring transactions" format:"date-time"`
+	NextDueAt          *time.Time                        `json:"nextDueAt" doc:"Next due date for recurring transactions" format:"date-time"`
 	LastExecutedAt     *time.Time                        `json:"lastExecutedAt,omitempty" doc:"Last execution timestamp" format:"date-time"`
 	RecurringStats     TransactionTemplateRecurringStats `json:"recurringStats" doc:"Recurring transaction statistics"`
 	CreatedAt          time.Time                         `json:"createdAt" doc:"Creation timestamp" format:"date-time"`

@@ -6,11 +6,13 @@ import { LogoutConfirmationModal } from "./logout-confirmation-modal";
 import { AccountDeleteConfirmationModal } from "./account-delete-confirmation-modal";
 import { CategoryDeleteConfirmationModal } from "./category-delete-confirmation-modal";
 import { TransactionDeleteConfirmationModal } from "./transaction-delete-confirmation-modal";
+import { TransactionTemplateDeleteConfirmationModal } from "./transaction-template-delete-confirmation-modal";
 
 interface ModalParams {
   accountId?: number;
   categoryId?: number;
   transactionId?: number;
+  transactionTemplateId?: number;
 }
 
 interface ModalState {
@@ -45,6 +47,12 @@ export const ModalRouter = () => {
         hasParam("transactionId") && (
           <TransactionDeleteConfirmationModal
             transactionId={params.transactionId!}
+          />
+        )}
+      {is(MODAL_ROUTES.TRANSACTION_TEMPLATE_DELETE_CONFIRMATION) &&
+        hasParam("transactionTemplateId") && (
+          <TransactionTemplateDeleteConfirmationModal
+            transactionTemplateId={params.transactionTemplateId!}
           />
         )}
     </Modal>
