@@ -1,13 +1,8 @@
 import { formatPrice, PriceFormat } from "@/lib/format-price";
 import type { InsightsAccountsModel } from "@/types/schemas";
+import { Text } from "@dimasbaguspm/versaur";
 import { startCase } from "lodash";
 import React from "react";
-
-const formatAccountingValue = (value: number): string => {
-  const absValue = Math.abs(value);
-  const formatted = formatPrice(absValue, PriceFormat.CURRENCY_NO_DECIMALS);
-  return value < 0 ? `(${formatted})` : formatted;
-};
 
 interface AccountSummaryTableProps {
   accountData: InsightsAccountsModel["data"];
@@ -45,85 +40,122 @@ export const AccountSummaryTable = ({
   const grandTotals = calculateTotals(accountData ?? []);
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto border border-border rounded-lg">
       <table className="w-full">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+        <thead className="border-b border-border">
+          <tr>
+            <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
               Account
             </th>
-            <th className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+            <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
               Income
             </th>
-            <th className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+            <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
               Expense
             </th>
-            <th className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+            <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
               Count
             </th>
-            <th className="text-right py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+            <th className="text-left py-4 px-4 text-sm font-semibold text-foreground whitespace-nowrap">
               Net
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-border">
           {Object.entries(groupedAccounts).map(([type, accounts]) => {
             const typeTotals = calculateTotals(accounts);
 
             return (
               <React.Fragment key={type}>
-                <tr className="bg-gray-50">
+                {/* Type Header */}
+                <tr>
                   <td
                     colSpan={5}
-                    className="py-2 px-3 sm:px-4 font-semibold text-gray-800 text-xs uppercase"
+                    className="py-3 px-4 font-semibold text-foreground text-xs uppercase tracking-wide"
                   >
                     {type}
                   </td>
                 </tr>
+
+                {/* Account Rows */}
                 {accounts?.map((account, idx) => {
                   return (
-                    <tr key={`${account.id}-${idx}`} className="bg-white">
-                      <td className="py-3 px-3 sm:px-4 sm:pl-8">
-                        <span className="text-xs sm:text-sm font-medium text-gray-900">
+                    <tr key={`${account.id}-${idx}`}>
+                      <td className="py-3 px-4">
+                        <Text as="small" color="black">
                           {account.name}
-                        </span>
+                        </Text>
                       </td>
-                      <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
-                        {formatPrice(
-                          account.incomeAmount ?? 0,
-                          PriceFormat.CURRENCY_NO_DECIMALS,
-                        )}
+                      <td className="py-3 px-4">
+                        <Text as="small" color="ghost">
+                          {formatPrice(
+                            account.incomeAmount ?? 0,
+                            PriceFormat.CURRENCY_NO_DECIMALS,
+                          )}
+                        </Text>
                       </td>
-                      <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm tabular-nums text-gray-900">
-                        {formatAccountingValue(-(account.expenseAmount ?? 0))}
+                      <td className="py-3 px-4">
+                        <Text as="small" color="ghost">
+                          (
+                          {formatPrice(
+                            Math.abs(account.expenseAmount ?? 0),
+                            PriceFormat.CURRENCY_NO_DECIMALS,
+                          )}
+                          )
+                        </Text>
                       </td>
-                      <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm text-gray-700">
-                        {account.totalCount ?? 0}
+                      <td className="py-3 px-4">
+                        <Text as="small" color="ghost">
+                          {account.totalCount ?? 0}
+                        </Text>
                       </td>
-                      <td className="text-right py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium tabular-nums text-gray-900">
-                        {formatAccountingValue(account.net ?? 0)}
+                      <td className="py-3 px-4">
+                        <Text as="small" color="black" fontWeight="medium">
+                          {formatPrice(
+                            account.net ?? 0,
+                            PriceFormat.CURRENCY_NO_DECIMALS,
+                          )}
+                        </Text>
                       </td>
                     </tr>
                   );
                 })}
-                <tr className="bg-gray-50">
-                  <td className="py-2 px-3 sm:px-4 sm:pl-8 text-xs sm:text-sm font-semibold text-gray-900">
+
+                {/* Type Subtotal */}
+                <tr className="border-t border-border">
+                  <td className="py-3 px-4 text-sm font-semibold text-foreground">
                     {startCase(type)} Subtotal
                   </td>
-                  <td className="text-right py-2 px-2 sm:px-4 text-xs sm:text-sm font-semibold tabular-nums text-gray-900">
-                    {formatPrice(
-                      typeTotals.income,
-                      PriceFormat.CURRENCY_NO_DECIMALS,
-                    )}
+                  <td className="py-3 px-4 text-sm font-semibold">
+                    <Text as="small" color="black" fontWeight="medium">
+                      {formatPrice(
+                        typeTotals.income,
+                        PriceFormat.CURRENCY_NO_DECIMALS,
+                      )}
+                    </Text>
                   </td>
-                  <td className="text-right py-2 px-2 sm:px-4 text-xs sm:text-sm font-semibold tabular-nums text-gray-900">
-                    {formatAccountingValue(-typeTotals.expense)}
+                  <td className="py-3 px-4 text-sm font-semibold">
+                    <Text as="small" color="black" fontWeight="medium">
+                      (
+                      {formatPrice(
+                        typeTotals.expense,
+                        PriceFormat.CURRENCY_NO_DECIMALS,
+                      )}
+                      )
+                    </Text>
                   </td>
-                  <td className="text-right py-2 px-2 sm:px-4 text-xs sm:text-sm text-gray-700">
-                    —
+                  <td className="py-3 px-4 text-sm font-semibold">
+                    <Text as="small" color="ghost">
+                      —
+                    </Text>
                   </td>
-                  <td className="text-right py-2 px-3 sm:px-4 text-xs sm:text-sm font-semibold tabular-nums text-gray-900">
-                    {formatAccountingValue(typeTotals.net)}
+                  <td className="py-3 px-4 text-sm font-semibold">
+                    <Text as="small" color="black" fontWeight="medium">
+                      {formatPrice(
+                        typeTotals.net,
+                        PriceFormat.CURRENCY_NO_DECIMALS,
+                      )}
+                    </Text>
                   </td>
                 </tr>
               </React.Fragment>
@@ -131,24 +163,37 @@ export const AccountSummaryTable = ({
           })}
         </tbody>
         <tfoot>
-          <tr className="border-t-2 border-orange-200">
-            <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold text-gray-900">
+          <tr className="border-t-2 border-border">
+            <td className="py-4 px-4 text-sm font-bold text-foreground">
               Grand Total
             </td>
-            <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
-              {formatPrice(
-                grandTotals.income,
-                PriceFormat.CURRENCY_NO_DECIMALS,
-              )}
+            <td className="py-4 px-4 text-sm font-bold">
+              <Text as="small" color="black" fontWeight="medium">
+                {formatPrice(
+                  grandTotals.income,
+                  PriceFormat.CURRENCY_NO_DECIMALS,
+                )}
+              </Text>
             </td>
-            <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
-              {formatAccountingValue(-grandTotals.expense)}
+            <td className="py-4 px-4 text-sm font-bold">
+              <Text as="small" color="black" fontWeight="medium">
+                (
+                {formatPrice(
+                  grandTotals.expense,
+                  PriceFormat.CURRENCY_NO_DECIMALS,
+                )}
+                )
+              </Text>
             </td>
-            <td className="text-right py-3 px-2 sm:px-4 text-xs sm:text-sm text-gray-700">
-              —
+            <td className="py-4 px-4 text-sm font-bold">
+              <Text as="small" color="ghost">
+                —
+              </Text>
             </td>
-            <td className="text-right py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tabular-nums text-gray-900">
-              {formatAccountingValue(grandTotals.net)}
+            <td className="py-4 px-4 text-sm font-bold">
+              <Text as="small" color="black" fontWeight="medium">
+                {formatPrice(grandTotals.net, PriceFormat.CURRENCY_NO_DECIMALS)}
+              </Text>
             </td>
           </tr>
         </tfoot>
