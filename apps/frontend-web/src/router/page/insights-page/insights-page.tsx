@@ -1,29 +1,35 @@
-import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { PAGE_ROUTES } from "@/constant/page-routes";
+import { useApiInsightsTransactionsSummaryQuery } from "@/hooks/use-api";
 import { useInsightFilter } from "@/hooks/use-filter-state";
-import { DateFormat, formatDate } from "@/lib/format-date";
-import { useDrawerProvider } from "@/providers/drawer-provider";
 import {
-  Button,
-  ButtonIcon,
-  Icon,
-  PageHeader,
+  PageContent,
   PageLayout,
   PageLoader,
-  Tabs,
+  useMobileBreakpoint,
 } from "@dimasbaguspm/versaur";
-import { FilterIcon } from "lucide-react";
 import { Suspense } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
+import {
+  InsightsBalanceCard,
+  InsightsTabs,
+  InsightsDateRangeSelector,
+  InsightsHeader,
+} from "./components";
 
 const InsightsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { openDrawer } = useDrawerProvider();
+  const isMobile = useMobileBreakpoint();
 
   const { appliedFilters } = useInsightFilter();
 
-  const { startDate, endDate } = appliedFilters;
+  const { startDate, endDate, frequency } = appliedFilters;
+
+  const [transactionSummary] = useApiInsightsTransactionsSummaryQuery({
+    startDate,
+    endDate,
+    frequency,
+  });
 
   const getActiveTab = () => {
     const path = location.pathname;
@@ -57,42 +63,21 @@ const InsightsPage = () => {
     }
   };
 
-  const handleOpenFilterDrawer = () => {
-    openDrawer(DRAWER_ROUTES.INSIGHTS_FILTER);
-  };
-
   return (
     <PageLayout>
       <PageLayout.HeaderRegion>
-        <PageHeader
-          title="Insights"
-          subtitle={`${formatDate(startDate, DateFormat.MEDIUM_DATE)} - ${formatDate(endDate, DateFormat.MEDIUM_DATE)}`}
-          size="wide"
-          tabs={
-            <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
-              <Tabs.Trigger value="accounts">Accounts</Tabs.Trigger>
-              <Tabs.Trigger value="categories">Categories</Tabs.Trigger>
-            </Tabs>
-          }
-          actions={
-            <Button variant="outline" onClick={handleOpenFilterDrawer}>
-              <Icon as={FilterIcon} color="inherit" size="sm" />
-              Filter
-            </Button>
-          }
-          mobileActions={
-            <ButtonIcon
-              as={FilterIcon}
-              variant="outline"
-              aria-label="Filter"
-              onClick={handleOpenFilterDrawer}
-            />
-          }
-        />
+        <InsightsHeader />
       </PageLayout.HeaderRegion>
       <PageLayout.ContentRegion>
         <Suspense fallback={<PageLoader />}>
+          <PageContent size={isMobile ? "narrow" : "wide"} className="pb-4">
+            <InsightsBalanceCard
+              summaryTransactions={transactionSummary?.data ?? []}
+            />
+            <InsightsTabs activeTab={activeTab} onTabChange={handleTabChange} />
+            <InsightsDateRangeSelector />
+          </PageContent>
+
           <Outlet />
         </Suspense>
       </PageLayout.ContentRegion>

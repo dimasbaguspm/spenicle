@@ -48,36 +48,140 @@ export const transactionFilterModelKeys = Array.from(
   transactionFilterModel.keys(),
 ) as (keyof TransactionFilterModel)[];
 
+// Validation guard functions
+const isValidNumber = (value: any): value is number => {
+  return typeof value === "number" && !isNaN(value) && isFinite(value);
+};
+
+const isValidPositiveNumber = (value: any): value is number => {
+  return isValidNumber(value) && value > 0;
+};
+
+const isValidPageNumber = (value: any): value is number => {
+  return isValidPositiveNumber(value) && value >= 1;
+};
+
+const isValidPageSize = (value: any): value is number => {
+  return isValidPositiveNumber(value) && value >= 1 && value <= 100;
+};
+
+const isValidSortBy = (
+  value: any,
+): value is TransactionSearchModel["sortBy"] => {
+  const validSortBy = [
+    "id",
+    "type",
+    "date",
+    "amount",
+    "createdAt",
+    "updatedAt",
+  ];
+  return typeof value === "string" && validSortBy.includes(value);
+};
+
+const isValidSortOrder = (
+  value: any,
+): value is TransactionSearchModel["sortOrder"] => {
+  return value === "asc" || value === "desc";
+};
+
+const isValidTransactionType = (
+  value: any,
+): value is "expense" | "income" | "transfer" => {
+  const validTypes = ["expense", "income", "transfer"];
+  return typeof value === "string" && validTypes.includes(value);
+};
+
+const isValidDateString = (value: any): value is string => {
+  return typeof value === "string" && !isNaN(Date.parse(value));
+};
+
+const isValidIdArray = (value: any): value is number[] => {
+  return (
+    Array.isArray(value) && value.every((item) => isValidPositiveNumber(item))
+  );
+};
+
+const isValidTypeArray = (
+  value: any,
+): value is TransactionSearchModel["type"] => {
+  return (
+    Array.isArray(value) && value.every((item) => isValidTransactionType(item))
+  );
+};
+
 export const useTransactionFilter = (
   opts?: UseFilterStateOptions<TransactionFilterModel>,
 ): UseTransactionFilterReturn => {
   const filters = useFilterState<TransactionFilterModel>(opts);
 
   const appliedFilters: TransactionFilterModel = {
-    id: filters.getAll("id").map(Number),
-    type: filters.getAll("type") as TransactionSearchModel["type"],
-    startDate: filters.getSingle("startDate"),
-    endDate: filters.getSingle("endDate"),
-    minAmount: filters.getSingle("minAmount")
-      ? Number(filters.getSingle("minAmount"))
-      : undefined,
-    maxAmount: filters.getSingle("maxAmount")
-      ? Number(filters.getSingle("maxAmount"))
-      : undefined,
-    accountIds: filters.getAll("accountIds").map(Number),
-    destinationAccountIds: filters.getAll("destinationAccountIds").map(Number),
-    categoryIds: filters.getAll("categoryIds").map(Number),
-    tagIds: filters.getAll("tagIds").map(Number),
-    sortBy: filters.getSingle("sortBy") as TransactionSearchModel["sortBy"],
-    sortOrder: filters.getSingle(
-      "sortOrder",
-    ) as TransactionSearchModel["sortOrder"],
-    pageNumber: filters.getSingle("pageNumber")
-      ? Number(filters.getSingle("pageNumber"))
-      : undefined,
-    pageSize: filters.getSingle("pageSize")
-      ? Number(filters.getSingle("pageSize"))
-      : undefined,
+    id: (() => {
+      const ids = filters.getAll("id").map(Number);
+      return isValidIdArray(ids) ? ids : undefined;
+    })(),
+    type: (() => {
+      const types = filters.getAll("type");
+      return isValidTypeArray(types)
+        ? (types as TransactionSearchModel["type"])
+        : undefined;
+    })(),
+    startDate: (() => {
+      const date = filters.getSingle("startDate");
+      return isValidDateString(date) ? date : undefined;
+    })(),
+    endDate: (() => {
+      const date = filters.getSingle("endDate");
+      return isValidDateString(date) ? date : undefined;
+    })(),
+    minAmount: (() => {
+      const amount = filters.getSingle("minAmount");
+      const numAmount = amount ? Number(amount) : undefined;
+      return isValidNumber(numAmount) && numAmount >= 0 ? numAmount : undefined;
+    })(),
+    maxAmount: (() => {
+      const amount = filters.getSingle("maxAmount");
+      const numAmount = amount ? Number(amount) : undefined;
+      return isValidNumber(numAmount) && numAmount >= 0 ? numAmount : undefined;
+    })(),
+    accountIds: (() => {
+      const ids = filters.getAll("accountIds").map(Number);
+      return isValidIdArray(ids) ? ids : undefined;
+    })(),
+    destinationAccountIds: (() => {
+      const ids = filters.getAll("destinationAccountIds").map(Number);
+      return isValidIdArray(ids) ? ids : undefined;
+    })(),
+    categoryIds: (() => {
+      const ids = filters.getAll("categoryIds").map(Number);
+      return isValidIdArray(ids) ? ids : undefined;
+    })(),
+    tagIds: (() => {
+      const ids = filters.getAll("tagIds").map(Number);
+      return isValidIdArray(ids) ? ids : undefined;
+    })(),
+    sortBy: (() => {
+      const sortBy = filters.getSingle("sortBy");
+      return isValidSortBy(sortBy)
+        ? (sortBy as TransactionSearchModel["sortBy"])
+        : "date";
+    })(),
+    sortOrder: (() => {
+      const sortOrder = filters.getSingle("sortOrder");
+      return isValidSortOrder(sortOrder)
+        ? (sortOrder as TransactionSearchModel["sortOrder"])
+        : "desc";
+    })(),
+    pageNumber: (() => {
+      const page = filters.getSingle("pageNumber");
+      const numPage = page ? Number(page) : undefined;
+      return isValidPageNumber(numPage) ? numPage : 1;
+    })(),
+    pageSize: (() => {
+      const size = filters.getSingle("pageSize");
+      const numSize = size ? Number(size) : undefined;
+      return isValidPageSize(numSize) ? numSize : 25;
+    })(),
   };
 
   const humanizedFilters = transactionFilterModelKeys.reduce(

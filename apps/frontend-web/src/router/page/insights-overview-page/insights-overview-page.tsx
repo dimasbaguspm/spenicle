@@ -1,7 +1,7 @@
 import { useApiInsightsTransactionsSummaryQuery } from "@/hooks/use-api";
 import { PageContent, useMobileBreakpoint } from "@dimasbaguspm/versaur";
 import { useInsightFilter } from "@/hooks/use-filter-state/built/use-insight-filter";
-import { HistoricalBreakdownTable, InsightsBalanceCard } from "./components";
+import { HistoricalBreakdownTable } from "./components";
 
 const InsightsOverviewPage = () => {
   const isMobile = useMobileBreakpoint();
@@ -16,40 +16,16 @@ const InsightsOverviewPage = () => {
       frequency,
     });
 
-  const totalIncome =
-    transactionSummary?.data?.reduce(
-      (sum, item) => sum + item.incomeAmount,
-      0,
-    ) ?? 0;
-  const totalExpense =
-    transactionSummary?.data?.reduce(
-      (sum, item) => sum + item.expenseAmount,
-      0,
-    ) ?? 0;
-
   return (
     <PageContent
       size={isMobile ? "narrow" : "wide"}
       className={isMobile ? "pb-20" : undefined}
     >
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-6">
-          <InsightsBalanceCard
-            totalIncome={totalIncome}
-            totalExpense={totalExpense}
-            summaryTransactions={transactionSummary?.data ?? []}
-            isMobile={isMobile}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-6">
-          <HistoricalBreakdownTable
-            transactionData={transactionSummary?.data ?? []}
-            frequency={transactionSummary?.frequency}
-            isLoading={!!isLoadingTransactions}
-          />
-        </div>
-      </div>
+      <HistoricalBreakdownTable
+        transactionData={transactionSummary?.data ?? []}
+        frequency={transactionSummary?.frequency}
+        isLoading={!!isLoadingTransactions}
+      />
     </PageContent>
   );
 };
