@@ -21,10 +21,14 @@ import { ScheduledTransactionsWidget } from "./components/scheduled-transaction-
 const DashboardPage = () => {
   const isMobile = useMobileBreakpoint();
 
+  // Default to last semester (current month + past 5 months)
+  const startDate = dayjs().subtract(5, "month").startOf("month").toISOString();
+  const endDate = dayjs().endOf("month").toISOString();
+
   const [summaryTransactions] = useApiInsightsTransactionsSummaryQuery({
     frequency: "monthly",
-    startDate: dayjs().subtract(5, "month").startOf("month").toISOString(),
-    endDate: dayjs().endOf("month").toISOString(),
+    startDate,
+    endDate,
   });
   const [transactions] = useApiTransactionsPaginatedQuery({
     pageSize: 5,
@@ -34,19 +38,6 @@ const DashboardPage = () => {
 
   const [transactionViewMode, setTransactionViewMode] =
     useState<DashboardTransactionViewMode>(DashboardTransactionViewMode.Recent);
-
-  const totals = useMemo(() => {
-    if (!summaryTransactions?.data)
-      return { totalIncome: 0, totalExpense: 0, netBalance: 0 };
-    let totalIncome = 0;
-    let totalExpense = 0;
-    for (const item of summaryTransactions.data) {
-      totalIncome += item.incomeAmount ?? 0;
-      totalExpense += Math.abs(item.expenseAmount ?? 0);
-    }
-    const netBalance = totalIncome - totalExpense;
-    return { totalIncome, totalExpense, netBalance };
-  }, [summaryTransactions]);
 
   const currentMonthSummary = useMemo(() => {
     if (
@@ -79,10 +70,10 @@ const DashboardPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               <NetBalanceCard
-                balance={totals.netBalance}
-                totalIncome={totals.totalIncome}
-                totalExpense={totals.totalExpense}
                 summaryTransactions={summaryTransactions?.data ?? []}
+                startDate={startDate}
+                endDate={endDate}
+                frequency="monthly"
                 isMobile={isMobile}
               />
               <ThisMonthSummaryCards

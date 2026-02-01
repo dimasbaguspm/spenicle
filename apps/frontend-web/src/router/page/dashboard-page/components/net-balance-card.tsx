@@ -1,6 +1,11 @@
 import { formatPrice, PriceFormat } from "@/lib/format-price";
 import type { InsightsTransactionModel } from "@/types/schemas";
-import { Badge } from "@dimasbaguspm/versaur";
+import {
+  Badge,
+  Heading,
+  Text,
+  useMobileBreakpoint,
+} from "@dimasbaguspm/versaur";
 import { cx } from "class-variance-authority";
 import dayjs from "dayjs";
 import { useMemo } from "react";
@@ -12,22 +17,53 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { DateFormat, formatDate } from "@/lib/format-date";
+import { When } from "@/lib/when";
 
 interface NetBalanceCardProps {
-  balance: number;
-  totalIncome: number;
-  totalExpense: number;
   summaryTransactions: InsightsTransactionModel["data"];
+  startDate: string;
+  endDate: string;
+  frequency?: string;
   isMobile?: boolean;
 }
 
+const formatPeriodLabel = (period: string, frequency: string) => {
+  switch (frequency) {
+    case "daily":
+      return dayjs(period).format("MMM DD");
+    case "weekly":
+      // Handle ISO week format like "2026-W09"
+      const weekMatch = period.match(/-W(\d+)$/);
+      return weekMatch ? `W${weekMatch[1]}` : period;
+    case "monthly":
+      return dayjs(period).format("MMM");
+    case "yearly":
+      return period; // Already in YYYY format
+    default:
+      return dayjs(period).format("MMM");
+  }
+};
+
 export const NetBalanceCard = ({
-  balance,
-  totalIncome,
-  totalExpense,
-  summaryTransactions,
+  summaryTransactions = [],
+  startDate,
+  endDate,
+  frequency = "monthly",
   isMobile,
 }: NetBalanceCardProps) => {
+  const isMobileBreakpoint = useMobileBreakpoint();
+  const finalIsMobile = isMobile ?? isMobileBreakpoint;
+
+  const totalIncome =
+    summaryTransactions?.reduce((sum, item) => sum + item.incomeAmount, 0) ?? 0;
+  const totalExpense =
+    summaryTransactions?.reduce((sum, item) => sum + item.expenseAmount, 0) ??
+    0;
+
+  const netBalance = totalIncome - totalExpense;
+
+  // Process chart data as cumulative balance
   const chartData = useMemo(() => {
     if (!Array.isArray(summaryTransactions) || summaryTransactions.length === 0)
       return [];
@@ -39,7 +75,7 @@ export const NetBalanceCard = ({
         const net = item.net ?? 0;
 
         return {
-          month: dayjs(item.period).format("MMM"),
+          month: formatPeriodLabel(item.period, frequency),
           income,
           expense,
           net,
@@ -48,103 +84,269 @@ export const NetBalanceCard = ({
       })
       .sort((a, b) => dayjs(a.date).unix() - dayjs(b.date).unix());
 
-    const reversed = [...sorted].reverse();
-    let cumulative = balance;
-    const withRunningBalance = reversed
-      .map((item) => {
-        const runningBalance = cumulative;
-        cumulative -= item.net;
-        return { ...item, runningBalance };
-      })
-      .reverse();
+    let carry = 0;
+    const withRunningBalance = sorted.map((item) => {
+      const runningBalance = carry + item.net;
+      carry = runningBalance;
+      return { ...item, runningBalance };
+    });
 
-    return isMobile ? withRunningBalance.slice(-4) : withRunningBalance;
-  }, [summaryTransactions, isMobile, balance]);
+    return withRunningBalance;
+  }, [summaryTransactions, frequency]);
 
   const percentageChange = useMemo(() => {
-    if (chartData.length < 2) return 0;
-    const current = chartData[chartData.length - 1]?.runningBalance ?? 0;
-    const previous = chartData[chartData.length - 2]?.runningBalance ?? 0;
-    const denominator = Math.abs(previous) || Math.abs(current) || 1;
-    return ((current - previous) / denominator) * 100;
-  }, [chartData]);
+    if (!Array.isArray(summaryTransactions)) return 0;
+
+    // Find periods with actual activity (totalCount > 0)
+    const activePeriods = summaryTransactions.filter(
+      (item) => (item.totalCount ?? 0) > 0,
+    );
+
+    if (activePeriods.length < 2) return 0;
+
+    // Compare the last active period to the previous active period
+    const currentNet = activePeriods[0]?.net ?? 0;
+    const previousNet = activePeriods[1]?.net ?? 0;
+
+    // Avoid division by zero
+    if (previousNet === 0) {
+      return currentNet > 0 ? 100 : currentNet < 0 ? -100 : 0;
+    }
+
+    return ((currentNet - previousNet) / Math.abs(previousNet)) * 100;
+  }, [summaryTransactions]);
 
   return (
-    <div className="bg-primary rounded-2xl p-6 text-white relative overflow-hidden">
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <p className="text-primary-light text-sm font-medium">Balance</p>
-          <p className="text-3xl font-bold mt-1">
-            {formatPrice(balance, PriceFormat.CURRENCY_NO_DECIMALS)}
-          </p>
-          <div className="mt-2 flex items-center space-x-2 text-sm">
-            <Badge
-              color={percentageChange >= 0 ? "secondary" : "primary"}
-              shape="rounded"
-            >
-              {percentageChange >= 0 ? "+" : ""}
-              {percentageChange.toFixed(1)}%
-            </Badge>
-            <span className="text-primary-light text-xs">Monthly change</span>
+    <div className="bg-background">
+      {/* Mobile Layout */}
+      <When condition={finalIsMobile}>
+        <div className="space-y-4">
+          {/* Period and Balance - Top */}
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex flex-col">
+              <Text as="small" color="ghost" transform="uppercase">
+                Period
+              </Text>
+              <Text as="small" color="black" className="whitespace-nowrap">
+                {formatDate(startDate, DateFormat.DAY_MONTH)} -{" "}
+                {formatDate(endDate, DateFormat.DAY_MONTH_YEAR)}
+              </Text>
+            </div>
+            <div className="text-right">
+              <Heading as="h1" color="primary">
+                {formatPrice(netBalance, PriceFormat.CURRENCY_NO_DECIMALS)}
+              </Heading>
+              <div className="flex items-center justify-end gap-2">
+                <Badge
+                  color={percentageChange >= 0 ? "success" : "danger"}
+                  shape="rounded"
+                  className="text-xs"
+                >
+                  {percentageChange >= 0 ? "+" : ""}
+                  {percentageChange.toFixed(1)}%
+                </Badge>
+                <Text as="small" color="gray" className="text-xs">
+                  vs last period
+                </Text>
+              </div>
+            </div>
+          </div>
+
+          {/* Chart - Middle */}
+          <div className={cx("relative", "h-48")}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ right: -10, left: -15 }}>
+                <defs>
+                  <linearGradient
+                    id="balanceGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="5%"
+                      stopColor="var(--color-primary)"
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="var(--color-primary)"
+                      stopOpacity={0.02}
+                    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="2 2"
+                  stroke="var(--color-border)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="month"
+                  stroke="var(--color-border)"
+                  tick={{ fontSize: 12, fill: "var(--color-foreground-light)" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  stroke="var(--color-border)"
+                  tick={{ fontSize: 12, fill: "var(--color-foreground-light)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) =>
+                    formatPrice(value, PriceFormat.COMPACT)
+                  }
+                />
+
+                <Area
+                  type="linear"
+                  dataKey="runningBalance"
+                  stroke="var(--color-primary)"
+                  strokeWidth={2.5}
+                  fill="url(#balanceGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Income & Expense - Bottom */}
+          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+            <div className="flex gap-2 justify-center">
+              <Text as="small" color="ghost" transform="uppercase">
+                Income
+              </Text>
+              <Text as="small" color="black" className="font-semibold">
+                {formatPrice(totalIncome, PriceFormat.CURRENCY_NO_DECIMALS)}
+              </Text>
+            </div>
+            <div className="flex gap-2 justify-center">
+              <Text as="small" color="ghost" transform="uppercase">
+                Expense
+              </Text>
+              <Text as="small" color="black" className="font-semibold">
+                {formatPrice(totalExpense, PriceFormat.CURRENCY_NO_DECIMALS)}
+              </Text>
+            </div>
           </div>
         </div>
-      </div>
+      </When>
 
-      {/* Recharts Area Chart */}
-      <div className={cx("relative mt-4", isMobile ? "h-52" : "h-76")}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={chartData}
-            margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ffffff" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.1)"
-            />
-            <XAxis
-              dataKey="month"
-              stroke="rgba(255,255,255,0.6)"
-              tick={{ fontSize: 11 }}
-            />
-            <YAxis
-              stroke="rgba(255,255,255,0.6)"
-              tick={{ fontSize: 11 }}
-              tickFormatter={(value) => formatPrice(value, PriceFormat.COMPACT)}
-            />
+      {/* Desktop Layout */}
+      <When condition={!finalIsMobile}>
+        <div className="flex items-center justify-between mb-6 gap-4">
+          {/* Left: Period Info */}
+          <div className="flex flex-col gap-1">
+            <Text as="small" color="ghost" transform="uppercase">
+              Period
+            </Text>
+            <Text as="p" color="black">
+              {formatDate(startDate, DateFormat.MEDIUM_DATE)} -{" "}
+              {formatDate(endDate, DateFormat.MEDIUM_DATE)}
+            </Text>
+          </div>
 
-            <Area
-              type="monotone"
-              dataKey="runningBalance"
-              stroke="#ffffff"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorNet)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+          {/* Center: Income & Expense */}
+          <div className="flex gap-4 flex-1 justify-center">
+            <div className="flex flex-col items-center">
+              <Text as="small" color="ghost" transform="uppercase">
+                Income
+              </Text>
+              <Text as="p" color="black" className="font-semibold">
+                {formatPrice(totalIncome, PriceFormat.CURRENCY_NO_DECIMALS)}
+              </Text>
+            </div>
+            <div className="flex flex-col items-center">
+              <Text as="small" color="ghost" transform="uppercase">
+                Expense
+              </Text>
+              <Text as="p" color="black" className="font-semibold">
+                {formatPrice(totalExpense, PriceFormat.CURRENCY_NO_DECIMALS)}
+              </Text>
+            </div>
+          </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white border-opacity-20">
-        <div>
-          <p className="text-primary-light text-xs">Total Income</p>
-          <p className="text-lg font-bold">
-            {formatPrice(totalIncome, PriceFormat.CURRENCY_NO_DECIMALS)}
-          </p>
+          {/* Right: Net Balance */}
+          <div className="text-right flex-shrink-0">
+            <Heading as="h1" color="primary">
+              {formatPrice(netBalance, PriceFormat.CURRENCY_NO_DECIMALS)}
+            </Heading>
+            <div className="flex items-center justify-end gap-2">
+              <Badge
+                color={percentageChange >= 0 ? "success" : "danger"}
+                shape="rounded"
+                className="text-xs"
+              >
+                {percentageChange >= 0 ? "+" : ""}
+                {percentageChange.toFixed(1)}%
+              </Badge>
+              <Text
+                as="small"
+                color="gray"
+                className="text-xs whitespace-nowrap"
+              >
+                vs last period
+              </Text>
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="text-primary-light text-xs">Total Expense</p>
-          <p className="text-lg font-bold">
-            {formatPrice(totalExpense, PriceFormat.CURRENCY_NO_DECIMALS)}
-          </p>
+
+        {/* Desktop Chart */}
+        <div className={cx("relative h-64")}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ right: -10, left: -15 }}>
+              <defs>
+                <linearGradient
+                  id="balanceGradient"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-primary)"
+                    stopOpacity={0.3}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-primary)"
+                    stopOpacity={0.02}
+                  />
+                </linearGradient>
+              </defs>
+              <CartesianGrid
+                strokeDasharray="2 2"
+                stroke="var(--color-border)"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="month"
+                stroke="var(--color-border)"
+                tick={{ fontSize: 12, fill: "var(--color-foreground-light)" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                stroke="var(--color-border)"
+                tick={{ fontSize: 12, fill: "var(--color-foreground-light)" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(value) =>
+                  formatPrice(value, PriceFormat.COMPACT)
+                }
+              />
+
+              <Area
+                type="linear"
+                dataKey="runningBalance"
+                stroke="var(--color-primary)"
+                strokeWidth={2.5}
+                fill="url(#balanceGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-      </div>
+      </When>
     </div>
   );
 };
