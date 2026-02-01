@@ -25,6 +25,8 @@ import {
 } from "./transaction-template-update-drawer";
 import { TransactionTemplateViewDrawer } from "./transaction-template-view-drawer";
 import { TransactionsAllTheTimeDrawer } from "./transactions-all-the-time-drawer";
+import { AccountComparisonDrawer } from "./account-comparison-drawer";
+import { CategoryComparisonDrawer } from "./category-comparison-drawer";
 
 interface DrawerParams {
   accountId?: number;
@@ -77,6 +79,7 @@ export const DrawerRouter = () => {
       {is(DRAWER_ROUTES.ACCOUNT_UPDATE) && hasParam("accountId") && (
         <AccountUpdateDrawer accountId={params.accountId!} />
       )}
+      {is(DRAWER_ROUTES.ACCOUNT_COMPARISON) && <AccountComparisonDrawer />}
       {/** Category */}
       {is(DRAWER_ROUTES.CATEGORY_CREATE) && <CategoryCreateDrawer />}
       {is(DRAWER_ROUTES.CATEGORY_VIEW) && hasParam("categoryId") && (
@@ -88,6 +91,7 @@ export const DrawerRouter = () => {
       {is(DRAWER_ROUTES.CATEGORY_UPDATE) && hasParam("categoryId") && (
         <CategoryUpdateDrawer categoryId={params.categoryId!} />
       )}
+      {is(DRAWER_ROUTES.CATEGORY_COMPARISON) && <CategoryComparisonDrawer />}
       {/** Transaction */}
       {is(DRAWER_ROUTES.TRANSACTION_CREATE) && (
         <TransactionCreateDrawer payload={state?.payload} />
