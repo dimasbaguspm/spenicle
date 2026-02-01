@@ -3,6 +3,7 @@ import { useApiInsightsTransactionsSummaryQuery } from "@/hooks/use-api";
 import { useInsightFilter } from "@/hooks/use-filter-state";
 import {
   PageContent,
+  PageHeader,
   PageLayout,
   PageLoader,
   useMobileBreakpoint,
@@ -13,7 +14,6 @@ import {
   InsightsBalanceCard,
   InsightsTabs,
   InsightsDateRangeSelector,
-  InsightsHeader,
 } from "./components";
 
 const InsightsPage = () => {
@@ -66,7 +66,7 @@ const InsightsPage = () => {
   return (
     <PageLayout>
       <PageLayout.HeaderRegion>
-        <InsightsHeader />
+        <PageHeader title="Insights" size="wide" />
       </PageLayout.HeaderRegion>
       <PageLayout.ContentRegion>
         <Suspense fallback={<PageLoader />}>
