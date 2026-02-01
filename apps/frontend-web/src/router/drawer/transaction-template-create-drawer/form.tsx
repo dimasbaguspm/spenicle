@@ -83,7 +83,7 @@ export const Form = ({
             render={({ field, fieldState }) => (
               <TextInput
                 label="Name"
-                helperText="Name of the transaction template"
+                placeholder="Name of the transaction template"
                 {...field}
                 error={fieldState.error?.message}
               />
@@ -100,7 +100,6 @@ export const Form = ({
             render={({ field, fieldState }) => (
               <DateSinglePickerInput
                 label="Start Date"
-                helperText="When the transaction template will start"
                 {...field}
                 error={fieldState.error?.message}
               />
@@ -118,7 +117,6 @@ export const Form = ({
               render={({ field, fieldState }) => (
                 <DateSinglePickerInput
                   label="End Date"
-                  helperText="When the transaction template will end"
                   {...field}
                   value={field.value || ""}
                   error={fieldState.error?.message}

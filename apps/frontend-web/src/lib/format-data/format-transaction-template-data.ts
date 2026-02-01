@@ -1,4 +1,4 @@
-import { capitalize } from "lodash";
+import { capitalize, startCase } from "lodash";
 import { formatPrice, PriceFormat } from "../format-price";
 import { DateFormat, formatDate } from "../format-date";
 import type { TransactionTemplateModel } from "@/types/schemas";
@@ -27,6 +27,7 @@ export const formatTransactionTemplateData = (
   const relatedDestinationAccountName = data?.destinationAccount?.name ?? "";
   const relatedCategoryName = data?.category?.name ?? "";
 
+  const recurs = startCase(data?.recurrence ?? "N/A");
   const occurrences = data?.recurringStats?.occurrences ?? 0;
   const remainingOccurrences = data?.recurringStats?.remaining ?? 0;
   const isCompleted = remainingOccurrences === 0 && occurrences > 0;
@@ -44,6 +45,7 @@ export const formatTransactionTemplateData = (
     capitalizedType,
     amount,
     note,
+    recurs,
     relatedAccountName,
     relatedDestinationAccountName,
     relatedCategoryName,

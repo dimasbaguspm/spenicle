@@ -312,6 +312,26 @@ export interface paths {
     patch: operations["update-category"];
     trace?: never;
   };
+  "/seed/development": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Seed development data
+     * @description Seed the database with development data.
+     */
+    post: operations["seed-development-data"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/summary/accounts": {
     parameters: {
       query?: never;
@@ -1308,6 +1328,10 @@ export interface components {
     ReorderCategoriesModel: {
       /** @description Ordered list of category IDs, first item will receive displayOrder 0 */
       items: number[] | null;
+    };
+    SeedDevelopmentDataResponseBody: {
+      /** @description Response message */
+      message: string;
     };
     SummaryAccountListModel: {
       /** @description Summary data grouped by account */
@@ -3003,6 +3027,35 @@ export interface operations {
       };
     };
   };
+  "seed-development-data": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SeedDevelopmentDataResponseBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "get-account-summary": {
     parameters: {
       query: {
@@ -3577,12 +3630,14 @@ export interface operations {
         id?: number[] | null;
         /** @description Filter by transaction type */
         type?: ("expense" | "income" | "transfer")[] | null;
-        /** @description Filter by source account IDs */
+        /** @description Filter by account IDs (source or destination) */
         accountId?: number[] | null;
         /** @description Filter by category IDs */
         categoryId?: number[] | null;
         /** @description Filter by destination account IDs (transfers) */
         destinationAccountId?: number[] | null;
+        /** @description Filter by transaction template IDs */
+        templateId?: number[] | null;
         /** @description Filter by tag IDs */
         tagId?: number[] | null;
         /** @description Filter by start date (YYYY-MM-DD) */

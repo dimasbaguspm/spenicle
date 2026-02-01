@@ -32,9 +32,13 @@ export const DetailsTab: FC<DetailsTabProps> = ({ data }) => {
     variant,
     capitalizedType,
     amount,
+    recurs,
     relatedAccountName,
     relatedDestinationAccountName,
     relatedCategoryName,
+    isInstallment,
+    remainingOccurrences,
+    occurrences,
   } = formatTransactionTemplateData(data);
 
   const handleOnEditClick = () => {
@@ -80,11 +84,25 @@ export const DetailsTab: FC<DetailsTabProps> = ({ data }) => {
 
       <BadgeGroup hasMargin>
         <Badge color={variant}>{capitalizedType}</Badge>
+        <Badge color="accent_2">
+          {isInstallment ? "Installment" : "Recurring"}
+        </Badge>
       </BadgeGroup>
 
       <AttributeList className="mb-4" columns={2}>
         <AttributeList.Item title="Amount">
           <Text>{amount}</Text>
+        </AttributeList.Item>
+        <AttributeList.Item title="Recurs">
+          <Text>
+            {recurs} (
+            {isInstallment
+              ? occurrences >= remainingOccurrences
+                ? "All installments completed"
+                : `${remainingOccurrences} remaining`
+              : `${occurrences} occurrences`}
+            )
+          </Text>
         </AttributeList.Item>
         <AttributeList.Item title="Category">
           <Anchor onClick={handleCategoryClick}>{relatedCategoryName}</Anchor>
