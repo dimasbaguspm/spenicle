@@ -98,6 +98,22 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 		destAccountID = &template.DestinationAccount.ID
 	}
 
+	// Build note with template name and occurrence count
+	nextOccurrence := template.RecurringStats.Occurrences + 1
+	noteStr := fmt.Sprintf("%s (Occurrence %d", template.Name, nextOccurrence)
+
+	if template.RecurringStats.Remaining != nil {
+		totalOccurrences := nextOccurrence + *template.RecurringStats.Remaining - 1
+		noteStr = fmt.Sprintf("%s of %d", noteStr, totalOccurrences)
+	}
+	noteStr = noteStr + ")"
+
+	if template.Note != nil && *template.Note != "" {
+		noteStr = noteStr + " - " + *template.Note
+	}
+
+	var note *string = &noteStr
+
 	transactionRequest := models.CreateTransactionModel{
 		Type:                 template.Type,
 		Date:                 time.Now().Truncate(24 * time.Hour),
@@ -105,7 +121,7 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 		AccountID:            template.Account.ID,
 		CategoryID:           template.Category.ID,
 		DestinationAccountID: destAccountID,
-		Note:                 template.Note,
+		Note:                 note,
 	}
 
 	transaction, err := ttw.transactionService.Create(ctx, transactionRequest)
