@@ -24,6 +24,7 @@ import {
   TransactionRecurringUpdateDrawer,
 } from "./transaction-template-update-drawer";
 import { TransactionTemplateViewDrawer } from "./transaction-template-view-drawer";
+import { TransactionsAllTheTimeDrawer } from "./transactions-all-the-time-drawer";
 
 interface DrawerParams {
   accountId?: number;
@@ -128,6 +129,9 @@ export const DrawerRouter = () => {
             tabId={params.tabId}
           />
         )}
+      {is(DRAWER_ROUTES.TRANSACTIONS_ALL_THE_TIME) && (
+        <TransactionsAllTheTimeDrawer />
+      )}
 
       {/** Insight Filter */}
       {is(DRAWER_ROUTES.INSIGHTS_FILTER) && (

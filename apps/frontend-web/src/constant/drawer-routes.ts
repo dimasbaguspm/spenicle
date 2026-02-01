@@ -13,6 +13,7 @@ export const DRAWER_ROUTES = {
   TRANSACTION_INSTALLMENT_CREATE: "transaction-installment-create",
   TRANSACTION_INSTALLMENT_UPDATE: "transaction-installment-update",
   TRANSACTION_TEMPLATE_VIEW: "transaction-template-view",
+  TRANSACTIONS_ALL_THE_TIME: "transactions-all-the-time",
   SELECT_SINGLE_ACCOUNT: "select-single-account",
   SELECT_SINGLE_CATEGORY: "select-single-category",
   INSIGHTS_FILTER: "insights-filter",

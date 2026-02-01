@@ -1,5 +1,7 @@
+import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { DEEP_PAGE_LINKS } from "@/constant/page-routes";
 import { formatPrice, PriceFormat } from "@/lib/format-price";
+import { useDrawerProvider } from "@/providers/drawer-provider";
 import {
   Button,
   ButtonGroup,
@@ -30,13 +32,14 @@ export const ThisMonthSummaryCards = ({
 }: ThisMonthSummaryCardsProps) => {
   const isMobile = useMobileBreakpoint();
   const navigate = useNavigate();
+  const { openDrawer } = useDrawerProvider();
 
   const handleOnViewSummaryClick = () => {
     navigate(DEEP_PAGE_LINKS.INSIGHTS.path);
   };
 
   const handleOnViewTransactionsClick = () => {
-    navigate(DEEP_PAGE_LINKS.TRANSACTIONS_ALT.path);
+    openDrawer(DRAWER_ROUTES.TRANSACTIONS_ALL_THE_TIME);
   };
 
   return (
