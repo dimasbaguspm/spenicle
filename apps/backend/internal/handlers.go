@@ -42,6 +42,7 @@ func RegisterPrivateRoutes(ctx context.Context, huma huma.API, db *pgxpool.Pool,
 	resources.NewBudgetResource(sevs).Routes(huma)
 	resources.NewBudgetTemplateResource(sevs).Routes(huma)
 	resources.NewTagResource(sevs).Routes(huma)
+	resources.NewSeedResource(db, rdb).Routes(huma)
 }
 
 func RegisterWorkers(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client) func() {
