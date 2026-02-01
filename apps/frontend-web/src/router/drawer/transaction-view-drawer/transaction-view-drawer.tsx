@@ -73,6 +73,12 @@ export const TransactionViewDrawer: FC<TransactionViewDrawerProps> = ({
     });
   };
 
+  const handleDestinationAccountClick = () => {
+    openDrawer(DRAWER_ROUTES.ACCOUNT_VIEW, {
+      accountId: transactionData?.destinationAccount?.id.toString() || "",
+    });
+  };
+
   return (
     <>
       <Drawer.Header>
@@ -135,7 +141,9 @@ export const TransactionViewDrawer: FC<TransactionViewDrawerProps> = ({
               </AttributeList.Item>
               <When condition={[relatedDestinationAccountName]}>
                 <AttributeList.Item title="Destination">
-                  <Text>{relatedDestinationAccountName}</Text>
+                  <Anchor onClick={handleDestinationAccountClick}>
+                    {relatedDestinationAccountName}
+                  </Anchor>
                 </AttributeList.Item>
               </When>
               <When condition={[note]}>
