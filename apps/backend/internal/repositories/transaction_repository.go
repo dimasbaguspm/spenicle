@@ -66,10 +66,11 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 				AND ($9::int8 IS NULL OR t.amount <= $9::int8)
 				AND ($10::timestamptz IS NULL OR t.date >= $10::timestamptz)
 				AND ($11::timestamptz IS NULL OR t.date <= $11::timestamptz)
-				AND (array_length($12::int8[], 1) IS NULL OR t.id IN (
+				AND (array_length($12::int8[], 1) IS NULL OR tt.id = ANY($12::int8[]))
+				AND (array_length($13::int8[], 1) IS NULL OR t.id IN (
 						SELECT DISTINCT tt.transaction_id
 						FROM transaction_tags tt
-						WHERE tt.tag_id = ANY($12::int8[])
+						WHERE tt.tag_id = ANY($13::int8[])
 					))
 			ORDER BY t.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
@@ -101,6 +102,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		accountIDs     []int64
 		categoryIDs    []int64
 		destAccountIDs []int64
+		templateIDs    []int64
 		tagIDs         []int64
 		minAmountParam *int64
 		maxAmountParam *int64
@@ -131,6 +133,11 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			destAccountIDs = append(destAccountIDs, int64(id))
 		}
 	}
+	if len(p.TemplateIDs) > 0 {
+		for _, id := range p.TemplateIDs {
+			templateIDs = append(templateIDs, int64(id))
+		}
+	}
 	if len(p.TagIDs) > 0 {
 		for _, id := range p.TagIDs {
 			tagIDs = append(tagIDs, int64(id))
@@ -154,7 +161,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		ids, types, accountIDs, categoryIDs, destAccountIDs,
 		minAmountParam, maxAmountParam,
 		startDateParam, endDateParam,
-		tagIDs,
+		templateIDs, tagIDs,
 	)
 	if err != nil {
 		return models.TransactionsPagedModel{}, huma.Error500InternalServerError("Unable to query transactions", err)

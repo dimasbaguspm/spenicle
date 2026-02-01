@@ -896,6 +896,15 @@ components:
       required:
         - items
       type: object
+    SeedDevelopmentDataResponseBody:
+      additionalProperties: false
+      properties:
+        message:
+          description: Response message
+          type: string
+      required:
+        - message
+      type: object
     SummaryAccountListModel:
       additionalProperties: false
       properties:
@@ -3119,6 +3128,28 @@ paths:
       summary: Update category
       tags:
         - Categories
+  /seed/development:
+    post:
+      description: Seed the database with development data.
+      operationId: seed-development-data
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeedDevelopmentDataResponseBody"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Seed development data
+      tags:
+        - Development
   /summary/accounts:
     get:
       description: Returns transaction summary grouped by account
@@ -3986,12 +4017,12 @@ paths:
             type:
               - array
               - "null"
-        - description: Filter by source account IDs
+        - description: Filter by account IDs (source or destination)
           explode: false
           in: query
           name: accountId
           schema:
-            description: Filter by source account IDs
+            description: Filter by account IDs (source or destination)
             items:
               format: int64
               type: integer
@@ -4016,6 +4047,18 @@ paths:
           name: destinationAccountId
           schema:
             description: Filter by destination account IDs (transfers)
+            items:
+              format: int64
+              type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by transaction template IDs
+          explode: false
+          in: query
+          name: templateId
+          schema:
+            description: Filter by transaction template IDs
             items:
               format: int64
               type: integer
@@ -4544,4 +4587,4 @@ paths:
         - Transaction Tags
 servers:
   - description: Development server
-    url: http://localhost:8081
+    url: http://localhost:8080

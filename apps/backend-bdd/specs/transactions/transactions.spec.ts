@@ -118,6 +118,95 @@ test.describe("Transactions - Filtering", () => {
     await accountAPI.deleteAccount(destAcc.data!.id as number);
     await categoryAPI.deleteCategory(cat.data!.id as number);
   });
+
+  test("GET /transactions - list transactions filtered by templateId", async ({
+    transactionAPI,
+    transactionTemplateAPI,
+    accountAPI,
+    categoryAPI,
+  }) => {
+    // Create test data
+    const account = await accountAPI.createAccount({
+      name: `tx-template-filter-acc-${Date.now()}`,
+      note: "test account",
+      type: "expense",
+    });
+    const accountId = account.data!.id as number;
+
+    const category = await categoryAPI.createCategory({
+      name: `tx-template-filter-cat-${Date.now()}`,
+      note: "test category",
+      type: "expense",
+    });
+    const categoryId = category.data!.id as number;
+
+    // Create a transaction template
+    const template = await transactionTemplateAPI.createTransactionTemplate({
+      name: `Test Template ${Date.now()}`,
+      note: "Template for filtering test",
+      amount: 10000,
+      type: "expense" as const,
+      accountId,
+      categoryId,
+      startDate: new Date().toISOString(),
+      recurrence: "monthly" as const,
+    });
+    const templateId = template.data!.id as number;
+
+    // Create some transactions (these won't be linked to the template via API)
+    const tx1 = await transactionAPI.createTransaction({
+      accountId,
+      categoryId,
+      amount: 5000,
+      date: new Date().toISOString(),
+      type: "expense" as const,
+      note: "Transaction 1",
+    });
+    const tx1Id = tx1.data!.id as number;
+
+    const tx2 = await transactionAPI.createTransaction({
+      accountId,
+      categoryId,
+      amount: 7500,
+      date: new Date().toISOString(),
+      type: "expense" as const,
+      note: "Transaction 2",
+    });
+    const tx2Id = tx2.data!.id as number;
+
+    // Test filtering by templateId - should return empty since no transactions are linked
+    const filteredRes = await transactionAPI.getTransactions({
+      templateId: [templateId],
+    });
+    expect(filteredRes.status).toBe(200);
+    const filteredItems = filteredRes.data!.items || [];
+    expect(filteredItems.length).toBe(0);
+
+    // Test filtering by non-existent template ID
+    const nonExistentRes = await transactionAPI.getTransactions({
+      templateId: [99999],
+    });
+    expect(nonExistentRes.status).toBe(200);
+    const nonExistentItems = nonExistentRes.data!.items || [];
+    expect(nonExistentItems.length).toBe(0);
+
+    // Test that regular filtering still works
+    const allRes = await transactionAPI.getTransactions({
+      accountId: [accountId],
+    });
+    expect(allRes.status).toBe(200);
+    const allItems = allRes.data!.items || [];
+    expect(allItems.length).toBe(2);
+    const txIds = allItems.map((tx) => tx.id).sort();
+    expect(txIds).toEqual([tx1Id, tx2Id].sort());
+
+    // Cleanup
+    await transactionAPI.deleteTransaction(tx1Id);
+    await transactionAPI.deleteTransaction(tx2Id);
+    await transactionTemplateAPI.deleteTransactionTemplate(templateId);
+    await categoryAPI.deleteCategory(categoryId);
+    await accountAPI.deleteAccount(accountId);
+  });
 });
 
 test.describe("Transactions - Template Embedding", () => {

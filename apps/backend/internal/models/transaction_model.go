@@ -12,6 +12,7 @@ type TransactionsSearchModel struct {
 	AccountIDs            []int    `query:"accountId" doc:"Filter by account IDs (source or destination)"`
 	CategoryIDs           []int    `query:"categoryId" doc:"Filter by category IDs"`
 	DestinationAccountIDs []int    `query:"destinationAccountId" doc:"Filter by destination account IDs (transfers)"`
+	TemplateIDs           []int    `query:"templateId" doc:"Filter by transaction template IDs"`
 	TagIDs                []int    `query:"tagId" doc:"Filter by tag IDs"`
 	StartDate             string   `query:"startDate" doc:"Filter by start date (YYYY-MM-DD)" format:"date-time"`
 	EndDate               string   `query:"endDate" doc:"Filter by end date (YYYY-MM-DD)" format:"date-time"`
