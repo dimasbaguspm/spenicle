@@ -42,6 +42,7 @@ func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.
 		all_periods AS (
 			SELECT DISTINCT period 
 			FROM period_range
+			WHERE date > DATE_TRUNC('month', $1::timestamptz)
 			ORDER BY period DESC
 		),
 		transactions_summary AS (
