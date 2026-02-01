@@ -314,7 +314,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 		return models.TransactionTemplateModel{}, huma.Error500InternalServerError("Unable to query transaction template stats", err)
 	}
 
-	// Calculate remaining
+	// Calculate remaining (matches SQL formula in GetPaged)
 	if data.EndDate != nil && data.Recurrence != "none" {
 		var intervalSeconds int64
 		switch data.Recurrence {
@@ -336,7 +336,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 
 		timeDiff := data.EndDate.Sub(baseTime)
 		if timeDiff > 0 {
-			remaining := int64(timeDiff.Seconds())/intervalSeconds + 1
+			remaining := int64(timeDiff.Seconds()/float64(intervalSeconds)) + 1
 			if remaining < 1 {
 				remaining = 1
 			}
