@@ -20,6 +20,9 @@ export const InsightsDateRangeSelector = () => {
           value={currentRange}
           onChange={handleRangeChange}
         >
+          <ChipSingleInput.Option value="last-semester">
+            Last Semester
+          </ChipSingleInput.Option>
           <ChipSingleInput.Option value="last-3-months">
             Last 3 Months
           </ChipSingleInput.Option>

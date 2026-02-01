@@ -7,6 +7,7 @@ import {
 import dayjs from "dayjs";
 
 export type DateRangeOption =
+  | "last-semester"
   | "last-3-months"
   | "last-quarter"
   | "this-year"
@@ -40,6 +41,11 @@ const getDateRangeFromOption = (option: DateRangeOption) => {
   const now = dayjs();
 
   switch (option) {
+    case "last-semester":
+      return {
+        startDate: now.subtract(5, "month").startOf("month").toISOString(),
+        endDate: now.endOf("month").toISOString(),
+      };
     case "last-3-months":
       return {
         startDate: now.subtract(3, "month").startOf("month").toISOString(),
@@ -80,6 +86,8 @@ const getDefaultFrequencyForRange = (
   option: DateRangeOption,
 ): "daily" | "weekly" | "monthly" | "yearly" => {
   switch (option) {
+    case "last-semester":
+      return "monthly";
     case "last-3-months":
       return "weekly";
     case "last-quarter":
@@ -91,7 +99,7 @@ const getDefaultFrequencyForRange = (
     case "last-10-years":
       return "yearly";
     default:
-      return "weekly";
+      return "monthly";
   }
 };
 
@@ -102,6 +110,16 @@ const getCurrentRangeOption = (
   const start = dayjs(startDate);
   const end = dayjs(endDate);
   const now = dayjs();
+
+  // Check last-semester (current month + past 5 months)
+  const lastSemesterStart = now.subtract(5, "month").startOf("month");
+  const lastSemesterEnd = now.endOf("month");
+  if (
+    start.isSame(lastSemesterStart, "month") &&
+    end.isSame(lastSemesterEnd, "month")
+  ) {
+    return "last-semester";
+  }
 
   // Check last-3-months
   const last3MonthsStart = now.subtract(3, "month").startOf("month");
@@ -150,8 +168,8 @@ const getCurrentRangeOption = (
     return "last-10-years";
   }
 
-  // Default to last-3-months
-  return "last-3-months";
+  // Default to last-semester
+  return "last-semester";
 };
 
 export const useInsightFilter = (
@@ -159,17 +177,19 @@ export const useInsightFilter = (
 ): UseInsightFilterReturn => {
   const filters = useFilterState<InsightFilterModel>(opts);
 
+  // Default to last-semester if no filters are set
+  const defaultDateRange = getDateRangeFromOption("last-semester");
+  const defaultFrequency = getDefaultFrequencyForRange("last-semester");
+
   const appliedFilters: InsightFilterModel = {
-    startDate:
-      filters.getSingle("startDate") || dayjs().startOf("month").toISOString(),
-    endDate:
-      filters.getSingle("endDate") || dayjs().endOf("month").toISOString(),
+    startDate: filters.getSingle("startDate") || defaultDateRange.startDate,
+    endDate: filters.getSingle("endDate") || defaultDateRange.endDate,
     frequency:
       (filters.getSingle("frequency") as
         | "daily"
         | "weekly"
         | "monthly"
-        | "yearly") || "weekly",
+        | "yearly") || defaultFrequency,
   };
 
   const humanizedFilters = insightFilterModelKeys.reduce(
