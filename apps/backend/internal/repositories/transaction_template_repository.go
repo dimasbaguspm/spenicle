@@ -81,9 +81,9 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 				CASE
 					WHEN tt.end_date IS NULL THEN NULL
 					WHEN tt.recurrence = 'none' THEN NULL
-					WHEN tt.recurrence = 'weekly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 604800)::bigint)
-					WHEN tt.recurrence = 'monthly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 2629746)::bigint)
-					WHEN tt.recurrence = 'yearly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 31556952)::bigint)
+				WHEN tt.recurrence = 'weekly' THEN GREATEST(1, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 604800)::bigint) + 1
+				WHEN tt.recurrence = 'monthly' THEN GREATEST(1, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 2629746)::bigint) + 1
+				WHEN tt.recurrence = 'yearly' THEN GREATEST(1, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 31556952)::bigint) + 1
 					ELSE NULL
 				END as remaining,
 				COUNT(*) OVER() as total_count
@@ -336,13 +336,13 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 
 		timeDiff := data.EndDate.Sub(baseTime)
 		if timeDiff > 0 {
-			remaining := int64(timeDiff.Seconds()) / intervalSeconds
-			if remaining < 0 {
-				remaining = 0
+			remaining := int64(timeDiff.Seconds())/intervalSeconds + 1
+			if remaining < 1 {
+				remaining = 1
 			}
 			data.RecurringStats.Remaining = &remaining
 		} else {
-			remaining := int64(0)
+			remaining := int64(1)
 			data.RecurringStats.Remaining = &remaining
 		}
 	} else {
@@ -516,9 +516,9 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 			CASE
 				WHEN tt.end_date IS NULL THEN NULL
 				WHEN tt.recurrence = 'none' THEN NULL
-				WHEN tt.recurrence = 'weekly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 604800)::bigint)
-				WHEN tt.recurrence = 'monthly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 2629746)::bigint)
-				WHEN tt.recurrence = 'yearly' THEN GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 31556952)::bigint)
+				WHEN tt.recurrence = 'weekly' THEN GREATEST(1, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 604800)::bigint) + 1
+				WHEN tt.recurrence = 'monthly' THEN GREATEST(1, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 2629746)::bigint) + 1
+				WHEN tt.recurrence = 'yearly' THEN GREATEST(1, FLOOR(EXTRACT(EPOCH FROM (tt.end_date - COALESCE(tt.last_executed_at, tt.start_date))) / 31556952)::bigint) + 1
 				ELSE NULL
 			END as remaining
 		FROM transaction_templates tt

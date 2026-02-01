@@ -49,8 +49,8 @@ func RegisterWorkers(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client) f
 	rpts := repositories.NewRootRepository(ctx, db)
 	sevs := services.NewRootService(rpts, rdb)
 
-	ttWorker := workers.NewTransactionTemplateWorker(ctx, rpts.TsctTem, sevs.Tsct)
-	btWorker := workers.NewBudgetTemplateWorker(ctx, rpts.BudgTem, sevs.Budg)
+	ttWorker := workers.NewTransactionTemplateWorker(ctx, rpts.TsctTem, sevs.Tsct, rdb)
+	btWorker := workers.NewBudgetTemplateWorker(ctx, rpts.BudgTem, sevs.Budg, rdb)
 
 	ttWorker.Start()
 	btWorker.Start()

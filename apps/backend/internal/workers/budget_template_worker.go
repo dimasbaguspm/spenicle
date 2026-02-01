@@ -6,27 +6,32 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
+	"github.com/redis/go-redis/v9"
 )
 
 type BudgetTemplateWorker struct {
 	cronWorker    *common.CronWorker
 	templateRepo  repositories.BudgetTemplateRepository
 	budgetService services.BudgetService
+	rdb           *redis.Client
 }
 
 func NewBudgetTemplateWorker(
 	ctx context.Context,
 	templateRepo repositories.BudgetTemplateRepository,
 	budgetService services.BudgetService,
+	rdb *redis.Client,
 ) *BudgetTemplateWorker {
 	return &BudgetTemplateWorker{
 		cronWorker:    common.NewCronWorker(ctx),
 		templateRepo:  templateRepo,
 		budgetService: budgetService,
+		rdb:           rdb,
 	}
 }
 
@@ -80,6 +85,17 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 		// Update last_executed_at timestamp
 		if err := btw.templateRepo.UpdateLastExecuted(ctx, template.ID); err != nil {
 			templateLogger.Error("failed to update execution time", "error", err)
+			continue
+		}
+
+		// Invalidate template caches after updating
+		cacheKey := fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", template.ID)
+		if err := common.InvalidateCache(ctx, btw.rdb, cacheKey); err != nil {
+			templateLogger.Warn("failed to invalidate template cache", "error", err)
+		}
+		// Invalidate paged cache since remaining count has changed
+		if err := common.InvalidateCache(ctx, btw.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*"); err != nil {
+			templateLogger.Warn("failed to invalidate paged cache", "error", err)
 		}
 	}
 

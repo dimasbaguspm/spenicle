@@ -2,30 +2,36 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
+	"github.com/redis/go-redis/v9"
 )
 
 type TransactionTemplateWorker struct {
 	cronWorker         *common.CronWorker
 	templateRepo       repositories.TransactionTemplateRepository
 	transactionService services.TransactionService
+	rdb                *redis.Client
 }
 
 func NewTransactionTemplateWorker(
 	ctx context.Context,
 	templateRepo repositories.TransactionTemplateRepository,
 	transactionService services.TransactionService,
+	rdb *redis.Client,
 ) *TransactionTemplateWorker {
 	return &TransactionTemplateWorker{
 		cronWorker:         common.NewCronWorker(ctx),
 		templateRepo:       templateRepo,
 		transactionService: transactionService,
+		rdb:                rdb,
 	}
 }
 
@@ -116,6 +122,17 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 
 	if err := ttw.templateRepo.UpdateLastExecuted(ctx, template.ID); err != nil {
 		logger.Error("failed to update execution time", "error", err)
+		return err
+	}
+
+	// Invalidate template caches after updating
+	cacheKey := fmt.Sprintf(constants.TransactionTemplateCacheKeyPrefix+"%d", template.ID)
+	if err := common.InvalidateCache(ctx, ttw.rdb, cacheKey); err != nil {
+		logger.Warn("failed to invalidate template cache", "error", err)
+	}
+	// Invalidate paged cache since remaining count has changed
+	if err := common.InvalidateCache(ctx, ttw.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*"); err != nil {
+		logger.Warn("failed to invalidate paged cache", "error", err)
 	}
 
 	logger.Info("success", "transaction_id", transaction.ID)
