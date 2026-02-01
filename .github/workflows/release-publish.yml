@@ -26,7 +26,7 @@ jobs:
       - name: Build image (single-arch linux/amd64) and save artifact
         run: |
           IMAGE_NAME=spenicle:build
-          docker buildx build --platform linux/amd64 -f deploy/Dockerfile -t ${IMAGE_NAME} --load .
+          docker buildx build --platform linux/amd64 -f deploy/Dockerfile -t ${IMAGE_NAME} --load --build-arg WEB_APP_VERSION=${{ github.event.release.tag_name }} .
           docker save ${IMAGE_NAME} -o image.tar
 
       - name: Upload image artifact

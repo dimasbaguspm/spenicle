@@ -44,7 +44,7 @@ export const AppTopBar: FC = () => {
             const isActiveLink = isActive(link.path);
 
             const isTransactionPageActive = location.pathname.startsWith(
-              DEEP_PAGE_LINKS.TRANSACTIONS_ALT.path
+              DEEP_PAGE_LINKS.TRANSACTIONS_ALT.path,
             );
 
             return (
@@ -85,7 +85,7 @@ export const AppTopBar: FC = () => {
           </ButtonMenuIcon.Item>
           <Hr />
           <Text as="small" color="gray" align="center">
-            Version 1.0.0
+            Version {import.meta.env.VITE_WEB_APP_VERSION}
           </Text>
         </ButtonMenuIcon>
       </TopBar.Trailing>

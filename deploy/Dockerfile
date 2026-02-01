@@ -13,6 +13,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o 
 
 FROM oven/bun:1-alpine AS web-builder
 WORKDIR /build
+ARG WEB_APP_VERSION
+ENV VITE_WEB_APP_VERSION=$WEB_APP_VERSION
 COPY apps/frontend-web/package.json apps/frontend-web/bun.lock ./
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 COPY apps/frontend-web/ ./

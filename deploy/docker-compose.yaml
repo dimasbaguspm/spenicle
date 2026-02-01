@@ -30,6 +30,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+      args:
+        WEB_APP_VERSION: staging
     container_name: spenicle-build-api
     ports:
       - "3000:3000"

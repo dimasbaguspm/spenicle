@@ -69,7 +69,7 @@ export const MenuBottomSheet = () => {
       </BottomSheet.Body>
       <BottomSheet.Footer className="mx-auto">
         <Text as="small" color="gray">
-          Version 123
+          Version {import.meta.env.VITE_WEB_APP_VERSION}
         </Text>
       </BottomSheet.Footer>
     </>
