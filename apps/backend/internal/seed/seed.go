@@ -276,12 +276,14 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 		{transactions[14], []string{"online", "pribadi"}},   // Beli game online
 	}
 
+	var transactionIDs []int64
 	for _, txWithTags := range transactionTags {
 		transaction, err := rootSvc.Tsct.Create(ctx, txWithTags.Transaction)
 		if err != nil {
 			return fmt.Errorf("failed to create transaction: %w", err)
 		}
 
+		transactionIDs = append(transactionIDs, transaction.ID)
 		slog.Info("Created transaction", "id", transaction.ID, "type", transaction.Type, "amount", transaction.Amount)
 
 		// Add tags if any
@@ -296,6 +298,225 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 				}
 			}
 		}
+	}
+
+	// Seed budgets - different types for comprehensive testing
+	budgets := []models.CreateBudgetModel{
+		// Account-only budgets
+		{
+			AccountID:   func() *int64 { id := accountMap["Dompet Utama"]; return &id }(),
+			PeriodStart: time.Now().AddDate(0, 0, -14), // 2 weeks ago
+			PeriodEnd:   time.Now().AddDate(0, 0, 14),  // 2 weeks from now
+			AmountLimit: 2000000,                       // 2 million IDR for main wallet
+			Name:        "Budget Dompet Utama Bulanan",
+			Note:        func() *string { s := "Budget pengeluaran harian dari dompet utama"; return &s }(),
+		},
+		{
+			AccountID:   func() *int64 { id := accountMap["Kartu Kredit BCA"]; return &id }(),
+			PeriodStart: time.Now().AddDate(0, 0, -14),
+			PeriodEnd:   time.Now().AddDate(0, 0, 14),
+			AmountLimit: 5000000, // 5 million IDR credit limit
+			Name:        "Limit Kartu Kredit BCA",
+			Note:        func() *string { s := "Batas maksimal penggunaan kartu kredit"; return &s }(),
+		},
+		// Category-only budgets
+		{
+			CategoryID:  func() *int64 { id := categoryMap["Makanan & Minuman"]; return &id }(),
+			PeriodStart: time.Now().AddDate(0, 0, -14),
+			PeriodEnd:   time.Now().AddDate(0, 0, 14),
+			AmountLimit: 1500000, // 1.5 million IDR for food
+			Name:        "Budget Makanan & Minuman",
+			Note:        func() *string { s := "Budget untuk makan di restoran dan bahan makanan"; return &s }(),
+		},
+		{
+			CategoryID:  func() *int64 { id := categoryMap["Transportasi"]; return &id }(),
+			PeriodStart: time.Now().AddDate(0, 0, -14),
+			PeriodEnd:   time.Now().AddDate(0, 0, 14),
+			AmountLimit: 800000, // 800k IDR for transport
+			Name:        "Budget Transportasi",
+			Note:        func() *string { s := "Budget untuk bensin, ojek online, dan angkutan umum"; return &s }(),
+		},
+	}
+
+	var budgetIDs []int64
+	for _, budget := range budgets {
+		budgetModel, err := rootSvc.Budg.Create(ctx, budget)
+		if err != nil {
+			return fmt.Errorf("failed to create budget %s: %w", budget.Name, err)
+		}
+		budgetIDs = append(budgetIDs, budgetModel.ID)
+		slog.Info("Created budget", "id", budgetModel.ID, "name", budgetModel.Name)
+	}
+
+	// Seed transaction templates for recurring transactions
+	transactionTemplates := []models.CreateTransactionTemplateModel{
+		// Monthly salary
+		{
+			Name:       "Gaji Bulanan PT Maju Jaya",
+			Type:       "income",
+			Amount:     8000000, // 8 million IDR monthly salary
+			AccountID:  accountMap["Rekening Gaji"],
+			CategoryID: categoryMap["Gaji"],
+			Recurrence: "monthly",
+			StartDate:  time.Now().AddDate(0, 0, -30),                                        // Started a month ago
+			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 12, 0); return &t }(), // 1 year from now
+			Note:       func() *string { s := "Gaji tetap bulanan dari pekerjaan utama"; return &s }(),
+		},
+		// Monthly internet bill
+		{
+			Name:       "Tagihan Internet Indihome",
+			Type:       "expense",
+			Amount:     350000, // 350k IDR monthly internet
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Tagihan"],
+			Recurrence: "monthly",
+			StartDate:  time.Now().AddDate(0, 0, -14),
+			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(), // 6 months
+			Note:       func() *string { s := "Tagihan internet bulanan Indihome 50Mbps"; return &s }(),
+		},
+		// Weekly grocery shopping
+		{
+			Name:       "Belanja Mingguan Supermarket",
+			Type:       "expense",
+			Amount:     250000, // 250k IDR weekly groceries
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Makanan & Minuman"],
+			Recurrence: "weekly",
+			StartDate:  time.Now().AddDate(0, 0, -14),
+			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 2, 0); return &t }(), // 2 months
+			Note:       func() *string { s := "Belanja bahan makanan mingguan di supermarket"; return &s }(),
+		},
+		// Monthly electricity bill
+		{
+			Name:       "Tagihan Listrik PLN",
+			Type:       "expense",
+			Amount:     450000, // 450k IDR monthly electricity
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Tagihan"],
+			Recurrence: "monthly",
+			StartDate:  time.Now().AddDate(0, 0, -14),
+			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(), // 6 months
+			Note:       func() *string { s := "Tagihan listrik bulanan untuk rumah"; return &s }(),
+		},
+		// Installment for laptop purchase (12 months)
+		{
+			Name:       "Cicilan Laptop Gaming",
+			Type:       "expense",
+			Amount:     833333, // ~8.3 million total / 12 months
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Belanja Online"],
+			Recurrence: "monthly",
+			StartDate:  time.Now().AddDate(0, 0, -10),                                        // Started 10 days ago
+			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 14, 0); return &t }(), // 14 months from start
+			Note:       func() *string { s := "Cicilan laptop gaming ASUS ROG 12 bulan"; return &s }(),
+		},
+	}
+
+	var templateIDs []int64
+	for _, template := range transactionTemplates {
+		templateModel, err := rootSvc.TsctTem.Create(ctx, template)
+		if err != nil {
+			return fmt.Errorf("failed to create transaction template %s: %w", template.Name, err)
+		}
+		templateIDs = append(templateIDs, templateModel.ID)
+		slog.Info("Created transaction template", "id", templateModel.ID, "name", templateModel.Name)
+	}
+
+	// Create some transactions from templates (simulating recurring execution)
+	templateTransactions := []struct {
+		TemplateID int64
+		Date       time.Time
+		Note       *string
+	}{
+		// Salary payments (last 2 months)
+		{templateIDs[0], time.Now().AddDate(0, 0, -30), func() *string { s := "Gaji bulan Desember 2024"; return &s }()},
+		{templateIDs[0], time.Now().AddDate(0, 0, -2), func() *string { s := "Gaji bulan Januari 2025"; return &s }()},
+
+		// Internet bills (last 2 months)
+		{templateIDs[1], time.Now().AddDate(0, 0, -30), func() *string { s := "Tagihan internet Desember 2024"; return &s }()},
+		{templateIDs[1], time.Now().AddDate(0, 0, -2), func() *string { s := "Tagihan internet Januari 2025"; return &s }()},
+
+		// Grocery shopping (last 2 weeks)
+		{templateIDs[2], time.Now().AddDate(0, 0, -14), func() *string { s := "Belanja minggu ke-2 Januari"; return &s }()},
+		{templateIDs[2], time.Now().AddDate(0, 0, -7), func() *string { s := "Belanja minggu ke-3 Januari"; return &s }()},
+		{templateIDs[2], time.Now().AddDate(0, 0, -1), func() *string { s := "Belanja minggu ke-4 Januari"; return &s }()},
+
+		// Electricity bills
+		{templateIDs[3], time.Now().AddDate(0, 0, -30), func() *string { s := "Tagihan listrik Desember 2024"; return &s }()},
+		{templateIDs[3], time.Now().AddDate(0, 0, -2), func() *string { s := "Tagihan listrik Januari 2025"; return &s }()},
+
+		// Laptop installments (last 3 months)
+		{templateIDs[4], time.Now().AddDate(0, 0, -10), func() *string { s := "Cicilan laptop bulan 1"; return &s }()},
+		{templateIDs[4], time.Now().AddDate(0, 0, -2), func() *string { s := "Cicilan laptop bulan 2"; return &s }()},
+	}
+
+	var templateTransactionIDs []int64
+	for _, tt := range templateTransactions {
+		// Get template details
+		template, err := rootSvc.TsctTem.GetDetail(ctx, tt.TemplateID)
+		if err != nil {
+			return fmt.Errorf("failed to get template %d: %w", tt.TemplateID, err)
+		}
+
+		// Create transaction from template
+		createTx := models.CreateTransactionModel{
+			Type:       template.Type,
+			Date:       tt.Date,
+			Amount:     template.Amount,
+			AccountID:  template.Account.ID,
+			CategoryID: template.Category.ID,
+			Note:       tt.Note,
+		}
+
+		if template.DestinationAccount != nil {
+			createTx.DestinationAccountID = &template.DestinationAccount.ID
+		}
+
+		transaction, err := rootSvc.Tsct.Create(ctx, createTx)
+		if err != nil {
+			return fmt.Errorf("failed to create transaction from template: %w", err)
+		}
+
+		templateTransactionIDs = append(templateTransactionIDs, transaction.ID)
+		slog.Info("Created transaction from template", "template_id", tt.TemplateID, "transaction_id", transaction.ID)
+	}
+
+	// Create transaction relations to link related transactions
+	transactionRelations := []struct {
+		SourceTransactionID  int64
+		RelatedTransactionID int64
+		RelationType         string
+	}{
+		// Link salary to savings transfer
+		{templateTransactionIDs[0], transactionIDs[8], "salary_to_savings"},  // First salary to first transfer
+		{templateTransactionIDs[1], transactionIDs[13], "salary_to_savings"}, // Second salary to second transfer
+
+		// Link laptop purchase to installments
+		{transactionIDs[3], templateTransactionIDs[9], "purchase_to_installment"},  // Laptop purchase to first installment
+		{transactionIDs[3], templateTransactionIDs[10], "purchase_to_installment"}, // Laptop purchase to second installment
+
+		// Link bill payments to their templates
+		{templateTransactionIDs[2], templateIDs[1], "bill_to_template"}, // Internet bill to template
+		{templateTransactionIDs[3], templateIDs[1], "bill_to_template"}, // Internet bill to template
+		{templateTransactionIDs[7], templateIDs[3], "bill_to_template"}, // Electricity bill to template
+		{templateTransactionIDs[8], templateIDs[3], "bill_to_template"}, // Electricity bill to template
+
+		// Link grocery transactions to template
+		{templateTransactionIDs[4], templateIDs[2], "shopping_to_template"}, // Grocery shopping to template
+		{templateTransactionIDs[5], templateIDs[2], "shopping_to_template"}, // Grocery shopping to template
+		{templateTransactionIDs[6], templateIDs[2], "shopping_to_template"}, // Grocery shopping to template
+	}
+
+	for _, relation := range transactionRelations {
+		_, err := rootSvc.TsctRel.Create(ctx, models.CreateTransactionRelationModel{
+			SourceTransactionID:  relation.SourceTransactionID,
+			RelatedTransactionID: relation.RelatedTransactionID,
+			RelationType:         relation.RelationType,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create transaction relation: %w", err)
+		}
+		slog.Info("Created transaction relation", "source", relation.SourceTransactionID, "related", relation.RelatedTransactionID, "type", relation.RelationType)
 	}
 
 	slog.Info("Development data seeding completed successfully")
