@@ -8,6 +8,7 @@ import { SearchXIcon } from "lucide-react";
 import type { FC } from "react";
 import { DetailsTab } from "./components/details-tab";
 import { HistoryTab } from "./components/history-tab";
+import { StatisticTab } from "./components/statistic-tab";
 
 interface CategoryViewDrawerProps {
   categoryId: number;
@@ -30,7 +31,7 @@ export const CategoryViewDrawer: FC<CategoryViewDrawerProps> = ({
       { categoryId, tabId },
       {
         replace: true,
-      }
+      },
     );
   };
 
@@ -44,6 +45,7 @@ export const CategoryViewDrawer: FC<CategoryViewDrawerProps> = ({
         <Tabs value={activeTab} onValueChange={handleOnTabChange}>
           <Tabs.Trigger value="details">Details</Tabs.Trigger>
           <Tabs.Trigger value="history">History</Tabs.Trigger>
+          <Tabs.Trigger value="statistic">Statistic</Tabs.Trigger>
         </Tabs>
       </Drawer.Tab>
 
@@ -62,6 +64,7 @@ export const CategoryViewDrawer: FC<CategoryViewDrawerProps> = ({
           <When condition={!!category}>
             {activeTab === "details" && <DetailsTab data={category!} />}
             {activeTab === "history" && <HistoryTab data={category!} />}
+            {activeTab === "statistic" && <StatisticTab data={category!} />}
           </When>
         </Drawer.Body>
       </When>

@@ -8,6 +8,7 @@ import { SearchXIcon } from "lucide-react";
 import type { FC } from "react";
 import { DetailsTab } from "./components/details-tab";
 import { HistoryTab } from "./components/history-tab";
+import { StatisticTab } from "./components/statistic-tab";
 
 interface AccountViewDrawerProps {
   accountId: number;
@@ -31,7 +32,7 @@ export const AccountViewDrawer: FC<AccountViewDrawerProps> = ({
       { accountId, tabId },
       {
         replace: true,
-      }
+      },
     );
   };
 
@@ -45,6 +46,7 @@ export const AccountViewDrawer: FC<AccountViewDrawerProps> = ({
         <Tabs value={activeTab} onValueChange={handleOnTabChange}>
           <Tabs.Trigger value="details">Details</Tabs.Trigger>
           <Tabs.Trigger value="history">History</Tabs.Trigger>
+          <Tabs.Trigger value="statistic">Statistic</Tabs.Trigger>
         </Tabs>
       </Drawer.Tab>
 
@@ -57,6 +59,7 @@ export const AccountViewDrawer: FC<AccountViewDrawerProps> = ({
           <When condition={!!account}>
             {activeTab === "details" && <DetailsTab data={account!} />}
             {activeTab === "history" && <HistoryTab data={account!} />}
+            {activeTab === "statistic" && <StatisticTab data={account!} />}
           </When>
           <When condition={!account}>
             <NoResults
