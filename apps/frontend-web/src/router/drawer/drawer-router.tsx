@@ -125,6 +125,7 @@ export const DrawerRouter = () => {
         hasParam("transactionTemplateId") && (
           <TransactionTemplateViewDrawer
             transactionTemplateId={params.transactionTemplateId!}
+            tabId={params.tabId}
           />
         )}
 

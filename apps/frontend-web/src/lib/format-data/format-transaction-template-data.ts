@@ -31,7 +31,10 @@ export const formatTransactionTemplateData = (
   const remainingOccurrences = data?.recurringStats?.remaining ?? 0;
   const isCompleted = remainingOccurrences === 0 && occurrences > 0;
 
+  const name = data?.name ?? "";
+
   return {
+    name,
     isIncome,
     isExpense,
     isTransfer,
