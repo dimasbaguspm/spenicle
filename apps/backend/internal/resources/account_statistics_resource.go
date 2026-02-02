@@ -27,9 +27,9 @@ func (sr AccountStatisticsResource) Routes(api huma.API) {
 		OperationID: "get-account-statistics",
 		Method:      http.MethodGet,
 		Path:        "/accounts/{id}/statistics",
-		Summary:     "Get account statistics",
-		Description: "Returns comprehensive statistics for an account including category heatmap, monthly velocity, and time frequency distribution",
-		Tags:        []string{"Statistics"},
+		Summary:     "Get comprehensive account statistics",
+		Description: "Returns all account statistics including category heatmap, monthly velocity, time frequency distribution, cash flow pulse (balance trend), burn rate (spending analysis), and budget health metrics",
+		Tags:        []string{"Accounts"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -41,7 +41,7 @@ func (sr AccountStatisticsResource) Routes(api huma.API) {
 		Path:        "/accounts/{id}/statistics/category-heatmap",
 		Summary:     "Get category spending heatmap",
 		Description: "Returns spending distribution by category for the specified time period",
-		Tags:        []string{"Statistics"},
+		Tags:        []string{"Accounts"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -53,7 +53,7 @@ func (sr AccountStatisticsResource) Routes(api huma.API) {
 		Path:        "/accounts/{id}/statistics/monthly-velocity",
 		Summary:     "Get monthly spending velocity",
 		Description: "Returns month-over-month spending trends and velocity metrics",
-		Tags:        []string{"Statistics"},
+		Tags:        []string{"Accounts"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -65,7 +65,7 @@ func (sr AccountStatisticsResource) Routes(api huma.API) {
 		Path:        "/accounts/{id}/statistics/time-frequency",
 		Summary:     "Get transaction time frequency distribution",
 		Description: "Returns frequency distribution of transactions (daily, weekly, monthly, irregular)",
-		Tags:        []string{"Statistics"},
+		Tags:        []string{"Accounts"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -77,7 +77,7 @@ func (sr AccountStatisticsResource) Routes(api huma.API) {
 		Path:        "/accounts/{id}/statistics/cash-flow-pulse",
 		Summary:     "Get cash flow balance trend",
 		Description: "Returns daily balance trend over the specified period for visualizing cash flow patterns",
-		Tags:        []string{"Statistics"},
+		Tags:        []string{"Accounts"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -89,7 +89,7 @@ func (sr AccountStatisticsResource) Routes(api huma.API) {
 		Path:        "/accounts/{id}/statistics/burn-rate",
 		Summary:     "Get spending burn rate analysis",
 		Description: "Returns daily/weekly/monthly average spending and budget projection estimates",
-		Tags:        []string{"Statistics"},
+		Tags:        []string{"Accounts"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -101,7 +101,7 @@ func (sr AccountStatisticsResource) Routes(api huma.API) {
 		Path:        "/accounts/{id}/statistics/budget-health",
 		Summary:     "Get budget health metrics",
 		Description: "Returns health status of active and past budgets for this account",
-		Tags:        []string{"Statistics"},
+		Tags:        []string{"Accounts"},
 		Security: []map[string][]string{
 			{"bearer": {}},
 		},
@@ -124,7 +124,7 @@ func (sr AccountStatisticsResource) GetAccountStatistics(ctx context.Context, in
 		return nil, err
 	}
 
-	logger.Info("success")
+	logger.Info("success", "period", resp.Period)
 	return &struct {
 		Body models.AccountStatisticsResponse
 	}{

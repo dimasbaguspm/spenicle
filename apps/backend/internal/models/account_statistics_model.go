@@ -65,6 +65,9 @@ type AccountStatisticsResponse struct {
 	CategoryHeatmap      AccountStatisticsCategoryHeatmapModel      `json:"categoryHeatmap" doc:"Category spending distribution"`
 	MonthlyVelocity      AccountStatisticsMonthlyVelocityModel      `json:"monthlyVelocity" doc:"Monthly spending velocity"`
 	TimeFrequencyHeatmap AccountStatisticsTimeFrequencyHeatmapModel `json:"timeFrequencyHeatmap" doc:"Transaction frequency distribution"`
+	CashFlowPulse        AccountStatisticsCashFlowPulseModel        `json:"cashFlowPulse" doc:"Daily balance trend over time"`
+	BurnRate             AccountStatisticsBurnRateModel             `json:"burnRate" doc:"Spending rate analysis"`
+	BudgetHealth         AccountStatisticsBudgetHealthModel         `json:"budgetHealth" doc:"Budget health metrics"`
 }
 
 // AccountStatisticsCashFlowDataPoint represents a single data point in the cash flow trend

@@ -485,6 +485,15 @@ components:
             - 1
           format: int64
           type: integer
+        budgetHealth:
+          $ref: "#/components/schemas/AccountStatisticsBudgetHealthModel"
+          description: Budget health metrics
+        burnRate:
+          $ref: "#/components/schemas/AccountStatisticsBurnRateModel"
+          description: Spending rate analysis
+        cashFlowPulse:
+          $ref: "#/components/schemas/AccountStatisticsCashFlowPulseModel"
+          description: Daily balance trend over time
         categoryHeatmap:
           $ref: "#/components/schemas/AccountStatisticsCategoryHeatmapModel"
           description: Category spending distribution
@@ -505,6 +514,9 @@ components:
         - categoryHeatmap
         - monthlyVelocity
         - timeFrequencyHeatmap
+        - cashFlowPulse
+        - burnRate
+        - budgetHealth
       type: object
     AccountStatisticsTimeFrequencyEntry:
       additionalProperties: false
@@ -2675,7 +2687,7 @@ paths:
         - Accounts
   /accounts/{id}/statistics:
     get:
-      description: Returns comprehensive statistics for an account including category heatmap, monthly velocity, and time frequency distribution
+      description: Returns all account statistics including category heatmap, monthly velocity, time frequency distribution, cash flow pulse (balance trend), burn rate (spending analysis), and budget health metrics
       operationId: get-account-statistics
       parameters:
         - description: Unique identifier of the account
@@ -2729,9 +2741,9 @@ paths:
           description: Error
       security:
         - bearer: []
-      summary: Get account statistics
+      summary: Get comprehensive account statistics
       tags:
-        - Statistics
+        - Accounts
   /accounts/{id}/statistics/budget-health:
     get:
       description: Returns health status of active and past budgets for this account
@@ -2790,7 +2802,7 @@ paths:
         - bearer: []
       summary: Get budget health metrics
       tags:
-        - Statistics
+        - Accounts
   /accounts/{id}/statistics/burn-rate:
     get:
       description: Returns daily/weekly/monthly average spending and budget projection estimates
@@ -2849,7 +2861,7 @@ paths:
         - bearer: []
       summary: Get spending burn rate analysis
       tags:
-        - Statistics
+        - Accounts
   /accounts/{id}/statistics/cash-flow-pulse:
     get:
       description: Returns daily balance trend over the specified period for visualizing cash flow patterns
@@ -2908,7 +2920,7 @@ paths:
         - bearer: []
       summary: Get cash flow balance trend
       tags:
-        - Statistics
+        - Accounts
   /accounts/{id}/statistics/category-heatmap:
     get:
       description: Returns spending distribution by category for the specified time period
@@ -2967,7 +2979,7 @@ paths:
         - bearer: []
       summary: Get category spending heatmap
       tags:
-        - Statistics
+        - Accounts
   /accounts/{id}/statistics/monthly-velocity:
     get:
       description: Returns month-over-month spending trends and velocity metrics
@@ -3026,7 +3038,7 @@ paths:
         - bearer: []
       summary: Get monthly spending velocity
       tags:
-        - Statistics
+        - Accounts
   /accounts/{id}/statistics/time-frequency:
     get:
       description: Returns frequency distribution of transactions (daily, weekly, monthly, irregular)
@@ -3085,7 +3097,7 @@ paths:
         - bearer: []
       summary: Get transaction time frequency distribution
       tags:
-        - Statistics
+        - Accounts
   /auth/login:
     post:
       description: Authenticate and receive access and refresh tokens

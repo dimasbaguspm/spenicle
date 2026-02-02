@@ -35,7 +35,10 @@ func (ss AccountStatisticsService) GetAccountStatistics(ctx context.Context, acc
 	categoryHeatmapChan := make(chan models.AccountStatisticsCategoryHeatmapModel)
 	monthlyVelocityChan := make(chan models.AccountStatisticsMonthlyVelocityModel)
 	timeFrequencyChan := make(chan models.AccountStatisticsTimeFrequencyHeatmapModel)
-	errChan := make(chan error, 3)
+	cashFlowPulseChan := make(chan models.AccountStatisticsCashFlowPulseModel)
+	burnRateChan := make(chan models.AccountStatisticsBurnRateModel)
+	budgetHealthChan := make(chan models.AccountStatisticsBudgetHealthModel)
+	errChan := make(chan error, 6)
 
 	// Fetch category heatmap
 	go func() {
@@ -67,12 +70,45 @@ func (ss AccountStatisticsService) GetAccountStatistics(ctx context.Context, acc
 		}
 	}()
 
+	// Fetch cash flow pulse
+	go func() {
+		data, err := ss.rpts.AccStat.GetCashFlowPulse(ctx, accountID, p)
+		if err != nil {
+			errChan <- err
+		} else {
+			cashFlowPulseChan <- data
+		}
+	}()
+
+	// Fetch burn rate
+	go func() {
+		data, err := ss.rpts.AccStat.GetBurnRate(ctx, accountID, p)
+		if err != nil {
+			errChan <- err
+		} else {
+			burnRateChan <- data
+		}
+	}()
+
+	// Fetch budget health
+	go func() {
+		data, err := ss.rpts.AccStat.GetBudgetHealth(ctx, accountID, p)
+		if err != nil {
+			errChan <- err
+		} else {
+			budgetHealthChan <- data
+		}
+	}()
+
 	// Collect results
 	var categoryHeatmap models.AccountStatisticsCategoryHeatmapModel
 	var monthlyVelocity models.AccountStatisticsMonthlyVelocityModel
 	var timeFrequency models.AccountStatisticsTimeFrequencyHeatmapModel
+	var cashFlowPulse models.AccountStatisticsCashFlowPulseModel
+	var burnRate models.AccountStatisticsBurnRateModel
+	var budgetHealth models.AccountStatisticsBudgetHealthModel
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 6; i++ {
 		select {
 		case err := <-errChan:
 			return models.AccountStatisticsResponse{}, err
@@ -82,6 +118,12 @@ func (ss AccountStatisticsService) GetAccountStatistics(ctx context.Context, acc
 			monthlyVelocity = mv
 		case tf := <-timeFrequencyChan:
 			timeFrequency = tf
+		case cfp := <-cashFlowPulseChan:
+			cashFlowPulse = cfp
+		case br := <-burnRateChan:
+			burnRate = br
+		case bh := <-budgetHealthChan:
+			budgetHealth = bh
 		}
 	}
 
@@ -91,6 +133,9 @@ func (ss AccountStatisticsService) GetAccountStatistics(ctx context.Context, acc
 		CategoryHeatmap:      categoryHeatmap,
 		MonthlyVelocity:      monthlyVelocity,
 		TimeFrequencyHeatmap: timeFrequency,
+		CashFlowPulse:        cashFlowPulse,
+		BurnRate:             burnRate,
+		BudgetHealth:         budgetHealth,
 	}, nil
 }
 
