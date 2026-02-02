@@ -3,6 +3,7 @@ import { AuthAPIClient } from "./auth-client";
 import { AccountAPIClient } from "./account-client";
 import { AccountStatisticsAPIClient } from "./account-statistics-client";
 import { CategoryAPIClient } from "./category-client";
+import { CategoryStatisticsAPIClient } from "./category-statistics-client";
 import { TransactionAPIClient } from "./transaction-client";
 import { TagAPIClient } from "./tag-client";
 import { SummaryAPIClient } from "./summary-client";
@@ -22,6 +23,7 @@ type APIFixtures = {
   accountAPI: AccountAPIClient;
   accountStatisticsAPI: AccountStatisticsAPIClient;
   categoryAPI: CategoryAPIClient;
+  categoryStatisticsAPI: CategoryStatisticsAPIClient;
   transactionAPI: TransactionAPIClient;
   tagAPI: TagAPIClient;
   summaryAPI: SummaryAPIClient;
@@ -158,6 +160,14 @@ export const test = base.extend<APIFixtures>({
    */
   categoryAPI: async ({ request, testContext }, use) => {
     const client = new CategoryAPIClient(request, testContext);
+    await use(client);
+  },
+
+  /**
+   * Category Statistics API client
+   */
+  categoryStatisticsAPI: async ({ request, testContext }, use) => {
+    const client = new CategoryStatisticsAPIClient(request, testContext);
     await use(client);
   },
 

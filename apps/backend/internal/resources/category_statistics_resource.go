@@ -108,6 +108,13 @@ func (sr CategoryStatisticsResource) GetCategoryStatistics(ctx context.Context, 
 	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetCategoryStatistics", "category_id", input.ID)
 	logger.Info("start")
 
+	// Validate category exists
+	_, err := sr.sevs.Cat.GetDetail(ctx, input.ID)
+	if err != nil {
+		logger.Error("error", "error", err)
+		return nil, huma.Error404NotFound("Category not found")
+	}
+
 	params, err := parseStatisticsParams(input.StartDate, input.EndDate)
 	if err != nil {
 		logger.Error("error", "error", err)
@@ -136,6 +143,13 @@ func (sr CategoryStatisticsResource) GetSpendingVelocity(ctx context.Context, in
 }, error) {
 	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetSpendingVelocity", "category_id", input.ID)
 	logger.Info("start")
+
+	// Validate category exists
+	_, err := sr.sevs.Cat.GetDetail(ctx, input.ID)
+	if err != nil {
+		logger.Error("error", "error", err)
+		return nil, huma.Error404NotFound("Category not found")
+	}
 
 	params, err := parseStatisticsParams(input.StartDate, input.EndDate)
 	if err != nil {
@@ -166,6 +180,13 @@ func (sr CategoryStatisticsResource) GetAccountDistribution(ctx context.Context,
 	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetAccountDistribution", "category_id", input.ID)
 	logger.Info("start")
 
+	// Validate category exists
+	_, err := sr.sevs.Cat.GetDetail(ctx, input.ID)
+	if err != nil {
+		logger.Error("error", "error", err)
+		return nil, huma.Error404NotFound("Category not found")
+	}
+
 	params, err := parseStatisticsParams(input.StartDate, input.EndDate)
 	if err != nil {
 		logger.Error("error", "error", err)
@@ -194,6 +215,13 @@ func (sr CategoryStatisticsResource) GetAverageTransactionSize(ctx context.Conte
 }, error) {
 	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetAverageTransactionSize", "category_id", input.ID)
 	logger.Info("start")
+
+	// Validate category exists
+	_, err := sr.sevs.Cat.GetDetail(ctx, input.ID)
+	if err != nil {
+		logger.Error("error", "error", err)
+		return nil, huma.Error404NotFound("Category not found")
+	}
 
 	params, err := parseStatisticsParams(input.StartDate, input.EndDate)
 	if err != nil {
@@ -224,6 +252,13 @@ func (sr CategoryStatisticsResource) GetDayOfWeekPattern(ctx context.Context, in
 	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetDayOfWeekPattern", "category_id", input.ID)
 	logger.Info("start")
 
+	// Validate category exists
+	_, err := sr.sevs.Cat.GetDetail(ctx, input.ID)
+	if err != nil {
+		logger.Error("error", "error", err)
+		return nil, huma.Error404NotFound("Category not found")
+	}
+
 	params, err := parseStatisticsParams(input.StartDate, input.EndDate)
 	if err != nil {
 		logger.Error("error", "error", err)
@@ -252,6 +287,13 @@ func (sr CategoryStatisticsResource) GetBudgetUtilization(ctx context.Context, i
 }, error) {
 	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetBudgetUtilization", "category_id", input.ID)
 	logger.Info("start")
+
+	// Validate category exists
+	_, err := sr.sevs.Cat.GetDetail(ctx, input.ID)
+	if err != nil {
+		logger.Error("error", "error", err)
+		return nil, huma.Error404NotFound("Category not found")
+	}
 
 	params, err := parseStatisticsParams(input.StartDate, input.EndDate)
 	if err != nil {

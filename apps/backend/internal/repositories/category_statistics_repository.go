@@ -144,9 +144,9 @@ func (sr CategoryStatisticsRepository) GetAverageTransactionSize(ctx context.Con
 		SELECT
 			COUNT(t.id) as transaction_count,
 			COALESCE(AVG(t.amount), 0)::bigint as average_amount,
-			MIN(t.amount) as min_amount,
-			MAX(t.amount) as max_amount,
-			PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.amount) as median_amount
+			COALESCE(MIN(t.amount), 0) as min_amount,
+			COALESCE(MAX(t.amount), 0) as max_amount,
+			COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.amount), 0)::bigint as median_amount
 		FROM transactions t
 		WHERE t.category_id = $1
 			AND t.type = 'expense'
@@ -190,10 +190,17 @@ func (sr CategoryStatisticsRepository) GetDayOfWeekPattern(ctx context.Context, 
 				AND t.date >= $2::timestamptz
 				AND t.date <= $3::timestamptz
 			GROUP BY EXTRACT(DOW FROM t.date)
+		),
+		all_days AS (
+			SELECT day::int as day_of_week FROM generate_series(0, 6) as t(day)
 		)
-		SELECT day_of_week, transaction_count, total_amount, average_amount
-		FROM daily_spending
-		ORDER BY day_of_week
+		SELECT ad.day_of_week, 
+			COALESCE(ds.transaction_count, 0) as transaction_count,
+			COALESCE(ds.total_amount, 0) as total_amount,
+			COALESCE(ds.average_amount, 0) as average_amount
+		FROM all_days ad
+		LEFT JOIN daily_spending ds ON ad.day_of_week = ds.day_of_week
+		ORDER BY ad.day_of_week
 	`
 
 	rows, err := sr.db.Query(ctx, sql, categoryID, p.StartDate, p.EndDate)

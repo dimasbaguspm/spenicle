@@ -452,6 +452,126 @@ export interface paths {
         patch: operations["update-category"];
         trace?: never;
     };
+    "/categories/{id}/statistics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get comprehensive category statistics
+         * @description Returns all lifestyle spending metrics for a category including spending velocity, account distribution, average transaction size, day-of-week patterns, and budget utilization
+         */
+        get: operations["get-category-statistics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/{id}/statistics/account-distribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get account distribution for category
+         * @description Returns which accounts pay for this category (donut chart data)
+         */
+        get: operations["get-account-distribution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/{id}/statistics/average-transaction-size": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get average transaction size for category
+         * @description Returns typical transaction amounts, including min, max, median, and average
+         */
+        get: operations["get-average-transaction-size"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/{id}/statistics/budget-utilization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get budget utilization for category
+         * @description Returns budget progress and remaining amounts for active budgets tied to this category
+         */
+        get: operations["get-budget-utilization"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/{id}/statistics/day-of-week-pattern": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get day-of-week spending pattern for category
+         * @description Returns spending patterns by day of week to show behavioral patterns
+         */
+        get: operations["get-day-of-week-pattern"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categories/{id}/statistics/spending-velocity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get category spending velocity trend
+         * @description Returns monthly spending trend over the specified period (line chart data)
+         */
+        get: operations["get-spending-velocity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/seed/development": {
         parameters: {
             query?: never;
@@ -1484,6 +1604,182 @@ export interface components {
              * @description Last update timestamp
              */
             updatedAt?: string;
+        };
+        CategoryStatisticAccountDistributionEntry: {
+            /**
+             * Format: int64
+             * @description Account ID
+             * @example 1
+             */
+            accountId: number;
+            /**
+             * @description Account name
+             * @example Credit Card
+             */
+            accountName: string;
+            /**
+             * Format: int64
+             * @description Total spending from this account in cents
+             * @example 2250000
+             */
+            amount: number;
+            /**
+             * Format: double
+             * @description Percentage of total spending
+             * @example 75
+             */
+            percentage: number;
+        };
+        CategoryStatisticAccountDistributionModel: {
+            /** @description Account spending distribution */
+            accounts: components["schemas"]["CategoryStatisticAccountDistributionEntry"][] | null;
+            /**
+             * Format: int64
+             * @description Total spending in cents
+             * @example 3000000
+             */
+            totalSpending: number;
+        };
+        CategoryStatisticAverageTransactionSizeModel: {
+            /**
+             * Format: int64
+             * @description Average transaction amount in cents
+             * @example 25000
+             */
+            averageAmount: number;
+            /**
+             * Format: int64
+             * @description Maximum transaction amount in cents
+             * @example 500000
+             */
+            maxAmount: number;
+            /**
+             * Format: int64
+             * @description Median transaction amount in cents
+             * @example 20000
+             */
+            medianAmount: number;
+            /**
+             * Format: int64
+             * @description Minimum transaction amount in cents
+             * @example 5000
+             */
+            minAmount: number;
+            /**
+             * Format: int64
+             * @description Total number of transactions
+             * @example 120
+             */
+            transactionCount: number;
+        };
+        CategoryStatisticBudgetUtilizationEntry: {
+            /**
+             * Format: int64
+             * @description Budget ID
+             * @example 1
+             */
+            budgetId: number;
+            /**
+             * Format: int64
+             * @description Budget limit in cents
+             * @example 1000000
+             */
+            limit: number;
+            /**
+             * @description Budget name
+             * @example Food Budget
+             */
+            name: string;
+            /**
+             * Format: date-time
+             * @description Budget period end date
+             */
+            periodEnd: string;
+            /**
+             * Format: date-time
+             * @description Budget period start date
+             */
+            periodStart: string;
+            /**
+             * Format: int64
+             * @description Remaining budget in cents
+             * @example 250000
+             */
+            remaining: number;
+            /**
+             * Format: int64
+             * @description Amount spent in cents
+             * @example 750000
+             */
+            spent: number;
+            /**
+             * Format: double
+             * @description Percentage of budget utilized
+             * @example 75
+             */
+            utilization: number;
+        };
+        CategoryStatisticBudgetUtilizationModel: {
+            /** @description Budget utilization data */
+            budgets: components["schemas"]["CategoryStatisticBudgetUtilizationEntry"][] | null;
+        };
+        CategoryStatisticDayOfWeekPatternEntry: {
+            /**
+             * Format: int64
+             * @description Average spending on this day in cents
+             * @example 25000
+             */
+            averageAmount: number;
+            /**
+             * @description Day of week
+             * @example Friday
+             */
+            dayOfWeek: string;
+            /**
+             * Format: int64
+             * @description Total spending on this day in cents
+             * @example 500000
+             */
+            totalAmount: number;
+            /**
+             * Format: int64
+             * @description Number of transactions on this day
+             * @example 20
+             */
+            transactionCount: number;
+        };
+        CategoryStatisticDayOfWeekPatternModel: {
+            /** @description Spending pattern by day of week */
+            data: components["schemas"]["CategoryStatisticDayOfWeekPatternEntry"][] | null;
+        };
+        CategoryStatisticSpendingVelocityDataPoint: {
+            /**
+             * Format: int64
+             * @description Total spending in cents
+             * @example 2500000
+             */
+            amount: number;
+            /**
+             * @description Month (YYYY-MM)
+             * @example 2024-01
+             */
+            month: string;
+        };
+        CategoryStatisticSpendingVelocityModel: {
+            /** @description Monthly spending data for line chart */
+            data: components["schemas"]["CategoryStatisticSpendingVelocityDataPoint"][] | null;
+        };
+        CategoryStatisticsResponse: {
+            /** @description Which accounts pay for this category */
+            accountDistribution: components["schemas"]["CategoryStatisticAccountDistributionModel"];
+            /** @description Typical transaction amounts */
+            averageTransactionSize: components["schemas"]["CategoryStatisticAverageTransactionSizeModel"];
+            /** @description Budget progress */
+            budgetUtilization: components["schemas"]["CategoryStatisticBudgetUtilizationModel"];
+            /** @description Spending patterns by day of week */
+            dayOfWeekPattern: components["schemas"]["CategoryStatisticDayOfWeekPatternModel"];
+            /** @description Spending trend over time */
+            spendingVelocity: components["schemas"]["CategoryStatisticSpendingVelocityModel"];
         };
         CreateAccountModel: {
             /** @description Icon identifier */
@@ -3784,6 +4080,282 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CategoryModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-category-statistics": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Category ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryStatisticsResponse"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-account-distribution": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Category ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryStatisticAccountDistributionModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-average-transaction-size": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Category ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryStatisticAverageTransactionSizeModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-budget-utilization": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Category ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryStatisticBudgetUtilizationModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-day-of-week-pattern": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Category ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryStatisticDayOfWeekPatternModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-spending-velocity": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Category ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryStatisticSpendingVelocityModel"];
                 };
             };
             /** @description Error */
