@@ -35,3 +35,13 @@ const (
 	AccountStatisticsBurnRateSuffix        = "burn_rate"
 	AccountStatisticsBudgetHealthSuffix    = "budget_health"
 )
+
+// Category Statistics cache key prefix and method suffixes
+const (
+	CategoryStatisticsCacheKeyPrefix            = "category_statistics:"
+	CategoryStatisticsSpendingVelocitySuffix    = "spending_velocity"
+	CategoryStatisticsAccountDistributionSuffix = "account_distribution"
+	CategoryStatisticsTransactionSizeSuffix     = "transaction_size"
+	CategoryStatisticsDayOfWeekPatternSuffix    = "day_of_week_pattern"
+	CategoryStatisticsBudgetUtilizationSuffix   = "budget_utilization"
+)

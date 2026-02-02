@@ -38,6 +38,7 @@ func RegisterPrivateRoutes(ctx context.Context, huma huma.API, db *pgxpool.Pool,
 	resources.NewAccountResource(sevs).Routes(huma)
 	resources.NewCategoryResource(sevs).Routes(huma)
 	resources.NewAccountStatisticsResource(sevs).Routes(huma)
+	resources.NewCategoryStatisticsResource(sevs).Routes(huma)
 	resources.NewTransactionResource(sevs).Routes(huma)
 	resources.NewSummaryResource(sevs).Routes(huma)
 	resources.NewBudgetResource(sevs).Routes(huma)

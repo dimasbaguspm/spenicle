@@ -12,6 +12,7 @@ type RootService struct {
 	Budg    BudgetService
 	BudgTem BudgetTemplateService
 	Cat     CategoryService
+	CatStat CategoryStatisticsService
 	Sum     SummaryService
 	Tag     TagService
 	Tsct    TransactionService
@@ -28,6 +29,7 @@ func NewRootService(repos repositories.RootRepository, rdb *redis.Client) RootSe
 		Budg:    NewBudgetService(&repos, rdb),
 		BudgTem: NewBudgetTemplateService(&repos, rdb),
 		Cat:     NewCategoryService(&repos, rdb),
+		CatStat: NewCategoryStatisticsService(&repos, rdb),
 		Sum:     NewSummaryService(&repos, rdb),
 		Tag:     NewTagService(&repos, rdb),
 		Tsct:    NewTransactionService(&repos, rdb),

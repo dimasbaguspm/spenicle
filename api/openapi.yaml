@@ -909,6 +909,268 @@ components:
         - displayOrder
         - createdAt
       type: object
+    CategoryStatisticAccountDistributionEntry:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        accountName:
+          description: Account name
+          examples:
+            - Credit Card
+          type: string
+        amount:
+          description: Total spending from this account in cents
+          examples:
+            - 2250000
+          format: int64
+          type: integer
+        percentage:
+          description: Percentage of total spending
+          examples:
+            - 75
+          format: double
+          type: number
+      required:
+        - accountId
+        - accountName
+        - amount
+        - percentage
+      type: object
+    CategoryStatisticAccountDistributionModel:
+      additionalProperties: false
+      properties:
+        accounts:
+          description: Account spending distribution
+          items:
+            $ref: "#/components/schemas/CategoryStatisticAccountDistributionEntry"
+          type:
+            - array
+            - "null"
+        totalSpending:
+          description: Total spending in cents
+          examples:
+            - 3000000
+          format: int64
+          type: integer
+      required:
+        - accounts
+        - totalSpending
+      type: object
+    CategoryStatisticAverageTransactionSizeModel:
+      additionalProperties: false
+      properties:
+        averageAmount:
+          description: Average transaction amount in cents
+          examples:
+            - 25000
+          format: int64
+          type: integer
+        maxAmount:
+          description: Maximum transaction amount in cents
+          examples:
+            - 500000
+          format: int64
+          type: integer
+        medianAmount:
+          description: Median transaction amount in cents
+          examples:
+            - 20000
+          format: int64
+          type: integer
+        minAmount:
+          description: Minimum transaction amount in cents
+          examples:
+            - 5000
+          format: int64
+          type: integer
+        transactionCount:
+          description: Total number of transactions
+          examples:
+            - 120
+          format: int64
+          type: integer
+      required:
+        - transactionCount
+        - averageAmount
+        - minAmount
+        - maxAmount
+        - medianAmount
+      type: object
+    CategoryStatisticBudgetUtilizationEntry:
+      additionalProperties: false
+      properties:
+        budgetId:
+          description: Budget ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        limit:
+          description: Budget limit in cents
+          examples:
+            - 1000000
+          format: int64
+          type: integer
+        name:
+          description: Budget name
+          examples:
+            - Food Budget
+          type: string
+        periodEnd:
+          description: Budget period end date
+          format: date-time
+          type: string
+        periodStart:
+          description: Budget period start date
+          format: date-time
+          type: string
+        remaining:
+          description: Remaining budget in cents
+          examples:
+            - 250000
+          format: int64
+          type: integer
+        spent:
+          description: Amount spent in cents
+          examples:
+            - 750000
+          format: int64
+          type: integer
+        utilization:
+          description: Percentage of budget utilized
+          examples:
+            - 75
+          format: double
+          type: number
+      required:
+        - budgetId
+        - name
+        - limit
+        - spent
+        - remaining
+        - utilization
+        - periodStart
+        - periodEnd
+      type: object
+    CategoryStatisticBudgetUtilizationModel:
+      additionalProperties: false
+      properties:
+        budgets:
+          description: Budget utilization data
+          items:
+            $ref: "#/components/schemas/CategoryStatisticBudgetUtilizationEntry"
+          type:
+            - array
+            - "null"
+      required:
+        - budgets
+      type: object
+    CategoryStatisticDayOfWeekPatternEntry:
+      additionalProperties: false
+      properties:
+        averageAmount:
+          description: Average spending on this day in cents
+          examples:
+            - 25000
+          format: int64
+          type: integer
+        dayOfWeek:
+          description: Day of week
+          examples:
+            - Friday
+          type: string
+        totalAmount:
+          description: Total spending on this day in cents
+          examples:
+            - 500000
+          format: int64
+          type: integer
+        transactionCount:
+          description: Number of transactions on this day
+          examples:
+            - 20
+          format: int64
+          type: integer
+      required:
+        - dayOfWeek
+        - transactionCount
+        - totalAmount
+        - averageAmount
+      type: object
+    CategoryStatisticDayOfWeekPatternModel:
+      additionalProperties: false
+      properties:
+        data:
+          description: Spending pattern by day of week
+          items:
+            $ref: "#/components/schemas/CategoryStatisticDayOfWeekPatternEntry"
+          type:
+            - array
+            - "null"
+      required:
+        - data
+      type: object
+    CategoryStatisticSpendingVelocityDataPoint:
+      additionalProperties: false
+      properties:
+        amount:
+          description: Total spending in cents
+          examples:
+            - 2500000
+          format: int64
+          type: integer
+        month:
+          description: Month (YYYY-MM)
+          examples:
+            - 2024-01
+          type: string
+      required:
+        - month
+        - amount
+      type: object
+    CategoryStatisticSpendingVelocityModel:
+      additionalProperties: false
+      properties:
+        data:
+          description: Monthly spending data for line chart
+          items:
+            $ref: "#/components/schemas/CategoryStatisticSpendingVelocityDataPoint"
+          type:
+            - array
+            - "null"
+      required:
+        - data
+      type: object
+    CategoryStatisticsResponse:
+      additionalProperties: false
+      properties:
+        accountDistribution:
+          $ref: "#/components/schemas/CategoryStatisticAccountDistributionModel"
+          description: Which accounts pay for this category
+        averageTransactionSize:
+          $ref: "#/components/schemas/CategoryStatisticAverageTransactionSizeModel"
+          description: Typical transaction amounts
+        budgetUtilization:
+          $ref: "#/components/schemas/CategoryStatisticBudgetUtilizationModel"
+          description: Budget progress
+        dayOfWeekPattern:
+          $ref: "#/components/schemas/CategoryStatisticDayOfWeekPatternModel"
+          description: Spending patterns by day of week
+        spendingVelocity:
+          $ref: "#/components/schemas/CategoryStatisticSpendingVelocityModel"
+          description: Spending trend over time
+      required:
+        - spendingVelocity
+        - accountDistribution
+        - averageTransactionSize
+        - dayOfWeekPattern
+        - budgetUtilization
+      type: object
     CreateAccountModel:
       additionalProperties: false
       properties:
@@ -4041,6 +4303,360 @@ paths:
       security:
         - bearer: []
       summary: Update category
+      tags:
+        - Categories
+  /categories/{id}/statistics:
+    get:
+      description: Returns all lifestyle spending metrics for a category including spending velocity, account distribution, average transaction size, day-of-week patterns, and budget utilization
+      operationId: get-category-statistics
+      parameters:
+        - description: Category ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Category ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryStatisticsResponse"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get comprehensive category statistics
+      tags:
+        - Categories
+  /categories/{id}/statistics/account-distribution:
+    get:
+      description: Returns which accounts pay for this category (donut chart data)
+      operationId: get-account-distribution
+      parameters:
+        - description: Category ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Category ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryStatisticAccountDistributionModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get account distribution for category
+      tags:
+        - Categories
+  /categories/{id}/statistics/average-transaction-size:
+    get:
+      description: Returns typical transaction amounts, including min, max, median, and average
+      operationId: get-average-transaction-size
+      parameters:
+        - description: Category ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Category ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryStatisticAverageTransactionSizeModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get average transaction size for category
+      tags:
+        - Categories
+  /categories/{id}/statistics/budget-utilization:
+    get:
+      description: Returns budget progress and remaining amounts for active budgets tied to this category
+      operationId: get-budget-utilization
+      parameters:
+        - description: Category ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Category ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryStatisticBudgetUtilizationModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get budget utilization for category
+      tags:
+        - Categories
+  /categories/{id}/statistics/day-of-week-pattern:
+    get:
+      description: Returns spending patterns by day of week to show behavioral patterns
+      operationId: get-day-of-week-pattern
+      parameters:
+        - description: Category ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Category ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryStatisticDayOfWeekPatternModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get day-of-week spending pattern for category
+      tags:
+        - Categories
+  /categories/{id}/statistics/spending-velocity:
+    get:
+      description: Returns monthly spending trend over the specified period (line chart data)
+      operationId: get-spending-velocity
+      parameters:
+        - description: Category ID
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Category ID
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryStatisticSpendingVelocityModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get category spending velocity trend
       tags:
         - Categories
   /seed/development:
