@@ -22,6 +22,7 @@ type RootRepository struct {
 	Budg    BudgetRepository
 	BudgTem BudgetTemplateRepository
 	Cat     CategoryRepository
+	AccStat AccountStatisticsRepository
 	Sum     SummaryRepository
 	Tag     TagRepository
 	Tsct    TransactionRepository
@@ -40,6 +41,7 @@ func NewRootRepository(ctx context.Context, pgx *pgxpool.Pool) RootRepository {
 		Budg:    NewBudgetRepository(db),
 		BudgTem: NewBudgetTemplateRepository(db),
 		Cat:     NewCategoryRepository(db),
+		AccStat: NewAccountStatisticsRepository(db),
 		Sum:     NewSummaryRepository(db),
 		Tag:     NewTagRepository(db),
 		Tsct:    NewTransactionRepository(db),
@@ -58,6 +60,7 @@ func (r RootRepository) WithTx(ctx context.Context, tx pgx.Tx) RootRepository {
 		Budg:    NewBudgetRepository(tx),
 		BudgTem: NewBudgetTemplateRepository(tx),
 		Cat:     NewCategoryRepository(tx),
+		AccStat: NewAccountStatisticsRepository(tx),
 		Sum:     NewSummaryRepository(tx),
 		Tag:     NewTagRepository(tx),
 		Tsct:    NewTransactionRepository(tx),

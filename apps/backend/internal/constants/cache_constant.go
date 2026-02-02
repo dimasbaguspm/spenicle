@@ -4,6 +4,7 @@ package constants
 const (
 	AccountCacheKeyPrefix                   = "account:"
 	AccountsPagedCacheKeyPrefix             = "accounts_paged:"
+	AccountStatisticsCacheKeyPrefix         = "account_statistics:"
 	CategoryCacheKeyPrefix                  = "category:"
 	CategoriesPagedCacheKeyPrefix           = "categories_paged:"
 	BudgetCacheKeyPrefix                    = "budget:"
@@ -23,4 +24,14 @@ const (
 	SummaryTransactionCacheKeyPrefix        = "summary_transaction:"
 	SummaryAccountCacheKeyPrefix            = "summary_account:"
 	SummaryCategoryCacheKeyPrefix           = "summary_category:"
+)
+
+// Account Statistics cache method suffixes
+const (
+	AccountStatisticsCategoryHeatmapSuffix = "category_heatmap"
+	AccountStatisticsMonthlyVelocitySuffix = "monthly_velocity"
+	AccountStatisticsTimeFrequencySuffix   = "time_frequency"
+	AccountStatisticsCashFlowPulseSuffix   = "cash_flow_pulse"
+	AccountStatisticsBurnRateSuffix        = "burn_rate"
+	AccountStatisticsBudgetHealthSuffix    = "budget_health"
 )

@@ -7,6 +7,7 @@ import (
 
 type RootService struct {
 	Acc     AccountService
+	AccStat AccountStatisticsService
 	Ath     AuthService
 	Budg    BudgetService
 	BudgTem BudgetTemplateService
@@ -22,6 +23,7 @@ type RootService struct {
 func NewRootService(repos repositories.RootRepository, rdb *redis.Client) RootService {
 	return RootService{
 		Acc:     NewAccountService(&repos, rdb),
+		AccStat: NewAccountStatisticsService(&repos, rdb),
 		Ath:     NewAuthService(&repos),
 		Budg:    NewBudgetService(&repos, rdb),
 		BudgTem: NewBudgetTemplateService(&repos, rdb),

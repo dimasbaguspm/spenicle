@@ -63,6 +63,493 @@ components:
         - displayOrder
         - createdAt
       type: object
+    AccountStatisticsBudgetHealthEntry:
+      additionalProperties: false
+      properties:
+        amountLimit:
+          description: Budget limit in cents
+          examples:
+            - 5000000
+          format: int64
+          type: integer
+        amountSpent:
+          description: Amount spent in cents
+          examples:
+            - 3500000
+          format: int64
+          type: integer
+        budgetId:
+          description: Budget ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        budgetName:
+          description: Budget name
+          examples:
+            - Monthly Groceries
+          type: string
+        daysRemaining:
+          description: Days remaining in budget period
+          examples:
+            - 10
+          format: int64
+          type: integer
+        percentageUsed:
+          description: Percentage of budget used
+          examples:
+            - 70
+          format: double
+          type: number
+        periodEnd:
+          description: Period end (YYYY-MM-DD)
+          examples:
+            - "2024-01-31"
+          type: string
+        periodStart:
+          description: Period start (YYYY-MM-DD)
+          examples:
+            - "2024-01-01"
+          type: string
+        status:
+          description: Budget health status
+          enum:
+            - on-track
+            - warning
+            - exceeded
+            - active
+            - inactive
+            - past
+          examples:
+            - on-track
+          type: string
+      required:
+        - budgetId
+        - budgetName
+        - periodStart
+        - periodEnd
+        - amountLimit
+        - amountSpent
+        - percentageUsed
+        - status
+        - daysRemaining
+      type: object
+    AccountStatisticsBudgetHealthModel:
+      additionalProperties: false
+      properties:
+        achievementRate:
+          description: Percentage of budgets successfully completed on track
+          examples:
+            - 80
+          format: double
+          type: number
+        activeBudgets:
+          description: Currently active budgets
+          items:
+            $ref: "#/components/schemas/AccountStatisticsBudgetHealthEntry"
+          type:
+            - array
+            - "null"
+        overallStatus:
+          description: Overall budget health status
+          enum:
+            - healthy
+            - at-risk
+            - concerning
+          examples:
+            - healthy
+          type: string
+        pastBudgets:
+          description: Past/completed budgets
+          items:
+            $ref: "#/components/schemas/AccountStatisticsBudgetHealthEntry"
+          type:
+            - array
+            - "null"
+        totalBudgets:
+          description: Total number of budgets (active and past)
+          examples:
+            - 15
+          format: int64
+          type: integer
+      required:
+        - activeBudgets
+        - pastBudgets
+        - overallStatus
+        - totalBudgets
+        - achievementRate
+      type: object
+    AccountStatisticsBurnRateModel:
+      additionalProperties: false
+      properties:
+        budgetLimitStatus:
+          description: Status relative to active budget
+          enum:
+            - within
+            - at-risk
+            - exceeded
+            - no-budget
+          examples:
+            - at-risk
+          type: string
+        dailyAverageSpend:
+          description: Average daily spending in cents
+          examples:
+            - 150000
+          format: int64
+          type: integer
+        daysRemaining:
+          description: Estimated days until budget limit (if active budget exists)
+          examples:
+            - 10
+          format: int64
+          type: integer
+        monthlyAverageSpend:
+          description: Average monthly spending in cents
+          examples:
+            - 4500000
+          format: int64
+          type: integer
+        spendingDays:
+          description: Number of days with spending
+          examples:
+            - 28
+          format: int64
+          type: integer
+        totalSpending:
+          description: Total spending in the period in cents
+          examples:
+            - 90000000
+          format: int64
+          type: integer
+        weeklyAverageSpend:
+          description: Average weekly spending in cents
+          examples:
+            - 1050000
+          format: int64
+          type: integer
+      required:
+        - dailyAverageSpend
+        - weeklyAverageSpend
+        - monthlyAverageSpend
+        - totalSpending
+        - daysRemaining
+        - spendingDays
+        - budgetLimitStatus
+      type: object
+    AccountStatisticsCashFlowDataPoint:
+      additionalProperties: false
+      properties:
+        balance:
+          description: Account balance at this date in cents
+          examples:
+            - 5000000
+          format: int64
+          type: integer
+        date:
+          description: Date (YYYY-MM-DD)
+          examples:
+            - "2024-01-15"
+          type: string
+      required:
+        - date
+        - balance
+      type: object
+    AccountStatisticsCashFlowPulseModel:
+      additionalProperties: false
+      properties:
+        data:
+          description: Daily balance data points
+          items:
+            $ref: "#/components/schemas/AccountStatisticsCashFlowDataPoint"
+          type:
+            - array
+            - "null"
+        endingBalance:
+          description: Balance at the end of the period in cents
+          examples:
+            - 5000000
+          format: int64
+          type: integer
+        maxBalance:
+          description: Maximum balance during the period in cents
+          examples:
+            - 10000000
+          format: int64
+          type: integer
+        minBalance:
+          description: Minimum balance during the period in cents
+          examples:
+            - 3000000
+          format: int64
+          type: integer
+        startingBalance:
+          description: Balance at the start of the period in cents
+          examples:
+            - 10000000
+          format: int64
+          type: integer
+        trendDirection:
+          description: Overall trend direction
+          enum:
+            - increasing
+            - decreasing
+            - stable
+          examples:
+            - decreasing
+          type: string
+      required:
+        - data
+        - startingBalance
+        - endingBalance
+        - minBalance
+        - maxBalance
+        - trendDirection
+      type: object
+    AccountStatisticsCategoryHeatmapEntry:
+      additionalProperties: false
+      properties:
+        categoryId:
+          description: Category ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        categoryName:
+          description: Category name
+          examples:
+            - Food
+          type: string
+        percentageOfTotal:
+          description: Percentage of total spending
+          examples:
+            - 15.5
+          format: double
+          type: number
+        totalAmount:
+          description: Total spending amount in cents
+          examples:
+            - 1500000
+          format: int64
+          type: integer
+        totalCount:
+          description: Total number of transactions
+          examples:
+            - 25
+          format: int64
+          type: integer
+      required:
+        - categoryId
+        - categoryName
+        - totalCount
+        - totalAmount
+        - percentageOfTotal
+      type: object
+    AccountStatisticsCategoryHeatmapModel:
+      additionalProperties: false
+      properties:
+        categoryCount:
+          description: Number of categories with transactions
+          examples:
+            - 10
+          format: int64
+          type: integer
+        data:
+          description: Category spending data
+          items:
+            $ref: "#/components/schemas/AccountStatisticsCategoryHeatmapEntry"
+          type:
+            - array
+            - "null"
+        totalSpending:
+          description: Total spending in the period
+          examples:
+            - 9680000
+          format: int64
+          type: integer
+      required:
+        - data
+        - totalSpending
+        - categoryCount
+      type: object
+    AccountStatisticsMonthlyVelocityEntry:
+      additionalProperties: false
+      properties:
+        dailyAverage:
+          description: Average daily spending in cents
+          examples:
+            - 112903
+          format: int64
+          type: integer
+        expenseAmount:
+          description: Total expense amount in cents
+          examples:
+            - 3500000
+          format: int64
+          type: integer
+        expenseCount:
+          description: Expense transactions
+          examples:
+            - 95
+          format: int64
+          type: integer
+        incomeAmount:
+          description: Total income amount in cents
+          examples:
+            - 5000000
+          format: int64
+          type: integer
+        incomeCount:
+          description: Income transactions
+          examples:
+            - 50
+          format: int64
+          type: integer
+        net:
+          description: Net amount (income - expense) in cents
+          examples:
+            - 1500000
+          format: int64
+          type: integer
+        period:
+          description: Month period (YYYY-MM)
+          examples:
+            - 2024-01
+          type: string
+        totalCount:
+          description: Total transactions in month
+          examples:
+            - 150
+          format: int64
+          type: integer
+        transferAmount:
+          description: Total transfer amount in cents
+          examples:
+            - 500000
+          format: int64
+          type: integer
+        transferCount:
+          description: Transfer transactions
+          examples:
+            - 5
+          format: int64
+          type: integer
+      required:
+        - period
+        - totalCount
+        - incomeCount
+        - expenseCount
+        - transferCount
+        - incomeAmount
+        - expenseAmount
+        - transferAmount
+        - net
+        - dailyAverage
+      type: object
+    AccountStatisticsMonthlyVelocityModel:
+      additionalProperties: false
+      properties:
+        averageMonthlySpend:
+          description: Average monthly spending in cents
+          examples:
+            - 3500000
+          format: int64
+          type: integer
+        data:
+          description: Monthly velocity data
+          items:
+            $ref: "#/components/schemas/AccountStatisticsMonthlyVelocityEntry"
+          type:
+            - array
+            - "null"
+        trendDirection:
+          description: Spending trend direction
+          enum:
+            - increasing
+            - decreasing
+            - stable
+          examples:
+            - increasing
+          type: string
+      required:
+        - data
+        - averageMonthlySpend
+        - trendDirection
+      type: object
+    AccountStatisticsResponse:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Account ID
+          examples:
+            - 1
+          format: int64
+          type: integer
+        categoryHeatmap:
+          $ref: "#/components/schemas/AccountStatisticsCategoryHeatmapModel"
+          description: Category spending distribution
+        monthlyVelocity:
+          $ref: "#/components/schemas/AccountStatisticsMonthlyVelocityModel"
+          description: Monthly spending velocity
+        period:
+          description: Period covered (ISO 8601)
+          examples:
+            - 2024-01-01T00:00:00Z to 2024-12-31T23:59:59Z
+          type: string
+        timeFrequencyHeatmap:
+          $ref: "#/components/schemas/AccountStatisticsTimeFrequencyHeatmapModel"
+          description: Transaction frequency distribution
+      required:
+        - accountId
+        - period
+        - categoryHeatmap
+        - monthlyVelocity
+        - timeFrequencyHeatmap
+      type: object
+    AccountStatisticsTimeFrequencyEntry:
+      additionalProperties: false
+      properties:
+        count:
+          description: Number of transactions at this frequency
+          examples:
+            - 45
+          format: int64
+          type: integer
+        frequency:
+          description: Time frequency (e.g., daily, weekly, monthly)
+          examples:
+            - weekly
+          type: string
+      required:
+        - frequency
+        - count
+      type: object
+    AccountStatisticsTimeFrequencyHeatmapModel:
+      additionalProperties: false
+      properties:
+        data:
+          description: Frequency distribution data
+          items:
+            $ref: "#/components/schemas/AccountStatisticsTimeFrequencyEntry"
+          type:
+            - array
+            - "null"
+        mostCommonPattern:
+          description: Most common transaction frequency
+          examples:
+            - weekly
+          type: string
+        totalTransactions:
+          description: Total transactions in period
+          examples:
+            - 240
+          format: int64
+          type: integer
+      required:
+        - data
+        - mostCommonPattern
+        - totalTransactions
+      type: object
     AccountsPagedModel:
       additionalProperties: false
       properties:
@@ -1553,7 +2040,9 @@ components:
         nextDueAt:
           description: Next due date for recurring transactions
           format: date-time
-          type: string
+          type:
+            - string
+            - "null"
         note:
           description: Template notes
           type: string
@@ -1594,6 +2083,7 @@ components:
         - recurrence
         - startDate
         - endDate
+        - nextDueAt
         - recurringStats
         - createdAt
         - updatedAt
@@ -2183,6 +2673,419 @@ paths:
       summary: Update account
       tags:
         - Accounts
+  /accounts/{id}/statistics:
+    get:
+      description: Returns comprehensive statistics for an account including category heatmap, monthly velocity, and time frequency distribution
+      operationId: get-account-statistics
+      parameters:
+        - description: Unique identifier of the account
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the account
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatisticsResponse"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get account statistics
+      tags:
+        - Statistics
+  /accounts/{id}/statistics/budget-health:
+    get:
+      description: Returns health status of active and past budgets for this account
+      operationId: get-budget-health
+      parameters:
+        - description: Unique identifier of the account
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the account
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatisticsBudgetHealthModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get budget health metrics
+      tags:
+        - Statistics
+  /accounts/{id}/statistics/burn-rate:
+    get:
+      description: Returns daily/weekly/monthly average spending and budget projection estimates
+      operationId: get-burn-rate
+      parameters:
+        - description: Unique identifier of the account
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the account
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatisticsBurnRateModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get spending burn rate analysis
+      tags:
+        - Statistics
+  /accounts/{id}/statistics/cash-flow-pulse:
+    get:
+      description: Returns daily balance trend over the specified period for visualizing cash flow patterns
+      operationId: get-cash-flow-pulse
+      parameters:
+        - description: Unique identifier of the account
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the account
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatisticsCashFlowPulseModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get cash flow balance trend
+      tags:
+        - Statistics
+  /accounts/{id}/statistics/category-heatmap:
+    get:
+      description: Returns spending distribution by category for the specified time period
+      operationId: get-category-heatmap
+      parameters:
+        - description: Unique identifier of the account
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the account
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatisticsCategoryHeatmapModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get category spending heatmap
+      tags:
+        - Statistics
+  /accounts/{id}/statistics/monthly-velocity:
+    get:
+      description: Returns month-over-month spending trends and velocity metrics
+      operationId: get-monthly-velocity
+      parameters:
+        - description: Unique identifier of the account
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the account
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatisticsMonthlyVelocityModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get monthly spending velocity
+      tags:
+        - Statistics
+  /accounts/{id}/statistics/time-frequency:
+    get:
+      description: Returns frequency distribution of transactions (daily, weekly, monthly, irregular)
+      operationId: get-time-frequency
+      parameters:
+        - description: Unique identifier of the account
+          example: 1
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Unique identifier of the account
+            examples:
+              - 1
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatisticsTimeFrequencyHeatmapModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get transaction time frequency distribution
+      tags:
+        - Statistics
   /auth/login:
     post:
       description: Authenticate and receive access and refresh tokens

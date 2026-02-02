@@ -77,6 +77,8 @@ func (as AccountService) Create(ctx context.Context, p models.CreateAccountModel
 	common.InvalidateCache(ctx, as.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
 	// Invalidate account summaries
 	common.InvalidateCache(ctx, as.rdb, constants.SummaryAccountCacheKeyPrefix+"*")
+	// Invalidate account statistics caches
+	common.InvalidateCache(ctx, as.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", account.ID)+":*")
 
 	return account, nil
 }
@@ -92,6 +94,8 @@ func (as AccountService) Update(ctx context.Context, id int64, p models.UpdateAc
 	common.InvalidateCache(ctx, as.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
 	// Invalidate account summaries
 	common.InvalidateCache(ctx, as.rdb, constants.SummaryAccountCacheKeyPrefix+"*")
+	// Invalidate account statistics caches
+	common.InvalidateCache(ctx, as.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", id)+":*")
 	return account, nil
 }
 
@@ -129,6 +133,8 @@ func (as AccountService) Delete(ctx context.Context, id int64) error {
 	common.InvalidateCache(ctx, as.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
 	// Invalidate account summaries
 	common.InvalidateCache(ctx, as.rdb, constants.SummaryAccountCacheKeyPrefix+"*")
+	// Invalidate account statistics caches
+	common.InvalidateCache(ctx, as.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", id)+":*")
 
 	return nil
 }
@@ -166,6 +172,8 @@ func (as AccountService) Reorder(ctx context.Context, p models.ReorderAccountsMo
 	common.InvalidateCache(ctx, as.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
 	// Invalidate account summaries
 	common.InvalidateCache(ctx, as.rdb, constants.SummaryAccountCacheKeyPrefix+"*")
+	// Invalidate all account statistics caches
+	common.InvalidateCache(ctx, as.rdb, constants.AccountStatisticsCacheKeyPrefix+"*")
 
 	return nil
 }

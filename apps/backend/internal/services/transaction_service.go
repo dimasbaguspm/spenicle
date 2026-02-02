@@ -98,6 +98,8 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
+	// Invalidate account statistics caches
+	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", p.AccountID)+":*")
 
 	return transaction, nil
 }
@@ -169,6 +171,11 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 	// Invalidate account caches since balances changed
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
+	// Invalidate account statistics caches for both old and new accounts
+	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Account.ID)+":*")
+	if newAccountID != existing.Account.ID {
+		common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", newAccountID)+":*")
+	}
 	return transaction, nil
 }
 
@@ -206,6 +213,8 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 	// Invalidate account caches since balances changed
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
+	// Invalidate account statistics caches
+	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Account.ID)+":*")
 	return nil
 }
 
