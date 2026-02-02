@@ -140,7 +140,7 @@ func (sr AccountStatisticsRepository) GetMonthlyVelocity(ctx context.Context, ac
 			expense_amount,
 			transfer_amount,
 			net,
-			ROUND(expense_amount::numeric / days_in_month, 0)::bigint as daily_average
+			CAST(ROUND(expense_amount::numeric / CAST(days_in_month AS numeric), 2) AS bigint) as daily_average
 		FROM monthly_data
 		ORDER BY period DESC
 	`
@@ -320,19 +320,16 @@ func (sr AccountStatisticsRepository) GetCashFlowPulse(ctx context.Context, acco
 		daily_flow AS (
 			SELECT 
 				ds.date_val,
-				COALESCE(dt.daily_amount, 0) as net_flow
-			FROM date_series ds
-			LEFT JOIN (
-				SELECT 
-					tx_date,
+				COALESCE(SUM(
 					CASE 
-						WHEN type = 'income' THEN SUM(daily_amount)
-						WHEN type = 'expense' THEN -SUM(daily_amount)
+						WHEN dt.type = 'income' THEN dt.daily_amount
+						WHEN dt.type = 'expense' THEN -dt.daily_amount
 						ELSE 0
-					END as daily_amount
-				FROM daily_transactions
-				GROUP BY tx_date
-			) dt ON ds.date_val = dt.tx_date
+					END
+				), 0) as net_flow
+			FROM date_series ds
+			LEFT JOIN daily_transactions dt ON ds.date_val = dt.tx_date
+			GROUP BY ds.date_val
 		)
 		SELECT date_val, net_flow FROM daily_flow ORDER BY date_val
 	`
@@ -647,7 +644,7 @@ func (sr AccountStatisticsRepository) GetBudgetHealth(ctx context.Context, accou
 	achievementRate := 0.0
 	totalBudgets := len(activeBudgets) + len(pastBudgets)
 
-	if totalBudgets > 0 {
+	if len(pastBudgets) > 0 {
 		achievementRate = (float64(achievedCount) / float64(len(pastBudgets))) * 100
 	}
 

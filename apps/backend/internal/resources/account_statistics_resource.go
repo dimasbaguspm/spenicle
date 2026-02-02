@@ -118,6 +118,13 @@ func (sr AccountStatisticsResource) GetAccountStatistics(ctx context.Context, in
 	logger := middleware.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetAccountStatistics", "account_id", input.ID)
 	logger.Info("start")
 
+	// Check if account exists
+	_, err := sr.sevs.Acc.GetDetail(ctx, input.ID)
+	if err != nil {
+		logger.Error("error", "error", err)
+		return nil, err
+	}
+
 	resp, err := sr.sevs.AccStat.GetAccountStatistics(ctx, input.ID, input.AccountStatisticsSearchModel)
 	if err != nil {
 		logger.Error("error", "error", err)

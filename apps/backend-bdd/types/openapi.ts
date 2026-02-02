@@ -76,6 +76,146 @@ export interface paths {
         patch: operations["update-account"];
         trace?: never;
     };
+    "/accounts/{id}/statistics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get comprehensive account statistics
+         * @description Returns all account statistics including category heatmap, monthly velocity, time frequency distribution, cash flow pulse (balance trend), burn rate (spending analysis), and budget health metrics
+         */
+        get: operations["get-account-statistics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/accounts/{id}/statistics/budget-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get budget health metrics
+         * @description Returns health status of active and past budgets for this account
+         */
+        get: operations["get-budget-health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/accounts/{id}/statistics/burn-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get spending burn rate analysis
+         * @description Returns daily/weekly/monthly average spending and budget projection estimates
+         */
+        get: operations["get-burn-rate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/accounts/{id}/statistics/cash-flow-pulse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get cash flow balance trend
+         * @description Returns daily balance trend over the specified period for visualizing cash flow patterns
+         */
+        get: operations["get-cash-flow-pulse"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/accounts/{id}/statistics/category-heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get category spending heatmap
+         * @description Returns spending distribution by category for the specified time period
+         */
+        get: operations["get-category-heatmap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/accounts/{id}/statistics/monthly-velocity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get monthly spending velocity
+         * @description Returns month-over-month spending trends and velocity metrics
+         */
+        get: operations["get-monthly-velocity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/accounts/{id}/statistics/time-frequency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get transaction time frequency distribution
+         * @description Returns frequency distribution of transactions (daily, weekly, monthly, irregular)
+         */
+        get: operations["get-time-frequency"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -719,6 +859,351 @@ export interface components {
              * @description Last update timestamp
              */
             updatedAt?: string;
+        };
+        AccountStatisticsBudgetHealthEntry: {
+            /**
+             * Format: int64
+             * @description Budget limit in cents
+             * @example 5000000
+             */
+            amountLimit: number;
+            /**
+             * Format: int64
+             * @description Amount spent in cents
+             * @example 3500000
+             */
+            amountSpent: number;
+            /**
+             * Format: int64
+             * @description Budget ID
+             * @example 1
+             */
+            budgetId: number;
+            /**
+             * @description Budget name
+             * @example Monthly Groceries
+             */
+            budgetName: string;
+            /**
+             * Format: int64
+             * @description Days remaining in budget period
+             * @example 10
+             */
+            daysRemaining: number;
+            /**
+             * Format: double
+             * @description Percentage of budget used
+             * @example 70
+             */
+            percentageUsed: number;
+            /**
+             * @description Period end (YYYY-MM-DD)
+             * @example 2024-01-31
+             */
+            periodEnd: string;
+            /**
+             * @description Period start (YYYY-MM-DD)
+             * @example 2024-01-01
+             */
+            periodStart: string;
+            /**
+             * @description Budget health status
+             * @example on-track
+             * @enum {string}
+             */
+            status: "on-track" | "warning" | "exceeded" | "active" | "inactive" | "past";
+        };
+        AccountStatisticsBudgetHealthModel: {
+            /**
+             * Format: double
+             * @description Percentage of budgets successfully completed on track
+             * @example 80
+             */
+            achievementRate: number;
+            /** @description Currently active budgets */
+            activeBudgets: components["schemas"]["AccountStatisticsBudgetHealthEntry"][] | null;
+            /**
+             * @description Overall budget health status
+             * @example healthy
+             * @enum {string}
+             */
+            overallStatus: "healthy" | "at-risk" | "concerning";
+            /** @description Past/completed budgets */
+            pastBudgets: components["schemas"]["AccountStatisticsBudgetHealthEntry"][] | null;
+            /**
+             * Format: int64
+             * @description Total number of budgets (active and past)
+             * @example 15
+             */
+            totalBudgets: number;
+        };
+        AccountStatisticsBurnRateModel: {
+            /**
+             * @description Status relative to active budget
+             * @example at-risk
+             * @enum {string}
+             */
+            budgetLimitStatus: "within" | "at-risk" | "exceeded" | "no-budget";
+            /**
+             * Format: int64
+             * @description Average daily spending in cents
+             * @example 150000
+             */
+            dailyAverageSpend: number;
+            /**
+             * Format: int64
+             * @description Estimated days until budget limit (if active budget exists)
+             * @example 10
+             */
+            daysRemaining: number;
+            /**
+             * Format: int64
+             * @description Average monthly spending in cents
+             * @example 4500000
+             */
+            monthlyAverageSpend: number;
+            /**
+             * Format: int64
+             * @description Number of days with spending
+             * @example 28
+             */
+            spendingDays: number;
+            /**
+             * Format: int64
+             * @description Total spending in the period in cents
+             * @example 90000000
+             */
+            totalSpending: number;
+            /**
+             * Format: int64
+             * @description Average weekly spending in cents
+             * @example 1050000
+             */
+            weeklyAverageSpend: number;
+        };
+        AccountStatisticsCashFlowDataPoint: {
+            /**
+             * Format: int64
+             * @description Account balance at this date in cents
+             * @example 5000000
+             */
+            balance: number;
+            /**
+             * @description Date (YYYY-MM-DD)
+             * @example 2024-01-15
+             */
+            date: string;
+        };
+        AccountStatisticsCashFlowPulseModel: {
+            /** @description Daily balance data points */
+            data: components["schemas"]["AccountStatisticsCashFlowDataPoint"][] | null;
+            /**
+             * Format: int64
+             * @description Balance at the end of the period in cents
+             * @example 5000000
+             */
+            endingBalance: number;
+            /**
+             * Format: int64
+             * @description Maximum balance during the period in cents
+             * @example 10000000
+             */
+            maxBalance: number;
+            /**
+             * Format: int64
+             * @description Minimum balance during the period in cents
+             * @example 3000000
+             */
+            minBalance: number;
+            /**
+             * Format: int64
+             * @description Balance at the start of the period in cents
+             * @example 10000000
+             */
+            startingBalance: number;
+            /**
+             * @description Overall trend direction
+             * @example decreasing
+             * @enum {string}
+             */
+            trendDirection: "increasing" | "decreasing" | "stable";
+        };
+        AccountStatisticsCategoryHeatmapEntry: {
+            /**
+             * Format: int64
+             * @description Category ID
+             * @example 1
+             */
+            categoryId: number;
+            /**
+             * @description Category name
+             * @example Food
+             */
+            categoryName: string;
+            /**
+             * Format: double
+             * @description Percentage of total spending
+             * @example 15.5
+             */
+            percentageOfTotal: number;
+            /**
+             * Format: int64
+             * @description Total spending amount in cents
+             * @example 1500000
+             */
+            totalAmount: number;
+            /**
+             * Format: int64
+             * @description Total number of transactions
+             * @example 25
+             */
+            totalCount: number;
+        };
+        AccountStatisticsCategoryHeatmapModel: {
+            /**
+             * Format: int64
+             * @description Number of categories with transactions
+             * @example 10
+             */
+            categoryCount: number;
+            /** @description Category spending data */
+            data: components["schemas"]["AccountStatisticsCategoryHeatmapEntry"][] | null;
+            /**
+             * Format: int64
+             * @description Total spending in the period
+             * @example 9680000
+             */
+            totalSpending: number;
+        };
+        AccountStatisticsMonthlyVelocityEntry: {
+            /**
+             * Format: int64
+             * @description Average daily spending in cents
+             * @example 112903
+             */
+            dailyAverage: number;
+            /**
+             * Format: int64
+             * @description Total expense amount in cents
+             * @example 3500000
+             */
+            expenseAmount: number;
+            /**
+             * Format: int64
+             * @description Expense transactions
+             * @example 95
+             */
+            expenseCount: number;
+            /**
+             * Format: int64
+             * @description Total income amount in cents
+             * @example 5000000
+             */
+            incomeAmount: number;
+            /**
+             * Format: int64
+             * @description Income transactions
+             * @example 50
+             */
+            incomeCount: number;
+            /**
+             * Format: int64
+             * @description Net amount (income - expense) in cents
+             * @example 1500000
+             */
+            net: number;
+            /**
+             * @description Month period (YYYY-MM)
+             * @example 2024-01
+             */
+            period: string;
+            /**
+             * Format: int64
+             * @description Total transactions in month
+             * @example 150
+             */
+            totalCount: number;
+            /**
+             * Format: int64
+             * @description Total transfer amount in cents
+             * @example 500000
+             */
+            transferAmount: number;
+            /**
+             * Format: int64
+             * @description Transfer transactions
+             * @example 5
+             */
+            transferCount: number;
+        };
+        AccountStatisticsMonthlyVelocityModel: {
+            /**
+             * Format: int64
+             * @description Average monthly spending in cents
+             * @example 3500000
+             */
+            averageMonthlySpend: number;
+            /** @description Monthly velocity data */
+            data: components["schemas"]["AccountStatisticsMonthlyVelocityEntry"][] | null;
+            /**
+             * @description Spending trend direction
+             * @example increasing
+             * @enum {string}
+             */
+            trendDirection: "increasing" | "decreasing" | "stable";
+        };
+        AccountStatisticsResponse: {
+            /**
+             * Format: int64
+             * @description Account ID
+             * @example 1
+             */
+            accountId: number;
+            /** @description Budget health metrics */
+            budgetHealth: components["schemas"]["AccountStatisticsBudgetHealthModel"];
+            /** @description Spending rate analysis */
+            burnRate: components["schemas"]["AccountStatisticsBurnRateModel"];
+            /** @description Daily balance trend over time */
+            cashFlowPulse: components["schemas"]["AccountStatisticsCashFlowPulseModel"];
+            /** @description Category spending distribution */
+            categoryHeatmap: components["schemas"]["AccountStatisticsCategoryHeatmapModel"];
+            /** @description Monthly spending velocity */
+            monthlyVelocity: components["schemas"]["AccountStatisticsMonthlyVelocityModel"];
+            /**
+             * @description Period covered (ISO 8601)
+             * @example 2024-01-01T00:00:00Z to 2024-12-31T23:59:59Z
+             */
+            period: string;
+            /** @description Transaction frequency distribution */
+            timeFrequencyHeatmap: components["schemas"]["AccountStatisticsTimeFrequencyHeatmapModel"];
+        };
+        AccountStatisticsTimeFrequencyEntry: {
+            /**
+             * Format: int64
+             * @description Number of transactions at this frequency
+             * @example 45
+             */
+            count: number;
+            /**
+             * @description Time frequency (e.g., daily, weekly, monthly)
+             * @example weekly
+             */
+            frequency: string;
+        };
+        AccountStatisticsTimeFrequencyHeatmapModel: {
+            /** @description Frequency distribution data */
+            data: components["schemas"]["AccountStatisticsTimeFrequencyEntry"][] | null;
+            /**
+             * @description Most common transaction frequency
+             * @example weekly
+             */
+            mostCommonPattern: string;
+            /**
+             * Format: int64
+             * @description Total transactions in period
+             * @example 240
+             */
+            totalTransactions: number;
         };
         AccountsPagedModel: {
             /** @description List of accounts */
@@ -1818,7 +2303,7 @@ export interface components {
              * Format: date-time
              * @description Next due date for recurring transactions
              */
-            nextDueAt?: string;
+            nextDueAt: string | null;
             /** @description Template notes */
             note?: string;
             /**
@@ -2289,6 +2774,328 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-account-statistics": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Unique identifier of the account
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountStatisticsResponse"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-budget-health": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Unique identifier of the account
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountStatisticsBudgetHealthModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-burn-rate": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Unique identifier of the account
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountStatisticsBurnRateModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-cash-flow-pulse": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Unique identifier of the account
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountStatisticsCashFlowPulseModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-category-heatmap": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Unique identifier of the account
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountStatisticsCategoryHeatmapModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-monthly-velocity": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Unique identifier of the account
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountStatisticsMonthlyVelocityModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-time-frequency": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Unique identifier of the account
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountStatisticsTimeFrequencyHeatmapModel"];
                 };
             };
             /** @description Error */

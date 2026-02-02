@@ -1,6 +1,7 @@
 import { test as base } from "@playwright/test";
 import { AuthAPIClient } from "./auth-client";
 import { AccountAPIClient } from "./account-client";
+import { AccountStatisticsAPIClient } from "./account-statistics-client";
 import { CategoryAPIClient } from "./category-client";
 import { TransactionAPIClient } from "./transaction-client";
 import { TagAPIClient } from "./tag-client";
@@ -19,6 +20,7 @@ type APIFixtures = {
   testContext: TestContext;
   authAPI: AuthAPIClient;
   accountAPI: AccountAPIClient;
+  accountStatisticsAPI: AccountStatisticsAPIClient;
   categoryAPI: CategoryAPIClient;
   transactionAPI: TransactionAPIClient;
   tagAPI: TagAPIClient;
@@ -140,6 +142,14 @@ export const test = base.extend<APIFixtures>({
    */
   accountAPI: async ({ request, testContext }, use) => {
     const client = new AccountAPIClient(request, testContext);
+    await use(client);
+  },
+
+  /**
+   * Account Statistics API client
+   */
+  accountStatisticsAPI: async ({ request, testContext }, use) => {
+    const client = new AccountStatisticsAPIClient(request, testContext);
     await use(client);
   },
 
