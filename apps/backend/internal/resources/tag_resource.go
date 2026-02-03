@@ -2,7 +2,7 @@ package resources
 import (
 	"context"
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -74,7 +74,7 @@ func (tr TagResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TagsPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.Tag.GetPaged(ctx, input.TagsSearchModel)
 	if err != nil {
@@ -91,7 +91,7 @@ func (tr TagResource) List(ctx context.Context, input *struct {
 func (tr TagResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
 }) (*struct{ Body models.TagModel }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "tag_id", input.ID)
 	resp, err := tr.sevs.Tag.GetDetail(ctx, input.ID)
 	if err != nil {
@@ -108,7 +108,7 @@ func (tr TagResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TagModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.Tag.Create(ctx, input.Body)
 	if err != nil {
@@ -128,7 +128,7 @@ func (tr TagResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TagModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "tag_id", input.ID)
 	resp, err := tr.sevs.Tag.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -145,7 +145,7 @@ func (tr TagResource) Update(ctx context.Context, input *struct {
 func (tr TagResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "tag_id", input.ID)
 	err := tr.sevs.Tag.Delete(ctx, input.ID)
 	if err != nil {

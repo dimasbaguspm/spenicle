@@ -1,9 +1,16 @@
 package observability
 
 import (
+	"context"
+	"log/slog"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
+
+type contextKey string
+
+const RequestIDKey contextKey = "request_id"
 
 var (
 	// HTTP metrics
@@ -75,3 +82,17 @@ var (
 		},
 	)
 )
+
+// GetRequestID retrieves the request ID from the context
+func GetRequestID(ctx context.Context) string {
+	if requestID, ok := ctx.Value(RequestIDKey).(string); ok {
+		return requestID
+	}
+	return "unknown"
+}
+
+// GetLogger returns a logger with the request ID from the context
+func GetLogger(ctx context.Context) *slog.Logger {
+	requestID := GetRequestID(ctx)
+	return NewLogger("request_id", requestID)
+}

@@ -36,7 +36,7 @@ func NewBudgetTemplateWorker(
 }
 
 func (btw *BudgetTemplateWorker) Start() error {
-	logger := common.NewLogger("worker", "BudgetTemplateWorker")
+	logger := observability.NewLogger("worker", "BudgetTemplateWorker")
 	logger.Info("starting")
 
 	err := btw.cronWorker.Register(common.CronTask{
@@ -54,7 +54,7 @@ func (btw *BudgetTemplateWorker) Start() error {
 
 func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 	runID := common.GenerateID()
-	logger := common.NewLogger("worker", "BudgetTemplateWorker", "run_id", runID, "task", "processTemplates")
+	logger := observability.NewLogger("worker", "BudgetTemplateWorker", "run_id", runID, "task", "processTemplates")
 	logger.Info("start")
 
 	dueTemplates, err := btw.templateRepo.GetDueTemplates(ctx)
@@ -106,7 +106,7 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 }
 
 func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template models.BudgetTemplateModel) error {
-	logger := common.NewLogger("worker", "BudgetTemplateWorker", "template_id", template.ID)
+	logger := observability.NewLogger("worker", "BudgetTemplateWorker", "template_id", template.ID)
 	logger.Info("start processing", "amount_limit", template.AmountLimit, "recurrence", template.Recurrence)
 
 	periodStart, periodEnd := calculateBudgetPeriod(template.Recurrence)
@@ -179,7 +179,7 @@ func calculateBudgetPeriod(recurrence string) (time.Time, time.Time) {
 }
 
 func (btw *BudgetTemplateWorker) Stop() {
-	logger := common.NewLogger("worker", "BudgetTemplateWorker")
+	logger := observability.NewLogger("worker", "BudgetTemplateWorker")
 	logger.Info("stopping")
 	btw.cronWorker.Stop()
 }

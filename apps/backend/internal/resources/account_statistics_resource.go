@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -115,7 +115,7 @@ func (sr AccountStatisticsResource) GetAccountStatistics(ctx context.Context, in
 }) (*struct {
 	Body models.AccountStatisticsResponse
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetAccountStatistics", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetAccountStatistics", "account_id", input.ID)
 	logger.Info("start")
 
 	// Check if account exists
@@ -146,7 +146,7 @@ func (sr AccountStatisticsResource) GetCategoryHeatmap(ctx context.Context, inpu
 }) (*struct {
 	Body models.AccountStatisticsCategoryHeatmapModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetCategoryHeatmap", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetCategoryHeatmap", "account_id", input.ID)
 	logger.Info("start")
 
 	resp, err := sr.sevs.AccStat.GetCategoryHeatmap(ctx, input.ID, input.AccountStatisticsSearchModel)
@@ -170,7 +170,7 @@ func (sr AccountStatisticsResource) GetMonthlyVelocity(ctx context.Context, inpu
 }) (*struct {
 	Body models.AccountStatisticsMonthlyVelocityModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetMonthlyVelocity", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetMonthlyVelocity", "account_id", input.ID)
 	logger.Info("start")
 
 	resp, err := sr.sevs.AccStat.GetMonthlyVelocity(ctx, input.ID, input.AccountStatisticsSearchModel)
@@ -194,7 +194,7 @@ func (sr AccountStatisticsResource) GetTimeFrequencyHeatmap(ctx context.Context,
 }) (*struct {
 	Body models.AccountStatisticsTimeFrequencyHeatmapModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetTimeFrequencyHeatmap", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetTimeFrequencyHeatmap", "account_id", input.ID)
 	logger.Info("start")
 
 	resp, err := sr.sevs.AccStat.GetTimeFrequencyHeatmap(ctx, input.ID, input.AccountStatisticsSearchModel)
@@ -218,7 +218,7 @@ func (sr AccountStatisticsResource) GetCashFlowPulse(ctx context.Context, input 
 }) (*struct {
 	Body models.AccountStatisticsCashFlowPulseModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetCashFlowPulse", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetCashFlowPulse", "account_id", input.ID)
 	logger.Info("start")
 
 	resp, err := sr.sevs.AccStat.GetCashFlowPulse(ctx, input.ID, input.AccountStatisticsSearchModel)
@@ -242,7 +242,7 @@ func (sr AccountStatisticsResource) GetBurnRate(ctx context.Context, input *stru
 }) (*struct {
 	Body models.AccountStatisticsBurnRateModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetBurnRate", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetBurnRate", "account_id", input.ID)
 	logger.Info("start")
 
 	resp, err := sr.sevs.AccStat.GetBurnRate(ctx, input.ID, input.AccountStatisticsSearchModel)
@@ -266,7 +266,7 @@ func (sr AccountStatisticsResource) GetBudgetHealth(ctx context.Context, input *
 }) (*struct {
 	Body models.AccountStatisticsBudgetHealthModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetBudgetHealth", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetBudgetHealth", "account_id", input.ID)
 	logger.Info("start")
 
 	resp, err := sr.sevs.AccStat.GetBudgetHealth(ctx, input.ID, input.AccountStatisticsSearchModel)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/configs"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -61,7 +62,7 @@ func RateLimitMiddleware(env configs.Environment, rdb *redis.Client) func(http.H
 				return
 			}
 
-			logger := GetLogger(r.Context())
+			logger := observability.GetLogger(r.Context())
 
 			clientIP := r.RemoteAddr
 

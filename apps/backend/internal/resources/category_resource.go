@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -89,7 +89,7 @@ func (cr CategoryResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoriesPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
+	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start")
 	resp, err := cr.sevs.Cat.GetPaged(ctx, input.CategoriesSearchModel)
 	if err != nil {
@@ -108,7 +108,7 @@ func (cr CategoryResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoryModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryResource.Get", "category_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Get", "category_id", input.ID)
 	logger.Info("start")
 	resp, err := cr.sevs.Cat.GetDetail(ctx, input.ID)
 	if err != nil {
@@ -127,7 +127,7 @@ func (cr CategoryResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoryModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
+	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start")
 	resp, err := cr.sevs.Cat.Create(ctx, input.Body)
 	if err != nil {
@@ -147,7 +147,7 @@ func (cr CategoryResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoryModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
+	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start", "category_id", input.ID)
 	resp, err := cr.sevs.Cat.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -164,7 +164,7 @@ func (cr CategoryResource) Update(ctx context.Context, input *struct {
 func (cr CategoryResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the category" example:"1"`
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
+	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start", "category_id", input.ID)
 	err := cr.sevs.Cat.Delete(ctx, input.ID)
 	if err != nil {
@@ -177,7 +177,7 @@ func (cr CategoryResource) Delete(ctx context.Context, input *struct {
 func (cr CategoryResource) Reorder(ctx context.Context, input *struct {
 	Body models.ReorderCategoriesModel
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
+	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start")
 	err := cr.sevs.Cat.Reorder(ctx, input.Body)
 	if err != nil {

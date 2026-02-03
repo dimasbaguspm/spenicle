@@ -2,7 +2,7 @@ package resources
 import (
 	"context"
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -229,7 +229,7 @@ func (tr TransactionResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionsPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.Tsct.GetPaged(ctx, input.TransactionsSearchModel)
 	if err != nil {
@@ -248,7 +248,7 @@ func (tr TransactionResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.ID)
 	resp, err := tr.sevs.Tsct.GetDetail(ctx, input.ID)
 	if err != nil {
@@ -267,7 +267,7 @@ func (tr TransactionResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.Tsct.Create(ctx, input.Body)
 	if err != nil {
@@ -287,7 +287,7 @@ func (tr TransactionResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.ID)
 	resp, err := tr.sevs.Tsct.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -304,7 +304,7 @@ func (tr TransactionResource) Update(ctx context.Context, input *struct {
 func (tr TransactionResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.ID)
 	err := tr.sevs.Tsct.Delete(ctx, input.ID)
 	if err != nil {
@@ -320,7 +320,7 @@ func (tr TransactionResource) ListRelations(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionRelationsPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "source_transaction_id", input.SourceTransactionID)
 	resp, err := tr.sevs.TsctRel.GetPaged(ctx, input.TransactionRelationsSearchModel)
 	if err != nil {
@@ -339,7 +339,7 @@ func (tr TransactionResource) GetRelation(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionRelationModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID)
 	resp, err := tr.sevs.TsctRel.GetDetail(ctx, input.TransactionRelationGetModel)
 	if err != nil {
@@ -358,7 +358,7 @@ func (tr TransactionResource) CreateRelation(ctx context.Context, input *struct 
 }) (*struct {
 	Body models.TransactionRelationModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "source_transaction_id", input.Body.SourceTransactionID)
 	resp, err := tr.sevs.TsctRel.Create(ctx, input.Body)
 	if err != nil {
@@ -375,7 +375,7 @@ func (tr TransactionResource) CreateRelation(ctx context.Context, input *struct 
 func (tr TransactionResource) DeleteRelation(ctx context.Context, input *struct {
 	models.DeleteTransactionRelationModel
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID)
 	if err := tr.sevs.TsctRel.Delete(ctx, input.DeleteTransactionRelationModel); err != nil {
 		logger.Error("error", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID, "error", err)
@@ -390,7 +390,7 @@ func (tr TransactionResource) ListTags(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionTagsPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.TransactionID)
 	resp, err := tr.sevs.TsctTag.GetPaged(ctx, input.TransactionTagsSearchModel)
 	if err != nil {
@@ -410,7 +410,7 @@ func (tr TransactionResource) GetTag(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionTagModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.TransactionID, "tag_id", input.TagID)
 	resp, err := tr.sevs.TsctTag.GetDetail(ctx, input.TagID)
 	if err != nil {
@@ -430,7 +430,7 @@ func (tr TransactionResource) CreateTag(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionTagModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.TransactionID)
 	input.Body.TransactionID = input.TransactionID
 	resp, err := tr.sevs.TsctTag.Create(ctx, input.Body)
@@ -449,7 +449,7 @@ func (tr TransactionResource) DeleteTag(ctx context.Context, input *struct {
 	TransactionID int64 `path:"transactionId" minimum:"1" doc:"Transaction ID"`
 	TagID         int64 `path:"tagId" minimum:"1" doc:"Tag ID"`
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.TransactionID, "tag_id", input.TagID)
 	if err := tr.sevs.TsctTag.Delete(ctx, input.TransactionID, input.TagID); err != nil {
 		logger.Error("error", "transaction_id", input.TransactionID, "tag_id", input.TagID, "error", err)
@@ -464,7 +464,7 @@ func (tr TransactionResource) ListTemplates(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionTemplatesPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.TsctTem.GetPaged(ctx, input.TransactionTemplatesSearchModel)
 	if err != nil {
@@ -483,7 +483,7 @@ func (tr TransactionResource) GetTemplate(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionTemplateModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.TemplateID)
 	resp, err := tr.sevs.TsctTem.GetDetail(ctx, input.TemplateID)
 	if err != nil {
@@ -502,7 +502,7 @@ func (tr TransactionResource) CreateTemplate(ctx context.Context, input *struct 
 }) (*struct {
 	Body models.TransactionTemplateModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.TsctTem.Create(ctx, input.Body)
 	if err != nil {
@@ -522,7 +522,7 @@ func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct 
 }) (*struct {
 	Body models.TransactionTemplateModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.TemplateID)
 	resp, err := tr.sevs.TsctTem.Update(ctx, input.TemplateID, input.Body)
 	if err != nil {
@@ -539,7 +539,7 @@ func (tr TransactionResource) UpdateTemplate(ctx context.Context, input *struct 
 func (tr TransactionResource) DeleteTemplate(ctx context.Context, input *struct {
 	TemplateID int64 `path:"templateId" minimum:"1" doc:"Unique identifier of the transaction template" example:"1"`
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.TemplateID)
 	err := tr.sevs.TsctTem.Delete(ctx, input.TemplateID)
 	if err != nil {
@@ -555,7 +555,7 @@ func (tr TransactionResource) ListTemplateRelatedTransactions(ctx context.Contex
 }) (*struct {
 	Body models.TransactionsPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.TemplateID)
 	result, err := tr.sevs.TsctTem.GetRelatedTransactions(ctx, input.TemplateID, input.TransactionTemplateRelatedTransactionsSearchModel)
 	if err != nil {

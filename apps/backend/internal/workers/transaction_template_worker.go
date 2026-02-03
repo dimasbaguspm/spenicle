@@ -36,7 +36,7 @@ func NewTransactionTemplateWorker(
 }
 
 func (ttw *TransactionTemplateWorker) Start() error {
-	logger := common.NewLogger("worker", "TransactionTemplateWorker")
+	logger := observability.NewLogger("worker", "TransactionTemplateWorker")
 	logger.Info("starting")
 
 	err := ttw.cronWorker.Register(common.CronTask{
@@ -54,7 +54,7 @@ func (ttw *TransactionTemplateWorker) Start() error {
 
 func (ttw *TransactionTemplateWorker) processTemplates(ctx context.Context) error {
 	runID := common.GenerateID()
-	logger := common.NewLogger("worker", "TransactionTemplateWorker", "run_id", runID, "task", "processTemplates")
+	logger := observability.NewLogger("worker", "TransactionTemplateWorker", "run_id", runID, "task", "processTemplates")
 	logger.Info("start")
 
 	dueTemplates, err := ttw.templateRepo.GetDueTemplates(ctx)
@@ -90,7 +90,7 @@ func (ttw *TransactionTemplateWorker) processTemplates(ctx context.Context) erro
 }
 
 func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, template models.TransactionTemplateModel) error {
-	logger := common.NewLogger("worker", "TransactionTemplateWorker", "template_id", template.ID)
+	logger := observability.NewLogger("worker", "TransactionTemplateWorker", "template_id", template.ID)
 	logger.Info("start processing", "template_name", template.Name, "type", template.Type, "amount", template.Amount)
 
 	var destAccountID *int64
@@ -157,7 +157,7 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 }
 
 func (ttw *TransactionTemplateWorker) Stop() {
-	logger := common.NewLogger("worker", "TransactionTemplateWorker")
+	logger := observability.NewLogger("worker", "TransactionTemplateWorker")
 	logger.Info("stopping")
 	ttw.cronWorker.Stop()
 }

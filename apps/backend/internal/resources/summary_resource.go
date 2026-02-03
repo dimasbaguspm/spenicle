@@ -3,7 +3,7 @@ import (
 	"context"
 	"net/http"
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -54,7 +54,7 @@ func (sr SummaryResource) GetTransactionSummary(ctx context.Context, input *stru
 }) (*struct {
 	Body models.SummaryTransactionListModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := sr.sevs.Sum.GetTransactionSummary(ctx, input.SummaryTransactionSearchModel)
 	if err != nil {
@@ -73,7 +73,7 @@ func (sr SummaryResource) GetAccountSummary(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.SummaryAccountListModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := sr.sevs.Sum.GetAccountSummary(ctx, input.SummarySearchModel)
 	if err != nil {
@@ -92,7 +92,7 @@ func (sr SummaryResource) GetCategorySummary(ctx context.Context, input *struct 
 }) (*struct {
 	Body models.SummaryCategoryListModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := sr.sevs.Sum.GetCategorySummary(ctx, input.SummarySearchModel)
 	if err != nil {

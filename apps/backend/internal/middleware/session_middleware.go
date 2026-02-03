@@ -4,12 +4,13 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 )
 
 func SessionMiddleware(api huma.API) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
-		logger := GetLogger(ctx.Context())
+		logger := observability.GetLogger(ctx.Context())
 
 		ar := repositories.NewAuthRepository(ctx.Context())
 

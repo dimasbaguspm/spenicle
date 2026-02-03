@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -79,7 +79,7 @@ func (br BudgetResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetsPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "BudgetResource.List")
+	logger := observability.GetLogger(ctx).With("resource", "BudgetResource.List")
 	logger.Info("start")
 
 	resp, err := br.sevs.Budg.GetPaged(ctx, input.BudgetsSearchModel)
@@ -98,7 +98,7 @@ func (br BudgetResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "BudgetResource.Get", "budget_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "BudgetResource.Get", "budget_id", input.ID)
 	logger.Info("start")
 	item, err := br.sevs.Budg.GetDetail(ctx, input.ID)
 	if err != nil {
@@ -115,7 +115,7 @@ func (br BudgetResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "BudgetResource.Create")
+	logger := observability.GetLogger(ctx).With("resource", "BudgetResource.Create")
 	logger.Info("start")
 	resp, err := br.sevs.Budg.Create(ctx, input.Body)
 	if err != nil {
@@ -133,7 +133,7 @@ func (br BudgetResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "BudgetResource.Update", "budget_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "BudgetResource.Update", "budget_id", input.ID)
 	logger.Info("start")
 	resp, err := br.sevs.Budg.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -148,7 +148,7 @@ func (br BudgetResource) Update(ctx context.Context, input *struct {
 func (br BudgetResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget ID"`
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "BudgetResource.Delete", "budget_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "BudgetResource.Delete", "budget_id", input.ID)
 	logger.Info("start")
 	if err := br.sevs.Budg.Delete(ctx, input.ID); err != nil {
 		logger.Error("error", "error", err)

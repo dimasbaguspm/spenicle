@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -105,7 +105,7 @@ func (sr CategoryStatisticsResource) GetCategoryStatistics(ctx context.Context, 
 }) (*struct {
 	Body models.CategoryStatisticsResponse
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetCategoryStatistics", "category_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetCategoryStatistics", "category_id", input.ID)
 	logger.Info("start")
 
 	// Validate category exists
@@ -141,7 +141,7 @@ func (sr CategoryStatisticsResource) GetSpendingVelocity(ctx context.Context, in
 }) (*struct {
 	Body models.CategoryStatisticSpendingVelocityModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetSpendingVelocity", "category_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetSpendingVelocity", "category_id", input.ID)
 	logger.Info("start")
 
 	// Validate category exists
@@ -177,7 +177,7 @@ func (sr CategoryStatisticsResource) GetAccountDistribution(ctx context.Context,
 }) (*struct {
 	Body models.CategoryStatisticAccountDistributionModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetAccountDistribution", "category_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetAccountDistribution", "category_id", input.ID)
 	logger.Info("start")
 
 	// Validate category exists
@@ -213,7 +213,7 @@ func (sr CategoryStatisticsResource) GetAverageTransactionSize(ctx context.Conte
 }) (*struct {
 	Body models.CategoryStatisticAverageTransactionSizeModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetAverageTransactionSize", "category_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetAverageTransactionSize", "category_id", input.ID)
 	logger.Info("start")
 
 	// Validate category exists
@@ -249,7 +249,7 @@ func (sr CategoryStatisticsResource) GetDayOfWeekPattern(ctx context.Context, in
 }) (*struct {
 	Body models.CategoryStatisticDayOfWeekPatternModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetDayOfWeekPattern", "category_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetDayOfWeekPattern", "category_id", input.ID)
 	logger.Info("start")
 
 	// Validate category exists
@@ -285,7 +285,7 @@ func (sr CategoryStatisticsResource) GetBudgetUtilization(ctx context.Context, i
 }) (*struct {
 	Body models.CategoryStatisticBudgetUtilizationModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetBudgetUtilization", "category_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "CategoryStatisticsResource.GetBudgetUtilization", "category_id", input.ID)
 	logger.Info("start")
 
 	// Validate category exists

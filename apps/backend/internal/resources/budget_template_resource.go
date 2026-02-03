@@ -3,7 +3,7 @@ import (
 	"context"
 	"net/http"
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -86,7 +86,7 @@ func (btr BudgetTemplateResource) GetPaged(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplatesPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := btr.sevs.BudgTem.GetPaged(ctx, input.BudgetTemplatesSearchModel)
 	if err != nil {
@@ -103,7 +103,7 @@ func (btr BudgetTemplateResource) GetDetail(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.ID)
 	item, err := btr.sevs.BudgTem.GetDetail(ctx, input.ID)
 	if err != nil {
@@ -120,7 +120,7 @@ func (btr BudgetTemplateResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := btr.sevs.BudgTem.Create(ctx, input.Body)
 	if err != nil {
@@ -138,7 +138,7 @@ func (btr BudgetTemplateResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.ID)
 	resp, err := btr.sevs.BudgTem.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -153,7 +153,7 @@ func (btr BudgetTemplateResource) Update(ctx context.Context, input *struct {
 func (btr BudgetTemplateResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Budget Template ID"`
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.ID)
 	if err := btr.sevs.BudgTem.Delete(ctx, input.ID); err != nil {
 		logger.Error("error", "template_id", input.ID, "error", err)
@@ -168,7 +168,7 @@ func (btr BudgetTemplateResource) GetRelatedBudgets(ctx context.Context, input *
 }) (*struct {
 	Body models.BudgetsPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "Resource")
+	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.ID)
 	resp, err := btr.sevs.BudgTem.GetRelatedBudgets(ctx, input.ID, input.BudgetTemplateRelatedBudgetsSearchModel)
 	if err != nil {

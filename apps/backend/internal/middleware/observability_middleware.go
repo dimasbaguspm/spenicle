@@ -36,7 +36,7 @@ func ObservabilityMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := common.GenerateID()
 
-		ctx := context.WithValue(r.Context(), RequestIDKey, requestID)
+		ctx := context.WithValue(r.Context(), observability.RequestIDKey, requestID)
 		r = r.WithContext(ctx)
 
 		rw := &responseWriter{ResponseWriter: w, statusCode: 0}
@@ -62,16 +62,4 @@ func ObservabilityMiddleware(next http.Handler) http.Handler {
 			"status", rw.statusCode,
 		)
 	})
-}
-
-func GetRequestID(ctx context.Context) string {
-	if requestID, ok := ctx.Value(RequestIDKey).(string); ok {
-		return requestID
-	}
-	return "unknown"
-}
-
-func GetLogger(ctx context.Context) *slog.Logger {
-	requestID := GetRequestID(ctx)
-	return common.NewLogger("request_id", requestID)
 }

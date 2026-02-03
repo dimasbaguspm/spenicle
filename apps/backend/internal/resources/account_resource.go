@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/middleware"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
@@ -89,7 +89,7 @@ func (ar AccountResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountsPagedModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.List")
+	logger := observability.GetLogger(ctx).With("resource", "AccountResource.List")
 	logger.Info("start")
 	resp, err := ar.sevs.Acc.GetPaged(ctx, input.AccountsSearchModel)
 	if err != nil {
@@ -108,7 +108,7 @@ func (ar AccountResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Get", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Get", "account_id", input.ID)
 	logger.Info("start")
 	resp, err := ar.sevs.Acc.GetDetail(ctx, input.ID)
 	if err != nil {
@@ -127,7 +127,7 @@ func (ar AccountResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Create", "name", input.Body.Name)
+	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Create", "name", input.Body.Name)
 	logger.Info("start")
 	resp, err := ar.sevs.Acc.Create(ctx, input.Body)
 	if err != nil {
@@ -147,7 +147,7 @@ func (ar AccountResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountModel
 }, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Update", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Update", "account_id", input.ID)
 	logger.Info("start")
 	resp, err := ar.sevs.Acc.Update(ctx, input.ID, input.Body)
 	if err != nil {
@@ -164,7 +164,7 @@ func (ar AccountResource) Update(ctx context.Context, input *struct {
 func (ar AccountResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Delete", "account_id", input.ID)
+	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Delete", "account_id", input.ID)
 	logger.Info("start")
 	err := ar.sevs.Acc.Delete(ctx, input.ID)
 	if err != nil {
@@ -177,7 +177,7 @@ func (ar AccountResource) Delete(ctx context.Context, input *struct {
 func (ar AccountResource) Reorder(ctx context.Context, input *struct {
 	Body models.ReorderAccountsModel
 }) (*struct{}, error) {
-	logger := middleware.GetLogger(ctx).With("resource", "AccountResource.Reorder")
+	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Reorder")
 	logger.Info("start")
 	err := ar.sevs.Acc.Reorder(ctx, input.Body)
 	if err != nil {
