@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -49,7 +48,7 @@ func (cs CategoryService) Create(ctx context.Context, p models.CreateCategoryMod
 		return category, err
 	}
 
-	common.SetCache(ctx, cs.rdb, fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", category.ID), category, CategoryCacheTTL)
+	common.InvalidateCache(ctx, cs.rdb, constants.CategoryCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, cs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, cs.rdb, constants.SummaryCategoryCacheKeyPrefix+"*")
 
@@ -62,8 +61,7 @@ func (cs CategoryService) Update(ctx context.Context, id int64, p models.UpdateC
 		return category, err
 	}
 
-	cacheKey := fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", id)
-	common.SetCache(ctx, cs.rdb, cacheKey, category, CategoryCacheTTL)
+	common.InvalidateCache(ctx, cs.rdb, constants.CategoryCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, cs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, cs.rdb, constants.SummaryCategoryCacheKeyPrefix+"*")
 
@@ -100,7 +98,7 @@ func (cs CategoryService) Delete(ctx context.Context, id int64) error {
 	}
 	tx = nil
 
-	common.InvalidateCache(ctx, cs.rdb, fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, cs.rdb, constants.CategoryCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, cs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, cs.rdb, constants.SummaryCategoryCacheKeyPrefix+"*")
 

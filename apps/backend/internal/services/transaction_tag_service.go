@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
@@ -45,10 +44,10 @@ func (tts TransactionTagService) Create(ctx context.Context, payload models.Crea
 		return tag, err
 	}
 
-	common.SetCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionTagCacheKeyPrefix+"%d", tag.ID), tag, TransactionTagCacheTTL)
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagsPagedCacheKeyPrefix+"*")
 	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", payload.TransactionID))
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, tts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	return tag, nil
 }
@@ -59,10 +58,10 @@ func (tts TransactionTagService) Delete(ctx context.Context, transactionID, tagI
 		return err
 	}
 
-	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionTagCacheKeyPrefix+"%d", tagID))
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagsPagedCacheKeyPrefix+"*")
 	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", transactionID))
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, tts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	return nil
 }

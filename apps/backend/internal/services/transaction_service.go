@@ -70,7 +70,7 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.SetCache(ctx, ts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", transaction.ID), transaction, TransactionCacheTTL)
+	common.InvalidateCache(ctx, ts.rdb, constants.TransactionCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
@@ -142,7 +142,7 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.SetCache(ctx, ts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", id), transaction, TransactionCacheTTL)
+	common.InvalidateCache(ctx, ts.rdb, constants.TransactionCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	// Invalidate account caches since balances changed
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
@@ -184,7 +184,7 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 		return huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, ts.rdb, constants.TransactionCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 	// Invalidate account caches since balances changed
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")

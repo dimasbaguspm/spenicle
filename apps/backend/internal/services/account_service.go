@@ -49,7 +49,7 @@ func (as AccountService) Create(ctx context.Context, p models.CreateAccountModel
 		return account, err
 	}
 
-	common.SetCache(ctx, as.rdb, fmt.Sprintf(constants.AccountCacheKeyPrefix+"%d", account.ID), account, AccountCacheTTL)
+	common.InvalidateCache(ctx, as.rdb, constants.AccountCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, as.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
 	// Invalidate account summaries
 	common.InvalidateCache(ctx, as.rdb, constants.SummaryAccountCacheKeyPrefix+"*")
@@ -65,8 +65,7 @@ func (as AccountService) Update(ctx context.Context, id int64, p models.UpdateAc
 		return account, err
 	}
 
-	cacheKey := fmt.Sprintf(constants.AccountCacheKeyPrefix+"%d", id)
-	common.SetCache(ctx, as.rdb, cacheKey, account, AccountCacheTTL)
+	common.InvalidateCache(ctx, as.rdb, constants.AccountCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, as.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
 	// Invalidate account summaries
 	common.InvalidateCache(ctx, as.rdb, constants.SummaryAccountCacheKeyPrefix+"*")
@@ -105,7 +104,7 @@ func (as AccountService) Delete(ctx context.Context, id int64) error {
 	}
 	tx = nil
 
-	common.InvalidateCache(ctx, as.rdb, fmt.Sprintf(constants.AccountCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, as.rdb, constants.AccountCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, as.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
 	// Invalidate account summaries
 	common.InvalidateCache(ctx, as.rdb, constants.SummaryAccountCacheKeyPrefix+"*")

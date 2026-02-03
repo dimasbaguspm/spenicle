@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
@@ -45,7 +44,7 @@ func (ts TagService) Create(ctx context.Context, payload models.CreateTagModel) 
 		return tag, err
 	}
 
-	common.SetCache(ctx, ts.rdb, fmt.Sprintf(constants.TagCacheKeyPrefix+"%d", tag.ID), tag, TagCacheTTL)
+	common.InvalidateCache(ctx, ts.rdb, constants.TagCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.TagsPagedCacheKeyPrefix+"*")
 
 	return tag, nil
@@ -57,8 +56,7 @@ func (ts TagService) Update(ctx context.Context, id int64, payload models.Update
 		return tag, err
 	}
 
-	cacheKey := fmt.Sprintf(constants.TagCacheKeyPrefix+"%d", id)
-	common.SetCache(ctx, ts.rdb, cacheKey, tag, TagCacheTTL)
+	common.InvalidateCache(ctx, ts.rdb, constants.TagCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.TagsPagedCacheKeyPrefix+"*")
 
 	return tag, nil
@@ -70,7 +68,7 @@ func (ts TagService) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, fmt.Sprintf(constants.TagCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, ts.rdb, constants.TagCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, ts.rdb, constants.TagsPagedCacheKeyPrefix+"*")
 
 	return nil

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
@@ -45,7 +44,7 @@ func (tts TransactionTemplateService) Create(ctx context.Context, payload models
 		return template, err
 	}
 
-	common.SetCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionTemplateCacheKeyPrefix+"%d", template.ID), template, TransactionTemplateCacheTTL)
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplateCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*")
 
 	return template, nil
@@ -57,8 +56,7 @@ func (tts TransactionTemplateService) Update(ctx context.Context, id int64, payl
 		return template, err
 	}
 
-	cacheKey := fmt.Sprintf(constants.TransactionTemplateCacheKeyPrefix+"%d", id)
-	common.SetCache(ctx, tts.rdb, cacheKey, template, TransactionTemplateCacheTTL)
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplateCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*")
 
 	return template, nil
@@ -70,7 +68,7 @@ func (tts TransactionTemplateService) Delete(ctx context.Context, id int64) erro
 		return err
 	}
 
-	common.InvalidateCache(ctx, tts.rdb, fmt.Sprintf(constants.TransactionTemplateCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplateCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*")
 
 	return nil

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -54,17 +53,13 @@ func (bs BudgetService) Create(ctx context.Context, p models.CreateBudgetModel) 
 		return budget, err
 	}
 
-	common.SetCache(ctx, bs.rdb, fmt.Sprintf(constants.BudgetCacheKeyPrefix+"%d", budget.ID), budget, BudgetCacheTTL)
+	common.InvalidateCache(ctx, bs.rdb, constants.BudgetCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, bs.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
 	// Invalidate related account/category caches
-	if budget.AccountID != nil {
-		common.InvalidateCache(ctx, bs.rdb, fmt.Sprintf(constants.AccountCacheKeyPrefix+"%d", *budget.AccountID))
-		common.InvalidateCache(ctx, bs.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
-	}
-	if budget.CategoryID != nil {
-		common.InvalidateCache(ctx, bs.rdb, fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", *budget.CategoryID))
-		common.InvalidateCache(ctx, bs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
-	}
+	common.InvalidateCache(ctx, bs.rdb, constants.AccountCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bs.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bs.rdb, constants.CategoryCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
 
 	return budget, nil
 }
@@ -75,25 +70,20 @@ func (bs BudgetService) Update(ctx context.Context, id int64, p models.UpdateBud
 		return budget, err
 	}
 
-	cacheKey := fmt.Sprintf(constants.BudgetCacheKeyPrefix+"%d", id)
-	common.SetCache(ctx, bs.rdb, cacheKey, budget, BudgetCacheTTL)
+	common.InvalidateCache(ctx, bs.rdb, constants.BudgetCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, bs.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
 	// Invalidate related account/category caches
-	if budget.AccountID != nil {
-		common.InvalidateCache(ctx, bs.rdb, fmt.Sprintf(constants.AccountCacheKeyPrefix+"%d", *budget.AccountID))
-		common.InvalidateCache(ctx, bs.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
-	}
-	if budget.CategoryID != nil {
-		common.InvalidateCache(ctx, bs.rdb, fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", *budget.CategoryID))
-		common.InvalidateCache(ctx, bs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
-	}
+	common.InvalidateCache(ctx, bs.rdb, constants.AccountCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bs.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bs.rdb, constants.CategoryCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
 
 	return budget, nil
 }
 
 func (bs BudgetService) Delete(ctx context.Context, id int64) error {
 	// Get budget details before deletion to know which caches to invalidate
-	budget, err := bs.rpts.Budg.GetDetail(ctx, id)
+	_, err := bs.rpts.Budg.GetDetail(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -103,17 +93,13 @@ func (bs BudgetService) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	common.InvalidateCache(ctx, bs.rdb, fmt.Sprintf(constants.BudgetCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, bs.rdb, constants.BudgetCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, bs.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
 	// Invalidate related account/category caches
-	if budget.AccountID != nil {
-		common.InvalidateCache(ctx, bs.rdb, fmt.Sprintf(constants.AccountCacheKeyPrefix+"%d", *budget.AccountID))
-		common.InvalidateCache(ctx, bs.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
-	}
-	if budget.CategoryID != nil {
-		common.InvalidateCache(ctx, bs.rdb, fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", *budget.CategoryID))
-		common.InvalidateCache(ctx, bs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
-	}
+	common.InvalidateCache(ctx, bs.rdb, constants.AccountCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bs.rdb, constants.AccountsPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bs.rdb, constants.CategoryCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bs.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
 
 	return nil
 }

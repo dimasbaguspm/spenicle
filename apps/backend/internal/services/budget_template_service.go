@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -54,7 +53,7 @@ func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudg
 		return template, err
 	}
 
-	common.SetCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", template.ID), template, BudgetTemplateCacheTTL)
+	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplateCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
 
 	return template, nil
@@ -66,8 +65,7 @@ func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.
 		return template, err
 	}
 
-	cacheKey := fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", id)
-	common.SetCache(ctx, bts.rdb, cacheKey, template, BudgetTemplateCacheTTL)
+	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplateCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
 
 	return template, nil
@@ -79,7 +77,7 @@ func (bts BudgetTemplateService) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplateCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
 
 	return nil

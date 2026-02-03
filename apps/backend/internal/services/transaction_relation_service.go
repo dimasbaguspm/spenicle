@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
@@ -45,12 +44,10 @@ func (trs TransactionRelationService) Create(ctx context.Context, p models.Creat
 		return relation, err
 	}
 
-	cacheKey := fmt.Sprintf(constants.TransactionRelationCacheKeyPrefix+"%d-%d", p.SourceTransactionID, relation.ID)
-	common.SetCache(ctx, trs.rdb, cacheKey, relation, TransactionRelationCacheTTL)
+	common.InvalidateCache(ctx, trs.rdb, constants.TransactionRelationCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, trs.rdb, constants.TransactionRelationsPagedCacheKeyPrefix+"*")
 	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", p.SourceTransactionID))
-	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", p.RelatedTransactionID))
+	common.InvalidateCache(ctx, trs.rdb, constants.TransactionCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, trs.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 
 	return relation, nil
@@ -58,7 +55,7 @@ func (trs TransactionRelationService) Create(ctx context.Context, p models.Creat
 
 func (trs TransactionRelationService) Delete(ctx context.Context, p models.DeleteTransactionRelationModel) error {
 	// Get relation details before deletion to know which transaction caches to invalidate
-	relation, err := trs.rpts.TsctRel.GetDetail(ctx, models.TransactionRelationGetModel{
+	_, err := trs.rpts.TsctRel.GetDetail(ctx, models.TransactionRelationGetModel{
 		SourceTransactionID: p.SourceTransactionID,
 		RelationID:          p.RelationID,
 	})
@@ -71,12 +68,10 @@ func (trs TransactionRelationService) Delete(ctx context.Context, p models.Delet
 		return err
 	}
 
-	cacheKey := fmt.Sprintf(constants.TransactionRelationCacheKeyPrefix+"%d-%d", p.SourceTransactionID, p.RelationID)
-	common.InvalidateCache(ctx, trs.rdb, cacheKey)
+	common.InvalidateCache(ctx, trs.rdb, constants.TransactionRelationCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, trs.rdb, constants.TransactionRelationsPagedCacheKeyPrefix+"*")
 	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", p.SourceTransactionID))
-	common.InvalidateCache(ctx, trs.rdb, fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", relation.RelatedTransactionID))
+	common.InvalidateCache(ctx, trs.rdb, constants.TransactionCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, trs.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
 
 	return nil
