@@ -8,6 +8,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -144,11 +145,14 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 		LIMIT $6::bigint OFFSET $7::bigint
 	`
 
+	queryStart := time.Now()
 	rows, err := ttr.db.Query(ctx, sql, searchPattern, p.Type, p.AccountID, p.CategoryID, p.DestinationAccountID, p.PageSize, offset)
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionTemplatesPagedModel{}, huma.Error500InternalServerError("Unable to query transaction templates", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transaction_templates", time.Since(queryStart).Seconds())
 
 	var items []models.TransactionTemplateModel
 	var totalCount int
@@ -223,7 +227,6 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 	var destAccountIcon *string
 	var destAccountIconColor *string
 
-	// First get the basic template data
 	sql := `
 		SELECT
 			tt.id,
@@ -266,6 +269,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 			AND (da.deleted_at IS NULL OR da.id IS NULL)
 	`
 
+	queryStart := time.Now()
 	err := ttr.db.QueryRow(ctx, sql, id).Scan(
 		&data.ID, &data.Name, &data.Type, &data.Amount,
 		&data.Account.ID, &data.Account.Name, &data.Account.Type, &data.Account.Amount,
@@ -280,8 +284,10 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TransactionTemplateModel{}, huma.Error404NotFound("Transaction template not found")
 		}
+		observability.RecordError("database")
 		return models.TransactionTemplateModel{}, huma.Error500InternalServerError("Unable to query transaction template", err)
 	}
+	observability.RecordQueryDuration("SELECT", "transaction_templates", time.Since(queryStart).Seconds())
 
 	// Set destination account if present
 	if destAccountID != nil {
@@ -305,14 +311,16 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 		WHERE r.template_id = $1
 	`
 
+	queryStart2 := time.Now()
 	err = ttr.db.QueryRow(ctx, statsSQL, id).Scan(
 		&data.RecurringStats.Occurrences,
 		&data.RecurringStats.TotalSpent,
 	)
-
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionTemplateModel{}, huma.Error500InternalServerError("Unable to query transaction template stats", err)
 	}
+	observability.RecordQueryDuration("SELECT", "transaction_template_relations", time.Since(queryStart2).Seconds())
 
 	// Calculate remaining (matches SQL formula in GetPaged)
 	if data.EndDate != nil && data.Recurrence != "none" {
@@ -370,6 +378,7 @@ func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload mod
 		RETURNING id
 	`
 
+	queryStart := time.Now()
 	err := ttr.db.QueryRow(
 		ctx,
 		sql,
@@ -387,8 +396,10 @@ func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload mod
 	).Scan(&ID)
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionTemplateModel{}, huma.Error500InternalServerError("Unable to create transaction template", err)
 	}
+	observability.RecordQueryDuration("INSERT", "transaction_templates", time.Since(queryStart).Seconds())
 
 	return ttr.GetDetail(ctx, ID)
 }
@@ -431,6 +442,7 @@ func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, p
 		RETURNING id
 	`
 
+	queryStart := time.Now()
 	var returnedID int64
 	err := ttr.db.QueryRow(
 		ctx,
@@ -451,8 +463,10 @@ func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, p
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TransactionTemplateModel{}, huma.Error404NotFound("Transaction template not found")
 		}
+		observability.RecordError("database")
 		return models.TransactionTemplateModel{}, huma.Error500InternalServerError("Unable to update transaction template", err)
 	}
+	observability.RecordQueryDuration("UPDATE", "transaction_templates", time.Since(queryStart).Seconds())
 
 	return ttr.GetDetail(ctx, returnedID)
 }
@@ -465,13 +479,16 @@ func (ttr TransactionTemplateRepository) Delete(ctx context.Context, id int64) e
 			SET deleted_at = CURRENT_TIMESTAMP
 			WHERE id = $1 AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	cmdTag, err := ttr.db.Exec(ctx, sql, id)
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to delete transaction template", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Transaction template not found")
 	}
+	observability.RecordQueryDuration("DELETE", "transaction_templates", time.Since(queryStart).Seconds())
 	return nil
 }
 
@@ -536,11 +553,14 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 		ORDER BY tt.next_due_at ASC
 	`
 
+	queryStart := time.Now()
 	rows, err := ttr.db.Query(ctx, sql)
 	if err != nil {
+		observability.RecordError("database")
 		return nil, huma.Error500InternalServerError("Unable to query due transaction templates", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transaction_templates", time.Since(queryStart).Seconds())
 
 	var items []models.TransactionTemplateModel
 	for rows.Next() {

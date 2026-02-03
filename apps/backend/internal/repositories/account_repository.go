@@ -9,6 +9,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -105,8 +106,11 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 		types = query.Type
 	}
 
+	queryStart := time.Now()
 	rows, err := ar.db.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
+	observability.RecordQueryDuration("SELECT", "accounts", time.Since(queryStart).Seconds())
 	if err != nil {
+		observability.RecordError("database")
 		return models.AccountsPagedModel{}, huma.Error500InternalServerError("Unable to query accounts", err)
 	}
 	defer rows.Close()
@@ -193,12 +197,15 @@ func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.Acc
 			LEFT JOIN budgets b ON b.account_id = a.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
 			WHERE a.id = $1 AND a.deleted_at IS NULL`
 
+	queryStart := time.Now()
 	err := ar.db.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &templateID, &accountID, &categoryID, &periodStart, &periodEnd, &amountLimit, &actualAmount, &periodType, &budgetName)
+	observability.RecordQueryDuration("SELECT", "accounts", time.Since(queryStart).Seconds())
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.AccountModel{}, huma.Error404NotFound("Account not found")
 		}
+		observability.RecordError("database")
 		return models.AccountModel{}, huma.Error500InternalServerError("Unable to query account", err)
 	}
 
@@ -232,9 +239,12 @@ func (ar AccountRepository) Create(ctx context.Context, payload models.CreateAcc
 		RETURNING id
 	`
 
+	queryStart := time.Now()
 	err := ar.db.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor).Scan(&ID)
+	observability.RecordQueryDuration("INSERT", "accounts", time.Since(queryStart).Seconds())
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.AccountModel{}, huma.Error500InternalServerError("Unable to create account", err)
 	}
 
@@ -262,12 +272,15 @@ func (ar AccountRepository) Update(ctx context.Context, id int64, payload models
 			WHERE id = $7 AND deleted_at IS NULL
 			RETURNING id`
 
+	queryStart := time.Now()
 	err := ar.db.QueryRow(ctx, sql, payload.Name, payload.Type, payload.Note, payload.Icon, payload.IconColor, payload.ArchivedAt, id).Scan(&ID)
+	observability.RecordQueryDuration("UPDATE", "accounts", time.Since(queryStart).Seconds())
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.AccountModel{}, huma.Error404NotFound("Account not found")
 		}
+		observability.RecordError("database")
 		return models.AccountModel{}, huma.Error500InternalServerError("Unable to update account", err)
 	}
 
@@ -307,8 +320,11 @@ func (ar AccountRepository) Delete(ctx context.Context, id int64) error {
 	defer cancel()
 
 	delSQL := `UPDATE accounts SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND deleted_at IS NULL`
+	queryStart := time.Now()
 	cmdTag, err := ar.db.Exec(ctx, delSQL, id)
+	observability.RecordQueryDuration("DELETE", "accounts", time.Since(queryStart).Seconds())
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to delete account", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
@@ -352,9 +368,12 @@ func (ar AccountRepository) Reorder(ctx context.Context, ids []int64) error {
 	defer cancel()
 
 	reorderSQL := `UPDATE accounts SET display_order = v.new_order, updated_at = CURRENT_TIMESTAMP FROM (SELECT id::bigint AS id, ord - 1 AS new_order FROM unnest($1::int8[]) WITH ORDINALITY AS t(id, ord)) v WHERE accounts.id = v.id AND deleted_at IS NULL`
+	queryStart := time.Now()
 	if _, err := ar.db.Exec(ctx, reorderSQL, ids); err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to reorder accounts", err)
 	}
+	observability.RecordQueryDuration("UPDATE", "accounts", time.Since(queryStart).Seconds())
 	return nil
 }
 

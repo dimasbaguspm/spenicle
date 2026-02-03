@@ -8,6 +8,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -108,11 +109,14 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 		categoryIDs = query.CategoryIDs
 	}
 
+	queryStart := time.Now()
 	rows, err := btr.db.Query(ctx, sql, query.PageSize, offset, ids, accountIDs, categoryIDs, query.Recurrence)
 	if err != nil {
+		observability.RecordError("database")
 		return models.BudgetTemplatesPagedModel{}, huma.Error400BadRequest("Unable to query budget templates", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "budget_templates", time.Since(queryStart).Seconds())
 
 	var items []models.BudgetTemplateModel
 	var totalCount int
@@ -159,6 +163,7 @@ func (btr BudgetTemplateRepository) GetDetail(ctx context.Context, id int64) (mo
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	err := btr.db.QueryRow(ctx, query, id).Scan(
 		&data.ID, &data.AccountID, &data.CategoryID, &data.AmountLimit, &data.Recurrence,
 		&data.StartDate, &data.EndDate, &data.Name, &data.NextRunAt, &data.LastExecutedAt, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
@@ -168,8 +173,10 @@ func (btr BudgetTemplateRepository) GetDetail(ctx context.Context, id int64) (mo
 		return models.BudgetTemplateModel{}, huma.Error404NotFound("Budget template not found")
 	}
 	if err != nil {
+		observability.RecordError("database")
 		return models.BudgetTemplateModel{}, huma.Error500InternalServerError("Unable to query budget template", err)
 	}
+	observability.RecordQueryDuration("SELECT", "budget_templates", time.Since(queryStart).Seconds())
 
 	return data, nil
 }
@@ -190,6 +197,7 @@ func (btr BudgetTemplateRepository) Create(ctx context.Context, p models.CreateB
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id`
 
+	queryStart := time.Now()
 	err := btr.db.QueryRow(
 		ctx,
 		query,
@@ -205,8 +213,10 @@ func (btr BudgetTemplateRepository) Create(ctx context.Context, p models.CreateB
 	).Scan(&ID)
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.BudgetTemplateModel{}, huma.Error500InternalServerError("Unable to create budget template", err)
 	}
+	observability.RecordQueryDuration("INSERT", "budget_templates", time.Since(queryStart).Seconds())
 
 	return btr.GetDetail(ctx, ID)
 }
@@ -245,6 +255,7 @@ func (btr BudgetTemplateRepository) Update(ctx context.Context, id int64, p mode
 		WHERE id = $7 AND deleted_at IS NULL
 		RETURNING id`
 
+	queryStart := time.Now()
 	err := btr.db.QueryRow(
 		ctx,
 		query,
@@ -261,8 +272,10 @@ func (btr BudgetTemplateRepository) Update(ctx context.Context, id int64, p mode
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.BudgetTemplateModel{}, huma.Error404NotFound("Budget template not found")
 		}
+		observability.RecordError("database")
 		return models.BudgetTemplateModel{}, huma.Error500InternalServerError("Unable to update budget template", err)
 	}
+	observability.RecordQueryDuration("UPDATE", "budget_templates", time.Since(queryStart).Seconds())
 
 	return btr.GetDetail(ctx, ID)
 }
@@ -277,13 +290,16 @@ func (btr BudgetTemplateRepository) Delete(ctx context.Context, id int64) error 
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	cmdTag, err := btr.db.Exec(ctx, sql, id)
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to delete budget template", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Budget template not found")
 	}
+	observability.RecordQueryDuration("DELETE", "budget_templates", time.Since(queryStart).Seconds())
 
 	return nil
 }
@@ -338,11 +354,14 @@ func (btr BudgetTemplateRepository) GetDueTemplates(ctx context.Context) ([]mode
 		FROM due_templates
 	`
 
+	queryStart := time.Now()
 	rows, err := btr.db.Query(ctx, sql)
 	if err != nil {
+		observability.RecordError("database")
 		return nil, huma.Error500InternalServerError("Unable to query due budget templates", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "budget_templates", time.Since(queryStart).Seconds())
 
 	var items []models.BudgetTemplateModel
 	for rows.Next() {

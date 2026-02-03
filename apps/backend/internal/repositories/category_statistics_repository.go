@@ -7,6 +7,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 )
 
 type CategoryStatisticsRepository struct {
@@ -42,11 +43,14 @@ func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, 
 		SELECT month, amount FROM monthly_spending
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, categoryID, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.CategoryStatisticSpendingVelocityModel{}, huma.Error500InternalServerError("query spending velocity: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	var data []models.CategoryStatisticSpendingVelocityDataPoint
 	for rows.Next() {
@@ -108,11 +112,14 @@ func (sr CategoryStatisticsRepository) GetAccountDistribution(ctx context.Contex
 		ORDER BY acc.total_amount DESC
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, categoryID, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.CategoryStatisticAccountDistributionModel{}, huma.Error500InternalServerError("query account distribution: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "accounts", time.Since(queryStart).Seconds())
 
 	var items []models.CategoryStatisticAccountDistributionEntry
 	var totalSpending int64
@@ -158,9 +165,12 @@ func (sr CategoryStatisticsRepository) GetAverageTransactionSize(ctx context.Con
 	var count int64
 	var avg, min, max, median int64
 
+	queryStart := time.Now()
 	if err := sr.db.QueryRow(ctx, sql, categoryID, p.StartDate, p.EndDate).Scan(&count, &avg, &min, &max, &median); err != nil {
+		observability.RecordError("database")
 		return models.CategoryStatisticAverageTransactionSizeModel{}, huma.Error500InternalServerError("query average size: %w", err)
 	}
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	return models.CategoryStatisticAverageTransactionSizeModel{
 		TransactionCount: count,

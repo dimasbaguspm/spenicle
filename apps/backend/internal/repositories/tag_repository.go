@@ -3,10 +3,12 @@ package repositories
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -60,11 +62,14 @@ func (tr TagRepository) GetPaged(ctx context.Context, query models.TagsSearchMod
 		ORDER BY ` + sortColumn + ` ` + sortOrder + `
 		`
 
+	queryStart := time.Now()
 	rows, err := tr.db.Query(ctx, sql, query.Name, query.PageSize, offset)
 	if err != nil {
+		observability.RecordError("database")
 		return models.TagsPagedModel{}, huma.Error400BadRequest("Unable to query tags", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "tags", time.Since(queryStart).Seconds())
 
 	var items []models.TagModel
 	var totalCount int
@@ -112,14 +117,17 @@ func (tr TagRepository) GetDetail(ctx context.Context, id int64) (models.TagMode
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	err := tr.db.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Color, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TagModel{}, huma.Error404NotFound("Tag not found")
 		}
+		observability.RecordError("database")
 		return models.TagModel{}, huma.Error500InternalServerError("Unable to query tag", err)
 	}
+	observability.RecordQueryDuration("SELECT", "tags", time.Since(queryStart).Seconds())
 
 	return data, nil
 }
@@ -134,11 +142,14 @@ func (tr TagRepository) Create(ctx context.Context, payload models.CreateTagMode
 			VALUES ($1, $2)
 			RETURNING id`
 
+	queryStart := time.Now()
 	err := tr.db.QueryRow(ctx, sql, payload.Name, payload.Color).Scan(&ID)
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.TagModel{}, huma.Error500InternalServerError("Unable to create tag", err)
 	}
+	observability.RecordQueryDuration("INSERT", "tags", time.Since(queryStart).Seconds())
 
 	return tr.GetDetail(ctx, ID)
 }
@@ -158,14 +169,17 @@ func (tr TagRepository) Update(ctx context.Context, id int64, payload models.Upd
 		RETURNING id
 	`
 
+	queryStart := time.Now()
 	err := tr.db.QueryRow(ctx, sql, payload.Name, payload.Color, id).Scan(&ID)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TagModel{}, huma.Error404NotFound("Tag not found")
 		}
+		observability.RecordError("database")
 		return models.TagModel{}, huma.Error500InternalServerError("Unable to update tag", err)
 	}
+	observability.RecordQueryDuration("UPDATE", "tags", time.Since(queryStart).Seconds())
 
 	return tr.GetDetail(ctx, ID)
 }
@@ -180,13 +194,16 @@ func (tr TagRepository) Delete(ctx context.Context, id int64) error {
 		WHERE id = $1
 			AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	cmdTag, err := tr.db.Exec(ctx, sql, id)
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to delete tag", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Tag not found")
 	}
+	observability.RecordQueryDuration("DELETE", "tags", time.Since(queryStart).Seconds())
 
 	return nil
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -151,11 +152,14 @@ func (br BudgetRepository) GetPaged(ctx context.Context, query models.BudgetsSea
 		categoryIDs = query.CategoryIDs
 	}
 
+	queryStart := time.Now()
 	rows, err := br.db.Query(ctx, sql, query.PageSize, offset, ids, templateIDs, accountIDs, categoryIDs, query.Status, query.Name)
 	if err != nil {
+		observability.RecordError("database")
 		return models.BudgetsPagedModel{}, huma.Error400BadRequest("Unable to query budgets", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "budgets", time.Since(queryStart).Seconds())
 
 	var items []models.BudgetModel
 	var totalCount int
@@ -243,15 +247,18 @@ func (br BudgetRepository) GetDetail(ctx context.Context, id int64) (models.Budg
 		WHERE b.id = $1
 			AND b.deleted_at IS NULL`
 
+	queryStart := time.Now()
 	err := br.db.QueryRow(ctx, query, id).Scan(
 		&data.ID, &data.TemplateID, &data.AccountID, &data.CategoryID, &data.PeriodStart, &data.PeriodEnd,
 		&data.AmountLimit, &data.Status, &data.PeriodType, &data.Name, &data.ActualAmount, &data.Note, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt,
 	)
+	observability.RecordQueryDuration("SELECT", "budgets", time.Since(queryStart).Seconds())
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.BudgetModel{}, huma.Error404NotFound("Budget not found")
 	}
 	if err != nil {
+		observability.RecordError("database")
 		return models.BudgetModel{}, huma.Error400BadRequest("Unable to query budget", err)
 	}
 
@@ -286,6 +293,7 @@ func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetMode
 		RETURNING id`
 
 	var ID int64
+	queryStart := time.Now()
 	err := br.db.QueryRow(
 		ctx,
 		query,
@@ -299,8 +307,10 @@ func (br BudgetRepository) Create(ctx context.Context, p models.CreateBudgetMode
 		p.Name,
 		p.Note,
 	).Scan(&ID)
+	observability.RecordQueryDuration("INSERT", "budgets", time.Since(queryStart).Seconds())
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.BudgetModel{}, huma.Error400BadRequest("Unable to create budget", err)
 	}
 
@@ -351,6 +361,7 @@ func (br BudgetRepository) Update(ctx context.Context, id int64, p models.Update
 		RETURNING id`
 
 	var ID int64
+	queryStart := time.Now()
 	err = br.db.QueryRow(
 		ctx,
 		query,
@@ -363,8 +374,10 @@ func (br BudgetRepository) Update(ctx context.Context, id int64, p models.Update
 		p.Note,
 		id,
 	).Scan(&ID)
+	observability.RecordQueryDuration("UPDATE", "budgets", time.Since(queryStart).Seconds())
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.BudgetModel{}, huma.Error500InternalServerError("Unable to update budget", err)
 	}
 
@@ -380,8 +393,11 @@ func (br BudgetRepository) Delete(ctx context.Context, id int64) error {
 		SET deleted_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	cmdTag, err := br.db.Exec(ctx, sql, id)
+	observability.RecordQueryDuration("DELETE", "budgets", time.Since(queryStart).Seconds())
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to delete budget", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
@@ -431,8 +447,11 @@ func (br BudgetRepository) DeactivateExistingActiveBudgets(ctx context.Context, 
 			AND category_id IS NOT DISTINCT FROM $2
 			AND period_type = $3`
 
+	queryStart := time.Now()
 	_, err := br.db.Exec(ctx, query, accountID, categoryID, periodType)
+	observability.RecordQueryDuration("UPDATE", "budgets", time.Since(queryStart).Seconds())
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to deactivate existing active budgets", err)
 	}
 

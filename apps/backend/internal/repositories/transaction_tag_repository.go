@@ -3,10 +3,12 @@ package repositories
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -48,11 +50,14 @@ func (ttr TransactionTagRepository) GetPaged(ctx context.Context, q models.Trans
 		LIMIT $2 OFFSET $3
 	`
 
+	queryStart := time.Now()
 	rows, err := ttr.db.Query(ctx, sql, q.TransactionID, q.PageSize, offset)
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionTagsPagedModel{}, huma.Error500InternalServerError("Unable to query transaction tags", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transaction_tags", time.Since(queryStart).Seconds())
 
 	var items []models.TransactionTagModel
 	var totalCount int
@@ -104,14 +109,17 @@ func (ttr TransactionTagRepository) GetDetail(ctx context.Context, ID int64) (mo
 		INNER JOIN tags t ON tt.tag_id = t.id
 		WHERE tt.id = $1 AND t.deleted_at IS NULL`
 
+	queryStart := time.Now()
 	err := ttr.db.QueryRow(ctx, sql, ID).Scan(&data.ID, &data.TransactionID, &data.TagID, &data.TagName, &data.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TransactionTagModel{}, huma.Error404NotFound("Transaction tag not found")
 		}
+		observability.RecordError("database")
 		return models.TransactionTagModel{}, huma.Error500InternalServerError("Unable to query transaction tag", err)
 	}
+	observability.RecordQueryDuration("SELECT", "transaction_tags", time.Since(queryStart).Seconds())
 
 	return data, nil
 }
@@ -130,15 +138,19 @@ func (ttr TransactionTagRepository) Create(ctx context.Context, p models.CreateT
 		VALUES ($1, $2)
 		ON CONFLICT (transaction_id, tag_id) DO NOTHING`
 
+	queryStart := time.Now()
 	_, err := ttr.db.Exec(ctx, insertSQL, p.TransactionID, p.TagID)
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionTagModel{}, huma.Error500InternalServerError("Unable to add tag to transaction", err)
 	}
+	observability.RecordQueryDuration("INSERT", "transaction_tags", time.Since(queryStart).Seconds())
 
 	selectSQL := `SELECT id FROM transaction_tags WHERE transaction_id = $1 AND tag_id = $2`
 	err = ttr.db.QueryRow(ctx, selectSQL, p.TransactionID, p.TagID).Scan(&ID)
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionTagModel{}, huma.Error500InternalServerError("Unable to add tag to transaction", err)
 	}
 
@@ -153,13 +165,16 @@ func (ttr TransactionTagRepository) Delete(ctx context.Context, transactionID, t
 		DELETE FROM transaction_tags
 		WHERE transaction_id = $1 AND tag_id = $2`
 
+	queryStart := time.Now()
 	cmdTag, err := ttr.db.Exec(ctx, sql, transactionID, tagID)
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to remove tag from transaction", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Transaction tag association not found")
 	}
+	observability.RecordQueryDuration("DELETE", "transaction_tags", time.Since(queryStart).Seconds())
 
 	return nil
 }

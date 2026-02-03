@@ -55,6 +55,11 @@ func ObservabilityMiddleware(next http.Handler) http.Handler {
 		observability.RequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration.Seconds())
 		observability.LastRequestTime.WithLabelValues(r.Method, r.URL.Path).Set(float64(time.Now().Unix()))
 
+		// Track HTTP errors (4xx and 5xx)
+		if rw.statusCode >= 400 {
+			observability.RecordHTTPError(strconv.Itoa(rw.statusCode), r.Method, r.URL.Path)
+		}
+
 		slog.Info("Request completed",
 			"request_id", requestID,
 			"duration_ms", duration.Milliseconds(),

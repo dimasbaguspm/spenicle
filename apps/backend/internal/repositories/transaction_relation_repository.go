@@ -3,10 +3,12 @@ package repositories
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -48,11 +50,14 @@ func (trr TransactionRelationRepository) GetPaged(ctx context.Context, q models.
 		LIMIT $2 OFFSET $3
 	`
 
+	queryStart := time.Now()
 	rows, err := trr.db.Query(ctx, sql, q.SourceTransactionID, q.PageSize, offset)
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionRelationsPagedModel{}, huma.Error500InternalServerError("Unable to query transaction relations", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transaction_relations", time.Since(queryStart).Seconds())
 
 	var items []models.TransactionRelationModel
 	var totalCount int
@@ -101,6 +106,7 @@ func (trr TransactionRelationRepository) GetDetail(ctx context.Context, p models
 		AND deleted_at IS NULL
 		`
 
+	queryStart := time.Now()
 	var item models.TransactionRelationModel
 	err := trr.db.QueryRow(ctx, query, p.RelationID, p.SourceTransactionID).Scan(
 		&item.ID, &item.SourceTransactionID, &item.RelatedTransactionID, &item.RelationType, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
@@ -110,8 +116,10 @@ func (trr TransactionRelationRepository) GetDetail(ctx context.Context, p models
 		return models.TransactionRelationModel{}, huma.Error404NotFound("Transaction relation not found")
 	}
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionRelationModel{}, huma.Error500InternalServerError("Unable to query transaction relation", err)
 	}
+	observability.RecordQueryDuration("SELECT", "transaction_relations", time.Since(queryStart).Seconds())
 
 	return item, nil
 }
@@ -143,11 +151,14 @@ func (trr TransactionRelationRepository) Create(ctx context.Context, p models.Cr
 		SELECT status FROM validation
 	`
 
+	queryStart := time.Now()
 	var validationStatus string
 	err := trr.db.QueryRow(ctx, sql, p.SourceTransactionID, p.RelatedTransactionID).Scan(&validationStatus)
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionRelationModel{}, huma.Error500InternalServerError("Unable to validate transaction relation", err)
 	}
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	switch validationStatus {
 	case "source_not_found":
@@ -165,6 +176,7 @@ func (trr TransactionRelationRepository) Create(ctx context.Context, p models.Cr
 		VALUES ($1, $2, $3)
 		RETURNING id, source_transaction_id`
 
+	queryStart2 := time.Now()
 	insertErr := trr.db.QueryRow(
 		ctx,
 		insertSQL,
@@ -174,8 +186,10 @@ func (trr TransactionRelationRepository) Create(ctx context.Context, p models.Cr
 	).Scan(&ID, &srcID)
 
 	if insertErr != nil {
+		observability.RecordError("database")
 		return models.TransactionRelationModel{}, huma.Error500InternalServerError("Unable to create transaction relation", insertErr)
 	}
+	observability.RecordQueryDuration("INSERT", "transaction_relations", time.Since(queryStart2).Seconds())
 
 	return trr.GetDetail(ctx, models.TransactionRelationGetModel{
 		SourceTransactionID: srcID,
@@ -192,13 +206,16 @@ func (trr TransactionRelationRepository) Delete(ctx context.Context, p models.De
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND source_transaction_id = $2 AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	cmdTag, err := trr.db.Exec(ctx, sql, p.RelationID, p.SourceTransactionID)
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to delete transaction relation", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Transaction relation not found")
 	}
+	observability.RecordQueryDuration("DELETE", "transaction_relations", time.Since(queryStart).Seconds())
 
 	return nil
 }

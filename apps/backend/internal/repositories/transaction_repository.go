@@ -9,6 +9,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -156,6 +157,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		endDateParam = &p.EndDate
 	}
 
+	queryStart := time.Now()
 	rows, err := tr.db.Query(ctx, sql,
 		p.PageSize, offset,
 		ids, types, accountIDs, categoryIDs, destAccountIDs,
@@ -164,9 +166,11 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		templateIDs, tagIDs,
 	)
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionsPagedModel{}, huma.Error500InternalServerError("Unable to query transactions", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	var items []models.TransactionModel
 	var totalCount int
@@ -316,6 +320,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 		FROM transaction_detail td
 		LEFT JOIN tags_agg ta ON td.id = ta.transaction_id`
 
+	queryStart := time.Now()
 	err := tr.db.QueryRow(ctx, sql, id).Scan(
 		&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 		&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
@@ -329,8 +334,10 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.TransactionModel{}, huma.Error404NotFound("Transaction not found")
 		}
+		observability.RecordError("database")
 		return models.TransactionModel{}, huma.Error500InternalServerError("Unable to query transaction", err)
 	}
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	item.Account = account
 	item.Category = category
@@ -378,11 +385,14 @@ func (tr TransactionRepository) Create(ctx context.Context, p models.CreateTrans
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id`
 
+	queryStart := time.Now()
 	err := tr.db.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note).Scan(&id)
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionModel{}, huma.Error500InternalServerError("Unable to create transaction", err)
 	}
+	observability.RecordQueryDuration("INSERT", "transactions", time.Since(queryStart).Seconds())
 
 	return tr.GetDetail(ctx, id)
 }
@@ -402,15 +412,18 @@ func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.U
 				updated_at = CURRENT_TIMESTAMP
 			WHERE id = $8 AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	cmdTag, err := tr.db.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.TransactionModel{}, huma.Error500InternalServerError("Unable to update transaction", err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
 		return models.TransactionModel{}, huma.Error404NotFound("Transaction not found")
 	}
+	observability.RecordQueryDuration("UPDATE", "transactions", time.Since(queryStart).Seconds())
 
 	return tr.GetDetail(ctx, id)
 }
@@ -422,13 +435,16 @@ func (tr TransactionRepository) Delete(ctx context.Context, id int64) error {
 			SET deleted_at = CURRENT_TIMESTAMP
 			WHERE id = $1 AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	cmdTag, err := tr.db.Exec(ctx, sql, id)
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to delete transaction", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Transaction not found")
 	}
+	observability.RecordQueryDuration("DELETE", "transactions", time.Since(queryStart).Seconds())
 
 	return nil
 }

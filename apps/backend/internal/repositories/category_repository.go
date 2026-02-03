@@ -8,6 +8,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -100,6 +101,7 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 
 	rows, err := cr.db.Query(ctx, sql, query.PageSize, offset, ids, types, query.Name, query.Archived)
 	if err != nil {
+		observability.RecordError("database")
 		return models.CategoriesPagedModel{}, huma.Error500InternalServerError("Unable to query categories", err)
 	}
 	defer rows.Close()
@@ -209,14 +211,17 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 		LEFT JOIN budgets b ON b.category_id = c.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
 		WHERE c.id = $1 AND c.deleted_at IS NULL
 	`
+	queryStart := time.Now()
 	err := cr.db.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &periodStart, &periodEnd, &templateID, &amountLimit, &accountID, &categoryID, &actualAmount, &periodType, &budgetName)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.CategoryModel{}, huma.Error404NotFound("Category not found")
 		}
+		observability.RecordError("database")
 		return models.CategoryModel{}, huma.Error500InternalServerError("Unable to query category", err)
 	}
+	observability.RecordQueryDuration("SELECT", "categories", time.Since(queryStart).Seconds())
 
 	if budgetID != nil {
 		data.EmbeddedBudget = &models.EmbeddedBudget{
@@ -248,7 +253,7 @@ func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCa
 		VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT MAX(display_order) + 1 FROM categories WHERE deleted_at IS NULL), 0))
 		RETURNING id
 	`
-
+	queryStart := time.Now()
 	err := cr.db.QueryRow(ctx, sql,
 		payload.Name,
 		payload.Type,
@@ -257,8 +262,10 @@ func (cr CategoryRepository) Create(ctx context.Context, payload models.CreateCa
 		payload.IconColor).Scan(&ID)
 
 	if err != nil {
+		observability.RecordError("database")
 		return models.CategoryModel{}, huma.Error500InternalServerError("Unable to create category", err)
 	}
+	observability.RecordQueryDuration("INSERT", "categories", time.Since(queryStart).Seconds())
 
 	return cr.GetDetail(ctx, ID)
 }
@@ -285,7 +292,7 @@ func (cr CategoryRepository) Update(ctx context.Context, id int64, payload model
 		WHERE id = $7 AND deleted_at IS NULL
 		RETURNING id
 	`
-
+	queryStart := time.Now()
 	err := cr.db.QueryRow(
 		ctx,
 		sql,
@@ -301,8 +308,10 @@ func (cr CategoryRepository) Update(ctx context.Context, id int64, payload model
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.CategoryModel{}, huma.Error404NotFound("Category not found")
 		}
+		observability.RecordError("database")
 		return models.CategoryModel{}, huma.Error500InternalServerError("Unable to update category", err)
 	}
+	observability.RecordQueryDuration("UPDATE", "categories", time.Since(queryStart).Seconds())
 
 	return cr.GetDetail(ctx, ID)
 }
@@ -317,14 +326,16 @@ func (cr CategoryRepository) Delete(ctx context.Context, id int64) error {
 		WHERE id = $1
 			AND deleted_at IS NULL
 	`
-
+	queryStart := time.Now()
 	cmdTag, err := cr.db.Exec(ctx, sql, id)
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to delete category", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
 		return huma.Error404NotFound("Category not found")
 	}
+	observability.RecordQueryDuration("DELETE", "categories", time.Since(queryStart).Seconds())
 
 	return nil
 }
@@ -347,8 +358,11 @@ func (cr CategoryRepository) Reorder(ctx context.Context, ids []int64) error {
             WHERE categories.id = v.id
                 AND deleted_at IS NULL`
 
+	queryStart := time.Now()
 	_, err := cr.db.Exec(ctx, sql, ids)
+	observability.RecordQueryDuration("UPDATE", "categories", time.Since(queryStart).Seconds())
 	if err != nil {
+		observability.RecordError("database")
 		return huma.Error500InternalServerError("Unable to reorder categories", err)
 	}
 

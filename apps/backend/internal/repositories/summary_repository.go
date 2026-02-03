@@ -2,10 +2,12 @@ package repositories
 
 import (
 	"context"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 )
 
 type SummaryRepository struct {
@@ -75,11 +77,14 @@ func (sr SummaryRepository) GetTransactionSummary(ctx context.Context, p models.
 		ORDER BY ap.period DESC
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.SummaryTransactionListModel{}, huma.Error500InternalServerError("query transaction summary: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	var items []models.SummaryTransactionModel
 	for rows.Next() {
@@ -153,11 +158,14 @@ func (sr SummaryRepository) GetAccountSummary(ctx context.Context, p models.Summ
 		ORDER BY total_count DESC
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.SummaryAccountListModel{}, huma.Error500InternalServerError("query account summary: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "accounts", time.Since(queryStart).Seconds())
 
 	var items []models.SummaryAccountModel
 	for rows.Next() {
@@ -228,11 +236,14 @@ func (sr SummaryRepository) GetCategorySummary(ctx context.Context, p models.Sum
 		ORDER BY total_count DESC
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.SummaryCategoryListModel{}, huma.Error500InternalServerError("query category summary: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "categories", time.Since(queryStart).Seconds())
 
 	var items []models.SummaryCategoryModel
 	for rows.Next() {

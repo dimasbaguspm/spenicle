@@ -7,6 +7,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 )
 
 type AccountStatisticsRepository struct {
@@ -62,11 +63,14 @@ func (sr AccountStatisticsRepository) GetCategoryHeatmap(ctx context.Context, ac
 		ORDER BY cs.total_amount DESC
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, accountID, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.AccountStatisticsCategoryHeatmapModel{}, huma.Error500InternalServerError("query category heatmap: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "categories", time.Since(queryStart).Seconds())
 
 	var items []models.AccountStatisticsCategoryHeatmapEntry
 	var totalSpending int64
@@ -145,11 +149,14 @@ func (sr AccountStatisticsRepository) GetMonthlyVelocity(ctx context.Context, ac
 		ORDER BY period DESC
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, accountID, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.AccountStatisticsMonthlyVelocityModel{}, huma.Error500InternalServerError("query monthly velocity: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	var items []models.AccountStatisticsMonthlyVelocityEntry
 	var totalSpending int64
@@ -243,11 +250,14 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 		ORDER BY count DESC
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, accountID, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.AccountStatisticsTimeFrequencyHeatmapModel{}, huma.Error500InternalServerError("query time frequency: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	var items []models.AccountStatisticsTimeFrequencyEntry
 	var maxFrequency string
