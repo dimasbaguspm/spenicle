@@ -30,14 +30,14 @@ func (bs BudgetService) GetPaged(ctx context.Context, p models.BudgetsSearchMode
 	cacheKey := common.BuildCacheKey(0, p, constants.BudgetsPagedCacheKeyPrefix)
 	return common.FetchWithCache(ctx, bs.rdb, cacheKey, BudgetCacheTTL, func(ctx context.Context) (models.BudgetsPagedModel, error) {
 		return bs.rpts.Budg.GetPaged(ctx, p)
-	})
+	}, "budget")
 }
 
 func (bs BudgetService) GetDetail(ctx context.Context, id int64) (models.BudgetModel, error) {
 	cacheKey := common.BuildCacheKey(id, nil, constants.BudgetCacheKeyPrefix)
 	return common.FetchWithCache(ctx, bs.rdb, cacheKey, BudgetCacheTTL, func(ctx context.Context) (models.BudgetModel, error) {
 		return bs.rpts.Budg.GetDetail(ctx, id)
-	})
+	}, "budget")
 }
 
 func (bs BudgetService) Create(ctx context.Context, p models.CreateBudgetModel) (models.BudgetModel, error) {

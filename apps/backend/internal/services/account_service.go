@@ -33,14 +33,14 @@ func (as AccountService) GetPaged(ctx context.Context, p models.AccountsSearchMo
 	cacheKey := common.BuildCacheKey(0, p, constants.AccountsPagedCacheKeyPrefix)
 	return common.FetchWithCache(ctx, as.rdb, cacheKey, AccountCacheTTL, func(ctx context.Context) (models.AccountsPagedModel, error) {
 		return as.rpts.Acc.GetPaged(ctx, p)
-	})
+	}, "account")
 }
 
 func (as AccountService) GetDetail(ctx context.Context, id int64) (models.AccountModel, error) {
 	cacheKey := common.BuildCacheKey(id, nil, constants.AccountCacheKeyPrefix)
 	return common.FetchWithCache(ctx, as.rdb, cacheKey, AccountCacheTTL, func(ctx context.Context) (models.AccountModel, error) {
 		return as.rpts.Acc.GetDetail(ctx, id)
-	})
+	}, "account")
 }
 
 func (as AccountService) Create(ctx context.Context, p models.CreateAccountModel) (models.AccountModel, error) {

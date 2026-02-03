@@ -81,6 +81,23 @@ var (
 			Help: "Timestamp of the last transaction template worker run",
 		},
 	)
+
+	// Cache metrics
+	CacheHits = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "cache_hits_total",
+			Help: "Total number of cache hits",
+		},
+		[]string{"resource"},
+	)
+
+	CacheMisses = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "cache_misses_total",
+			Help: "Total number of cache misses",
+		},
+		[]string{"resource"},
+	)
 )
 
 // GetRequestID retrieves the request ID from the context

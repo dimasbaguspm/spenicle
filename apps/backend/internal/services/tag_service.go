@@ -29,14 +29,14 @@ func (ts TagService) GetPaged(ctx context.Context, query models.TagsSearchModel)
 	cacheKey := common.BuildCacheKey(0, query, constants.TagsPagedCacheKeyPrefix)
 	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TagCacheTTL, func(ctx context.Context) (models.TagsPagedModel, error) {
 		return ts.rpts.Tag.GetPaged(ctx, query)
-	})
+	}, "tag")
 }
 
 func (ts TagService) GetDetail(ctx context.Context, id int64) (models.TagModel, error) {
 	cacheKey := common.BuildCacheKey(id, nil, constants.TagCacheKeyPrefix)
 	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TagCacheTTL, func(ctx context.Context) (models.TagModel, error) {
 		return ts.rpts.Tag.GetDetail(ctx, id)
-	})
+	}, "tag")
 }
 
 func (ts TagService) Create(ctx context.Context, payload models.CreateTagModel) (models.TagModel, error) {

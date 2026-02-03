@@ -53,7 +53,7 @@ func (btw *BudgetTemplateWorker) Start() error {
 }
 
 func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
-	runID := common.GenerateID()
+	runID := observability.GenerateID()
 	logger := observability.NewLogger("worker", "BudgetTemplateWorker", "run_id", runID, "task", "processTemplates")
 	logger.Info("start")
 

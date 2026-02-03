@@ -100,7 +100,7 @@ func (ss AccountStatisticsService) GetCategoryHeatmap(ctx context.Context, accou
 	cacheKey := common.BuildCacheKey(accountID, p, constants.AccountStatisticsCacheKeyPrefix, constants.AccountStatisticsCategoryHeatmapSuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsCategoryHeatmapModel, error) {
 		return ss.rpts.AccStat.GetCategoryHeatmap(ctx, accountID, p)
-	})
+	}, "account_statistics")
 }
 
 // GetMonthlyVelocity returns monthly spending trends
@@ -108,7 +108,7 @@ func (ss AccountStatisticsService) GetMonthlyVelocity(ctx context.Context, accou
 	cacheKey := common.BuildCacheKey(accountID, p, constants.AccountStatisticsCacheKeyPrefix, constants.AccountStatisticsMonthlyVelocitySuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsMonthlyVelocityModel, error) {
 		return ss.rpts.AccStat.GetMonthlyVelocity(ctx, accountID, p)
-	})
+	}, "account_statistics")
 }
 
 // GetTimeFrequencyHeatmap returns transaction frequency distribution
@@ -116,7 +116,7 @@ func (ss AccountStatisticsService) GetTimeFrequencyHeatmap(ctx context.Context, 
 	cacheKey := common.BuildCacheKey(accountID, p, constants.AccountStatisticsCacheKeyPrefix, constants.AccountStatisticsTimeFrequencySuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsTimeFrequencyHeatmapModel, error) {
 		return ss.rpts.AccStat.GetTimeFrequencyHeatmap(ctx, accountID, p)
-	})
+	}, "account_statistics")
 }
 
 // GetCashFlowPulse returns daily balance trend
@@ -124,7 +124,7 @@ func (ss AccountStatisticsService) GetCashFlowPulse(ctx context.Context, account
 	cacheKey := common.BuildCacheKey(accountID, p, constants.AccountStatisticsCacheKeyPrefix, constants.AccountStatisticsCashFlowPulseSuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsCashFlowPulseModel, error) {
 		return ss.rpts.AccStat.GetCashFlowPulse(ctx, accountID, p)
-	})
+	}, "account_statistics")
 }
 
 // GetBurnRate returns spending rate analysis
@@ -132,7 +132,7 @@ func (ss AccountStatisticsService) GetBurnRate(ctx context.Context, accountID in
 	cacheKey := common.BuildCacheKey(accountID, p, constants.AccountStatisticsCacheKeyPrefix, constants.AccountStatisticsBurnRateSuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsBurnRateModel, error) {
 		return ss.rpts.AccStat.GetBurnRate(ctx, accountID, p)
-	})
+	}, "account_statistics")
 }
 
 // GetBudgetHealth returns budget health metrics
@@ -140,5 +140,5 @@ func (ss AccountStatisticsService) GetBudgetHealth(ctx context.Context, accountI
 	cacheKey := common.BuildCacheKey(accountID, p, constants.AccountStatisticsCacheKeyPrefix, constants.AccountStatisticsBudgetHealthSuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsBudgetHealthModel, error) {
 		return ss.rpts.AccStat.GetBudgetHealth(ctx, accountID, p)
-	})
+	}, "account_statistics")
 }

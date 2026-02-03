@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dimasbaguspm/spenicle-api/internal/common"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 )
 
@@ -34,7 +33,7 @@ func (rw *responseWriter) Write(data []byte) (int, error) {
 
 func ObservabilityMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestID := common.GenerateID()
+		requestID := observability.GenerateID()
 
 		ctx := context.WithValue(r.Context(), observability.RequestIDKey, requestID)
 		r = r.WithContext(ctx)

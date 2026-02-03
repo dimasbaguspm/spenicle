@@ -33,7 +33,7 @@ func (ss SummaryService) GetTransactionSummary(ctx context.Context, p models.Sum
 	cacheKey := common.BuildCacheKey(0, p, constants.SummaryTransactionCacheKeyPrefix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, SummaryCacheTTL, func(ctx context.Context) (models.SummaryTransactionListModel, error) {
 		return ss.rpts.Sum.GetTransactionSummary(ctx, p)
-	})
+	}, "summary")
 }
 
 func (ss SummaryService) GetAccountSummary(ctx context.Context, p models.SummarySearchModel) (models.SummaryAccountListModel, error) {
@@ -44,7 +44,7 @@ func (ss SummaryService) GetAccountSummary(ctx context.Context, p models.Summary
 	cacheKey := common.BuildCacheKey(0, p, constants.SummaryAccountCacheKeyPrefix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, SummaryCacheTTL, func(ctx context.Context) (models.SummaryAccountListModel, error) {
 		return ss.rpts.Sum.GetAccountSummary(ctx, p)
-	})
+	}, "summary")
 }
 
 func (ss SummaryService) GetCategorySummary(ctx context.Context, p models.SummarySearchModel) (models.SummaryCategoryListModel, error) {
@@ -55,5 +55,5 @@ func (ss SummaryService) GetCategorySummary(ctx context.Context, p models.Summar
 	cacheKey := common.BuildCacheKey(0, p, constants.SummaryCategoryCacheKeyPrefix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, SummaryCacheTTL, func(ctx context.Context) (models.SummaryCategoryListModel, error) {
 		return ss.rpts.Sum.GetCategorySummary(ctx, p)
-	})
+	}, "summary")
 }

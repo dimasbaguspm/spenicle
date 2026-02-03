@@ -33,14 +33,14 @@ func (cs CategoryService) GetPaged(ctx context.Context, p models.CategoriesSearc
 	cacheKey := common.BuildCacheKey(0, p, constants.CategoriesPagedCacheKeyPrefix)
 	return common.FetchWithCache(ctx, cs.rdb, cacheKey, CategoryCacheTTL, func(ctx context.Context) (models.CategoriesPagedModel, error) {
 		return cs.rpts.Cat.GetPaged(ctx, p)
-	})
+	}, "category")
 }
 
 func (cs CategoryService) GetDetail(ctx context.Context, id int64) (models.CategoryModel, error) {
 	cacheKey := common.BuildCacheKey(id, nil, constants.CategoryCacheKeyPrefix)
 	return common.FetchWithCache(ctx, cs.rdb, cacheKey, CategoryCacheTTL, func(ctx context.Context) (models.CategoryModel, error) {
 		return cs.rpts.Cat.GetDetail(ctx, id)
-	})
+	}, "category")
 }
 
 func (cs CategoryService) Create(ctx context.Context, p models.CreateCategoryModel) (models.CategoryModel, error) {

@@ -29,14 +29,14 @@ func (tts TransactionTagService) GetPaged(ctx context.Context, q models.Transact
 	cacheKey := common.BuildCacheKey(0, q, constants.TransactionTagsPagedCacheKeyPrefix)
 	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTagCacheTTL, func(ctx context.Context) (models.TransactionTagsPagedModel, error) {
 		return tts.rpts.TsctTag.GetPaged(ctx, q)
-	})
+	}, "transaction_tag")
 }
 
 func (tts TransactionTagService) GetDetail(ctx context.Context, ID int64) (models.TransactionTagModel, error) {
 	cacheKey := common.BuildCacheKey(ID, nil, constants.TransactionTagCacheKeyPrefix)
 	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTagCacheTTL, func(ctx context.Context) (models.TransactionTagModel, error) {
 		return tts.rpts.TsctTag.GetDetail(ctx, ID)
-	})
+	}, "transaction_tag")
 }
 
 func (tts TransactionTagService) Create(ctx context.Context, payload models.CreateTransactionTagModel) (models.TransactionTagModel, error) {

@@ -53,7 +53,7 @@ func (ttw *TransactionTemplateWorker) Start() error {
 }
 
 func (ttw *TransactionTemplateWorker) processTemplates(ctx context.Context) error {
-	runID := common.GenerateID()
+	runID := observability.GenerateID()
 	logger := observability.NewLogger("worker", "TransactionTemplateWorker", "run_id", runID, "task", "processTemplates")
 	logger.Info("start")
 

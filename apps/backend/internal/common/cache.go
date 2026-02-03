@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -42,20 +43,25 @@ func InvalidateCache(ctx context.Context, rdb *redis.Client, pattern string) err
 // FetchWithCache is a generic helper that fetches data with caching
 // It attempts to retrieve cached data first, and on cache miss or error,
 // it executes the fetcher function and caches the result
+// resourceLabel is optional and defaults to "unknown" if not provided
 func FetchWithCache[T any](
 	ctx context.Context,
 	rdb *redis.Client,
 	cacheKey string,
 	ttl time.Duration,
 	fetcher func(context.Context) (T, error),
+	resourceLabel string,
 ) (T, error) {
 	// Try to get from cache first
 	cached, err := GetCache[T](ctx, rdb, cacheKey)
 	if err == nil {
+		// Cache hit
+		observability.CacheHits.WithLabelValues(resourceLabel).Inc()
 		return cached, nil
 	}
 
-	// Cache miss or error - fetch fresh data
+	// Cache miss - fetch fresh data
+	observability.CacheMisses.WithLabelValues(resourceLabel).Inc()
 	result, err := fetcher(ctx)
 	if err != nil {
 		var zero T

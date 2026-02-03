@@ -29,14 +29,14 @@ func (trs TransactionRelationService) GetPaged(ctx context.Context, q models.Tra
 	cacheKey := common.BuildCacheKey(0, q, constants.TransactionRelationsPagedCacheKeyPrefix)
 	return common.FetchWithCache(ctx, trs.rdb, cacheKey, TransactionRelationCacheTTL, func(ctx context.Context) (models.TransactionRelationsPagedModel, error) {
 		return trs.rpts.TsctRel.GetPaged(ctx, q)
-	})
+	}, "transaction_relation")
 }
 
 func (trs TransactionRelationService) GetDetail(ctx context.Context, p models.TransactionRelationGetModel) (models.TransactionRelationModel, error) {
 	cacheKey := common.BuildCacheKey(0, p, constants.TransactionRelationCacheKeyPrefix)
 	return common.FetchWithCache(ctx, trs.rdb, cacheKey, TransactionRelationCacheTTL, func(ctx context.Context) (models.TransactionRelationModel, error) {
 		return trs.rpts.TsctRel.GetDetail(ctx, p)
-	})
+	}, "transaction_relation")
 }
 
 func (trs TransactionRelationService) Create(ctx context.Context, p models.CreateTransactionRelationModel) (models.TransactionRelationModel, error) {

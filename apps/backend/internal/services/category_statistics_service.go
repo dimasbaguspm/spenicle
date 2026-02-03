@@ -90,7 +90,7 @@ func (ss CategoryStatisticsService) GetSpendingVelocity(ctx context.Context, cat
 	cacheKey := common.BuildCacheKey(categoryID, p, constants.CategoryStatisticsCacheKeyPrefix, constants.CategoryStatisticsSpendingVelocitySuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, CategoryStatisticsCacheTTL, func(ctx context.Context) (models.CategoryStatisticSpendingVelocityModel, error) {
 		return ss.rpts.CatStat.GetSpendingVelocity(ctx, categoryID, p)
-	})
+	}, "category_statistics")
 }
 
 // GetAccountDistribution returns account distribution with Redis caching
@@ -98,7 +98,7 @@ func (ss CategoryStatisticsService) GetAccountDistribution(ctx context.Context, 
 	cacheKey := common.BuildCacheKey(categoryID, p, constants.CategoryStatisticsCacheKeyPrefix, constants.CategoryStatisticsAccountDistributionSuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, CategoryStatisticsCacheTTL, func(ctx context.Context) (models.CategoryStatisticAccountDistributionModel, error) {
 		return ss.rpts.CatStat.GetAccountDistribution(ctx, categoryID, p)
-	})
+	}, "category_statistics")
 }
 
 // GetAverageTransactionSize returns average transaction size with Redis caching
@@ -106,7 +106,7 @@ func (ss CategoryStatisticsService) GetAverageTransactionSize(ctx context.Contex
 	cacheKey := common.BuildCacheKey(categoryID, p, constants.CategoryStatisticsCacheKeyPrefix, constants.CategoryStatisticsTransactionSizeSuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, CategoryStatisticsCacheTTL, func(ctx context.Context) (models.CategoryStatisticAverageTransactionSizeModel, error) {
 		return ss.rpts.CatStat.GetAverageTransactionSize(ctx, categoryID, p)
-	})
+	}, "category_statistics")
 }
 
 // GetDayOfWeekPattern returns day of week pattern with Redis caching
@@ -114,7 +114,7 @@ func (ss CategoryStatisticsService) GetDayOfWeekPattern(ctx context.Context, cat
 	cacheKey := common.BuildCacheKey(categoryID, p, constants.CategoryStatisticsCacheKeyPrefix, constants.CategoryStatisticsDayOfWeekPatternSuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, CategoryStatisticsCacheTTL, func(ctx context.Context) (models.CategoryStatisticDayOfWeekPatternModel, error) {
 		return ss.rpts.CatStat.GetDayOfWeekPattern(ctx, categoryID, p)
-	})
+	}, "category_statistics")
 }
 
 // GetBudgetUtilization returns budget utilization with Redis caching
@@ -122,5 +122,5 @@ func (ss CategoryStatisticsService) GetBudgetUtilization(ctx context.Context, ca
 	cacheKey := common.BuildCacheKey(categoryID, p, constants.CategoryStatisticsCacheKeyPrefix, constants.CategoryStatisticsBudgetUtilizationSuffix)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, CategoryStatisticsCacheTTL, func(ctx context.Context) (models.CategoryStatisticBudgetUtilizationModel, error) {
 		return ss.rpts.CatStat.GetBudgetUtilization(ctx, categoryID, p)
-	})
+	}, "category_statistics")
 }
