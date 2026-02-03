@@ -146,7 +146,7 @@ export const useApiDeleteCategory = () => {
 // Statistics queries
 export const useApiCategoryStatisticsQuery = (
   id: number,
-  params?: CategoryStatisticsSearchModel,
+  params: CategoryStatisticsSearchModel,
   options?: Partial<
     UseApiQueryOptions<CategoryStatisticsModel, unknown, unknown>
   >,
@@ -161,7 +161,7 @@ export const useApiCategoryStatisticsQuery = (
 
 export const useApiCategoryStatisticBudgetUtilizationQuery = (
   id: number,
-  params?: CategoryStatisticBudgetUtilizationSearchModel,
+  params: CategoryStatisticBudgetUtilizationSearchModel,
   options?: Partial<
     UseApiQueryOptions<
       CategoryStatisticBudgetUtilizationModel,
@@ -180,7 +180,7 @@ export const useApiCategoryStatisticBudgetUtilizationQuery = (
 
 export const useApiCategoryStatisticAccountDistributionQuery = (
   id: number,
-  params?: CategoryStatisticAccountDistributionSearchModel,
+  params: CategoryStatisticAccountDistributionSearchModel,
   options?: Partial<
     UseApiQueryOptions<
       CategoryStatisticAccountDistributionModel,
@@ -199,7 +199,7 @@ export const useApiCategoryStatisticAccountDistributionQuery = (
 
 export const useApiCategoryStatisticAverageTransactionSizeQuery = (
   id: number,
-  params?: CategoryStatisticAverageTransactionSizeSearchModel,
+  params: CategoryStatisticAverageTransactionSizeSearchModel,
   options?: Partial<
     UseApiQueryOptions<
       CategoryStatisticAverageTransactionSizeModel,
@@ -221,7 +221,7 @@ export const useApiCategoryStatisticAverageTransactionSizeQuery = (
 
 export const useApiCategoryStatisticDayOfWeekPatternQuery = (
   id: number,
-  params?: CategoryStatisticDayOfWeekPatternSearchModel,
+  params: CategoryStatisticDayOfWeekPatternSearchModel,
   options?: Partial<
     UseApiQueryOptions<CategoryStatisticDayOfWeekPatternModel, unknown, unknown>
   >,
@@ -236,7 +236,7 @@ export const useApiCategoryStatisticDayOfWeekPatternQuery = (
 
 export const useApiCategoryStatisticSpendingVelocityQuery = (
   id: number,
-  params?: CategoryStatisticSpendingVelocitySearchModel,
+  params: CategoryStatisticSpendingVelocitySearchModel,
   options?: Partial<
     UseApiQueryOptions<CategoryStatisticSpendingVelocityModel, unknown, unknown>
   >,

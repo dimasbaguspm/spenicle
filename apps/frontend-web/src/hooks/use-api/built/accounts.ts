@@ -145,10 +145,9 @@ export const useApiDeleteAccount = () => {
   });
 };
 
-// Statistics queries
 export const useApiAccountStatisticsQuery = (
   id: number,
-  params?: AccountStatisticsSearchModel,
+  params: AccountStatisticsSearchModel,
   options?: Partial<
     UseApiQueryOptions<AccountStatisticsModel, unknown, unknown>
   >,
@@ -163,7 +162,7 @@ export const useApiAccountStatisticsQuery = (
 
 export const useApiAccountStatisticBudgetHealthQuery = (
   id: number,
-  params?: AccountStatisticBudgetHealthSearchModel,
+  params: AccountStatisticBudgetHealthSearchModel,
   options?: Partial<
     UseApiQueryOptions<AccountStatisticBudgetHealthModel, unknown, unknown>
   >,
@@ -178,7 +177,7 @@ export const useApiAccountStatisticBudgetHealthQuery = (
 
 export const useApiAccountStatisticBurnRateQuery = (
   id: number,
-  params?: AccountStatisticBurnRateSearchModel,
+  params: AccountStatisticBurnRateSearchModel,
   options?: Partial<
     UseApiQueryOptions<AccountStatisticBurnRateModel, unknown, unknown>
   >,
@@ -193,7 +192,7 @@ export const useApiAccountStatisticBurnRateQuery = (
 
 export const useApiAccountStatisticCashFlowPulseQuery = (
   id: number,
-  params?: AccountStatisticCashFlowPulseSearchModel,
+  params: AccountStatisticCashFlowPulseSearchModel,
   options?: Partial<
     UseApiQueryOptions<AccountStatisticCashFlowPulseModel, unknown, unknown>
   >,
@@ -208,7 +207,7 @@ export const useApiAccountStatisticCashFlowPulseQuery = (
 
 export const useApiAccountStatisticCategoryHeatmapQuery = (
   id: number,
-  params?: AccountStatisticCategoryHeatmapSearchModel,
+  params: AccountStatisticCategoryHeatmapSearchModel,
   options?: Partial<
     UseApiQueryOptions<AccountStatisticCategoryHeatmapModel, unknown, unknown>
   >,
@@ -223,7 +222,7 @@ export const useApiAccountStatisticCategoryHeatmapQuery = (
 
 export const useApiAccountStatisticMonthlyVelocityQuery = (
   id: number,
-  params?: AccountStatisticMonthlyVelocitySearchModel,
+  params: AccountStatisticMonthlyVelocitySearchModel,
   options?: Partial<
     UseApiQueryOptions<AccountStatisticMonthlyVelocityModel, unknown, unknown>
   >,
@@ -238,7 +237,7 @@ export const useApiAccountStatisticMonthlyVelocityQuery = (
 
 export const useApiAccountStatisticTimeFrequencyQuery = (
   id: number,
-  params?: AccountStatisticTimeFrequencySearchModel,
+  params: AccountStatisticTimeFrequencySearchModel,
   options?: Partial<
     UseApiQueryOptions<AccountStatisticTimeFrequencyModel, unknown, unknown>
   >,
