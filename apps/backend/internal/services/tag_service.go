@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -27,40 +26,17 @@ func NewTagService(rpts *repositories.RootRepository, rdb *redis.Client) TagServ
 }
 
 func (ts TagService) GetPaged(ctx context.Context, query models.TagsSearchModel) (models.TagsPagedModel, error) {
-	data, _ := json.Marshal(query)
-	cacheKey := constants.TagsPagedCacheKeyPrefix + string(data)
-
-	paged, err := common.GetCache[models.TagsPagedModel](ctx, ts.rdb, cacheKey)
-	if err == nil {
-		return paged, nil
-	}
-
-	paged, err = ts.rpts.Tag.GetPaged(ctx, query)
-	if err != nil {
-		return paged, err
-	}
-
-	common.SetCache(ctx, ts.rdb, cacheKey, paged, TagCacheTTL)
-
-	return paged, nil
+	cacheKey := common.BuildCacheKey(0, query, constants.TagsPagedCacheKeyPrefix)
+	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TagCacheTTL, func(ctx context.Context) (models.TagsPagedModel, error) {
+		return ts.rpts.Tag.GetPaged(ctx, query)
+	})
 }
 
 func (ts TagService) GetDetail(ctx context.Context, id int64) (models.TagModel, error) {
-	cacheKey := fmt.Sprintf(constants.TagCacheKeyPrefix+"%d", id)
-
-	tag, err := common.GetCache[models.TagModel](ctx, ts.rdb, cacheKey)
-	if err == nil {
-		return tag, nil
-	}
-
-	tag, err = ts.rpts.Tag.GetDetail(ctx, id)
-	if err != nil {
-		return tag, err
-	}
-
-	common.SetCache(ctx, ts.rdb, cacheKey, tag, TagCacheTTL)
-
-	return tag, nil
+	cacheKey := common.BuildCacheKey(id, nil, constants.TagCacheKeyPrefix)
+	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TagCacheTTL, func(ctx context.Context) (models.TagModel, error) {
+		return ts.rpts.Tag.GetDetail(ctx, id)
+	})
 }
 
 func (ts TagService) Create(ctx context.Context, payload models.CreateTagModel) (models.TagModel, error) {

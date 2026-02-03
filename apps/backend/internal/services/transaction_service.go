@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -32,40 +31,17 @@ func NewTransactionService(rpts *repositories.RootRepository, rdb *redis.Client)
 }
 
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
-	data, _ := json.Marshal(p)
-	cacheKey := constants.TransactionsPagedCacheKeyPrefix + string(data)
-
-	paged, err := common.GetCache[models.TransactionsPagedModel](ctx, ts.rdb, cacheKey)
-	if err == nil {
-		return paged, nil
-	}
-
-	paged, err = ts.rpts.Tsct.GetPaged(ctx, p)
-	if err != nil {
-		return paged, err
-	}
-
-	common.SetCache(ctx, ts.rdb, cacheKey, paged, TransactionCacheTTL)
-
-	return paged, nil
+	cacheKey := common.BuildCacheKey(0, p, constants.TransactionsPagedCacheKeyPrefix)
+	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TransactionCacheTTL, func(ctx context.Context) (models.TransactionsPagedModel, error) {
+		return ts.rpts.Tsct.GetPaged(ctx, p)
+	})
 }
 
 func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.TransactionModel, error) {
-	cacheKey := fmt.Sprintf(constants.TransactionCacheKeyPrefix+"%d", id)
-
-	transaction, err := common.GetCache[models.TransactionModel](ctx, ts.rdb, cacheKey)
-	if err == nil {
-		return transaction, nil
-	}
-
-	transaction, err = ts.rpts.Tsct.GetDetail(ctx, id)
-	if err != nil {
-		return transaction, err
-	}
-
-	common.SetCache(ctx, ts.rdb, cacheKey, transaction, TransactionCacheTTL)
-
-	return transaction, nil
+	cacheKey := common.BuildCacheKey(id, nil, constants.TransactionCacheKeyPrefix)
+	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TransactionCacheTTL, func(ctx context.Context) (models.TransactionModel, error) {
+		return ts.rpts.Tsct.GetDetail(ctx, id)
+	})
 }
 
 func (ts TransactionService) Create(ctx context.Context, p models.CreateTransactionModel) (models.TransactionModel, error) {

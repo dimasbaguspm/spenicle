@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -31,40 +30,17 @@ func NewCategoryService(rpts *repositories.RootRepository, rdb *redis.Client) Ca
 }
 
 func (cs CategoryService) GetPaged(ctx context.Context, p models.CategoriesSearchModel) (models.CategoriesPagedModel, error) {
-	data, _ := json.Marshal(p)
-	cacheKey := constants.CategoriesPagedCacheKeyPrefix + string(data)
-
-	paged, err := common.GetCache[models.CategoriesPagedModel](ctx, cs.rdb, cacheKey)
-	if err == nil {
-		return paged, nil
-	}
-
-	paged, err = cs.rpts.Cat.GetPaged(ctx, p)
-	if err != nil {
-		return paged, err
-	}
-
-	common.SetCache(ctx, cs.rdb, cacheKey, paged, CategoryCacheTTL)
-
-	return paged, nil
+	cacheKey := common.BuildCacheKey(0, p, constants.CategoriesPagedCacheKeyPrefix)
+	return common.FetchWithCache(ctx, cs.rdb, cacheKey, CategoryCacheTTL, func(ctx context.Context) (models.CategoriesPagedModel, error) {
+		return cs.rpts.Cat.GetPaged(ctx, p)
+	})
 }
 
 func (cs CategoryService) GetDetail(ctx context.Context, id int64) (models.CategoryModel, error) {
-	cacheKey := fmt.Sprintf(constants.CategoryCacheKeyPrefix+"%d", id)
-
-	category, err := common.GetCache[models.CategoryModel](ctx, cs.rdb, cacheKey)
-	if err == nil {
-		return category, nil
-	}
-
-	category, err = cs.rpts.Cat.GetDetail(ctx, id)
-	if err != nil {
-		return category, err
-	}
-
-	common.SetCache(ctx, cs.rdb, cacheKey, category, CategoryCacheTTL)
-
-	return category, nil
+	cacheKey := common.BuildCacheKey(id, nil, constants.CategoryCacheKeyPrefix)
+	return common.FetchWithCache(ctx, cs.rdb, cacheKey, CategoryCacheTTL, func(ctx context.Context) (models.CategoryModel, error) {
+		return cs.rpts.Cat.GetDetail(ctx, id)
+	})
 }
 
 func (cs CategoryService) Create(ctx context.Context, p models.CreateCategoryModel) (models.CategoryModel, error) {

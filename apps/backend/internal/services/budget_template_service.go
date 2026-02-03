@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -28,40 +27,17 @@ func NewBudgetTemplateService(rpts *repositories.RootRepository, rdb *redis.Clie
 }
 
 func (bts BudgetTemplateService) GetPaged(ctx context.Context, p models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
-	data, _ := json.Marshal(p)
-	cacheKey := constants.BudgetTemplatesPagedCacheKeyPrefix + string(data)
-
-	paged, err := common.GetCache[models.BudgetTemplatesPagedModel](ctx, bts.rdb, cacheKey)
-	if err == nil {
-		return paged, nil
-	}
-
-	paged, err = bts.rpts.BudgTem.GetPaged(ctx, p)
-	if err != nil {
-		return paged, err
-	}
-
-	common.SetCache(ctx, bts.rdb, cacheKey, paged, BudgetTemplateCacheTTL)
-
-	return paged, nil
+	cacheKey := common.BuildCacheKey(0, p, constants.BudgetTemplatesPagedCacheKeyPrefix)
+	return common.FetchWithCache(ctx, bts.rdb, cacheKey, BudgetTemplateCacheTTL, func(ctx context.Context) (models.BudgetTemplatesPagedModel, error) {
+		return bts.rpts.BudgTem.GetPaged(ctx, p)
+	})
 }
 
 func (bts BudgetTemplateService) GetDetail(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
-	cacheKey := fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", id)
-
-	template, err := common.GetCache[models.BudgetTemplateModel](ctx, bts.rdb, cacheKey)
-	if err == nil {
-		return template, nil
-	}
-
-	template, err = bts.rpts.BudgTem.GetDetail(ctx, id)
-	if err != nil {
-		return template, err
-	}
-
-	common.SetCache(ctx, bts.rdb, cacheKey, template, BudgetTemplateCacheTTL)
-
-	return template, nil
+	cacheKey := common.BuildCacheKey(id, nil, constants.BudgetTemplateCacheKeyPrefix)
+	return common.FetchWithCache(ctx, bts.rdb, cacheKey, BudgetTemplateCacheTTL, func(ctx context.Context) (models.BudgetTemplateModel, error) {
+		return bts.rpts.BudgTem.GetDetail(ctx, id)
+	})
 }
 
 func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudgetTemplateModel) (models.BudgetTemplateModel, error) {

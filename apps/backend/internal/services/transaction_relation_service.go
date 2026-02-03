@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -27,40 +26,17 @@ func NewTransactionRelationService(rpts *repositories.RootRepository, rdb *redis
 }
 
 func (trs TransactionRelationService) GetPaged(ctx context.Context, q models.TransactionRelationsSearchModel) (models.TransactionRelationsPagedModel, error) {
-	data, _ := json.Marshal(q)
-	cacheKey := constants.TransactionRelationsPagedCacheKeyPrefix + string(data)
-
-	paged, err := common.GetCache[models.TransactionRelationsPagedModel](ctx, trs.rdb, cacheKey)
-	if err == nil {
-		return paged, nil
-	}
-
-	paged, err = trs.rpts.TsctRel.GetPaged(ctx, q)
-	if err != nil {
-		return paged, err
-	}
-
-	common.SetCache(ctx, trs.rdb, cacheKey, paged, TransactionRelationCacheTTL)
-
-	return paged, nil
+	cacheKey := common.BuildCacheKey(0, q, constants.TransactionRelationsPagedCacheKeyPrefix)
+	return common.FetchWithCache(ctx, trs.rdb, cacheKey, TransactionRelationCacheTTL, func(ctx context.Context) (models.TransactionRelationsPagedModel, error) {
+		return trs.rpts.TsctRel.GetPaged(ctx, q)
+	})
 }
 
 func (trs TransactionRelationService) GetDetail(ctx context.Context, p models.TransactionRelationGetModel) (models.TransactionRelationModel, error) {
-	cacheKey := fmt.Sprintf(constants.TransactionRelationCacheKeyPrefix+"%d-%d", p.SourceTransactionID, p.RelationID)
-
-	relation, err := common.GetCache[models.TransactionRelationModel](ctx, trs.rdb, cacheKey)
-	if err == nil {
-		return relation, nil
-	}
-
-	relation, err = trs.rpts.TsctRel.GetDetail(ctx, p)
-	if err != nil {
-		return relation, err
-	}
-
-	common.SetCache(ctx, trs.rdb, cacheKey, relation, TransactionRelationCacheTTL)
-
-	return relation, nil
+	cacheKey := common.BuildCacheKey(0, p, constants.TransactionRelationCacheKeyPrefix)
+	return common.FetchWithCache(ctx, trs.rdb, cacheKey, TransactionRelationCacheTTL, func(ctx context.Context) (models.TransactionRelationModel, error) {
+		return trs.rpts.TsctRel.GetDetail(ctx, p)
+	})
 }
 
 func (trs TransactionRelationService) Create(ctx context.Context, p models.CreateTransactionRelationModel) (models.TransactionRelationModel, error) {

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -31,40 +30,17 @@ func NewAccountService(rpts *repositories.RootRepository, rdb *redis.Client) Acc
 }
 
 func (as AccountService) GetPaged(ctx context.Context, p models.AccountsSearchModel) (models.AccountsPagedModel, error) {
-	data, _ := json.Marshal(p)
-	cacheKey := constants.AccountsPagedCacheKeyPrefix + string(data)
-
-	paged, err := common.GetCache[models.AccountsPagedModel](ctx, as.rdb, cacheKey)
-	if err == nil {
-		return paged, nil
-	}
-
-	paged, err = as.rpts.Acc.GetPaged(ctx, p)
-	if err != nil {
-		return paged, err
-	}
-
-	common.SetCache(ctx, as.rdb, cacheKey, paged, AccountCacheTTL)
-
-	return paged, nil
+	cacheKey := common.BuildCacheKey(0, p, constants.AccountsPagedCacheKeyPrefix)
+	return common.FetchWithCache(ctx, as.rdb, cacheKey, AccountCacheTTL, func(ctx context.Context) (models.AccountsPagedModel, error) {
+		return as.rpts.Acc.GetPaged(ctx, p)
+	})
 }
 
 func (as AccountService) GetDetail(ctx context.Context, id int64) (models.AccountModel, error) {
-	cacheKey := fmt.Sprintf(constants.AccountCacheKeyPrefix+"%d", id)
-
-	account, err := common.GetCache[models.AccountModel](ctx, as.rdb, cacheKey)
-	if err == nil {
-		return account, nil
-	}
-
-	account, err = as.rpts.Acc.GetDetail(ctx, id)
-	if err != nil {
-		return account, err
-	}
-
-	common.SetCache(ctx, as.rdb, cacheKey, account, AccountCacheTTL)
-
-	return account, nil
+	cacheKey := common.BuildCacheKey(id, nil, constants.AccountCacheKeyPrefix)
+	return common.FetchWithCache(ctx, as.rdb, cacheKey, AccountCacheTTL, func(ctx context.Context) (models.AccountModel, error) {
+		return as.rpts.Acc.GetDetail(ctx, id)
+	})
 }
 
 func (as AccountService) Create(ctx context.Context, p models.CreateAccountModel) (models.AccountModel, error) {

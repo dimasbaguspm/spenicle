@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -27,40 +26,17 @@ func NewTransactionTemplateService(rpts *repositories.RootRepository, rdb *redis
 }
 
 func (tts TransactionTemplateService) GetPaged(ctx context.Context, query models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
-	data, _ := json.Marshal(query)
-	cacheKey := constants.TransactionTemplatesPagedCacheKeyPrefix + string(data)
-
-	paged, err := common.GetCache[models.TransactionTemplatesPagedModel](ctx, tts.rdb, cacheKey)
-	if err == nil {
-		return paged, nil
-	}
-
-	paged, err = tts.rpts.TsctTem.GetPaged(ctx, query)
-	if err != nil {
-		return paged, err
-	}
-
-	common.SetCache(ctx, tts.rdb, cacheKey, paged, TransactionTemplateCacheTTL)
-
-	return paged, nil
+	cacheKey := common.BuildCacheKey(0, query, constants.TransactionTemplatesPagedCacheKeyPrefix)
+	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTemplateCacheTTL, func(ctx context.Context) (models.TransactionTemplatesPagedModel, error) {
+		return tts.rpts.TsctTem.GetPaged(ctx, query)
+	})
 }
 
 func (tts TransactionTemplateService) GetDetail(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
-	cacheKey := fmt.Sprintf(constants.TransactionTemplateCacheKeyPrefix+"%d", id)
-
-	template, err := common.GetCache[models.TransactionTemplateModel](ctx, tts.rdb, cacheKey)
-	if err == nil {
-		return template, nil
-	}
-
-	template, err = tts.rpts.TsctTem.GetDetail(ctx, id)
-	if err != nil {
-		return template, err
-	}
-
-	common.SetCache(ctx, tts.rdb, cacheKey, template, TransactionTemplateCacheTTL)
-
-	return template, nil
+	cacheKey := common.BuildCacheKey(id, nil, constants.TransactionTemplateCacheKeyPrefix)
+	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTemplateCacheTTL, func(ctx context.Context) (models.TransactionTemplateModel, error) {
+		return tts.rpts.TsctTem.GetDetail(ctx, id)
+	})
 }
 
 func (tts TransactionTemplateService) Create(ctx context.Context, payload models.CreateTransactionTemplateModel) (models.TransactionTemplateModel, error) {
