@@ -17,6 +17,74 @@ export type AccountReorderModel =
 export type AccountDeleteModel =
   paths["/accounts/{id}"]["delete"]["parameters"]["path"];
 
+export type AccountStatisticsModel =
+  paths["/accounts/{id}/statistics"]["get"]["responses"]["200"]["content"]["application/json"];
+export type AccountStatisticsSearchModel = NonNullable<
+  paths["/accounts/{id}/statistics"]["get"]["parameters"]["query"]
+>;
+export type AccountStatisticBudgetHealthModel =
+  paths["/accounts/{id}/statistics/budget-health"]["get"]["responses"]["200"]["content"]["application/json"];
+export type AccountStatisticBudgetHealthSearchModel = NonNullable<
+  paths["/accounts/{id}/statistics/budget-health"]["get"]["parameters"]["query"]
+>;
+export type AccountStatisticBurnRateModel =
+  paths["/accounts/{id}/statistics/burn-rate"]["get"]["responses"]["200"]["content"]["application/json"];
+export type AccountStatisticBurnRateSearchModel = NonNullable<
+  paths["/accounts/{id}/statistics/burn-rate"]["get"]["parameters"]["query"]
+>;
+export type AccountStatisticCashFlowPulseModel =
+  paths["/accounts/{id}/statistics/cash-flow-pulse"]["get"]["responses"]["200"]["content"]["application/json"];
+export type AccountStatisticCashFlowPulseSearchModel = NonNullable<
+  paths["/accounts/{id}/statistics/cash-flow-pulse"]["get"]["parameters"]["query"]
+>;
+export type AccountStatisticCategoryHeatmapModel =
+  paths["/accounts/{id}/statistics/category-heatmap"]["get"]["responses"]["200"]["content"]["application/json"];
+export type AccountStatisticCategoryHeatmapSearchModel = NonNullable<
+  paths["/accounts/{id}/statistics/category-heatmap"]["get"]["parameters"]["query"]
+>;
+export type AccountStatisticMonthlyVelocityModel =
+  paths["/accounts/{id}/statistics/monthly-velocity"]["get"]["responses"]["200"]["content"]["application/json"];
+export type AccountStatisticMonthlyVelocitySearchModel = NonNullable<
+  paths["/accounts/{id}/statistics/monthly-velocity"]["get"]["parameters"]["query"]
+>;
+export type AccountStatisticTimeFrequencyModel =
+  paths["/accounts/{id}/statistics/time-frequency"]["get"]["responses"]["200"]["content"]["application/json"];
+export type AccountStatisticTimeFrequencySearchModel = NonNullable<
+  paths["/accounts/{id}/statistics/time-frequency"]["get"]["parameters"]["query"]
+>;
+
+export type CategoryStatisticsModel =
+  paths["/categories/{id}/statistics"]["get"]["responses"]["200"]["content"]["application/json"];
+export type CategoryStatisticsSearchModel = NonNullable<
+  paths["/categories/{id}/statistics"]["get"]["parameters"]["query"]
+>;
+
+export type CategoryStatisticAccountDistributionModel =
+  paths["/categories/{id}/statistics/account-distribution"]["get"]["responses"]["200"]["content"]["application/json"];
+export type CategoryStatisticAccountDistributionSearchModel = NonNullable<
+  paths["/categories/{id}/statistics/account-distribution"]["get"]["parameters"]["query"]
+>;
+export type CategoryStatisticAverageTransactionSizeModel =
+  paths["/categories/{id}/statistics/average-transaction-size"]["get"]["responses"]["200"]["content"]["application/json"];
+export type CategoryStatisticAverageTransactionSizeSearchModel = NonNullable<
+  paths["/categories/{id}/statistics/average-transaction-size"]["get"]["parameters"]["query"]
+>;
+export type CategoryStatisticBudgetUtilizationModel =
+  paths["/categories/{id}/statistics/budget-utilization"]["get"]["responses"]["200"]["content"]["application/json"];
+export type CategoryStatisticBudgetUtilizationSearchModel = NonNullable<
+  paths["/categories/{id}/statistics/budget-utilization"]["get"]["parameters"]["query"]
+>;
+export type CategoryStatisticDayOfWeekPatternModel =
+  paths["/categories/{id}/statistics/day-of-week-pattern"]["get"]["responses"]["200"]["content"]["application/json"];
+export type CategoryStatisticDayOfWeekPatternSearchModel = NonNullable<
+  paths["/categories/{id}/statistics/day-of-week-pattern"]["get"]["parameters"]["query"]
+>;
+export type CategoryStatisticSpendingVelocityModel =
+  paths["/categories/{id}/statistics/spending-velocity"]["get"]["responses"]["200"]["content"]["application/json"];
+export type CategoryStatisticSpendingVelocitySearchModel = NonNullable<
+  paths["/categories/{id}/statistics/spending-velocity"]["get"]["parameters"]["query"]
+>;
+
 export type AuthLoginRequestModel =
   paths["/auth/login"]["post"]["requestBody"]["content"]["application/json"];
 export type AuthLoginResponseModel =

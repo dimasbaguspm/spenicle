@@ -6,6 +6,20 @@ import type {
   AccountUpdateModel,
   AccountReorderModel,
   AccountDeleteModel,
+  AccountStatisticsModel,
+  AccountStatisticsSearchModel,
+  AccountStatisticBudgetHealthModel,
+  AccountStatisticBudgetHealthSearchModel,
+  AccountStatisticBurnRateModel,
+  AccountStatisticBurnRateSearchModel,
+  AccountStatisticCashFlowPulseModel,
+  AccountStatisticCashFlowPulseSearchModel,
+  AccountStatisticCategoryHeatmapModel,
+  AccountStatisticCategoryHeatmapSearchModel,
+  AccountStatisticMonthlyVelocityModel,
+  AccountStatisticMonthlyVelocitySearchModel,
+  AccountStatisticTimeFrequencyModel,
+  AccountStatisticTimeFrequencySearchModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -128,5 +142,111 @@ export const useApiDeleteAccount = () => {
         exact: false,
       });
     },
+  });
+};
+
+// Statistics queries
+export const useApiAccountStatisticsQuery = (
+  id: number,
+  params?: AccountStatisticsSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<AccountStatisticsModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<AccountStatisticsModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.ACCOUNT_BY_ID(id, params),
+    queryParams: params,
+    path: ENDPOINTS.ACCOUNT.STATISTICS.BY_ID(id),
+  });
+};
+
+export const useApiAccountStatisticBudgetHealthQuery = (
+  id: number,
+  params?: AccountStatisticBudgetHealthSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<AccountStatisticBudgetHealthModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<AccountStatisticBudgetHealthModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.ACCOUNT_STATISTICS.BUDGET_HEALTH(id, params),
+    queryParams: params,
+    path: ENDPOINTS.ACCOUNT.STATISTICS.BUDGET_HEALTH(id),
+  });
+};
+
+export const useApiAccountStatisticBurnRateQuery = (
+  id: number,
+  params?: AccountStatisticBurnRateSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<AccountStatisticBurnRateModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<AccountStatisticBurnRateModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.ACCOUNT_STATISTICS.BURN_RATE(id, params),
+    queryParams: params,
+    path: ENDPOINTS.ACCOUNT.STATISTICS.BURN_RATE(id),
+  });
+};
+
+export const useApiAccountStatisticCashFlowPulseQuery = (
+  id: number,
+  params?: AccountStatisticCashFlowPulseSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<AccountStatisticCashFlowPulseModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<AccountStatisticCashFlowPulseModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.ACCOUNT_STATISTICS.CASH_FLOW_PULSE(id, params),
+    queryParams: params,
+    path: ENDPOINTS.ACCOUNT.STATISTICS.CASH_FLOW_PULSE(id),
+  });
+};
+
+export const useApiAccountStatisticCategoryHeatmapQuery = (
+  id: number,
+  params?: AccountStatisticCategoryHeatmapSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<AccountStatisticCategoryHeatmapModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<AccountStatisticCategoryHeatmapModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.ACCOUNT_STATISTICS.CATEGORY_HEATMAP(id, params),
+    queryParams: params,
+    path: ENDPOINTS.ACCOUNT.STATISTICS.CATEGORY_HEATMAP(id),
+  });
+};
+
+export const useApiAccountStatisticMonthlyVelocityQuery = (
+  id: number,
+  params?: AccountStatisticMonthlyVelocitySearchModel,
+  options?: Partial<
+    UseApiQueryOptions<AccountStatisticMonthlyVelocityModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<AccountStatisticMonthlyVelocityModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.ACCOUNT_STATISTICS.MONTHLY_VELOCITY(id, params),
+    queryParams: params,
+    path: ENDPOINTS.ACCOUNT.STATISTICS.MONTHLY_VELOCITY(id),
+  });
+};
+
+export const useApiAccountStatisticTimeFrequencyQuery = (
+  id: number,
+  params?: AccountStatisticTimeFrequencySearchModel,
+  options?: Partial<
+    UseApiQueryOptions<AccountStatisticTimeFrequencyModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<AccountStatisticTimeFrequencyModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.ACCOUNT_STATISTICS.TIME_FREQUENCY(id, params),
+    queryParams: params,
+    path: ENDPOINTS.ACCOUNT.STATISTICS.TIME_FREQUENCY(id),
   });
 };

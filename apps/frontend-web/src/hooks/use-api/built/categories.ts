@@ -6,6 +6,18 @@ import type {
   CategoryUpdateModel,
   CategoryReorderModel,
   CategoryDeleteModel,
+  CategoryStatisticsModel,
+  CategoryStatisticsSearchModel,
+  CategoryStatisticAccountDistributionModel,
+  CategoryStatisticAccountDistributionSearchModel,
+  CategoryStatisticAverageTransactionSizeModel,
+  CategoryStatisticAverageTransactionSizeSearchModel,
+  CategoryStatisticBudgetUtilizationModel,
+  CategoryStatisticBudgetUtilizationSearchModel,
+  CategoryStatisticDayOfWeekPatternModel,
+  CategoryStatisticDayOfWeekPatternSearchModel,
+  CategoryStatisticSpendingVelocityModel,
+  CategoryStatisticSpendingVelocitySearchModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -128,5 +140,111 @@ export const useApiDeleteCategory = () => {
         exact: false,
       });
     },
+  });
+};
+
+// Statistics queries
+export const useApiCategoryStatisticsQuery = (
+  id: number,
+  params?: CategoryStatisticsSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<CategoryStatisticsModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<CategoryStatisticsModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.CATEGORY_BY_ID(id, params),
+    queryParams: params,
+    path: ENDPOINTS.CATEGORIES.STATISTICS.BY_ID(id),
+  });
+};
+
+export const useApiCategoryStatisticBudgetUtilizationQuery = (
+  id: number,
+  params?: CategoryStatisticBudgetUtilizationSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<
+      CategoryStatisticBudgetUtilizationModel,
+      unknown,
+      unknown
+    >
+  >,
+) => {
+  return useApiQuery<CategoryStatisticBudgetUtilizationModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.CATEGORY_STATISTICS.BUDGET_UTILIZATION(id, params),
+    queryParams: params,
+    path: ENDPOINTS.CATEGORIES.STATISTICS.BUDGET_UTILIZATION(id),
+  });
+};
+
+export const useApiCategoryStatisticAccountDistributionQuery = (
+  id: number,
+  params?: CategoryStatisticAccountDistributionSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<
+      CategoryStatisticAccountDistributionModel,
+      unknown,
+      unknown
+    >
+  >,
+) => {
+  return useApiQuery<CategoryStatisticAccountDistributionModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.CATEGORY_STATISTICS.ACCOUNT_DISTRIBUTION(id, params),
+    queryParams: params,
+    path: ENDPOINTS.CATEGORIES.STATISTICS.ACCOUNT_DISTRIBUTION(id),
+  });
+};
+
+export const useApiCategoryStatisticAverageTransactionSizeQuery = (
+  id: number,
+  params?: CategoryStatisticAverageTransactionSizeSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<
+      CategoryStatisticAverageTransactionSizeModel,
+      unknown,
+      unknown
+    >
+  >,
+) => {
+  return useApiQuery<CategoryStatisticAverageTransactionSizeModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.CATEGORY_STATISTICS.AVERAGE_TRANSACTION_SIZE(
+      id,
+      params,
+    ),
+    queryParams: params,
+    path: ENDPOINTS.CATEGORIES.STATISTICS.AVERAGE_TRANSACTION_SIZE(id),
+  });
+};
+
+export const useApiCategoryStatisticDayOfWeekPatternQuery = (
+  id: number,
+  params?: CategoryStatisticDayOfWeekPatternSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<CategoryStatisticDayOfWeekPatternModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<CategoryStatisticDayOfWeekPatternModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.CATEGORY_STATISTICS.DAY_OF_WEEK_PATTERN(id, params),
+    queryParams: params,
+    path: ENDPOINTS.CATEGORIES.STATISTICS.DAY_OF_WEEK_PATTERN(id),
+  });
+};
+
+export const useApiCategoryStatisticSpendingVelocityQuery = (
+  id: number,
+  params?: CategoryStatisticSpendingVelocitySearchModel,
+  options?: Partial<
+    UseApiQueryOptions<CategoryStatisticSpendingVelocityModel, unknown, unknown>
+  >,
+) => {
+  return useApiQuery<CategoryStatisticSpendingVelocityModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.CATEGORY_STATISTICS.SPENDING_VELOCITY(id, params),
+    queryParams: params,
+    path: ENDPOINTS.CATEGORIES.STATISTICS.SPENDING_VELOCITY(id),
   });
 };
