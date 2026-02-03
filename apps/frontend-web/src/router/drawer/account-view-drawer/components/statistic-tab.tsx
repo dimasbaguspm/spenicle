@@ -1,7 +1,7 @@
 import { useApiAccountStatisticsQuery } from "@/hooks/use-api";
 import { AccountModel } from "@/types/schemas";
 import dayjs from "dayjs";
-import { FC } from "react";
+import { FC, useState } from "react";
 import { AccountsStatisticBudgetHealth } from "@/ui/accounts-statistic-budget-health";
 import { AccountsStatisticBurnRate } from "@/ui/accounts-statistic-burn-rate";
 import { AccountsStatisticCashFlowPulse } from "@/ui/accounts-statistic-cash-flow-pulse";
@@ -9,18 +9,51 @@ import { AccountsStatisticCategoryHeatmap } from "@/ui/accounts-statistic-catego
 import { AccountsStatisticMonthlyVelocity } from "@/ui/accounts-statistic-monthly-velocity";
 import { AccountsStatisticTimeFrequency } from "@/ui/accounts-statistic-time-frequency";
 import { When } from "@/lib/when";
-import { NoResults, PageLoader } from "@dimasbaguspm/versaur";
+import { ChipSingleInput, NoResults, PageLoader } from "@dimasbaguspm/versaur";
 import { SearchXIcon } from "lucide-react";
 
 interface StatisticTabProps {
   data: AccountModel;
 }
 
+type PeriodOption = "3months" | "6months" | "1year";
+
+const PERIOD_OPTIONS: { value: PeriodOption; label: string }[] = [
+  { value: "3months", label: "Last 3 Months" },
+  { value: "6months", label: "Last Semester" },
+  { value: "1year", label: "Last Year" },
+];
+
+const getPeriodDates = (period: PeriodOption) => {
+  const endDate = dayjs().endOf("month");
+  let startDate: dayjs.Dayjs;
+
+  switch (period) {
+    case "3months":
+      startDate = dayjs().startOf("month").subtract(2, "month");
+      break;
+    case "6months":
+      startDate = dayjs().startOf("month").subtract(5, "month");
+      break;
+    case "1year":
+      startDate = dayjs().startOf("month").subtract(11, "month");
+      break;
+  }
+
+  return {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  };
+};
+
 export const StatisticTab: FC<StatisticTabProps> = ({ data }) => {
-  const [stats, error, { isPending }] = useApiAccountStatisticsQuery(data.id, {
-    startDate: dayjs().startOf("month").subtract(5, "month").toISOString(),
-    endDate: dayjs().endOf("month").toISOString(),
-  });
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>("3months");
+  const periodDates = getPeriodDates(selectedPeriod);
+
+  const [stats, error, { isPending }] = useApiAccountStatisticsQuery(
+    data.id,
+    periodDates,
+  );
 
   return (
     <>
@@ -40,6 +73,24 @@ export const StatisticTab: FC<StatisticTabProps> = ({ data }) => {
             />
           </When>
           <When condition={!!stats}>
+            <div className="mb-4 flex flex-col gap-3">
+              <ChipSingleInput
+                size="md"
+                name="period"
+                value={selectedPeriod}
+                onChange={(value) => setSelectedPeriod(value as PeriodOption)}
+              >
+                {PERIOD_OPTIONS.map((option) => (
+                  <ChipSingleInput.Option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </ChipSingleInput.Option>
+                ))}
+              </ChipSingleInput>
+            </div>
+
             <div className="space-y-6">
               <When condition={!!stats?.budgetHealth}>
                 <AccountsStatisticBudgetHealth data={stats?.budgetHealth!} />
