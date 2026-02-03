@@ -24,9 +24,10 @@ var (
 
 	RequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
-			Help:    "HTTP request duration in seconds",
-			Buckets: prometheus.DefBuckets,
+			Name: "http_request_duration_seconds",
+			Help: "HTTP request duration in seconds with latency buckets (50ms, 100ms, 250ms, 500ms)",
+			// Custom buckets: 50ms, 100ms, 250ms, 500ms, and default upper bounds
+			Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2, 5},
 		},
 		[]string{"method", "endpoint"},
 	)
