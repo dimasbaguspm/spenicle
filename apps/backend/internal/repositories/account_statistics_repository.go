@@ -241,13 +241,29 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 				END as frequency
 			FROM transaction_dates
 			WHERE days_since_prev IS NOT NULL
+		),
+		frequency_counts AS (
+			SELECT
+				frequency,
+				COUNT(*) as count
+			FROM frequency_classified
+			GROUP BY frequency
+		),
+		total_count AS (
+			SELECT COUNT(*) as total
+			FROM transactions
+			WHERE account_id = $1
+				AND deleted_at IS NULL
+				AND date >= $2::timestamptz
+				AND date <= $3::timestamptz
 		)
 		SELECT
-			frequency,
-			COUNT(*) as count
-		FROM frequency_classified
-		GROUP BY frequency
-		ORDER BY count DESC
+			fc.frequency,
+			fc.count,
+			tc.total
+		FROM frequency_counts fc
+		CROSS JOIN total_count tc
+		ORDER BY fc.count DESC
 	`
 
 	queryStart := time.Now()
@@ -262,15 +278,16 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 	var items []models.AccountStatisticsTimeFrequencyEntry
 	var maxFrequency string
 	var maxCount int
-	var totalTransactions int
+	var txCount int
 
 	for rows.Next() {
 		var item models.AccountStatisticsTimeFrequencyEntry
-		if err := rows.Scan(&item.Frequency, &item.Count); err != nil {
+		var totalFromRow int
+		if err := rows.Scan(&item.Frequency, &item.Count, &totalFromRow); err != nil {
 			return models.AccountStatisticsTimeFrequencyHeatmapModel{}, huma.Error500InternalServerError("scan time frequency: %w", err)
 		}
 		items = append(items, item)
-		totalTransactions += item.Count
+		txCount = totalFromRow
 
 		if item.Count > maxCount {
 			maxCount = item.Count
@@ -280,21 +297,6 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 
 	if items == nil {
 		items = []models.AccountStatisticsTimeFrequencyEntry{}
-	}
-
-	// Get total transaction count for the period
-	var txCount int
-	err = sr.db.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM transactions
-		WHERE account_id = $1
-			AND deleted_at IS NULL
-			AND date >= $2::timestamptz
-			AND date <= $3::timestamptz
-	`, accountID, p.StartDate, p.EndDate).Scan(&txCount)
-
-	if err != nil {
-		return models.AccountStatisticsTimeFrequencyHeatmapModel{}, huma.Error500InternalServerError("query total transactions: %w", err)
 	}
 
 	return models.AccountStatisticsTimeFrequencyHeatmapModel{
@@ -309,29 +311,39 @@ func (sr AccountStatisticsRepository) GetCashFlowPulse(ctx context.Context, acco
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
+	// Get starting balance from account.amount first
+	var startingBalance int64
+	balanceStart := time.Now()
+	err := sr.db.QueryRow(ctx, "SELECT amount FROM accounts WHERE id = $1", accountID).Scan(&startingBalance)
+	if err != nil {
+		observability.RecordError("database")
+		return models.AccountStatisticsCashFlowPulseModel{}, huma.Error500InternalServerError("get account balance: %w", err)
+	}
+	observability.RecordQueryDuration("SELECT", "accounts", time.Since(balanceStart).Seconds())
+
 	// Query to get daily transactions and calculate running balance
 	sql := `
 		WITH daily_transactions AS (
-			SELECT 
+			SELECT
 				DATE(t.date) as tx_date,
 				t.type,
 				SUM(t.amount) as daily_amount
 			FROM transactions t
-			WHERE t.account_id = $1 
-				AND t.date >= $2 
-				AND t.date <= $3
+			WHERE t.account_id = $1
+				AND t.date >= $2::timestamptz
+				AND t.date <= $3::timestamptz
 				AND t.deleted_at IS NULL
 			GROUP BY DATE(t.date), t.type
 		),
 		date_series AS (
 			SELECT DATE(d) as date_val
-			FROM generate_series($2::timestamp, $3::timestamp, '1 day'::interval) d
+			FROM generate_series(DATE($2::timestamptz), DATE($3::timestamptz), '1 day'::interval) d
 		),
 		daily_flow AS (
-			SELECT 
+			SELECT
 				ds.date_val,
 				COALESCE(SUM(
-					CASE 
+					CASE
 						WHEN dt.type = 'income' THEN dt.daily_amount
 						WHEN dt.type = 'expense' THEN -dt.daily_amount
 						ELSE 0
@@ -344,21 +356,17 @@ func (sr AccountStatisticsRepository) GetCashFlowPulse(ctx context.Context, acco
 		SELECT date_val, net_flow FROM daily_flow ORDER BY date_val
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, accountID, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.AccountStatisticsCashFlowPulseModel{}, huma.Error500InternalServerError("query cash flow: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	var items []models.AccountStatisticsCashFlowDataPoint
 	var minBalance, maxBalance, runningBalance int64
-
-	// Get starting balance from account.amount
-	var startingBalance int64
-	err = sr.db.QueryRow(ctx, "SELECT amount FROM accounts WHERE id = $1", accountID).Scan(&startingBalance)
-	if err != nil {
-		return models.AccountStatisticsCashFlowPulseModel{}, huma.Error500InternalServerError("get account balance: %w", err)
-	}
 
 	runningBalance = startingBalance
 	minBalance = startingBalance
@@ -414,14 +422,14 @@ func (sr AccountStatisticsRepository) GetBurnRate(ctx context.Context, accountID
 	defer cancel()
 
 	sql := `
-		SELECT 
+		SELECT
 			COUNT(DISTINCT DATE(t.date)) as spending_days,
 			COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as total_spending,
 			COUNT(*) as total_transactions
 		FROM transactions t
-		WHERE t.account_id = $1 
-			AND t.date >= $2 
-			AND t.date <= $3
+		WHERE t.account_id = $1
+			AND t.date >= $2::timestamptz
+			AND t.date <= $3::timestamptz
 			AND t.type = 'expense'
 			AND t.deleted_at IS NULL
 	`
@@ -430,10 +438,13 @@ func (sr AccountStatisticsRepository) GetBurnRate(ctx context.Context, accountID
 	var totalSpending int64
 	var totalTransactions int
 
+	queryStart := time.Now()
 	err := sr.db.QueryRow(ctx, sql, accountID, p.StartDate, p.EndDate).Scan(&spendingDays, &totalSpending, &totalTransactions)
 	if err != nil {
+		observability.RecordError("database")
 		return models.AccountStatisticsBurnRateModel{}, huma.Error500InternalServerError("query burn rate: %w", err)
 	}
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	// Calculate daily and period averages
 	daysDiff := int(p.EndDate.Sub(p.StartDate).Hours() / 24)
@@ -447,8 +458,9 @@ func (sr AccountStatisticsRepository) GetBurnRate(ctx context.Context, accountID
 
 	// Check for active budget
 	budgetSQL := `
-		SELECT 
+		SELECT
 			COALESCE(amount_limit, 0) as amount_limit,
+			period_start,
 			period_end
 		FROM budgets
 		WHERE account_id = $1
@@ -460,11 +472,14 @@ func (sr AccountStatisticsRepository) GetBurnRate(ctx context.Context, accountID
 	`
 
 	var budgetLimit int64
-	var periodEnd time.Time
+	var periodStart, periodEnd time.Time
 	budgetLimitStatus := "no-budget"
 	daysRemaining := 0
 
-	err = sr.db.QueryRow(ctx, budgetSQL, accountID).Scan(&budgetLimit, &periodEnd)
+	budgetStart := time.Now()
+	err = sr.db.QueryRow(ctx, budgetSQL, accountID).Scan(&budgetLimit, &periodStart, &periodEnd)
+	observability.RecordQueryDuration("SELECT", "budgets", time.Since(budgetStart).Seconds())
+
 	if err == nil && budgetLimit > 0 {
 		daysRemaining = int(time.Until(periodEnd).Hours() / 24)
 		if daysRemaining < 0 {
@@ -477,13 +492,15 @@ func (sr AccountStatisticsRepository) GetBurnRate(ctx context.Context, accountID
 			FROM transactions
 			WHERE account_id = $1
 				AND type = 'expense'
-				AND date >= $2
-				AND date <= $3
+				AND date >= $2::timestamptz
+				AND date <= $3::timestamptz
 				AND deleted_at IS NULL
 		`
 
 		var currentSpending int64
-		sr.db.QueryRow(ctx, currentBudgetSQL, accountID, periodEnd, periodEnd).Scan(&currentSpending)
+		budgetSpendStart := time.Now()
+		sr.db.QueryRow(ctx, currentBudgetSQL, accountID, periodStart, periodEnd).Scan(&currentSpending)
+		observability.RecordQueryDuration("SELECT", "transactions", time.Since(budgetSpendStart).Seconds())
 
 		remaining := budgetLimit - currentSpending
 		if remaining <= 0 {
@@ -537,11 +554,14 @@ func (sr AccountStatisticsRepository) GetBudgetHealth(ctx context.Context, accou
 	`
 
 	activeBudgets := []models.AccountStatisticsBudgetHealthEntry{}
+	activeStart := time.Now()
 	rows, err := sr.db.Query(ctx, activeBudgetSQL, accountID)
 	if err != nil {
+		observability.RecordError("database")
 		return models.AccountStatisticsBudgetHealthModel{}, huma.Error500InternalServerError("query active budgets: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "budgets", time.Since(activeStart).Seconds())
 
 	for rows.Next() {
 		var id int64
@@ -608,11 +628,14 @@ func (sr AccountStatisticsRepository) GetBudgetHealth(ctx context.Context, accou
 	`
 
 	pastBudgets := []models.AccountStatisticsBudgetHealthEntry{}
+	pastStart := time.Now()
 	rows, err = sr.db.Query(ctx, pastBudgetSQL, accountID)
 	if err != nil {
+		observability.RecordError("database")
 		return models.AccountStatisticsBudgetHealthModel{}, huma.Error500InternalServerError("query past budgets: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "budgets", time.Since(pastStart).Seconds())
 
 	achievedCount := 0
 
