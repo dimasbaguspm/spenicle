@@ -236,6 +236,21 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
+	// First, get total transaction count
+	var totalTx int
+	err := sr.db.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM transactions
+		WHERE (account_id = $1 OR destination_account_id = $1)
+			AND deleted_at IS NULL
+			AND date >= $2::timestamptz
+			AND date <= $3::timestamptz
+	`, accountID, p.StartDate, p.EndDate).Scan(&totalTx)
+	if err != nil {
+		observability.RecordError("database")
+		return models.AccountStatisticsTimeFrequencyHeatmapModel{}, huma.Error500InternalServerError("count transactions: %w", err)
+	}
+
 	// This query analyzes gaps between transactions to determine frequency patterns
 	sql := `
 		WITH transaction_dates AS (
@@ -268,22 +283,12 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 				COUNT(*) as count
 			FROM frequency_classified
 			GROUP BY frequency
-		),
-		total_count AS (
-			SELECT COUNT(*) as total
-			FROM transactions
-			WHERE (account_id = $1 OR destination_account_id = $1)
-				AND deleted_at IS NULL
-				AND date >= $2::timestamptz
-				AND date <= $3::timestamptz
 		)
 		SELECT
-			fc.frequency,
-			fc.count,
-			tc.total
-		FROM frequency_counts fc
-		CROSS JOIN total_count tc
-		ORDER BY fc.count DESC
+			frequency,
+			count
+		FROM frequency_counts
+		ORDER BY count DESC
 	`
 
 	queryStart := time.Now()
@@ -298,16 +303,13 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 	var items []models.AccountStatisticsTimeFrequencyEntry
 	var maxFrequency string
 	var maxCount int
-	var txCount int
 
 	for rows.Next() {
 		var item models.AccountStatisticsTimeFrequencyEntry
-		var totalFromRow int
-		if err := rows.Scan(&item.Frequency, &item.Count, &totalFromRow); err != nil {
+		if err := rows.Scan(&item.Frequency, &item.Count); err != nil {
 			return models.AccountStatisticsTimeFrequencyHeatmapModel{}, huma.Error500InternalServerError("scan time frequency: %w", err)
 		}
 		items = append(items, item)
-		txCount = totalFromRow
 
 		if item.Count > maxCount {
 			maxCount = item.Count
@@ -322,7 +324,7 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 	return models.AccountStatisticsTimeFrequencyHeatmapModel{
 		Data:              items,
 		MostCommonPattern: maxFrequency,
-		TotalTransactions: txCount,
+		TotalTransactions: totalTx,
 	}, nil
 }
 
