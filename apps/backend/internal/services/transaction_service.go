@@ -76,6 +76,8 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
 	// Invalidate account statistics caches
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", p.AccountID)+":*")
+	// Invalidate category statistics caches
+	common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", p.CategoryID)+":*")
 
 	return transaction, nil
 }
@@ -152,6 +154,11 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 	if newAccountID != existing.Account.ID {
 		common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", newAccountID)+":*")
 	}
+	// Invalidate category statistics caches for both old and new categories
+	common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Category.ID)+":*")
+	if newCategoryID != existing.Category.ID {
+		common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", newCategoryID)+":*")
+	}
 	return transaction, nil
 }
 
@@ -191,6 +198,8 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
 	// Invalidate account statistics caches
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Account.ID)+":*")
+	// Invalidate category statistics caches
+	common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Category.ID)+":*")
 	return nil
 }
 

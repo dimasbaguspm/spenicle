@@ -965,27 +965,69 @@ components:
       additionalProperties: false
       properties:
         averageAmount:
-          description: Average transaction amount in cents
+          description: Average expense transaction amount in cents
           examples:
             - 25000
           format: int64
           type: integer
+        averageIncomeAmount:
+          description: Average income amount in cents
+          examples:
+            - 150000
+          format: int64
+          type: integer
+        expenseCount:
+          description: Expense transaction count
+          examples:
+            - 80
+          format: int64
+          type: integer
+        incomeCount:
+          description: Income transaction count
+          examples:
+            - 40
+          format: int64
+          type: integer
+        incomeToExpenseRatio:
+          description: Ratio of income/expense counts
+          examples:
+            - 0.5
+          format: double
+          type: number
         maxAmount:
-          description: Maximum transaction amount in cents
+          description: Maximum expense transaction amount in cents
           examples:
             - 500000
           format: int64
           type: integer
+        maxIncomeAmount:
+          description: Maximum income amount in cents
+          examples:
+            - 1000000
+          format: int64
+          type: integer
         medianAmount:
-          description: Median transaction amount in cents
+          description: Median expense transaction amount in cents
           examples:
             - 20000
           format: int64
           type: integer
+        medianIncomeAmount:
+          description: Median income amount in cents
+          examples:
+            - 100000
+          format: int64
+          type: integer
         minAmount:
-          description: Minimum transaction amount in cents
+          description: Minimum expense transaction amount in cents
           examples:
             - 5000
+          format: int64
+          type: integer
+        minIncomeAmount:
+          description: Minimum income amount in cents
+          examples:
+            - 50000
           format: int64
           type: integer
         transactionCount:
@@ -1000,6 +1042,13 @@ components:
         - minAmount
         - maxAmount
         - medianAmount
+        - expenseCount
+        - incomeCount
+        - averageIncomeAmount
+        - minIncomeAmount
+        - maxIncomeAmount
+        - medianIncomeAmount
+        - incomeToExpenseRatio
       type: object
     CategoryStatisticBudgetUtilizationEntry:
       additionalProperties: false
@@ -1074,7 +1123,7 @@ components:
       additionalProperties: false
       properties:
         averageAmount:
-          description: Average spending on this day in cents
+          description: Average expense amount on this day in cents
           examples:
             - 25000
           format: int64
@@ -1084,8 +1133,44 @@ components:
           examples:
             - Friday
           type: string
+        expenseAverage:
+          description: Average expense amount in cents
+          examples:
+            - 33333
+          format: int64
+          type: integer
+        expenseCount:
+          description: Expense transactions on this day
+          examples:
+            - 15
+          format: int64
+          type: integer
+        expenseTotal:
+          description: Total expense amount in cents
+          examples:
+            - 500000
+          format: int64
+          type: integer
+        incomeAverage:
+          description: Average income amount in cents
+          examples:
+            - 150000
+          format: int64
+          type: integer
+        incomeCount:
+          description: Income transactions on this day
+          examples:
+            - 5
+          format: int64
+          type: integer
+        incomeTotal:
+          description: Total income amount in cents
+          examples:
+            - 750000
+          format: int64
+          type: integer
         totalAmount:
-          description: Total spending on this day in cents
+          description: Total expense amount on this day in cents
           examples:
             - 500000
           format: int64
@@ -1101,6 +1186,12 @@ components:
         - transactionCount
         - totalAmount
         - averageAmount
+        - expenseCount
+        - incomeCount
+        - expenseTotal
+        - incomeTotal
+        - expenseAverage
+        - incomeAverage
       type: object
     CategoryStatisticDayOfWeekPatternModel:
       additionalProperties: false
@@ -1112,30 +1203,104 @@ components:
           type:
             - array
             - "null"
+        highestSpendDay:
+          description: Day with highest expense total
+          examples:
+            - Saturday
+          type: string
+        mostActiveDay:
+          description: Day with highest transaction count
+          examples:
+            - Friday
+          type: string
+        totalTransactions:
+          description: Total transactions across all days
+          examples:
+            - 150
+          format: int64
+          type: integer
       required:
         - data
+        - mostActiveDay
+        - highestSpendDay
+        - totalTransactions
       type: object
     CategoryStatisticSpendingVelocityDataPoint:
       additionalProperties: false
       properties:
         amount:
-          description: Total spending in cents
+          description: Total expense amount in cents (legacy field)
           examples:
             - 2500000
           format: int64
           type: integer
+        expenseAmount:
+          description: Total expense in cents
+          examples:
+            - 2500000
+          format: int64
+          type: integer
+        expenseCount:
+          description: Expense transaction count
+          examples:
+            - 35
+          format: int64
+          type: integer
+        incomeAmount:
+          description: Total income in cents
+          examples:
+            - 5000000
+          format: int64
+          type: integer
+        incomeCount:
+          description: Income transaction count
+          examples:
+            - 10
+          format: int64
+          type: integer
+        incomePercentage:
+          description: Percentage of income vs total volume
+          examples:
+            - 66.67
+          format: double
+          type: number
         month:
           description: Month (YYYY-MM)
           examples:
             - 2024-01
           type: string
+        net:
+          description: Net flow (income - expense) in cents
+          examples:
+            - 2500000
+          format: int64
+          type: integer
+        totalCount:
+          description: Total transactions in month
+          examples:
+            - 45
+          format: int64
+          type: integer
       required:
         - month
         - amount
+        - totalCount
+        - incomeCount
+        - expenseCount
+        - incomeAmount
+        - expenseAmount
+        - net
+        - incomePercentage
       type: object
     CategoryStatisticSpendingVelocityModel:
       additionalProperties: false
       properties:
+        averageMonthlySpend:
+          description: Average monthly expense in cents
+          examples:
+            - 2500000
+          format: int64
+          type: integer
         data:
           description: Monthly spending data for line chart
           items:
@@ -1143,8 +1308,40 @@ components:
           type:
             - array
             - "null"
+        netFlow:
+          description: Total net (income - expense) in cents
+          examples:
+            - 20000000
+          format: int64
+          type: integer
+        totalExpense:
+          description: Sum of all expense across months in cents
+          examples:
+            - 30000000
+          format: int64
+          type: integer
+        totalIncome:
+          description: Sum of all income across months in cents
+          examples:
+            - 50000000
+          format: int64
+          type: integer
+        trendDirection:
+          description: Spending trend direction
+          enum:
+            - increasing
+            - decreasing
+            - stable
+          examples:
+            - stable
+          type: string
       required:
         - data
+        - totalIncome
+        - totalExpense
+        - netFlow
+        - trendDirection
+        - averageMonthlySpend
       type: object
     CategoryStatisticsResponse:
       additionalProperties: false

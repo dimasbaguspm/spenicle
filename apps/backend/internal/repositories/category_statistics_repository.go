@@ -21,26 +21,58 @@ func NewCategoryStatisticsRepository(db DBQuerier) CategoryStatisticsRepository 
 	return CategoryStatisticsRepository{db}
 }
 
+// calculatePercentage returns percentage as float64, handling division by zero
+func calculatePercentage(part, total int64) float64 {
+	if total == 0 {
+		return 0.0
+	}
+	return (float64(part) / float64(total)) * 100.0
+}
+
 // GetSpendingVelocity returns spending trend over the period (line chart data)
 func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, categoryID int64, p models.CategoryStatisticsSearchModel) (models.CategoryStatisticSpendingVelocityModel, error) {
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
 	sql := `
-		WITH monthly_spending AS (
+		WITH transaction_impacts AS (
 			SELECT
-				DATE_TRUNC('month', t.date)::date as month,
-				SUM(t.amount) as amount
-			FROM transactions t
-			WHERE t.category_id = $1
-				AND t.type = 'expense'
-				AND t.deleted_at IS NULL
-				AND t.date >= $2::timestamptz
-				AND t.date <= $3::timestamptz
-			GROUP BY DATE_TRUNC('month', t.date)
-			ORDER BY month
+				TO_CHAR(date, 'YYYY-MM') as period,
+				type as transaction_type,
+				amount,
+				CASE
+					WHEN type = 'income' THEN amount
+					WHEN type = 'expense' THEN -amount
+					ELSE 0
+				END as net_impact
+			FROM transactions
+			WHERE category_id = $1
+				AND deleted_at IS NULL
+				AND date >= $2::timestamptz
+				AND date <= $3::timestamptz
+		),
+		monthly_data AS (
+			SELECT
+				period,
+				COUNT(*) as total_count,
+				COUNT(*) FILTER (WHERE transaction_type = 'income') as income_count,
+				COUNT(*) FILTER (WHERE transaction_type = 'expense') as expense_count,
+				COALESCE(SUM(amount) FILTER (WHERE transaction_type = 'income'), 0) as income_amount,
+				COALESCE(SUM(amount) FILTER (WHERE transaction_type = 'expense'), 0) as expense_amount,
+				COALESCE(SUM(net_impact), 0) as net
+			FROM transaction_impacts
+			GROUP BY period
 		)
-		SELECT month, amount FROM monthly_spending
+		SELECT
+			period,
+			total_count,
+			income_count,
+			expense_count,
+			income_amount,
+			expense_amount,
+			net
+		FROM monthly_data
+		ORDER BY period DESC
 	`
 
 	queryStart := time.Now()
@@ -54,21 +86,57 @@ func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, 
 
 	var data []models.CategoryStatisticSpendingVelocityDataPoint
 	for rows.Next() {
-		var month time.Time
-		var amount int64
+		var period string
+		var totalCount, incomeCount, expenseCount, incomeAmount, expenseAmount, net int64
 
-		if err := rows.Scan(&month, &amount); err != nil {
+		if err := rows.Scan(&period, &totalCount, &incomeCount, &expenseCount, &incomeAmount, &expenseAmount, &net); err != nil {
 			return models.CategoryStatisticSpendingVelocityModel{}, huma.Error500InternalServerError("scan velocity row: %w", err)
 		}
 
+		totalVolume := incomeAmount + expenseAmount
 		data = append(data, models.CategoryStatisticSpendingVelocityDataPoint{
-			Month:  month.Format("2006-01"),
-			Amount: amount,
+			Month:            period,
+			Amount:           expenseAmount,
+			TotalCount:       int(totalCount),
+			IncomeCount:      int(incomeCount),
+			ExpenseCount:     int(expenseCount),
+			IncomeAmount:     incomeAmount,
+			ExpenseAmount:    expenseAmount,
+			Net:              net,
+			IncomePercentage: calculatePercentage(incomeAmount, totalVolume),
 		})
 	}
 
+	// Calculate aggregates and trend
+	var totalIncome, totalExpense int64
+	for _, dp := range data {
+		totalIncome += dp.IncomeAmount
+		totalExpense += dp.ExpenseAmount
+	}
+
+	trendDirection := "stable"
+	if len(data) >= 2 {
+		recent := data[0].ExpenseAmount
+		older := data[len(data)-1].ExpenseAmount
+		if recent > older*110/100 {
+			trendDirection = "increasing"
+		} else if recent < older*90/100 {
+			trendDirection = "decreasing"
+		}
+	}
+
+	avgMonthlySpend := int64(0)
+	if len(data) > 0 {
+		avgMonthlySpend = totalExpense / int64(len(data))
+	}
+
 	return models.CategoryStatisticSpendingVelocityModel{
-		Data: data,
+		Data:                data,
+		TotalIncome:         totalIncome,
+		TotalExpense:        totalExpense,
+		NetFlow:             totalIncome - totalExpense,
+		TrendDirection:      trendDirection,
+		AverageMonthlySpend: avgMonthlySpend,
 	}, nil
 }
 
@@ -86,8 +154,8 @@ func (sr CategoryStatisticsRepository) GetAccountDistribution(ctx context.Contex
 			FROM accounts a
 			LEFT JOIN transactions t ON t.account_id = a.id
 				AND t.category_id = $1
-				AND t.type = 'expense'
 				AND t.deleted_at IS NULL
+				AND t.type = 'expense'
 				AND t.date >= $2::timestamptz
 				AND t.date <= $3::timestamptz
 			WHERE a.deleted_at IS NULL
@@ -149,35 +217,56 @@ func (sr CategoryStatisticsRepository) GetAverageTransactionSize(ctx context.Con
 
 	sql := `
 		SELECT
-			COUNT(t.id) as transaction_count,
-			COALESCE(AVG(t.amount), 0)::bigint as average_amount,
-			COALESCE(MIN(t.amount), 0) as min_amount,
-			COALESCE(MAX(t.amount), 0) as max_amount,
-			COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.amount), 0)::bigint as median_amount
+			COUNT(*) FILTER (WHERE type = 'expense') as expense_count,
+			COUNT(*) FILTER (WHERE type = 'income') as income_count,
+			COALESCE(AVG(amount) FILTER (WHERE type = 'expense'), 0)::bigint as avg_expense,
+			COALESCE(MIN(amount) FILTER (WHERE type = 'expense'), 0) as min_expense,
+			COALESCE(MAX(amount) FILTER (WHERE type = 'expense'), 0) as max_expense,
+			COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount) FILTER (WHERE type = 'expense'), 0)::bigint as median_expense,
+			COALESCE(AVG(amount) FILTER (WHERE type = 'income'), 0)::bigint as avg_income,
+			COALESCE(MIN(amount) FILTER (WHERE type = 'income'), 0) as min_income,
+			COALESCE(MAX(amount) FILTER (WHERE type = 'income'), 0) as max_income,
+			COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount) FILTER (WHERE type = 'income'), 0)::bigint as median_income
 		FROM transactions t
 		WHERE t.category_id = $1
-			AND t.type = 'expense'
 			AND t.deleted_at IS NULL
 			AND t.date >= $2::timestamptz
 			AND t.date <= $3::timestamptz
 	`
 
-	var count int64
-	var avg, min, max, median int64
+	var expenseCount, incomeCount int64
+	var avgExp, minExp, maxExp, medianExp int64
+	var avgInc, minInc, maxInc, medianInc int64
 
 	queryStart := time.Now()
-	if err := sr.db.QueryRow(ctx, sql, categoryID, p.StartDate, p.EndDate).Scan(&count, &avg, &min, &max, &median); err != nil {
+	if err := sr.db.QueryRow(ctx, sql, categoryID, p.StartDate, p.EndDate).Scan(
+		&expenseCount, &incomeCount,
+		&avgExp, &minExp, &maxExp, &medianExp,
+		&avgInc, &minInc, &maxInc, &medianInc,
+	); err != nil {
 		observability.RecordError("database")
 		return models.CategoryStatisticAverageTransactionSizeModel{}, huma.Error500InternalServerError("query average size: %w", err)
 	}
 	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
+	ratio := 0.0
+	if expenseCount > 0 {
+		ratio = float64(incomeCount) / float64(expenseCount)
+	}
+
 	return models.CategoryStatisticAverageTransactionSizeModel{
-		TransactionCount: count,
-		AverageAmount:    avg,
-		MinAmount:        min,
-		MaxAmount:        max,
-		MedianAmount:     median,
+		TransactionCount:     expenseCount + incomeCount,
+		AverageAmount:        avgExp,
+		MinAmount:            minExp,
+		MaxAmount:            maxExp,
+		MedianAmount:         medianExp,
+		ExpenseCount:         expenseCount,
+		IncomeCount:          incomeCount,
+		AverageIncomeAmount:  avgInc,
+		MinIncomeAmount:      minInc,
+		MaxIncomeAmount:      maxInc,
+		MedianIncomeAmount:   medianInc,
+		IncomeToExpenseRatio: ratio,
 	}, nil
 }
 
@@ -190,12 +279,15 @@ func (sr CategoryStatisticsRepository) GetDayOfWeekPattern(ctx context.Context, 
 		WITH daily_spending AS (
 			SELECT
 				EXTRACT(DOW FROM t.date)::int as day_of_week,
-				COUNT(t.id) as transaction_count,
-				COALESCE(SUM(t.amount), 0) as total_amount,
-				COALESCE(AVG(t.amount), 0)::bigint as average_amount
+				COUNT(*) as transaction_count,
+				COUNT(*) FILTER (WHERE type = 'expense') as expense_count,
+				COUNT(*) FILTER (WHERE type = 'income') as income_count,
+				COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as expense_total,
+				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as income_total,
+				COALESCE(AVG(amount) FILTER (WHERE type = 'expense'), 0)::bigint as expense_avg,
+				COALESCE(AVG(amount) FILTER (WHERE type = 'income'), 0)::bigint as income_avg
 			FROM transactions t
 			WHERE t.category_id = $1
-				AND t.type = 'expense'
 				AND t.deleted_at IS NULL
 				AND t.date >= $2::timestamptz
 				AND t.date <= $3::timestamptz
@@ -204,42 +296,79 @@ func (sr CategoryStatisticsRepository) GetDayOfWeekPattern(ctx context.Context, 
 		all_days AS (
 			SELECT day::int as day_of_week FROM generate_series(0, 6) as t(day)
 		)
-		SELECT ad.day_of_week, 
+		SELECT
+			ad.day_of_week,
 			COALESCE(ds.transaction_count, 0) as transaction_count,
-			COALESCE(ds.total_amount, 0) as total_amount,
-			COALESCE(ds.average_amount, 0) as average_amount
+			COALESCE(ds.expense_count, 0) as expense_count,
+			COALESCE(ds.income_count, 0) as income_count,
+			COALESCE(ds.expense_total, 0) as expense_total,
+			COALESCE(ds.income_total, 0) as income_total,
+			COALESCE(ds.expense_avg, 0) as expense_avg,
+			COALESCE(ds.income_avg, 0) as income_avg
 		FROM all_days ad
 		LEFT JOIN daily_spending ds ON ad.day_of_week = ds.day_of_week
 		ORDER BY ad.day_of_week
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, categoryID, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.CategoryStatisticDayOfWeekPatternModel{}, huma.Error500InternalServerError("query day of week pattern: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
 
 	var data []models.CategoryStatisticDayOfWeekPatternEntry
 	dayNames := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 
 	for rows.Next() {
 		var dayOfWeek int
-		var txCount, total, avg int64
+		var txCount, expCount, incCount int64
+		var expTotal, incTotal, expAvg, incAvg int64
 
-		if err := rows.Scan(&dayOfWeek, &txCount, &total, &avg); err != nil {
+		if err := rows.Scan(&dayOfWeek, &txCount, &expCount, &incCount, &expTotal, &incTotal, &expAvg, &incAvg); err != nil {
 			return models.CategoryStatisticDayOfWeekPatternModel{}, huma.Error500InternalServerError("scan day of week row: %w", err)
 		}
 
 		data = append(data, models.CategoryStatisticDayOfWeekPatternEntry{
 			DayOfWeek:        dayNames[dayOfWeek],
 			TransactionCount: txCount,
-			TotalAmount:      total,
-			AverageAmount:    avg,
+			TotalAmount:      expTotal,
+			AverageAmount:    expAvg,
+			ExpenseCount:     expCount,
+			IncomeCount:      incCount,
+			ExpenseTotal:     expTotal,
+			IncomeTotal:      incTotal,
+			ExpenseAverage:   expAvg,
+			IncomeAverage:    incAvg,
 		})
 	}
 
+	// Calculate metadata
+	mostActiveDay := ""
+	highestSpendDay := ""
+	maxCount := int64(0)
+	maxSpend := int64(0)
+	totalTx := 0
+
+	for _, entry := range data {
+		totalTx += int(entry.TransactionCount)
+		if entry.TransactionCount > maxCount {
+			maxCount = entry.TransactionCount
+			mostActiveDay = entry.DayOfWeek
+		}
+		if entry.ExpenseTotal > maxSpend {
+			maxSpend = entry.ExpenseTotal
+			highestSpendDay = entry.DayOfWeek
+		}
+	}
+
 	return models.CategoryStatisticDayOfWeekPatternModel{
-		Data: data,
+		Data:              data,
+		MostActiveDay:     mostActiveDay,
+		HighestSpendDay:   highestSpendDay,
+		TotalTransactions: totalTx,
 	}, nil
 }
 
@@ -258,7 +387,7 @@ func (sr CategoryStatisticsRepository) GetBudgetUtilization(ctx context.Context,
 			b.period_end,
 			COALESCE(SUM(t.amount), 0) as spent_amount
 		FROM budgets b
-		LEFT JOIN transactions t ON t.category_id = $1
+		LEFT JOIN transactions t ON t.category_id = b.category_id
 			AND t.account_id = b.account_id
 			AND t.type = 'expense'
 			AND t.deleted_at IS NULL
@@ -272,11 +401,14 @@ func (sr CategoryStatisticsRepository) GetBudgetUtilization(ctx context.Context,
 		ORDER BY b.period_start DESC
 	`
 
+	queryStart := time.Now()
 	rows, err := sr.db.Query(ctx, sql, categoryID, p.StartDate, p.EndDate)
 	if err != nil {
+		observability.RecordError("database")
 		return models.CategoryStatisticBudgetUtilizationModel{}, huma.Error500InternalServerError("query budget utilization: %w", err)
 	}
 	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "budgets", time.Since(queryStart).Seconds())
 
 	var items []models.CategoryStatisticBudgetUtilizationEntry
 	for rows.Next() {
