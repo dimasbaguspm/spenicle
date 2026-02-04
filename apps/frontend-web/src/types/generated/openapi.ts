@@ -1663,28 +1663,70 @@ export interface components {
     CategoryStatisticAverageTransactionSizeModel: {
       /**
        * Format: int64
-       * @description Average transaction amount in cents
+       * @description Average expense transaction amount in cents
        * @example 25000
        */
       averageAmount: number;
       /**
        * Format: int64
-       * @description Maximum transaction amount in cents
+       * @description Average income amount in cents
+       * @example 150000
+       */
+      averageIncomeAmount: number;
+      /**
+       * Format: int64
+       * @description Expense transaction count
+       * @example 80
+       */
+      expenseCount: number;
+      /**
+       * Format: int64
+       * @description Income transaction count
+       * @example 40
+       */
+      incomeCount: number;
+      /**
+       * Format: double
+       * @description Ratio of income/expense counts
+       * @example 0.5
+       */
+      incomeToExpenseRatio: number;
+      /**
+       * Format: int64
+       * @description Maximum expense transaction amount in cents
        * @example 500000
        */
       maxAmount: number;
       /**
        * Format: int64
-       * @description Median transaction amount in cents
+       * @description Maximum income amount in cents
+       * @example 1000000
+       */
+      maxIncomeAmount: number;
+      /**
+       * Format: int64
+       * @description Median expense transaction amount in cents
        * @example 20000
        */
       medianAmount: number;
       /**
        * Format: int64
-       * @description Minimum transaction amount in cents
+       * @description Median income amount in cents
+       * @example 100000
+       */
+      medianIncomeAmount: number;
+      /**
+       * Format: int64
+       * @description Minimum expense transaction amount in cents
        * @example 5000
        */
       minAmount: number;
+      /**
+       * Format: int64
+       * @description Minimum income amount in cents
+       * @example 50000
+       */
+      minIncomeAmount: number;
       /**
        * Format: int64
        * @description Total number of transactions
@@ -1748,7 +1790,7 @@ export interface components {
     CategoryStatisticDayOfWeekPatternEntry: {
       /**
        * Format: int64
-       * @description Average spending on this day in cents
+       * @description Average expense amount on this day in cents
        * @example 25000
        */
       averageAmount: number;
@@ -1759,7 +1801,43 @@ export interface components {
       dayOfWeek: string;
       /**
        * Format: int64
-       * @description Total spending on this day in cents
+       * @description Average expense amount in cents
+       * @example 33333
+       */
+      expenseAverage: number;
+      /**
+       * Format: int64
+       * @description Expense transactions on this day
+       * @example 15
+       */
+      expenseCount: number;
+      /**
+       * Format: int64
+       * @description Total expense amount in cents
+       * @example 500000
+       */
+      expenseTotal: number;
+      /**
+       * Format: int64
+       * @description Average income amount in cents
+       * @example 150000
+       */
+      incomeAverage: number;
+      /**
+       * Format: int64
+       * @description Income transactions on this day
+       * @example 5
+       */
+      incomeCount: number;
+      /**
+       * Format: int64
+       * @description Total income amount in cents
+       * @example 750000
+       */
+      incomeTotal: number;
+      /**
+       * Format: int64
+       * @description Total expense amount on this day in cents
        * @example 500000
        */
       totalAmount: number;
@@ -1775,25 +1853,113 @@ export interface components {
       data:
         | components["schemas"]["CategoryStatisticDayOfWeekPatternEntry"][]
         | null;
+      /**
+       * @description Day with highest expense total
+       * @example Saturday
+       */
+      highestSpendDay: string;
+      /**
+       * @description Day with highest transaction count
+       * @example Friday
+       */
+      mostActiveDay: string;
+      /**
+       * Format: int64
+       * @description Total transactions across all days
+       * @example 150
+       */
+      totalTransactions: number;
     };
     CategoryStatisticSpendingVelocityDataPoint: {
       /**
        * Format: int64
-       * @description Total spending in cents
+       * @description Total expense amount in cents (legacy field)
        * @example 2500000
        */
       amount: number;
+      /**
+       * Format: int64
+       * @description Total expense in cents
+       * @example 2500000
+       */
+      expenseAmount: number;
+      /**
+       * Format: int64
+       * @description Expense transaction count
+       * @example 35
+       */
+      expenseCount: number;
+      /**
+       * Format: int64
+       * @description Total income in cents
+       * @example 5000000
+       */
+      incomeAmount: number;
+      /**
+       * Format: int64
+       * @description Income transaction count
+       * @example 10
+       */
+      incomeCount: number;
+      /**
+       * Format: double
+       * @description Percentage of income vs total volume
+       * @example 66.67
+       */
+      incomePercentage: number;
       /**
        * @description Month (YYYY-MM)
        * @example 2024-01
        */
       month: string;
+      /**
+       * Format: int64
+       * @description Net flow (income - expense) in cents
+       * @example 2500000
+       */
+      net: number;
+      /**
+       * Format: int64
+       * @description Total transactions in month
+       * @example 45
+       */
+      totalCount: number;
     };
     CategoryStatisticSpendingVelocityModel: {
+      /**
+       * Format: int64
+       * @description Average monthly expense in cents
+       * @example 2500000
+       */
+      averageMonthlySpend: number;
       /** @description Monthly spending data for line chart */
       data:
         | components["schemas"]["CategoryStatisticSpendingVelocityDataPoint"][]
         | null;
+      /**
+       * Format: int64
+       * @description Total net (income - expense) in cents
+       * @example 20000000
+       */
+      netFlow: number;
+      /**
+       * Format: int64
+       * @description Sum of all expense across months in cents
+       * @example 30000000
+       */
+      totalExpense: number;
+      /**
+       * Format: int64
+       * @description Sum of all income across months in cents
+       * @example 50000000
+       */
+      totalIncome: number;
+      /**
+       * @description Spending trend direction
+       * @example stable
+       * @enum {string}
+       */
+      trendDirection: "increasing" | "decreasing" | "stable";
     };
     CategoryStatisticsResponse: {
       /** @description Which accounts pay for this category */
