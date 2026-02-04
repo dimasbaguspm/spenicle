@@ -186,12 +186,19 @@ export const Component = ({ title, onClose }: ComponentProps) => {
     // ...
   };
 
-  // 2e. Conditional renders
+  // 2e. Conditional renders (early returns for loading/empty)
   if (isLoading) return <Loader />;
   if (!data) return null;
 
-  // 2f. Main render
-  return <div>{/* JSX */}</div>;
+  // 2f. Main render (use When for inline conditionals)
+  return (
+    <div>
+      <When condition={!!data.budget}>
+        <BudgetBadge budget={data.budget} />
+      </When>
+      {/* ... */}
+    </div>
+  );
 };
 
 // 3. Helper components (if small and local)
@@ -388,7 +395,7 @@ const AccountList = () => {
 
 // ✅ Separated concerns
 const AccountList = () => {
-  const { data: accounts } = useGetAccounts(); // Hook handles API
+  const [accounts] = useApiAccountsPaginatedQuery({ pageSize: 20 }); // Hook handles API
   return <div>{/* render */}</div>;
 };
 ```
@@ -424,6 +431,45 @@ const Component = () => {
   // ...
 };
 ```
+
+## Conditional Rendering
+
+Use the `When` component (`src/lib/when/`) instead of `&&` for conditional rendering in JSX:
+
+```typescript
+import { When } from "@/lib/when";
+
+// ✅ Use When for conditional sections
+<When condition={hasBudget}>
+  <Badge color={budgetIntent}>{budgetText}</Badge>
+</When>
+
+<When condition={[!!account, !error]}>
+  <AccountDetails account={account} />
+</When>
+
+// ❌ Avoid && for rendering (can render "0" or "false" as text)
+{count && <List />}
+```
+
+See [utilities.md](./utilities.md) for full `When` documentation.
+
+## Data Formatting
+
+Use `formatData` utilities (`src/lib/format-data/`) to transform API models into display-ready objects. Used primarily in card components:
+
+```typescript
+import { formatAccountData } from "@/lib/format-data";
+
+// ✅ Use formatData for consistent display values
+const { name, initialName, formattedAmount, variant, hasBudget, budgetText } =
+  formatAccountData(account);
+
+// ❌ Don't format inline in components
+const amount = `Rp${account.amount.toLocaleString()}`;
+```
+
+Available formatters: `formatAccountData`, `formatCategoryData`, `formatTransactionData`, `formatTransactionTemplateData`. See [utilities.md](./utilities.md) for details.
 
 ## Performance
 
@@ -484,10 +530,19 @@ describe("Component", () => {
 
 ## Examples
 
-See existing code for reference:
+See existing code and documentation for reference:
 
-- Components: `src/components/floating-actions/`
-- Hooks: `src/hooks/use-session/`
-- Utils: `src/lib/format-date/`
-- Providers: `src/providers/auth-provider/`
+- **Routing:** [routing.md](./routing.md) — Multi-layer routing, drawer/modal/bottom sheet
+- **State Management:** [state-management.md](./state-management.md) — Providers, session, auth
+- **API Integration:** [api-integration.md](./api-integration.md) — Hooks, queries, mutations
+- **Filter State:** [filter-state.md](./filter-state.md) — URL-based filter hooks
+- **UI Components:** [ui-components.md](./ui-components.md) — Cards, filter fields, statistics
+- **Utilities:** [utilities.md](./utilities.md) — formatPrice, formatDate, formatData, When
+
+Code references:
+- Card component: `src/ui/account-card/account-card.tsx`
+- API hooks: `src/hooks/use-api/built/accounts.ts`
+- Filter hook: `src/hooks/use-filter-state/built/use-account-filter.ts`
+- Provider: `src/providers/drawer-provider/`
 - Routes: `src/router/page/page-router.tsx`
+- Format utilities: `src/lib/format-price/`, `src/lib/format-date/`, `src/lib/format-data/`

@@ -1,15 +1,15 @@
 # State Management
 
-Spenicle Web uses **React Context providers** for app-level state, avoiding external state management libraries.
+Spenicle Web uses **React Context providers** for app-level state, **TanStack Query** for server state, and **URL search parameters** for overlay and filter state.
 
 ## Provider Architecture
 
 ```
-<SessionProvider>           ← Token storage
-  <AuthProvider>            ← Authentication state
-    <DrawerProvider>        ← Drawer overlay state
-      <ModalProvider>       ← Modal overlay state
-        <BottomSheetProvider>  ← Bottom sheet state
+<SessionProvider>             ← Token storage (BrowserSession singleton)
+  <AuthProvider>              ← Authentication state + token refresh
+    <DrawerProvider>          ← Drawer overlay state (URL-based)
+      <ModalProvider>         ← Modal overlay state (URL-based)
+        <BottomSheetProvider> ← Bottom sheet state (URL-based)
           <App />
         </BottomSheetProvider>
       </ModalProvider>
@@ -24,40 +24,40 @@ Spenicle Web uses **React Context providers** for app-level state, avoiding exte
 
 **Purpose:** Manage authentication tokens with appropriate storage strategies.
 
+**Location:** `src/providers/session-provider/`
+
 **Storage:**
 
 - Access token → `sessionStorage` (cleared on tab close)
 - Refresh token → `localStorage` (persists across sessions)
-
-**Location:** `src/providers/session-provider/`
 
 **Usage:**
 
 ```typescript
 import { useSessionProvider } from "@/providers/session-provider";
 
-const { accessToken, refreshToken, setTokens, clearSession } =
-  useSessionProvider();
+const { browserSession } = useSessionProvider();
 
 // Set tokens after login
-setTokens({ access_token: "...", refresh_token: "..." });
+browserSession.setTokens({ access_token: "...", refresh_token: "..." });
+
+// Read tokens
+browserSession.accessToken;
+browserSession.refreshToken;
 
 // Clear on logout
-clearSession();
-
-// Check if authenticated
-const isAuthenticated = !!accessToken;
+browserSession.clearSession();
 ```
 
-**Implementation Detail:**
-
-- Uses `BrowserSession` class (singleton in `src/core/browser-session.ts`)
-- `useSyncExternalStore` for reactive updates
-- Cross-tab sync via storage events
+**Implementation:** The `BrowserSession` class (`src/providers/session-provider/browser-session.ts`) is a singleton that:
+- Stores access token in `sessionStorage`, refresh token in `localStorage`
+- Dispatches custom `session-change` events on mutation
+- Supports `subscribe()` for reactive updates (compatible with `useSyncExternalStore`)
+- Listens for cross-tab `storage` events
 
 ### AuthProvider
 
-**Purpose:** High-level authentication state and user information.
+**Purpose:** High-level authentication state with automatic token refresh.
 
 **Location:** `src/providers/auth-provider/`
 
@@ -66,103 +66,95 @@ const isAuthenticated = !!accessToken;
 ```typescript
 import { useAuthProvider } from "@/providers/auth-provider";
 
-const { isAuthenticated, login, logout, user } = useAuthProvider();
+const { isAuthenticated, accessToken, refreshToken, handleSetTokens, handleClearSession } =
+  useAuthProvider();
 
-// Login
-await login({ email, password });
+// After login
+handleSetTokens({ access_token: "...", refresh_token: "..." });
 
 // Logout
-await logout();
-
-// Access user info
-console.log(user?.name);
+handleClearSession();
 ```
 
-**Responsibilities:**
-
-- Wraps SessionProvider
-- Manages login/logout flows
-- Stores user profile data
-- Handles token refresh logic
+**Behavior:**
+- Wraps `SessionProvider` — reads tokens from `BrowserSession`
+- On mount, if refresh token exists but access token is missing, automatically calls the refresh endpoint
+- Shows `PageLoader` while token refresh is in progress
+- Exposes `isAuthenticated` (derived from `!!accessToken`)
 
 ### DrawerProvider
 
-**Purpose:** Manage drawer overlay state and navigation.
+**Purpose:** Manage drawer overlay state via URL search parameters.
 
 **Location:** `src/providers/drawer-provider/`
 
-**Usage:**
+**API:**
 
 ```typescript
 import { useDrawerProvider } from "@/providers/drawer-provider";
 
-const { open, close, currentRoute, params, isOpen } = useDrawerProvider();
-
-// Open drawer
-open(DRAWER_ROUTES.ACCOUNT_CREATE);
-
-// Open with params
-open(DRAWER_ROUTES.ACCOUNT_VIEW, { id: "123" });
-
-// Close
-close();
+const { isOpen, drawerId, params, state, openDrawer, closeDrawer } = useDrawerProvider();
 ```
 
-**State:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `isOpen` | `boolean` | Whether a drawer is currently open |
+| `drawerId` | `string \| null` | Current drawer route ID |
+| `params` | `Record<string, string \| number> \| null` | URL-encoded params (persists on refresh) |
+| `state` | `Record<string, unknown> \| null` | Navigation state (lost on refresh) |
+| `openDrawer` | `(id, params?, opts?) => void` | Open a drawer |
+| `closeDrawer` | `() => void` | Close drawer (navigates back) |
+
+**Open options:**
 
 ```typescript
-{
-  isOpen: boolean;
-  currentRoute: string | null;
-  params?: Record<string, any>;
-}
+openDrawer(drawerId, params?, {
+  replace?: boolean;   // Replace history entry (for tab switching)
+  state?: object;      // Ephemeral navigation state
+});
 ```
+
+See [routing.md](./routing.md) for URL encoding details and examples.
 
 ### ModalProvider
 
-**Purpose:** Manage modal dialog state and navigation.
+**Purpose:** Manage modal dialog state via URL search parameters.
 
 **Location:** `src/providers/modal-provider/`
 
-**Usage:**
+**API:** Identical pattern to DrawerProvider with `modal` search param key:
 
 ```typescript
 import { useModalProvider } from "@/providers/modal-provider";
 
-const { open, close, currentRoute, params, isOpen } = useModalProvider();
+const { isOpen, modalId, params, state, openModal, closeModal } = useModalProvider();
 
-// Open modal
-open(MODAL_ROUTES.DELETE_CONFIRMATION, { itemId: "123" });
-
-// Close
-close();
+openModal(MODAL_ROUTES.LOGOUT_CONFIRMATION);
+openModal(MODAL_ROUTES.ACCOUNT_DELETE_CONFIRMATION, undefined, {
+  state: { accountId: 123 },
+});
+closeModal();
 ```
-
-**State:** Same as DrawerProvider
 
 ### BottomSheetProvider
 
-**Purpose:** Manage bottom sheet overlay state (mobile-first).
+**Purpose:** Manage bottom sheet overlay state via URL search parameters.
 
 **Location:** `src/providers/bottom-sheet-provider/`
 
-**Usage:**
+**API:** Identical pattern with `bottom-sheet` search param key:
 
 ```typescript
 import { useBottomSheetProvider } from "@/providers/bottom-sheet-provider";
 
-const { open, close, currentRoute, params, isOpen } = useBottomSheetProvider();
+const { isOpen, bottomSheetId, params, state, openBottomSheet, closeBottomSheet } =
+  useBottomSheetProvider();
 
-// Open bottom sheet
-open(BOTTOM_SHEET_ROUTES.MENU);
-
-// Close
-close();
+openBottomSheet(BOTTOM_SHEET_ROUTES.MENU);
+closeBottomSheet();
 ```
 
-**State:** Same as DrawerProvider
-
-## Provider Pattern Structure
+## Provider Folder Structure
 
 Each provider follows a consistent structure:
 
@@ -170,106 +162,71 @@ Each provider follows a consistent structure:
 provider-name/
 ├── index.ts                  # Barrel export
 ├── context.ts                # React Context definition
-├── provider.tsx              # Provider component
+├── provider.tsx              # Provider component (or named file)
 ├── use-provider-name.ts      # Consumer hook
 ├── types.ts                  # TypeScript interfaces
 └── helpers.ts                # Utility functions (if needed)
 ```
 
-### Example Provider Implementation
+## State Categories
+
+### Server State (TanStack Query)
+
+All API data is managed through TanStack Query via hooks in `src/hooks/use-api/`. See [api-integration.md](./api-integration.md).
 
 ```typescript
-// context.ts
-import { createContext } from 'react';
-import type { ProviderContextType } from './types';
-
-export const ProviderContext = createContext<ProviderContextType | undefined>(undefined);
-
-// provider.tsx
-export const Provider = ({ children }: PropsWithChildren) => {
-  const [state, setState] = useState(...);
-
-  const value = useMemo(() => ({
-    // state and methods
-  }), [state]);
-
-  return (
-    <ProviderContext.Provider value={value}>
-      {children}
-    </ProviderContext.Provider>
-  );
-};
-
-// use-provider-name.ts
-export const useProvider = () => {
-  const context = useContext(ProviderContext);
-  if (!context) {
-    throw new Error('useProvider must be used within Provider');
-  }
-  return context;
-};
+const [accounts, , { isLoading }] = useApiAccountsPaginatedQuery({ pageSize: 10 });
 ```
 
-## Local State Patterns
+### URL State (Search Parameters)
 
-### Component State
-
-Use `useState` for local component state:
+Used for overlays (drawer/modal/bottom sheet) and filters. See [filter-state.md](./filter-state.md).
 
 ```typescript
-const [isLoading, setIsLoading] = useState(false);
-const [formData, setFormData] = useState({ name: "", email: "" });
+// Overlay state
+// URL: ?drawer=account-view~eyJhY2NvdW50SWQiOjEyM30=
+
+// Filter state (via useFilterState hooks)
+const filters = useAccountFilter();
+filters.replaceSingle("type", "checking");
+// URL: ?type=checking
 ```
 
-### Server State
+### Component State (useState)
 
-Use TanStack Query hooks (via `use-api`):
+Used for local, ephemeral state:
 
 ```typescript
-import { useGetAccounts, useCreateAccount } from "@/hooks/use-api";
-
-// Fetching
-const { data, isLoading, error } = useGetAccounts();
-
-// Mutations
-const createAccount = useCreateAccount({
-  onSuccess: () => {
-    queryClient.invalidateQueries(["accounts"]);
-  },
-});
+const [isEditing, setIsEditing] = useState(false);
+const [viewMode, setViewMode] = useState<"recent" | "upcoming">("recent");
 ```
 
-### URL State
+## Best Practices
 
-Use `useSearchParams` for URL-based state:
+### When to Use Providers
+
+**Use Providers For:**
+- Cross-cutting concerns (auth, theme)
+- Overlay state (drawer, modal, bottom sheet)
+- App-wide settings
+
+**Don't Use Providers For:**
+- Data fetching (use TanStack Query)
+- Local component state (use `useState`)
+- Derived state (use `useMemo`)
+- Props that can be passed down 1-2 levels
+
+### Provider Performance
 
 ```typescript
-const [searchParams, setSearchParams] = useSearchParams();
-
-const page = searchParams.get("page") || "1";
-const query = searchParams.get("q") || "";
-
-setSearchParams({ page: "2", q: "search term" });
+// Memoize context value to prevent unnecessary re-renders
+const contextValue = useMemo(
+  () => ({ isOpen, drawerId, params, state, openDrawer, closeDrawer }),
+  [isOpen, drawerId, params, state, openDrawer, closeDrawer]
+);
 ```
 
-### Custom Hooks for Reusable State
-
-```typescript
-// hooks/use-filter-state/use-filter-state.ts
-export const useFilterState = (initialFilters) => {
-  const [filters, setFilters] = useState(initialFilters);
-
-  const updateFilter = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const resetFilters = () => setFilters(initialFilters);
-
-  return { filters, updateFilter, resetFilters };
-};
-```
-
-## State Flow Diagram
+### State Flow
 
 ```
 User Action
@@ -277,102 +234,11 @@ User Action
 Component Event Handler
     ↓
     ├─→ Local State (useState)
-    ├─→ Provider Method (useProvider)
-    ├─→ API Mutation (use-api)
-    └─→ Navigation (useNavigate)
+    ├─→ Provider Method (openDrawer, closeModal, etc.)
+    ├─→ API Mutation (useApiCreateAccount)
+    └─→ URL State (useFilterState)
     ↓
-State Update
-    ↓
-React Re-render
+State Update (React re-render / URL change / cache update)
     ↓
 UI Update
 ```
-
-## Best Practices
-
-### When to Use Providers
-
-**✅ Use Providers For:**
-
-- Cross-cutting concerns (auth, theme, i18n)
-- Overlay state (drawer, modal, bottom sheet)
-- App-wide settings
-- Features used by multiple unrelated components
-
-**❌ Don't Use Providers For:**
-
-- Data fetching (use TanStack Query)
-- Local component state
-- Derived state (use `useMemo`)
-- Props that can be passed down 1-2 levels
-
-### Provider Performance
-
-**Optimization tips:**
-
-```typescript
-// ✅ Memoize context value
-const value = useMemo(
-  () => ({
-    state,
-    actions,
-  }),
-  [state]
-);
-
-// ✅ Split large contexts
-// AuthProvider (user info) + PermissionsProvider (permissions)
-// Instead of one giant AuthProvider
-
-// ✅ Use context selectors (if needed)
-const userName = useAuthProvider((state) => state.user?.name);
-```
-
-### State Initialization
-
-```typescript
-// ✅ Initialize from localStorage
-const [theme, setTheme] = useState(() => {
-  return localStorage.getItem("theme") || "light";
-});
-
-// ✅ Sync with storage
-useEffect(() => {
-  localStorage.setItem("theme", theme);
-}, [theme]);
-```
-
-### Error Boundaries
-
-Wrap providers with error boundaries:
-
-```typescript
-<ErrorBoundary fallback={<ErrorFallback />}>
-  <SessionProvider>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  </SessionProvider>
-</ErrorBoundary>
-```
-
-## Testing Providers
-
-```typescript
-// Mock provider for tests
-const TestProviderWrapper = ({ children }) => (
-  <SessionProvider>
-    <AuthProvider>{children}</AuthProvider>
-  </SessionProvider>
-);
-
-render(<ComponentUnderTest />, { wrapper: TestProviderWrapper });
-```
-
-## Future Enhancements
-
-- Theme provider (dark/light mode)
-- i18n provider (multi-language support)
-- Feature flag provider
-- Analytics provider
-- Notification provider (toast system)

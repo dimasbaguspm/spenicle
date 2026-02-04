@@ -1,495 +1,366 @@
 # API Integration
 
-Guide for integrating with the Spenicle backend API.
+Guide for integrating with the Spenicle backend API using type-safe hooks.
 
 ## Overview
 
 The web app communicates with the backend REST API using:
 
 - **Type Safety:** OpenAPI-generated TypeScript types
-- **Data Fetching:** TanStack Query (React Query)
-- **API Client:** Custom hooks in `src/hooks/use-api/`
+- **Data Fetching:** TanStack Query v5 (React Query)
+- **HTTP Client:** Axios with query-string serialization
+- **Custom Hooks:** Tuple-return wrappers in `src/hooks/use-api/`
 
 ## OpenAPI Type Generation
 
-### Generate Types
-
 ```bash
-cd apps/web
-bun run generate:openapi-types
+cd apps/frontend-web
+bun run generate:types
 ```
 
-This fetches the OpenAPI spec from the backend and generates TypeScript types.
+This fetches the OpenAPI spec from the running backend and generates TypeScript types.
 
 **Output:** `src/types/generated/openapi.ts`
 
-### What Gets Generated
+Custom schema types are re-exported from `src/types/schemas.ts` for convenient imports:
 
 ```typescript
-// Request types
-export interface AuthLoginRequest {
-  email: string;
-  password: string;
-}
+import type { AccountModel, AccountCreateModel } from "@/types/schemas";
+```
 
-// Response types
-export interface AuthLoginResponse {
-  access_token: string;
-  refresh_token: string;
-  user: UserModel;
-}
+> **Never manually define API types.** Always use the generated types.
 
-// Model types
-export interface AccountModel {
-  id: string;
-  name: string;
-  type: "expense" | "income" | "investment";
-  balance: number;
-  created_at: string;
-  updated_at: string;
-}
+## Directory Structure
+
+```
+src/hooks/use-api/
+├── index.ts                        # Re-exports built/
+├── constant.ts                     # BASE_URL, BASE_QUERY_KEYS, ENDPOINTS
+├── queries-keys.ts                 # QUERY_KEYS factory
+├── base/                           # Base hook implementations
+│   ├── use-api-query.ts            # Single query (GET)
+│   ├── use-api-infinite-query.ts   # Infinite scroll query (GET)
+│   └── use-api-mutate.ts           # Mutations (POST/PUT/PATCH/DELETE)
+└── built/                          # Per-resource hook definitions
+    ├── index.ts                    # Re-exports all resources
+    ├── accounts.ts
+    ├── categories.ts
+    ├── transactions.ts
+    ├── transaction-templates.ts
+    ├── insights.ts
+    └── auth.ts
+```
+
+All hooks are imported from the top-level barrel:
+
+```typescript
+import { useApiAccountsPaginatedQuery, useApiCreateAccount } from "@/hooks/use-api";
+```
+
+## Query Hooks
+
+Query hooks wrap TanStack Query's `useQuery` and return a **4-element tuple**:
+
+```typescript
+type UseApiQueryResult<TData, TError> = [
+  data: TData | null,
+  error: TError | null,
+  state: QueryState,
+  refetch: (options?: RefetchOptions) => Promise<...>
+];
 ```
 
 ### Usage
 
 ```typescript
-import type {
-  AccountModel,
-  AccountListResponse,
-  CreateAccountRequest,
-} from "@/types/generated/openapi";
+import { useApiAccountsPaginatedQuery } from "@/hooks/use-api";
 
-// Use in components
-const accounts: AccountModel[] = [];
+const MyComponent = () => {
+  const [accounts, error, { isLoading }, refetch] = useApiAccountsPaginatedQuery({
+    pageSize: 10,
+    sortBy: "name",
+  });
+
+  if (isLoading) return <PageLoader />;
+  if (error) return <ErrorMessage />;
+
+  return <div>{accounts?.items.map(/* ... */)}</div>;
+};
 ```
 
-## API Hooks
+### Available State Flags
 
-### Location
+The third tuple element contains all TanStack Query status flags:
 
-```
-src/hooks/use-api/
-├── index.ts               # Main exports
-├── constant.ts            # API base URL
-├── queries-keys.ts        # Query key factory
-├── base/                  # Base API client
-│   └── client.ts
-└── built/                 # Generated API hooks
-    ├── accounts.ts
-    ├── categories.ts
-    ├── transactions.ts
-    └── ...
-```
+| Flag | Description |
+|------|-------------|
+| `isLoading` | First load (no cached data) |
+| `isFetching` | Any fetch in progress (including background refetch) |
+| `isPending` | Mutation/query not yet resolved |
+| `isSuccess` | Query succeeded |
+| `isError` | Query failed |
+| `isRefetching` | Background refetch in progress |
+| `isStale` | Data is stale |
 
-### Query Hooks
-
-**GET requests** use query hooks:
+### Query Options
 
 ```typescript
-import { useGetAccounts, useGetAccount } from "@/hooks/use-api";
-
-// List query
-const { data, isLoading, error } = useGetAccounts({
-  type: "expense",
-  limit: 20,
-});
-
-// Single item query
-const { data: account } = useGetAccount("account-id");
-
-// With query options
-const { data, refetch } = useGetAccounts(
-  { type: "expense" },
+const [data] = useApiAccountsPaginatedQuery(
+  { pageSize: 10 },
   {
-    enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: isAuthenticated,     // Conditionally enable
+    staleTime: 5 * 60 * 1000,    // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000,      // Garbage collect after 10 minutes
+    retry: true,                  // Retry on failure
+    silentError: true,            // Suppress snackbar on error
+    onSuccess: (data) => {},      // Callback on success
+    onError: (error) => {},       // Callback on error
   }
 );
 ```
 
-### Mutation Hooks
+### Query Hook Naming Convention
 
-**POST/PUT/DELETE requests** use mutation hooks:
+| Pattern | Example | Purpose |
+|---------|---------|---------|
+| `useApi{Resource}sPaginatedQuery` | `useApiAccountsPaginatedQuery` | Paginated list |
+| `useApi{Resource}sInfiniteQuery` | `useApiAccountsInfiniteQuery` | Infinite scroll list |
+| `useApi{Resource}Query` | `useApiAccountQuery` | Single item by ID |
+| `useApi{Resource}Statistic{Name}Query` | `useApiAccountStatisticBurnRateQuery` | Statistics endpoint |
+| `useApiInsights{Name}Query` | `useApiInsightsTransactionsSummaryQuery` | Insights/summary data |
+
+## Infinite Query Hooks
+
+Infinite queries return a **4-element tuple** with pagination controls:
 
 ```typescript
-import {
-  useCreateAccount,
-  useUpdateAccount,
-  useDeleteAccount,
-} from "@/hooks/use-api";
-import { useQueryClient } from "@tanstack/react-query";
+type UseApiInfiniteQueryResult<TData, TError> = [
+  data: TData[],             // Flattened items from all pages
+  error: TError | null,
+  state: InfiniteQueryState,  // Includes hasNextPage, isFetchingNextPage
+  funcs: { fetchNextPage, fetchPreviousPage, refetch }
+];
+```
 
-const queryClient = useQueryClient();
+### Usage
+
+```typescript
+const [items, error, { hasNextPage, isFetchingNextPage }, { fetchNextPage }] =
+  useApiAccountsInfiniteQuery({ pageSize: 20 });
+
+// Items are automatically flattened from paginated responses
+// fetchNextPage() loads the next page and appends items
+```
+
+The hook automatically handles paginated response shapes (`{ items, pageNumber, totalPages }`) by concatenating `items` arrays across pages.
+
+## Mutation Hooks
+
+Mutation hooks wrap TanStack Query's `useMutation` and return a **4-element tuple**:
+
+```typescript
+type UseApiMutateResult<TData, TVariables, TError> = [
+  mutateAsync: (variables: TVariables) => Promise<TData>,
+  error: TError | null,
+  states: { isError, isIdle, isPending, isSuccess },
+  reset: () => void
+];
+```
+
+### Usage
+
+```typescript
+import { useApiCreateAccount, useApiUpdateAccount, useApiDeleteAccount } from "@/hooks/use-api";
 
 // Create
-const createAccount = useCreateAccount({
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
-    toast.success("Account created");
-  },
-  onError: (error) => {
-    toast.error(error.message);
-  },
-});
-
-createAccount.mutate({
+const [createAccount, , { isPending }] = useApiCreateAccount();
+await createAccount({
   name: "Savings",
-  type: "expense",
-  balance: 0,
+  accountType: "savings",
+  currency: "IDR",
+  amount: 0,
 });
 
-// Update
-const updateAccount = useUpdateAccount({
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
-  },
-});
-
-updateAccount.mutate({
-  id: "account-id",
-  data: { name: "Updated Name" },
+// Update (path params extracted from variables)
+const [updateAccount] = useApiUpdateAccount();
+await updateAccount({
+  id: 123,            // Replaces :id in path
+  name: "Updated",    // Sent in request body (id stripped)
 });
 
 // Delete
-const deleteAccount = useDeleteAccount({
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
-  },
+const [deleteAccount] = useApiDeleteAccount();
+await deleteAccount({ id: 123 });
+```
+
+### Path Parameter Replacement
+
+Mutation hooks support templated paths. Parameters matching `:paramName` are extracted from the variables object, replaced in the URL, and **removed from the request body**:
+
+```typescript
+// Definition
+useApiMutate<AccountModel, AccountUpdateModel>({
+  path: ENDPOINTS.ACCOUNT.BY_ID(":id"),  // → "/accounts/:id"
+  method: "PATCH",
 });
 
-deleteAccount.mutate("account-id");
+// Call
+await updateAccount({ id: 42, name: "New Name" });
+// Request: PATCH /accounts/42
+// Body: { name: "New Name" }  ← id is stripped
 ```
+
+### Error Handling
+
+Mutations automatically show a snackbar on error via `useSnackbars()` from Versaur. To suppress this:
+
+```typescript
+useApiMutate<Data, Variables>({
+  path: "...",
+  method: "POST",
+  silentError: true,  // No snackbar on error
+});
+```
+
+## Cache Invalidation
+
+Mutation hooks handle cache invalidation internally via `onSuccess`. Each mutation invalidates all related query caches:
+
+```typescript
+// From built/accounts.ts — useApiCreateAccount
+onSuccess: (data) => {
+  // Invalidate paginated and infinite lists
+  queryClient.invalidateQueries({
+    queryKey: QUERY_KEYS.ACCOUNT_PAGINATED().slice(0, 2),  // ["accounts", "paginated"]
+    exact: false,  // Matches all param variations
+  });
+  queryClient.invalidateQueries({
+    queryKey: QUERY_KEYS.ACCOUNT_INFINITE().slice(0, 2),
+    exact: false,
+  });
+  // Seed the by-id cache with the new data
+  queryClient.setQueryData(QUERY_KEYS.ACCOUNT_BY_ID(data.id), data);
+};
+```
+
+**Cross-resource invalidation:** Transaction mutations also invalidate insights caches since transactions affect summary statistics.
 
 ## Query Keys
 
-**Centralized query key factory** in `src/hooks/use-api/queries-keys.ts`:
+Centralized in `src/hooks/use-api/queries-keys.ts` using a factory pattern:
 
 ```typescript
-export const queryKeys = {
-  accounts: {
-    all: ["accounts"] as const,
-    lists: () => [...queryKeys.accounts.all, "list"] as const,
-    list: (filters: AccountFilters) =>
-      [...queryKeys.accounts.lists(), filters] as const,
-    details: () => [...queryKeys.accounts.all, "detail"] as const,
-    detail: (id: string) => [...queryKeys.accounts.details(), id] as const,
-  },
+import { QUERY_KEYS } from "./queries-keys";
 
-  transactions: {
-    // ...
-  },
+// List queries (params serialized as JSON)
+QUERY_KEYS.ACCOUNT_PAGINATED(params)
+// → ["accounts", "paginated", '{"pageSize":10}']
+
+QUERY_KEYS.ACCOUNT_INFINITE(params)
+// → ["accounts", "infinite", '{"pageSize":20}']
+
+// Single item
+QUERY_KEYS.ACCOUNT_BY_ID(id, params)
+// → ["accounts", "by-id", 42, '{}']
+
+// Statistics (nested)
+QUERY_KEYS.ACCOUNT_STATISTICS.BURN_RATE(id, params)
+// → ["accounts", "statistics", "burn-rate", 42, '{}']
+
+// Transactions (nested)
+QUERY_KEYS.TRANSACTIONS.PAGINATED(params)
+// → ["transactions", "paginated", '{}']
+
+// Insights (nested)
+QUERY_KEYS.INSIGHTS.TRANSACTIONS_SUMMARY(params)
+// → ["insights", "transactions-summary", '{}']
+```
+
+**Base keys** in `constant.ts` define the root segments:
+
+```typescript
+const BASE_QUERY_KEYS = {
+  ACCOUNTS: ["accounts"],
+  CATEGORIES: ["categories"],
+  TRANSACTIONS: ["transactions"],
+  TRANSACTION_TEMPLATES: ["transaction-templates"],
+  INSIGHTS: ["insights"],
 };
+```
 
-// Usage
-queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all });
-queryClient.invalidateQueries({ queryKey: queryKeys.accounts.detail(id) });
+**Invalidation pattern:** Use `.slice(0, 2)` with `exact: false` to match all param variations of a query type.
+
+## Endpoints
+
+All API paths are centralized in `ENDPOINTS` in `src/hooks/use-api/constant.ts`:
+
+```typescript
+ENDPOINTS.ACCOUNT.PAGINATED           // "/accounts"
+ENDPOINTS.ACCOUNT.BY_ID(42)           // "/accounts/42"
+ENDPOINTS.ACCOUNT.STATISTICS.BURN_RATE(42) // "/accounts/42/statistics/burn-rate"
+ENDPOINTS.TRANSACTIONS.PAGINATED      // "/transactions"
+ENDPOINTS.INSIGHTS.TRANSACTIONS_SUMMARY // "/summary/transactions"
 ```
 
 ## Authentication
 
-### Token Management
+### Token Injection
 
-Tokens are automatically included in API requests:
-
-```typescript
-// src/hooks/use-api/base/client.ts
-const client = axios.create({
-  baseURL: API_BASE_URL,
-});
-
-client.interceptors.request.use((config) => {
-  const token = browserSession.getAccessToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-```
-
-### Token Refresh
-
-Automatic token refresh on 401 responses:
+Every API request automatically includes the Bearer token from `SessionProvider`:
 
 ```typescript
-client.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      const refreshToken = browserSession.getRefreshToken();
-
-      if (refreshToken) {
-        try {
-          const { access_token } = await refreshAccessToken(refreshToken);
-          browserSession.setAccessToken(access_token);
-
-          // Retry original request
-          error.config.headers.Authorization = `Bearer ${access_token}`;
-          return client.request(error.config);
-        } catch {
-          // Refresh failed, logout
-          browserSession.clearSession();
-          window.location.href = "/login";
-        }
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
-```
-
-## Error Handling
-
-### API Errors
-
-```typescript
-import { useGetAccounts } from "@/hooks/use-api";
-
-const { data, error, isError } = useGetAccounts();
-
-if (isError) {
-  // error is typed as AxiosError
-  console.error(error.response?.data);
-
-  // Show user-friendly message
-  if (error.response?.status === 404) {
-    return <NotFound />;
-  }
-
-  return <ErrorMessage message={error.message} />;
+headers: {
+  Authorization: `Bearer ${browserSession.accessToken}`,
 }
 ```
 
-### Global Error Handler
+### 401 Handling
+
+On 401 responses, `browserSession.clearSession()` is called, which clears tokens and redirects to login.
+
+### Online Status
+
+All queries check `useIsOnline()` and disable fetching when offline:
 
 ```typescript
-// In QueryClientProvider setup
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      onError: (error) => {
-        // Log to error tracking service
-        console.error("Query error:", error);
-      },
-    },
-    mutations: {
-      onError: (error) => {
-        // Show toast notification
-        toast.error("Something went wrong");
-      },
-    },
-  },
-});
+const isEnable = enabled && isOnline;
 ```
 
-## Optimistic Updates
+## Adding a New API Hook
+
+1. **Add endpoint** to `ENDPOINTS` in `src/hooks/use-api/constant.ts`
+2. **Add query key** to `QUERY_KEYS` in `src/hooks/use-api/queries-keys.ts`
+3. **Create hooks** in `src/hooks/use-api/built/{resource}.ts`:
 
 ```typescript
-const updateAccount = useUpdateAccount({
-  onMutate: async (variables) => {
-    // Cancel ongoing queries
-    await queryClient.cancelQueries({ queryKey: ["accounts"] });
+// Query hook
+export const useApiWidgetsPaginatedQuery = (
+  params: WidgetSearchModel,
+  options?: Partial<UseApiQueryOptions<WidgetsPagedModel, WidgetSearchModel, unknown>>,
+) => {
+  return useApiQuery<WidgetsPagedModel, WidgetSearchModel>({
+    ...options,
+    queryKey: QUERY_KEYS.WIDGET_PAGINATED(params),
+    queryParams: params,
+    path: ENDPOINTS.WIDGETS.PAGINATED,
+  });
+};
 
-    // Snapshot previous value
-    const previous = queryClient.getQueryData(["accounts"]);
-
-    // Optimistically update
-    queryClient.setQueryData(["accounts"], (old: Account[]) => {
-      return old.map((acc) =>
-        acc.id === variables.id ? { ...acc, ...variables.data } : acc
-      );
-    });
-
-    // Return rollback function
-    return { previous };
-  },
-  onError: (err, variables, context) => {
-    // Rollback on error
-    if (context?.previous) {
-      queryClient.setQueryData(["accounts"], context.previous);
-    }
-  },
-  onSettled: () => {
-    // Refetch to sync with server
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
-  },
-});
-```
-
-## Pagination
-
-```typescript
-import { useGetTransactions } from "@/hooks/use-api";
-
-const [page, setPage] = useState(1);
-const LIMIT = 20;
-
-const { data, isLoading } = useGetTransactions({
-  offset: (page - 1) * LIMIT,
-  limit: LIMIT,
-});
-
-const totalPages = data?.total ? Math.ceil(data.total / LIMIT) : 0;
-
-// Navigate pages
-<Pagination
-  currentPage={page}
-  totalPages={totalPages}
-  onPageChange={setPage}
-/>;
-```
-
-## Infinite Scroll
-
-```typescript
-import { useInfiniteQuery } from "@tanstack/react-query";
-
-const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
-  useInfiniteQuery({
-    queryKey: ["transactions", "infinite"],
-    queryFn: ({ pageParam = 0 }) =>
-      fetchTransactions({ offset: pageParam, limit: 20 }),
-    getNextPageParam: (lastPage, allPages) => {
-      if (lastPage.transactions.length < 20) return undefined;
-      return allPages.length * 20;
+// Mutation hook
+export const useApiCreateWidget = () => {
+  const queryClient = useQueryClient();
+  return useApiMutate<WidgetModel, WidgetCreateModel>({
+    path: ENDPOINTS.WIDGETS.PAGINATED,
+    method: "POST",
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.WIDGET_PAGINATED().slice(0, 2),
+        exact: false,
+      });
     },
   });
-
-// Render
-<InfiniteScroll
-  loadMore={fetchNextPage}
-  hasMore={hasNextPage}
-  isLoading={isFetchingNextPage}
->
-  {data?.pages.map((page) =>
-    page.transactions.map((tx) => <TransactionCard key={tx.id} {...tx} />)
-  )}
-</InfiniteScroll>;
-```
-
-## Real-Time Updates
-
-### Polling
-
-```typescript
-const { data } = useGetAccounts(
-  {},
-  {
-    refetchInterval: 10 * 1000, // Poll every 10 seconds
-    refetchIntervalInBackground: false,
-  }
-);
-```
-
-### Manual Refetch
-
-```typescript
-const { data, refetch } = useGetAccounts();
-
-// Refetch on window focus
-useEffect(() => {
-  const handleFocus = () => refetch();
-  window.addEventListener("focus", handleFocus);
-  return () => window.removeEventListener("focus", handleFocus);
-}, [refetch]);
-```
-
-## Best Practices
-
-### 1. Centralize API Calls
-
-```typescript
-// ❌ Don't call API directly in components
-const Component = () => {
-  useEffect(() => {
-    axios.get("/api/accounts").then(setAccounts);
-  }, []);
-};
-
-// ✅ Use custom hooks
-const Component = () => {
-  const { data: accounts } = useGetAccounts();
 };
 ```
 
-### 2. Invalidate Queries
-
-```typescript
-// ✅ Invalidate related queries after mutations
-const createTransaction = useCreateTransaction({
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["transactions"] });
-    queryClient.invalidateQueries({ queryKey: ["accounts"] }); // Balance changed
-    queryClient.invalidateQueries({ queryKey: ["summary"] }); // Stats changed
-  },
-});
-```
-
-### 3. Handle Loading States
-
-```typescript
-const { data, isLoading, isFetching } = useGetAccounts();
-
-// isLoading: First load
-// isFetching: Background refetch
-
-if (isLoading) return <Skeleton />;
-if (!data) return null;
-
-return (
-  <>
-    {isFetching && <RefreshIndicator />}
-    <AccountList accounts={data.accounts} />
-  </>
-);
-```
-
-### 4. Type Safety
-
-```typescript
-// ✅ Use generated types
-import type { AccountModel } from "@/types/generated/openapi";
-
-const { data } = useGetAccounts();
-// data is typed as AccountListResponse
-
-const accounts: AccountModel[] = data?.accounts || [];
-```
-
-### 5. Error Boundaries
-
-```typescript
-<ErrorBoundary fallback={<ErrorPage />}>
-  <Suspense fallback={<Loading />}>
-    <Component />
-  </Suspense>
-</ErrorBoundary>
-```
-
-## Debugging
-
-### Enable Query Devtools
-
-```typescript
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-<QueryClientProvider client={queryClient}>
-  <App />
-  <ReactQueryDevtools initialIsOpen={false} />
-</QueryClientProvider>;
-```
-
-### Log API Calls
-
-```typescript
-// Add axios interceptor
-client.interceptors.request.use((config) => {
-  console.log("API Request:", config.method?.toUpperCase(), config.url);
-  return config;
-});
-
-client.interceptors.response.use((response) => {
-  console.log("API Response:", response.status, response.config.url);
-  return response;
-});
-```
+4. **Export** from `src/hooks/use-api/built/index.ts`
+5. **Regenerate types** if backend schema changed: `bun run generate:types`
