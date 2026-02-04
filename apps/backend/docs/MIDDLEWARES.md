@@ -4,30 +4,159 @@ Middlewares are HTTP request interceptors that run before handlers. They modify 
 
 ## Middleware Registration
 
-Middlewares are registered in `handlers.go` in `RegisterMiddlewares()` and `RegisterPrivateRoutes()`:
+Middlewares are applied at two levels:
+
+1. **Server level** (wraps entire HTTP server in `main.go:42`):
+   ```go
+   srv := &http.Server{
+       Handler: middleware.RateLimitMiddleware(env, rdb)(
+           middleware.ObservabilityMiddleware(
+               middleware.CORS(svr)
+           )
+       ),
+   }
+   ```
+
+2. **Route scope level** (applied in `RegisterPrivateRoutes()` via Huma):
+   ```go
+   func RegisterPrivateRoutes(ctx context.Context, huma huma.API, db *pgxpool.Pool, rdb *redis.Client) {
+       huma.UseMiddleware(middleware.SessionMiddleware(huma))  // Private routes only
+       // ... register resources
+   }
+   ```
+
+**Execution Order (4 layers):**
+
+1. ObservabilityMiddleware (logging, metrics, request ID)
+2. RateLimitMiddleware (Redis-based, production only)
+3. CORS Middleware (origin validation)
+4. SessionMiddleware (JWT auth, private routes only)
+5. Handler execution
+
+## 1. ObservabilityMiddleware
+
+**File:** `internal/middleware/observability_middleware.go`
+
+**Purpose:** Request tracing, structured logging, and Prometheus metrics collection
+
+**Applied to:** All routes (server level)
+
+### Features
+
+1. **Request ID Generation**
+   - Unique ID per request via `observability.GenerateID()`
+   - Stored in context: `context.WithValue(ctx, observability.RequestIDKey, requestID)`
+   - Logged with every request start/completion
+
+2. **Structured Logging**
+   - Uses Go's `log/slog` with JSON format
+   - Request start log includes: request_id, method, url, remote_addr
+   - Completion log adds: duration_ms, status
+
+3. **Prometheus Metrics**
+   - `requests_total{method, status, path}` (counter)
+   - `request_duration_seconds{method, path}` (histogram)
+   - `last_request_time{method, path}` (gauge, Unix timestamp)
+   - `http_errors_total{status, method, path}` (counter, 4xx and 5xx only)
+
+4. **Response Wrapping**
+   - Custom `responseWriter` struct captures status code
+   - Default status 200 if handler doesn't set explicitly
+
+### Example Logs
+
+```json
+{"time":"2024-01-04T10:15:30Z","level":"INFO","msg":"Incoming request","request_id":"abc123","method":"GET","url":"/accounts","remote_addr":"127.0.0.1:54321"}
+{"time":"2024-01-04T10:15:30Z","level":"INFO","msg":"Request completed","request_id":"abc123","duration_ms":45,"status":200}
+```
+
+### Integration
+
+Access request ID in handlers:
+```go
+requestID := r.Context().Value(observability.RequestIDKey).(string)
+```
+
+---
+
+## 2. RateLimitMiddleware
+
+**File:** `internal/middleware/rate_limiter_middleware.go`
+
+**Purpose:** Prevent abuse by limiting requests per IP address
+
+**Applied to:** All routes (server level), **production only**
+
+### Configuration
 
 ```go
-func RegisterMiddlewares(ctx context.Context, huma huma.API) {
-    huma.UseMiddleware(internalmiddleware.CORS(huma))  // Applied to all routes
-}
+const (
+    RateLimitRequests  = 100         // requests per window
+    RateLimitWindow    = time.Minute // time window
+    RateLimitKeyPrefix = "rate_limit:"
+)
+```
 
-func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool) {
-    huma.UseMiddleware(internalmiddleware.SessionMiddleware(huma))  // Applied to private routes only
-    // ... register resources
+### Algorithm: Sliding Window
+
+Uses Redis INCR with EXPIRE for atomic sliding window:
+
+```go
+func (rl *RateLimiter) IsAllowed(ctx context.Context, key string) (bool, int, time.Duration, error) {
+    now := time.Now()
+    windowStart := now.Truncate(RateLimitWindow)
+
+    redisKey := fmt.Sprintf("%srate_limit:%s:%s", RateLimitKeyPrefix, key, windowStart.Format("2006-01-02T15:04"))
+
+    count, _ := rl.rdb.Incr(ctx, redisKey).Result()
+
+    if count == 1 {
+        rl.rdb.Expire(ctx, redisKey, RateLimitWindow)
+    }
+
+    return count <= RateLimitRequests, int(count), resetDuration, nil
 }
 ```
 
-**Execution Order:**
+### Behavior
 
-1. Global middleware (CORS)
-2. Route-specific middleware (Session)
-3. Handler execution
+**When allowed (count ≤ 100):**
+- Sets response headers:
+  - `X-RateLimit-Limit: 100`
+  - `X-RateLimit-Remaining: N`
+  - `X-RateLimit-Reset: N` (seconds)
+- Continues to next middleware
 
-## CORS Middleware
+**When exceeded (count > 100):**
+- Returns HTTP 429 Too Many Requests
+- Sets headers:
+  - `X-RateLimit-Limit: 100`
+  - `X-RateLimit-Remaining: 0`
+  - `X-RateLimit-Reset: N`
+  - `Retry-After: N`
+- Logs warning with client IP, count, reset time
+
+**Development mode:**
+- Completely bypassed when `env.AppStage != configs.AppStageProd`
+- No rate limiting applied in development
+
+### Redis Key Pattern
+
+```
+rate_limit:rate_limit:127.0.0.1:2024-01-04T10:15
+```
+
+Keys auto-expire after 1 minute.
+
+---
+
+## 3. CORS Middleware
 
 **File:** `internal/middleware/cors_middleware.go`
 
 **Purpose:** Validate origin and enable cross-origin requests from web frontend
+
+**Applied to:** All routes (server level)
 
 **Configuration:**
 
@@ -79,13 +208,15 @@ Access-Control-Allow-Credentials: true
 - Methods restricted to needed operations
 - Headers restricted to necessary ones
 
-## Session Middleware
+---
+
+## 4. SessionMiddleware
 
 **File:** `internal/middleware/session_middleware.go`
 
 **Purpose:** Validate JWT token and ensure authentication for protected routes
 
-**Applied to:** All routes under `RegisterPrivateRoutes()` scope
+**Applied to:** Private routes only (via `huma.UseMiddleware()` in `RegisterPrivateRoutes()` scope)
 
 ### Behavior
 
@@ -167,25 +298,70 @@ func (ar AuthRepository) ParseToken(tokenString string) (*AuthModel, error) {
 - Includes in every request: `Authorization: Bearer {token}`
 - Server validates in SessionMiddleware
 
+---
+
 ## Middleware Chain Example
 
+### Full Request Flow
+
 ```
-Request arrives
-├─ CORS Middleware
-│  ├─ Check origin
-│  ├─ If invalid origin: return 204 (preflight) or continue with headers
-│  └─ Continue to next
+Request arrives at HTTP server
+├─ ObservabilityMiddleware (Layer 1)
+│  ├─ Generate request ID (e.g., "abc123")
+│  ├─ Add to context: ctx = context.WithValue(ctx, RequestIDKey, "abc123")
+│  ├─ Log: "Incoming request" {request_id, method, url, remote_addr}
+│  ├─ Start timer for metrics
+│  └─ Continue to next →
 │
-├─ SessionMiddleware (if private route)
-│  ├─ Extract Bearer token
-│  ├─ Validate JWT
-│  ├─ If invalid: return 401 Unauthorized
-│  └─ Continue if valid
+├─ RateLimitMiddleware (Layer 2, production only)
+│  ├─ Extract client IP from r.RemoteAddr
+│  ├─ Build Redis key: "rate_limit:127.0.0.1:2024-01-04T10:15"
+│  ├─ INCR counter in Redis (atomic)
+│  ├─ If count == 1: SET EXPIRE 1 minute
+│  ├─ If count > 100:
+│  │  ├─ Set X-RateLimit-* headers
+│  │  ├─ Return HTTP 429 Too Many Requests
+│  │  └─ Stop (don't continue)
+│  ├─ Else: Set X-RateLimit-* headers
+│  └─ Continue to next →
 │
-└─ Route Handler
+├─ CORS Middleware (Layer 3)
+│  ├─ Extract Origin header
+│  ├─ Check against allowlist: ["http://localhost:3000"]
+│  ├─ If valid: Set Access-Control-* headers
+│  ├─ If OPTIONS (preflight): Return 204
+│  └─ Continue to next →
+│
+├─ SessionMiddleware (Layer 4, private routes only)
+│  ├─ Extract Authorization header
+│  ├─ Parse "Bearer {token}"
+│  ├─ Call AuthRepository.ParseToken(token)
+│  ├─ Verify JWT signature + expiration
+│  ├─ If invalid/missing:
+│  │  ├─ Return HTTP 401 Unauthorized
+│  │  └─ Stop (don't continue)
+│  ├─ Extract user claims from token
+│  └─ Continue to next →
+│
+└─ Route Handler (Resource Layer)
+   ├─ Huma validates request schema
    ├─ Parse request body/query params
-   ├─ Call service
-   ├─ Return response
+   ├─ Call service method
+   │  ├─ Check cache (Redis)
+   │  ├─ On cache miss: Query repository (PostgreSQL)
+   │  ├─ On mutation: Invalidate affected caches
+   │  └─ Return response
+   ├─ Return HTTP response
+   │
+   ← Back to ObservabilityMiddleware
+      ├─ Calculate duration
+      ├─ Record Prometheus metrics:
+      │  ├─ requests_total{method="GET", status="200", path="/accounts"}++
+      │  ├─ request_duration_seconds{method="GET", path="/accounts"}.Observe(0.045)
+      │  ├─ last_request_time{method="GET", path="/accounts"} = now
+      │  ├─ (if status >= 400) http_errors_total{status, method, path}++
+      ├─ Log: "Request completed" {request_id, duration_ms, status}
+      └─ Return to client
 ```
 
 ## Public vs Private Routes
@@ -202,20 +378,64 @@ Request arrives
 - Requires valid JWT token
 - Examples: `/accounts`, `/transactions`, `/budgets`, etc.
 
+---
+
+## Summary Table
+
+| Middleware | Level | Applied To | Key Features | Production Only |
+|-----------|-------|-----------|--------------|-----------------|
+| **ObservabilityMiddleware** | Server | All routes | Request ID, logging, Prometheus metrics | No |
+| **RateLimitMiddleware** | Server | All routes | 100 req/min per IP, Redis sliding window | **Yes** |
+| **CORS** | Server | All routes | Origin validation, Access-Control headers | No |
+| **SessionMiddleware** | Huma scope | Private routes | JWT validation, HTTP 401 on invalid | No |
+
+---
+
 ## Best Practices
 
 1. **Middleware should be stateless** - Don't store request state in middleware
-2. **Order matters** - CORS before Session (validate origin before checking auth)
+2. **Order matters** - Observability first (for logging), then RateLimit, then CORS, then Session
 3. **Keep middlewares focused** - One responsibility per middleware
-4. **Error responses** - Use appropriate HTTP status codes
-5. **Logging** - Consider adding logging middleware for debugging
-6. **Token expiration** - Implement refresh token flow for long-lived sessions
+4. **Error responses** - Use appropriate HTTP status codes (401, 429, etc.)
+5. **Context usage** - Pass data via context.WithValue (e.g., request ID)
+6. **Prometheus labels** - Keep label cardinality low (avoid user IDs in labels)
+7. **Rate limiting** - Only in production to avoid disrupting development
+8. **Logging** - Use structured logging (slog) with consistent fields
 
-## Future Enhancements
+---
 
-1. Fix preflight request handling (return 204 properly)
-2. Add rate limiting middleware
-3. Add request logging/tracing middleware
-4. Add request body size limiting middleware
-5. Add panic recovery middleware
-6. Implement refresh token mechanism
+## Monitoring
+
+### Prometheus Metrics Endpoint
+
+Visit `/metrics` to see all metrics:
+
+```
+# HELP requests_total Total number of HTTP requests
+# TYPE requests_total counter
+requests_total{method="GET",path="/accounts",status="200"} 1247
+
+# HELP request_duration_seconds HTTP request duration
+# TYPE request_duration_seconds histogram
+request_duration_seconds_bucket{method="GET",path="/accounts",le="0.05"} 980
+request_duration_seconds_bucket{method="GET",path="/accounts",le="0.1"} 1200
+...
+
+# HELP cache_hits_total Total cache hits
+# TYPE cache_hits_total counter
+cache_hits_total{resource="accounts"} 523
+
+# HELP cache_misses_total Total cache misses
+# TYPE cache_misses_total counter
+cache_misses_total{resource="accounts"} 124
+```
+
+### Structured Logs
+
+All requests logged with consistent format:
+
+```json
+{"time":"2024-01-04T10:15:30Z","level":"INFO","msg":"Incoming request","request_id":"abc123","method":"GET","url":"/accounts","remote_addr":"127.0.0.1:54321"}
+{"time":"2024-01-04T10:15:30Z","level":"INFO","msg":"Request completed","request_id":"abc123","duration_ms":45,"status":200}
+{"time":"2024-01-04T10:15:31Z","level":"WARN","msg":"rate_limit_exceeded","client_ip":"127.0.0.1","count":101,"reset_in":"45s"}
+```

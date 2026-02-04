@@ -309,7 +309,7 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
         Date:                time.Now(),             // Use today's date
     }
 
-    // Create transaction (updates account balances)
+    // Create transaction (updates account balances + invalidates caches)
     _, err := ttw.transactionService.Create(ctx, req)
     return err
 }
@@ -322,7 +322,21 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 3. Call TransactionService.Create()
    - Creates transaction record
    - Updates account balances based on type
+   - **Invalidates caches** (transactions, accounts, account statistics, summary)
 4. Return any errors
+
+**Cache Invalidation:**
+
+The service layer handles cache invalidation automatically:
+```go
+// In TransactionService.Create()
+common.InvalidateCache(ctx, s.rdb, "transactions:*")
+common.InvalidateCache(ctx, s.rdb, "accounts:*")
+common.InvalidateCache(ctx, s.rdb, "account_statistics:*")
+common.InvalidateCache(ctx, s.rdb, "summary:*")
+```
+
+This ensures that after a worker creates transactions, all affected cached data is cleared and will be refreshed on next request.
 
 ### Stopping the Worker
 
@@ -431,10 +445,19 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
         PeriodEnd:    periodEnd,
     }
 
-    // Create budget
+    // Create budget (invalidates budget caches)
     _, err := btw.budgetService.Create(ctx, req)
     return err
 }
+```
+
+**Cache Invalidation:**
+
+Similar to TransactionService, BudgetService.Create() automatically invalidates affected caches:
+```go
+// In BudgetService.Create()
+common.InvalidateCache(ctx, s.rdb, "budgets:*")
+common.InvalidateCache(ctx, s.rdb, "budget_templates:*")
 ```
 
 ### Period Calculation

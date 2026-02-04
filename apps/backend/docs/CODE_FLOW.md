@@ -3,18 +3,33 @@
 ## Application Startup
 
 ```
-main.go:main()
+cmd/app/main.go:main()
   ├─ signal.NotifyContext(ctx, SIGINT, SIGTERM)
-  ├─ http.NewServeMux()
-  ├─ configs.NewEnvironment()
-  ├─ configs.NewDatabase(env)
-  ├─ db.Connect(ctx) → pgxpool.Pool
-  ├─ configs.RunMigration(env) → Apply *.up.sql files
-  ├─ humago.New(svr, configs.NewOpenApi(env)) → Huma API
-  ├─ internal.RegisterMiddlewares(ctx, huma)
-  ├─ internal.RegisterPublicRoutes(ctx, huma, pool)
-  ├─ internal.RegisterPrivateRoutes(ctx, huma, pool)
-  ├─ internal.RegisterWorkers(ctx, pool) → returns cleanup fn
+  ├─ slog.New(slog.NewJSONHandler) → Initialize structured logging
+  ├─ configs.NewEnvironment() → Load env vars
+  ├─ configs.NewDatabase(ctx, env) → pgxpool.Pool
+  ├─ configs.NewRedisClient(ctx, env) → redis.Client
+  ├─ http.NewServeMux() → HTTP mux
+  ├─ humago.New(svr, configs.NewOpenApi(svr, env)) → Huma API
+  ├─ internal.RegisterPublicRoutes(ctx, svr, huma, db, rdb)
+  │  ├─ Register /metrics (Prometheus)
+  │  ├─ Register /health
+  │  ├─ Create RootRepository(ctx, db)
+  │  ├─ Create RootService(repos, rdb)
+  │  └─ Register AuthResource
+  ├─ internal.RegisterPrivateRoutes(ctx, huma, db, rdb)
+  │  ├─ Apply SessionMiddleware to scope
+  │  ├─ Create RootRepository(ctx, db)
+  │  ├─ Create RootService(repos, rdb)
+  │  └─ Register all resources (Account, Category, Transaction, etc.)
+  ├─ internal.RegisterWorkers(ctx, db, rdb) → returns cleanup fn
+  │  ├─ Create RootRepository + RootService
+  │  ├─ Start TransactionTemplateWorker
+  │  └─ Start BudgetTemplateWorker
+  ├─ Build middleware stack:
+  │  └─ RateLimitMiddleware(env, rdb)(
+  │       ObservabilityMiddleware(
+  │         CORS(svr)))
   ├─ http.Server.ListenAndServe() [goroutine]
   └─ Wait for context cancellation
      └─ Graceful shutdown sequence
@@ -27,61 +42,89 @@ main.go:main()
 **Public Routes:**
 
 ```
-RegisterPublicRoutes(ctx, huma, pool)
-  └─ Create AuthRepository (context-based, no pool needed)
-     └─ Create AuthService
-        └─ Register AuthResource.Routes(huma)
-           ├─ POST /auth/login
-           ├─ POST /auth/signup
-           └─ POST /auth/logout
+RegisterPublicRoutes(ctx, svr, huma, db, rdb)
+  ├─ svr.Handle("/metrics", promhttp.Handler())
+  ├─ svr.HandleFunc("/health", ...)
+  ├─ rpts := repositories.NewRootRepository(ctx, db)
+  ├─ sevs := services.NewRootService(rpts, rdb)
+  └─ resources.NewAuthResource(sevs.Ath).Routes(huma)
+     ├─ POST /auth/login
+     ├─ POST /auth/signup
+     └─ POST /auth/logout
 ```
 
 **Private Routes:**
 
 ```
-RegisterPrivateRoutes(ctx, huma, pool)
-  ├─ Apply SessionMiddleware globally for this scope
-  ├─ Create All Repositories (pool-based)
-  ├─ Create All Services
-  └─ Register All Resources
-      ├─ AccountResource.Routes(huma)
+RegisterPrivateRoutes(ctx, huma, db, rdb)
+  ├─ huma.UseMiddleware(middleware.SessionMiddleware(huma))
+  ├─ rpts := repositories.NewRootRepository(ctx, db)
+  ├─ sevs := services.NewRootService(rpts, rdb)
+  └─ Register All Resources (each receives sevs)
+      ├─ resources.NewAccountResource(sevs).Routes(huma)
       │  ├─ GET /accounts
       │  ├─ POST /accounts
       │  ├─ GET /accounts/{id}
       │  ├─ PUT /accounts/{id}
       │  └─ DELETE /accounts/{id}
-      ├─ CategoryResource.Routes(huma)
-      ├─ TransactionResource.Routes(huma)
-      ├─ BudgetResource.Routes(huma)
-      └─ ... [other resources]
+      ├─ resources.NewCategoryResource(sevs).Routes(huma)
+      ├─ resources.NewAccountStatisticsResource(sevs).Routes(huma)
+      ├─ resources.NewCategoryStatisticsResource(sevs).Routes(huma)
+      ├─ resources.NewTransactionResource(sevs).Routes(huma)
+      ├─ resources.NewSummaryResource(sevs).Routes(huma)
+      ├─ resources.NewBudgetResource(sevs).Routes(huma)
+      ├─ resources.NewBudgetTemplateResource(sevs).Routes(huma)
+      ├─ resources.NewTagResource(sevs).Routes(huma)
+      └─ resources.NewSeedResource(db, rdb).Routes(huma)
 ```
 
 ### Request Processing Pipeline
 
 ```
-HTTP Request arrives at Huma
-  ├─ [Middleware Phase]
-  │  ├─ CORS Middleware
-  │  │  └─ Validate origin + set headers
-  │  │     └─ Return 204 if preflight + invalid origin
-  │  └─ SessionMiddleware (if private route)
+HTTP Request arrives
+  ├─ [Middleware Stack - Server Level]
+  │  ├─ ObservabilityMiddleware
+  │  │  ├─ Generate request ID
+  │  │  ├─ Log incoming request
+  │  │  └─ Start metrics timer
+  │  │
+  │  ├─ RateLimitMiddleware (production only)
+  │  │  ├─ Check Redis for IP request count
+  │  │  └─ Return 429 if exceeded, else continue
+  │  │
+  │  └─ CORS Middleware
+  │     ├─ Validate origin
+  │     └─ Set Access-Control headers
+  │
+  ├─ [Huma Route Matching]
+  │  └─ Match HTTP method + path to handler
+  │
+  ├─ [Middleware - Huma Scope]
+  │  └─ SessionMiddleware (private routes only)
   │     ├─ Extract Bearer token
   │     ├─ Parse token (JWT validation)
   │     └─ Return 401 if invalid
   │
-  ├─ [Route Matching Phase]
-  │  └─ Huma matches HTTP method + path to handler
-  │
   └─ [Handler Phase]
-     └─ Resource handler (e.g., TransactionResource.List)
-        ├─ Parse request query params + validate
+     └─ Resource handler (e.g., AccountResource.List)
+        ├─ Huma validates request schema
+        ├─ Parse request query params
         ├─ Call Service method
-        │  └─ Service calls Repository methods
-        │     ├─ Build SQL query
-        │     ├─ Execute on pool
-        │     └─ Map results to model
+        │  ├─ Check cache (Redis)
+        │  │  ├─ Cache hit: Return cached data
+        │  │  └─ Cache miss: Fetch from repository
+        │  │
+        │  └─ Service calls Repository method
+        │     ├─ Build SQL query with filters
+        │     ├─ Execute on pool (PostgreSQL)
+        │     ├─ Map rows to models
+        │     └─ Return data
+        │
+        ├─ Cache result (if cache miss)
         ├─ Transform response
         └─ Return HTTP 200 + JSON body
+           │
+           └─ ObservabilityMiddleware logs completion + records metrics
 ```
 
 ## Specific Flow Example: Create Transaction
@@ -96,80 +139,147 @@ POST /transactions
   "note": "Lunch"
 }
 
+├─ ObservabilityMiddleware
+│  ├─ Generate request ID: "req_abc123"
+│  └─ Log: "Incoming request" {request_id, method="POST", url="/transactions"}
+│
+├─ RateLimitMiddleware (production only)
+│  ├─ Redis INCR rate_limit:127.0.0.1:2024-01-04T10:15
+│  ├─ Count: 45/100
+│  └─ Continue (set X-RateLimit-* headers)
+│
 ├─ CORS Middleware
-│  └─ Validate origin
+│  └─ Validate origin + set Access-Control headers
 │
 ├─ SessionMiddleware
-│  └─ Extract + validate Bearer token
+│  ├─ Extract "Bearer {token}"
+│  ├─ AuthRepository.ParseToken(token)
+│  └─ Valid → Continue
 │
 └─ TransactionResource.Post(ctx, req)
    │
    ├─ Call TransactionService.Create(ctx, req)
    │  │
-   │  ├─ Call TransactionRepository.Create(ctx, req)
+   │  ├─ Call repos.Tsct.Create(ctx, req)
    │  │  │
-   │  │  ├─ Execute:
+   │  │  ├─ Execute SQL:
    │  │  │  INSERT INTO transactions (type, date, amount, account_id, category_id, note)
    │  │  │  VALUES ($1, NOW(), $2, $3, $4, $5)
    │  │  │  RETURNING id, created_at, updated_at
    │  │  │
    │  │  └─ Return TransactionModel {id: 123, ...}
    │  │
-   │  ├─ Call TransactionRepository.UpdateAccountBalance(ctx, accountID, -amount)
-   │  │  │
-   │  │  └─ Execute:
-   │  │     UPDATE accounts SET amount = amount - $1, updated_at = NOW()
-   │  │     WHERE id = $2
+   │  ├─ Update account balance (business logic):
+   │  │  └─ repos.Acc.UpdateAccountBalance(ctx, accountID, -amount)
+   │  │     └─ Execute SQL:
+   │  │        UPDATE accounts SET amount = amount - $1, updated_at = NOW()
+   │  │        WHERE id = $2
+   │  │
+   │  ├─ Invalidate affected caches:
+   │  │  ├─ common.InvalidateCache(ctx, rdb, "transactions:*")
+   │  │  ├─ common.InvalidateCache(ctx, rdb, "accounts:*")
+   │  │  ├─ common.InvalidateCache(ctx, rdb, "account_statistics:*")
+   │  │  └─ common.InvalidateCache(ctx, rdb, "summary:*")
    │  │
    │  └─ Return CreateTransactionResponseModel
    │
-   └─ Response HTTP 200
-      {
-        "id": 123,
-        "type": "expense",
-        "amount": 5000,
-        "accountID": 1,
-        "categoryID": 2,
-        ...
-      }
-```
-
-## List Request Flow (Pagination)
-
-```
-GET /transactions?pageNumber=1&pageSize=10&sortBy=date&sortOrder=desc
-
-└─ TransactionResource.Get(ctx, params)
+   ├─ Response HTTP 201 Created
+   │  {
+   │    "id": 123,
+   │    "type": "expense",
+   │    "amount": 5000,
+   │    "accountID": 1,
+   │    "categoryID": 2,
+   │    ...
+   │  }
    │
-   └─ TransactionService.List(ctx, params)
-      │
-      └─ TransactionRepository.List(ctx, params)
-         │
-         ├─ Validate + normalize params
-         │  ├─ pageNumber >= 1, else 1
-         │  ├─ pageSize 1-100, else 10
-         │  └─ sortBy/sortOrder from allowlist
-         │
-         ├─ Calculate offset = (pageNumber - 1) * pageSize
-         │
-         ├─ Execute count query:
-         │  SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL
-         │
-         ├─ Execute paginated query:
-         │  SELECT * FROM transactions
-         │  WHERE deleted_at IS NULL
-         │  ORDER BY {sortBy} {sortOrder}
-         │  LIMIT $1 OFFSET $2
-         │
-         └─ Return ListTransactionsResponseModel
-            {
-              "data": [...],
-              "pageNumber": 1,
-              "pageSize": 10,
-              "totalCount": 47,
-              "totalPages": 5
-            }
+   └─ ObservabilityMiddleware
+      ├─ Duration: 45ms
+      ├─ Prometheus metrics:
+      │  ├─ requests_total{method="POST", status="201", path="/transactions"}++
+      │  ├─ request_duration_seconds{method="POST", path="/transactions"}.Observe(0.045)
+      │  └─ last_request_time{method="POST", path="/transactions"} = now
+      └─ Log: "Request completed" {request_id, duration_ms=45, status=201}
 ```
+
+## List Request Flow with Caching
+
+```
+GET /accounts?pageNumber=1&pageSize=10&sortBy=createdAt&sortOrder=desc
+
+├─ [Middleware Stack: Observability → RateLimit → CORS → Session]
+│
+└─ AccountResource.List(ctx, params)
+   │
+   └─ AccountService.List(ctx, params)
+      │
+      ├─ Build cache key:
+      │  └─ common.BuildCacheKey(0, params, "accounts:list")
+      │     Result: "accounts:list:0:{\"pageNumber\":1,\"pageSize\":10,...}"
+      │
+      ├─ Call common.FetchWithCache[ListAccountsResponseModel](...)
+      │  │
+      │  ├─ Try GetCache(ctx, rdb, cacheKey)
+      │  │  │
+      │  │  ├─ Cache HIT:
+      │  │  │  ├─ observability.CacheHits.WithLabelValues("accounts").Inc()
+      │  │  │  └─ Return cached data (fast path)
+      │  │  │
+      │  │  └─ Cache MISS (redis.Nil):
+      │  │     ├─ observability.CacheMisses.WithLabelValues("accounts").Inc()
+      │  │     └─ Execute fetcher function →
+      │  │
+      │  └─ Fetcher function: repos.Acc.List(ctx, params)
+      │     │
+      │     ├─ Validate + normalize params
+      │     │  ├─ pageNumber >= 1, else 1
+      │     │  ├─ pageSize 1-100, else 10
+      │     │  └─ sortBy/sortOrder from allowlist
+      │     │
+      │     ├─ Calculate offset = (pageNumber - 1) * pageSize
+      │     │
+      │     ├─ Execute count query:
+      │     │  SELECT COUNT(*) FROM accounts WHERE deleted_at IS NULL
+      │     │
+      │     ├─ Execute paginated query:
+      │     │  SELECT * FROM accounts
+      │     │  WHERE deleted_at IS NULL
+      │     │  ORDER BY {sortBy} {sortOrder}
+      │     │  LIMIT $1 OFFSET $2
+      │     │
+      │     ├─ Map rows to models
+      │     │
+      │     └─ Return ListAccountsResponseModel
+      │        {
+      │          "data": [...],
+      │          "pageNumber": 1,
+      │          "pageSize": 10,
+      │          "totalCount": 47,
+      │          "totalPages": 5
+      │        }
+      │
+      ├─ SetCache(ctx, rdb, cacheKey, result, 10*time.Minute)
+      │
+      └─ Return result (fresh data, now cached)
+
+Response HTTP 200
+{
+  "data": [...],
+  "pageNumber": 1,
+  "pageSize": 10,
+  "totalCount": 47,
+  "totalPages": 5
+}
+```
+
+**Cache Key Uniqueness:**
+
+Different query parameters = different cache keys:
+- `accounts:list:0:{\"pageNumber\":1,\"pageSize\":10}`
+- `accounts:list:0:{\"pageNumber\":2,\"pageSize\":10}`
+- `accounts:list:0:{\"pageNumber\":1,\"pageSize\":25}`
+
+Each combination cached separately for 10 minutes.
 
 ## Delete Flow (Soft Delete)
 

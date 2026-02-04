@@ -1,6 +1,6 @@
 # Main and Handlers
 
-## Application Entry Point (main.go)
+## Application Entry Point (cmd/app/main.go)
 
 The `main()` function orchestrates application startup, dependency initialization, and graceful shutdown.
 
@@ -12,44 +12,47 @@ func main() {
     ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
     defer stop()
 
-    // 2. Initialize HTTP infrastructure
-    svr := http.NewServeMux()
+    // 2. Initialize structured logging (JSON format)
+    logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+        Level: slog.LevelInfo,
+    }))
+    slog.SetDefault(logger)
 
-    // 3. Load configuration
+    // 3. Load configuration from environment
     env := configs.NewEnvironment()
 
-    // 4. Initialize database
-    db := configs.NewDatabase(env)
-    pool, err := db.Connect(ctx)
-    if err != nil {
-        panic(err)
-    }
+    // 4. Initialize database connection pool
+    db := configs.NewDatabase(ctx, env)
 
-    // 5. Run migrations
-    if err := configs.RunMigration(env); err != nil {
-        panic(err)
-    }
+    // 5. Initialize Redis client for caching and rate limiting
+    rdb := configs.NewRedisClient(ctx, env)
 
-    // 6. Initialize Huma API framework
-    humaSvr := humago.New(svr, configs.NewOpenApi(env))
+    // 6. Initialize HTTP mux
+    svr := http.NewServeMux()
 
-    // 7. Register middlewares
-    internal.RegisterMiddlewares(ctx, humaSvr)
+    // 7. Initialize Huma API framework
+    humaSvr := humago.New(svr, configs.NewOpenApi(svr, env))
 
-    // 8. Register public routes (auth)
-    internal.RegisterPublicRoutes(ctx, humaSvr, pool)
+    // 8. Register public routes (includes /metrics, /health)
+    internal.RegisterPublicRoutes(ctx, svr, humaSvr, db, rdb)
 
-    // 9. Register private routes (authenticated)
-    internal.RegisterPrivateRoutes(ctx, humaSvr, pool)
+    // 9. Register private routes (authenticated, includes SessionMiddleware)
+    internal.RegisterPrivateRoutes(ctx, humaSvr, db, rdb)
 
     // 10. Register background workers
-    stopWorkers := internal.RegisterWorker(ctx, pool)
+    cleanupWorkers := internal.RegisterWorkers(ctx, db, rdb)
 
-    // 11. Start HTTP server in goroutine
+    // 11. Start HTTP server with middleware stack
     srv := &http.Server{
-        Addr:    fmt.Sprintf(":%s", env.AppPort),
-        Handler: svr,
+        Addr: fmt.Sprintf(":%s", env.AppPort),
+        Handler: middleware.RateLimitMiddleware(env, rdb)(
+            middleware.ObservabilityMiddleware(
+                middleware.CORS(svr)
+            )
+        ),
     }
+
+    slog.Info("Server is running at port", "port", env.AppPort)
 
     go func() {
         if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -61,12 +64,11 @@ func main() {
     <-ctx.Done()
     slog.Info("Shutting down HTTP server")
 
-    // 13. Stop workers first
-    stopWorkers()
-
-    // 14. Gracefully shutdown HTTP server (10s timeout)
+    // 13. Gracefully shutdown HTTP server (10s timeout)
     shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
+    defer cleanupWorkers()  // Stop workers after HTTP server
+
     if err := srv.Shutdown(shutdownCtx); err != nil {
         slog.Error("Graceful shutdown failed, forcing exit", "err", err)
     } else {
@@ -78,188 +80,151 @@ func main() {
 ### Initialization Order (Important!)
 
 1. **Context** - Required for cancellation
-2. **HTTP Mux** - Routing infrastructure
-3. **Config** - Environment variables
-4. **Database** - Connection pool
-5. **Migrations** - Schema setup
-6. **Huma** - API framework
-7. **Middlewares** - Before route registration
-8. **Routes** - Public first, then private
-9. **Workers** - After routes
-10. **HTTP Server** - Listen on port
+2. **Structured Logging** - JSON handler for production logging
+3. **Config** - Environment variables (DATABASE_URL, APP_PORT, JWT_SECRET, etc.)
+4. **Database** - PostgreSQL connection pool (pgxpool)
+5. **Redis** - Cache and rate limiter backend
+6. **HTTP Mux** - Routing infrastructure
+7. **Huma** - API framework with OpenAPI generation
+8. **Public Routes** - Unauthenticated endpoints + /metrics + /health
+9. **Private Routes** - Authenticated endpoints (SessionMiddleware applied in scope)
+10. **Workers** - Background tasks (transaction templates, budget templates)
+11. **HTTP Server** - Start with middleware stack (RateLimit → Observability → CORS)
 
 **Why this order matters:**
 
-- Database must be connected before routes (routes create repositories)
-- Migrations before routes (schema must exist)
-- Middlewares before routes (they're applied during route registration)
-- Workers after routes (workers may call services)
+- Database and Redis must be initialized before routes (repositories and services need them)
+- Huma before routes (routes register via Huma API)
+- Public routes before private (public includes /metrics, /health at mux level)
+- Workers after routes (workers call services)
+- Middleware stack wraps entire server (applied in main.go, not in handlers.go)
 
-## Handlers Registration
+## Handlers Registration (internal/handlers.go)
 
-Route registration is centralized in `handlers.go` with three main functions.
-
-### RegisterMiddlewares()
-
-```go
-func RegisterMiddlewares(ctx context.Context, huma huma.API) {
-    huma.UseMiddleware(internalmiddleware.CORS(huma))
-}
-```
-
-**Purpose:** Register middlewares that apply globally
-
-**Middlewares registered:**
-
-- CORS middleware (allow cross-origin requests)
-
-**Applied to:** All routes
-
-**Called from:** main.go line 39
-
----
+Route registration is centralized in `internal/handlers.go` with three main functions using RootRepository and RootService aggregates.
 
 ### RegisterPublicRoutes()
 
 ```go
-func RegisterPublicRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool) {
-    // 1. Create auth repository
-    ap := repositories.NewAuthRepository(ctx)
+func RegisterPublicRoutes(ctx context.Context, svr *http.ServeMux, huma huma.API, db *pgxpool.Pool, rdb *redis.Client) {
+    // 1. Register /metrics endpoint (Prometheus)
+    svr.Handle("/metrics", promhttp.Handler())
 
-    // 2. Create auth service
-    as := services.NewAuthService(ap)
+    // 2. Register /health endpoint
+    svr.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+        w.WriteHeader(http.StatusOK)
+        w.Write([]byte("OK"))
+    })
 
-    // 3. Register auth resource routes
-    resources.NewAuthResource(as).Routes(huma)
+    // 3. Create repository and service aggregates
+    rpts := repositories.NewRootRepository(ctx, db)
+    sevs := services.NewRootService(rpts, rdb)
+
+    // 4. Register auth resource (unauthenticated)
+    resources.NewAuthResource(sevs.Ath).Routes(huma)
 }
 ```
 
-**Purpose:** Register unauthenticated routes (no SessionMiddleware)
+**Purpose:** Register unauthenticated routes and monitoring endpoints
+
+**Routes registered:**
+
+- `/metrics` - Prometheus metrics (via promhttp.Handler)
+- `/health` - Health check endpoint (returns HTTP 200 "OK")
+- `POST /auth/login` - User authentication
+- `POST /auth/signup` - User registration
+- `POST /auth/logout` - User logout
+
+**Note:** /metrics and /health are registered at mux level (not Huma), so they bypass middleware stack except ObservabilityMiddleware and CORS
+
+**Why separate:** SessionMiddleware is NOT applied to these routes
 
 **Dependency Pattern:**
 
 ```
-Repository → Service → Resource → Routes
+RootRepository → RootService → AuthService → AuthResource → Routes
 ```
 
-**Routes registered:**
-
-- POST /auth/login
-- POST /auth/signup
-- POST /auth/logout
-
-**Why separate:** SessionMiddleware is not applied to these routes (needed for login)
-
-**Called from:** main.go line 40
+**Called from:** main.go line 36
 
 ---
 
 ### RegisterPrivateRoutes()
 
 ```go
-func RegisterPrivateRoutes(ctx context.Context, huma huma.API, pool *pgxpool.Pool) {
+func RegisterPrivateRoutes(ctx context.Context, huma huma.API, db *pgxpool.Pool, rdb *redis.Client) {
     // 1. Apply SessionMiddleware to all routes in this scope
-    huma.UseMiddleware(internalmiddleware.SessionMiddleware(huma))
+    huma.UseMiddleware(middleware.SessionMiddleware(huma))
 
-    // 2. Create all repositories (pool-based)
-    accountRepo := repositories.NewAccountRepository(pool)
-    categoryRepo := repositories.NewCategoryRepository(pool)
-    transactionRepo := repositories.NewTransactionRepository(pool)
-    summaryRepo := repositories.NewSummaryRepository(pool)
-    budgetRepo := repositories.NewBudgetRepository(pool)
-    budgetTemplateRepo := repositories.NewBudgetTemplateRepository(pool)
-    transactionRelationRepo := repositories.NewTransactionRelationRepository(pool)
-    tagRepo := repositories.NewTagRepository(pool)
-    transactionTagRepo := repositories.NewTransactionTagRepository(pool)
-    transactionTemplateRepo := repositories.NewTransactionTemplateRepository(pool)
+    // 2. Create repository and service aggregates
+    rpts := repositories.NewRootRepository(ctx, db)
+    sevs := services.NewRootService(rpts, rdb)
 
-    // 3. Create all services
-    accountService := services.NewAccountService(accountRepo)
-    categoryService := services.NewCategoryService(categoryRepo)
-    transactionService := services.NewTransactionService(transactionRepo)
-    summaryService := services.NewSummaryService(summaryRepo)
-    budgetService := services.NewBudgetService(budgetRepo)
-    budgetTemplateService := services.NewBudgetTemplateService(budgetTemplateRepo)
-    transactionRelationService := services.NewTransactionRelationService(transactionRelationRepo, transactionRepo)
-    tagService := services.NewTagService(tagRepo)
-    transactionTagService := services.NewTransactionTagService(transactionTagRepo)
-    transactionTemplateService := services.NewTransactionTemplateService(transactionTemplateRepo)
-
-    // 4. Register all resources
-    resources.NewAccountResource(accountService).Routes(huma)
-    resources.NewCategoryResource(categoryService).Routes(huma)
-    resources.NewTransactionResource(transactionService, transactionRelationService, transactionTagService, transactionTemplateService).Routes(huma)
-    resources.NewSummaryResource(summaryService).Routes(huma)
-    resources.NewBudgetResource(budgetService).Routes(huma)
-    resources.NewBudgetTemplateResource(budgetTemplateService).Routes(huma)
-    resources.NewTagResource(tagService).Routes(huma)
+    // 3. Register all resources (each receives full RootService)
+    resources.NewAccountResource(sevs).Routes(huma)
+    resources.NewCategoryResource(sevs).Routes(huma)
+    resources.NewAccountStatisticsResource(sevs).Routes(huma)
+    resources.NewCategoryStatisticsResource(sevs).Routes(huma)
+    resources.NewTransactionResource(sevs).Routes(huma)
+    resources.NewSummaryResource(sevs).Routes(huma)
+    resources.NewBudgetResource(sevs).Routes(huma)
+    resources.NewBudgetTemplateResource(sevs).Routes(huma)
+    resources.NewTagResource(sevs).Routes(huma)
+    resources.NewSeedResource(db, rdb).Routes(huma)  // Special: receives db/rdb directly
 }
 ```
 
 **Purpose:** Register authenticated routes (SessionMiddleware required)
 
-**Middleware applied:** SessionMiddleware (validates JWT token)
+**Middleware applied:** SessionMiddleware (validates JWT token in scope)
 
 **Routes registered:**
 
-- All account operations
-- All category operations
-- All transaction operations
-- All budget operations
-- All tag operations
-- Summary operations
+- Account operations (CRUD + archive)
+- Category operations (CRUD + archive)
+- Account statistics (time frequency heatmap, monthly velocity, etc.)
+- Category statistics (breakdown, trends)
+- Transaction operations (CRUD + relations + tags + templates)
+- Summary operations (dashboard aggregations)
+- Budget operations (CRUD + tracking)
+- Budget template operations (CRUD + recurring budgets)
+- Tag operations (CRUD + transaction tagging)
+- Seed operations (development data seeding)
 
-**Dependency Pattern (per resource):**
-
-```
-Repository → Service → Resource → Routes
-```
-
-**Example for transactions:**
+**Dependency Pattern:**
 
 ```
-TransactionRepository
-  ↓
-TransactionService
-  ↓
-TransactionResource
-  ↓
-huma.Get(api, "GET /transactions", r.List)
-huma.Post(api, "POST /transactions", r.Create)
-... etc
+RootRepository → RootService → All Services → Resources → Routes
+                      ↓
+                 Redis Client
 ```
 
-**Called from:** main.go line 41
+**Key difference from old pattern:**
+- Old: Each service created individually with specific repository
+- New: Single RootService aggregate created once, all resources receive it
+- Benefit: Resources can access multiple services easily for cross-entity operations
+
+**Called from:** main.go line 37
 
 ---
 
-### RegisterWorker()
+### RegisterWorkers()
 
 ```go
-func RegisterWorker(ctx context.Context, pool *pgxpool.Pool) func() {
-    // 1. Create repositories
-    ttr := repositories.NewTransactionTemplateRepository(pool)
-    tr := repositories.NewTransactionRepository(pool)
-    btr := repositories.NewBudgetTemplateRepository(pool)
-    br := repositories.NewBudgetRepository(pool)
+func RegisterWorkers(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client) func() {
+    // 1. Create repository and service aggregates
+    rpts := repositories.NewRootRepository(ctx, db)
+    sevs := services.NewRootService(rpts, rdb)
 
-    // 2. Create services
-    ts := services.NewTransactionService(tr)
-    budgetService := services.NewBudgetService(br)
+    // 2. Initialize transaction template worker
+    ttWorker := workers.NewTransactionTemplateWorker(ctx, rpts.TsctTem, sevs.Tsct, rdb)
+    btWorker := workers.NewBudgetTemplateWorker(ctx, rpts.BudgTem, sevs.Budg, rdb)
 
-    // 3. Initialize transaction template worker
-    ttWorker := workers.NewTransactionTemplateWorker(ctx, ttr, ts)
-    if err := ttWorker.Start(); err != nil {
-        slog.Error("Failed to start transaction template worker", "err", err)
-    }
+    // 3. Start workers
+    ttWorker.Start()
+    btWorker.Start()
 
-    // 4. Initialize budget template worker
-    btWorker := workers.NewBudgetTemplateWorker(ctx, btr, budgetService)
-    if err := btWorker.Start(); err != nil {
-        slog.Error("Failed to start budget template worker", "err", err)
-    }
-
-    // 5. Return cleanup function
+    // 4. Return cleanup function
     return func() {
         slog.Info("Stopping all workers")
         ttWorker.Stop()
@@ -272,16 +237,26 @@ func RegisterWorker(ctx context.Context, pool *pgxpool.Pool) func() {
 
 **Workers registered:**
 
-- TransactionTemplateWorker (hourly, creates recurring transactions)
-- BudgetTemplateWorker (daily, creates recurring budgets)
+- **TransactionTemplateWorker** - Processes recurring transaction templates (hourly)
+  - Receives: context, TransactionTemplateRepository, TransactionService, Redis client
+  - Creates transactions from templates based on recurrence rules
+  - Updates `last_executed_at` timestamp
+  - Invalidates transaction caches after processing
 
-**Return value:** Cleanup function that stops all workers
+- **BudgetTemplateWorker** - Creates budgets from templates (daily)
+  - Receives: context, BudgetTemplateRepository, BudgetService, Redis client
+  - Creates budget periods from templates (weekly/monthly/yearly)
+  - Calculates period start/end dates
+  - Updates `last_executed_at` timestamp
+  - Invalidates budget caches after processing
 
-**Error handling:** Log errors if worker startup fails (non-fatal)
+**Return value:** Cleanup function (stops all workers)
 
-**Called from:** main.go line 42: `stopWorkers := internal.RegisterWorker(ctx, pool)`
+**Error handling:** Workers use fault-tolerant pattern (errors logged, don't crash worker)
 
-**Called again in shutdown:** main.go line 60: `stopWorkers()`
+**Called from:** main.go line 38: `cleanupWorkers := internal.RegisterWorkers(ctx, db, rdb)`
+
+**Called again in shutdown:** main.go line 58: `defer cleanupWorkers()` (after HTTP server shutdown)
 
 ---
 

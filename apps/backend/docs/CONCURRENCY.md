@@ -74,6 +74,49 @@ go func() {
 // Both run concurrently on different pool connections
 ```
 
+### Redis Client Concurrency
+
+```go
+rdb := configs.NewRedisClient(ctx, env)  // *redis.Client
+```
+
+**redis.Client:**
+
+- **Thread-safe** - safe for concurrent use across goroutines
+- Connection pooling built-in
+- Atomic operations (INCR, EXPIRE) for rate limiting
+- Pipelining support for batch operations
+
+**Usage:**
+
+```go
+// Multiple goroutines can safely use same Redis client
+go func() {
+    rdb.Get(ctx, "accounts:123")  // Request 1
+}()
+
+go func() {
+    rdb.Set(ctx, "accounts:456", data, ttl)  // Request 2
+}()
+
+go func() {
+    rdb.Incr(ctx, "rate_limit:127.0.0.1")  // Request 3 (atomic)
+}()
+// All operations safely concurrent
+```
+
+**Atomic operations for rate limiting:**
+
+```go
+// INCR is atomic - safe for concurrent rate limit checks
+count, _ := rdb.Incr(ctx, redisKey).Result()
+if count == 1 {
+    rdb.Expire(ctx, redisKey, duration)  // Also atomic
+}
+```
+
+No race conditions even with thousands of concurrent requests checking rate limits.
+
 ### HTTP Server Concurrency
 
 Go's `http.Server` handles concurrent requests via goroutines:

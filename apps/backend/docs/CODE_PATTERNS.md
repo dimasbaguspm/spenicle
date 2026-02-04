@@ -1,18 +1,79 @@
 # Code Patterns
 
+## RootRepository Aggregate Pattern
+
+All repositories are organized into a single aggregate for centralized initialization and transaction support.
+
+### Structure (`internal/repositories/root_repository.go`)
+
+```go
+type DBQuerier interface {
+    Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+    QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+    Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
+type RootRepository struct {
+    Pool    *pgxpool.Pool
+    db      DBQuerier
+    Acc     AccountRepository
+    Ath     AuthRepository
+    Budg    BudgetRepository
+    BudgTem BudgetTemplateRepository
+    Cat     CategoryRepository
+    AccStat AccountStatisticsRepository
+    CatStat CategoryStatisticsRepository
+    Sum     SummaryRepository
+    Tag     TagRepository
+    Tsct    TransactionRepository
+    TsctRel TransactionRelationRepository
+    TsctTag TransactionTagRepository
+    TsctTem TransactionTemplateRepository
+}
+
+func NewRootRepository(ctx context.Context, pgx *pgxpool.Pool) RootRepository {
+    db := DBQuerier(pgx)
+    return RootRepository{
+        Pool:    pgx,
+        db:      db,
+        Acc:     NewAccountRepository(db),
+        Ath:     NewAuthRepository(ctx),
+        Budg:    NewBudgetRepository(db),
+        // ... all other repositories
+    }
+}
+
+// Transaction support: creates new aggregate with transaction
+func (r RootRepository) WithTx(ctx context.Context, tx pgx.Tx) RootRepository {
+    return RootRepository{
+        Pool:    r.Pool,
+        db:      tx,  // All repositories now use transaction
+        Acc:     NewAccountRepository(tx),
+        Ath:     NewAuthRepository(ctx),
+        // ... recreate all repositories with tx
+    }
+}
+```
+
+**Key Benefits:**
+- Single initialization point
+- Transaction support via `WithTx()` - all repositories use same transaction
+- Small `DBQuerier` interface allows testing with mocks
+- Individual repositories don't need to know about pool/tx distinction
+
 ## Repository Pattern
 
-All data access is abstracted through repositories. Each resource has a dedicated repository.
+Individual repositories receive `DBQuerier` interface (not *pgxpool.Pool).
 
 ### Structure
 
 ```go
 type {Resource}Repository struct {
-    pgx *pgxpool.Pool
+    db DBQuerier  // Can be pool or transaction
 }
 
-func New{Resource}Repository(pool *pgxpool.Pool) {Resource}Repository {
-    return {Resource}Repository{pool}
+func New{Resource}Repository(db DBQuerier) {Resource}Repository {
+    return {Resource}Repository{db}
 }
 
 // Methods follow CRUD + custom queries
@@ -98,30 +159,79 @@ func (tr TransactionRepository) UpdateAccountBalance(ctx context.Context, accoun
 }
 ```
 
+## RootService Aggregate Pattern
+
+All services are organized into a single aggregate for centralized initialization with Redis client.
+
+### Structure (`internal/services/root_service.go`)
+
+```go
+type RootService struct {
+    Acc     AccountService
+    AccStat AccountStatisticsService
+    Ath     AuthService
+    Budg    BudgetService
+    BudgTem BudgetTemplateService
+    Cat     CategoryService
+    CatStat CategoryStatisticsService
+    Sum     SummaryService
+    Tag     TagService
+    Tsct    TransactionService
+    TsctRel TransactionRelationService
+    TsctTag TransactionTagService
+    TsctTem TransactionTemplateService
+}
+
+func NewRootService(repos repositories.RootRepository, rdb *redis.Client) RootService {
+    return RootService{
+        Acc:     NewAccountService(&repos, rdb),
+        AccStat: NewAccountStatisticsService(&repos, rdb),
+        Ath:     NewAuthService(&repos),  // No cache for auth
+        Budg:    NewBudgetService(&repos, rdb),
+        // ... all other services
+    }
+}
+```
+
+**Key Benefits:**
+- Single initialization point with Redis client injection
+- Resources receive entire RootService, access services via fields
+- All services have access to all repositories via pointer
+- Simplifies cross-service coordination
+
 ## Service Pattern
 
-Services contain business logic and coordinate between repositories.
+Individual services receive `*RootRepository` and `*redis.Client`.
 
 ### Structure
 
 ```go
 type {Resource}Service struct {
-    repo {Resource}Repository
-    // other dependencies as needed
+    repo *repositories.RootRepository
+    rdb  *redis.Client  // Optional, omit for services without caching
 }
 
-func New{Resource}Service(repo {Resource}Repository) {Resource}Service {
-    return {Resource}Service{repo}
+func New{Resource}Service(repo *repositories.RootRepository, rdb *redis.Client) {Resource}Service {
+    return {Resource}Service{repo, rdb}
 }
 
 // Methods delegate to repository and add business logic
 func (s {Resource}Service) List(ctx context.Context, params) (response, error) {
-    return s.repo.List(ctx, params)
+    // Use caching pattern (see below)
+    return s.repo.{Resource}.List(ctx, params)
 }
 
 func (s {Resource}Service) Create(ctx context.Context, req) (response, error) {
-    // Business logic here (validation, coordination, etc.)
-    return s.repo.Create(ctx, req)
+    // Business logic + repository call
+    result, err := s.repo.{Resource}.Create(ctx, req)
+    if err != nil {
+        return response{}, err
+    }
+
+    // Invalidate caches after mutation
+    common.InvalidateCache(ctx, s.rdb, "{resource}:*")
+
+    return result, nil
 }
 ```
 
@@ -170,19 +280,116 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 }
 ```
 
+## Caching Pattern
+
+Services use generic caching helper from `internal/common/cache.go`.
+
+### FetchWithCache Pattern
+
+```go
+func (s AccountService) List(ctx context.Context, p models.ListAccountsRequestModel) (models.ListAccountsResponseModel, error) {
+    // Build cache key from parameters
+    cacheKey := common.BuildCacheKey(0, p, "accounts:list")
+
+    // Fetch with caching - cache miss triggers fetcher function
+    return common.FetchWithCache(
+        ctx,
+        s.rdb,
+        cacheKey,
+        10*time.Minute,  // TTL
+        func(ctx context.Context) (models.ListAccountsResponseModel, error) {
+            // This only runs on cache miss
+            return s.repo.Acc.List(ctx, p)
+        },
+        "accounts",  // Resource label for Prometheus metrics
+    )
+}
+```
+
+**How FetchWithCache works:**
+1. Try `GetCache[T](ctx, rdb, key)` first
+2. If found: Increment `cache_hits_total` metric, return cached data
+3. If not found: Increment `cache_misses_total` metric
+4. Execute fetcher function (repository call)
+5. `SetCache()` the result with TTL
+6. Return fresh data
+
+### Manual Cache Operations
+
+```go
+// Set cache with TTL
+err := common.SetCache(ctx, rdb, "accounts:123", accountData, 15*time.Minute)
+
+// Get from cache
+data, err := common.GetCache[AccountModel](ctx, rdb, "accounts:123")
+if err == redis.Nil {
+    // Cache miss
+}
+
+// Invalidate by pattern (supports wildcards)
+err := common.InvalidateCache(ctx, rdb, "accounts:*")  // Delete all account caches
+```
+
+### Cache Key Generation
+
+```go
+// BuildCacheKey(id int64, params interface{}, parts ...string) string
+cacheKey := common.BuildCacheKey(123, requestParams, "accounts", "statistics")
+// Result: "accountsstatistics:123:{json_of_params}"
+
+// For list queries without specific ID
+cacheKey := common.BuildCacheKey(0, listParams, "transactions:list")
+// Result: "transactions:list:0:{json_of_params}"
+```
+
+### Cache Invalidation in Mutations
+
+```go
+func (s TransactionService) Create(ctx context.Context, req models.CreateTransactionRequestModel) (models.CreateTransactionResponseModel, error) {
+    // 1. Create transaction
+    result, err := s.repo.Tsct.Create(ctx, req)
+    if err != nil {
+        return models.CreateTransactionResponseModel{}, err
+    }
+
+    // 2. Update account balances
+    // ... business logic ...
+
+    // 3. Invalidate affected caches
+    common.InvalidateCache(ctx, s.rdb, "transactions:*")
+    common.InvalidateCache(ctx, s.rdb, "accounts:*")
+    common.InvalidateCache(ctx, s.rdb, "account_statistics:*")
+    common.InvalidateCache(ctx, s.rdb, "summary:*")
+
+    return result, nil
+}
+```
+
+**Invalidation strategy:**
+- Use wildcard patterns to clear all related caches
+- Invalidate cross-entity caches (e.g., transaction affects accounts)
+- Trade-off: Aggressive invalidation vs. stale data risk
+
+### TTL Guidelines
+
+- **List queries:** 5-15 minutes (frequently changing)
+- **Single entities:** 10-30 minutes (moderate stability)
+- **Statistics/aggregations:** 5-10 minutes (computationally expensive)
+- **Summary data:** 5 minutes (dashboard views)
+
 ## Resource Pattern
 
-Resources define HTTP endpoints and request/response handling.
+Resources define HTTP endpoints and receive RootService aggregate (or specific service for simple resources).
 
-### Structure
+### Structure (Typical Pattern)
 
 ```go
 type {Resource}Resource struct {
-    service {Resource}Service
+    sevs services.RootService  // Receives entire service aggregate
 }
 
-func New{Resource}Resource(service {Resource}Service) {Resource}Resource {
-    return {Resource}Resource{service}
+func New{Resource}Resource(sevs services.RootService) {Resource}Resource {
+    return {Resource}Resource{sevs}
 }
 
 func (r {Resource}Resource) Routes(api huma.API) {
@@ -194,9 +401,28 @@ func (r {Resource}Resource) Routes(api huma.API) {
     huma.Delete(api, "DELETE /path/{id}", r.Delete)
 }
 
-func (r {Resource}Resource) List(ctx context.Context, params *ListRequest) (*ListResponse, error)
-func (r {Resource}Resource) Get(ctx context.Context, params *GetRequest) (*GetResponse, error)
-func (r {Resource}Resource) Post(ctx context.Context, req *PostRequest) (*PostResponse, error)
+// Access specific service via fields
+func (r {Resource}Resource) List(ctx context.Context, params *ListRequest) (*ListResponse, error) {
+    resp, err := r.sevs.{Resource}.List(ctx, params.Body)
+    if err != nil {
+        return nil, huma.Error500InternalServerError("Failed", err)
+    }
+    return &ListResponse{Body: resp}, nil
+}
+```
+
+### Structure (Simple Resources - Single Service)
+
+For resources that only need one service (e.g., AuthResource):
+
+```go
+type AuthResource struct {
+    svc services.AuthService  // Receives only needed service
+}
+
+func NewAuthResource(svc services.AuthService) AuthResource {
+    return AuthResource{svc}
+}
 ```
 
 ### Example: AccountResource
