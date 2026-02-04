@@ -311,29 +311,72 @@ func (sr AccountStatisticsRepository) GetCashFlowPulse(ctx context.Context, acco
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
-	// Get starting balance from account.amount first
-	var startingBalance int64
+	// Get current balance and calculate balance at period start
+	var currentBalance int64
 	balanceStart := time.Now()
-	err := sr.db.QueryRow(ctx, "SELECT amount FROM accounts WHERE id = $1", accountID).Scan(&startingBalance)
+	err := sr.db.QueryRow(ctx, "SELECT amount FROM accounts WHERE id = $1", accountID).Scan(&currentBalance)
 	if err != nil {
 		observability.RecordError("database")
 		return models.AccountStatisticsCashFlowPulseModel{}, huma.Error500InternalServerError("get account balance: %w", err)
 	}
 	observability.RecordQueryDuration("SELECT", "accounts", time.Since(balanceStart).Seconds())
 
+	// Calculate net flow from period start to now to determine starting balance
+	// Include both outgoing and incoming transfers
+	netFlowSQL := `
+		SELECT COALESCE(
+			SUM(
+				CASE
+					WHEN type = 'income' THEN amount
+					WHEN type = 'expense' THEN -amount
+					WHEN type = 'transfer' AND account_id = $1 THEN -amount
+					WHEN type = 'transfer' AND destination_account_id = $1 THEN amount
+					ELSE 0
+				END
+			), 0) as net_flow
+		FROM transactions
+		WHERE (account_id = $1 OR destination_account_id = $1)
+			AND date >= $2::timestamptz
+			AND deleted_at IS NULL
+	`
+
+	var netFlowFromStart int64
+	netFlowStart := time.Now()
+	err = sr.db.QueryRow(ctx, netFlowSQL, accountID, p.StartDate).Scan(&netFlowFromStart)
+	if err != nil {
+		observability.RecordError("database")
+		return models.AccountStatisticsCashFlowPulseModel{}, huma.Error500InternalServerError("query net flow: %w", err)
+	}
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(netFlowStart).Seconds())
+
+	// Calculate starting balance by subtracting transactions that happened after period start
+	startingBalance := currentBalance - netFlowFromStart
+
 	// Query to get daily transactions and calculate running balance
+	// Include both outgoing and incoming transfers
 	sql := `
-		WITH daily_transactions AS (
+		WITH transaction_impacts AS (
 			SELECT
 				DATE(t.date) as tx_date,
-				t.type,
-				SUM(t.amount) as daily_amount
+				CASE
+					WHEN t.type = 'income' THEN t.amount
+					WHEN t.type = 'expense' THEN -t.amount
+					WHEN t.type = 'transfer' AND t.account_id = $1 THEN -t.amount
+					WHEN t.type = 'transfer' AND t.destination_account_id = $1 THEN t.amount
+					ELSE 0
+				END as amount_impact
 			FROM transactions t
-			WHERE t.account_id = $1
+			WHERE (t.account_id = $1 OR t.destination_account_id = $1)
 				AND t.date >= $2::timestamptz
 				AND t.date <= $3::timestamptz
 				AND t.deleted_at IS NULL
-			GROUP BY DATE(t.date), t.type
+		),
+		daily_transactions AS (
+			SELECT
+				tx_date,
+				SUM(amount_impact) as daily_net
+			FROM transaction_impacts
+			GROUP BY tx_date
 		),
 		date_series AS (
 			SELECT DATE(d) as date_val
@@ -342,16 +385,9 @@ func (sr AccountStatisticsRepository) GetCashFlowPulse(ctx context.Context, acco
 		daily_flow AS (
 			SELECT
 				ds.date_val,
-				COALESCE(SUM(
-					CASE
-						WHEN dt.type = 'income' THEN dt.daily_amount
-						WHEN dt.type = 'expense' THEN -dt.daily_amount
-						ELSE 0
-					END
-				), 0) as net_flow
+				COALESCE(dt.daily_net, 0) as net_flow
 			FROM date_series ds
 			LEFT JOIN daily_transactions dt ON ds.date_val = dt.tx_date
-			GROUP BY ds.date_val
 		)
 		SELECT date_val, net_flow FROM daily_flow ORDER BY date_val
 	`
