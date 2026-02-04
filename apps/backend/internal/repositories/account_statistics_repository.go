@@ -115,24 +115,44 @@ func (sr AccountStatisticsRepository) GetMonthlyVelocity(ctx context.Context, ac
 	defer cancel()
 
 	sql := `
-		WITH monthly_data AS (
+		WITH transaction_impacts AS (
 			SELECT
 				TO_CHAR(date, 'YYYY-MM') as period,
-				COUNT(*) as total_count,
-				COUNT(*) FILTER (WHERE type = 'income') as income_count,
-				COUNT(*) FILTER (WHERE type = 'expense') as expense_count,
-				COUNT(*) FILTER (WHERE type = 'transfer') as transfer_count,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as income_amount,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as expense_amount,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'transfer'), 0) as transfer_amount,
-				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) - COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as net,
+				CASE
+					WHEN type = 'income' THEN 'income'
+					WHEN type = 'expense' THEN 'expense'
+					WHEN type = 'transfer' AND account_id = $1 THEN 'transfer_out'
+					WHEN type = 'transfer' AND destination_account_id = $1 THEN 'transfer_in'
+				END as impact_type,
+				amount,
+				CASE
+					WHEN type = 'income' THEN amount
+					WHEN type = 'expense' THEN -amount
+					WHEN type = 'transfer' AND account_id = $1 THEN -amount
+					WHEN type = 'transfer' AND destination_account_id = $1 THEN amount
+					ELSE 0
+				END as net_impact,
 				DATE_PART('days', (date_trunc('month', date) + INTERVAL '1 month' - INTERVAL '1 day')::date::timestamp) as days_in_month
 			FROM transactions
-			WHERE account_id = $1
+			WHERE (account_id = $1 OR destination_account_id = $1)
 				AND deleted_at IS NULL
 				AND date >= $2::timestamptz
 				AND date <= $3::timestamptz
-			GROUP BY period, days_in_month
+		),
+		monthly_data AS (
+			SELECT
+				period,
+				COUNT(*) as total_count,
+				COUNT(*) FILTER (WHERE impact_type = 'income') as income_count,
+				COUNT(*) FILTER (WHERE impact_type = 'expense') as expense_count,
+				COUNT(*) FILTER (WHERE impact_type IN ('transfer_out', 'transfer_in')) as transfer_count,
+				COALESCE(SUM(amount) FILTER (WHERE impact_type = 'income'), 0) as income_amount,
+				COALESCE(SUM(amount) FILTER (WHERE impact_type = 'expense'), 0) as expense_amount,
+				COALESCE(SUM(amount) FILTER (WHERE impact_type = 'transfer_out'), 0) - COALESCE(SUM(amount) FILTER (WHERE impact_type = 'transfer_in'), 0) as transfer_amount,
+				COALESCE(SUM(net_impact), 0) as net,
+				MAX(days_in_month) as days_in_month
+			FROM transaction_impacts
+			GROUP BY period
 		)
 		SELECT
 			period,
@@ -224,7 +244,7 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 				LAG(date) OVER (ORDER BY date) as prev_date,
 				EXTRACT(EPOCH FROM (date - LAG(date) OVER (ORDER BY date))) / 86400 as days_since_prev
 			FROM transactions
-			WHERE account_id = $1
+			WHERE (account_id = $1 OR destination_account_id = $1)
 				AND deleted_at IS NULL
 				AND date >= $2::timestamptz
 				AND date <= $3::timestamptz
@@ -252,7 +272,7 @@ func (sr AccountStatisticsRepository) GetTimeFrequencyHeatmap(ctx context.Contex
 		total_count AS (
 			SELECT COUNT(*) as total
 			FROM transactions
-			WHERE account_id = $1
+			WHERE (account_id = $1 OR destination_account_id = $1)
 				AND deleted_at IS NULL
 				AND date >= $2::timestamptz
 				AND date <= $3::timestamptz
