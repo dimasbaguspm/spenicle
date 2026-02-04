@@ -1,7 +1,7 @@
 import { useApiCategoryStatisticsQuery } from "@/hooks/use-api";
+import { useStatisticFilter, PERIOD_OPTIONS } from "@/hooks/use-filter-state";
 import { CategoryModel } from "@/types/schemas";
-import dayjs from "dayjs";
-import { FC, useState } from "react";
+import { FC } from "react";
 import { CategoryStatisticSpendingVelocity } from "@/ui/category-statistic-spending-velocity";
 import { CategoryStatisticAccountDistribution } from "@/ui/category-statistic-account-distribution";
 import { CategoryStatisticAverageTransactionSize } from "@/ui/category-statistic-average-transaction-size";
@@ -15,39 +15,9 @@ interface StatisticTabProps {
   data: CategoryModel;
 }
 
-type PeriodOption = "3months" | "6months" | "1year";
-
-const PERIOD_OPTIONS: { value: PeriodOption; label: string }[] = [
-  { value: "3months", label: "3M" },
-  { value: "6months", label: "6M" },
-  { value: "1year", label: "1Y" },
-];
-
-const getPeriodDates = (period: PeriodOption) => {
-  const endDate = dayjs().endOf("month");
-  let startDate: dayjs.Dayjs;
-
-  switch (period) {
-    case "3months":
-      startDate = dayjs().startOf("month").subtract(2, "month");
-      break;
-    case "6months":
-      startDate = dayjs().startOf("month").subtract(5, "month");
-      break;
-    case "1year":
-      startDate = dayjs().startOf("month").subtract(11, "month");
-      break;
-  }
-
-  return {
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString(),
-  };
-};
-
 export const StatisticTab: FC<StatisticTabProps> = ({ data }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>("3months");
-  const periodDates = getPeriodDates(selectedPeriod);
+  const filters = useStatisticFilter({ adapter: "state" });
+  const periodDates = filters.getPeriodDates();
 
   const [stats, error, { isPending }] = useApiCategoryStatisticsQuery(
     data.id,
@@ -69,8 +39,10 @@ export const StatisticTab: FC<StatisticTabProps> = ({ data }) => {
               <ChipSingleInput
                 size="sm"
                 name="period"
-                value={selectedPeriod}
-                onChange={(value) => setSelectedPeriod(value as PeriodOption)}
+                value={filters.appliedFilters.period || "3months"}
+                onChange={(value) =>
+                  filters.replaceSingle("period", value as string)
+                }
               >
                 {PERIOD_OPTIONS.map((option) => (
                   <ChipSingleInput.Option
@@ -84,15 +56,15 @@ export const StatisticTab: FC<StatisticTabProps> = ({ data }) => {
             </div>
 
             <div className="space-y-4">
-              <When condition={!!stats.spendingVelocity}>
-                <CategoryStatisticSpendingVelocity
-                  data={stats.spendingVelocity!}
+              <When condition={!!stats.budgetUtilization}>
+                <CategoryStatisticBudgetUtilization
+                  data={stats.budgetUtilization!}
                 />
               </When>
 
-              <When condition={!!stats.accountDistribution}>
-                <CategoryStatisticAccountDistribution
-                  data={stats.accountDistribution!}
+              <When condition={!!stats.spendingVelocity}>
+                <CategoryStatisticSpendingVelocity
+                  data={stats.spendingVelocity!}
                 />
               </When>
 
@@ -102,15 +74,15 @@ export const StatisticTab: FC<StatisticTabProps> = ({ data }) => {
                 />
               </When>
 
-              <When condition={!!stats.dayOfWeekPattern}>
-                <CategoryStatisticDayOfWeekPattern
-                  data={stats.dayOfWeekPattern!}
+              <When condition={!!stats.accountDistribution}>
+                <CategoryStatisticAccountDistribution
+                  data={stats.accountDistribution!}
                 />
               </When>
 
-              <When condition={!!stats.budgetUtilization}>
-                <CategoryStatisticBudgetUtilization
-                  data={stats.budgetUtilization!}
+              <When condition={!!stats.dayOfWeekPattern}>
+                <CategoryStatisticDayOfWeekPattern
+                  data={stats.dayOfWeekPattern!}
                 />
               </When>
             </div>

@@ -52,6 +52,15 @@ export const CategoryStatisticAverageTransactionSize: FC<
             {formatPrice(data.medianAmount, PriceFormat.CURRENCY_NO_DECIMALS)}
           </Text>
         </div>
+
+        <div>
+          <Text as="p" transform="uppercase" className="text-xs">
+            Total Transactions
+          </Text>
+          <Text as="p" className="mt-1 font-semibold">
+            {data.transactionCount}
+          </Text>
+        </div>
       </div>
     </div>
   );

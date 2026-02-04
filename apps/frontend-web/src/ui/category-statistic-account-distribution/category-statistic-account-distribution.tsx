@@ -7,6 +7,16 @@ interface CategoryStatisticAccountDistributionProps {
   data: CategoryStatisticAccountDistributionModel;
 }
 
+// Versaur design system color palette
+const ACCOUNT_COLORS = [
+  "#e07a5f", // primary
+  "#81b29a", // secondary
+  "#84a5c0", // tertiary
+  "#6db285", // success
+  "#e08a47", // warning
+  "#e06650", // danger
+];
+
 export const CategoryStatisticAccountDistribution: FC<
   CategoryStatisticAccountDistributionProps
 > = ({ data }) => {
@@ -44,29 +54,38 @@ export const CategoryStatisticAccountDistribution: FC<
       </div>
 
       {displayAccounts.length > 0 ? (
-        <div className="space-y-3">
-          {displayAccounts.map((acc) => (
-            <div key={acc.accountId}>
-              <div className="flex justify-between mb-1">
-                <Text as="p" className="text-xs truncate">
-                  {acc.accountName}
-                </Text>
-                <Text as="strong" className="text-xs">
-                  {acc.percentage.toFixed(0)}%
-                </Text>
-              </div>
-              <div
-                className="h-1.5 w-full rounded-full"
-                style={{ backgroundColor: "var(--color-border)" }}
-              >
+        <div className="space-y-2">
+          {displayAccounts.map((acc, index) => (
+            <div
+              key={acc.accountId}
+              className="flex items-center justify-between gap-3"
+            >
+              {/* Account Indicator & Name */}
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div
-                  className="h-full rounded-full transition-all"
+                  className="h-2 w-2 rounded-full flex-shrink-0"
                   style={{
-                    width: `${acc.percentage}%`,
-                    backgroundColor: "var(--color-primary)",
+                    backgroundColor:
+                      index < ACCOUNT_COLORS.length
+                        ? ACCOUNT_COLORS[index]
+                        : "#a0aec0", // neutral gray for extras
                   }}
                 />
+                <Text
+                  as="p"
+                  className="text-sm text-[var(--color-foreground-bold)] truncate"
+                >
+                  {acc.accountName}
+                </Text>
               </div>
+
+              {/* Percentage */}
+              <Text
+                as="p"
+                className="font-semibold text-sm text-[var(--color-foreground-bold)] flex-shrink-0"
+              >
+                {acc.percentage.toFixed(0)}%
+              </Text>
             </div>
           ))}
         </div>

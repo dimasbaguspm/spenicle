@@ -29,7 +29,7 @@ func calculatePercentage(part, total int64) float64 {
 	return (float64(part) / float64(total)) * 100.0
 }
 
-// GetSpendingVelocity returns spending trend over the period (line chart data)
+// GetSpendingVelocity returns spending trend over the period (line chart data - daily data points)
 func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, categoryID int64, p models.CategoryStatisticsSearchModel) (models.CategoryStatisticSpendingVelocityModel, error) {
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
@@ -37,7 +37,7 @@ func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, 
 	sql := `
 		WITH transaction_impacts AS (
 			SELECT
-				TO_CHAR(date, 'YYYY-MM') as period,
+				date::date as period,
 				type as transaction_type,
 				amount,
 				CASE
@@ -51,7 +51,7 @@ func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, 
 				AND date >= $2::timestamptz
 				AND date <= $3::timestamptz
 		),
-		monthly_data AS (
+		daily_data AS (
 			SELECT
 				period,
 				COUNT(*) as total_count,
@@ -71,8 +71,8 @@ func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, 
 			income_amount,
 			expense_amount,
 			net
-		FROM monthly_data
-		ORDER BY period DESC
+		FROM daily_data
+		ORDER BY period ASC
 	`
 
 	queryStart := time.Now()
@@ -86,7 +86,7 @@ func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, 
 
 	var data []models.CategoryStatisticSpendingVelocityDataPoint
 	for rows.Next() {
-		var period string
+		var period time.Time
 		var totalCount, incomeCount, expenseCount, incomeAmount, expenseAmount, net int64
 
 		if err := rows.Scan(&period, &totalCount, &incomeCount, &expenseCount, &incomeAmount, &expenseAmount, &net); err != nil {
@@ -95,7 +95,7 @@ func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, 
 
 		totalVolume := incomeAmount + expenseAmount
 		data = append(data, models.CategoryStatisticSpendingVelocityDataPoint{
-			Month:            period,
+			Month:            period.Format("2006-01-02"),
 			Amount:           expenseAmount,
 			TotalCount:       int(totalCount),
 			IncomeCount:      int(incomeCount),
@@ -116,8 +116,8 @@ func (sr CategoryStatisticsRepository) GetSpendingVelocity(ctx context.Context, 
 
 	trendDirection := "stable"
 	if len(data) >= 2 {
-		recent := data[0].ExpenseAmount
-		older := data[len(data)-1].ExpenseAmount
+		recent := data[len(data)-1].ExpenseAmount
+		older := data[0].ExpenseAmount
 		if recent > older*110/100 {
 			trendDirection = "increasing"
 		} else if recent < older*90/100 {

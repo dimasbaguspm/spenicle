@@ -32,10 +32,10 @@ export const CategoryStatisticBudgetUtilization: FC<
           {/* Primary Budget */}
           <div className="space-y-2 mb-3">
             <div className="flex items-baseline justify-between">
-              <Text as="p" className="font-medium">
+              <Text as="p" className="text-sm font-medium">
                 {primaryBudget.name}
               </Text>
-              <Text as="strong" className="text-xs">
+              <Text as="strong" className="text-xs font-semibold">
                 {Math.round(primaryBudget.utilization)}%
               </Text>
             </div>
@@ -52,7 +52,7 @@ export const CategoryStatisticBudgetUtilization: FC<
               />
             </div>
             <div className="flex items-center justify-between text-xs">
-              <Text as="p">
+              <Text as="p" className="text-xs">
                 {formatPrice(primaryBudget.spent, PriceFormat.COMPACT_CURRENCY)}{" "}
                 /{" "}
                 {formatPrice(primaryBudget.limit, PriceFormat.COMPACT_CURRENCY)}
@@ -76,7 +76,7 @@ export const CategoryStatisticBudgetUtilization: FC<
                     className="flex items-center justify-between"
                   >
                     <div className="min-w-0 flex-1">
-                      <Text as="p" className="truncate font-medium text-sm">
+                      <Text as="p" className="truncate text-sm font-medium">
                         {budget.name}
                       </Text>
                       <Text as="p" className="text-xs">

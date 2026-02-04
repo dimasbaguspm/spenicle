@@ -1,7 +1,7 @@
 import { useApiAccountStatisticsQuery } from "@/hooks/use-api";
+import { useStatisticFilter, PERIOD_OPTIONS } from "@/hooks/use-filter-state";
 import { AccountModel } from "@/types/schemas";
-import dayjs from "dayjs";
-import { FC, useState } from "react";
+import { FC } from "react";
 import { AccountsStatisticBudgetHealth } from "@/ui/accounts-statistic-budget-health";
 import { AccountsStatisticBurnRate } from "@/ui/accounts-statistic-burn-rate";
 import { AccountsStatisticCashFlowPulse } from "@/ui/accounts-statistic-cash-flow-pulse";
@@ -16,39 +16,9 @@ interface StatisticTabProps {
   data: AccountModel;
 }
 
-type PeriodOption = "3months" | "6months" | "1year";
-
-const PERIOD_OPTIONS: { value: PeriodOption; label: string }[] = [
-  { value: "3months", label: "Last 3 Months" },
-  { value: "6months", label: "Last Semester" },
-  { value: "1year", label: "Last Year" },
-];
-
-const getPeriodDates = (period: PeriodOption) => {
-  const endDate = dayjs().endOf("month");
-  let startDate: dayjs.Dayjs;
-
-  switch (period) {
-    case "3months":
-      startDate = dayjs().startOf("month").subtract(2, "month");
-      break;
-    case "6months":
-      startDate = dayjs().startOf("month").subtract(5, "month");
-      break;
-    case "1year":
-      startDate = dayjs().startOf("month").subtract(11, "month");
-      break;
-  }
-
-  return {
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString(),
-  };
-};
-
 export const StatisticTab: FC<StatisticTabProps> = ({ data }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>("3months");
-  const periodDates = getPeriodDates(selectedPeriod);
+  const filters = useStatisticFilter({ adapter: "state" });
+  const periodDates = filters.getPeriodDates();
 
   const [stats, error, { isPending }] = useApiAccountStatisticsQuery(
     data.id,
@@ -77,8 +47,10 @@ export const StatisticTab: FC<StatisticTabProps> = ({ data }) => {
               <ChipSingleInput
                 size="md"
                 name="period"
-                value={selectedPeriod}
-                onChange={(value) => setSelectedPeriod(value as PeriodOption)}
+                value={filters.appliedFilters.period || "3months"}
+                onChange={(value) =>
+                  filters.replaceSingle("period", value as string)
+                }
               >
                 {PERIOD_OPTIONS.map((option) => (
                   <ChipSingleInput.Option
