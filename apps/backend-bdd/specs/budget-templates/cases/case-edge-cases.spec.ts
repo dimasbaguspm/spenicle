@@ -28,6 +28,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       name: "Past End Date Test",
+      active: true,
     });
     expect(res.status).toBe(200); // API allows end date in past
 
@@ -63,12 +64,15 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       name: "Past Start Date Test",
+      active: true,
     });
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(res.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(res.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -96,13 +100,16 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       recurrence: "yearly",
       startDate: new Date().toISOString(),
       name: "Large Amount Test",
+      active: true,
     });
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     expect(res.data!.amountLimit).toBe(999999999999);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(res.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(res.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -133,6 +140,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       startDate: new Date().toISOString(),
       note: longNote,
       name: "Long Note Test",
+      active: true,
     });
     expect(res.status).toBe(422); // Validation error for too long note
     // No cleanup needed since creation failed
@@ -161,13 +169,16 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       recurrence: "none",
       startDate: new Date().toISOString(),
       name: "None Recurrence Test",
+      active: true,
     });
     expect(res.status).toBe(200);
     expect(res.data).toBeDefined();
     expect(res.data!.recurrence).toBe("none");
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(res.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(res.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -196,6 +207,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Update Recurrence Test",
+      active: true,
     });
 
     // Update recurrence
@@ -209,7 +221,9 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     expect(updated.data!.recurrence).toBe("yearly");
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -238,6 +252,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Add End Date Test",
+      active: true,
     });
 
     // Update to add endDate
@@ -252,7 +267,9 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     expect(updated.data!.endDate).toBeDefined();
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -283,6 +300,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       startDate: new Date().toISOString(),
       endDate: endDate.toISOString(),
       name: "Remove End Date Test",
+      active: true,
     });
 
     // Update to remove endDate
@@ -297,7 +315,9 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     expect(updated.data!.endDate).toBeDefined();
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -326,6 +346,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Duplicate Template 1",
+      active: true,
     });
 
     // Create duplicate template (same data)
@@ -335,14 +356,19 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Duplicate Template 2",
+      active: true,
     });
 
     expect(template2.status).toBe(200);
     expect(template2.data!.id).not.toBe(template1.data!.id);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template2.data!.id as number);
-    await budgetTemplateAPI.deleteBudgetTemplate(template1.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template2.data!.id as number, {
+      active: false,
+    });
+    await budgetTemplateAPI.updateBudgetTemplate(template1.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -355,7 +381,9 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     // Clean up any existing templates first
     const allTemplates = await budgetTemplateAPI.getBudgetTemplates();
     for (const template of allTemplates.data!.items || []) {
-      await budgetTemplateAPI.deleteBudgetTemplate(template.id as number);
+      await budgetTemplateAPI.updateBudgetTemplate(template.id as number, {
+        active: false,
+      });
     }
     // Create dependencies
     const account = await accountAPI.createAccount({
@@ -378,6 +406,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
         recurrence: "monthly",
         startDate: new Date().toISOString(),
         name: `Pagination Template ${i + 1}`,
+        active: true,
       });
       templates.push(template.data!.id);
     }
@@ -399,7 +428,9 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
 
     // Cleanup
     for (const id of templates) {
-      await budgetTemplateAPI.deleteBudgetTemplate(id as number);
+      await budgetTemplateAPI.updateBudgetTemplate(id as number, {
+        active: false,
+      });
     }
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
@@ -428,12 +459,15 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       recurrence: "none",
       startDate: new Date().toISOString(),
       name: "None NextRun Test",
+      active: true,
     });
     expect(res.status).toBe(200);
     expect(res.data!.nextRunAt).toBeUndefined();
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(res.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(res.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -462,12 +496,15 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       recurrence: "monthly",
       startDate: startDate,
       name: "NextRun StartDate Test",
+      active: true,
     });
     expect(res.status).toBe(200);
     expect(res.data!.nextRunAt).toBe(startDate);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(res.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(res.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });

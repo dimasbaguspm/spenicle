@@ -25,12 +25,15 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Income Category Test",
+      active: true,
     });
     expect(res.status).toBe(200);
     expect(res.data!.accountId).toBe(account.data!.id);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(res.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(res.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -59,12 +62,15 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       recurrence: "yearly",
       startDate: new Date().toISOString(),
       name: "Asset Account Test",
+      active: true,
     });
     expect(res.status).toBe(200);
     expect(res.data!.accountId).toBe(account.data!.id);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(res.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(res.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -94,6 +100,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       startDate: new Date().toISOString(),
       note: "Test template for relations",
       name: "Relations Test Template",
+      active: true,
     });
 
     // Get template and verify relations
@@ -106,7 +113,9 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     expect(retrieved.data!.note).toBe("Test template for relations");
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -135,6 +144,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Delete Account Test",
+      active: true,
     });
 
     // Try to delete account - should succeed (no foreign key constraints)
@@ -143,12 +153,14 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     );
     expect(deleteResult.status).toBe(204);
 
-    // Cleanup - delete template first, then account
+    // Cleanup - deactivate template first, then account
     const templates = await budgetTemplateAPI.getBudgetTemplates({
       accountId: [account.data!.id as number],
     });
     for (const template of templates.data!.items!) {
-      await budgetTemplateAPI.deleteBudgetTemplate(template.id as number);
+      await budgetTemplateAPI.updateBudgetTemplate(template.id as number, {
+        active: false,
+      });
     }
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
@@ -178,6 +190,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Delete Category Test",
+      active: true,
     });
 
     // Try to delete category - should succeed (no foreign key constraints)
@@ -186,12 +199,14 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     );
     expect(deleteResult.status).toBe(204);
 
-    // Cleanup - delete template first, then category
+    // Cleanup - deactivate template first, then category
     const templates = await budgetTemplateAPI.getBudgetTemplates({
       categoryId: [category.data!.id as number],
     });
     for (const template of templates.data!.items!) {
-      await budgetTemplateAPI.deleteBudgetTemplate(template.id as number);
+      await budgetTemplateAPI.updateBudgetTemplate(template.id as number, {
+        active: false,
+      });
     }
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
@@ -226,6 +241,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Update Account Test",
+      active: true,
     });
 
     // Update to account2 - should fail (accountId updates not allowed)
@@ -238,7 +254,9 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     expect(updated.status).toBe(422); // Validation failed - accountId not allowed in updates
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account2.data!.id as number);
     await accountAPI.deleteAccount(account1.data!.id as number);
@@ -274,6 +292,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Update Category Test",
+      active: true,
     });
 
     // Update to category2 - should fail (categoryId updates not allowed)
@@ -286,7 +305,9 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     expect(updated.status).toBe(422); // Validation failed - categoryId not allowed in updates
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category2.data!.id as number);
     await categoryAPI.deleteCategory(category1.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
@@ -316,6 +337,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Invalid Update Test",
+      active: true,
     });
 
     // Try to update to non-existent account
@@ -328,7 +350,9 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     expect(updated.status).toBeGreaterThanOrEqual(400);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -357,6 +381,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Invalid Category Update Test",
+      active: true,
     });
 
     // Try to update to non-existent category
@@ -369,7 +394,9 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     expect(updated.status).toBeGreaterThanOrEqual(400);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });

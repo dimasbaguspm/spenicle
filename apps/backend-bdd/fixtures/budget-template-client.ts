@@ -31,33 +31,26 @@ export class BudgetTemplateAPIClient extends BaseAPIClient {
   async getBudgetTemplates(
     params?: BudgetTemplateSearchParams,
   ): Promise<APIResponse<PaginatedBudgetTemplatesResponseModel>> {
-    return this.get<PaginatedBudgetTemplatesResponseModel>(
-      "/budgets/templates",
-      params,
-    );
+    return this.get<PaginatedBudgetTemplatesResponseModel>("/budgets", params);
   }
 
   async getBudgetTemplate(
     id: number,
   ): Promise<APIResponse<BudgetTemplateModel>> {
-    return this.get<BudgetTemplateModel>(`/budgets/templates/${id}`);
+    return this.get<BudgetTemplateModel>(`/budgets/${id}`);
   }
 
   async createBudgetTemplate(
     data: CreateBudgetTemplateRequestModel,
   ): Promise<APIResponse<BudgetTemplateModel>> {
-    return this.post<BudgetTemplateModel>("/budgets/templates", data);
+    return this.post<BudgetTemplateModel>("/budgets", data);
   }
 
   async updateBudgetTemplate(
     id: number,
     data: UpdateBudgetTemplateRequestModel,
   ): Promise<APIResponse<BudgetTemplateModel>> {
-    return this.patch<BudgetTemplateModel>(`/budgets/templates/${id}`, data);
-  }
-
-  async deleteBudgetTemplate(id: number): Promise<APIResponse<void>> {
-    return this.delete<void>(`/budgets/templates/${id}`);
+    return this.patch<BudgetTemplateModel>(`/budgets/${id}`, data);
   }
 
   async getBudgetTemplateRelatedBudgets(
@@ -65,7 +58,7 @@ export class BudgetTemplateAPIClient extends BaseAPIClient {
     params?: BudgetTemplateRelatedBudgetsSearchParams,
   ): Promise<APIResponse<PaginatedBudgetsResponseModel>> {
     return this.get<PaginatedBudgetsResponseModel>(
-      `/budgets/templates/${templateId}/relations`,
+      `/budgets/${templateId}/list`,
       params,
     );
   }

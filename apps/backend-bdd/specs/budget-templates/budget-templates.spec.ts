@@ -27,6 +27,7 @@ test.describe("Budget Templates - Common CRUD", () => {
       startDate: startDate,
       name: "Monthly Budget Template",
       note: "create test",
+      active: true,
     });
 
     expect(res.status).toBe(200);
@@ -35,8 +36,8 @@ test.describe("Budget Templates - Common CRUD", () => {
     expect(res.data!.nextRunAt).toBe(startDate); // Initially set to startDate
     const id = res.data!.id as number;
 
-    // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(id);
+    // Cleanup - deactivate instead of delete
+    await budgetTemplateAPI.updateBudgetTemplate(id, { active: false });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -67,6 +68,7 @@ test.describe("Budget Templates - Common CRUD", () => {
       startDate: new Date().toISOString(),
       name: "Weekly Budget Template",
       note: "list test",
+      active: true,
     });
     const id = created.data!.id as number;
 
@@ -76,8 +78,8 @@ test.describe("Budget Templates - Common CRUD", () => {
     expect(Array.isArray(items)).toBe(true);
     expect(items.length).toBeGreaterThanOrEqual(1);
 
-    // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(id);
+    // Cleanup - deactivate instead of delete
+    await budgetTemplateAPI.updateBudgetTemplate(id, { active: false });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -108,6 +110,7 @@ test.describe("Budget Templates - Common CRUD", () => {
       startDate: new Date().toISOString(),
       name: "Yearly Budget Template",
       note: "get test",
+      active: true,
     });
     const id = created.data!.id as number;
 
@@ -117,8 +120,8 @@ test.describe("Budget Templates - Common CRUD", () => {
     expect(getRes.data!.amountLimit).toBe(75000);
     expect(getRes.data!.recurrence).toBe("yearly");
 
-    // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(id);
+    // Cleanup - deactivate instead of delete
+    await budgetTemplateAPI.updateBudgetTemplate(id, { active: false });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -149,6 +152,7 @@ test.describe("Budget Templates - Common CRUD", () => {
       startDate: new Date().toISOString(),
       name: "Monthly Update Test Template",
       note: "update test",
+      active: true,
     });
     const id = created.data!.id as number;
 
@@ -162,50 +166,8 @@ test.describe("Budget Templates - Common CRUD", () => {
     expect(updateRes.data!.amountLimit).toBe(newAmount);
     expect(updateRes.data!.note).toBe("updated note");
 
-    // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(id);
-    await categoryAPI.deleteCategory(category.data!.id as number);
-    await accountAPI.deleteAccount(account.data!.id as number);
-  });
-
-  test("DELETE /budgets/templates/:id - delete budget template", async ({
-    budgetTemplateAPI,
-    accountAPI,
-    categoryAPI,
-  }) => {
-    // Create dependencies
-    const account = await accountAPI.createAccount({
-      name: `bt-delete-account-${Date.now()}`,
-      note: "test account",
-      type: "expense",
-    });
-    const category = await categoryAPI.createCategory({
-      name: `bt-delete-category-${Date.now()}`,
-      note: "test category",
-      type: "expense",
-    });
-
-    // Create a budget template
-    const created = await budgetTemplateAPI.createBudgetTemplate({
-      accountId: account.data!.id as number,
-      // categoryId: category.data!.id as number, // Removed - cannot have both
-      amountLimit: 200000, // $2000.00
-      recurrence: "monthly",
-      startDate: new Date().toISOString(),
-      name: "Monthly Delete Test Template",
-      note: "delete test",
-    });
-    const templateId = created.data!.id as number;
-
-    // Delete the template
-    const delRes = await budgetTemplateAPI.deleteBudgetTemplate(templateId);
-    expect([200, 204]).toContain(delRes.status);
-
-    // Verify it's gone
-    const afterGet = await budgetTemplateAPI.getBudgetTemplate(templateId);
-    expect(afterGet.status).toBe(404);
-
-    // Cleanup dependencies
+    // Cleanup - deactivate instead of delete
+    await budgetTemplateAPI.updateBudgetTemplate(id, { active: false });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });

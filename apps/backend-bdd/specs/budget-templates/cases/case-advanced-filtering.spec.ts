@@ -5,7 +5,9 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     // Clean up any existing templates to ensure test isolation
     const allTemplates = await budgetTemplateAPI.getBudgetTemplates();
     for (const template of allTemplates.data!.items || []) {
-      await budgetTemplateAPI.deleteBudgetTemplate(template.id as number);
+      await budgetTemplateAPI.updateBudgetTemplate(template.id as number, {
+        active: false,
+      });
     }
   });
   test("GET /budgets/templates - filter by accountId", async ({
@@ -37,6 +39,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Monthly Filter Template 1",
+      active: true,
     });
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account2.data!.id as number,
@@ -44,6 +47,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "weekly",
       startDate: new Date().toISOString(),
       name: "Weekly Filter Template 2",
+      active: true,
     });
 
     // Filter by account1
@@ -63,8 +67,12 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     expect(filtered2.data!.items![0].id).toBe(template2.data!.id);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template2.data!.id as number);
-    await budgetTemplateAPI.deleteBudgetTemplate(template1.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template2.data!.id as number, {
+      active: false,
+    });
+    await budgetTemplateAPI.updateBudgetTemplate(template1.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account2.data!.id as number);
     await accountAPI.deleteAccount(account1.data!.id as number);
@@ -100,6 +108,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Monthly Category Filter Template 1",
+      active: true,
     });
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
       // accountId: account.data!.id as number, // Removed for category filtering test
@@ -108,6 +117,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "weekly",
       startDate: new Date().toISOString(),
       name: "Weekly Category Filter Template 2",
+      active: true,
     });
 
     // Filter by category1
@@ -127,8 +137,12 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     expect(filtered2.data!.items![0].id).toBe(template2.data!.id);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template2.data!.id as number);
-    await budgetTemplateAPI.deleteBudgetTemplate(template1.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template2.data!.id as number, {
+      active: false,
+    });
+    await budgetTemplateAPI.updateBudgetTemplate(template1.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category2.data!.id as number);
     await categoryAPI.deleteCategory(category1.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
@@ -158,6 +172,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Monthly Recurrence Template",
+      active: true,
     });
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
@@ -165,6 +180,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "weekly",
       startDate: new Date().toISOString(),
       name: "Weekly Recurrence Template",
+      active: true,
     });
     const template3 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
@@ -172,6 +188,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "yearly",
       startDate: new Date().toISOString(),
       name: "Yearly Recurrence Template",
+      active: true,
     });
 
     // Filter by monthly
@@ -199,9 +216,15 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     expect(filteredYearly.data!.items![0].id).toBe(template3.data!.id);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template3.data!.id as number);
-    await budgetTemplateAPI.deleteBudgetTemplate(template2.data!.id as number);
-    await budgetTemplateAPI.deleteBudgetTemplate(template1.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template3.data!.id as number, {
+      active: false,
+    });
+    await budgetTemplateAPI.updateBudgetTemplate(template2.data!.id as number, {
+      active: false,
+    });
+    await budgetTemplateAPI.updateBudgetTemplate(template1.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
@@ -235,6 +258,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Combined Filter Template 1",
+      active: true,
     });
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account1.data!.id as number,
@@ -242,6 +266,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "weekly",
       startDate: new Date().toISOString(),
       name: "Combined Filter Template 2",
+      active: true,
     });
     const template3 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account2.data!.id as number,
@@ -249,6 +274,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Combined Filter Template 3",
+      active: true,
     });
 
     // Combined filter: account1 + monthly recurrence
@@ -270,9 +296,15 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     expect(filtered2.data!.items![0].id).toBe(template2.data!.id);
 
     // Cleanup
-    await budgetTemplateAPI.deleteBudgetTemplate(template3.data!.id as number);
-    await budgetTemplateAPI.deleteBudgetTemplate(template2.data!.id as number);
-    await budgetTemplateAPI.deleteBudgetTemplate(template1.data!.id as number);
+    await budgetTemplateAPI.updateBudgetTemplate(template3.data!.id as number, {
+      active: false,
+    });
+    await budgetTemplateAPI.updateBudgetTemplate(template2.data!.id as number, {
+      active: false,
+    });
+    await budgetTemplateAPI.updateBudgetTemplate(template1.data!.id as number, {
+      active: false,
+    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account2.data!.id as number);
     await accountAPI.deleteAccount(account1.data!.id as number);

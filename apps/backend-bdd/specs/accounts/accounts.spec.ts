@@ -34,59 +34,6 @@ test.describe("Accounts - Common CRUD", () => {
     await accountAPI.deleteAccount(id);
   });
 
-  test("GET /accounts - list accounts includes embedded budgets", async ({
-    accountAPI,
-    budgetAPI,
-  }) => {
-    const accountName = `e2e-account-list-budget-${Date.now()}`;
-    const accountRes = await accountAPI.createAccount({
-      name: accountName,
-      note: "list with budget test",
-      type: "expense",
-    });
-    const accountId = accountRes.data!.id as number;
-
-    // Create active budget
-    const today = new Date();
-    const startOfMonth = new Date(
-      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
-    );
-    const endOfMonth = new Date(
-      Date.UTC(
-        today.getUTCFullYear(),
-        today.getUTCMonth() + 1,
-        0,
-        23,
-        59,
-        59,
-        999,
-      ),
-    );
-
-    const budgetRes = await budgetAPI.createBudget({
-      accountId,
-      name: "List Budget",
-      periodStart: startOfMonth.toISOString(),
-      periodEnd: endOfMonth.toISOString(),
-      amountLimit: 500,
-    });
-    const budgetId = budgetRes.data!.id;
-
-    const listRes = await accountAPI.getAccounts();
-    expect(listRes.status).toBe(200);
-    const items = listRes.data!.items || [];
-    const accountWithBudget = items.find((item) => item.id === accountId);
-    expect(accountWithBudget).toBeDefined();
-    expect(accountWithBudget!.budget).toBeDefined();
-    expect(accountWithBudget!.budget!.id).toBe(budgetId);
-    expect(accountWithBudget!.budget!.accountId).toBe(accountId);
-    expect(accountWithBudget!.budget!.categoryId).toBeUndefined();
-
-    // Clean up
-    await budgetAPI.deleteBudget(budgetId);
-    await accountAPI.deleteAccount(accountId);
-  });
-
   test("GET /accounts/:id - get account by id", async ({ accountAPI }) => {
     const name = `e2e-account-get-${Date.now()}`;
     const created = await accountAPI.createAccount({
@@ -135,65 +82,5 @@ test.describe("Accounts - Common CRUD", () => {
 
     const afterGet = await accountAPI.getAccount(created.data?.id as number);
     expect(afterGet.status).not.toBe(200);
-  });
-
-  test("GET /accounts/:id - account with active budget includes embedded budget", async ({
-    accountAPI,
-    budgetAPI,
-  }) => {
-    const name = `e2e-account-embedded-budget-${Date.now()}`;
-    const accountRes = await accountAPI.createAccount({
-      name,
-      note: "embedded budget test",
-      type: "expense",
-    });
-    expect(accountRes.status).toBe(200);
-    const accountId = accountRes.data!.id as number;
-
-    // Initially, no embedded budget
-    const initialGet = await accountAPI.getAccount(accountId);
-    expect(initialGet.status).toBe(200);
-    expect(initialGet.data!.budget).toBeUndefined();
-
-    // Create an active budget for today
-    const today = new Date();
-    const startOfMonth = new Date(
-      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
-    );
-    const endOfMonth = new Date(
-      Date.UTC(
-        today.getUTCFullYear(),
-        today.getUTCMonth() + 1,
-        0,
-        23,
-        59,
-        59,
-        999,
-      ),
-    );
-
-    const budgetRes = await budgetAPI.createBudget({
-      accountId,
-      name: "Active Budget",
-      periodStart: startOfMonth.toISOString(),
-      periodEnd: endOfMonth.toISOString(),
-      amountLimit: 1000,
-    });
-    expect(budgetRes.status).toBe(200);
-    const budgetId = budgetRes.data!.id;
-
-    // Now get account again, should have embedded budget
-    const withBudgetGet = await accountAPI.getAccount(accountId);
-    expect(withBudgetGet.status).toBe(200);
-    expect(withBudgetGet.data!.budget).toBeDefined();
-    expect(withBudgetGet.data!.budget!.id).toBe(budgetId);
-    expect(withBudgetGet.data!.budget!.name).toBe("Active Budget");
-    expect(withBudgetGet.data!.budget!.amountLimit).toBe(1000);
-    expect(withBudgetGet.data!.budget!.accountId).toBe(accountId);
-    expect(withBudgetGet.data!.budget!.categoryId).toBeUndefined();
-
-    // Clean up
-    await budgetAPI.deleteBudget(budgetId);
-    await accountAPI.deleteAccount(accountId);
   });
 });

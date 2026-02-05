@@ -152,6 +152,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Zero Amount Test",
+      active: true,
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -183,6 +184,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Negative Amount Test",
+      active: true,
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -208,6 +210,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Non-existent Account Test",
+      active: true,
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -232,6 +235,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
       recurrence: "monthly",
       startDate: new Date().toISOString(),
       name: "Non-existent Category Test",
+      active: true,
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
 
@@ -266,6 +270,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       name: "End Before Start Test",
+      active: true,
     });
     expect(res.status).toBe(200); // API allows end date before start date
 

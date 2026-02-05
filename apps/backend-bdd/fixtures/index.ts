@@ -7,7 +7,6 @@ import { CategoryStatisticsAPIClient } from "./category-statistics-client";
 import { TransactionAPIClient } from "./transaction-client";
 import { TagAPIClient } from "./tag-client";
 import { SummaryAPIClient } from "./summary-client";
-import { BudgetAPIClient } from "./budget-client";
 import { BudgetTemplateAPIClient } from "./budget-template-client";
 import { TransactionTemplateAPIClient } from "./transaction-template-client";
 import type { TestContext } from "../types/common";
@@ -27,7 +26,6 @@ type APIFixtures = {
   transactionAPI: TransactionAPIClient;
   tagAPI: TagAPIClient;
   summaryAPI: SummaryAPIClient;
-  budgetAPI: BudgetAPIClient;
   budgetTemplateAPI: BudgetTemplateAPIClient;
   transactionTemplateAPI: TransactionTemplateAPIClient;
   authenticatedContext: TestContext;
@@ -192,14 +190,6 @@ export const test = base.extend<APIFixtures>({
    */
   summaryAPI: async ({ request, testContext }, use) => {
     const client = new SummaryAPIClient(request, testContext);
-    await use(client);
-  },
-
-  /**
-   * Budget API client
-   */
-  budgetAPI: async ({ request, testContext }, use) => {
-    const client = new BudgetAPIClient(request, testContext);
     await use(client);
   },
 

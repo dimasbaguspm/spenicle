@@ -686,6 +686,9 @@ components:
           description: Account ID to filter transactions
           format: int64
           type: integer
+        active:
+          description: Whether this template is active and generating budgets
+          type: boolean
         amountLimit:
           description: Budget limit amount in cents
           format: int64
@@ -749,6 +752,7 @@ components:
         - recurrence
         - startDate
         - name
+        - active
         - createdAt
       type: object
     BudgetTemplatesPagedModel:
@@ -1396,51 +1400,6 @@ components:
         - type
         - note
       type: object
-    CreateBudgetModel:
-      additionalProperties: false
-      properties:
-        accountId:
-          description: Account ID to filter transactions
-          format: int64
-          minimum: 1
-          type: integer
-        amountLimit:
-          description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        categoryId:
-          description: Category ID to filter transactions
-          format: int64
-          minimum: 1
-          type: integer
-        name:
-          description: Budget name
-          maxLength: 100
-          type: string
-        note:
-          description: Optional note for the budget
-          maxLength: 500
-          type: string
-        periodEnd:
-          description: Budget period end date
-          format: date-time
-          type: string
-        periodStart:
-          description: Budget period start date
-          format: date-time
-          type: string
-        templateId:
-          description: Budget template ID if generated from template
-          format: int64
-          minimum: 1
-          type: integer
-      required:
-        - periodStart
-        - periodEnd
-        - amountLimit
-        - name
-      type: object
     CreateBudgetTemplateModel:
       additionalProperties: false
       properties:
@@ -1449,6 +1408,10 @@ components:
           format: int64
           minimum: 1
           type: integer
+        active:
+          default: true
+          description: Whether this template is active and generating budgets
+          type: boolean
         amountLimit:
           description: Budget limit amount in cents
           format: int64
@@ -1488,6 +1451,7 @@ components:
         - recurrence
         - startDate
         - name
+        - active
       type: object
     CreateCategoryModel:
       additionalProperties: false
@@ -2674,49 +2638,12 @@ components:
           minLength: 1
           type: string
       type: object
-    UpdateBudgetModel:
-      additionalProperties: false
-      properties:
-        amountLimit:
-          description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        name:
-          description: Budget name
-          maxLength: 100
-          type: string
-        note:
-          description: Optional note for the budget
-          maxLength: 500
-          type: string
-        periodEnd:
-          description: Budget period end date
-          format: date-time
-          type: string
-        periodStart:
-          description: Budget period start date
-          format: date-time
-          type: string
-        status:
-          description: Budget status
-          enum:
-            - active
-            - inactive
-          type: string
-      type: object
     UpdateBudgetTemplateModel:
       additionalProperties: false
       properties:
-        amountLimit:
-          description: Budget limit amount in cents
-          format: int64
-          minimum: 1
-          type: integer
-        endDate:
-          description: Optional end date for recurrence
-          format: date-time
-          type: string
+        active:
+          description: Whether this template is active and generating budgets
+          type: boolean
         name:
           description: Template name
           maxLength: 100
@@ -2724,18 +2651,6 @@ components:
         note:
           description: Optional note for the template
           maxLength: 500
-          type: string
-        recurrence:
-          description: Recurrence pattern
-          enum:
-            - none
-            - weekly
-            - monthly
-            - yearly
-          type: string
-        startDate:
-          description: Start date for recurrence
-          format: date-time
           type: string
       type: object
     UpdateCategoryModel:
@@ -3611,173 +3526,6 @@ paths:
         - Auth
   /budgets:
     get:
-      description: Get a paginated list of budgets with optional filtering
-      operationId: list-budgets
-      parameters:
-        - description: Page number for pagination
-          explode: false
-          in: query
-          name: pageNumber
-          schema:
-            default: 1
-            description: Page number for pagination
-            format: int64
-            minimum: 1
-            type: integer
-        - description: Number of items per page
-          explode: false
-          in: query
-          name: pageSize
-          schema:
-            default: 25
-            description: Number of items per page
-            format: int64
-            maximum: 100
-            minimum: 1
-            type: integer
-        - description: Field to sort by
-          explode: false
-          in: query
-          name: sortBy
-          schema:
-            default: createdAt
-            description: Field to sort by
-            enum:
-              - id
-              - templateId
-              - accountId
-              - categoryId
-              - periodStart
-              - periodEnd
-              - amountLimit
-              - status
-              - name
-              - createdAt
-              - updatedAt
-            type: string
-        - description: Sort order
-          explode: false
-          in: query
-          name: sortOrder
-          schema:
-            default: desc
-            description: Sort order
-            enum:
-              - asc
-              - desc
-            type: string
-        - description: Filter by budget IDs
-          explode: false
-          in: query
-          name: id
-          schema:
-            description: Filter by budget IDs
-            items:
-              format: int64
-              type: integer
-            type:
-              - array
-              - "null"
-        - description: Filter by template IDs
-          explode: false
-          in: query
-          name: templateId
-          schema:
-            description: Filter by template IDs
-            items:
-              format: int64
-              type: integer
-            type:
-              - array
-              - "null"
-        - description: Filter by account IDs
-          explode: false
-          in: query
-          name: accountId
-          schema:
-            description: Filter by account IDs
-            items:
-              format: int64
-              type: integer
-            type:
-              - array
-              - "null"
-        - description: Filter by category IDs
-          explode: false
-          in: query
-          name: categoryId
-          schema:
-            description: Filter by category IDs
-            items:
-              format: int64
-              type: integer
-            type:
-              - array
-              - "null"
-        - description: Filter by budget status
-          explode: false
-          in: query
-          name: status
-          schema:
-            description: Filter by budget status
-            enum:
-              - active
-              - inactive
-            type: string
-        - description: Filter by budget name (partial match)
-          explode: false
-          in: query
-          name: name
-          schema:
-            description: Filter by budget name (partial match)
-            type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BudgetsPagedModel"
-          description: OK
-        default:
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Error
-      security:
-        - bearer: []
-      summary: List budgets
-      tags:
-        - Budgets
-    post:
-      description: Create a new budget period
-      operationId: create-budget
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateBudgetModel"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BudgetModel"
-          description: OK
-        default:
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Error
-      security:
-        - bearer: []
-      summary: Create budget
-      tags:
-        - Budgets
-  /budgets/templates:
-    get:
       description: Get a paginated list of budget templates
       operationId: list-budget-templates
       parameters:
@@ -3818,6 +3566,7 @@ paths:
               - startDate
               - endDate
               - name
+              - active
               - nextRunAt
               - createdAt
               - updatedAt
@@ -3881,6 +3630,13 @@ paths:
               - monthly
               - yearly
             type: string
+        - description: Filter by active status
+          explode: false
+          in: query
+          name: active
+          schema:
+            description: Filter by active status
+            type: boolean
       responses:
         "200":
           content:
@@ -3926,34 +3682,7 @@ paths:
       summary: Create budget template
       tags:
         - Budget Templates
-  /budgets/templates/{id}:
-    delete:
-      description: Soft delete a budget template
-      operationId: delete-budget-template
-      parameters:
-        - description: Budget Template ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Budget Template ID
-            format: int64
-            minimum: 1
-            type: integer
-      responses:
-        "204":
-          description: No Content
-        default:
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Error
-      security:
-        - bearer: []
-      summary: Delete budget template
-      tags:
-        - Budget Templates
+  /budgets/{id}:
     get:
       description: Get a single budget template by ID
       operationId: get-budget-template
@@ -3986,7 +3715,7 @@ paths:
       tags:
         - Budget Templates
     patch:
-      description: Update an existing budget template
+      description: Update an existing budget template (name, note, active status only)
       operationId: update-budget-template
       parameters:
         - description: Budget Template ID
@@ -4022,9 +3751,9 @@ paths:
       summary: Update budget template
       tags:
         - Budget Templates
-  /budgets/templates/{id}/relations:
+  /budgets/{id}/list:
     get:
-      description: Get budgets related to a budget template
+      description: Get budgets generated from a budget template with pagination
       operationId: list-budget-template-related-budgets
       parameters:
         - description: Budget Template ID
@@ -4140,102 +3869,6 @@ paths:
       summary: Get budget template related budgets
       tags:
         - Budget Templates
-  /budgets/{id}:
-    delete:
-      description: Soft delete a budget
-      operationId: delete-budget
-      parameters:
-        - description: Budget ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Budget ID
-            format: int64
-            minimum: 1
-            type: integer
-      responses:
-        "204":
-          description: No Content
-        default:
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Error
-      security:
-        - bearer: []
-      summary: Delete budget
-      tags:
-        - Budgets
-    get:
-      description: Get a single budget by ID with calculated actual amount
-      operationId: get-budget
-      parameters:
-        - description: Budget ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Budget ID
-            format: int64
-            minimum: 1
-            type: integer
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BudgetModel"
-          description: OK
-        default:
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Error
-      security:
-        - bearer: []
-      summary: Get budget
-      tags:
-        - Budgets
-    patch:
-      description: Update an existing budget
-      operationId: update-budget
-      parameters:
-        - description: Budget ID
-          in: path
-          name: id
-          required: true
-          schema:
-            description: Budget ID
-            format: int64
-            minimum: 1
-            type: integer
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateBudgetModel"
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BudgetModel"
-          description: OK
-        default:
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Error
-      security:
-        - bearer: []
-      summary: Update budget
-      tags:
-        - Budgets
   /categories:
     get:
       description: Get a paginated list of categories with optional search

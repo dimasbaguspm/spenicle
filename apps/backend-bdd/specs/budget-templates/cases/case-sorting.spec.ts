@@ -26,7 +26,9 @@ test.describe("Budget Templates - Sorting Cases", () => {
     ) {
       for (const template of existingTemplatesRes.data.items) {
         if (template.note?.startsWith("Sort Test")) {
-          await budgetTemplateAPI.deleteBudgetTemplate(template.id);
+          await budgetTemplateAPI.updateBudgetTemplate(template.id, {
+            active: false,
+          });
         }
       }
     }
@@ -63,6 +65,7 @@ test.describe("Budget Templates - Sorting Cases", () => {
         startDate: templateData.startDate,
         note: templateData.note,
         name: `Sorting Test ${templateData.note}`,
+        active: true,
       });
       createdTemplates.push({
         id: res.data!.id as number,
@@ -115,7 +118,9 @@ test.describe("Budget Templates - Sorting Cases", () => {
 
     // Cleanup
     for (const template of createdTemplates) {
-      await budgetTemplateAPI.deleteBudgetTemplate(template.id);
+      await budgetTemplateAPI.updateBudgetTemplate(template.id, {
+        active: false,
+      });
     }
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
@@ -151,6 +156,7 @@ test.describe("Budget Templates - Sorting Cases", () => {
         startDate: new Date().toISOString(),
         note: "amount sort test",
         name: `Amount Sort Test ${amount}`,
+        active: true,
       });
       templates.push({ id: res.data!.id as number, amount });
     }
@@ -170,7 +176,9 @@ test.describe("Budget Templates - Sorting Cases", () => {
 
     // Cleanup
     for (const template of templates) {
-      await budgetTemplateAPI.deleteBudgetTemplate(template.id);
+      await budgetTemplateAPI.updateBudgetTemplate(template.id, {
+        active: false,
+      });
     }
     await categoryAPI.deleteCategory(categoryId);
     await accountAPI.deleteAccount(accountId);
