@@ -46,7 +46,7 @@ export const DetailsTab: FC<DetailsTabProps> = ({ data }) => {
           onClick={handleDeleteClick}
           className="ml-auto"
           variant="outline"
-          aria-label="Delete category"
+          aria-label="Delete account"
         />
       </ButtonGroup>
 

@@ -9,6 +9,7 @@ import type { FC } from "react";
 import { DetailsTab } from "./components/details-tab";
 import { HistoryTab } from "./components/history-tab";
 import { StatisticTab } from "./components/statistic-tab";
+import { BudgetsTab } from "./components/budgets-tab";
 
 interface AccountViewDrawerProps {
   accountId: number;
@@ -45,8 +46,9 @@ export const AccountViewDrawer: FC<AccountViewDrawerProps> = ({
       <Drawer.Tab>
         <Tabs value={activeTab} onValueChange={handleOnTabChange}>
           <Tabs.Trigger value="details">Details</Tabs.Trigger>
-          <Tabs.Trigger value="history">History</Tabs.Trigger>
+          <Tabs.Trigger value="budgets">Budgets</Tabs.Trigger>
           <Tabs.Trigger value="statistic">Statistic</Tabs.Trigger>
+          <Tabs.Trigger value="history">History</Tabs.Trigger>
         </Tabs>
       </Drawer.Tab>
 
@@ -58,6 +60,7 @@ export const AccountViewDrawer: FC<AccountViewDrawerProps> = ({
         <Drawer.Body>
           <When condition={!!account}>
             {activeTab === "details" && <DetailsTab data={account!} />}
+            {activeTab === "budgets" && <BudgetsTab data={account!} />}
             {activeTab === "history" && <HistoryTab data={account!} />}
             {activeTab === "statistic" && <StatisticTab data={account!} />}
           </When>

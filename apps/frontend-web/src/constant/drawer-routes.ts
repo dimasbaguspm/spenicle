@@ -18,5 +18,7 @@ export const DRAWER_ROUTES = {
   TRANSACTIONS_ALL_THE_TIME: "transactions-all-the-time",
   SELECT_SINGLE_ACCOUNT: "select-single-account",
   SELECT_SINGLE_CATEGORY: "select-single-category",
+  BUDGET_CREATE: "budget-create",
+  BUDGET_UPDATE: "budget-update",
   INSIGHTS_FILTER: "insights-filter",
 } as const;

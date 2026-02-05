@@ -150,6 +150,19 @@ export const QUERY_KEYS = {
       JSON.stringify(params ?? {}),
     ],
   },
+  BUDGETS: {
+    PAGINATED: (params: object = {}) => [
+      ...BASE_QUERY_KEYS.BUDGETS,
+      "paginated",
+      JSON.stringify(params ?? {}),
+    ],
+    BY_ID: (id: number, params: object = {}) => [
+      ...BASE_QUERY_KEYS.BUDGETS,
+      "by-id",
+      id,
+      JSON.stringify(params ?? {}),
+    ],
+  },
   INSIGHTS: {
     ACCOUNTS_SUMMARY: (params: object = {}) => [
       ...BASE_QUERY_KEYS.INSIGHTS,

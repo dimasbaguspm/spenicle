@@ -4,3 +4,4 @@ export * from "./auth";
 export * from "./transactions";
 export * from "./insights";
 export * from "./transaction-templates";
+export * from "./budgets";

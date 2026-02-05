@@ -8,6 +8,7 @@ export const BASE_QUERY_KEYS = {
   TRANSACTIONS: ["transactions"],
   TRANSACTION_TEMPLATES: ["transaction-templates"],
   INSIGHTS: ["insights"],
+  BUDGETS: ["budgets"],
 };
 
 export const ENDPOINTS = {
