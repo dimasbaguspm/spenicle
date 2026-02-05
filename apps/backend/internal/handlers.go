@@ -41,7 +41,6 @@ func RegisterPrivateRoutes(ctx context.Context, huma huma.API, db *pgxpool.Pool,
 	resources.NewCategoryStatisticsResource(sevs).Routes(huma)
 	resources.NewTransactionResource(sevs).Routes(huma)
 	resources.NewSummaryResource(sevs).Routes(huma)
-	resources.NewBudgetResource(sevs).Routes(huma)
 	resources.NewBudgetTemplateResource(sevs).Routes(huma)
 	resources.NewTagResource(sevs).Routes(huma)
 	resources.NewSeedResource(db, rdb).Routes(huma)
@@ -52,7 +51,7 @@ func RegisterWorkers(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client) f
 	sevs := services.NewRootService(rpts, rdb)
 
 	ttWorker := workers.NewTransactionTemplateWorker(ctx, rpts.TsctTem, sevs.Tsct, rdb)
-	btWorker := workers.NewBudgetTemplateWorker(ctx, rpts.BudgTem, sevs.Budg, rdb)
+	btWorker := workers.NewBudgetTemplateWorker(ctx, sevs.BudgTem, rdb)
 
 	ttWorker.Start()
 	btWorker.Start()

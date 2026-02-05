@@ -9,7 +9,6 @@ type RootService struct {
 	Acc     AccountService
 	AccStat AccountStatisticsService
 	Ath     AuthService
-	Budg    BudgetService
 	BudgTem BudgetTemplateService
 	Cat     CategoryService
 	CatStat CategoryStatisticsService
@@ -26,7 +25,6 @@ func NewRootService(repos repositories.RootRepository, rdb *redis.Client) RootSe
 		Acc:     NewAccountService(&repos, rdb),
 		AccStat: NewAccountStatisticsService(&repos, rdb),
 		Ath:     NewAuthService(&repos),
-		Budg:    NewBudgetService(&repos, rdb),
 		BudgTem: NewBudgetTemplateService(&repos, rdb),
 		Cat:     NewCategoryService(&repos, rdb),
 		CatStat: NewCategoryStatisticsService(&repos, rdb),

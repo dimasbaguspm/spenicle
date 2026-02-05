@@ -9,29 +9,25 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability"
-	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 	"github.com/redis/go-redis/v9"
 )
 
 type BudgetTemplateWorker struct {
-	cronWorker    *common.CronWorker
-	templateRepo  repositories.BudgetTemplateRepository
-	budgetService services.BudgetService
-	rdb           *redis.Client
+	cronWorker            *common.CronWorker
+	budgetTemplateService services.BudgetTemplateService
+	rdb                   *redis.Client
 }
 
 func NewBudgetTemplateWorker(
 	ctx context.Context,
-	templateRepo repositories.BudgetTemplateRepository,
-	budgetService services.BudgetService,
+	budgetTemplateService services.BudgetTemplateService,
 	rdb *redis.Client,
 ) *BudgetTemplateWorker {
 	return &BudgetTemplateWorker{
-		cronWorker:    common.NewCronWorker(ctx),
-		templateRepo:  templateRepo,
-		budgetService: budgetService,
-		rdb:           rdb,
+		cronWorker:            common.NewCronWorker(ctx),
+		budgetTemplateService: budgetTemplateService,
+		rdb:                   rdb,
 	}
 }
 
@@ -57,7 +53,7 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 	logger := observability.NewLogger("worker", "BudgetTemplateWorker", "run_id", runID, "task", "processTemplates")
 	logger.Info("start")
 
-	dueTemplates, err := btw.templateRepo.GetDueTemplates(ctx)
+	dueTemplates, err := btw.budgetTemplateService.Rpts.BudgTem.GetDueTemplates(ctx)
 	if err != nil {
 		logger.Error("failed to get due templates", "error", err)
 		return err
@@ -83,7 +79,7 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 		templateLogger.Info("template processed successfully")
 
 		// Update last_executed_at timestamp
-		if err := btw.templateRepo.UpdateLastExecuted(ctx, template.ID); err != nil {
+		if err := btw.budgetTemplateService.Rpts.BudgTem.UpdateLastExecuted(ctx, template.ID); err != nil {
 			templateLogger.Error("failed to update execution time", "error", err)
 			continue
 		}
@@ -102,6 +98,19 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 	logger.Info("completed", "processed_count", len(dueTemplates))
 	observability.BudgetTemplatesProcessed.Add(float64(len(dueTemplates)))
 	observability.BudgetWorkerLastRun.Set(float64(time.Now().Unix()))
+
+	// Invalidate all paged cache keys for budgets since we created new budgets
+	if len(dueTemplates) > 0 {
+		common.InvalidateCache(ctx, btw.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
+		// Invalidate related budget list caches for each processed template
+		for _, template := range dueTemplates {
+			cacheKey := fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d_budgets_paged:*", template.ID)
+			if err := common.InvalidateCache(ctx, btw.rdb, cacheKey); err != nil {
+				logger.Warn("failed to invalidate related budgets cache", "template_id", template.ID, "error", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -114,7 +123,7 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 
 	// For recurring templates, deactivate any existing active budgets for the same account/category/period type
 	if template.Recurrence != "none" {
-		if err := btw.budgetService.DeactivateExistingActiveBudgets(ctx, template.AccountID, template.CategoryID, periodType); err != nil {
+		if err := btw.budgetTemplateService.DeactivateExistingActiveBudgets(ctx, template.AccountID, template.CategoryID, periodType); err != nil {
 			logger.Error("failed to deactivate existing budgets", "error", err, "account_id", template.AccountID, "category_id", template.CategoryID, "period_type", periodType)
 			return err
 		}
@@ -132,7 +141,7 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 		Note:        template.Note,
 	}
 
-	budget, err := btw.budgetService.Create(ctx, budgetRequest)
+	budget, err := btw.budgetTemplateService.CreateBudget(ctx, budgetRequest)
 	if err != nil {
 		logger.Error("failed to create budget", "error", err)
 		return err
@@ -140,7 +149,7 @@ func (btw *BudgetTemplateWorker) processTemplate(ctx context.Context, template m
 
 	logger.Info("budget created", "budget_id", budget.ID)
 
-	if err := btw.templateRepo.CreateRelation(ctx, budget.ID, template.ID); err != nil {
+	if err := btw.budgetTemplateService.Rpts.BudgTem.CreateRelation(ctx, budget.ID, template.ID); err != nil {
 		logger.Error("failed to create relation", "error", err, "budget_id", budget.ID)
 	}
 

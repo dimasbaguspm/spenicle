@@ -19,7 +19,6 @@ type RootRepository struct {
 	db      DBQuerier
 	Acc     AccountRepository
 	Ath     AuthRepository
-	Budg    BudgetRepository
 	BudgTem BudgetTemplateRepository
 	Cat     CategoryRepository
 	AccStat AccountStatisticsRepository
@@ -39,7 +38,6 @@ func NewRootRepository(ctx context.Context, pgx *pgxpool.Pool) RootRepository {
 		db:      db,
 		Acc:     NewAccountRepository(db),
 		Ath:     NewAuthRepository(ctx),
-		Budg:    NewBudgetRepository(db),
 		BudgTem: NewBudgetTemplateRepository(db),
 		Cat:     NewCategoryRepository(db),
 		AccStat: NewAccountStatisticsRepository(db),
@@ -59,7 +57,6 @@ func (r RootRepository) WithTx(ctx context.Context, tx pgx.Tx) RootRepository {
 		db:      tx,
 		Acc:     NewAccountRepository(tx),
 		Ath:     NewAuthRepository(ctx),
-		Budg:    NewBudgetRepository(tx),
 		BudgTem: NewBudgetTemplateRepository(tx),
 		Cat:     NewCategoryRepository(tx),
 		AccStat: NewAccountStatisticsRepository(tx),

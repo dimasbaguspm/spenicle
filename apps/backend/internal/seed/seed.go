@@ -340,7 +340,7 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 
 	var budgetIDs []int64
 	for _, budget := range budgets {
-		budgetModel, err := rootSvc.Budg.Create(ctx, budget)
+		budgetModel, err := rootSvc.BudgTem.CreateBudget(ctx, budget)
 		if err != nil {
 			return fmt.Errorf("failed to create budget %s: %w", budget.Name, err)
 		}
