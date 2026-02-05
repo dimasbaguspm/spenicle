@@ -9,10 +9,11 @@ import (
 
 // CronTask represents a scheduled task to be executed by the cron worker
 type CronTask struct {
-	ID       string        // Unique identifier for the task
-	Name     string        // Human-readable name
-	Schedule time.Duration // How often to run the task
-	Handler  CronHandler   // Function to execute
+	ID              string        // Unique identifier for the task
+	Name            string        // Human-readable name
+	Schedule        time.Duration // How often to run the task
+	Handler         CronHandler   // Function to execute
+	RunImmediately  bool          // If true, execute the handler once before starting the ticker loop
 }
 
 // CronHandler is the function signature for cron task handlers
@@ -79,6 +80,15 @@ func (cw *CronWorker) Register(task CronTask) error {
 func (cw *CronWorker) runTask(task CronTask, ticker *time.Ticker) {
 	defer cw.wg.Done()
 	defer ticker.Stop()
+
+	// Run immediately on startup if configured
+	if task.RunImmediately {
+		taskCtx, cancel := context.WithTimeout(cw.ctx, 30*time.Second)
+		if err := task.Handler(taskCtx); err != nil {
+			fmt.Printf("Cron task %s (%s) immediate run failed: %v\n", task.ID, task.Name, err)
+		}
+		cancel()
+	}
 
 	for {
 		select {

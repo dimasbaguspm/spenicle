@@ -57,6 +57,14 @@ func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudg
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplateCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
 
+	// Generate initial budget immediately if the template is due today
+	if bts.isTemplateDueNow(template) {
+		if _, err := bts.GenerateBudgetFromTemplate(ctx, template); err != nil {
+			// Log but don't fail the creation — the worker will pick it up later
+			fmt.Printf("budget_template_service: failed to generate immediate budget for template %d: %v\n", template.ID, err)
+		}
+	}
+
 	return template, nil
 }
 
@@ -165,4 +173,120 @@ func (bts BudgetTemplateService) DeactivateExistingActiveBudgets(ctx context.Con
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
 
 	return nil
+}
+
+// GenerateBudgetFromTemplate creates a budget from a template, handling the full lifecycle:
+// deactivate existing budgets, create the new budget, create the relation, update execution timestamps, and invalidate caches.
+func (bts BudgetTemplateService) GenerateBudgetFromTemplate(ctx context.Context, template models.BudgetTemplateModel) (models.BudgetModel, error) {
+	periodStart, periodEnd := CalculateBudgetPeriod(template.Recurrence)
+	periodType := CalculatePeriodType(periodStart, periodEnd)
+
+	// For recurring templates, deactivate any existing active budgets for the same account/category/period type
+	if template.Recurrence != "none" {
+		if err := bts.DeactivateExistingActiveBudgets(ctx, template.AccountID, template.CategoryID, periodType); err != nil {
+			return models.BudgetModel{}, fmt.Errorf("failed to deactivate existing budgets: %w", err)
+		}
+	}
+
+	budgetRequest := models.CreateBudgetModel{
+		TemplateID:  &template.ID,
+		AccountID:   template.AccountID,
+		CategoryID:  template.CategoryID,
+		PeriodStart: periodStart,
+		PeriodEnd:   periodEnd,
+		AmountLimit: template.AmountLimit,
+		Name:        fmt.Sprintf("%s (%s)", template.Name, periodStart.Format("2006-01-02")),
+		Note:        template.Note,
+	}
+
+	budget, err := bts.CreateBudget(ctx, budgetRequest)
+	if err != nil {
+		return models.BudgetModel{}, fmt.Errorf("failed to create budget: %w", err)
+	}
+
+	// Create budget-template relation
+	if err := bts.Rpts.BudgTem.CreateRelation(ctx, budget.ID, template.ID); err != nil {
+		return budget, fmt.Errorf("failed to create relation: %w", err)
+	}
+
+	// Update last_executed_at and next_run_at
+	if err := bts.Rpts.BudgTem.UpdateLastExecuted(ctx, template.ID); err != nil {
+		return budget, fmt.Errorf("failed to update execution time: %w", err)
+	}
+
+	// Invalidate template caches after updating execution timestamps
+	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", template.ID))
+	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d_budgets_paged:*", template.ID))
+
+	return budget, nil
+}
+
+// isTemplateDueNow checks if a template should generate a budget immediately
+func (bts BudgetTemplateService) isTemplateDueNow(template models.BudgetTemplateModel) bool {
+	if !template.Active {
+		return false
+	}
+	if template.Recurrence == "none" {
+		return false
+	}
+
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	startDate := time.Date(template.StartDate.Year(), template.StartDate.Month(), template.StartDate.Day(), 0, 0, 0, 0, template.StartDate.Location())
+
+	if startDate.After(today) {
+		return false
+	}
+	if template.EndDate != nil {
+		endDate := time.Date(template.EndDate.Year(), template.EndDate.Month(), template.EndDate.Day(), 0, 0, 0, 0, template.EndDate.Location())
+		if endDate.Before(today) {
+			return false
+		}
+	}
+	return true
+}
+
+// CalculateBudgetPeriod calculates the budget period start and end dates based on the recurrence pattern
+func CalculateBudgetPeriod(recurrence string) (time.Time, time.Time) {
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	switch recurrence {
+	case "weekly":
+		daysFromMonday := int((today.Weekday() - time.Monday + 7) % 7)
+		weekStart := today.AddDate(0, 0, -daysFromMonday)
+		weekEnd := weekStart.AddDate(0, 0, 6)
+		return weekStart, weekEnd
+
+	case "monthly":
+		monthStart := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, today.Location())
+		monthEnd := monthStart.AddDate(0, 1, -1)
+		return monthStart, monthEnd
+
+	case "yearly":
+		yearStart := time.Date(today.Year(), time.January, 1, 0, 0, 0, 0, today.Location())
+		yearEnd := time.Date(today.Year(), time.December, 31, 0, 0, 0, 0, today.Location())
+		return yearStart, yearEnd
+
+	default:
+		return today, today
+	}
+}
+
+// CalculatePeriodType determines the period type based on start and end dates
+func CalculatePeriodType(start, end time.Time) string {
+	duration := end.Sub(start)
+	days := int(duration.Hours()/24) + 1 // +1 to include both start and end dates
+
+	if days == 7 {
+		return "weekly"
+	}
+	if days >= 28 && days <= 31 {
+		return "monthly"
+	}
+	if days >= 365 && days <= 366 {
+		return "yearly"
+	}
+	return "custom"
 }
