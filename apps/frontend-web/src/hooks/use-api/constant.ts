@@ -80,9 +80,6 @@ export const ENDPOINTS = {
   BUDGETS: {
     PAGINATED: "/budgets",
     BY_ID: (id: number | string) => `/budgets/${id}`,
-  },
-  BUDGET_TEMPLATES: {
-    PAGINATED: "/budgets/templates",
-    BY_ID: (id: number | string) => `/budgets/templates/${id}`,
+    RELATED_BUDGETS: (id: number | string) => `/budgets/${id}/list`,
   },
 };

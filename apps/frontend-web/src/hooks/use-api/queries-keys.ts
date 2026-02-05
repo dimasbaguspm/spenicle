@@ -162,6 +162,12 @@ export const QUERY_KEYS = {
       id,
       JSON.stringify(params ?? {}),
     ],
+    RELATED: (templateId: number, params: object = {}) => [
+      ...BASE_QUERY_KEYS.BUDGETS,
+      "related",
+      templateId,
+      JSON.stringify(params ?? {}),
+    ],
   },
   INSIGHTS: {
     ACCOUNTS_SUMMARY: (params: object = {}) => [

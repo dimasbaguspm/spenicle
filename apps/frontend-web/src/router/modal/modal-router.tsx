@@ -7,7 +7,7 @@ import { AccountDeleteConfirmationModal } from "./account-delete-confirmation-mo
 import { CategoryDeleteConfirmationModal } from "./category-delete-confirmation-modal";
 import { TransactionDeleteConfirmationModal } from "./transaction-delete-confirmation-modal";
 import { TransactionTemplateDeleteConfirmationModal } from "./transaction-template-delete-confirmation-modal";
-import { BudgetDeleteConfirmationModal } from "./budget-delete-confirmation-modal";
+import { BudgetDeactivateConfirmationModal } from "./budget-delete-confirmation-modal";
 
 interface ModalParams {
   accountId?: number;
@@ -58,12 +58,13 @@ export const ModalRouter = () => {
             transactionTemplateId={params.transactionTemplateId!}
           />
         )}
-      {is(MODAL_ROUTES.BUDGET_DELETE_CONFIRMATION) && hasParam("budgetId") && (
-        <BudgetDeleteConfirmationModal
-          budgetId={params.budgetId!}
-          budgetName={params.budgetName}
-        />
-      )}
+      {is(MODAL_ROUTES.BUDGET_DEACTIVATE_CONFIRMATION) &&
+        hasParam("budgetId") && (
+          <BudgetDeactivateConfirmationModal
+            budgetId={params.budgetId!}
+            budgetName={params.budgetName}
+          />
+        )}
     </Modal>
   );
 };

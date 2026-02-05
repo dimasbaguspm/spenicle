@@ -6,5 +6,5 @@ export const MODAL_ROUTES = {
   TRANSACTION_DELETE_CONFIRMATION: "transaction-delete-confirmation",
   TRANSACTION_TEMPLATE_DELETE_CONFIRMATION:
     "transaction-template-delete-confirmation",
-  BUDGET_DELETE_CONFIRMATION: "budget-delete-confirmation",
+  BUDGET_DEACTIVATE_CONFIRMATION: "budget-deactivate-confirmation",
 } as const;

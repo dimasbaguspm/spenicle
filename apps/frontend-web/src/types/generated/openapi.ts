@@ -264,30 +264,6 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * List budgets
-     * @description Get a paginated list of budgets with optional filtering
-     */
-    get: operations["list-budgets"];
-    put?: never;
-    /**
-     * Create budget
-     * @description Create a new budget period
-     */
-    post: operations["create-budget"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/budgets/templates": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
      * List budget templates
      * @description Get a paginated list of budget templates
      */
@@ -304,7 +280,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/budgets/templates/{id}": {
+  "/budgets/{id}": {
     parameters: {
       query?: never;
       header?: never;
@@ -318,21 +294,17 @@ export interface paths {
     get: operations["get-budget-template"];
     put?: never;
     post?: never;
-    /**
-     * Delete budget template
-     * @description Soft delete a budget template
-     */
-    delete: operations["delete-budget-template"];
+    delete?: never;
     options?: never;
     head?: never;
     /**
      * Update budget template
-     * @description Update an existing budget template
+     * @description Update an existing budget template (name, note, active status only)
      */
     patch: operations["update-budget-template"];
     trace?: never;
   };
-  "/budgets/templates/{id}/relations": {
+  "/budgets/{id}/list": {
     parameters: {
       query?: never;
       header?: never;
@@ -341,7 +313,7 @@ export interface paths {
     };
     /**
      * Get budget template related budgets
-     * @description Get budgets related to a budget template
+     * @description Get budgets generated from a budget template with pagination
      */
     get: operations["list-budget-template-related-budgets"];
     put?: never;
@@ -350,34 +322,6 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
-    trace?: never;
-  };
-  "/budgets/{id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get budget
-     * @description Get a single budget by ID with calculated actual amount
-     */
-    get: operations["get-budget"];
-    put?: never;
-    post?: never;
-    /**
-     * Delete budget
-     * @description Soft delete a budget
-     */
-    delete: operations["delete-budget"];
-    options?: never;
-    head?: never;
-    /**
-     * Update budget
-     * @description Update an existing budget
-     */
-    patch: operations["update-budget"];
     trace?: never;
   };
   "/categories": {
@@ -1444,6 +1388,8 @@ export interface components {
        * @description Account ID to filter transactions
        */
       accountId?: number;
+      /** @description Whether this template is active and generating budgets */
+      active: boolean;
       /**
        * Format: int64
        * @description Budget limit amount in cents
@@ -1988,48 +1934,17 @@ export interface components {
        */
       type: "expense" | "income";
     };
-    CreateBudgetModel: {
-      /**
-       * Format: int64
-       * @description Account ID to filter transactions
-       */
-      accountId?: number;
-      /**
-       * Format: int64
-       * @description Budget limit amount in cents
-       */
-      amountLimit: number;
-      /**
-       * Format: int64
-       * @description Category ID to filter transactions
-       */
-      categoryId?: number;
-      /** @description Budget name */
-      name: string;
-      /** @description Optional note for the budget */
-      note?: string;
-      /**
-       * Format: date-time
-       * @description Budget period end date
-       */
-      periodEnd: string;
-      /**
-       * Format: date-time
-       * @description Budget period start date
-       */
-      periodStart: string;
-      /**
-       * Format: int64
-       * @description Budget template ID if generated from template
-       */
-      templateId?: number;
-    };
     CreateBudgetTemplateModel: {
       /**
        * Format: int64
        * @description Account ID to filter transactions
        */
       accountId?: number;
+      /**
+       * @description Whether this template is active and generating budgets
+       * @default true
+       */
+      active: boolean;
       /**
        * Format: int64
        * @description Budget limit amount in cents
@@ -2899,57 +2814,13 @@ export interface components {
        */
       type?: "expense" | "income";
     };
-    UpdateBudgetModel: {
-      /**
-       * Format: int64
-       * @description Budget limit amount in cents
-       */
-      amountLimit?: number;
-      /** @description Budget name */
-      name?: string;
-      /** @description Optional note for the budget */
-      note?: string;
-      /**
-       * Format: date-time
-       * @description Budget period end date
-       */
-      periodEnd?: string;
-      /**
-       * Format: date-time
-       * @description Budget period start date
-       */
-      periodStart?: string;
-      /**
-       * @description Budget status
-       * @enum {string}
-       */
-      status?: "active" | "inactive";
-    };
     UpdateBudgetTemplateModel: {
-      /**
-       * Format: int64
-       * @description Budget limit amount in cents
-       */
-      amountLimit?: number;
-      /**
-       * Format: date-time
-       * @description Optional end date for recurrence
-       */
-      endDate?: string;
+      /** @description Whether this template is active and generating budgets */
+      active?: boolean;
       /** @description Template name */
       name?: string;
       /** @description Optional note for the template */
       note?: string;
-      /**
-       * @description Recurrence pattern
-       * @enum {string}
-       */
-      recurrence?: "none" | "weekly" | "monthly" | "yearly";
-      /**
-       * Format: date-time
-       * @description Start date for recurrence
-       */
-      startDate?: string;
     };
     UpdateCategoryModel: {
       /** @description Archive status (null string to unarchive, any other value to archive) */
@@ -3669,100 +3540,6 @@ export interface operations {
       };
     };
   };
-  "list-budgets": {
-    parameters: {
-      query?: {
-        /** @description Page number for pagination */
-        pageNumber?: number;
-        /** @description Number of items per page */
-        pageSize?: number;
-        /** @description Field to sort by */
-        sortBy?:
-          | "id"
-          | "templateId"
-          | "accountId"
-          | "categoryId"
-          | "periodStart"
-          | "periodEnd"
-          | "amountLimit"
-          | "status"
-          | "name"
-          | "createdAt"
-          | "updatedAt";
-        /** @description Sort order */
-        sortOrder?: "asc" | "desc";
-        /** @description Filter by budget IDs */
-        id?: number[] | null;
-        /** @description Filter by template IDs */
-        templateId?: number[] | null;
-        /** @description Filter by account IDs */
-        accountId?: number[] | null;
-        /** @description Filter by category IDs */
-        categoryId?: number[] | null;
-        /** @description Filter by budget status */
-        status?: "active" | "inactive";
-        /** @description Filter by budget name (partial match) */
-        name?: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["BudgetsPagedModel"];
-        };
-      };
-      /** @description Error */
-      default: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["ErrorModel"];
-        };
-      };
-    };
-  };
-  "create-budget": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CreateBudgetModel"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["BudgetModel"];
-        };
-      };
-      /** @description Error */
-      default: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["ErrorModel"];
-        };
-      };
-    };
-  };
   "list-budget-templates": {
     parameters: {
       query?: {
@@ -3780,6 +3557,7 @@ export interface operations {
           | "startDate"
           | "endDate"
           | "name"
+          | "active"
           | "nextRunAt"
           | "createdAt"
           | "updatedAt";
@@ -3793,6 +3571,8 @@ export interface operations {
         categoryId?: number[] | null;
         /** @description Filter by recurrence pattern */
         recurrence?: "none" | "weekly" | "monthly" | "yearly";
+        /** @description Filter by active status */
+        active?: boolean;
       };
       header?: never;
       path?: never;
@@ -3885,36 +3665,6 @@ export interface operations {
       };
     };
   };
-  "delete-budget-template": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Budget Template ID */
-        id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Error */
-      default: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["ErrorModel"];
-        };
-      };
-    };
-  };
   "update-budget-template": {
     parameters: {
       query?: never;
@@ -3994,104 +3744,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["BudgetsPagedModel"];
-        };
-      };
-      /** @description Error */
-      default: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["ErrorModel"];
-        };
-      };
-    };
-  };
-  "get-budget": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Budget ID */
-        id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["BudgetModel"];
-        };
-      };
-      /** @description Error */
-      default: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["ErrorModel"];
-        };
-      };
-    };
-  };
-  "delete-budget": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Budget ID */
-        id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Error */
-      default: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["ErrorModel"];
-        };
-      };
-    };
-  };
-  "update-budget": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Budget ID */
-        id: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdateBudgetModel"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["BudgetModel"];
         };
       };
       /** @description Error */

@@ -1,6 +1,9 @@
 export interface BudgetCreateFormSchema {
   name: string;
   amountLimit: number;
-  periodType: "weekly" | "monthly" | "yearly";
+  recurrence: "none" | "weekly" | "monthly" | "yearly";
+  startDate: string;
+  endDate: string;
   note: string;
+  active: boolean;
 }

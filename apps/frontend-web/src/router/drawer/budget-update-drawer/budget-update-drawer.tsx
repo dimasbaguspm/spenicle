@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   ButtonGroup,
   Drawer,
@@ -8,42 +9,18 @@ import {
   useSnackbars,
 } from "@dimasbaguspm/versaur";
 import type { FC } from "react";
-import dayjs from "dayjs";
 
 import { Form, formId } from "./form";
 import type { BudgetUpdateFormSchema } from "./types";
 import { useDrawerProvider } from "@/providers/drawer-provider";
 import { useApiBudgetQuery, useApiUpdateBudget } from "@/hooks/use-api";
 import { When } from "@/lib/when";
+import { formatBudgetTemplateData } from "@/lib/format-data";
 import { SearchXIcon } from "lucide-react";
 
 interface BudgetUpdateDrawerProps {
   budgetId: number;
 }
-
-const computeNextPeriodDates = (
-  periodType: BudgetUpdateFormSchema["periodType"],
-) => {
-  const now = dayjs();
-
-  switch (periodType) {
-    case "weekly":
-      return {
-        periodStart: now.startOf("week").toISOString(),
-        periodEnd: now.endOf("week").toISOString(),
-      };
-    case "monthly":
-      return {
-        periodStart: now.startOf("month").toISOString(),
-        periodEnd: now.endOf("month").toISOString(),
-      };
-    case "yearly":
-      return {
-        periodStart: now.startOf("year").toISOString(),
-        periodEnd: now.endOf("year").toISOString(),
-      };
-  }
-};
 
 export const BudgetUpdateDrawer: FC<BudgetUpdateDrawerProps> = ({
   budgetId,
@@ -56,16 +33,14 @@ export const BudgetUpdateDrawer: FC<BudgetUpdateDrawerProps> = ({
     useApiBudgetQuery(budgetId);
   const [updateBudget, , { isPending }] = useApiUpdateBudget();
 
-  const handleOnValidSubmit = async (data: BudgetUpdateFormSchema) => {
-    const { periodStart, periodEnd } = computeNextPeriodDates(data.periodType);
+  const templateInfo = formatBudgetTemplateData(budgetData ?? null);
 
+  const handleOnValidSubmit = async (data: BudgetUpdateFormSchema) => {
     await updateBudget({
       id: budgetId,
-      name: data.name,
-      amountLimit: data.amountLimit,
-      periodStart,
-      periodEnd,
+      name: data.name || undefined,
       note: data.note || undefined,
+      active: data.active,
     });
     showSnack("success", "Budget updated successfully");
     closeDrawer();
@@ -95,14 +70,46 @@ export const BudgetUpdateDrawer: FC<BudgetUpdateDrawerProps> = ({
         </When>
         <When condition={!!budgetData}>
           <Drawer.Body>
+            <div className="mb-4 space-y-2 rounded-lg bg-gray-50 p-3 text-sm text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Amount Limit</span>
+                <span className="font-medium text-foreground">
+                  {templateInfo.formattedAmountLimit}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Recurrence</span>
+                <span className="capitalize font-medium text-foreground">
+                  {templateInfo.recurrence}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Start Date</span>
+                <span className="font-medium text-foreground">
+                  {templateInfo.startDate}
+                </span>
+              </div>
+              <When condition={!!templateInfo.endDate}>
+                <div className="flex justify-between">
+                  <span>End Date</span>
+                  <span className="font-medium text-foreground">
+                    {templateInfo.endDate}
+                  </span>
+                </div>
+              </When>
+              <div className="flex justify-between">
+                <span>Status</span>
+                <Badge color={templateInfo.activeBadgeColor}>
+                  {templateInfo.activeText}
+                </Badge>
+              </div>
+            </div>
             <Form
               handleOnValidSubmit={handleOnValidSubmit}
               defaultValues={{
                 name: budgetData?.name,
-                amountLimit: budgetData?.amountLimit,
-                periodType:
-                  budgetData?.periodType as BudgetUpdateFormSchema["periodType"],
                 note: budgetData?.note || "",
+                active: budgetData?.active ?? true,
               }}
             />
           </Drawer.Body>

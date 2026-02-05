@@ -1,8 +1,64 @@
-import type { BudgetModel } from "@/types/schemas";
+import type { BudgetModel, BudgetTemplateModel } from "@/types/schemas";
 import dayjs from "dayjs";
 import { formatPrice, PriceFormat } from "../format-price";
 import { DateFormat, formatDate } from "../format-date";
 import type { BadgeProps } from "@dimasbaguspm/versaur";
+
+export const formatBudgetTemplateData = (data: BudgetTemplateModel | null) => {
+  const formattedAmountLimit = formatPrice(
+    data?.amountLimit || 0,
+    PriceFormat.CURRENCY_NO_DECIMALS,
+  );
+
+  const startDate = data?.startDate
+    ? formatDate(data.startDate, DateFormat.SHORT_DATE)
+    : "";
+
+  const endDate = data?.endDate
+    ? formatDate(data.endDate, DateFormat.SHORT_DATE)
+    : "";
+
+  const nextRunAt = data?.nextRunAt
+    ? formatDate(data.nextRunAt, DateFormat.SHORT_DATE)
+    : "";
+
+  const createdAt = data?.createdAt
+    ? formatDate(data.createdAt, DateFormat.LONG_DATE)
+    : "";
+
+  const updatedAt = data?.updatedAt
+    ? formatDate(data.updatedAt, DateFormat.LONG_DATE)
+    : "";
+
+  const isActive = data?.active ?? false;
+  const activeText = isActive ? "Active" : "Inactive";
+  const activeBadgeColor: BadgeProps["color"] = isActive
+    ? "success"
+    : "secondary";
+
+  const recurrence = data?.recurrence ?? "none";
+  const recurrenceLabel =
+    recurrence === "none" ? "One-time" : recurrence;
+
+  return {
+    name: data?.name,
+    recurrence,
+    recurrenceLabel,
+    amountLimit: data?.amountLimit,
+    formattedAmountLimit,
+    startDate,
+    endDate,
+    nextRunAt,
+    isActive,
+    activeText,
+    activeBadgeColor,
+    note: data?.note,
+    createdAt,
+    updatedAt,
+    accountId: data?.accountId,
+    categoryId: data?.categoryId,
+  } as const;
+};
 
 export const formatBudgetData = (data: BudgetModel | null) => {
   const isExpired = data ? dayjs().isAfter(dayjs(data.periodEnd)) : false;

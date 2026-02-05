@@ -1,1 +1,1 @@
-export { BudgetDeleteConfirmationModal } from "./budget-delete-confirmation-modal";
+export { BudgetDeactivateConfirmationModal } from "./budget-delete-confirmation-modal";

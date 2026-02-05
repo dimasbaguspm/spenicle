@@ -12,8 +12,11 @@ import type { FC } from "react";
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { When } from "@/lib/when";
 import { useDrawerProvider } from "@/providers/drawer-provider";
-import { useApiBudgetsInfiniteQuery } from "@/hooks/use-api";
-import { BudgetCard } from "@/ui/budget-card";
+import {
+  useApiBudgetsPaginatedQuery,
+  useApiRelatedBudgetsInfiniteQuery,
+} from "@/hooks/use-api";
+import { BudgetCard, BudgetTemplateCard } from "@/ui/budget-card";
 import type { AccountModel } from "@/types/schemas";
 
 interface BudgetsTabProps {
@@ -23,38 +26,53 @@ interface BudgetsTabProps {
 export const BudgetsTab: FC<BudgetsTabProps> = ({ data }) => {
   const { openDrawer } = useDrawerProvider();
 
+  const [templateResult, , { isPending: isTemplateLoading }] =
+    useApiBudgetsPaginatedQuery(
+      { accountId: [data.id] },
+      { enabled: !!data.id },
+    );
+
+  const template = templateResult?.items?.[0] ?? null;
+
   const [
-    budgets,
+    relatedBudgets,
     ,
-    { isPending: isBudgetsLoading, hasNextPage, isFetchingNextPage },
-    { fetchNextPage },
-  ] = useApiBudgetsInfiniteQuery(
     {
-      accountId: [data.id],
+      isPending: isRelatedLoading,
+      hasNextPage,
+      isFetchingNextPage,
     },
-    { enabled: !!data.id },
+    { fetchNextPage },
+  ] = useApiRelatedBudgetsInfiniteQuery(
+    template?.id ?? 0,
+    {},
+    { enabled: !!template?.id },
   );
+
+  const isLoading = isTemplateLoading;
 
   const handleCreateBudgetClick = () => {
     openDrawer(DRAWER_ROUTES.BUDGET_CREATE, { accountId: data.id });
   };
 
-  const handleEditBudgetClick = (budgetId: number) => {
-    openDrawer(DRAWER_ROUTES.BUDGET_UPDATE, { budgetId });
+  const handleEditBudgetClick = () => {
+    if (template) {
+      openDrawer(DRAWER_ROUTES.BUDGET_UPDATE, { budgetId: template.id });
+    }
   };
 
   return (
     <>
-      <When condition={isBudgetsLoading}>
+      <When condition={isLoading}>
         <PageLoader />
       </When>
 
-      <When condition={!isBudgetsLoading}>
-        <When condition={budgets.length === 0}>
+      <When condition={!isLoading}>
+        <When condition={!template}>
           <NoResults
             icon={SearchXIcon}
-            title="No Budgets Found"
-            subtitle="Create budgets to manage your spending effectively."
+            title="No Budget Template"
+            subtitle="Create a budget template to manage your spending effectively."
             action={
               <Button onClick={handleCreateBudgetClick} variant="outline">
                 <Icon as={PlusIcon} size="sm" color="inherit" />
@@ -64,37 +82,58 @@ export const BudgetsTab: FC<BudgetsTabProps> = ({ data }) => {
           />
         </When>
 
-        <When condition={budgets.length > 0}>
+        <When condition={!!template}>
           <div className="mb-4">
-            <Button onClick={handleCreateBudgetClick} variant="outline">
-              <Icon as={PlusIcon} size="sm" color="inherit" />
-              Create Budget
-            </Button>
+            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+              Budget Template
+            </h3>
+            <BudgetTemplateCard
+              budget={template!}
+              onClick={handleEditBudgetClick}
+            />
           </div>
 
-          <ul className="mb-4">
-            {budgets.map((budget) => (
-              <li key={budget.id}>
-                <BudgetCard
-                  budget={budget}
-                  onClick={() => handleEditBudgetClick(budget.id)}
-                />
-                <Hr />
-              </li>
-            ))}
-          </ul>
+          <Hr />
 
-          <When condition={hasNextPage}>
-            <ButtonGroup alignment="center">
-              <Button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                variant="outline"
-              >
-                Load More
-              </Button>
-            </ButtonGroup>
-          </When>
+          <div className="mt-4">
+            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+              Generated Budgets
+            </h3>
+
+            <When condition={isRelatedLoading}>
+              <PageLoader />
+            </When>
+
+            <When condition={!isRelatedLoading && relatedBudgets.length === 0}>
+              <p className="text-sm text-muted-foreground">
+                No budgets generated yet. The worker will create budgets based on
+                your template schedule.
+              </p>
+            </When>
+
+            <When condition={!isRelatedLoading && relatedBudgets.length > 0}>
+              <ul className="mb-4">
+                {relatedBudgets.map((budget) => (
+                  <li key={budget.id}>
+                    <BudgetCard budget={budget} />
+                    <Hr />
+                  </li>
+                ))}
+              </ul>
+
+              <When condition={hasNextPage}>
+                <ButtonGroup alignment="center">
+                  <Button
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    variant="outline"
+                  >
+                    Load More
+                  </Button>
+                </ButtonGroup>
+              </When>
+            </When>
+          </div>
         </When>
       </When>
     </>

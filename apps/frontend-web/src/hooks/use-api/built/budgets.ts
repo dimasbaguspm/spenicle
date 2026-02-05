@@ -1,10 +1,11 @@
 import type {
   BudgetModel,
-  BudgetCreateModel,
-  BudgetUpdateModel,
-  BudgetDeleteModel,
-  BudgetPagedModel,
-  BudgetSearchModel,
+  BudgetRelatedSearchModel,
+  BudgetTemplateModel,
+  BudgetTemplateCreateModel,
+  BudgetTemplateUpdateModel,
+  BudgetTemplatePagedModel,
+  BudgetTemplateSearchModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -18,9 +19,13 @@ import {
 import { useApiQuery, type UseApiQueryOptions } from "../base/use-api-query";
 
 export const useApiBudgetsInfiniteQuery = (
-  params: BudgetSearchModel,
+  params: BudgetTemplateSearchModel,
   options?: Partial<
-    UseApiInfiniteQueryOptions<BudgetModel, BudgetSearchModel, unknown>
+    UseApiInfiniteQueryOptions<
+      BudgetTemplateModel,
+      BudgetTemplateSearchModel,
+      unknown
+    >
   >,
 ) => {
   return useApiInfiniteQuery({
@@ -32,12 +37,16 @@ export const useApiBudgetsInfiniteQuery = (
 };
 
 export const useApiBudgetsPaginatedQuery = (
-  params: BudgetSearchModel,
+  params: BudgetTemplateSearchModel,
   options?: Partial<
-    UseApiQueryOptions<BudgetPagedModel, BudgetSearchModel, unknown>
+    UseApiQueryOptions<
+      BudgetTemplatePagedModel,
+      BudgetTemplateSearchModel,
+      unknown
+    >
   >,
 ) => {
-  return useApiQuery<BudgetPagedModel, BudgetSearchModel>({
+  return useApiQuery<BudgetTemplatePagedModel, BudgetTemplateSearchModel>({
     ...options,
     queryKey: QUERY_KEYS.BUDGETS.PAGINATED(params),
     queryParams: params,
@@ -47,9 +56,9 @@ export const useApiBudgetsPaginatedQuery = (
 
 export const useApiBudgetQuery = (
   id: number,
-  options?: Partial<UseApiQueryOptions<BudgetModel, unknown, unknown>>,
+  options?: Partial<UseApiQueryOptions<BudgetTemplateModel, unknown, unknown>>,
 ) => {
-  return useApiQuery<BudgetModel, unknown>({
+  return useApiQuery<BudgetTemplateModel, unknown>({
     ...options,
     queryKey: QUERY_KEYS.BUDGETS.BY_ID(id),
     path: ENDPOINTS.BUDGETS.BY_ID(id),
@@ -58,7 +67,7 @@ export const useApiBudgetQuery = (
 
 export const useApiCreateBudget = () => {
   const queryClient = useQueryClient();
-  return useApiMutate<BudgetModel, BudgetCreateModel>({
+  return useApiMutate<BudgetTemplateModel, BudgetTemplateCreateModel>({
     path: ENDPOINTS.BUDGETS.PAGINATED,
     method: "POST",
     onSuccess: (data) => {
@@ -73,7 +82,7 @@ export const useApiCreateBudget = () => {
 
 export const useApiUpdateBudget = () => {
   const queryClient = useQueryClient();
-  return useApiMutate<BudgetModel, BudgetUpdateModel>({
+  return useApiMutate<BudgetTemplateModel, BudgetTemplateUpdateModel>({
     path: ENDPOINTS.BUDGETS.BY_ID(":id"),
     method: "PATCH",
     onSuccess: (data) => {
@@ -86,16 +95,23 @@ export const useApiUpdateBudget = () => {
   });
 };
 
-export const useApiDeleteBudget = () => {
-  const queryClient = useQueryClient();
-  return useApiMutate<void, BudgetDeleteModel>({
-    path: ENDPOINTS.BUDGETS.BY_ID(":id"),
-    method: "DELETE",
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.BUDGETS.PAGINATED().slice(0, 2),
-        exact: false,
-      });
+export const useApiRelatedBudgetsInfiniteQuery = (
+  templateId: number,
+  params: Omit<BudgetRelatedSearchModel, "id">,
+  options?: Partial<
+    UseApiInfiniteQueryOptions<
+      BudgetModel,
+      Omit<BudgetRelatedSearchModel, "id">,
+      unknown
+    >
+  >,
+) => {
+  return useApiInfiniteQuery<BudgetModel, Omit<BudgetRelatedSearchModel, "id">>(
+    {
+      ...options,
+      queryKey: QUERY_KEYS.BUDGETS.RELATED(templateId, params),
+      queryParams: params,
+      path: ENDPOINTS.BUDGETS.RELATED_BUDGETS(templateId),
     },
-  });
+  );
 };

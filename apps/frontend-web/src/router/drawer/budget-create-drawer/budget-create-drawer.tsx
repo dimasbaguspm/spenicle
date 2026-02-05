@@ -23,30 +23,6 @@ interface BudgetCreateDrawerProps {
   categoryId?: number;
 }
 
-const computePeriodDates = (
-  periodType: BudgetCreateFormSchema["periodType"],
-) => {
-  const now = dayjs();
-
-  switch (periodType) {
-    case "weekly":
-      return {
-        periodStart: now.startOf("week").toISOString(),
-        periodEnd: now.endOf("week").toISOString(),
-      };
-    case "monthly":
-      return {
-        periodStart: now.startOf("month").toISOString(),
-        periodEnd: now.endOf("month").toISOString(),
-      };
-    case "yearly":
-      return {
-        periodStart: now.startOf("year").toISOString(),
-        periodEnd: now.endOf("year").toISOString(),
-      };
-  }
-};
-
 export const BudgetCreateDrawer: FC<BudgetCreateDrawerProps> = ({
   payload,
   accountId,
@@ -56,13 +32,18 @@ export const BudgetCreateDrawer: FC<BudgetCreateDrawerProps> = ({
   const { showSnack } = useSnackbars();
   const isDesktop = useDesktopBreakpoint();
 
+  const today = dayjs().format("YYYY-MM-DD");
+
   const defaultValues: Partial<BudgetCreateFormSchema> = {
     name: payload?.name ?? "",
     amountLimit: payload?.amountLimit ? Number(payload.amountLimit) : undefined,
-    periodType:
-      (payload?.periodType as BudgetCreateFormSchema["periodType"]) ??
+    recurrence:
+      (payload?.recurrence as BudgetCreateFormSchema["recurrence"]) ??
       "monthly",
+    startDate: payload?.startDate ?? today,
+    endDate: payload?.endDate ?? "",
     note: payload?.note ?? "",
+    active: true,
   };
 
   const [accountData] = useApiAccountQuery(accountId!, {
@@ -75,16 +56,18 @@ export const BudgetCreateDrawer: FC<BudgetCreateDrawerProps> = ({
   const [createBudget, , { isPending }] = useApiCreateBudget();
 
   const handleOnValidSubmit = async (data: BudgetCreateFormSchema) => {
-    const { periodStart, periodEnd } = computePeriodDates(data.periodType);
-
     await createBudget({
       name: data.name,
       amountLimit: data.amountLimit,
-      periodStart,
-      periodEnd,
+      recurrence: data.recurrence,
+      startDate: dayjs(data.startDate).toISOString(),
+      endDate: data.endDate
+        ? dayjs(data.endDate).toISOString()
+        : undefined,
       accountId: accountId || undefined,
       categoryId: categoryId || undefined,
       note: data.note || undefined,
+      active: data.active,
     });
     showSnack("success", "Budget created successfully");
     closeDrawer();

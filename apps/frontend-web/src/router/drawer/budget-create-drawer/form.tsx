@@ -3,6 +3,7 @@ import {
   FormLayout,
   Icon,
   PriceInput,
+  SwitchInput,
   TextAreaInput,
   TextInput,
 } from "@dimasbaguspm/versaur";
@@ -10,6 +11,7 @@ import {
   CalendarIcon,
   CalendarDaysIcon,
   CalendarRangeIcon,
+  MinusCircleIcon,
 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import type { BudgetCreateFormSchema } from "./types";
@@ -73,10 +75,14 @@ export const Form = ({ defaultValues, handleOnValidSubmit }: FormProps) => {
         <FormLayout.Column span={12}>
           <Controller
             control={control}
-            name="periodType"
-            rules={{ required: "Period type is required" }}
+            name="recurrence"
+            rules={{ required: "Recurrence is required" }}
             render={({ field }) => (
-              <ChipSingleInput {...field} label="Period">
+              <ChipSingleInput {...field} label="Recurrence">
+                <ChipSingleInput.Option value="none">
+                  <Icon as={MinusCircleIcon} color="inherit" size="sm" />
+                  One-time
+                </ChipSingleInput.Option>
                 <ChipSingleInput.Option value="weekly">
                   <Icon as={CalendarIcon} color="inherit" size="sm" />
                   Weekly
@@ -93,7 +99,39 @@ export const Form = ({ defaultValues, handleOnValidSubmit }: FormProps) => {
             )}
           />
         </FormLayout.Column>
-
+        <FormLayout.Column span={6}>
+          <Controller
+            control={control}
+            name="startDate"
+            rules={{ required: "Start date is required" }}
+            render={({ field, fieldState }) => (
+              <TextInput
+                label="Start Date"
+                type="date"
+                {...field}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+        </FormLayout.Column>
+        <FormLayout.Column span={6}>
+          <Controller
+            control={control}
+            name="endDate"
+            render={({ field }) => (
+              <TextInput label="End Date (Optional)" type="date" {...field} />
+            )}
+          />
+        </FormLayout.Column>
+        <FormLayout.Column span={12}>
+          <Controller
+            control={control}
+            name="active"
+            render={({ field }) => (
+              <SwitchInput {...field} label="Active" />
+            )}
+          />
+        </FormLayout.Column>
         <FormLayout.Column span={12}>
           <Controller
             name="note"

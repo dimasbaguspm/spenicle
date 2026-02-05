@@ -1,4 +1,4 @@
-import { type paths } from "./generated/openapi";
+import { type paths, type components } from "./generated/openapi";
 
 export type AccountSearchModel = NonNullable<
   paths["/accounts"]["get"]["parameters"]["query"]
@@ -94,35 +94,27 @@ export type AuthRefreshTokenRequestModel =
 export type AuthRefreshTokenResponseModel =
   paths["/auth/refresh"]["post"]["responses"]["200"]["content"]["application/json"];
 
-export type BudgetSearchModel = NonNullable<
+export type BudgetTemplateSearchModel = NonNullable<
   paths["/budgets"]["get"]["parameters"]["query"]
 >;
-export type BudgetPagedModel =
+export type BudgetTemplatePagedModel =
   paths["/budgets"]["get"]["responses"]["200"]["content"]["application/json"];
-export type BudgetCreateModel =
+export type BudgetTemplateCreateModel =
   paths["/budgets"]["post"]["requestBody"]["content"]["application/json"];
-export type BudgetUpdateModel =
+export type BudgetTemplateUpdateModel =
   paths["/budgets/{id}"]["patch"]["requestBody"]["content"]["application/json"] &
     paths["/budgets/{id}"]["patch"]["parameters"]["path"];
-export type BudgetDeleteModel =
-  paths["/budgets/{id}"]["delete"]["parameters"]["path"];
-export type BudgetModel =
+export type BudgetTemplateModel =
   paths["/budgets/{id}"]["get"]["responses"]["200"]["content"]["application/json"];
 
-export type BudgetTemplateSearchModel = NonNullable<
-  paths["/budgets/templates"]["get"]["parameters"]["query"]
->;
-export type BudgetTemplatePagedModel =
-  paths["/budgets/templates"]["get"]["responses"]["200"]["content"]["application/json"];
-export type BudgetTemplateCreateModel =
-  paths["/budgets/templates"]["post"]["requestBody"]["content"]["application/json"];
-export type BudgetTemplateUpdateModel =
-  paths["/budgets/templates/{id}"]["patch"]["requestBody"]["content"]["application/json"] &
-    paths["/budgets/templates/{id}"]["patch"]["parameters"]["path"];
-export type BudgetTemplateDeleteModel =
-  paths["/budgets/templates/{id}"]["delete"]["parameters"]["path"];
-export type BudgetTemplateModel =
-  paths["/budgets/templates/{id}"]["get"]["responses"]["200"]["content"]["application/json"];
+export type BudgetRelatedSearchModel = NonNullable<
+  paths["/budgets/{id}/list"]["get"]["parameters"]["query"]
+> &
+  paths["/budgets/{id}/list"]["get"]["parameters"]["path"];
+export type BudgetRelatedPagedModel =
+  paths["/budgets/{id}/list"]["get"]["responses"]["200"]["content"]["application/json"];
+
+export type BudgetModel = components["schemas"]["BudgetModel"];
 
 export type CategorySearchModel = NonNullable<
   paths["/categories"]["get"]["parameters"]["query"]
