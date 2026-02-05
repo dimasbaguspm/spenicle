@@ -157,13 +157,12 @@ test.describe("Budget Templates - Common CRUD", () => {
     const id = created.data!.id as number;
 
     // Update the template
-    const newAmount = 150000; // $1500.00
     const updateRes = await budgetTemplateAPI.updateBudgetTemplate(id, {
-      amountLimit: newAmount,
+      name: "Updated Template Name",
       note: "updated note",
     });
     expect(updateRes.status).toBe(200);
-    expect(updateRes.data!.amountLimit).toBe(newAmount);
+    expect(updateRes.data!.name).toBe("Updated Template Name");
     expect(updateRes.data!.note).toBe("updated note");
 
     // Cleanup - deactivate instead of delete

@@ -71,7 +71,6 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 				AND (array_length($4::int8[], 1) IS NULL OR b.account_id = ANY($4::int8[]))
 				AND (array_length($5::int8[], 1) IS NULL OR b.category_id = ANY($5::int8[]))
 				AND ($6::text IS NULL OR $6::text = '' OR b.recurrence = $6::text)
-				AND ($7::bool IS NULL OR b.active = $7::bool)
 			ORDER BY b.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		)
@@ -97,23 +96,23 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 	`
 
 	var (
-		ids         []int64
-		accountIDs  []int64
-		categoryIDs []int64
+		ids         *[]int64
+		accountIDs  *[]int64
+		categoryIDs *[]int64
 	)
 
 	if len(query.IDs) > 0 {
-		ids = query.IDs
+		ids = &query.IDs
 	}
 	if len(query.AccountIDs) > 0 {
-		accountIDs = query.AccountIDs
+		accountIDs = &query.AccountIDs
 	}
 	if len(query.CategoryIDs) > 0 {
-		categoryIDs = query.CategoryIDs
+		categoryIDs = &query.CategoryIDs
 	}
 
 	queryStart := time.Now()
-	rows, err := btr.db.Query(ctx, sql, query.PageSize, offset, ids, accountIDs, categoryIDs, query.Recurrence, query.Active)
+	rows, err := btr.db.Query(ctx, sql, query.PageSize, offset, ids, accountIDs, categoryIDs, query.Recurrence)
 	if err != nil {
 		observability.RecordError("database")
 		return models.BudgetTemplatesPagedModel{}, huma.Error400BadRequest("Unable to query budget templates", err)
@@ -530,23 +529,23 @@ func (btr BudgetTemplateRepository) GetBudgetsPaged(ctx context.Context, query m
 		`
 
 	var (
-		ids         []int64
-		templateIDs []int64
-		accountIDs  []int64
-		categoryIDs []int64
+		ids         *[]int64
+		templateIDs *[]int64
+		accountIDs  *[]int64
+		categoryIDs *[]int64
 	)
 
 	if len(query.IDs) > 0 {
-		ids = query.IDs
+		ids = &query.IDs
 	}
 	if len(query.TemplateIDs) > 0 {
-		templateIDs = query.TemplateIDs
+		templateIDs = &query.TemplateIDs
 	}
 	if len(query.AccountIDs) > 0 {
-		accountIDs = query.AccountIDs
+		accountIDs = &query.AccountIDs
 	}
 	if len(query.CategoryIDs) > 0 {
-		categoryIDs = query.CategoryIDs
+		categoryIDs = &query.CategoryIDs
 	}
 
 	queryStart := time.Now()

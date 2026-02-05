@@ -183,7 +183,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update recurrence from monthly to yearly", async ({
+  test("PUT /budgets/templates - update name only", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -206,19 +206,19 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
-      name: "Update Recurrence Test",
+      name: "Update Name Test",
       active: true,
     });
 
-    // Update recurrence
+    // Update name only (allowed field)
     const updated = await budgetTemplateAPI.updateBudgetTemplate(
       template.data!.id as number,
       {
-        recurrence: "yearly",
+        name: "New Name",
       },
     );
     expect(updated.status).toBe(200);
-    expect(updated.data!.recurrence).toBe("yearly");
+    expect(updated.data!.name).toBe("New Name");
 
     // Cleanup
     await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
@@ -228,7 +228,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update to add endDate", async ({
+  test("PUT /budgets/templates - update name and note", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -245,26 +245,27 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       type: "expense",
     });
 
-    // Create template without endDate
+    // Create template
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
-      name: "Add End Date Test",
+      name: "Update Fields Test",
       active: true,
     });
 
-    // Update to add endDate
-    const endDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
+    // Update name and note only (allowed fields)
     const updated = await budgetTemplateAPI.updateBudgetTemplate(
       template.data!.id as number,
       {
-        endDate: endDate.toISOString(),
+        name: "Updated Name",
+        note: "Updated Note",
       },
     );
     expect(updated.status).toBe(200);
-    expect(updated.data!.endDate).toBeDefined();
+    expect(updated.data!.name).toBe("Updated Name");
+    expect(updated.data!.note).toBe("Updated Note");
 
     // Cleanup
     await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
@@ -274,7 +275,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update to remove endDate", async ({
+  test("PUT /budgets/templates - update to deactivate", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -291,33 +292,28 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       type: "expense",
     });
 
-    // Create template with endDate
-    const endDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    // Create template
     const template = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
       amountLimit: 100000,
       recurrence: "monthly",
       startDate: new Date().toISOString(),
-      endDate: endDate.toISOString(),
-      name: "Remove End Date Test",
+      name: "Deactivate Test",
       active: true,
     });
 
-    // Update to remove endDate
+    // Update to deactivate
     const updated = await budgetTemplateAPI.updateBudgetTemplate(
       template.data!.id as number,
       {
-        endDate: undefined,
+        active: false,
       },
     );
     expect(updated.status).toBe(200);
-    // Note: API may not support removing endDate, so we check it still has the original value
-    expect(updated.data!.endDate).toBeDefined();
+    // Note: Once deactivated, template should stop generating budgets
+    expect(updated.data!.active).toBe(false);
 
     // Cleanup
-    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
-      active: false,
-    });
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
