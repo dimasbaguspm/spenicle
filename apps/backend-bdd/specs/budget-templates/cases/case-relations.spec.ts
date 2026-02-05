@@ -1,7 +1,7 @@
 import { test, expect } from "@fixtures/index";
 
 test.describe("Budget Templates - Relations and Dependencies", () => {
-  test("POST /budgets/templates - create with income account type", async ({
+  test("POST /budgets - create with income account type", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -38,7 +38,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - create with asset account type", async ({
+  test("POST /budgets - create with asset account type", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -75,7 +75,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("GET /budgets/templates - verify account and category relations", async ({
+  test("GET /budgets - verify account and category relations", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -212,7 +212,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update accountId to different account", async ({
+  test("PATCH /budgets - update accountId to different account", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -262,7 +262,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     await accountAPI.deleteAccount(account1.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update categoryId to different category", async ({
+  test("PATCH /budgets - update categoryId to different category", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -313,7 +313,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update to non-existent account returns 400", async ({
+  test("PATCH /budgets - update to non-existent account returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -357,7 +357,7 @@ test.describe("Budget Templates - Relations and Dependencies", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update to non-existent category returns 400", async ({
+  test("PATCH /budgets - update to non-existent category returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,

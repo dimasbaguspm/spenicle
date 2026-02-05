@@ -1,7 +1,7 @@
 import { test, expect } from "@fixtures/index";
 
 test.describe("Budget Templates - Sorting Cases", () => {
-  test("GET /budgets/templates - sort by nextRunAt works correctly", async ({
+  test("GET /budgets - sort by nextRunAt works correctly", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -126,7 +126,7 @@ test.describe("Budget Templates - Sorting Cases", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("GET /budgets/templates - sort by amountLimit desc returns templates in correct order", async ({
+  test("GET /budgets - sort by amountLimit desc returns templates in correct order", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,

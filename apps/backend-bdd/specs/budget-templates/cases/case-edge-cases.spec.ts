@@ -1,7 +1,7 @@
 import { test, expect } from "@fixtures/index";
 
 test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
-  test("POST /budgets/templates - create with endDate in past returns 400", async ({
+  test("POST /budgets - create with endDate in past returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -37,7 +37,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - create with startDate in past is allowed", async ({
+  test("POST /budgets - create with startDate in past is allowed", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -77,7 +77,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - create with very large amountLimit", async ({
+  test("POST /budgets - create with very large amountLimit", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -114,7 +114,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - create with very long note", async ({
+  test("POST /budgets - create with very long note", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -146,7 +146,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     // No cleanup needed since creation failed
   });
 
-  test("POST /budgets/templates - create with 'none' recurrence", async ({
+  test("POST /budgets - create with 'none' recurrence", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -183,7 +183,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update name only", async ({
+  test("PATCH /budgets - update name only", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -228,7 +228,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update name and note", async ({
+  test("PATCH /budgets - update name and note", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -275,7 +275,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PUT /budgets/templates - update to deactivate", async ({
+  test("PATCH /budgets - update to deactivate", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -318,7 +318,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - create duplicate templates is allowed", async ({
+  test("POST /budgets - create duplicate templates is allowed", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -369,7 +369,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("GET /budgets/templates - pagination works", async ({
+  test("GET /budgets - pagination works", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -432,7 +432,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - nextRunAt is null for none recurrence", async ({
+  test("POST /budgets - nextRunAt is null for none recurrence", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -468,7 +468,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - nextRunAt is set to startDate for recurring templates", async ({
+  test("POST /budgets - nextRunAt is set to startDate for recurring templates", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,

@@ -70,7 +70,7 @@ func (btr BudgetTemplateRepository) GetPaged(ctx context.Context, query models.B
 				AND (array_length($3::int8[], 1) IS NULL OR b.id = ANY($3::int8[]))
 				AND (array_length($4::int8[], 1) IS NULL OR b.account_id = ANY($4::int8[]))
 				AND (array_length($5::int8[], 1) IS NULL OR b.category_id = ANY($5::int8[]))
-				AND ($6::text IS NULL OR $6::text = '' OR b.recurrence = $6::text)
+				AND ($6::text = '' OR b.recurrence = $6::text)
 			ORDER BY b.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		)

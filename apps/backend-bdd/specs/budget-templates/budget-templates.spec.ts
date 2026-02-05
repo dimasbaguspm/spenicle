@@ -1,7 +1,7 @@
 import { test, expect } from "@fixtures/index";
 
 test.describe("Budget Templates - Common CRUD", () => {
-  test("POST /budgets/templates - create budget template", async ({
+  test("POST /budgets - create budget template", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -42,7 +42,7 @@ test.describe("Budget Templates - Common CRUD", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("GET /budgets/templates - list budget templates returns items", async ({
+  test("GET /budgets - list budget templates returns items", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -84,7 +84,7 @@ test.describe("Budget Templates - Common CRUD", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("GET /budgets/templates/:id - get budget template by id", async ({
+  test("GET /budgets/:id - get budget template by id", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -126,7 +126,7 @@ test.describe("Budget Templates - Common CRUD", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("PATCH /budgets/templates/:id - update budget template", async ({
+  test("PATCH /budgets/:id - update budget template", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,

@@ -1,14 +1,14 @@
 import { test, expect } from "@fixtures/index";
 
 test.describe("Budget Templates - Create Invalid Cases", () => {
-  test("POST /budgets/templates - missing required fields returns 400", async ({
+  test("POST /budgets - missing required fields returns 400", async ({
     budgetTemplateAPI,
   }) => {
     const res = await budgetTemplateAPI.createBudgetTemplate({} as any);
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 
-  test("POST /budgets/templates - missing amountLimit returns 400", async ({
+  test("POST /budgets - missing amountLimit returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -38,7 +38,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - missing recurrence returns 400", async ({
+  test("POST /budgets - missing recurrence returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -68,7 +68,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - missing startDate returns 400", async ({
+  test("POST /budgets - missing startDate returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -98,7 +98,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - invalid recurrence returns 400", async ({
+  test("POST /budgets - invalid recurrence returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -129,7 +129,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - zero amountLimit returns 400", async ({
+  test("POST /budgets - zero amountLimit returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -161,7 +161,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - negative amountLimit returns 400", async ({
+  test("POST /budgets - negative amountLimit returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -193,7 +193,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - non-existent account returns 400", async ({
+  test("POST /budgets - non-existent account returns 400", async ({
     budgetTemplateAPI,
     categoryAPI,
   }) => {
@@ -218,7 +218,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
     await categoryAPI.deleteCategory(category.data!.id as number);
   });
 
-  test("POST /budgets/templates - non-existent category returns 400", async ({
+  test("POST /budgets - non-existent category returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
   }) => {
@@ -243,7 +243,7 @@ test.describe("Budget Templates - Create Invalid Cases", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets/templates - end date before start date returns 400", async ({
+  test("POST /budgets - end date before start date returns 400", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,

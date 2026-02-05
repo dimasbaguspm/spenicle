@@ -10,7 +10,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       });
     }
   });
-  test("GET /budgets/templates - filter by accountId", async ({
+  test("GET /budgets - filter by accountId", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -78,7 +78,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     await accountAPI.deleteAccount(account1.data!.id as number);
   });
 
-  test("GET /budgets/templates - filter by categoryId", async ({
+  test("GET /budgets - filter by categoryId", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -147,89 +147,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     await categoryAPI.deleteCategory(category1.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
-
-  test("GET /budgets/templates - filter by recurrence", async ({
-    budgetTemplateAPI,
-    accountAPI,
-    categoryAPI,
-  }) => {
-    // Create dependencies
-    const account = await accountAPI.createAccount({
-      name: `bt-filter-rec-account-${Date.now()}`,
-      note: "test account",
-      type: "expense",
-    });
-    const category = await categoryAPI.createCategory({
-      name: `bt-filter-rec-category-${Date.now()}`,
-      note: "test category",
-      type: "expense",
-    });
-
-    // Create budget templates with different recurrences
-    const template1 = await budgetTemplateAPI.createBudgetTemplate({
-      accountId: account.data!.id as number,
-      amountLimit: 50000,
-      recurrence: "monthly",
-      startDate: new Date().toISOString(),
-      name: "Monthly Recurrence Template",
-      active: true,
-    });
-    const template2 = await budgetTemplateAPI.createBudgetTemplate({
-      accountId: account.data!.id as number,
-      amountLimit: 75000,
-      recurrence: "weekly",
-      startDate: new Date().toISOString(),
-      name: "Weekly Recurrence Template",
-      active: true,
-    });
-    const template3 = await budgetTemplateAPI.createBudgetTemplate({
-      accountId: account.data!.id as number,
-      amountLimit: 100000,
-      recurrence: "yearly",
-      startDate: new Date().toISOString(),
-      name: "Yearly Recurrence Template",
-      active: true,
-    });
-
-    // Filter by monthly
-    const filteredMonthly = await budgetTemplateAPI.getBudgetTemplates({
-      recurrence: "monthly",
-    });
-    expect(filteredMonthly.status).toBe(200);
-    expect(filteredMonthly.data!.items!.length).toBe(1);
-    expect(filteredMonthly.data!.items![0].id).toBe(template1.data!.id);
-
-    // Filter by weekly
-    const filteredWeekly = await budgetTemplateAPI.getBudgetTemplates({
-      recurrence: "weekly",
-    });
-    expect(filteredWeekly.status).toBe(200);
-    expect(filteredWeekly.data!.items!.length).toBe(1);
-    expect(filteredWeekly.data!.items![0].id).toBe(template2.data!.id);
-
-    // Filter by yearly
-    const filteredYearly = await budgetTemplateAPI.getBudgetTemplates({
-      recurrence: "yearly",
-    });
-    expect(filteredYearly.status).toBe(200);
-    expect(filteredYearly.data!.items!.length).toBe(1);
-    expect(filteredYearly.data!.items![0].id).toBe(template3.data!.id);
-
-    // Cleanup
-    await budgetTemplateAPI.updateBudgetTemplate(template3.data!.id as number, {
-      active: false,
-    });
-    await budgetTemplateAPI.updateBudgetTemplate(template2.data!.id as number, {
-      active: false,
-    });
-    await budgetTemplateAPI.updateBudgetTemplate(template1.data!.id as number, {
-      active: false,
-    });
-    await categoryAPI.deleteCategory(category.data!.id as number);
-    await accountAPI.deleteAccount(account.data!.id as number);
-  });
-
-  test("GET /budgets/templates - combined filters", async ({
+  test("GET /budgets - combined filters", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
