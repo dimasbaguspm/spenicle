@@ -78,6 +78,9 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", p.AccountID)+":*")
 	// Invalidate category statistics caches
 	common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", p.CategoryID)+":*")
+	// Invalidate budget caches since transactions affect budget actual_amount
+	common.InvalidateCache(ctx, ts.rdb, constants.BudgetCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
 
 	return transaction, nil
 }
@@ -159,6 +162,9 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 	if newCategoryID != existing.Category.ID {
 		common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", newCategoryID)+":*")
 	}
+	// Invalidate budget caches since transactions affect budget actual_amount for both old and new accounts/categories
+	common.InvalidateCache(ctx, ts.rdb, constants.BudgetCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
 	return transaction, nil
 }
 
@@ -200,6 +206,9 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Account.ID)+":*")
 	// Invalidate category statistics caches
 	common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Category.ID)+":*")
+	// Invalidate budget caches since deleting transactions affects budget actual_amount
+	common.InvalidateCache(ctx, ts.rdb, constants.BudgetCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, ts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
 	return nil
 }
 

@@ -192,6 +192,10 @@ func (bts BudgetTemplateService) CreateBudget(ctx context.Context, p models.Crea
 		common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplateCacheKeyPrefix+"*_budgets_paged:*")
 	}
 
+	// Invalidate account and category caches since a new active budget may appear in their responses
+	common.InvalidateCache(ctx, bts.rdb, constants.AccountCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bts.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
+
 	return budget, nil
 }
 
@@ -205,6 +209,10 @@ func (bts BudgetTemplateService) DeactivateExistingActiveBudgets(ctx context.Con
 	// Invalidate all budget caches since we deactivated budgets
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
+
+	// Invalidate account and category caches since active budget status affects their responses
+	common.InvalidateCache(ctx, bts.rdb, constants.AccountCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bts.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
 
 	return nil
 }
@@ -280,6 +288,10 @@ func (bts BudgetTemplateService) UpdateBudget(ctx context.Context, id int64, p m
 	if budget.TemplateID != nil {
 		common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d_budgets_paged:*", *budget.TemplateID))
 	}
+
+	// Invalidate account and category caches since budgets are embedded in their responses
+	common.InvalidateCache(ctx, bts.rdb, constants.AccountCacheKeyPrefix+"*")
+	common.InvalidateCache(ctx, bts.rdb, constants.CategoriesPagedCacheKeyPrefix+"*")
 
 	return budget, nil
 }
