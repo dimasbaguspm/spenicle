@@ -245,7 +245,7 @@ func (bts BudgetTemplateService) GenerateBudgetFromTemplate(ctx context.Context,
 		PeriodStart: periodStart,
 		PeriodEnd:   periodEnd,
 		AmountLimit: template.AmountLimit,
-		Name:        fmt.Sprintf("%s (%s)", template.Name, periodStart.Format("2006-01-02")),
+		Name:        fmt.Sprintf("%s (%s to %s)", template.Name, periodStart.Format("2006-01-02"), periodEnd.Format("2006-01-02")),
 		Note:        template.Note,
 	}
 
