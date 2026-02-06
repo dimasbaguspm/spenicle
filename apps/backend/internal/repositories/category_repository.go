@@ -38,15 +38,26 @@ func (cr CategoryRepository) GetPaged(ctx context.Context, query models.Categori
 	offset := (query.PageNumber - 1) * query.PageSize
 
 	sql := `
-		WITH filtered_categories AS (
-			SELECT 
+		WITH ranked_budgets AS (
+			SELECT
+				b.*,
+				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.category_id = b.category_id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+				ROW_NUMBER() OVER (PARTITION BY b.category_id ORDER BY b.id DESC) as rn
+			FROM budgets b
+			WHERE b.status = 'active'
+				AND b.period_start <= CURRENT_DATE
+				AND b.period_end >= CURRENT_DATE
+				AND b.deleted_at IS NULL
+		),
+		filtered_categories AS (
+			SELECT
 				c.id, c.name, c.type, c.note, c.icon, c.icon_color, c.display_order, c.archived_at, c.created_at, c.updated_at,
 				b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, b.account_id, b.category_id,
-				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.category_id = c.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+				b.actual_amount,
 				b.period_type, b.name as budget_name,
 				COUNT(*) OVER() as total_count
 			FROM categories c
-			LEFT JOIN budgets b ON b.category_id = c.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
+			LEFT JOIN ranked_budgets b ON b.category_id = c.id AND b.rn = 1
 			WHERE c.deleted_at IS NULL
 					AND (array_length($3::int8[], 1) IS NULL OR c.id = ANY($3::int8[]))
 					AND ($5::text IS NULL OR $5::text = '' OR c.name ILIKE '%' || $5::text || '%')
@@ -204,11 +215,31 @@ func (cr CategoryRepository) GetDetail(ctx context.Context, id int64) (models.Ca
 	sql := `
 		SELECT
 			c.id, c.name, c.type, c.note, c.icon, c.icon_color, c.display_order, c.archived_at, c.created_at, c.updated_at, c.deleted_at,
-			b.id as budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, b.account_id, b.category_id,
-			COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.category_id = c.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
-			b.period_type, b.name as budget_name
+			b.budget_id, b.period_start, b.period_end, b.template_id, b.amount_limit, b.account_id, b.category_id,
+			b.actual_amount,
+			b.period_type, b.budget_name
 		FROM categories c
-		LEFT JOIN budgets b ON b.category_id = c.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
+		LEFT JOIN LATERAL (
+			SELECT
+				b.id as budget_id,
+				b.period_start,
+				b.period_end,
+				b.template_id,
+				b.amount_limit,
+				b.account_id,
+				b.category_id,
+				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.category_id = c.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+				b.period_type,
+				b.name as budget_name
+			FROM budgets b
+			WHERE b.category_id = c.id
+				AND b.status = 'active'
+				AND b.period_start <= CURRENT_DATE
+				AND b.period_end >= CURRENT_DATE
+				AND b.deleted_at IS NULL
+			ORDER BY b.id DESC
+			LIMIT 1
+		) b ON true
 		WHERE c.id = $1 AND c.deleted_at IS NULL
 	`
 	queryStart := time.Now()

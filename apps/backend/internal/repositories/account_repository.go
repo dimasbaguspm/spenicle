@@ -44,15 +44,26 @@ func (ar AccountRepository) GetPaged(ctx context.Context, query models.AccountsS
 	offset := (query.PageNumber - 1) * query.PageSize
 
 	sql := `
-		WITH filtered_accounts AS (
-			SELECT 
+		WITH ranked_budgets AS (
+			SELECT
+				b.*,
+				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = b.account_id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+				ROW_NUMBER() OVER (PARTITION BY b.account_id ORDER BY b.id DESC) as rn
+			FROM budgets b
+			WHERE b.status = 'active'
+				AND b.period_start <= CURRENT_DATE
+				AND b.period_end >= CURRENT_DATE
+				AND b.deleted_at IS NULL
+		),
+		filtered_accounts AS (
+			SELECT
 				a.id, a.name, a.type, a.note, a.amount, a.icon, a.icon_color, a.display_order, a.archived_at, a.created_at, a.updated_at,
-				b.id as budget_id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end, b.amount_limit, 
-				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = a.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+				b.id as budget_id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end, b.amount_limit,
+				b.actual_amount,
 				b.period_type, b.name as budget_name,
 				COUNT(*) OVER() as total_count
 			FROM accounts a
-			LEFT JOIN budgets b ON b.account_id = a.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
+			LEFT JOIN ranked_budgets b ON b.account_id = a.id AND b.rn = 1
 			WHERE a.deleted_at IS NULL
 				AND (array_length($3::int8[], 1) IS NULL OR a.id = ANY($3::int8[]))
 				AND ($5::text IS NULL OR $5::text = '' OR a.name ILIKE '%' || $5::text || '%')
@@ -189,13 +200,34 @@ func (ar AccountRepository) GetDetail(ctx context.Context, id int64) (models.Acc
 	var periodType *string
 	var budgetName *string
 
-	sql := `SELECT a.id, a.name, a.type, a.note, a.amount, a.icon, a.icon_color, a.display_order, a.archived_at, a.created_at, a.updated_at, a.deleted_at,
-			b.id as budget_id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end, b.amount_limit, 
-			COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = a.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
-			b.period_type, b.name as budget_name
-			FROM accounts a
-			LEFT JOIN budgets b ON b.account_id = a.id AND b.status = 'active' AND b.period_start <= CURRENT_DATE AND b.period_end >= CURRENT_DATE AND b.deleted_at IS NULL
-			WHERE a.id = $1 AND a.deleted_at IS NULL`
+	sql := `SELECT
+			a.id, a.name, a.type, a.note, a.amount, a.icon, a.icon_color, a.display_order, a.archived_at, a.created_at, a.updated_at, a.deleted_at,
+			b.budget_id, b.template_id, b.account_id, b.category_id, b.period_start, b.period_end, b.amount_limit,
+			b.actual_amount,
+			b.period_type, b.budget_name
+		FROM accounts a
+		LEFT JOIN LATERAL (
+			SELECT
+				b.id as budget_id,
+				b.template_id,
+				b.account_id,
+				b.category_id,
+				b.period_start,
+				b.period_end,
+				b.amount_limit,
+				COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.account_id = a.id AND t.date >= b.period_start AND t.date <= b.period_end AND t.deleted_at IS NULL), 0) as actual_amount,
+				b.period_type,
+				b.name as budget_name
+			FROM budgets b
+			WHERE b.account_id = a.id
+				AND b.status = 'active'
+				AND b.period_start <= CURRENT_DATE
+				AND b.period_end >= CURRENT_DATE
+				AND b.deleted_at IS NULL
+			ORDER BY b.id DESC
+			LIMIT 1
+		) b ON true
+		WHERE a.id = $1 AND a.deleted_at IS NULL`
 
 	queryStart := time.Now()
 	err := ar.db.QueryRow(ctx, sql, id).Scan(&data.ID, &data.Name, &data.Type, &data.Note, &data.Amount, &data.Icon, &data.IconColor, &data.DisplayOrder, &data.ArchivedAt, &data.CreatedAt, &data.UpdatedAt, &data.DeletedAt, &budgetID, &templateID, &accountID, &categoryID, &periodStart, &periodEnd, &amountLimit, &actualAmount, &periodType, &budgetName)

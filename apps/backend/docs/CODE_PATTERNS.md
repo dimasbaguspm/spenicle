@@ -700,3 +700,166 @@ func (w *BudgetTemplateWorker) calculateBudgetPeriod(recurrence string) (time.Ti
     return now, now
 }
 ```
+
+## One-to-Many Deduplication Pattern
+
+When a LEFT JOIN creates multiple rows per entity (e.g., one account with multiple budgets), use PostgreSQL window functions to deduplicate and select only one related record.
+
+### Problem
+
+Without deduplication, LEFT JOIN produces duplicate rows:
+
+```sql
+-- ❌ WRONG: Creates duplicate accounts when multiple budgets exist
+SELECT a.*, b.*
+FROM accounts a
+LEFT JOIN budgets b ON b.account_id = a.id
+    AND b.status = 'active'
+WHERE a.deleted_at IS NULL
+LIMIT 10 OFFSET 0
+```
+
+If account ID 1 has 2 active budgets:
+- Row 1: Account 1 + Budget ID 5
+- Row 2: Account 1 + Budget ID 1  ← Duplicate account!
+
+This causes:
+- Duplicate accounts in paginated responses
+- Wrong `LIMIT/OFFSET` boundaries (applied to joined rows, not unique accounts)
+- Inflated `COUNT(*) OVER()` totals
+
+### Solution: Window Function with ROW_NUMBER()
+
+Use `ROW_NUMBER() OVER (PARTITION BY ...)` to rank related records and select only one:
+
+```sql
+-- ✅ CORRECT: Window function deduplicates by ranking budgets per account
+WITH ranked_budgets AS (
+    SELECT
+        b.*,
+        COALESCE((SELECT SUM(t.amount) FROM transactions t
+                  WHERE t.account_id = b.account_id
+                  AND t.date >= b.period_start
+                  AND t.date <= b.period_end
+                  AND t.deleted_at IS NULL), 0) as actual_amount,
+        ROW_NUMBER() OVER (PARTITION BY b.account_id ORDER BY b.id DESC) as rn
+    FROM budgets b
+    WHERE b.status = 'active'
+        AND b.period_start <= CURRENT_DATE
+        AND b.period_end >= CURRENT_DATE
+        AND b.deleted_at IS NULL
+),
+filtered_accounts AS (
+    SELECT
+        a.id, a.name, a.type, /* ... all account fields ... */
+        b.id as budget_id, b.template_id, /* ... all budget fields ... */
+        b.actual_amount,
+        COUNT(*) OVER() as total_count  -- Now counts unique accounts
+    FROM accounts a
+    LEFT JOIN ranked_budgets b ON b.account_id = a.id AND b.rn = 1  -- ← Only first ranked budget
+    WHERE a.deleted_at IS NULL
+        -- ... filters ...
+    ORDER BY a.created_at DESC
+    LIMIT $1 OFFSET $2
+)
+SELECT * FROM filtered_accounts
+ORDER BY created_at DESC
+```
+
+**Key Points:**
+- `PARTITION BY b.account_id` - Groups budgets by account
+- `ORDER BY b.id DESC` - Ranks budgets (newest first)
+- `rn = 1` in JOIN - Selects only the top-ranked budget per account
+- `COUNT(*) OVER()` - Counts unique accounts after deduplication
+- `LIMIT/OFFSET` - Applied to unique accounts, not joined rows
+
+### Alternative: LATERAL Subquery for Detail Endpoints
+
+For single-record queries (`GetDetail`), use `LATERAL` subquery with `LIMIT 1`:
+
+```sql
+-- ✅ For detail endpoint: LATERAL ensures only one budget returned
+SELECT
+    a.id, a.name, /* ... account fields ... */
+    b.budget_id, b.template_id, /* ... budget fields ... */
+    b.actual_amount
+FROM accounts a
+LEFT JOIN LATERAL (
+    SELECT
+        b.id as budget_id,
+        b.template_id,
+        b.account_id,
+        b.category_id,
+        b.period_start,
+        b.period_end,
+        b.amount_limit,
+        COALESCE((SELECT SUM(t.amount) FROM transactions t
+                  WHERE t.account_id = a.id
+                  AND t.date >= b.period_start
+                  AND t.date <= b.period_end
+                  AND t.deleted_at IS NULL), 0) as actual_amount,
+        b.period_type,
+        b.name as budget_name
+    FROM budgets b
+    WHERE b.account_id = a.id
+        AND b.status = 'active'
+        AND b.period_start <= CURRENT_DATE
+        AND b.period_end >= CURRENT_DATE
+        AND b.deleted_at IS NULL
+    ORDER BY b.id DESC
+    LIMIT 1  -- ← Only one budget
+) b ON true
+WHERE a.id = $1 AND a.deleted_at IS NULL
+```
+
+### When to Use This Pattern
+
+Apply this pattern when:
+- One-to-many relationships (1 account → N budgets, 1 category → N budgets)
+- Multiple active records can exist simultaneously (e.g., NULL values bypass unique constraints)
+- JOIN might produce duplicate parent records
+- Pagination and counting must be accurate
+
+### Real-World Example: Multiple Active Budgets
+
+PostgreSQL allows multiple active budgets per account when `category_id = NULL`:
+
+```sql
+-- accounts table
+id | name
+1  | Dompet Utama
+
+-- budgets table (both active for account 1)
+id | account_id | category_id | period_start | period_end | status
+1  | 1          | NULL        | 2026-01-01   | 2026-01-31 | active
+5  | 1          | NULL        | 2026-02-01   | 2026-02-28 | active
+```
+
+**Without deduplication:**
+- `GET /accounts?pageSize=10` returns Account 1 twice
+- `totalCount = 2` (wrong - should be 1)
+- Pagination breaks (LIMIT applied to 2 rows, not 1 account)
+
+**With window function:**
+- Account 1 appears once with budget ID 5 (highest ID)
+- `totalCount = 1` (correct)
+- Pagination works correctly
+
+### Testing Deduplication
+
+Create E2E test to verify:
+
+```typescript
+// Create account with 2 active budget templates
+const account = await createAccount({ name: "Test" });
+await createBudgetTemplate({ accountId: account.id, /* ... */ });
+await createBudgetTemplate({ accountId: account.id, /* ... */ });
+
+// Verify account appears only once
+const accounts = await getAccounts({ pageSize: 100 });
+const occurrences = accounts.items.filter(a => a.id === account.id);
+expect(occurrences.length).toBe(1);  // Not 2!
+
+// Verify embedded budget is the most recent
+expect(occurrences[0].embeddedBudget.id).toBe(maxBudgetId);
+```

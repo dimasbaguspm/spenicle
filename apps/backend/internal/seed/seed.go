@@ -126,159 +126,267 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 		"online":    tagIDs[9],
 	}
 
-	// Seed transactions
-	transactions := []models.CreateTransactionModel{
-		{
+	// Seed transactions - 3 months of data for realistic testing
+	startDate := time.Now().AddDate(0, 0, -90)
+	var transactions []models.CreateTransactionModel
+
+	// Monthly income - 3 months
+	for i := 0; i < 3; i++ {
+		transactions = append(transactions, models.CreateTransactionModel{
 			Type:       "income",
-			Date:       time.Now().AddDate(0, 0, -30),
+			Date:       startDate.AddDate(0, i, 5),
 			Amount:     8000000,
 			AccountID:  accountMap["Rekening Gaji"],
 			CategoryID: categoryMap["Gaji"],
-			Note:       func() *string { s := "Gaji bulan Januari 2024"; return &s }(),
-		},
-		{
-			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -28),
-			Amount:     150000,
-			AccountID:  accountMap["Dompet Utama"],
-			CategoryID: categoryMap["Makanan & Minuman"],
-			Note:       func() *string { s := "Makan siang di warung"; return &s }(),
-		},
-		{
-			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -27),
-			Amount:     50000,
-			AccountID:  accountMap["Dompet Digital GoPay"],
-			CategoryID: categoryMap["Transportasi"],
-			Note:       func() *string { s := "GoRide ke kantor"; return &s }(),
-		},
-		{
-			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -25),
-			Amount:     250000,
-			AccountID:  accountMap["Kartu Kredit BCA"],
-			CategoryID: categoryMap["Belanja Online"],
-			Note:       func() *string { s := "Beli laptop di Shopee"; return &s }(),
-		},
-		{
-			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -24),
-			Amount:     750000,
-			AccountID:  accountMap["Dompet Utama"],
-			CategoryID: categoryMap["Tagihan"],
-			Note:       func() *string { s := "Bayar listrik dan internet"; return &s }(),
-		},
-		{
+			Note:       func() *string { s := fmt.Sprintf("Gaji bulan ke-%d", i+1); return &s }(),
+		})
+	}
+
+	// Freelance income - sporadic
+	transactions = append(transactions,
+		models.CreateTransactionModel{
 			Type:       "income",
-			Date:       time.Now().AddDate(0, 0, -22),
+			Date:       startDate.AddDate(0, 0, 15),
 			Amount:     2500000,
 			AccountID:  accountMap["Tabungan Mandiri"],
 			CategoryID: categoryMap["Freelance"],
 			Note:       func() *string { s := "Proyek website perusahaan"; return &s }(),
 		},
-		{
+		models.CreateTransactionModel{
+			Type:       "income",
+			Date:       startDate.AddDate(0, 1, 20),
+			Amount:     3000000,
+			AccountID:  accountMap["Tabungan Mandiri"],
+			CategoryID: categoryMap["Freelance"],
+			Note:       func() *string { s := "Konsultasi sistem database"; return &s }(),
+		},
+	)
+
+	// Bonus income
+	transactions = append(transactions, models.CreateTransactionModel{
+		Type:       "income",
+		Date:       startDate.AddDate(0, 0, 10),
+		Amount:     1500000,
+		AccountID:  accountMap["Tabungan Darurat"],
+		CategoryID: categoryMap["Bonus"],
+		Note:       func() *string { s := "Bonus akhir tahun"; return &s }(),
+	})
+
+	// Weekly groceries - ~13 weeks over 3 months
+	for i := 0; i < 13; i++ {
+		transactions = append(transactions, models.CreateTransactionModel{
 			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -20),
+			Date:       startDate.AddDate(0, 0, i*7+2),
+			Amount:     200000 + int64((i%3)*50000),
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Makanan & Minuman"],
+			Note:       func() *string { s := fmt.Sprintf("Belanja mingguan ke-%d", i+1); return &s }(),
+		})
+	}
+
+	// Monthly bills - 3 months each for electricity, internet, phone
+	for i := 0; i < 3; i++ {
+		transactions = append(transactions,
+			models.CreateTransactionModel{
+				Type:       "expense",
+				Date:       startDate.AddDate(0, i, 12),
+				Amount:     450000,
+				AccountID:  accountMap["Dompet Utama"],
+				CategoryID: categoryMap["Tagihan"],
+				Note:       func() *string { s := fmt.Sprintf("Tagihan listrik bulan ke-%d", i+1); return &s }(),
+			},
+			models.CreateTransactionModel{
+				Type:       "expense",
+				Date:       startDate.AddDate(0, i, 15),
+				Amount:     350000,
+				AccountID:  accountMap["Dompet Utama"],
+				CategoryID: categoryMap["Tagihan"],
+				Note:       func() *string { s := fmt.Sprintf("Tagihan internet bulan ke-%d", i+1); return &s }(),
+			},
+			models.CreateTransactionModel{
+				Type:       "expense",
+				Date:       startDate.AddDate(0, i, 18),
+				Amount:     200000,
+				AccountID:  accountMap["Dompet Utama"],
+				CategoryID: categoryMap["Tagihan"],
+				Note:       func() *string { s := fmt.Sprintf("Tagihan telepon bulan ke-%d", i+1); return &s }(),
+			},
+		)
+	}
+
+	// Fuel/transport - biweekly over 3 months (~6 times)
+	for i := 0; i < 6; i++ {
+		transactions = append(transactions, models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, i*14+3),
+			Amount:     300000,
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Transportasi"],
+			Note:       func() *string { s := "Bensin motor"; return &s }(),
+		})
+		transactions = append(transactions, models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, i*14+8),
+			Amount:     50000,
+			AccountID:  accountMap["Dompet Digital GoPay"],
+			CategoryID: categoryMap["Transportasi"],
+			Note:       func() *string { s := "GoRide ke kantor"; return &s }(),
+		})
+	}
+
+	// Coffee/snacks - frequent small purchases (~19 times)
+	for i := 0; i < 19; i++ {
+		transactions = append(transactions, models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, i*4+1),
+			Amount:     25000 + int64((i%4)*10000),
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Makanan & Minuman"],
+			Note:       func() *string { s := "Kopi dan snack"; return &s }(),
+		})
+	}
+
+	// One-time expenses - shopping, doctor, entertainment
+	transactions = append(transactions,
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, 8),
+			Amount:     500000,
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Belanja Online"],
+			Note:       func() *string { s := "Beli sepatu olahraga"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 1, 5),
+			Amount:     750000,
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Belanja Online"],
+			Note:       func() *string { s := "Beli laptop accessories"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 2, 10),
+			Amount:     300000,
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Belanja Online"],
+			Note:       func() *string { s := "Beli buku programming"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 2, 25),
+			Amount:     1200000,
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Belanja Online"],
+			Note:       func() *string { s := "Beli monitor 27 inch"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, 20),
+			Amount:     200000,
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Kesehatan"],
+			Note:       func() *string { s := "Kontrol ke dokter gigi"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 1, 25),
+			Amount:     350000,
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Kesehatan"],
+			Note:       func() *string { s := "Beli obat dan vitamin"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, 22),
 			Amount:     100000,
 			AccountID:  accountMap["Dompet Utama"],
 			CategoryID: categoryMap["Hiburan"],
 			Note:       func() *string { s := "Tiket bioskop"; return &s }(),
 		},
-		{
+		models.CreateTransactionModel{
 			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -18),
-			Amount:     200000,
-			AccountID:  accountMap["Kartu Kredit BCA"],
-			CategoryID: categoryMap["Kesehatan"],
-			Note:       func() *string { s := "Kontrol ke dokter"; return &s }(),
-		},
-		{
-			Type:                 "transfer",
-			Date:                 time.Now().AddDate(0, 0, -15),
-			Amount:               1000000,
-			AccountID:            accountMap["Rekening Gaji"],
-			CategoryID:           categoryMap["Transfer"],
-			DestinationAccountID: func() *int64 { id := accountMap["Tabungan Mandiri"]; return &id }(),
-			Note:                 func() *string { s := "Transfer gaji ke tabungan"; return &s }(),
-		},
-		{
-			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -12),
-			Amount:     500000,
-			AccountID:  accountMap["Dompet Digital GoPay"],
-			CategoryID: categoryMap["Belanja Online"],
-			Note:       func() *string { s := "Beli buku programming"; return &s }(),
-		},
-		{
-			Type:       "income",
-			Date:       time.Now().AddDate(0, 0, -10),
-			Amount:     1500000,
-			AccountID:  accountMap["Tabungan Darurat"],
-			CategoryID: categoryMap["Bonus"],
-			Note:       func() *string { s := "Bonus akhir tahun"; return &s }(),
-		},
-		{
-			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -8),
-			Amount:     300000,
-			AccountID:  accountMap["Kartu Kredit BCA"],
-			CategoryID: categoryMap["Transportasi"],
-			Note:       func() *string { s := "Bensin motor"; return &s }(),
-		},
-		{
-			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -5),
-			Amount:     80000,
-			AccountID:  accountMap["Dompet Utama"],
-			CategoryID: categoryMap["Makanan & Minuman"],
-			Note:       func() *string { s := "Makan malam keluarga"; return &s }(),
-		},
-		{
-			Type:                 "transfer",
-			Date:                 time.Now().AddDate(0, 0, -3),
-			Amount:               500000,
-			AccountID:            accountMap["Tabungan Mandiri"],
-			CategoryID:           categoryMap["Transfer"],
-			DestinationAccountID: func() *int64 { id := accountMap["Dompet Digital GoPay"]; return &id }(),
-			Note:                 func() *string { s := "Top up GoPay"; return &s }(),
-		},
-		{
-			Type:       "expense",
-			Date:       time.Now().AddDate(0, 0, -1),
+			Date:       startDate.AddDate(0, 1, 18),
 			Amount:     150000,
 			AccountID:  accountMap["Dompet Digital GoPay"],
 			CategoryID: categoryMap["Hiburan"],
 			Note:       func() *string { s := "Beli game online"; return &s }(),
 		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 2, 15),
+			Amount:     450000,
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Hiburan"],
+			Note:       func() *string { s := "Tiket konser musik"; return &s }(),
+		},
+	)
+
+	// Monthly transfers - salary to savings (3x)
+	for i := 0; i < 3; i++ {
+		transactions = append(transactions, models.CreateTransactionModel{
+			Type:                 "transfer",
+			Date:                 startDate.AddDate(0, i, 8),
+			Amount:               2000000,
+			AccountID:            accountMap["Rekening Gaji"],
+			CategoryID:           categoryMap["Transfer"],
+			DestinationAccountID: func() *int64 { id := accountMap["Tabungan Mandiri"]; return &id }(),
+			Note:                 func() *string { s := "Transfer gaji ke tabungan"; return &s }(),
+		})
 	}
 
-	// Track transactions with their tags for later association
-	type transactionWithTags struct {
-		Transaction models.CreateTransactionModel
-		Tags        []string
+	// E-wallet top-ups (4x over 3 months)
+	for i := 0; i < 4; i++ {
+		transactions = append(transactions, models.CreateTransactionModel{
+			Type:                 "transfer",
+			Date:                 startDate.AddDate(0, 0, i*20+7),
+			Amount:               500000,
+			AccountID:            accountMap["Tabungan Mandiri"],
+			CategoryID:           categoryMap["Transfer"],
+			DestinationAccountID: func() *int64 { id := accountMap["Dompet Digital GoPay"]; return &id }(),
+			Note:                 func() *string { s := "Top up GoPay"; return &s }(),
+		})
 	}
 
-	transactionTags := []transactionWithTags{
-		{transactions[0], []string{"berulang"}},             // Gaji bulan Januari
-		{transactions[1], nil},                              // Makan siang di warung
-		{transactions[2], []string{"online"}},               // GoRide ke kantor
-		{transactions[3], []string{"online", "penting"}},    // Beli laptop di Shopee
-		{transactions[4], []string{"berulang"}},             // Bayar listrik dan internet
-		{transactions[5], []string{"bisnis"}},               // Proyek website perusahaan
-		{transactions[6], []string{"pribadi"}},              // Tiket bioskop
-		{transactions[7], []string{"penting"}},              // Kontrol ke dokter
-		{transactions[8], nil},                              // Transfer gaji ke tabungan
-		{transactions[9], []string{"pendidikan", "online"}}, // Beli buku programming
-		{transactions[10], []string{"hadiah"}},              // Bonus akhir tahun
-		{transactions[11], nil},                             // Bensin motor
-		{transactions[12], []string{"pribadi"}},             // Makan malam keluarga
-		{transactions[13], nil},                             // Top up GoPay
-		{transactions[14], []string{"online", "pribadi"}},   // Beli game online
+	// Emergency fund transfers (2x)
+	transactions = append(transactions,
+		models.CreateTransactionModel{
+			Type:                 "transfer",
+			Date:                 startDate.AddDate(0, 0, 28),
+			Amount:               1000000,
+			AccountID:            accountMap["Rekening Gaji"],
+			CategoryID:           categoryMap["Transfer"],
+			DestinationAccountID: func() *int64 { id := accountMap["Tabungan Darurat"]; return &id }(),
+			Note:                 func() *string { s := "Transfer ke dana darurat"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:                 "transfer",
+			Date:                 startDate.AddDate(0, 2, 5),
+			Amount:               1500000,
+			AccountID:            accountMap["Rekening Gaji"],
+			CategoryID:           categoryMap["Transfer"],
+			DestinationAccountID: func() *int64 { id := accountMap["Tabungan Darurat"]; return &id }(),
+			Note:                 func() *string { s := "Top up dana darurat"; return &s }(),
+		},
+	)
+
+	// Investment transfers (3x)
+	for i := 0; i < 3; i++ {
+		transactions = append(transactions, models.CreateTransactionModel{
+			Type:                 "transfer",
+			Date:                 startDate.AddDate(0, i, 25),
+			Amount:               1000000,
+			AccountID:            accountMap["Tabungan Mandiri"],
+			CategoryID:           categoryMap["Transfer"],
+			DestinationAccountID: func() *int64 { id := accountMap["Tabungan Darurat"]; return &id }(),
+			Note:                 func() *string { s := "Investasi bulanan"; return &s }(),
+		})
 	}
 
+	// Map tags to transaction patterns (simplified - just tag a subset)
 	var transactionIDs []int64
-	for _, txWithTags := range transactionTags {
-		transaction, err := rootSvc.Tsct.Create(ctx, txWithTags.Transaction)
+	for idx, tx := range transactions {
+		transaction, err := rootSvc.Tsct.Create(ctx, tx)
 		if err != nil {
 			return fmt.Errorf("failed to create transaction: %w", err)
 		}
@@ -286,67 +394,138 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 		transactionIDs = append(transactionIDs, transaction.ID)
 		slog.Info("Created transaction", "id", transaction.ID, "type", transaction.Type, "amount", transaction.Amount)
 
-		// Add tags if any
-		for _, tagName := range txWithTags.Tags {
-			if tagID, exists := tagMap[tagName]; exists {
-				_, err := rootSvc.TsctTag.Create(ctx, models.CreateTransactionTagModel{
-					TransactionID: transaction.ID,
-					TagID:         tagID,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to add tag %s to transaction %d: %w", tagName, transaction.ID, err)
+		// Add tags to specific transaction types (simple pattern-based)
+		var tags []int64
+		if tx.Note != nil {
+			noteText := *tx.Note
+			// Recurring tags - monthly salaries, bills, weekly groceries
+			if len(noteText) >= 4 && (noteText[:4] == "Gaji" || noteText[:7] == "Tagihan" || noteText[:7] == "Belanja") {
+				tags = append(tags, tagMap["berulang"])
+			}
+			// Online tags - e-wallet, online purchases
+			if len(noteText) >= 6 && (noteText[:6] == "GoRide" || noteText[:6] == "Top up" || noteText[:4] == "Beli") {
+				tags = append(tags, tagMap["online"])
+			}
+			// Important tags - bills, doctor
+			if len(noteText) >= 7 && (noteText[:7] == "Tagihan" || noteText[:7] == "Kontrol" || noteText[:4] == "Beli" && len(noteText) > 8 && noteText[5:9] == "obat") {
+				tags = append(tags, tagMap["penting"])
+			}
+			// Business tags - projects
+			if len(noteText) >= 6 && (noteText[:6] == "Proyek" || noteText[:10] == "Konsultasi") {
+				tags = append(tags, tagMap["bisnis"])
+			}
+			// Personal tags - cinema, coffee, games
+			if len(noteText) >= 5 && (noteText[:5] == "Tiket" || noteText[:4] == "Kopi" || noteText[:4] == "game") {
+				tags = append(tags, tagMap["pribadi"])
+			}
+			// Investment tags
+			if len(noteText) >= 9 && noteText[:9] == "Investasi" {
+				tags = append(tags, tagMap["investasi"])
+			}
+			// Emergency tags
+			if len(noteText) >= 4 && noteText[:4] == "dana" || (len(noteText) >= 6 && noteText[:6] == "Top up" && len(noteText) > 10) {
+				if len(noteText) >= 11 && noteText[len(noteText)-7:] == "darurat" {
+					tags = append(tags, tagMap["darurat"])
 				}
 			}
 		}
+
+		// Add tags
+		for _, tagID := range tags {
+			_, err := rootSvc.TsctTag.Create(ctx, models.CreateTransactionTagModel{
+				TransactionID: transaction.ID,
+				TagID:         tagID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to add tag to transaction %d: %w", transaction.ID, err)
+			}
+		}
+
+		// Log progress every 20 transactions
+		if (idx+1)%20 == 0 {
+			slog.Info("Transaction creation progress", "completed", idx+1, "total", len(transactions))
+		}
 	}
 
-	// Seed budgets - different types for comprehensive testing
-	budgets := []models.CreateBudgetModel{
-		// Account-only budgets
+	slog.Info("Created transactions", "count", len(transactionIDs))
+
+	// Seed budget templates - will automatically generate budgets
+	budgetTemplates := []models.CreateBudgetTemplateModel{
+		// Account-level templates
 		{
 			AccountID:   func() *int64 { id := accountMap["Dompet Utama"]; return &id }(),
-			PeriodStart: time.Now().AddDate(0, 0, -14), // 2 weeks ago
-			PeriodEnd:   time.Now().AddDate(0, 0, 14),  // 2 weeks from now
-			AmountLimit: 2000000,                       // 2 million IDR for main wallet
-			Name:        "Budget Dompet Utama Bulanan",
-			Note:        func() *string { s := "Budget pengeluaran harian dari dompet utama"; return &s }(),
+			AmountLimit: 2500000, // 2.5 million IDR monthly
+			Recurrence:  "monthly",
+			StartDate:   startDate, // 90 days ago
+			EndDate:     func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(),
+			Name:        "Budget Dompet Utama",
+			Note:        func() *string { s := "Budget pengeluaran bulanan dari dompet utama"; return &s }(),
+			Active:      true,
 		},
 		{
 			AccountID:   func() *int64 { id := accountMap["Kartu Kredit BCA"]; return &id }(),
-			PeriodStart: time.Now().AddDate(0, 0, -14),
-			PeriodEnd:   time.Now().AddDate(0, 0, 14),
-			AmountLimit: 5000000, // 5 million IDR credit limit
-			Name:        "Limit Kartu Kredit BCA",
-			Note:        func() *string { s := "Batas maksimal penggunaan kartu kredit"; return &s }(),
+			AmountLimit: 5000000, // 5 million IDR monthly credit limit
+			Recurrence:  "monthly",
+			StartDate:   startDate,
+			EndDate:     func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(),
+			Name:        "Budget Kartu Kredit BCA",
+			Note:        func() *string { s := "Batas maksimal penggunaan kartu kredit bulanan"; return &s }(),
+			Active:      true,
 		},
-		// Category-only budgets
+		// Category-level templates
 		{
 			CategoryID:  func() *int64 { id := categoryMap["Makanan & Minuman"]; return &id }(),
-			PeriodStart: time.Now().AddDate(0, 0, -14),
-			PeriodEnd:   time.Now().AddDate(0, 0, 14),
-			AmountLimit: 1500000, // 1.5 million IDR for food
-			Name:        "Budget Makanan & Minuman",
-			Note:        func() *string { s := "Budget untuk makan di restoran dan bahan makanan"; return &s }(),
+			AmountLimit: 500000, // 500k IDR weekly
+			Recurrence:  "weekly",
+			StartDate:   startDate,
+			EndDate:     func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(),
+			Name:        "Budget Makanan Mingguan",
+			Note:        func() *string { s := "Budget mingguan untuk makanan dan minuman"; return &s }(),
+			Active:      true,
 		},
 		{
 			CategoryID:  func() *int64 { id := categoryMap["Transportasi"]; return &id }(),
-			PeriodStart: time.Now().AddDate(0, 0, -14),
-			PeriodEnd:   time.Now().AddDate(0, 0, 14),
-			AmountLimit: 800000, // 800k IDR for transport
-			Name:        "Budget Transportasi",
-			Note:        func() *string { s := "Budget untuk bensin, ojek online, dan angkutan umum"; return &s }(),
+			AmountLimit: 300000, // 300k IDR weekly
+			Recurrence:  "weekly",
+			StartDate:   startDate,
+			EndDate:     func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(),
+			Name:        "Budget Transportasi Mingguan",
+			Note:        func() *string { s := "Budget mingguan untuk transportasi"; return &s }(),
+			Active:      true,
+		},
+		{
+			CategoryID:  func() *int64 { id := categoryMap["Hiburan"]; return &id }(),
+			AmountLimit: 800000, // 800k IDR monthly
+			Recurrence:  "monthly",
+			StartDate:   startDate.AddDate(0, 0, 30), // Started 60 days ago
+			EndDate:     func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(),
+			Name:        "Budget Hiburan Bulanan",
+			Note:        func() *string { s := "Budget bulanan untuk hiburan dan rekreasi"; return &s }(),
+			Active:      true,
+		},
+		{
+			CategoryID:  func() *int64 { id := categoryMap["Belanja Online"]; return &id }(),
+			AmountLimit: 1500000, // 1.5 million IDR monthly
+			Recurrence:  "monthly",
+			StartDate:   startDate.AddDate(0, 0, 45), // Started 45 days ago
+			EndDate:     func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(),
+			Name:        "Budget Belanja Online",
+			Note:        func() *string { s := "Budget bulanan untuk belanja online"; return &s }(),
+			Active:      true,
 		},
 	}
 
-	var budgetIDs []int64
-	for _, budget := range budgets {
-		budgetModel, err := rootSvc.BudgTem.CreateBudget(ctx, budget)
+	var budgetTemplateIDs []int64
+	for _, template := range budgetTemplates {
+		templateModel, err := rootSvc.BudgTem.Create(ctx, template)
 		if err != nil {
-			return fmt.Errorf("failed to create budget %s: %w", budget.Name, err)
+			return fmt.Errorf("failed to create budget template %s: %w", template.Name, err)
 		}
-		budgetIDs = append(budgetIDs, budgetModel.ID)
-		slog.Info("Created budget", "id", budgetModel.ID, "name", budgetModel.Name)
+		budgetTemplateIDs = append(budgetTemplateIDs, templateModel.ID)
+		slog.Info("Created budget template", "id", templateModel.ID, "name", templateModel.Name)
 	}
+
+	slog.Info("Budget templates will auto-generate budgets for their recurrence periods")
 
 	// Seed transaction templates for recurring transactions
 	transactionTemplates := []models.CreateTransactionTemplateModel{
@@ -358,7 +537,7 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 			AccountID:  accountMap["Rekening Gaji"],
 			CategoryID: categoryMap["Gaji"],
 			Recurrence: "monthly",
-			StartDate:  time.Now().AddDate(0, 0, -30),                                        // Started a month ago
+			StartDate:  startDate,                                                            // Started 90 days ago
 			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 12, 0); return &t }(), // 1 year from now
 			Note:       func() *string { s := "Gaji tetap bulanan dari pekerjaan utama"; return &s }(),
 		},
@@ -370,7 +549,7 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 			AccountID:  accountMap["Dompet Utama"],
 			CategoryID: categoryMap["Tagihan"],
 			Recurrence: "monthly",
-			StartDate:  time.Now().AddDate(0, 0, -14),
+			StartDate:  startDate,
 			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(), // 6 months
 			Note:       func() *string { s := "Tagihan internet bulanan Indihome 50Mbps"; return &s }(),
 		},
@@ -382,7 +561,7 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 			AccountID:  accountMap["Dompet Utama"],
 			CategoryID: categoryMap["Makanan & Minuman"],
 			Recurrence: "weekly",
-			StartDate:  time.Now().AddDate(0, 0, -14),
+			StartDate:  startDate,
 			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 2, 0); return &t }(), // 2 months
 			Note:       func() *string { s := "Belanja bahan makanan mingguan di supermarket"; return &s }(),
 		},
@@ -394,7 +573,7 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 			AccountID:  accountMap["Dompet Utama"],
 			CategoryID: categoryMap["Tagihan"],
 			Recurrence: "monthly",
-			StartDate:  time.Now().AddDate(0, 0, -14),
+			StartDate:  startDate,
 			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 6, 0); return &t }(), // 6 months
 			Note:       func() *string { s := "Tagihan listrik bulanan untuk rumah"; return &s }(),
 		},
@@ -406,7 +585,7 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 			AccountID:  accountMap["Kartu Kredit BCA"],
 			CategoryID: categoryMap["Belanja Online"],
 			Recurrence: "monthly",
-			StartDate:  time.Now().AddDate(0, 0, -10),                                        // Started 10 days ago
+			StartDate:  startDate.AddDate(0, 0, 80),                                          // Started 10 days ago
 			EndDate:    func() *time.Time { t := time.Now().AddDate(0, 14, 0); return &t }(), // 14 months from start
 			Note:       func() *string { s := "Cicilan laptop gaming ASUS ROG 12 bulan"; return &s }(),
 		},
