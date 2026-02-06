@@ -73,6 +73,17 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, btr.GetRelatedBudgets)
+	huma.Register(api, huma.Operation{
+		OperationID: "update-budget-from-template",
+		Method:      http.MethodPatch,
+		Path:        "/budgets/{template_id}/list/{budget_id}",
+		Summary:     "Update generated budget",
+		Description: "Update an individual budget's amount limit only (does not affect template or future budgets)",
+		Tags:        []string{"Budget Templates"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, btr.UpdateBudget)
 }
 func (btr BudgetTemplateResource) GetPaged(ctx context.Context, input *struct {
 	models.BudgetTemplatesSearchModel
@@ -167,5 +178,27 @@ func (btr BudgetTemplateResource) GetRelatedBudgets(ctx context.Context, input *
 	logger.Info("success", "template_id", input.ID, "count", len(resp.Items))
 	return &struct {
 		Body models.BudgetsPagedModel
+	}{Body: resp}, nil
+}
+
+func (btr BudgetTemplateResource) UpdateBudget(ctx context.Context, input *struct {
+	TemplateID int64 `path:"template_id" minimum:"1" doc:"Budget Template ID"`
+	BudgetID   int64 `path:"budget_id" minimum:"1" doc:"Budget ID"`
+	Body       models.UpdateBudgetRequestModel
+}) (*struct {
+	Body models.BudgetModel
+}, error) {
+	logger := observability.GetLogger(ctx).With("resource", "BudgetTemplateResource.UpdateBudget")
+	logger.Info("start", "template_id", input.TemplateID, "budget_id", input.BudgetID)
+
+	resp, err := btr.sevs.BudgTem.UpdateBudget(ctx, input.BudgetID, input.Body)
+	if err != nil {
+		logger.Error("error", "template_id", input.TemplateID, "budget_id", input.BudgetID, "error", err)
+		return nil, err
+	}
+
+	logger.Info("success", "template_id", input.TemplateID, "budget_id", input.BudgetID)
+	return &struct {
+		Body models.BudgetModel
 	}{Body: resp}, nil
 }

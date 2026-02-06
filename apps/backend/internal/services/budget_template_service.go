@@ -49,6 +49,11 @@ func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudg
 		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Budget template cannot be associated with both account and category")
 	}
 
+	// Validate uniqueness - applies to ALL templates (active and inactive)
+	if err := bts.Rpts.BudgTem.ValidateUniqueBudgetTemplate(ctx, p.AccountID, p.CategoryID, nil); err != nil {
+		return models.BudgetTemplateModel{}, err
+	}
+
 	template, err := bts.Rpts.BudgTem.Create(ctx, p)
 	if err != nil {
 		return template, err
@@ -69,9 +74,9 @@ func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudg
 }
 
 func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.UpdateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
-	// Strict validation: only allow updating name, note, and active status
-	if p.Name == nil && p.Note == nil && p.Active == nil {
-		return models.BudgetTemplateModel{}, huma.Error400BadRequest("At least one of name, note, or active must be provided")
+	// Strict validation: only allow updating name, note, active status, and amountLimit
+	if p.Name == nil && p.Note == nil && p.Active == nil && p.AmountLimit == nil {
+		return models.BudgetTemplateModel{}, huma.Error400BadRequest("At least one of name, note, active, or amountLimit must be provided")
 	}
 
 	template, err := bts.Rpts.BudgTem.Update(ctx, id, p)
@@ -218,6 +223,34 @@ func (bts BudgetTemplateService) GenerateBudgetFromTemplate(ctx context.Context,
 	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", template.ID))
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
 	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d_budgets_paged:*", template.ID))
+
+	return budget, nil
+}
+
+// UpdateBudget updates an individual budget's amountLimit (public API method)
+// This ONLY affects the specific budget, NOT the template or future budgets
+func (bts BudgetTemplateService) UpdateBudget(ctx context.Context, id int64, p models.UpdateBudgetRequestModel) (models.BudgetModel, error) {
+	if p.AmountLimit == nil {
+		return models.BudgetModel{}, huma.Error400BadRequest("AmountLimit must be provided")
+	}
+
+	// Convert public model to internal model
+	internalUpdate := models.UpdateBudgetModel{
+		AmountLimit: p.AmountLimit,
+	}
+
+	budget, err := bts.Rpts.BudgTem.UpdateBudget(ctx, id, internalUpdate)
+	if err != nil {
+		return budget, err
+	}
+
+	// Invalidate caches
+	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetCacheKeyPrefix+"%d", id))
+	common.InvalidateCache(ctx, bts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
+
+	if budget.TemplateID != nil {
+		common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d_budgets_paged:*", *budget.TemplateID))
+	}
 
 	return budget, nil
 }

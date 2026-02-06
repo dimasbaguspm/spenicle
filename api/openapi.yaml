@@ -2638,12 +2638,26 @@ components:
           minLength: 1
           type: string
       type: object
+    UpdateBudgetRequestModel:
+      additionalProperties: false
+      properties:
+        amountLimit:
+          description: Budget limit amount in cents
+          format: int64
+          minimum: 1
+          type: integer
+      type: object
     UpdateBudgetTemplateModel:
       additionalProperties: false
       properties:
         active:
           description: Whether this template is active and generating budgets
           type: boolean
+        amountLimit:
+          description: Budget limit amount in cents
+          format: int64
+          minimum: 1
+          type: integer
         name:
           description: Template name
           maxLength: 100
@@ -3867,6 +3881,53 @@ paths:
       security:
         - bearer: []
       summary: Get budget template related budgets
+      tags:
+        - Budget Templates
+  /budgets/{template_id}/list/{budget_id}:
+    patch:
+      description: Update an individual budget's amount limit only (does not affect template or future budgets)
+      operationId: update-budget-from-template
+      parameters:
+        - description: Budget Template ID
+          in: path
+          name: template_id
+          required: true
+          schema:
+            description: Budget Template ID
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Budget ID
+          in: path
+          name: budget_id
+          required: true
+          schema:
+            description: Budget ID
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBudgetRequestModel"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Update generated budget
       tags:
         - Budget Templates
   /categories:

@@ -234,8 +234,9 @@ func (btr BudgetTemplateRepository) Update(ctx context.Context, id int64, p mode
 		SET name = COALESCE($1, name),
 		    note = COALESCE($2, note),
 		    active = COALESCE($3, active),
+		    amount_limit = COALESCE($4, amount_limit),
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = $4 AND deleted_at IS NULL
+		WHERE id = $5 AND deleted_at IS NULL
 		RETURNING id`
 
 	queryStart := time.Now()
@@ -245,6 +246,7 @@ func (btr BudgetTemplateRepository) Update(ctx context.Context, id int64, p mode
 		p.Name,
 		p.Note,
 		p.Active,
+		p.AmountLimit,
 		id,
 	).Scan(&ID)
 
@@ -367,6 +369,49 @@ func (btr BudgetTemplateRepository) UpdateLastExecuted(ctx context.Context, id i
 	if err != nil {
 		return huma.Error500InternalServerError("Unable to update budget template execution time", err)
 	}
+	return nil
+}
+
+// ValidateUniqueBudgetTemplate ensures only one budget template exists
+// per account_id OR category_id (regardless of active status)
+func (btr BudgetTemplateRepository) ValidateUniqueBudgetTemplate(
+	ctx context.Context,
+	accountID, categoryID *int64,
+	templateID *int64,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
+	query := `
+		SELECT COUNT(1)
+		FROM budget_templates
+		WHERE deleted_at IS NULL
+			AND (
+				(account_id IS NOT DISTINCT FROM $1 AND $1 IS NOT NULL)
+				OR (category_id IS NOT DISTINCT FROM $2 AND $2 IS NOT NULL)
+			)`
+
+	args := []interface{}{accountID, categoryID}
+
+	if templateID != nil {
+		query += ` AND id != $3`
+		args = append(args, *templateID)
+	}
+
+	var count int
+	err := btr.db.QueryRow(ctx, query, args...).Scan(&count)
+	if err != nil {
+		observability.RecordError("database")
+		return huma.Error500InternalServerError("Unable to validate template uniqueness", err)
+	}
+
+	if count > 0 {
+		if accountID != nil {
+			return huma.Error400BadRequest("A budget template already exists for this account")
+		}
+		return huma.Error400BadRequest("A budget template already exists for this category")
+	}
+
 	return nil
 }
 

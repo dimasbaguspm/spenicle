@@ -53,9 +53,10 @@ type CreateBudgetTemplateModel struct {
 }
 
 type UpdateBudgetTemplateModel struct {
-	Name   *string `json:"name,omitempty" doc:"Template name" maxLength:"100"`
-	Note   *string `json:"note,omitempty" doc:"Optional note for the template" maxLength:"500"`
-	Active *bool   `json:"active,omitempty" doc:"Whether this template is active and generating budgets"`
+	Name        *string `json:"name,omitempty" doc:"Template name" maxLength:"100"`
+	Note        *string `json:"note,omitempty" doc:"Optional note for the template" maxLength:"500"`
+	Active      *bool   `json:"active,omitempty" doc:"Whether this template is active and generating budgets"`
+	AmountLimit *int64  `json:"amountLimit,omitempty" minimum:"1" doc:"Budget limit amount in cents"`
 }
 
 type BudgetTemplateRelatedBudgetsSearchModel struct {
@@ -145,4 +146,11 @@ type UpdateBudgetModel struct {
 	Status      *string      `json:"status,omitempty" enum:"active,inactive" doc:"Budget status"`
 	Name        *string      `json:"name,omitempty" doc:"Budget name" maxLength:"100"`
 	Note        *string      `json:"note,omitempty" doc:"Optional note for the budget" maxLength:"500"`
+}
+
+// UpdateBudgetRequestModel represents the public API model for updating individual budgets
+// Exposed via PATCH /budgets/{template_id}/list/{budget_id} endpoint
+// Only amountLimit can be updated by users
+type UpdateBudgetRequestModel struct {
+	AmountLimit *int64 `json:"amountLimit,omitempty" minimum:"1" doc:"Budget limit amount in cents"`
 }
