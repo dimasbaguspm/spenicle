@@ -46,3 +46,23 @@ const (
 	CategoryStatisticsDayOfWeekPatternSuffix    = "day_of_week_pattern"
 	CategoryStatisticsBudgetUtilizationSuffix   = "budget_utilization"
 )
+
+// Cache invalidation wildcard patterns for dependent caches
+// These patterns are used when a data change affects multiple cached entries
+const (
+	// Account and category statistics invalidation patterns
+	AccountStatisticsWildcardPattern  = "account_statistics:*"
+	CategoryStatisticsWildcardPattern = "category_statistics:*"
+	AccountWildcardPattern            = "account:*"
+	AccountsPagedWildcardPattern      = "accounts_paged:*"
+
+	// Budget cache invalidation patterns
+	BudgetWildcardPattern                = "budget:*"
+	BudgetsPagedWildcardPattern          = "budgets_paged:*"
+	BudgetTemplateWildcardPattern        = "budget_template:*"
+	BudgetTemplatesPagedWildcardPattern  = "budget_templates_paged:*"
+	BudgetTemplateRelatedWildcardPattern = "budget_template:*_budgets_paged:*"
+
+	// Category cache invalidation patterns
+	CategoriesPagedWildcardPattern = "categories_paged:*"
+)
