@@ -6,6 +6,7 @@ import { useDrawerProvider } from "@/providers/drawer-provider";
 import { Drawer, NoResults, PageLoader, Tabs } from "@dimasbaguspm/versaur";
 import { SearchXIcon } from "lucide-react";
 import type { FC } from "react";
+import { BudgetsTab } from "./components/budgets-tab";
 import { DetailsTab } from "./components/details-tab";
 import { HistoryTab } from "./components/history-tab";
 import { StatisticTab } from "./components/statistic-tab";
@@ -44,6 +45,7 @@ export const CategoryViewDrawer: FC<CategoryViewDrawerProps> = ({
       <Drawer.Tab>
         <Tabs value={activeTab} onValueChange={handleOnTabChange}>
           <Tabs.Trigger value="details">Details</Tabs.Trigger>
+          <Tabs.Trigger value="budgets">Budgets</Tabs.Trigger>
           <Tabs.Trigger value="history">History</Tabs.Trigger>
           <Tabs.Trigger value="statistic">Statistic</Tabs.Trigger>
         </Tabs>
@@ -63,6 +65,7 @@ export const CategoryViewDrawer: FC<CategoryViewDrawerProps> = ({
           </When>
           <When condition={!!category}>
             {activeTab === "details" && <DetailsTab data={category!} />}
+            {activeTab === "budgets" && <BudgetsTab data={category!} />}
             {activeTab === "history" && <HistoryTab data={category!} />}
             {activeTab === "statistic" && <StatisticTab data={category!} />}
           </When>

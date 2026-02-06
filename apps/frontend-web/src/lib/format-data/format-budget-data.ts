@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { formatPrice, PriceFormat } from "../format-price";
 import { DateFormat, formatDate } from "../format-date";
 import type { BadgeProps } from "@dimasbaguspm/versaur";
+import { startCase } from "lodash";
 
 export const formatBudgetTemplateData = (data: BudgetTemplateModel | null) => {
   const formattedAmountLimit = formatPrice(
@@ -37,13 +38,12 @@ export const formatBudgetTemplateData = (data: BudgetTemplateModel | null) => {
     : "secondary";
 
   const recurrence = data?.recurrence ?? "none";
-  const recurrenceLabel =
-    recurrence === "none" ? "One-time" : recurrence;
+  const recurrenceLabel = recurrence === "none" ? "One-time" : recurrence;
 
   return {
     name: data?.name,
     recurrence,
-    recurrenceLabel,
+    recurrenceLabel: startCase(recurrenceLabel),
     amountLimit: data?.amountLimit,
     formattedAmountLimit,
     startDate,
