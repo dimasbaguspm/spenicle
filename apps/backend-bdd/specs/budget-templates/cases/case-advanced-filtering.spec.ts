@@ -163,13 +163,18 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       note: "test account 2",
       type: "expense",
     });
+    const account3 = await accountAPI.createAccount({
+      name: `bt-combined-account3-${Date.now()}`,
+      note: "test account 3",
+      type: "expense",
+    });
     const category = await categoryAPI.createCategory({
       name: `bt-combined-category-${Date.now()}`,
       note: "test category",
       type: "expense",
     });
 
-    // Create budget templates
+    // Create budget templates (one per account to respect uniqueness)
     const template1 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account1.data!.id as number,
       amountLimit: 50000,
@@ -179,7 +184,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       active: true,
     });
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
-      accountId: account1.data!.id as number,
+      accountId: account3.data!.id as number,
       amountLimit: 75000,
       recurrence: "weekly",
       startDate: new Date().toISOString(),
@@ -204,9 +209,9 @@ test.describe("Budget Templates - Advanced Filtering", () => {
     expect(filtered.data!.items!.length).toBe(1);
     expect(filtered.data!.items![0].id).toBe(template1.data!.id);
 
-    // Combined filter: account1 + weekly recurrence
+    // Combined filter: account3 + weekly recurrence
     const filtered2 = await budgetTemplateAPI.getBudgetTemplates({
-      accountId: [account1.data!.id as number],
+      accountId: [account3.data!.id as number],
       recurrence: "weekly",
     });
     expect(filtered2.status).toBe(200);
@@ -224,6 +229,7 @@ test.describe("Budget Templates - Advanced Filtering", () => {
       active: false,
     });
     await categoryAPI.deleteCategory(category.data!.id as number);
+    await accountAPI.deleteAccount(account3.data!.id as number);
     await accountAPI.deleteAccount(account2.data!.id as number);
     await accountAPI.deleteAccount(account1.data!.id as number);
   });

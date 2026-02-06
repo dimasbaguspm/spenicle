@@ -318,7 +318,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await accountAPI.deleteAccount(account.data!.id as number);
   });
 
-  test("POST /budgets - create duplicate templates is allowed", async ({
+  test("POST /budgets - create duplicate templates is NOT allowed", async ({
     budgetTemplateAPI,
     accountAPI,
     categoryAPI,
@@ -345,7 +345,7 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       active: true,
     });
 
-    // Create duplicate template (same data)
+    // Attempt to create duplicate template (same account)
     const template2 = await budgetTemplateAPI.createBudgetTemplate({
       accountId: account.data!.id as number,
       amountLimit: 100000,
@@ -355,13 +355,11 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
       active: true,
     });
 
-    expect(template2.status).toBe(200);
-    expect(template2.data!.id).not.toBe(template1.data!.id);
+    // Assert: Duplicate creation fails due to uniqueness constraint
+    expect(template2.status).toBe(400);
+    expect(template2.data).toBeUndefined();
 
     // Cleanup
-    await budgetTemplateAPI.updateBudgetTemplate(template2.data!.id as number, {
-      active: false,
-    });
     await budgetTemplateAPI.updateBudgetTemplate(template1.data!.id as number, {
       active: false,
     });
@@ -381,21 +379,18 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
         active: false,
       });
     }
-    // Create dependencies
-    const account = await accountAPI.createAccount({
-      name: `bt-pagination-account-${Date.now()}`,
-      note: "test account",
-      type: "expense",
-    });
-    const category = await categoryAPI.createCategory({
-      name: `bt-pagination-category-${Date.now()}`,
-      note: "test category",
-      type: "expense",
-    });
 
-    // Create multiple templates
+    // Create multiple templates (one per account to respect uniqueness constraint)
     const templates = [];
+    const accounts = [];
     for (let i = 0; i < 5; i++) {
+      const account = await accountAPI.createAccount({
+        name: `bt-pagination-account-${i}-${Date.now()}`,
+        note: "test account",
+        type: "expense",
+      });
+      accounts.push(account);
+
       const template = await budgetTemplateAPI.createBudgetTemplate({
         accountId: account.data!.id as number,
         amountLimit: 10000 * (i + 1),
@@ -428,8 +423,9 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
         active: false,
       });
     }
-    await categoryAPI.deleteCategory(category.data!.id as number);
-    await accountAPI.deleteAccount(account.data!.id as number);
+    for (const account of accounts) {
+      await accountAPI.deleteAccount(account.data!.id as number);
+    }
   });
 
   test("POST /budgets - nextRunAt is null for none recurrence", async ({

@@ -23,6 +23,10 @@ export type BudgetTemplateRelatedBudgetsSearchParams =
 export type PaginatedBudgetsResponseModel =
   components["schemas"]["BudgetsPagedModel"];
 
+export type BudgetModel = components["schemas"]["BudgetModel"];
+export type UpdateBudgetRequestModel =
+  components["schemas"]["UpdateBudgetRequestModel"];
+
 export class BudgetTemplateAPIClient extends BaseAPIClient {
   constructor(request: APIRequestContext, context: TestContext) {
     super(request, context);
@@ -60,6 +64,22 @@ export class BudgetTemplateAPIClient extends BaseAPIClient {
     return this.get<PaginatedBudgetsResponseModel>(
       `/budgets/${templateId}/list`,
       params,
+    );
+  }
+
+  /**
+   * Update an individual budget's amount limit
+   * PATCH /budgets/{template_id}/list/{budget_id}
+   * Only affects the specific budget, NOT the template or future budgets
+   */
+  async updateBudgetFromTemplate(
+    templateId: number,
+    budgetId: number,
+    data: UpdateBudgetRequestModel,
+  ): Promise<APIResponse<BudgetModel>> {
+    return this.patch<BudgetModel>(
+      `/budgets/${templateId}/list/${budgetId}`,
+      data,
     );
   }
 }

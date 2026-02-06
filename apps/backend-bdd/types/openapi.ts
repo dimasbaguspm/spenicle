@@ -324,6 +324,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/budgets/{template_id}/list/{budget_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update generated budget
+         * @description Update an individual budget's amount limit only (does not affect template or future budgets)
+         */
+        patch: operations["update-budget-from-template"];
+        trace?: never;
+    };
     "/categories": {
         parameters: {
             query?: never;
@@ -2788,9 +2808,21 @@ export interface components {
              */
             type?: "expense" | "income";
         };
+        UpdateBudgetRequestModel: {
+            /**
+             * Format: int64
+             * @description Budget limit amount in cents
+             */
+            amountLimit?: number;
+        };
         UpdateBudgetTemplateModel: {
             /** @description Whether this template is active and generating budgets */
             active?: boolean;
+            /**
+             * Format: int64
+             * @description Budget limit amount in cents
+             */
+            amountLimit?: number;
             /** @description Template name */
             name?: string;
             /** @description Optional note for the template */
@@ -3691,6 +3723,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BudgetsPagedModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-budget-from-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Budget Template ID */
+                template_id: number;
+                /** @description Budget ID */
+                budget_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBudgetRequestModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetModel"];
                 };
             };
             /** @description Error */

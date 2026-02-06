@@ -7,14 +7,19 @@ test.describe("Budget Templates - Sorting Cases", () => {
     categoryAPI,
   }) => {
     // Create dependencies
-    const account = await accountAPI.createAccount({
-      name: `bt-sort-account-${Date.now()}`,
+    const account1 = await accountAPI.createAccount({
+      name: `bt-sort-account1-${Date.now()}`,
       note: "test account",
       type: "expense",
     });
-    const category = await categoryAPI.createCategory({
-      name: `bt-sort-category-${Date.now()}`,
-      note: "test category",
+    const account2 = await accountAPI.createAccount({
+      name: `bt-sort-account2-${Date.now()}`,
+      note: "test account",
+      type: "expense",
+    });
+    const account3 = await accountAPI.createAccount({
+      name: `bt-sort-account3-${Date.now()}`,
+      note: "test account",
       type: "expense",
     });
 
@@ -38,16 +43,19 @@ test.describe("Budget Templates - Sorting Cases", () => {
     const testId = Date.now();
     const templates = [
       {
+        accountId: account1.data!.id,
         note: `Sort Test Due Today ${testId}`,
         startDate: now.toISOString(), // today
         recurrence: "weekly" as const,
       },
       {
+        accountId: account2.data!.id,
         note: `Sort Test Due Tomorrow ${testId}`,
         startDate: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(), // tomorrow
         recurrence: "monthly" as const,
       },
       {
+        accountId: account3.data!.id,
         note: `Sort Test Due Next Week ${testId}`,
         startDate: new Date(
           now.getTime() + 7 * 24 * 60 * 60 * 1000,
@@ -59,7 +67,7 @@ test.describe("Budget Templates - Sorting Cases", () => {
     const createdTemplates = [];
     for (const templateData of templates) {
       const res = await budgetTemplateAPI.createBudgetTemplate({
-        accountId: account.data!.id as number,
+        accountId: templateData.accountId as number,
         amountLimit: 100000,
         recurrence: templateData.recurrence,
         startDate: templateData.startDate,
@@ -67,6 +75,9 @@ test.describe("Budget Templates - Sorting Cases", () => {
         name: `Sorting Test ${templateData.note}`,
         active: true,
       });
+      if (res.status !== 200) {
+        console.log("Template creation failed:", res.status, res.error);
+      }
       createdTemplates.push({
         id: res.data!.id as number,
         nextRunAt: res.data!.nextRunAt,
@@ -122,8 +133,9 @@ test.describe("Budget Templates - Sorting Cases", () => {
         active: false,
       });
     }
-    await categoryAPI.deleteCategory(category.data!.id as number);
-    await accountAPI.deleteAccount(account.data!.id as number);
+    await accountAPI.deleteAccount(account1.data!.id as number);
+    await accountAPI.deleteAccount(account2.data!.id as number);
+    await accountAPI.deleteAccount(account3.data!.id as number);
   });
 
   test("GET /budgets - sort by amountLimit desc returns templates in correct order", async ({
@@ -131,26 +143,20 @@ test.describe("Budget Templates - Sorting Cases", () => {
     accountAPI,
     categoryAPI,
   }) => {
-    const accountRes = await accountAPI.createAccount({
-      name: `bt-amount-sort-account-${Date.now()}`,
-      note: "amount sort test",
-      type: "expense",
-    });
-    const categoryRes = await categoryAPI.createCategory({
-      name: `bt-amount-sort-category-${Date.now()}`,
-      note: "amount sort test",
-      type: "expense",
-    });
-    const accountId = accountRes.data!.id as number;
-    const categoryId = categoryRes.data!.id as number;
-
-    // Create templates with different amounts
-    const templates = [];
+    // Create multiple accounts for testing different amounts
     const amounts = [50000, 150000, 100000]; // $500, $1500, $1000
+    const templates = [];
+
     for (const amount of amounts) {
+      const accountRes = await accountAPI.createAccount({
+        name: `bt-amount-sort-account-${amount}-${Date.now()}`,
+        note: "amount sort test",
+        type: "expense",
+      });
+      const accountId = accountRes.data!.id as number;
+
       const res = await budgetTemplateAPI.createBudgetTemplate({
         accountId,
-        // categoryId, // Removed - cannot have both
         amountLimit: amount,
         recurrence: "monthly",
         startDate: new Date().toISOString(),
@@ -158,7 +164,7 @@ test.describe("Budget Templates - Sorting Cases", () => {
         name: `Amount Sort Test ${amount}`,
         active: true,
       });
-      templates.push({ id: res.data!.id as number, amount });
+      templates.push({ id: res.data!.id as number, amount, accountId });
     }
 
     // Sort by amountLimit desc
@@ -179,8 +185,7 @@ test.describe("Budget Templates - Sorting Cases", () => {
       await budgetTemplateAPI.updateBudgetTemplate(template.id, {
         active: false,
       });
+      await accountAPI.deleteAccount(template.accountId);
     }
-    await categoryAPI.deleteCategory(categoryId);
-    await accountAPI.deleteAccount(accountId);
   });
 });

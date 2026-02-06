@@ -191,6 +191,12 @@ func (btr BudgetTemplateResource) UpdateBudget(ctx context.Context, input *struc
 	logger := observability.GetLogger(ctx).With("resource", "BudgetTemplateResource.UpdateBudget")
 	logger.Info("start", "template_id", input.TemplateID, "budget_id", input.BudgetID)
 
+	// Validate that template exists and budget belongs to it
+	if err := btr.sevs.BudgTem.ValidateBudgetBelongsToTemplate(ctx, input.TemplateID, input.BudgetID); err != nil {
+		logger.Error("error", "template_id", input.TemplateID, "budget_id", input.BudgetID, "error", err)
+		return nil, err
+	}
+
 	resp, err := btr.sevs.BudgTem.UpdateBudget(ctx, input.BudgetID, input.Body)
 	if err != nil {
 		logger.Error("error", "template_id", input.TemplateID, "budget_id", input.BudgetID, "error", err)

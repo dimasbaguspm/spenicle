@@ -40,6 +40,35 @@ func (bts BudgetTemplateService) GetDetail(ctx context.Context, id int64) (model
 	}, "budget_template")
 }
 
+// ValidateBudgetBelongsToTemplate checks that a budget exists and belongs to the specified template
+func (bts BudgetTemplateService) ValidateBudgetBelongsToTemplate(ctx context.Context, templateID, budgetID int64) error {
+	// Check if template exists
+	_, err := bts.GetDetail(ctx, templateID)
+	if err != nil {
+		return huma.Error404NotFound("Budget template not found")
+	}
+
+	// Check if budget exists
+	budget, err := bts.Rpts.BudgTem.GetBudgetDetail(ctx, budgetID)
+	if err != nil {
+		return huma.Error404NotFound("Budget not found")
+	}
+
+	// Check if budget belongs to template using the budget_template_relations table
+	relations, err := bts.Rpts.BudgTem.GetRelatedBudgets(ctx, templateID, models.BudgetTemplateRelatedBudgetsSearchModel{})
+	if err != nil {
+		return err
+	}
+
+	for _, relatedID := range relations {
+		if relatedID == budget.ID {
+			return nil
+		}
+	}
+
+	return huma.Error404NotFound("Budget does not belong to this template")
+}
+
 func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudgetTemplateModel) (models.BudgetTemplateModel, error) {
 	if p.AccountID == nil && p.CategoryID == nil {
 		return models.BudgetTemplateModel{}, huma.Error400BadRequest("Budget template must be associated with either an account or category")
