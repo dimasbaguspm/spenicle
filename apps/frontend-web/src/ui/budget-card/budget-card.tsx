@@ -1,4 +1,5 @@
 import { formatBudgetData } from "@/lib/format-data";
+import { When } from "@/lib/when";
 import type { BudgetModel } from "@/types/schemas";
 import { Badge, BadgeGroup, Card, type CardProps } from "@dimasbaguspm/versaur";
 import type { FC } from "react";
@@ -7,64 +8,53 @@ interface BudgetCardProps extends Omit<CardProps, "onClick"> {
   budget: BudgetModel;
   templateId?: number;
   onClick?: (budget: BudgetModel, templateId?: number) => void;
+  hideStatus?: boolean;
 }
 
 export const BudgetCard: FC<BudgetCardProps> = (props) => {
-  const { budget, templateId, onClick, ...rest } = props;
+  const { budget, templateId, onClick, hideStatus, ...rest } = props;
+
   const {
-    name,
     periodStart,
     periodEnd,
     utilizationPercent,
-    budgetStatusText,
     statusBadgeColor,
+    isActive,
+    budgetStatusText,
     formattedActualAmount,
     formattedAmountLimit,
     isExpired,
   } = formatBudgetData(budget);
 
-  const subtitle = `${periodStart} — ${periodEnd}`;
-  const statusText = isExpired ? "Expired" : "Active";
-  const clampedPercent = Math.min(utilizationPercent, 100);
-
-  const progressColor =
-    statusBadgeColor === "danger"
-      ? "bg-[var(--color-danger)]"
-      : statusBadgeColor === "warning"
-        ? "bg-[var(--color-warning)]"
-        : statusBadgeColor === "success"
-          ? "bg-[var(--color-success)]"
-          : "bg-[var(--color-neutral)]";
-
   const handleClick = () => {
     onClick?.(budget, templateId);
   };
 
+  const statusText = isExpired ? "Expired" : "Active";
+
   return (
     <Card
-      title={name}
-      subtitle={subtitle}
+      title={`${periodStart} until ${periodEnd}`}
+      subtitle={
+        <Card.List>
+          <Card.ListItem>Limit: {formattedAmountLimit}</Card.ListItem>
+          <Card.ListItem>Used: {formattedActualAmount}</Card.ListItem>
+        </Card.List>
+      }
       badge={
         <BadgeGroup>
-          <Badge color={statusBadgeColor}>{statusText}</Badge>
+          <When condition={!hideStatus}>
+            <Badge color={isActive ? "accent_2" : "neutral"}>
+              {statusText}
+            </Badge>
+          </When>
+          <Badge color={statusBadgeColor}>
+            {budgetStatusText} ({Math.round(utilizationPercent)}%){" "}
+          </Badge>
         </BadgeGroup>
       }
       onClick={handleClick}
       {...rest}
-    >
-      <div className="space-y-1">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{formattedActualAmount} / {formattedAmountLimit}</span>
-          <span>{Math.round(utilizationPercent)}%</span>
-        </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-neutral-soft)]">
-          <div
-            className={`h-full transition-all ${progressColor}`}
-            style={{ width: `${clampedPercent}%` }}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">{budgetStatusText}</p>
-      </div>
-    </Card>
+    />
   );
 };

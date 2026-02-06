@@ -6,7 +6,7 @@ import {
   NoResults,
   PageLoader,
 } from "@dimasbaguspm/versaur";
-import { PlusIcon, SearchXIcon } from "lucide-react";
+import { EditIcon, PlusIcon, SearchXIcon } from "lucide-react";
 import type { FC } from "react";
 
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
@@ -37,11 +37,7 @@ export const BudgetsTab: FC<BudgetsTabProps> = ({ data }) => {
   const [
     relatedBudgets,
     ,
-    {
-      isPending: isRelatedLoading,
-      hasNextPage,
-      isFetchingNextPage,
-    },
+    { isPending: isRelatedLoading, hasNextPage, isFetchingNextPage },
     { fetchNextPage },
   ] = useApiRelatedBudgetsInfiniteQuery(
     template?.id ?? 0,
@@ -61,7 +57,10 @@ export const BudgetsTab: FC<BudgetsTabProps> = ({ data }) => {
     }
   };
 
-  const handleGeneratedBudgetClick = (budget: BudgetModel, templateId?: number) => {
+  const handleGeneratedBudgetClick = (
+    budget: BudgetModel,
+    templateId?: number,
+  ) => {
     if (!templateId) return;
     openDrawer(DRAWER_ROUTES.BUDGET_GENERATED_UPDATE, {
       templateId,
@@ -91,21 +90,20 @@ export const BudgetsTab: FC<BudgetsTabProps> = ({ data }) => {
         </When>
 
         <When condition={!!template}>
-          <div className="mb-4">
-            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-              Budget Template
-            </h3>
-            <BudgetTemplateCard
-              budget={template!}
-              onClick={handleEditBudgetClick}
-            />
-          </div>
+          <ButtonGroup hasMargin>
+            <Button variant="outline" onClick={handleEditBudgetClick}>
+              <Icon as={EditIcon} color="inherit" size="sm" />
+              Edit
+            </Button>
+          </ButtonGroup>
+
+          <BudgetTemplateCard as="div" budgetTemplate={template!} />
 
           <Hr />
 
           <div className="mt-4">
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-              Generated Budgets
+              List Budgets
             </h3>
 
             <When condition={isRelatedLoading}>
@@ -113,10 +111,11 @@ export const BudgetsTab: FC<BudgetsTabProps> = ({ data }) => {
             </When>
 
             <When condition={!isRelatedLoading && relatedBudgets.length === 0}>
-              <p className="text-sm text-muted-foreground">
-                No budgets generated yet. The worker will create budgets based on
-                your template schedule.
-              </p>
+              <NoResults
+                title="No Budgets Generated"
+                subtitle="No budgets generated yet. The worker will create budgets based on your template schedule."
+                icon={SearchXIcon}
+              />
             </When>
 
             <When condition={!isRelatedLoading && relatedBudgets.length > 0}>

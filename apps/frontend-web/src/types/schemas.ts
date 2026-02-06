@@ -114,6 +114,12 @@ export type BudgetRelatedSearchModel = NonNullable<
 export type BudgetRelatedPagedModel =
   paths["/budgets/{id}/list"]["get"]["responses"]["200"]["content"]["application/json"];
 
+export type BudgetGeneratedSearchModel = NonNullable<
+  paths["/budgets/{template_id}/list/{budget_id}"]["get"]["parameters"]["path"]
+>;
+export type BudgetGeneratedModel =
+  paths["/budgets/{template_id}/list/{budget_id}"]["get"]["responses"]["200"]["content"]["application/json"];
+
 export type BudgetModel = components["schemas"]["BudgetModel"];
 
 export type CategorySearchModel = NonNullable<

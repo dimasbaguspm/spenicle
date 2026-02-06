@@ -1,46 +1,36 @@
 import { formatBudgetTemplateData } from "@/lib/format-data";
-import { When } from "@/lib/when";
 import type { BudgetTemplateModel } from "@/types/schemas";
-import { Badge, BadgeGroup, Card, type CardProps } from "@dimasbaguspm/versaur";
+import { Card, type CardProps } from "@dimasbaguspm/versaur";
 import type { FC } from "react";
 
 interface BudgetTemplateCardProps extends Omit<CardProps, "onClick"> {
-  budget: BudgetTemplateModel;
-  onClick?: (budget: BudgetTemplateModel) => void;
+  budgetTemplate: BudgetTemplateModel;
+  onClick?: (budgetTemplate: BudgetTemplateModel) => void;
+  hideActive?: boolean;
 }
 
 export const BudgetTemplateCard: FC<BudgetTemplateCardProps> = (props) => {
-  const { budget, onClick, ...rest } = props;
-  const {
-    name,
-    recurrenceLabel,
-    formattedAmountLimit,
-    activeBadgeColor,
-    activeText,
-    nextRunAt,
-  } = formatBudgetTemplateData(budget);
+  const { budgetTemplate, onClick, hideActive, ...rest } = props;
+
+  const { name, recurrenceLabel, formattedAmountLimit, nextRunAt } =
+    formatBudgetTemplateData(budgetTemplate);
 
   const handleClick = () => {
-    onClick?.(budget);
+    onClick?.(budgetTemplate);
   };
-
-  const subtitle = `${recurrenceLabel} • ${formattedAmountLimit}`;
 
   return (
     <Card
       onClick={handleClick}
       title={name}
-      subtitle={subtitle}
-      badge={
-        <BadgeGroup>
-          <Badge color={activeBadgeColor}>{activeText}</Badge>
-        </BadgeGroup>
+      subtitle={
+        <Card.List>
+          <Card.ListItem>{recurrenceLabel}</Card.ListItem>
+          <Card.ListItem>{formattedAmountLimit}</Card.ListItem>
+        </Card.List>
       }
+      supplementaryInfo={`Next run at: ${nextRunAt}`}
       {...rest}
-    >
-      <When condition={!!nextRunAt}>
-        <p className="text-xs text-muted-foreground">Next run: {nextRunAt}</p>
-      </When>
-    </Card>
+    />
   );
 };

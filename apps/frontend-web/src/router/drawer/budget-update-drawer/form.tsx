@@ -40,10 +40,34 @@ export const Form = ({ defaultValues, handleOnValidSubmit }: FormProps) => {
         <FormLayout.Column span={12}>
           <Controller
             control={control}
-            name="active"
-            render={({ field }) => (
-              <SwitchInput {...field} label="Active" />
+            name="amountLimit"
+            rules={{
+              required: "Amount Limit is required",
+              min: { value: 0.01, message: "Amount must be at least 0.01" },
+            }}
+            render={({ field, fieldState }) => (
+              <TextInput
+                label="Amount Limit"
+                placeholder="Enter amount limit"
+                type="number"
+                step="0.01"
+                {...field}
+                value={field.value ?? ""}
+                onChange={(e) =>
+                  field.onChange(
+                    e.target.value ? parseFloat(e.target.value) : "",
+                  )
+                }
+                error={fieldState.error?.message}
+              />
             )}
+          />
+        </FormLayout.Column>
+        <FormLayout.Column span={12}>
+          <Controller
+            control={control}
+            name="active"
+            render={({ field }) => <SwitchInput {...field} label="Active" />}
           />
         </FormLayout.Column>
         <FormLayout.Column span={12}>

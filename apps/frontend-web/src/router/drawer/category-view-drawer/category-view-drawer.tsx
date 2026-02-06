@@ -46,8 +46,8 @@ export const CategoryViewDrawer: FC<CategoryViewDrawerProps> = ({
         <Tabs value={activeTab} onValueChange={handleOnTabChange}>
           <Tabs.Trigger value="details">Details</Tabs.Trigger>
           <Tabs.Trigger value="budgets">Budgets</Tabs.Trigger>
-          <Tabs.Trigger value="history">History</Tabs.Trigger>
           <Tabs.Trigger value="statistic">Statistic</Tabs.Trigger>
+          <Tabs.Trigger value="history">History</Tabs.Trigger>
         </Tabs>
       </Drawer.Tab>
 

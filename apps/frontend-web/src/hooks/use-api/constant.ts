@@ -81,7 +81,13 @@ export const ENDPOINTS = {
     PAGINATED: "/budgets",
     BY_ID: (id: number | string) => `/budgets/${id}`,
     RELATED_BUDGETS: (id: number | string) => `/budgets/${id}/list`,
-    GENERATED_BUDGET_UPDATE: (templateId: number | string, budgetId: number | string) =>
-      `/budgets/${templateId}/list/${budgetId}`,
+    GENERATED_BUDGET: (
+      templateId: number | string,
+      budgetId: number | string,
+    ) => `/budgets/${templateId}/list/${budgetId}`,
+    GENERATED_BUDGET_UPDATE: (
+      templateId: number | string,
+      budgetId: number | string,
+    ) => `/budgets/${templateId}/list/${budgetId}`,
   },
 };

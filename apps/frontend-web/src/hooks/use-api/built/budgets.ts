@@ -116,6 +116,18 @@ export const useApiRelatedBudgetsInfiniteQuery = (
   );
 };
 
+export const useApiGeneratedBudgetQuery = (
+  templateId: number,
+  budgetId: number,
+  options?: Partial<UseApiQueryOptions<BudgetModel, unknown, unknown>>,
+) => {
+  return useApiQuery<BudgetModel, unknown>({
+    ...options,
+    queryKey: QUERY_KEYS.BUDGETS.GENERATED_BY_ID(templateId, budgetId),
+    path: ENDPOINTS.BUDGETS.GENERATED_BUDGET(templateId, budgetId),
+  });
+};
+
 export const useApiUpdateGeneratedBudget = () => {
   const queryClient = useQueryClient();
   return useApiMutate<

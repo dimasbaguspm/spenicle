@@ -125,7 +125,9 @@ func (bts BudgetTemplateService) Delete(ctx context.Context, id int64) error {
 
 func (bts BudgetTemplateService) GetRelatedBudgets(ctx context.Context, templateID int64, query models.BudgetTemplateRelatedBudgetsSearchModel) (models.BudgetsPagedModel, error) {
 	// Build cache key for related budgets list
-	cacheKey := common.BuildCacheKey(templateID, query, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d_budgets_paged:", templateID))
+	// Pass 0 as the ID to avoid double-encoding templateID in the cache key
+	// This ensures the cache key format matches the invalidation pattern
+	cacheKey := common.BuildCacheKey(0, query, fmt.Sprintf(constants.BudgetTemplateRelatedBudgetsCacheKeyPattern, templateID))
 	return common.FetchWithCache(ctx, bts.rdb, cacheKey, BudgetTemplateCacheTTL, func(ctx context.Context) (models.BudgetsPagedModel, error) {
 		ids, err := bts.Rpts.BudgTem.GetRelatedBudgets(ctx, templateID, query)
 		if err != nil {
@@ -259,7 +261,7 @@ func (bts BudgetTemplateService) GenerateBudgetFromTemplate(ctx context.Context,
 	// Invalidate template caches after updating execution timestamps
 	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d", template.ID))
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetTemplatesPagedCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d_budgets_paged:*", template.ID))
+	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateRelatedBudgetsCacheKeyPattern, template.ID)+"*")
 
 	return budget, nil
 }
@@ -282,11 +284,16 @@ func (bts BudgetTemplateService) UpdateBudget(ctx context.Context, id int64, p m
 	}
 
 	// Invalidate caches
-	common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetCacheKeyPrefix+"%d", id))
+	// Use BuildCacheKey to construct the cache key base, then convert to wildcard pattern
+	// BuildCacheKey(id, nil, prefix) produces "prefix:id:null"
+	// We replace ":null" with ":*" to match all parameter variations
+	baseCacheKey := common.BuildCacheKey(id, nil, constants.BudgetCacheKeyPrefix)
+	pattern := baseCacheKey[:len(baseCacheKey)-5] + ":*" // Remove ":null" and add ":*"
+	common.InvalidateCache(ctx, bts.rdb, pattern)
 	common.InvalidateCache(ctx, bts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
 
 	if budget.TemplateID != nil {
-		common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateCacheKeyPrefix+"%d_budgets_paged:*", *budget.TemplateID))
+		common.InvalidateCache(ctx, bts.rdb, fmt.Sprintf(constants.BudgetTemplateRelatedBudgetsCacheKeyPattern, *budget.TemplateID)+"*")
 	}
 
 	// Invalidate account and category caches since budgets are embedded in their responses
