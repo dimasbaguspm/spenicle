@@ -388,13 +388,14 @@ func (sr CategoryStatisticsRepository) GetBudgetUtilization(ctx context.Context,
 			COALESCE(SUM(t.amount), 0) as spent_amount
 		FROM budgets b
 		LEFT JOIN transactions t ON t.category_id = b.category_id
-			AND t.account_id = b.account_id
+			AND (b.account_id IS NULL OR t.account_id = b.account_id)
 			AND t.type = 'expense'
 			AND t.deleted_at IS NULL
 			AND t.date >= b.period_start
 			AND t.date <= b.period_end
 		WHERE b.category_id = $1
 			AND b.deleted_at IS NULL
+			AND b.status = 'active'
 			AND b.period_start <= $3::timestamptz
 			AND b.period_end >= $2::timestamptz
 		GROUP BY b.id, b.name, b.amount_limit, b.period_start, b.period_end

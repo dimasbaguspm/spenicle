@@ -604,8 +604,8 @@ func (sr AccountStatisticsRepository) GetBudgetHealth(ctx context.Context, accou
 			AND t.deleted_at IS NULL
 		WHERE b.account_id = $1
 			AND b.status = 'active'
-			AND b.period_start <= CURRENT_DATE
-			AND b.period_end >= CURRENT_DATE
+			AND b.period_start <= $3::timestamptz
+			AND b.period_end >= $2::timestamptz
 			AND b.deleted_at IS NULL
 		GROUP BY b.id, b.name, b.period_start, b.period_end, b.amount_limit
 		ORDER BY b.period_end ASC
@@ -613,7 +613,7 @@ func (sr AccountStatisticsRepository) GetBudgetHealth(ctx context.Context, accou
 
 	activeBudgets := []models.AccountStatisticsBudgetHealthEntry{}
 	activeStart := time.Now()
-	rows, err := sr.db.Query(ctx, activeBudgetSQL, accountID)
+	rows, err := sr.db.Query(ctx, activeBudgetSQL, accountID, p.StartDate, p.EndDate)
 	if err != nil {
 		observability.RecordError("database")
 		return models.AccountStatisticsBudgetHealthModel{}, huma.Error500InternalServerError("query active budgets: %w", err)
