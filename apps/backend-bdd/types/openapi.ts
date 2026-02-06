@@ -331,7 +331,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get generated budget
+         * @description Get a single budget generated from a budget template by ID
+         */
+        get: operations["get-generated-budget"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3723,6 +3727,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BudgetsPagedModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-generated-budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Budget Template ID */
+                template_id: number;
+                /** @description Budget ID */
+                budget_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetModel"];
                 };
             };
             /** @description Error */

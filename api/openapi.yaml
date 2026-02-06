@@ -3884,6 +3884,46 @@ paths:
       tags:
         - Budget Templates
   /budgets/{template_id}/list/{budget_id}:
+    get:
+      description: Get a single budget generated from a budget template by ID
+      operationId: get-generated-budget
+      parameters:
+        - description: Budget Template ID
+          in: path
+          name: template_id
+          required: true
+          schema:
+            description: Budget Template ID
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Budget ID
+          in: path
+          name: budget_id
+          required: true
+          schema:
+            description: Budget ID
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get generated budget
+      tags:
+        - Budget Templates
     patch:
       description: Update an individual budget's amount limit only (does not affect template or future budgets)
       operationId: update-budget-from-template

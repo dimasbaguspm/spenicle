@@ -84,6 +84,17 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, btr.UpdateBudget)
+	huma.Register(api, huma.Operation{
+		OperationID: "get-generated-budget",
+		Method:      http.MethodGet,
+		Path:        "/budgets/{template_id}/list/{budget_id}",
+		Summary:     "Get generated budget",
+		Description: "Get a single budget generated from a budget template by ID",
+		Tags:        []string{"Budget Templates"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, btr.GetGeneratedBudgetDetail)
 }
 func (btr BudgetTemplateResource) GetPaged(ctx context.Context, input *struct {
 	models.BudgetTemplatesSearchModel
@@ -198,6 +209,33 @@ func (btr BudgetTemplateResource) UpdateBudget(ctx context.Context, input *struc
 	}
 
 	resp, err := btr.sevs.BudgTem.UpdateBudget(ctx, input.BudgetID, input.Body)
+	if err != nil {
+		logger.Error("error", "template_id", input.TemplateID, "budget_id", input.BudgetID, "error", err)
+		return nil, err
+	}
+
+	logger.Info("success", "template_id", input.TemplateID, "budget_id", input.BudgetID)
+	return &struct {
+		Body models.BudgetModel
+	}{Body: resp}, nil
+}
+
+func (btr BudgetTemplateResource) GetGeneratedBudgetDetail(ctx context.Context, input *struct {
+	TemplateID int64 `path:"template_id" minimum:"1" doc:"Budget Template ID"`
+	BudgetID   int64 `path:"budget_id" minimum:"1" doc:"Budget ID"`
+}) (*struct {
+	Body models.BudgetModel
+}, error) {
+	logger := observability.GetLogger(ctx).With("resource", "BudgetTemplateResource.GetGeneratedBudgetDetail")
+	logger.Info("start", "template_id", input.TemplateID, "budget_id", input.BudgetID)
+
+	// Validate that template exists and budget belongs to it
+	if err := btr.sevs.BudgTem.ValidateBudgetBelongsToTemplate(ctx, input.TemplateID, input.BudgetID); err != nil {
+		logger.Error("error", "template_id", input.TemplateID, "budget_id", input.BudgetID, "error", err)
+		return nil, err
+	}
+
+	resp, err := btr.sevs.BudgTem.GetBudgetDetail(ctx, input.BudgetID)
 	if err != nil {
 		logger.Error("error", "template_id", input.TemplateID, "budget_id", input.BudgetID, "error", err)
 		return nil, err

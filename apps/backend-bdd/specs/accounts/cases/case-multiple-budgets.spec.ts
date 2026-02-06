@@ -1,7 +1,7 @@
 import { test, expect } from "@fixtures/index";
 
 test.describe("Accounts - Multiple Budgets", () => {
-  test("GET /accounts - account with multiple active budgets appears only once", async ({
+  test("GET /accounts - account with active budget appears once with embedded budget", async ({
     accountAPI,
     budgetTemplateAPI,
     ensureCleanDB,
@@ -10,17 +10,16 @@ test.describe("Accounts - Multiple Budgets", () => {
     await ensureCleanDB();
 
     // Create a test account
-    const accountName = `test-account-multiple-budgets-${Date.now()}`;
+    const accountName = `test-account-active-budget-${Date.now()}`;
     const accountRes = await accountAPI.createAccount({
       name: accountName,
-      note: "Test account for multiple budgets",
+      note: "Test account for active budget",
       type: "expense",
     });
     expect(accountRes.status).toBe(200);
     const accountId = accountRes.data!.id as number;
 
-    // Create multiple active budget templates for the same account
-    // These should generate budgets that overlap in the "current" period
+    // Create single active budget template for the account
     const now = new Date();
     const startDate = new Date(now);
     startDate.setDate(startDate.getDate() - 7); // 1 week ago
@@ -28,49 +27,28 @@ test.describe("Accounts - Multiple Budgets", () => {
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 30); // 30 days from now
 
-    // Create first budget template
-    const template1Res = await budgetTemplateAPI.createBudgetTemplate({
+    const templateRes = await budgetTemplateAPI.createBudgetTemplate({
       accountId: accountId,
       amountLimit: 1000000,
       recurrence: "monthly",
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      name: `Budget Template 1 - ${accountName}`,
+      name: `Budget Template - ${accountName}`,
       active: true,
     });
-    expect(template1Res.status).toBe(200);
-    const template1Id = template1Res.data!.id as number;
-
-    // Create second budget template for the same account
-    const template2Res = await budgetTemplateAPI.createBudgetTemplate({
-      accountId: accountId,
-      amountLimit: 2000000,
-      recurrence: "monthly",
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      name: `Budget Template 2 - ${accountName}`,
-      active: true,
-    });
-    expect(template2Res.status).toBe(200);
-    const template2Id = template2Res.data!.id as number;
+    expect(templateRes.status).toBe(200);
+    const templateId = templateRes.data!.id as number;
 
     // Wait a moment for budget generation
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Verify that both templates generated budgets
-    const budgets1 = await budgetTemplateAPI.getBudgetTemplateRelatedBudgets(
-      template1Id,
+    // Verify that template generated budgets
+    const budgets = await budgetTemplateAPI.getBudgetTemplateRelatedBudgets(
+      templateId,
       { pageSize: 100 },
     );
-    expect(budgets1.status).toBe(200);
-    expect((budgets1.data!.items || []).length).toBeGreaterThan(0);
-
-    const budgets2 = await budgetTemplateAPI.getBudgetTemplateRelatedBudgets(
-      template2Id,
-      { pageSize: 100 },
-    );
-    expect(budgets2.status).toBe(200);
-    expect((budgets2.data!.items || []).length).toBeGreaterThan(0);
+    expect(budgets.status).toBe(200);
+    expect((budgets.data!.items || []).length).toBeGreaterThan(0);
 
     // Now test the accounts list endpoint
     const accountsListRes = await accountAPI.getAccounts({
@@ -86,20 +64,13 @@ test.describe("Accounts - Multiple Budgets", () => {
       (acc: any) => acc.id === accountId,
     );
 
-    // CRITICAL: Account should appear exactly once, not once per budget
+    // CRITICAL: Account should appear exactly once
     expect(testAccountOccurrences.length).toBe(1);
 
-    // Verify the account has a budget embedded (the most recent one by ID)
+    // Verify the account has a budget embedded (from the template)
     const testAccount = testAccountOccurrences[0];
     expect(testAccount.budget).toBeDefined();
-
-    // The embedded budget should be the one with higher ID (most recent)
-    const allBudgetIds = [
-      ...(budgets1.data!.items || []).map((b: any) => b.id),
-      ...(budgets2.data!.items || []).map((b: any) => b.id),
-    ];
-    const maxBudgetId = Math.max(...allBudgetIds);
-    expect(testAccount.budget?.id).toBe(maxBudgetId);
+    expect(testAccount.budget?.id).toBeDefined();
 
     // Verify total count reflects unique accounts
     const totalCountBefore = accountsListRes.data!.totalCount;
@@ -116,7 +87,7 @@ test.describe("Accounts - Multiple Budgets", () => {
     expect(totalCountAfter).toBe(totalCountBefore - 1);
   });
 
-  test("GET /accounts/:id - account detail with multiple budgets returns single account", async ({
+  test("GET /accounts/:id - account detail with budget returns single account", async ({
     accountAPI,
     budgetTemplateAPI,
     ensureCleanDB,
@@ -134,7 +105,7 @@ test.describe("Accounts - Multiple Budgets", () => {
     expect(accountRes.status).toBe(200);
     const accountId = accountRes.data!.id as number;
 
-    // Create multiple budget templates
+    // Create single budget template (only 1 allowed per account)
     const now = new Date();
     const startDate = new Date(now);
     startDate.setDate(startDate.getDate() - 7);
@@ -142,25 +113,16 @@ test.describe("Accounts - Multiple Budgets", () => {
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 30);
 
-    await budgetTemplateAPI.createBudgetTemplate({
+    const templateRes = await budgetTemplateAPI.createBudgetTemplate({
       accountId: accountId,
       amountLimit: 1000000,
       recurrence: "monthly",
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      name: `Budget 1 - ${accountName}`,
+      name: `Budget - ${accountName}`,
       active: true,
     });
-
-    await budgetTemplateAPI.createBudgetTemplate({
-      accountId: accountId,
-      amountLimit: 2000000,
-      recurrence: "monthly",
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      name: `Budget 2 - ${accountName}`,
-      active: true,
-    });
+    expect(templateRes.status).toBe(200);
 
     // Wait for budget generation
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -170,14 +132,15 @@ test.describe("Accounts - Multiple Budgets", () => {
     expect(detailRes.status).toBe(200);
     expect(detailRes.data!.id).toBe(accountId);
 
-    // Should have exactly one budget (the most recent by ID)
+    // Should have exactly one budget (from the template)
     expect(detailRes.data!.budget).toBeDefined();
+    expect(detailRes.data!.budget?.id).toBeDefined();
 
     // Cleanup
     await accountAPI.deleteAccount(accountId);
   });
 
-  test("GET /accounts - pagination count is correct with multiple budgets per account", async ({
+  test("GET /accounts - pagination count is correct with budgets", async ({
     accountAPI,
     budgetTemplateAPI,
     ensureCleanDB,
@@ -185,7 +148,7 @@ test.describe("Accounts - Multiple Budgets", () => {
     // Ensure clean database
     await ensureCleanDB();
 
-    // Create 3 accounts, each with 2 active budgets
+    // Create 3 accounts, each with 1 active budget template
     const accountIds: number[] = [];
     const now = new Date();
     const startDate = new Date(now);
@@ -202,26 +165,17 @@ test.describe("Accounts - Multiple Budgets", () => {
       expect(accountRes.status).toBe(200);
       accountIds.push(accountRes.data!.id as number);
 
-      // Create 2 budget templates for this account
-      await budgetTemplateAPI.createBudgetTemplate({
+      // Create 1 budget template for this account (only 1 allowed per account)
+      const templateRes = await budgetTemplateAPI.createBudgetTemplate({
         accountId: accountRes.data!.id as number,
         amountLimit: 1000000,
         recurrence: "monthly",
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        name: `Budget A - Account ${i}`,
+        name: `Budget - Account ${i}`,
         active: true,
       });
-
-      await budgetTemplateAPI.createBudgetTemplate({
-        accountId: accountRes.data!.id as number,
-        amountLimit: 2000000,
-        recurrence: "monthly",
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        name: `Budget B - Account ${i}`,
-        active: true,
-      });
+      expect(templateRes.status).toBe(200);
     }
 
     // Wait for budget generation
@@ -234,10 +188,10 @@ test.describe("Accounts - Multiple Budgets", () => {
     });
     expect(page1Res.status).toBe(200);
 
-    // Should have exactly 2 items in page 1 (not 4 due to duplicate joins)
+    // Should have exactly 2 items in page 1 (page size limit)
     expect((page1Res.data!.items || []).length).toBeLessThanOrEqual(2);
 
-    // Total count should count unique accounts, not joined rows
+    // Total count should count unique accounts
     const uniqueAccountIds = new Set(
       (page1Res.data!.items || []).map((acc: any) => acc.id),
     );

@@ -500,4 +500,215 @@ test.describe("Budget Templates - Edge Cases and Recurrence Scenarios", () => {
     await categoryAPI.deleteCategory(category.data!.id as number);
     await accountAPI.deleteAccount(account.data!.id as number);
   });
+
+  test("GET /budgets/{template_id}/list/{budget_id} - retrieve after template deactivation", async ({
+    budgetTemplateAPI,
+    accountAPI,
+  }) => {
+    // Arrange: Create account and template
+    const account = await accountAPI.createAccount({
+      name: `get-deactivated-template-account-${Date.now()}`,
+      note: "test account",
+      type: "expense",
+    });
+
+    const template = await budgetTemplateAPI.createBudgetTemplate({
+      accountId: account.data!.id as number,
+      amountLimit: 100000,
+      recurrence: "monthly",
+      startDate: new Date().toISOString(),
+      name: "Deactivated Template Test",
+      active: true,
+    });
+
+    // Wait and fetch related budgets
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const budgets = await budgetTemplateAPI.getBudgetTemplateRelatedBudgets(
+      template.data!.id as number,
+    );
+
+    if (!budgets.data?.items || budgets.data.items.length === 0) {
+      await budgetTemplateAPI.updateBudgetTemplate(
+        template.data!.id as number,
+        { active: false },
+      );
+      await accountAPI.deleteAccount(account.data!.id as number);
+      return;
+    }
+
+    const budgetId = budgets.data.items[0].id as number;
+
+    // Act: Deactivate template then retrieve budget
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
+
+    const retrieved = await budgetTemplateAPI.getGeneratedBudget(
+      template.data!.id as number,
+      budgetId,
+    );
+
+    // Assert: Budget still retrievable after template deactivation
+    expect(retrieved.status).toBe(200);
+    expect(retrieved.data!.id).toBe(budgetId);
+
+    // Cleanup
+    await accountAPI.deleteAccount(account.data!.id as number);
+  });
+
+  test("GET /budgets/{template_id}/list/{budget_id} - sequential retrievals return consistent data", async ({
+    budgetTemplateAPI,
+    accountAPI,
+  }) => {
+    // Arrange: Create account and template
+    const account = await accountAPI.createAccount({
+      name: `get-sequential-account-${Date.now()}`,
+      note: "test account",
+      type: "expense",
+    });
+
+    const template = await budgetTemplateAPI.createBudgetTemplate({
+      accountId: account.data!.id as number,
+      amountLimit: 100000,
+      recurrence: "monthly",
+      startDate: new Date().toISOString(),
+      name: "Sequential Retrieval Test",
+      active: true,
+    });
+
+    // Wait and fetch related budgets
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const budgets = await budgetTemplateAPI.getBudgetTemplateRelatedBudgets(
+      template.data!.id as number,
+    );
+
+    if (!budgets.data?.items || budgets.data.items.length === 0) {
+      await budgetTemplateAPI.updateBudgetTemplate(
+        template.data!.id as number,
+        { active: false },
+      );
+      await accountAPI.deleteAccount(account.data!.id as number);
+      return;
+    }
+
+    const budgetId = budgets.data.items[0].id as number;
+
+    // Act: Retrieve the same budget multiple times
+    const retrieval1 = await budgetTemplateAPI.getGeneratedBudget(
+      template.data!.id as number,
+      budgetId,
+    );
+
+    const retrieval2 = await budgetTemplateAPI.getGeneratedBudget(
+      template.data!.id as number,
+      budgetId,
+    );
+
+    const retrieval3 = await budgetTemplateAPI.getGeneratedBudget(
+      template.data!.id as number,
+      budgetId,
+    );
+
+    // Assert: All retrievals return same data
+    expect(retrieval1.data!.id).toBe(retrieval2.data!.id);
+    expect(retrieval2.data!.id).toBe(retrieval3.data!.id);
+    expect(retrieval1.data!.amountLimit).toBe(retrieval2.data!.amountLimit);
+    expect(retrieval2.data!.amountLimit).toBe(retrieval3.data!.amountLimit);
+
+    // Cleanup
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
+    await accountAPI.deleteAccount(account.data!.id as number);
+  });
+
+  test("GET /budgets/{template_id}/list/{budget_id} - boundary ID values", async ({
+    budgetTemplateAPI,
+  }) => {
+    // Act: Try to retrieve with non-existent large ID values
+    const largeIdResult = await budgetTemplateAPI.getGeneratedBudget(
+      999999,
+      999999,
+    );
+
+    // Assert: Returns 404 for non-existent budget
+    console.log(
+      "Boundary test - large ID result status:",
+      largeIdResult.status,
+    );
+    expect([404, 400]).toContain(largeIdResult.status);
+  });
+
+  test("GET /budgets/{template_id}/list/{budget_id} - retrieve after individual budget update", async ({
+    budgetTemplateAPI,
+    accountAPI,
+  }) => {
+    // Arrange: Create account and template
+    const account = await accountAPI.createAccount({
+      name: `get-after-update-edge-account-${Date.now()}`,
+      note: "test account",
+      type: "expense",
+    });
+
+    const template = await budgetTemplateAPI.createBudgetTemplate({
+      accountId: account.data!.id as number,
+      amountLimit: 100000,
+      recurrence: "monthly",
+      startDate: new Date().toISOString(),
+      name: "Get After Update Edge Test",
+      active: true,
+    });
+
+    // Wait and fetch related budgets
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const budgets = await budgetTemplateAPI.getBudgetTemplateRelatedBudgets(
+      template.data!.id as number,
+    );
+
+    if (!budgets.data?.items || budgets.data.items.length === 0) {
+      await budgetTemplateAPI.updateBudgetTemplate(
+        template.data!.id as number,
+        { active: false },
+      );
+      await accountAPI.deleteAccount(account.data!.id as number);
+      return;
+    }
+
+    const budgetId = budgets.data.items[0].id as number;
+    const initialAmountLimit = budgets.data.items[0].amountLimit!;
+
+    // Act: Update the budget
+    const newAmountLimit = 250000;
+    await budgetTemplateAPI.updateBudgetFromTemplate(
+      template.data!.id as number,
+      budgetId,
+      { amountLimit: newAmountLimit },
+    );
+
+    // Wait briefly for update to persist
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Retrieve the budget to confirm update
+    const retrieved = await budgetTemplateAPI.getGeneratedBudget(
+      template.data!.id as number,
+      budgetId,
+    );
+
+    console.log("Update confirmation test:", {
+      initial: initialAmountLimit,
+      updated: newAmountLimit,
+      retrieved: retrieved.data!.amountLimit,
+    });
+
+    // Assert: Retrieved budget shows the updated amount
+    expect(retrieved.status).toBe(200);
+    expect(retrieved.data!.amountLimit).toBe(newAmountLimit);
+    expect(retrieved.data!.amountLimit).not.toBe(initialAmountLimit);
+
+    // Cleanup
+    await budgetTemplateAPI.updateBudgetTemplate(template.data!.id as number, {
+      active: false,
+    });
+    await accountAPI.deleteAccount(account.data!.id as number);
+  });
 });

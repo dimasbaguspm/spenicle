@@ -68,6 +68,18 @@ export class BudgetTemplateAPIClient extends BaseAPIClient {
   }
 
   /**
+   * Retrieve an individual budget generated from a template
+   * GET /budgets/{template_id}/list/{budget_id}
+   * Returns the full budget details including period, limit, and actual amount
+   */
+  async getGeneratedBudget(
+    templateId: number,
+    budgetId: number,
+  ): Promise<APIResponse<BudgetModel>> {
+    return this.get<BudgetModel>(`/budgets/${templateId}/list/${budgetId}`);
+  }
+
+  /**
    * Update an individual budget's amount limit
    * PATCH /budgets/{template_id}/list/{budget_id}
    * Only affects the specific budget, NOT the template or future budgets
