@@ -5,10 +5,12 @@ import type { FC } from "react";
 
 interface BudgetCardProps extends Omit<CardProps, "onClick"> {
   budget: BudgetModel;
+  templateId?: number;
+  onClick?: (budget: BudgetModel, templateId?: number) => void;
 }
 
 export const BudgetCard: FC<BudgetCardProps> = (props) => {
-  const { budget, ...rest } = props;
+  const { budget, templateId, onClick, ...rest } = props;
   const {
     name,
     periodStart,
@@ -34,6 +36,10 @@ export const BudgetCard: FC<BudgetCardProps> = (props) => {
           ? "bg-[var(--color-success)]"
           : "bg-[var(--color-neutral)]";
 
+  const handleClick = () => {
+    onClick?.(budget, templateId);
+  };
+
   return (
     <Card
       title={name}
@@ -43,6 +49,7 @@ export const BudgetCard: FC<BudgetCardProps> = (props) => {
           <Badge color={statusBadgeColor}>{statusText}</Badge>
         </BadgeGroup>
       }
+      onClick={handleClick}
       {...rest}
     >
       <div className="space-y-1">

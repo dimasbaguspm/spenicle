@@ -115,3 +115,24 @@ export const useApiRelatedBudgetsInfiniteQuery = (
     },
   );
 };
+
+export const useApiUpdateGeneratedBudget = () => {
+  const queryClient = useQueryClient();
+  return useApiMutate<
+    BudgetModel,
+    { templateId: number; budgetId: number; amountLimit?: number }
+  >({
+    path: ENDPOINTS.BUDGETS.GENERATED_BUDGET_UPDATE(":templateId", ":budgetId"),
+    method: "PATCH",
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.BUDGETS.RELATED(variables.templateId, {}),
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.BUDGETS.PAGINATED().slice(0, 2),
+        exact: false,
+      });
+    },
+  });
+};

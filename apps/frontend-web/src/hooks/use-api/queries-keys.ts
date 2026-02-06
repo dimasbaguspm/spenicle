@@ -168,6 +168,12 @@ export const QUERY_KEYS = {
       templateId,
       JSON.stringify(params ?? {}),
     ],
+    GENERATED_BY_ID: (templateId: number, budgetId: number) => [
+      ...BASE_QUERY_KEYS.BUDGETS,
+      "generated",
+      templateId,
+      budgetId,
+    ],
   },
   INSIGHTS: {
     ACCOUNTS_SUMMARY: (params: object = {}) => [

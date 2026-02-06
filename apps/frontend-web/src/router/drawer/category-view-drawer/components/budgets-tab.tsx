@@ -17,7 +17,7 @@ import {
   useApiRelatedBudgetsInfiniteQuery,
 } from "@/hooks/use-api";
 import { BudgetCard, BudgetTemplateCard } from "@/ui/budget-card";
-import type { CategoryModel } from "@/types/schemas";
+import type { BudgetModel, CategoryModel } from "@/types/schemas";
 
 interface BudgetsTabProps {
   data: CategoryModel;
@@ -59,6 +59,14 @@ export const BudgetsTab: FC<BudgetsTabProps> = ({ data }) => {
     if (template) {
       openDrawer(DRAWER_ROUTES.BUDGET_UPDATE, { budgetId: template.id });
     }
+  };
+
+  const handleGeneratedBudgetClick = (budget: BudgetModel, templateId?: number) => {
+    if (!templateId) return;
+    openDrawer(DRAWER_ROUTES.BUDGET_GENERATED_UPDATE, {
+      templateId,
+      budgetId: budget.id,
+    });
   };
 
   return (
@@ -115,7 +123,11 @@ export const BudgetsTab: FC<BudgetsTabProps> = ({ data }) => {
               <ul className="mb-4">
                 {relatedBudgets.map((budget) => (
                   <li key={budget.id}>
-                    <BudgetCard budget={budget} />
+                    <BudgetCard
+                      budget={budget}
+                      templateId={template?.id}
+                      onClick={handleGeneratedBudgetClick}
+                    />
                     <Hr />
                   </li>
                 ))}

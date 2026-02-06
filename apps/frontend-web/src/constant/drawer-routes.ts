@@ -20,5 +20,6 @@ export const DRAWER_ROUTES = {
   SELECT_SINGLE_CATEGORY: "select-single-category",
   BUDGET_CREATE: "budget-create",
   BUDGET_UPDATE: "budget-update",
+  BUDGET_GENERATED_UPDATE: "budget-generated-update",
   INSIGHTS_FILTER: "insights-filter",
 } as const;

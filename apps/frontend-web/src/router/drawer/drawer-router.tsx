@@ -29,11 +29,13 @@ import { AccountComparisonDrawer } from "./account-comparison-drawer";
 import { CategoryComparisonDrawer } from "./category-comparison-drawer";
 import { BudgetCreateDrawer } from "./budget-create-drawer";
 import { BudgetUpdateDrawer } from "./budget-update-drawer";
+import { BudgetGeneratedUpdateDrawer } from "./budget-generated-update-drawer";
 
 interface DrawerParams {
   accountId?: number;
   categoryId?: number;
   budgetId?: number;
+  templateId?: number;
   transactionId?: number;
   transactionTemplateId?: number;
   payloadId?: string;
@@ -151,6 +153,14 @@ export const DrawerRouter = () => {
       {is(DRAWER_ROUTES.BUDGET_UPDATE) && (
         <BudgetUpdateDrawer budgetId={params.budgetId!} />
       )}
+      {is(DRAWER_ROUTES.BUDGET_GENERATED_UPDATE) &&
+        hasParam("templateId") &&
+        hasParam("budgetId") && (
+          <BudgetGeneratedUpdateDrawer
+            templateId={params.templateId!}
+            budgetId={params.budgetId!}
+          />
+        )}
 
       {/** Insight Filter */}
       {is(DRAWER_ROUTES.INSIGHTS_FILTER) && (
