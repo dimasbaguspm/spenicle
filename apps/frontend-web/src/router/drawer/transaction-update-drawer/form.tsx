@@ -23,6 +23,7 @@ import type { AccountModel, CategoryModel } from "@/types/schemas";
 export const formId = "update-transaction-form";
 
 interface FormProps {
+  id: number;
   defaultValues?: Partial<TransactionUpdateFormSchema>;
   handleOnValidSubmit: (data: TransactionUpdateFormSchema) => Promise<void>;
   accountData?: AccountModel | null;
@@ -31,6 +32,7 @@ interface FormProps {
 }
 
 export const Form = ({
+  id,
   defaultValues,
   handleOnValidSubmit,
   accountData,
@@ -58,6 +60,9 @@ export const Form = ({
           state: {
             payload: watchedValues,
             returnToDrawer: DRAWER_ROUTES.TRANSACTION_UPDATE,
+            returnToDrawerId: {
+              transactionId: id,
+            },
           },
         },
       );

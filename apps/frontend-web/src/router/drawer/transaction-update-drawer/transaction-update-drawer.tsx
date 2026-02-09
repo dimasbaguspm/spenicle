@@ -48,7 +48,7 @@ export const TransactionUpdateDrawer: FC<TransactionUpdateDrawerProps> = ({
     defaultValues.accountId,
     {
       enabled: !!defaultValues.accountId,
-    }
+    },
   );
   const [destinationAccountData, , { isPending: isDestinationAccountPending }] =
     useApiAccountQuery(defaultValues.destinationAccountId!, {
@@ -114,6 +114,7 @@ export const TransactionUpdateDrawer: FC<TransactionUpdateDrawerProps> = ({
         <When condition={!!transactionData}>
           <Drawer.Body>
             <Form
+              id={transactionData?.id!}
               accountData={accountData}
               destinationAccountData={destinationAccountData}
               categoryData={categoryData}
