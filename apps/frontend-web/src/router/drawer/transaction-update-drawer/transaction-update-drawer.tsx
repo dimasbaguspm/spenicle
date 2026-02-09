@@ -39,10 +39,7 @@ export const TransactionUpdateDrawer: FC<TransactionUpdateDrawerProps> = ({
   const [transactionData, , { isPending: isTransactionPending }] =
     useApiTransactionQuery(transactionId);
 
-  const defaultValues = {
-    ...formatDefaultValues(null, payload),
-    ...formatDefaultValues(transactionData),
-  };
+  const defaultValues = formatDefaultValues(transactionData, payload);
 
   const [accountData, , { isPending: isAccountPending }] = useApiAccountQuery(
     defaultValues.accountId,
