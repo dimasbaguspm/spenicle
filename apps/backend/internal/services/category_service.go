@@ -2,17 +2,14 @@ package services
 
 import (
 	"context"
-	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
-)
-
-const (
-	CategoryCacheTTL = 10 * time.Minute
 )
 
 type CategoryService struct {
@@ -28,15 +25,15 @@ func NewCategoryService(rpts *repositories.RootRepository, rdb *redis.Client) Ca
 }
 
 func (cs CategoryService) GetPaged(ctx context.Context, p models.CategoriesSearchModel) (models.CategoriesPagedModel, error) {
-	cacheKey := common.BuildPagedCacheKey("category", p)
-	return common.FetchWithCache(ctx, cs.rdb, cacheKey, CategoryCacheTTL, func(ctx context.Context) (models.CategoriesPagedModel, error) {
+	cacheKey := common.BuildPagedCacheKey(constants.EntityCategory, p)
+	return common.FetchWithCache(ctx, cs.rdb, cacheKey, constants.CacheTTLPaged, func(ctx context.Context) (models.CategoriesPagedModel, error) {
 		return cs.rpts.Cat.GetPaged(ctx, p)
 	}, "category")
 }
 
 func (cs CategoryService) GetDetail(ctx context.Context, id int64) (models.CategoryModel, error) {
-	cacheKey := common.BuildDetailCacheKey("category", id)
-	return common.FetchWithCache(ctx, cs.rdb, cacheKey, CategoryCacheTTL, func(ctx context.Context) (models.CategoryModel, error) {
+	cacheKey := common.BuildDetailCacheKey(constants.EntityCategory, id)
+	return common.FetchWithCache(ctx, cs.rdb, cacheKey, constants.CacheTTLDetail, func(ctx context.Context) (models.CategoryModel, error) {
 		return cs.rpts.Cat.GetDetail(ctx, id)
 	}, "category")
 }
@@ -47,7 +44,9 @@ func (cs CategoryService) Create(ctx context.Context, p models.CreateCategoryMod
 		return category, err
 	}
 
-	common.InvalidateCacheForEntity(ctx, cs.rdb, "category", map[string]interface{}{"categoryId": category.ID})
+	if err := common.InvalidateCacheForEntity(ctx, cs.rdb, constants.EntityCategory, map[string]interface{}{"categoryId": category.ID}); err != nil {
+		observability.NewLogger("service", "CategoryService").Warn("cache invalidation failed", "error", err)
+	}
 
 	return category, nil
 }
@@ -58,7 +57,9 @@ func (cs CategoryService) Update(ctx context.Context, id int64, p models.UpdateC
 		return category, err
 	}
 
-	common.InvalidateCacheForEntity(ctx, cs.rdb, "category", map[string]interface{}{"categoryId": id})
+	if err := common.InvalidateCacheForEntity(ctx, cs.rdb, constants.EntityCategory, map[string]interface{}{"categoryId": id}); err != nil {
+		observability.NewLogger("service", "CategoryService").Warn("cache invalidation failed", "error", err)
+	}
 
 	return category, nil
 }
@@ -93,7 +94,7 @@ func (cs CategoryService) Delete(ctx context.Context, id int64) error {
 	}
 	tx = nil
 
-	common.InvalidateCacheForEntity(ctx, cs.rdb, "category", map[string]interface{}{"categoryId": id})
+	common.InvalidateCacheForEntity(ctx, cs.rdb, constants.EntityCategory, map[string]interface{}{"categoryId": id})
 
 	return nil
 }
@@ -127,7 +128,7 @@ func (cs CategoryService) Reorder(ctx context.Context, p models.ReorderCategorie
 	}
 	tx = nil
 
-	common.InvalidateCacheForEntity(ctx, cs.rdb, "category", map[string]interface{}{})
+	common.InvalidateCacheForEntity(ctx, cs.rdb, constants.EntityCategory, map[string]interface{}{})
 
 	return nil
 }

@@ -7,13 +7,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
-)
-
-const (
-	BudgetTemplateCacheTTL = 10 * time.Minute
 )
 
 type BudgetTemplateService struct {
@@ -26,15 +24,15 @@ func NewBudgetTemplateService(rpts *repositories.RootRepository, rdb *redis.Clie
 }
 
 func (bts BudgetTemplateService) GetPaged(ctx context.Context, p models.BudgetTemplatesSearchModel) (models.BudgetTemplatesPagedModel, error) {
-	cacheKey := common.BuildPagedCacheKey("budget_template", p)
-	return common.FetchWithCache(ctx, bts.rdb, cacheKey, BudgetTemplateCacheTTL, func(ctx context.Context) (models.BudgetTemplatesPagedModel, error) {
+	cacheKey := common.BuildPagedCacheKey(constants.EntityBudgetTemplate, p)
+	return common.FetchWithCache(ctx, bts.rdb, cacheKey, constants.CacheTTLPaged, func(ctx context.Context) (models.BudgetTemplatesPagedModel, error) {
 		return bts.Rpts.BudgTem.GetPaged(ctx, p)
 	}, "budget_template")
 }
 
 func (bts BudgetTemplateService) GetDetail(ctx context.Context, id int64) (models.BudgetTemplateModel, error) {
-	cacheKey := common.BuildDetailCacheKey("budget_template", id)
-	return common.FetchWithCache(ctx, bts.rdb, cacheKey, BudgetTemplateCacheTTL, func(ctx context.Context) (models.BudgetTemplateModel, error) {
+	cacheKey := common.BuildDetailCacheKey(constants.EntityBudgetTemplate, id)
+	return common.FetchWithCache(ctx, bts.rdb, cacheKey, constants.CacheTTLDetail, func(ctx context.Context) (models.BudgetTemplateModel, error) {
 		return bts.Rpts.BudgTem.GetDetail(ctx, id)
 	}, "budget_template")
 }
@@ -87,7 +85,9 @@ func (bts BudgetTemplateService) Create(ctx context.Context, p models.CreateBudg
 		return template, err
 	}
 
-	common.InvalidateCacheForEntity(ctx, bts.rdb, "budget_template", map[string]interface{}{"templateId": template.ID})
+	if err := common.InvalidateCacheForEntity(ctx, bts.rdb, constants.EntityBudgetTemplate, map[string]interface{}{"templateId": template.ID}); err != nil {
+		observability.NewLogger("service", "BudgetTemplateService").Warn("cache invalidation failed", "error", err)
+	}
 
 	// Generate initial budget immediately if the template is due today
 	if bts.isTemplateDueNow(template) {
@@ -111,7 +111,9 @@ func (bts BudgetTemplateService) Update(ctx context.Context, id int64, p models.
 		return template, err
 	}
 
-	common.InvalidateCacheForEntity(ctx, bts.rdb, "budget_template", map[string]interface{}{"templateId": id})
+	if err := common.InvalidateCacheForEntity(ctx, bts.rdb, constants.EntityBudgetTemplate, map[string]interface{}{"templateId": id}); err != nil {
+		observability.NewLogger("service", "BudgetTemplateService").Warn("cache invalidation failed", "error", err)
+	}
 
 	return template, nil
 }
@@ -122,8 +124,8 @@ func (bts BudgetTemplateService) Delete(ctx context.Context, id int64) error {
 
 func (bts BudgetTemplateService) GetRelatedBudgets(ctx context.Context, templateID int64, query models.BudgetTemplateRelatedBudgetsSearchModel) (models.BudgetsPagedModel, error) {
 	// Build cache key for related budgets list - scoped by template ID in entity name
-	cacheKey := common.BuildPagedCacheKey(fmt.Sprintf("budget_template:%d:budgets", templateID), query)
-	return common.FetchWithCache(ctx, bts.rdb, cacheKey, BudgetTemplateCacheTTL, func(ctx context.Context) (models.BudgetsPagedModel, error) {
+	cacheKey := common.BuildPagedCacheKey(fmt.Sprintf("%s:%d:budgets", constants.EntityBudgetTemplate, templateID), query)
+	return common.FetchWithCache(ctx, bts.rdb, cacheKey, constants.CacheTTLPaged, func(ctx context.Context) (models.BudgetsPagedModel, error) {
 		ids, err := bts.Rpts.BudgTem.GetRelatedBudgets(ctx, templateID, query)
 		if err != nil {
 			return models.BudgetsPagedModel{}, err
@@ -160,16 +162,16 @@ func (bts BudgetTemplateService) GetRelatedBudgets(ctx context.Context, template
 
 // GetBudgetsPaged retrieves generated budgets with optional filtering (internal use)
 func (bts BudgetTemplateService) GetBudgetsPaged(ctx context.Context, p models.BudgetsSearchModel) (models.BudgetsPagedModel, error) {
-	cacheKey := common.BuildPagedCacheKey("budget", p)
-	return common.FetchWithCache(ctx, bts.rdb, cacheKey, BudgetTemplateCacheTTL, func(ctx context.Context) (models.BudgetsPagedModel, error) {
+	cacheKey := common.BuildPagedCacheKey(constants.EntityBudget, p)
+	return common.FetchWithCache(ctx, bts.rdb, cacheKey, constants.CacheTTLPaged, func(ctx context.Context) (models.BudgetsPagedModel, error) {
 		return bts.Rpts.BudgTem.GetBudgetsPaged(ctx, p)
 	}, "budget")
 }
 
 // GetBudgetDetail retrieves a single generated budget with calculated actual amount (internal use)
 func (bts BudgetTemplateService) GetBudgetDetail(ctx context.Context, id int64) (models.BudgetModel, error) {
-	cacheKey := common.BuildDetailCacheKey("budget", id)
-	return common.FetchWithCache(ctx, bts.rdb, cacheKey, BudgetTemplateCacheTTL, func(ctx context.Context) (models.BudgetModel, error) {
+	cacheKey := common.BuildDetailCacheKey(constants.EntityBudget, id)
+	return common.FetchWithCache(ctx, bts.rdb, cacheKey, constants.CacheTTLDetail, func(ctx context.Context) (models.BudgetModel, error) {
 		return bts.Rpts.BudgTem.GetBudgetDetail(ctx, id)
 	}, "budget")
 }
@@ -182,9 +184,9 @@ func (bts BudgetTemplateService) CreateBudget(ctx context.Context, p models.Crea
 	}
 
 	// Invalidate budget and related caches
-	common.InvalidateCacheForEntity(ctx, bts.rdb, "budget", map[string]interface{}{})
+	common.InvalidateCacheForEntity(ctx, bts.rdb, constants.EntityBudget, map[string]interface{}{})
 	if p.TemplateID != nil {
-		common.InvalidateCacheForEntity(ctx, bts.rdb, "budget_template", map[string]interface{}{"templateId": *p.TemplateID})
+		common.InvalidateCacheForEntity(ctx, bts.rdb, constants.EntityBudgetTemplate, map[string]interface{}{"templateId": *p.TemplateID})
 	}
 
 	return budget, nil
@@ -198,7 +200,7 @@ func (bts BudgetTemplateService) DeactivateExistingActiveBudgets(ctx context.Con
 	}
 
 	// Invalidate budget and related account/category caches
-	common.InvalidateCacheForEntity(ctx, bts.rdb, "budget", map[string]interface{}{})
+	common.InvalidateCacheForEntity(ctx, bts.rdb, constants.EntityBudget, map[string]interface{}{})
 
 	return nil
 }
@@ -243,7 +245,7 @@ func (bts BudgetTemplateService) GenerateBudgetFromTemplate(ctx context.Context,
 	}
 
 	// Invalidate template caches after updating execution timestamps
-	common.InvalidateCacheForEntity(ctx, bts.rdb, "budget_template", map[string]interface{}{"templateId": template.ID})
+	common.InvalidateCacheForEntity(ctx, bts.rdb, constants.EntityBudgetTemplate, map[string]interface{}{"templateId": template.ID})
 
 	return budget, nil
 }
@@ -266,9 +268,9 @@ func (bts BudgetTemplateService) UpdateBudget(ctx context.Context, id int64, p m
 	}
 
 	// Invalidate budget caches
-	common.InvalidateCacheForEntity(ctx, bts.rdb, "budget", map[string]interface{}{"budgetId": id})
+	common.InvalidateCacheForEntity(ctx, bts.rdb, constants.EntityBudget, map[string]interface{}{"budgetId": id})
 	if budget.TemplateID != nil {
-		common.InvalidateCacheForEntity(ctx, bts.rdb, "budget_template", map[string]interface{}{"templateId": *budget.TemplateID})
+		common.InvalidateCacheForEntity(ctx, bts.rdb, constants.EntityBudgetTemplate, map[string]interface{}{"templateId": *budget.TemplateID})
 	}
 
 	return budget, nil

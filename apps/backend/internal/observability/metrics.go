@@ -124,6 +124,47 @@ var (
 		[]string{"entity", "pattern"},
 	)
 
+	// Enhanced cache monitoring - cache key distribution and TTL tracking
+	CacheKeyOperations = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "spenicle_cache_key_operations_total",
+			Help: "Total cache operations by key type (entity and operation: detail/paged/statistics)",
+		},
+		[]string{"entity", "operation"},
+	)
+
+	CacheHitsByOperation = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "spenicle_cache_hits_by_operation_total",
+			Help: "Cache hits by operation type",
+		},
+		[]string{"entity", "operation"},
+	)
+
+	CacheMissesByOperation = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "spenicle_cache_misses_by_operation_total",
+			Help: "Cache misses by operation type",
+		},
+		[]string{"entity", "operation"},
+	)
+
+	CacheTTLExpirations = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "spenicle_cache_ttl_expirations_total",
+			Help: "Cache entries expired by TTL bucket type",
+		},
+		[]string{"ttl_bucket"},
+	)
+
+	CacheKeysEstimate = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "spenicle_cache_keys_estimate",
+			Help: "Estimated cache key count by entity",
+		},
+		[]string{"entity"},
+	)
+
 	// Database metrics
 	QueryExecutionTime = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{

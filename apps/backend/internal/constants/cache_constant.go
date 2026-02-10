@@ -1,51 +1,33 @@
 package constants
 
-// Cache key prefixes for use with BuildCacheKey in Get/Fetch operations
-// These are minimal prefixes used to construct cache keys for fetching cached data
+import "time"
+
+// Entity names for consistent cache key construction
 const (
-	// Account cache prefixes
-	AccountCacheKeyPrefix       = "account:"
-	AccountsPagedCacheKeyPrefix = "account:paged:"
+	EntityAccount             = "account"
+	EntityCategory            = "category"
+	EntityTransaction         = "transaction"
+	EntityTransactionTag      = "transaction_tag"
+	EntityTransactionRelation = "transaction_relation"
+	EntityBudget              = "budget"
+	EntityBudgetTemplate      = "budget_template"
+	EntityTag                 = "tag"
+	EntityTransactionTemplate = "transaction_template"
+)
 
-	// Category cache prefixes
-	CategoryCacheKeyPrefix        = "category:"
-	CategoriesPagedCacheKeyPrefix = "category:paged:"
+// Summary entity names for summary cache keys
+const (
+	SummaryAccount     = "summary:account"
+	SummaryCategory    = "summary:category"
+	SummaryTransaction = "summary:transaction"
+)
 
-	// Transaction cache prefixes
-	TransactionCacheKeyPrefix               = "transaction:"
-	TransactionsPagedCacheKeyPrefix         = "transaction:paged:"
-	TransactionTagCacheKeyPrefix            = "transaction_tag:"
-	TransactionTagsPagedCacheKeyPrefix      = "transaction_tag:paged:"
-	TransactionRelationCacheKeyPrefix       = "transaction_relation:"
-	TransactionRelationsPagedCacheKeyPrefix = "transaction_relation:paged:"
-
-	// Budget cache prefixes
-	BudgetCacheKeyPrefix               = "budget:"
-	BudgetsPagedCacheKeyPrefix         = "budget:paged:"
-	BudgetTemplateCacheKeyPrefix       = "budget_template:"
-	BudgetTemplatesPagedCacheKeyPrefix = "budget_template:paged:"
-
-	// Tag cache prefixes
-	TagCacheKeyPrefix       = "tag:"
-	TagsPagedCacheKeyPrefix = "tag:paged:"
-
-	// Transaction Template cache prefixes
-	TransactionTemplateCacheKeyPrefix       = "transaction_template:"
-	TransactionTemplatesPagedCacheKeyPrefix = "transaction_template:paged:"
-
-	// Account Statistics cache prefixes
-	AccountStatisticsCacheKeyPrefix = "account:statistics:"
-
-	// Category Statistics cache prefixes
-	CategoryStatisticsCacheKeyPrefix = "category:statistics:"
-
-	// Budget Template related budgets pattern (used by GetRelatedBudgets)
-	BudgetTemplateRelatedBudgetsCacheKeyPattern = "budget_template:%d_budgets_paged:"
-
-	// Summary cache prefixes
-	SummaryTransactionCacheKeyPrefix = "summary:transaction:"
-	SummaryAccountCacheKeyPrefix     = "summary:account:"
-	SummaryCategoryCacheKeyPrefix    = "summary:category:"
+// Cache TTLs for different cache operation types
+const (
+	CacheTTLDetail     = 10 * time.Minute // Detail queries (single item)
+	CacheTTLPaged      = 5 * time.Minute  // Paged queries (list operations)
+	CacheTTLStatistics = 30 * time.Minute // Statistics queries (expensive to compute)
+	CacheTTLSummary    = 5 * time.Minute  // Summary queries
 )
 
 // Statistics method types
@@ -68,19 +50,19 @@ const (
 // Patterns use entity-qualified placeholders like {accountId}, {transactionId}, etc.
 // Wildcard patterns (*) apply to all variations of that cache type
 var EntityCachePatterns = map[string][]string{
-	"account": {
+	EntityAccount: {
 		"account:detail:*",
 		"account:paged:*",
 		"account:statistics:{accountId}:*:*",
-		"summary:account:*",
+		SummaryAccount + ":*",
 	},
-	"category": {
+	EntityCategory: {
 		"category:detail:*",
 		"category:paged:*",
 		"category:statistics:{categoryId}:*:*",
-		"summary:category:*",
+		SummaryCategory + ":*",
 	},
-	"transaction": {
+	EntityTransaction: {
 		"transaction:detail:*",
 		"transaction:paged:*",
 		"account:detail:*",
@@ -90,36 +72,40 @@ var EntityCachePatterns = map[string][]string{
 		"category:statistics:{categoryId}:*:*",
 		"budget:detail:*",
 		"budget:paged:*",
-		"summary:transaction:*",
-		"summary:account:*",
-		"summary:category:*",
+		SummaryTransaction + ":*",
+		SummaryAccount + ":*",
+		SummaryCategory + ":*",
 	},
-	"transaction_tag": {
+	EntityTransactionTag: {
 		"transaction_tag:detail:*",
 		"transaction_tag:paged:*",
 		"transaction:detail:*",
 		"transaction:paged:*",
+		"account:statistics:{accountId}:*:*",
 	},
-	"transaction_relation": {
+	EntityTransactionRelation: {
 		"transaction_relation:detail:*",
 		"transaction_relation:paged:*",
+		"transaction:detail:*",
+		"transaction:paged:*",
 	},
-	"budget": {
+	EntityBudget: {
 		"budget:detail:*",
 		"budget:paged:*",
 		"account:statistics:{accountId}:*:*",
 		"category:statistics:{categoryId}:*:*",
 	},
-	"budget_template": {
+	EntityBudgetTemplate: {
 		"budget_template:detail:*",
 		"budget_template:paged:*",
 		"budget_template:{templateId}:budgets:paged:*",
 	},
-	"tag": {
+	EntityTag: {
 		"tag:detail:*",
 		"tag:paged:*",
+		"transaction_tag:paged:*",
 	},
-	"transaction_template": {
+	EntityTransactionTemplate: {
 		"transaction_template:detail:*",
 		"transaction_template:paged:*",
 	},

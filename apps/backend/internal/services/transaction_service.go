@@ -2,18 +2,15 @@ package services
 
 import (
 	"context"
-	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/errgroup"
-)
-
-const (
-	TransactionCacheTTL = 10 * time.Minute
 )
 
 type TransactionService struct {
@@ -29,15 +26,15 @@ func NewTransactionService(rpts *repositories.RootRepository, rdb *redis.Client)
 }
 
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
-	cacheKey := common.BuildPagedCacheKey("transaction", p)
-	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TransactionCacheTTL, func(ctx context.Context) (models.TransactionsPagedModel, error) {
+	cacheKey := common.BuildPagedCacheKey(constants.EntityTransaction, p)
+	return common.FetchWithCache(ctx, ts.rdb, cacheKey, constants.CacheTTLPaged, func(ctx context.Context) (models.TransactionsPagedModel, error) {
 		return ts.rpts.Tsct.GetPaged(ctx, p)
 	}, "transaction")
 }
 
 func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.TransactionModel, error) {
-	cacheKey := common.BuildDetailCacheKey("transaction", id)
-	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TransactionCacheTTL, func(ctx context.Context) (models.TransactionModel, error) {
+	cacheKey := common.BuildDetailCacheKey(constants.EntityTransaction, id)
+	return common.FetchWithCache(ctx, ts.rdb, cacheKey, constants.CacheTTLDetail, func(ctx context.Context) (models.TransactionModel, error) {
 		return ts.rpts.Tsct.GetDetail(ctx, id)
 	}, "transaction")
 }
@@ -68,11 +65,13 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.InvalidateCacheForEntity(ctx, ts.rdb, "transaction", map[string]interface{}{
+	if err := common.InvalidateCacheForEntity(ctx, ts.rdb, constants.EntityTransaction, map[string]interface{}{
 		"transactionId": transaction.ID,
 		"accountId":     p.AccountID,
 		"categoryId":    p.CategoryID,
-	})
+	}); err != nil {
+		observability.NewLogger("service", "TransactionService").Warn("cache invalidation failed", "error", err)
+	}
 
 	return transaction, nil
 }
@@ -139,17 +138,23 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.InvalidateCacheForEntity(ctx, ts.rdb, "transaction", map[string]interface{}{
+	if err := common.InvalidateCacheForEntity(ctx, ts.rdb, constants.EntityTransaction, map[string]interface{}{
 		"transactionId": transaction.ID,
 		"accountId":     existing.Account.ID,
 		"categoryId":    existing.Category.ID,
-	})
+	}); err != nil {
+		observability.NewLogger("service", "TransactionService").Warn("cache invalidation failed", "error", err)
+	}
 	// Also invalidate new account/category if they changed
 	if newAccountID != existing.Account.ID {
-		common.InvalidateCacheForEntity(ctx, ts.rdb, "account", map[string]interface{}{"accountId": newAccountID})
+		if err := common.InvalidateCacheForEntity(ctx, ts.rdb, constants.EntityAccount, map[string]interface{}{"accountId": newAccountID}); err != nil {
+			observability.NewLogger("service", "TransactionService").Warn("cache invalidation failed", "error", err)
+		}
 	}
 	if newCategoryID != existing.Category.ID {
-		common.InvalidateCacheForEntity(ctx, ts.rdb, "category", map[string]interface{}{"categoryId": newCategoryID})
+		if err := common.InvalidateCacheForEntity(ctx, ts.rdb, constants.EntityCategory, map[string]interface{}{"categoryId": newCategoryID}); err != nil {
+			observability.NewLogger("service", "TransactionService").Warn("cache invalidation failed", "error", err)
+		}
 	}
 	return transaction, nil
 }
@@ -183,11 +188,13 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 		return huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.InvalidateCacheForEntity(ctx, ts.rdb, "transaction", map[string]interface{}{
+	if err := common.InvalidateCacheForEntity(ctx, ts.rdb, constants.EntityTransaction, map[string]interface{}{
 		"transactionId": existing.ID,
 		"accountId":     existing.Account.ID,
 		"categoryId":    existing.Category.ID,
-	})
+	}); err != nil {
+		observability.NewLogger("service", "TransactionService").Warn("cache invalidation failed", "error", err)
+	}
 
 	return nil
 }

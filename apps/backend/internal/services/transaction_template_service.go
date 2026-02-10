@@ -2,16 +2,13 @@ package services
 
 import (
 	"context"
-	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
-)
-
-const (
-	TransactionTemplateCacheTTL = 10 * time.Minute
 )
 
 type TransactionTemplateService struct {
@@ -24,15 +21,15 @@ func NewTransactionTemplateService(rpts *repositories.RootRepository, rdb *redis
 }
 
 func (tts TransactionTemplateService) GetPaged(ctx context.Context, query models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
-	cacheKey := common.BuildPagedCacheKey("transaction_template", query)
-	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTemplateCacheTTL, func(ctx context.Context) (models.TransactionTemplatesPagedModel, error) {
+	cacheKey := common.BuildPagedCacheKey(constants.EntityTransactionTemplate, query)
+	return common.FetchWithCache(ctx, tts.rdb, cacheKey, constants.CacheTTLPaged, func(ctx context.Context) (models.TransactionTemplatesPagedModel, error) {
 		return tts.rpts.TsctTem.GetPaged(ctx, query)
 	}, "transaction_template")
 }
 
 func (tts TransactionTemplateService) GetDetail(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
-	cacheKey := common.BuildDetailCacheKey("transaction_template", id)
-	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTemplateCacheTTL, func(ctx context.Context) (models.TransactionTemplateModel, error) {
+	cacheKey := common.BuildDetailCacheKey(constants.EntityTransactionTemplate, id)
+	return common.FetchWithCache(ctx, tts.rdb, cacheKey, constants.CacheTTLDetail, func(ctx context.Context) (models.TransactionTemplateModel, error) {
 		return tts.rpts.TsctTem.GetDetail(ctx, id)
 	}, "transaction_template")
 }
@@ -43,7 +40,9 @@ func (tts TransactionTemplateService) Create(ctx context.Context, payload models
 		return template, err
 	}
 
-	common.InvalidateCacheForEntity(ctx, tts.rdb, "transaction_template", map[string]interface{}{"templateId": template.ID})
+	if err := common.InvalidateCacheForEntity(ctx, tts.rdb, constants.EntityTransactionTemplate, map[string]interface{}{"templateId": template.ID}); err != nil {
+		observability.NewLogger("service", "TransactionTemplateService").Warn("cache invalidation failed", "error", err)
+	}
 
 	return template, nil
 }
@@ -54,7 +53,9 @@ func (tts TransactionTemplateService) Update(ctx context.Context, id int64, payl
 		return template, err
 	}
 
-	common.InvalidateCacheForEntity(ctx, tts.rdb, "transaction_template", map[string]interface{}{"templateId": id})
+	if err := common.InvalidateCacheForEntity(ctx, tts.rdb, constants.EntityTransactionTemplate, map[string]interface{}{"templateId": id}); err != nil {
+		observability.NewLogger("service", "TransactionTemplateService").Warn("cache invalidation failed", "error", err)
+	}
 
 	return template, nil
 }
@@ -65,7 +66,9 @@ func (tts TransactionTemplateService) Delete(ctx context.Context, id int64) erro
 		return err
 	}
 
-	common.InvalidateCacheForEntity(ctx, tts.rdb, "transaction_template", map[string]interface{}{"templateId": id})
+	if err := common.InvalidateCacheForEntity(ctx, tts.rdb, constants.EntityTransactionTemplate, map[string]interface{}{"templateId": id}); err != nil {
+		observability.NewLogger("service", "TransactionTemplateService").Warn("cache invalidation failed", "error", err)
+	}
 
 	return nil
 }

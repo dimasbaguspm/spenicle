@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
@@ -10,10 +9,6 @@ import (
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/errgroup"
-)
-
-const (
-	AccountStatisticsCacheTTL = 5 * time.Minute
 )
 
 type AccountStatisticsService struct {
@@ -97,48 +92,48 @@ func (ss AccountStatisticsService) GetAccountStatistics(ctx context.Context, acc
 
 // GetCategoryHeatmap returns category spending distribution
 func (ss AccountStatisticsService) GetCategoryHeatmap(ctx context.Context, accountID int64, p models.AccountStatisticsSearchModel) (models.AccountStatisticsCategoryHeatmapModel, error) {
-	cacheKey := common.BuildStatisticsCacheKey("account", accountID, constants.AccountStatisticsCategoryHeatmapSuffix, p)
-	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsCategoryHeatmapModel, error) {
+	cacheKey := common.BuildStatisticsCacheKey(constants.EntityAccount, accountID, constants.AccountStatisticsCategoryHeatmapSuffix, p)
+	return common.FetchWithCache(ctx, ss.rdb, cacheKey, constants.CacheTTLStatistics, func(ctx context.Context) (models.AccountStatisticsCategoryHeatmapModel, error) {
 		return ss.rpts.AccStat.GetCategoryHeatmap(ctx, accountID, p)
 	}, "account_statistics")
 }
 
 // GetMonthlyVelocity returns monthly spending trends
 func (ss AccountStatisticsService) GetMonthlyVelocity(ctx context.Context, accountID int64, p models.AccountStatisticsSearchModel) (models.AccountStatisticsMonthlyVelocityModel, error) {
-	cacheKey := common.BuildStatisticsCacheKey("account", accountID, constants.AccountStatisticsMonthlyVelocitySuffix, p)
-	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsMonthlyVelocityModel, error) {
+	cacheKey := common.BuildStatisticsCacheKey(constants.EntityAccount, accountID, constants.AccountStatisticsMonthlyVelocitySuffix, p)
+	return common.FetchWithCache(ctx, ss.rdb, cacheKey, constants.CacheTTLStatistics, func(ctx context.Context) (models.AccountStatisticsMonthlyVelocityModel, error) {
 		return ss.rpts.AccStat.GetMonthlyVelocity(ctx, accountID, p)
 	}, "account_statistics")
 }
 
 // GetTimeFrequencyHeatmap returns transaction frequency distribution
 func (ss AccountStatisticsService) GetTimeFrequencyHeatmap(ctx context.Context, accountID int64, p models.AccountStatisticsSearchModel) (models.AccountStatisticsTimeFrequencyHeatmapModel, error) {
-	cacheKey := common.BuildStatisticsCacheKey("account", accountID, constants.AccountStatisticsTimeFrequencySuffix, p)
-	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsTimeFrequencyHeatmapModel, error) {
+	cacheKey := common.BuildStatisticsCacheKey(constants.EntityAccount, accountID, constants.AccountStatisticsTimeFrequencySuffix, p)
+	return common.FetchWithCache(ctx, ss.rdb, cacheKey, constants.CacheTTLStatistics, func(ctx context.Context) (models.AccountStatisticsTimeFrequencyHeatmapModel, error) {
 		return ss.rpts.AccStat.GetTimeFrequencyHeatmap(ctx, accountID, p)
 	}, "account_statistics")
 }
 
 // GetCashFlowPulse returns daily balance trend
 func (ss AccountStatisticsService) GetCashFlowPulse(ctx context.Context, accountID int64, p models.AccountStatisticsSearchModel) (models.AccountStatisticsCashFlowPulseModel, error) {
-	cacheKey := common.BuildStatisticsCacheKey("account", accountID, constants.AccountStatisticsCashFlowPulseSuffix, p)
-	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsCashFlowPulseModel, error) {
+	cacheKey := common.BuildStatisticsCacheKey(constants.EntityAccount, accountID, constants.AccountStatisticsCashFlowPulseSuffix, p)
+	return common.FetchWithCache(ctx, ss.rdb, cacheKey, constants.CacheTTLStatistics, func(ctx context.Context) (models.AccountStatisticsCashFlowPulseModel, error) {
 		return ss.rpts.AccStat.GetCashFlowPulse(ctx, accountID, p)
 	}, "account_statistics")
 }
 
 // GetBurnRate returns spending rate analysis
 func (ss AccountStatisticsService) GetBurnRate(ctx context.Context, accountID int64, p models.AccountStatisticsSearchModel) (models.AccountStatisticsBurnRateModel, error) {
-	cacheKey := common.BuildStatisticsCacheKey("account", accountID, constants.AccountStatisticsBurnRateSuffix, p)
-	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsBurnRateModel, error) {
+	cacheKey := common.BuildStatisticsCacheKey(constants.EntityAccount, accountID, constants.AccountStatisticsBurnRateSuffix, p)
+	return common.FetchWithCache(ctx, ss.rdb, cacheKey, constants.CacheTTLStatistics, func(ctx context.Context) (models.AccountStatisticsBurnRateModel, error) {
 		return ss.rpts.AccStat.GetBurnRate(ctx, accountID, p)
 	}, "account_statistics")
 }
 
 // GetBudgetHealth returns budget health metrics
 func (ss AccountStatisticsService) GetBudgetHealth(ctx context.Context, accountID int64, p models.AccountStatisticsSearchModel) (models.AccountStatisticsBudgetHealthModel, error) {
-	cacheKey := common.BuildStatisticsCacheKey("account", accountID, constants.AccountStatisticsBudgetHealthSuffix, p)
-	return common.FetchWithCache(ctx, ss.rdb, cacheKey, AccountStatisticsCacheTTL, func(ctx context.Context) (models.AccountStatisticsBudgetHealthModel, error) {
+	cacheKey := common.BuildStatisticsCacheKey(constants.EntityAccount, accountID, constants.AccountStatisticsBudgetHealthSuffix, p)
+	return common.FetchWithCache(ctx, ss.rdb, cacheKey, constants.CacheTTLStatistics, func(ctx context.Context) (models.AccountStatisticsBudgetHealthModel, error) {
 		return ss.rpts.AccStat.GetBudgetHealth(ctx, accountID, p)
 	}, "account_statistics")
 }

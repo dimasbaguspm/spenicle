@@ -2,17 +2,14 @@ package services
 
 import (
 	"context"
-	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
-)
-
-const (
-	AccountCacheTTL = 10 * time.Minute
 )
 
 type AccountService struct {
@@ -28,15 +25,15 @@ func NewAccountService(rpts *repositories.RootRepository, rdb *redis.Client) Acc
 }
 
 func (as AccountService) GetPaged(ctx context.Context, p models.AccountsSearchModel) (models.AccountsPagedModel, error) {
-	cacheKey := common.BuildPagedCacheKey("account", p)
-	return common.FetchWithCache(ctx, as.rdb, cacheKey, AccountCacheTTL, func(ctx context.Context) (models.AccountsPagedModel, error) {
+	cacheKey := common.BuildPagedCacheKey(constants.EntityAccount, p)
+	return common.FetchWithCache(ctx, as.rdb, cacheKey, constants.CacheTTLPaged, func(ctx context.Context) (models.AccountsPagedModel, error) {
 		return as.rpts.Acc.GetPaged(ctx, p)
 	}, "account")
 }
 
 func (as AccountService) GetDetail(ctx context.Context, id int64) (models.AccountModel, error) {
-	cacheKey := common.BuildDetailCacheKey("account", id)
-	return common.FetchWithCache(ctx, as.rdb, cacheKey, AccountCacheTTL, func(ctx context.Context) (models.AccountModel, error) {
+	cacheKey := common.BuildDetailCacheKey(constants.EntityAccount, id)
+	return common.FetchWithCache(ctx, as.rdb, cacheKey, constants.CacheTTLDetail, func(ctx context.Context) (models.AccountModel, error) {
 		return as.rpts.Acc.GetDetail(ctx, id)
 	}, "account")
 }
@@ -47,7 +44,9 @@ func (as AccountService) Create(ctx context.Context, p models.CreateAccountModel
 		return account, err
 	}
 
-	common.InvalidateCacheForEntity(ctx, as.rdb, "account", map[string]interface{}{"accountId": account.ID})
+	if err := common.InvalidateCacheForEntity(ctx, as.rdb, constants.EntityAccount, map[string]interface{}{"accountId": account.ID}); err != nil {
+		observability.NewLogger("service", "AccountService").Warn("cache invalidation failed", "error", err)
+	}
 
 	return account, nil
 }
@@ -58,7 +57,9 @@ func (as AccountService) Update(ctx context.Context, id int64, p models.UpdateAc
 		return account, err
 	}
 
-	common.InvalidateCacheForEntity(ctx, as.rdb, "account", map[string]interface{}{"accountId": id})
+	if err := common.InvalidateCacheForEntity(ctx, as.rdb, constants.EntityAccount, map[string]interface{}{"accountId": id}); err != nil {
+		observability.NewLogger("service", "AccountService").Warn("cache invalidation failed", "error", err)
+	}
 	return account, nil
 }
 
@@ -92,7 +93,7 @@ func (as AccountService) Delete(ctx context.Context, id int64) error {
 	}
 	tx = nil
 
-	common.InvalidateCacheForEntity(ctx, as.rdb, "account", map[string]interface{}{"accountId": id})
+	common.InvalidateCacheForEntity(ctx, as.rdb, constants.EntityAccount, map[string]interface{}{"accountId": id})
 
 	return nil
 }
@@ -126,7 +127,7 @@ func (as AccountService) Reorder(ctx context.Context, p models.ReorderAccountsMo
 	}
 	tx = nil
 
-	common.InvalidateCacheForEntity(ctx, as.rdb, "account", map[string]interface{}{})
+	common.InvalidateCacheForEntity(ctx, as.rdb, constants.EntityAccount, map[string]interface{}{})
 
 	return nil
 }

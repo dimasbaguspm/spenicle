@@ -98,6 +98,30 @@ func deletePatternKeys(ctx context.Context, rdb *redis.Client, pattern string) e
 	return nil
 }
 
+// canonicalJSON marshals data with sorted keys for deterministic cache keys
+// This ensures the same parameters always produce the same cache key
+func canonicalJSON(data interface{}) (string, error) {
+	// Marshal to JSON
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	// Unmarshal to map to normalize structure
+	var obj map[string]interface{}
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		// If not a map, return original marshalled form
+		return string(raw), nil
+	}
+
+	// Re-marshal - Go's json.Marshal sorts map keys by default
+	sorted, err := json.Marshal(obj)
+	if err != nil {
+		return "", err
+	}
+	return string(sorted), nil
+}
+
 // BuildDetailCacheKey constructs a detail cache key in the format "entity:detail:{id}"
 // This matches the EntityCachePatterns format and is used by GetDetail methods
 // Example: BuildDetailCacheKey("account", 123) → "account:detail:123"
@@ -108,19 +132,31 @@ func BuildDetailCacheKey(entity string, id int64) string {
 // BuildPagedCacheKey constructs a paged list cache key in the format "entity:paged:{hash}"
 // This matches the EntityCachePatterns format and is used by GetPaged methods
 // The hash is computed from search parameters to ensure unique keys for different queries
+// Uses canonical JSON encoding to ensure deterministic cache keys
 // Example: BuildPagedCacheKey("account", searchParams) → "account:paged:{json_hash}"
 func BuildPagedCacheKey(entity string, searchParams interface{}) string {
-	data, _ := json.Marshal(searchParams)
-	return fmt.Sprintf("%s:paged:%s", entity, string(data))
+	hash, err := canonicalJSON(searchParams)
+	if err != nil {
+		// Fallback to non-canonical if marshalling fails
+		data, _ := json.Marshal(searchParams)
+		hash = string(data)
+	}
+	return fmt.Sprintf("%s:paged:%s", entity, hash)
 }
 
 // BuildStatisticsCacheKey constructs a statistics cache key in format "entity:statistics:{id}:{type}:{hash}"
 // This matches the EntityCachePatterns format and is used by statistics service methods
 // Allows fine-grained cache invalidation by entity ID, statistic type, and parameters
+// Uses canonical JSON encoding to ensure deterministic cache keys
 // Example: BuildStatisticsCacheKey("account", 123, "category_heatmap", params) → "account:statistics:123:category_heatmap:{hash}"
 func BuildStatisticsCacheKey(entity string, entityID int64, statisticType string, searchParams interface{}) string {
-	data, _ := json.Marshal(searchParams)
-	return fmt.Sprintf("%s:statistics:%d:%s:%s", entity, entityID, statisticType, string(data))
+	hash, err := canonicalJSON(searchParams)
+	if err != nil {
+		// Fallback to non-canonical if marshalling fails
+		data, _ := json.Marshal(searchParams)
+		hash = string(data)
+	}
+	return fmt.Sprintf("%s:statistics:%d:%s:%s", entity, entityID, statisticType, hash)
 }
 
 // FetchWithCache is a generic helper that fetches data with caching
