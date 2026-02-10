@@ -1523,6 +1523,18 @@ components:
           description: Destination account ID (transfers only)
           format: int64
           type: integer
+        latitude:
+          description: Transaction latitude
+          format: double
+          maximum: 90
+          minimum: -90
+          type: number
+        longitude:
+          description: Transaction longitude
+          format: double
+          maximum: 180
+          minimum: -180
+          type: number
         note:
           description: Optional transaction notes
           type: string
@@ -2205,6 +2217,18 @@ components:
           description: Unique identifier
           format: int64
           type: integer
+        latitude:
+          description: Transaction latitude
+          format: double
+          maximum: 90
+          minimum: -90
+          type: number
+        longitude:
+          description: Transaction longitude
+          format: double
+          maximum: 180
+          minimum: -180
+          type: number
         note:
           description: Transaction notes
           type: string
@@ -2734,6 +2758,18 @@ components:
           description: Destination account ID (transfers only)
           format: int64
           type: integer
+        latitude:
+          description: Transaction latitude
+          format: double
+          maximum: 90
+          minimum: -90
+          type: number
+        longitude:
+          description: Transaction longitude
+          format: double
+          maximum: 180
+          minimum: -180
+          type: number
         note:
           description: Transaction notes
           type: string
@@ -5572,6 +5608,37 @@ paths:
             description: Filter by maximum amount
             format: int64
             minimum: 0
+            type: integer
+        - description: Latitude for geospatial search
+          explode: false
+          in: query
+          name: latitude
+          schema:
+            description: Latitude for geospatial search
+            format: double
+            maximum: 90
+            minimum: -90
+            type: number
+        - description: Longitude for geospatial search
+          explode: false
+          in: query
+          name: longitude
+          schema:
+            description: Longitude for geospatial search
+            format: double
+            maximum: 180
+            minimum: -180
+            type: number
+        - description: Search radius in meters
+          explode: false
+          in: query
+          name: radiusMeters
+          schema:
+            default: 500
+            description: Search radius in meters
+            format: int64
+            maximum: 50000
+            minimum: 100
             type: integer
       responses:
         "200":
