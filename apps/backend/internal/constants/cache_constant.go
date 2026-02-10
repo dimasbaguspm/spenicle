@@ -1,33 +1,54 @@
 package constants
 
-// Cache key prefixes for consistency across services
+// Cache key prefixes for use with BuildCacheKey in Get/Fetch operations
+// These are minimal prefixes used to construct cache keys for fetching cached data
 const (
-	AccountCacheKeyPrefix                       = "account:"
-	AccountsPagedCacheKeyPrefix                 = "accounts_paged:"
-	AccountStatisticsCacheKeyPrefix             = "account_statistics:"
-	CategoryCacheKeyPrefix                      = "category:"
-	CategoriesPagedCacheKeyPrefix               = "categories_paged:"
-	BudgetCacheKeyPrefix                        = "budget:"
-	BudgetsPagedCacheKeyPrefix                  = "budgets_paged:"
-	BudgetTemplateCacheKeyPrefix                = "budget_template:"
-	BudgetTemplatesPagedCacheKeyPrefix          = "budget_templates_paged:"
+	// Account cache prefixes
+	AccountCacheKeyPrefix       = "account:"
+	AccountsPagedCacheKeyPrefix = "account:paged:"
+
+	// Category cache prefixes
+	CategoryCacheKeyPrefix        = "category:"
+	CategoriesPagedCacheKeyPrefix = "category:paged:"
+
+	// Transaction cache prefixes
+	TransactionCacheKeyPrefix               = "transaction:"
+	TransactionsPagedCacheKeyPrefix         = "transaction:paged:"
+	TransactionTagCacheKeyPrefix            = "transaction_tag:"
+	TransactionTagsPagedCacheKeyPrefix      = "transaction_tag:paged:"
+	TransactionRelationCacheKeyPrefix       = "transaction_relation:"
+	TransactionRelationsPagedCacheKeyPrefix = "transaction_relation:paged:"
+
+	// Budget cache prefixes
+	BudgetCacheKeyPrefix               = "budget:"
+	BudgetsPagedCacheKeyPrefix         = "budget:paged:"
+	BudgetTemplateCacheKeyPrefix       = "budget_template:"
+	BudgetTemplatesPagedCacheKeyPrefix = "budget_template:paged:"
+
+	// Tag cache prefixes
+	TagCacheKeyPrefix       = "tag:"
+	TagsPagedCacheKeyPrefix = "tag:paged:"
+
+	// Transaction Template cache prefixes
+	TransactionTemplateCacheKeyPrefix       = "transaction_template:"
+	TransactionTemplatesPagedCacheKeyPrefix = "transaction_template:paged:"
+
+	// Account Statistics cache prefixes
+	AccountStatisticsCacheKeyPrefix = "account:statistics:"
+
+	// Category Statistics cache prefixes
+	CategoryStatisticsCacheKeyPrefix = "category:statistics:"
+
+	// Budget Template related budgets pattern (used by GetRelatedBudgets)
 	BudgetTemplateRelatedBudgetsCacheKeyPattern = "budget_template:%d_budgets_paged:"
-	TagCacheKeyPrefix                           = "tag:"
-	TagsPagedCacheKeyPrefix                     = "tags_paged:"
-	TransactionCacheKeyPrefix                   = "transaction:"
-	TransactionsPagedCacheKeyPrefix             = "transactions_paged:"
-	TransactionTemplateCacheKeyPrefix           = "transaction_template:"
-	TransactionTemplatesPagedCacheKeyPrefix     = "transaction_templates_paged:"
-	TransactionTagCacheKeyPrefix                = "transaction_tag:"
-	TransactionTagsPagedCacheKeyPrefix          = "transaction_tags_paged:"
-	TransactionRelationCacheKeyPrefix           = "transaction_relation:"
-	TransactionRelationsPagedCacheKeyPrefix     = "transaction_relations_paged:"
-	SummaryTransactionCacheKeyPrefix            = "summary_transaction:"
-	SummaryAccountCacheKeyPrefix                = "summary_account:"
-	SummaryCategoryCacheKeyPrefix               = "summary_category:"
+
+	// Summary cache prefixes
+	SummaryTransactionCacheKeyPrefix = "summary:transaction:"
+	SummaryAccountCacheKeyPrefix     = "summary:account:"
+	SummaryCategoryCacheKeyPrefix    = "summary:category:"
 )
 
-// Account Statistics cache method suffixes
+// Statistics method types
 const (
 	AccountStatisticsCategoryHeatmapSuffix = "category_heatmap"
 	AccountStatisticsMonthlyVelocitySuffix = "monthly_velocity"
@@ -35,11 +56,7 @@ const (
 	AccountStatisticsCashFlowPulseSuffix   = "cash_flow_pulse"
 	AccountStatisticsBurnRateSuffix        = "burn_rate"
 	AccountStatisticsBudgetHealthSuffix    = "budget_health"
-)
 
-// Category Statistics cache key prefix and method suffixes
-const (
-	CategoryStatisticsCacheKeyPrefix            = "category_statistics:"
 	CategoryStatisticsSpendingVelocitySuffix    = "spending_velocity"
 	CategoryStatisticsAccountDistributionSuffix = "account_distribution"
 	CategoryStatisticsTransactionSizeSuffix     = "transaction_size"
@@ -47,22 +64,63 @@ const (
 	CategoryStatisticsBudgetUtilizationSuffix   = "budget_utilization"
 )
 
-// Cache invalidation wildcard patterns for dependent caches
-// These patterns are used when a data change affects multiple cached entries
-const (
-	// Account and category statistics invalidation patterns
-	AccountStatisticsWildcardPattern  = "account_statistics:*"
-	CategoryStatisticsWildcardPattern = "category_statistics:*"
-	AccountWildcardPattern            = "account:*"
-	AccountsPagedWildcardPattern      = "accounts_paged:*"
-
-	// Budget cache invalidation patterns
-	BudgetWildcardPattern                = "budget:*"
-	BudgetsPagedWildcardPattern          = "budgets_paged:*"
-	BudgetTemplateWildcardPattern        = "budget_template:*"
-	BudgetTemplatesPagedWildcardPattern  = "budget_templates_paged:*"
-	BudgetTemplateRelatedWildcardPattern = "budget_template:*_budgets_paged:*"
-
-	// Category cache invalidation patterns
-	CategoriesPagedWildcardPattern = "categories_paged:*"
-)
+// EntityCachePatterns maps entity names to their associated cache patterns
+// Patterns use entity-qualified placeholders like {accountId}, {transactionId}, etc.
+// Wildcard patterns (*) apply to all variations of that cache type
+var EntityCachePatterns = map[string][]string{
+	"account": {
+		"account:detail:*",
+		"account:paged:*",
+		"account:statistics:{accountId}:*:*",
+		"summary:account:*",
+	},
+	"category": {
+		"category:detail:*",
+		"category:paged:*",
+		"category:statistics:{categoryId}:*:*",
+		"summary:category:*",
+	},
+	"transaction": {
+		"transaction:detail:*",
+		"transaction:paged:*",
+		"account:detail:*",
+		"account:paged:*",
+		"account:statistics:{accountId}:*:*",
+		"category:detail:*",
+		"category:statistics:{categoryId}:*:*",
+		"budget:detail:*",
+		"budget:paged:*",
+		"summary:transaction:*",
+		"summary:account:*",
+		"summary:category:*",
+	},
+	"transaction_tag": {
+		"transaction_tag:detail:*",
+		"transaction_tag:paged:*",
+		"transaction:detail:*",
+		"transaction:paged:*",
+	},
+	"transaction_relation": {
+		"transaction_relation:detail:*",
+		"transaction_relation:paged:*",
+	},
+	"budget": {
+		"budget:detail:*",
+		"budget:paged:*",
+		"account:statistics:{accountId}:*:*",
+		"category:statistics:{categoryId}:*:*",
+	},
+	"budget_template": {
+		"budget_template:detail:*",
+		"budget_template:paged:*",
+		"budget_template:{templateId}:budgets:paged:*",
+	},
+	"tag": {
+		"tag:detail:*",
+		"tag:paged:*",
+	},
+	"transaction_template": {
+		"transaction_template:detail:*",
+		"transaction_template:paged:*",
+	},
+}

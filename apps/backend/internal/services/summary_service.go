@@ -6,7 +6,6 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
-	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -30,7 +29,7 @@ func (ss SummaryService) GetTransactionSummary(ctx context.Context, p models.Sum
 		return models.SummaryTransactionListModel{}, huma.Error400BadRequest("endDate must be after or equal to startDate")
 	}
 
-	cacheKey := common.BuildCacheKey(0, p, constants.SummaryTransactionCacheKeyPrefix)
+	cacheKey := common.BuildPagedCacheKey("summary:transaction", p)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, SummaryCacheTTL, func(ctx context.Context) (models.SummaryTransactionListModel, error) {
 		return ss.rpts.Sum.GetTransactionSummary(ctx, p)
 	}, "summary")
@@ -41,7 +40,7 @@ func (ss SummaryService) GetAccountSummary(ctx context.Context, p models.Summary
 		return models.SummaryAccountListModel{}, huma.Error400BadRequest("endDate must be after or equal to startDate")
 	}
 
-	cacheKey := common.BuildCacheKey(0, p, constants.SummaryAccountCacheKeyPrefix)
+	cacheKey := common.BuildPagedCacheKey("summary:account", p)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, SummaryCacheTTL, func(ctx context.Context) (models.SummaryAccountListModel, error) {
 		return ss.rpts.Sum.GetAccountSummary(ctx, p)
 	}, "summary")
@@ -52,7 +51,7 @@ func (ss SummaryService) GetCategorySummary(ctx context.Context, p models.Summar
 		return models.SummaryCategoryListModel{}, huma.Error400BadRequest("endDate must be after or equal to startDate")
 	}
 
-	cacheKey := common.BuildCacheKey(0, p, constants.SummaryCategoryCacheKeyPrefix)
+	cacheKey := common.BuildPagedCacheKey("summary:category", p)
 	return common.FetchWithCache(ctx, ss.rdb, cacheKey, SummaryCacheTTL, func(ctx context.Context) (models.SummaryCategoryListModel, error) {
 		return ss.rpts.Sum.GetCategorySummary(ctx, p)
 	}, "summary")

@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/redis/go-redis/v9"
 )
 
-func SetCache[T any](ctx context.Context, rdb *redis.Client, key string, value T, ttl time.Duration) error {
+func setCache[T any](ctx context.Context, rdb *redis.Client, key string, value T, ttl time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -18,7 +20,7 @@ func SetCache[T any](ctx context.Context, rdb *redis.Client, key string, value T
 	return rdb.Set(ctx, key, data, ttl).Err()
 }
 
-func GetCache[T any](ctx context.Context, rdb *redis.Client, key string) (T, error) {
+func getCache[T any](ctx context.Context, rdb *redis.Client, key string) (T, error) {
 	var zero T
 	data, err := rdb.Get(ctx, key).Result()
 	if err != nil {
@@ -29,7 +31,63 @@ func GetCache[T any](ctx context.Context, rdb *redis.Client, key string) (T, err
 	return value, err
 }
 
-func InvalidateCache(ctx context.Context, rdb *redis.Client, pattern string) error {
+// InvalidateCacheForEntity invalidates cache patterns for a given entity
+// It resolves placeholders (e.g., {accountId}) using the provided params map
+// and deletes all matching cache keys from Redis.
+// Missing placeholders are silently skipped with observability metric emitted.
+func InvalidateCacheForEntity(
+	ctx context.Context,
+	rdb *redis.Client,
+	entity string,
+	params map[string]interface{},
+) error {
+	patterns, exists := constants.EntityCachePatterns[entity]
+	if !exists {
+		return fmt.Errorf("entity '%s' not found in EntityCachePatterns", entity)
+	}
+
+	placeholderPattern := regexp.MustCompile(`\{([a-zA-Z]+)\}`)
+
+	for _, pattern := range patterns {
+		// Substitute placeholders with actual values from params
+		resolvedPattern := pattern
+		missingPlaceholder := false
+
+		matches := placeholderPattern.FindAllStringSubmatchIndex(pattern, -1)
+		// Process matches in reverse order to maintain indices
+		for i := len(matches) - 1; i >= 0; i-- {
+			match := matches[i]
+			placeholderName := pattern[match[2]:match[3]] // Extract placeholder name without braces
+			value, found := params[placeholderName]
+
+			if !found {
+				// Placeholder not found in params - skip this pattern and emit metric
+				missingPlaceholder = true
+				observability.CacheInvalidationSkipped.WithLabelValues(entity, pattern).Inc()
+				break
+			}
+
+			// Substitute placeholder with value
+			replacement := fmt.Sprintf("%v", value)
+			resolvedPattern = resolvedPattern[:match[0]] + replacement + resolvedPattern[match[1]:]
+		}
+
+		// Skip pattern if it had missing placeholders
+		if missingPlaceholder {
+			continue
+		}
+
+		// Delete all keys matching the resolved pattern
+		if err := deletePatternKeys(ctx, rdb, resolvedPattern); err != nil {
+			return fmt.Errorf("failed to invalidate pattern '%s' for entity '%s': %w", resolvedPattern, entity, err)
+		}
+	}
+
+	return nil
+}
+
+// deletePatternKeys deletes all Redis keys matching a glob pattern
+func deletePatternKeys(ctx context.Context, rdb *redis.Client, pattern string) error {
 	keys, err := rdb.Keys(ctx, pattern).Result()
 	if err != nil {
 		return err
@@ -38,6 +96,31 @@ func InvalidateCache(ctx context.Context, rdb *redis.Client, pattern string) err
 		return rdb.Del(ctx, keys...).Err()
 	}
 	return nil
+}
+
+// BuildDetailCacheKey constructs a detail cache key in the format "entity:detail:{id}"
+// This matches the EntityCachePatterns format and is used by GetDetail methods
+// Example: BuildDetailCacheKey("account", 123) → "account:detail:123"
+func BuildDetailCacheKey(entity string, id int64) string {
+	return fmt.Sprintf("%s:detail:%d", entity, id)
+}
+
+// BuildPagedCacheKey constructs a paged list cache key in the format "entity:paged:{hash}"
+// This matches the EntityCachePatterns format and is used by GetPaged methods
+// The hash is computed from search parameters to ensure unique keys for different queries
+// Example: BuildPagedCacheKey("account", searchParams) → "account:paged:{json_hash}"
+func BuildPagedCacheKey(entity string, searchParams interface{}) string {
+	data, _ := json.Marshal(searchParams)
+	return fmt.Sprintf("%s:paged:%s", entity, string(data))
+}
+
+// BuildStatisticsCacheKey constructs a statistics cache key in format "entity:statistics:{id}:{type}:{hash}"
+// This matches the EntityCachePatterns format and is used by statistics service methods
+// Allows fine-grained cache invalidation by entity ID, statistic type, and parameters
+// Example: BuildStatisticsCacheKey("account", 123, "category_heatmap", params) → "account:statistics:123:category_heatmap:{hash}"
+func BuildStatisticsCacheKey(entity string, entityID int64, statisticType string, searchParams interface{}) string {
+	data, _ := json.Marshal(searchParams)
+	return fmt.Sprintf("%s:statistics:%d:%s:%s", entity, entityID, statisticType, string(data))
 }
 
 // FetchWithCache is a generic helper that fetches data with caching
@@ -53,7 +136,7 @@ func FetchWithCache[T any](
 	resourceLabel string,
 ) (T, error) {
 	// Try to get from cache first
-	cached, err := GetCache[T](ctx, rdb, cacheKey)
+	cached, err := getCache[T](ctx, rdb, cacheKey)
 	if err == nil {
 		// Cache hit
 		observability.CacheHits.WithLabelValues(resourceLabel).Inc()
@@ -69,16 +152,6 @@ func FetchWithCache[T any](
 	}
 
 	// Cache the result
-	SetCache(ctx, rdb, cacheKey, result, ttl)
+	setCache(ctx, rdb, cacheKey, result, ttl)
 	return result, nil
-}
-
-// BuildCacheKey creates a consistent cache key from variadic key parts, ID, and serialized params
-func BuildCacheKey(id int64, params interface{}, parts ...string) string {
-	data, _ := json.Marshal(params)
-	key := ""
-	for _, part := range parts {
-		key += part
-	}
-	return key + ":" + fmt.Sprintf("%d", id) + ":" + string(data)
 }

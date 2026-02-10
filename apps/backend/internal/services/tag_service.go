@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
-	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -25,14 +24,14 @@ func NewTagService(rpts *repositories.RootRepository, rdb *redis.Client) TagServ
 }
 
 func (ts TagService) GetPaged(ctx context.Context, query models.TagsSearchModel) (models.TagsPagedModel, error) {
-	cacheKey := common.BuildCacheKey(0, query, constants.TagsPagedCacheKeyPrefix)
+	cacheKey := common.BuildPagedCacheKey("tag", query)
 	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TagCacheTTL, func(ctx context.Context) (models.TagsPagedModel, error) {
 		return ts.rpts.Tag.GetPaged(ctx, query)
 	}, "tag")
 }
 
 func (ts TagService) GetDetail(ctx context.Context, id int64) (models.TagModel, error) {
-	cacheKey := common.BuildCacheKey(id, nil, constants.TagCacheKeyPrefix)
+	cacheKey := common.BuildDetailCacheKey("tag", id)
 	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TagCacheTTL, func(ctx context.Context) (models.TagModel, error) {
 		return ts.rpts.Tag.GetDetail(ctx, id)
 	}, "tag")
@@ -44,8 +43,7 @@ func (ts TagService) Create(ctx context.Context, payload models.CreateTagModel) 
 		return tag, err
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, constants.TagCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.TagsPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, ts.rdb, "tag", map[string]interface{}{"tagId": tag.ID})
 
 	return tag, nil
 }
@@ -56,8 +54,7 @@ func (ts TagService) Update(ctx context.Context, id int64, payload models.Update
 		return tag, err
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, constants.TagCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.TagsPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, ts.rdb, "tag", map[string]interface{}{"tagId": id})
 
 	return tag, nil
 }
@@ -68,8 +65,7 @@ func (ts TagService) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, constants.TagCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.TagsPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, ts.rdb, "tag", map[string]interface{}{"tagId": id})
 
 	return nil
 }

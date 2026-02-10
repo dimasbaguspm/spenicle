@@ -116,6 +116,14 @@ var (
 		[]string{"resource"},
 	)
 
+	CacheInvalidationSkipped = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "spenicle_cache_invalidation_skipped_total",
+			Help: "Total number of cache invalidation patterns skipped due to missing parameters",
+		},
+		[]string{"entity", "pattern"},
+	)
+
 	// Database metrics
 	QueryExecutionTime = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{

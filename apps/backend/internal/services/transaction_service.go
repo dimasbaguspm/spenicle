@@ -2,12 +2,10 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
-	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -31,14 +29,14 @@ func NewTransactionService(rpts *repositories.RootRepository, rdb *redis.Client)
 }
 
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
-	cacheKey := common.BuildCacheKey(0, p, constants.TransactionsPagedCacheKeyPrefix)
+	cacheKey := common.BuildPagedCacheKey("transaction", p)
 	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TransactionCacheTTL, func(ctx context.Context) (models.TransactionsPagedModel, error) {
 		return ts.rpts.Tsct.GetPaged(ctx, p)
 	}, "transaction")
 }
 
 func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.TransactionModel, error) {
-	cacheKey := common.BuildCacheKey(id, nil, constants.TransactionCacheKeyPrefix)
+	cacheKey := common.BuildDetailCacheKey("transaction", id)
 	return common.FetchWithCache(ctx, ts.rdb, cacheKey, TransactionCacheTTL, func(ctx context.Context) (models.TransactionModel, error) {
 		return ts.rpts.Tsct.GetDetail(ctx, id)
 	}, "transaction")
@@ -70,17 +68,11 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, constants.TransactionCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
-	// Invalidate account statistics caches
-	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", p.AccountID)+":*")
-	// Invalidate category statistics caches
-	common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", p.CategoryID)+":*")
-	// Invalidate budget caches since transactions affect budget actual_amount
-	common.InvalidateCache(ctx, ts.rdb, constants.BudgetCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, ts.rdb, "transaction", map[string]interface{}{
+		"transactionId": transaction.ID,
+		"accountId":     p.AccountID,
+		"categoryId":    p.CategoryID,
+	})
 
 	return transaction, nil
 }
@@ -147,24 +139,18 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, constants.TransactionCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
-	// Invalidate account caches since balances changed
-	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
-	// Invalidate account statistics caches for both old and new accounts
-	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Account.ID)+":*")
+	common.InvalidateCacheForEntity(ctx, ts.rdb, "transaction", map[string]interface{}{
+		"transactionId": transaction.ID,
+		"accountId":     existing.Account.ID,
+		"categoryId":    existing.Category.ID,
+	})
+	// Also invalidate new account/category if they changed
 	if newAccountID != existing.Account.ID {
-		common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", newAccountID)+":*")
+		common.InvalidateCacheForEntity(ctx, ts.rdb, "account", map[string]interface{}{"accountId": newAccountID})
 	}
-	// Invalidate category statistics caches for both old and new categories
-	common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Category.ID)+":*")
 	if newCategoryID != existing.Category.ID {
-		common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", newCategoryID)+":*")
+		common.InvalidateCacheForEntity(ctx, ts.rdb, "category", map[string]interface{}{"categoryId": newCategoryID})
 	}
-	// Invalidate budget caches since transactions affect budget actual_amount for both old and new accounts/categories
-	common.InvalidateCache(ctx, ts.rdb, constants.BudgetCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
 	return transaction, nil
 }
 
@@ -197,18 +183,12 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 		return huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
-	common.InvalidateCache(ctx, ts.rdb, constants.TransactionCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
-	// Invalidate account caches since balances changed
-	common.InvalidateCache(ctx, ts.rdb, constants.AccountCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.SummaryTransactionCacheKeyPrefix+"*")
-	// Invalidate account statistics caches
-	common.InvalidateCache(ctx, ts.rdb, constants.AccountStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Account.ID)+":*")
-	// Invalidate category statistics caches
-	common.InvalidateCache(ctx, ts.rdb, constants.CategoryStatisticsCacheKeyPrefix+"*:"+fmt.Sprintf("%d", existing.Category.ID)+":*")
-	// Invalidate budget caches since deleting transactions affects budget actual_amount
-	common.InvalidateCache(ctx, ts.rdb, constants.BudgetCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, ts.rdb, constants.BudgetsPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, ts.rdb, "transaction", map[string]interface{}{
+		"transactionId": existing.ID,
+		"accountId":     existing.Account.ID,
+		"categoryId":    existing.Category.ID,
+	})
+
 	return nil
 }
 

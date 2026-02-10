@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
-	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -25,14 +24,14 @@ func NewTransactionTagService(rpts *repositories.RootRepository, rdb *redis.Clie
 }
 
 func (tts TransactionTagService) GetPaged(ctx context.Context, q models.TransactionTagsSearchModel) (models.TransactionTagsPagedModel, error) {
-	cacheKey := common.BuildCacheKey(0, q, constants.TransactionTagsPagedCacheKeyPrefix)
+	cacheKey := common.BuildPagedCacheKey("transaction_tag", q)
 	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTagCacheTTL, func(ctx context.Context) (models.TransactionTagsPagedModel, error) {
 		return tts.rpts.TsctTag.GetPaged(ctx, q)
 	}, "transaction_tag")
 }
 
 func (tts TransactionTagService) GetDetail(ctx context.Context, ID int64) (models.TransactionTagModel, error) {
-	cacheKey := common.BuildCacheKey(ID, nil, constants.TransactionTagCacheKeyPrefix)
+	cacheKey := common.BuildDetailCacheKey("transaction_tag", ID)
 	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTagCacheTTL, func(ctx context.Context) (models.TransactionTagModel, error) {
 		return tts.rpts.TsctTag.GetDetail(ctx, ID)
 	}, "transaction_tag")
@@ -44,11 +43,7 @@ func (tts TransactionTagService) Create(ctx context.Context, payload models.Crea
 		return tag, err
 	}
 
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagsPagedCacheKeyPrefix+"*")
-	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, tts.rdb, "transaction_tag", map[string]interface{}{"tagId": tag.ID})
 	return tag, nil
 }
 
@@ -58,10 +53,6 @@ func (tts TransactionTagService) Delete(ctx context.Context, transactionID, tagI
 		return err
 	}
 
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTagsPagedCacheKeyPrefix+"*")
-	// Invalidate related transaction caches
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionsPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, tts.rdb, "transaction_tag", map[string]interface{}{"tagId": tagID})
 	return nil
 }

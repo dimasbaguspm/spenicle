@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
-	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
 	"github.com/redis/go-redis/v9"
@@ -25,14 +24,14 @@ func NewTransactionTemplateService(rpts *repositories.RootRepository, rdb *redis
 }
 
 func (tts TransactionTemplateService) GetPaged(ctx context.Context, query models.TransactionTemplatesSearchModel) (models.TransactionTemplatesPagedModel, error) {
-	cacheKey := common.BuildCacheKey(0, query, constants.TransactionTemplatesPagedCacheKeyPrefix)
+	cacheKey := common.BuildPagedCacheKey("transaction_template", query)
 	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTemplateCacheTTL, func(ctx context.Context) (models.TransactionTemplatesPagedModel, error) {
 		return tts.rpts.TsctTem.GetPaged(ctx, query)
 	}, "transaction_template")
 }
 
 func (tts TransactionTemplateService) GetDetail(ctx context.Context, id int64) (models.TransactionTemplateModel, error) {
-	cacheKey := common.BuildCacheKey(id, nil, constants.TransactionTemplateCacheKeyPrefix)
+	cacheKey := common.BuildDetailCacheKey("transaction_template", id)
 	return common.FetchWithCache(ctx, tts.rdb, cacheKey, TransactionTemplateCacheTTL, func(ctx context.Context) (models.TransactionTemplateModel, error) {
 		return tts.rpts.TsctTem.GetDetail(ctx, id)
 	}, "transaction_template")
@@ -44,8 +43,7 @@ func (tts TransactionTemplateService) Create(ctx context.Context, payload models
 		return template, err
 	}
 
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplateCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, tts.rdb, "transaction_template", map[string]interface{}{"templateId": template.ID})
 
 	return template, nil
 }
@@ -56,8 +54,7 @@ func (tts TransactionTemplateService) Update(ctx context.Context, id int64, payl
 		return template, err
 	}
 
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplateCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, tts.rdb, "transaction_template", map[string]interface{}{"templateId": id})
 
 	return template, nil
 }
@@ -68,8 +65,7 @@ func (tts TransactionTemplateService) Delete(ctx context.Context, id int64) erro
 		return err
 	}
 
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplateCacheKeyPrefix+"*")
-	common.InvalidateCache(ctx, tts.rdb, constants.TransactionTemplatesPagedCacheKeyPrefix+"*")
+	common.InvalidateCacheForEntity(ctx, tts.rdb, "transaction_template", map[string]interface{}{"templateId": id})
 
 	return nil
 }
