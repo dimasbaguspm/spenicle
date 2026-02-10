@@ -18,8 +18,8 @@ type TransactionsSearchModel struct {
 	EndDate               string   `query:"endDate" doc:"Filter by end date (YYYY-MM-DD)" format:"date-time"`
 	MinAmount             int64    `query:"minAmount" doc:"Filter by minimum amount" minimum:"0"`
 	MaxAmount             int64    `query:"maxAmount" doc:"Filter by maximum amount" minimum:"0"`
-	Latitude              *float64 `query:"latitude" doc:"Latitude for geospatial search" minimum:"-90" maximum:"90"`
-	Longitude             *float64 `query:"longitude" doc:"Longitude for geospatial search" minimum:"-180" maximum:"180"`
+	Latitude              float64  `query:"latitude" doc:"Latitude for geospatial search" minimum:"-90" maximum:"90"`
+	Longitude             float64  `query:"longitude" doc:"Longitude for geospatial search" minimum:"-180" maximum:"180"`
 	RadiusMeters          int      `query:"radiusMeters" default:"500" minimum:"100" maximum:"50000" doc:"Search radius in meters"`
 }
 

@@ -38,8 +38,9 @@ func (ts TransactionService) GetGeoIndexManager() *common.GeoIndexManager {
 }
 
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
-	if p.Latitude != nil && p.Longitude != nil {
-		geoIDs, err := ts.geoIndexMgr.Search(ctx, *p.Longitude, *p.Latitude, p.RadiusMeters)
+	// Geo search if both latitude and longitude are provided (non-zero)
+	if p.Latitude != 0 && p.Longitude != 0 {
+		geoIDs, err := ts.geoIndexMgr.Search(ctx, p.Longitude, p.Latitude, p.RadiusMeters)
 		if err != nil && err != redis.Nil {
 			observability.NewLogger("service", "TransactionService").Warn("geo search failed", "error", err)
 		} else if len(geoIDs) > 0 {
@@ -87,7 +88,9 @@ func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.Tr
 
 func (ts TransactionService) Create(ctx context.Context, p models.CreateTransactionModel) (models.TransactionModel, error) {
 	// Validate coordinates: both must be present or both must be nil
-	if (p.Latitude != nil && p.Longitude == nil) || (p.Latitude == nil && p.Longitude != nil) {
+	latPresent := p.Latitude != nil && *p.Latitude != 0
+	lngPresent := p.Longitude != nil && *p.Longitude != 0
+	if (latPresent && !lngPresent) || (!latPresent && lngPresent) {
 		return models.TransactionModel{}, huma.Error400BadRequest("Both latitude and longitude must be provided together or neither")
 	}
 
@@ -117,10 +120,10 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 	}
 
 	// Fire async goroutine to index in Redis Geo if coordinates provided
-	if p.Latitude != nil && p.Longitude != nil {
-		go func() {
-			ts.geoIndexMgr.Index(context.Background(), transaction.ID, *p.Latitude, *p.Longitude)
-		}()
+	if p.Latitude != nil && *p.Latitude != 0 && p.Longitude != nil && *p.Longitude != 0 {
+		go func(lat, lng float64) {
+			ts.geoIndexMgr.Index(context.Background(), transaction.ID, lat, lng)
+		}(*p.Latitude, *p.Longitude)
 	}
 
 	if err := common.InvalidateCacheForEntity(ctx, ts.rdb, constants.EntityTransaction, map[string]interface{}{
@@ -136,7 +139,9 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 
 func (ts TransactionService) Update(ctx context.Context, id int64, p models.UpdateTransactionModel) (models.TransactionModel, error) {
 	// Validate coordinates: both must be present or both must be nil
-	if (p.Latitude != nil && p.Longitude == nil) || (p.Latitude == nil && p.Longitude != nil) {
+	latPresent := p.Latitude != nil && *p.Latitude != 0
+	lngPresent := p.Longitude != nil && *p.Longitude != 0
+	if (latPresent && !lngPresent) || (!latPresent && lngPresent) {
 		return models.TransactionModel{}, huma.Error400BadRequest("Both latitude and longitude must be provided together or neither")
 	}
 
@@ -202,12 +207,12 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 	}
 
 	// Fire async goroutine to update geo index if coordinates changed
-	if p.Latitude != nil && p.Longitude != nil {
+	if p.Latitude != nil && *p.Latitude != 0 && p.Longitude != nil && *p.Longitude != 0 {
 		// Update with new coordinates
-		go func() {
-			ts.geoIndexMgr.Update(context.Background(), transaction.ID, *p.Latitude, *p.Longitude)
-		}()
-	} else if p.Latitude == nil && p.Longitude == nil && existing.Latitude != nil && existing.Longitude != nil {
+		go func(lat, lng float64) {
+			ts.geoIndexMgr.Update(context.Background(), transaction.ID, lat, lng)
+		}(*p.Latitude, *p.Longitude)
+	} else if (p.Latitude == nil || *p.Latitude == 0) && (p.Longitude == nil || *p.Longitude == 0) && existing.Latitude != nil && existing.Longitude != nil {
 		// Remove from geo index if coordinates were cleared
 		go func() {
 			ts.geoIndexMgr.Remove(context.Background(), transaction.ID)
