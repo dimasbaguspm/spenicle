@@ -33,6 +33,10 @@ func NewTransactionService(rpts *repositories.RootRepository, rdb *redis.Client)
 	}
 }
 
+func (ts TransactionService) GetGeoIndexManager() *common.GeoIndexManager {
+	return ts.geoIndexMgr
+}
+
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
 	if p.Latitude != nil && p.Longitude != nil {
 		geoIDs, err := ts.geoIndexMgr.Search(ctx, *p.Longitude, *p.Latitude, p.RadiusMeters)

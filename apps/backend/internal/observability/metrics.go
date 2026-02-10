@@ -109,6 +109,20 @@ var (
 		},
 	)
 
+	GeoIndexRepopulated = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "spenicle_worker_geo_index_repopulated_total",
+			Help: "Total number of transactions indexed in geo cache (Panel: Stat card showing repopulation throughput)",
+		},
+	)
+
+	GeoIndexWorkerRuns = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "spenicle_worker_geo_index_runs_total",
+			Help: "Total number of geo index worker executions (Panel: Counter showing worker activity)",
+		},
+	)
+
 	// Cache metrics - used for: Hit rate line charts, TTL distribution pie charts, Key count gauge
 	CacheHits = promauto.NewCounterVec(
 		prometheus.CounterOpts{

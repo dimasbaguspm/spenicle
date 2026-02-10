@@ -52,13 +52,16 @@ func RegisterWorkers(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client) f
 
 	ttWorker := workers.NewTransactionTemplateWorker(ctx, rpts.TsctTem, sevs.Tsct, rdb)
 	btWorker := workers.NewBudgetTemplateWorker(ctx, sevs.BudgTem, rdb)
+	gitWorker := workers.NewGeoIndexTransactionsWorker(ctx, rpts.Tsct, sevs.Tsct.GetGeoIndexManager(), rdb)
 
 	ttWorker.Start()
 	btWorker.Start()
+	gitWorker.Start()
 
 	return func() {
 		slog.Info("Stopping all workers")
 		ttWorker.Stop()
 		btWorker.Stop()
+		gitWorker.Stop()
 	}
 }
