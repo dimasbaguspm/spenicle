@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
+	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
 	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/repositories"
@@ -141,11 +142,11 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 	}
 
 	// Invalidate template caches after updating
-	if err := common.InvalidateCacheForEntity(ctx, ttw.rdb, "transaction_template", map[string]interface{}{"templateId": template.ID}); err != nil {
+	if err := common.InvalidateCacheForEntity(ctx, ttw.rdb, constants.EntityTransactionTemplate, map[string]interface{}{"templateId": template.ID}); err != nil {
 		logger.Warn("failed to invalidate template cache", "error", err)
 	}
 	// Invalidate transaction and related caches since transaction was created
-	if err := common.InvalidateCacheForEntity(ctx, ttw.rdb, "transaction", map[string]interface{}{}); err != nil {
+	if err := common.InvalidateCacheForEntity(ctx, ttw.rdb, constants.EntityTransaction, map[string]interface{}{}); err != nil {
 		logger.Warn("failed to invalidate transaction cache", "error", err)
 	}
 
