@@ -68,6 +68,8 @@ func (gitw *GeoIndexTransactionsWorker) repopulateGeoIndex(ctx context.Context) 
 	searchParams := models.TransactionsSearchModel{
 		PageNumber: 1,
 		PageSize:   geoIndexBatchSize,
+		SortBy:     "date",
+		SortOrder:  "desc",
 	}
 
 	result, err := gitw.repo.GetPaged(ctx, searchParams)
