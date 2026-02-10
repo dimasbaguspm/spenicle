@@ -45,7 +45,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 	sql := `
 		WITH filtered_transactions AS (
 			SELECT 
-				t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
+				t.id, t.type, t.date, t.amount, t.note, t.latitude, t.longitude, t.created_at, t.updated_at, t.deleted_at,
 				tt.id as template_id, tt.name as template_name, tt.amount as template_amount, tt.recurrence as template_recurrence, tt.start_date as template_start_date, tt.end_date as template_end_date,
 				a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
 				c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
@@ -85,7 +85,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			GROUP BY tt.transaction_id
 		)
 		SELECT
-			ft.id, ft.type, ft.date, ft.amount, ft.note, ft.created_at, ft.updated_at, ft.deleted_at,
+			ft.id, ft.type, ft.date, ft.amount, ft.note, ft.latitude, ft.longitude, ft.created_at, ft.updated_at, ft.deleted_at,
 			ft.template_id, ft.template_name, ft.template_amount, ft.template_recurrence, ft.template_start_date, ft.template_end_date,
 			ft.account_id, ft.account_name, ft.account_type, ft.account_amount, ft.account_icon, ft.account_color,
 			ft.category_id, ft.category_name, ft.category_type, ft.category_icon, ft.category_color,
@@ -195,7 +195,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		var templateEndDate *time.Time
 
 		err := rows.Scan(
-			&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.Latitude, &item.Longitude, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 			&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
 			&account.ID, &account.Name, &account.Type, &account.Amount, &account.Icon, &account.IconColor,
 			&category.ID, &category.Name, &category.Type, &category.Icon, &category.IconColor,
@@ -289,7 +289,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 
 	sql := `
 		WITH transaction_detail AS (
-			SELECT t.id, t.type, t.date, t.amount, t.note, t.created_at, t.updated_at, t.deleted_at,
+			SELECT t.id, t.type, t.date, t.amount, t.note, t.latitude, t.longitude, t.created_at, t.updated_at, t.deleted_at,
 				tt.id as template_id, tt.name as template_name, tt.amount as template_amount, tt.recurrence as template_recurrence, tt.start_date as template_start_date, tt.end_date as template_end_date,
 				a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
 				c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
@@ -311,7 +311,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 			GROUP BY tt.transaction_id
 		)
 		SELECT
-			td.id, td.type, td.date, td.amount, td.note, td.created_at, td.updated_at, td.deleted_at,
+			td.id, td.type, td.date, td.amount, td.note, td.latitude, td.longitude, td.created_at, td.updated_at, td.deleted_at,
 			td.template_id, td.template_name, td.template_amount, td.template_recurrence, td.template_start_date, td.template_end_date,
 			td.account_id, td.account_name, td.account_type, td.account_amount, td.account_icon, td.account_color,
 			td.category_id, td.category_name, td.category_type, td.category_icon, td.category_color,
@@ -322,7 +322,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 
 	queryStart := time.Now()
 	err := tr.db.QueryRow(ctx, sql, id).Scan(
-		&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+		&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.Latitude, &item.Longitude, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 		&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
 		&account.ID, &account.Name, &account.Type, &account.Amount, &account.Icon, &account.IconColor,
 		&category.ID, &category.Name, &category.Type, &category.Icon, &category.IconColor,
@@ -381,12 +381,12 @@ func (tr TransactionRepository) Create(ctx context.Context, p models.CreateTrans
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
-	sql := `INSERT INTO transactions (type, date, amount, account_id, category_id, destination_account_id, note)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+	sql := `INSERT INTO transactions (type, date, amount, account_id, category_id, destination_account_id, note, latitude, longitude)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			RETURNING id`
 
 	queryStart := time.Now()
-	err := tr.db.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note).Scan(&id)
+	err := tr.db.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, p.Latitude, p.Longitude).Scan(&id)
 
 	if err != nil {
 		observability.RecordError("database")
@@ -409,11 +409,13 @@ func (tr TransactionRepository) Update(ctx context.Context, id int64, p models.U
 				category_id = COALESCE($5, category_id),
 				destination_account_id = COALESCE($6, destination_account_id),
 				note = COALESCE($7, note),
+				latitude = COALESCE($8, latitude),
+				longitude = COALESCE($9, longitude),
 				updated_at = CURRENT_TIMESTAMP
-			WHERE id = $8 AND deleted_at IS NULL`
+			WHERE id = $10 AND deleted_at IS NULL`
 
 	queryStart := time.Now()
-	cmdTag, err := tr.db.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, id)
+	cmdTag, err := tr.db.Exec(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, p.Latitude, p.Longitude, id)
 
 	if err != nil {
 		observability.RecordError("database")

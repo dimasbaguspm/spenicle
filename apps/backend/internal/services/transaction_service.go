@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
@@ -14,32 +15,78 @@ import (
 )
 
 type TransactionService struct {
-	rpts *repositories.RootRepository
-	rdb  *redis.Client
+	rpts        *repositories.RootRepository
+	rdb         *redis.Client
+	geoIndexMgr *common.GeoIndexManager
 }
 
 func NewTransactionService(rpts *repositories.RootRepository, rdb *redis.Client) TransactionService {
+	geoConfig := common.GeoIndexConfig{
+		Key:   "transactions:geo",
+		TTL:   24 * time.Hour,
+		Label: "transaction_geo",
+	}
 	return TransactionService{
 		rpts,
 		rdb,
+		common.NewGeoIndexManager(rdb, geoConfig),
 	}
 }
 
 func (ts TransactionService) GetPaged(ctx context.Context, p models.TransactionsSearchModel) (models.TransactionsPagedModel, error) {
+	if p.Latitude != nil && p.Longitude != nil {
+		geoIDs, err := ts.geoIndexMgr.Search(ctx, *p.Longitude, *p.Latitude, p.RadiusMeters)
+		if err != nil && err != redis.Nil {
+			observability.NewLogger("service", "TransactionService").Warn("geo search failed", "error", err)
+		} else if len(geoIDs) > 0 {
+			ids := make([]int, len(geoIDs))
+			for i, id := range geoIDs {
+				ids[i] = int(id)
+			}
+			p.IDs = ids
+		}
+	}
+
 	cacheKey := common.BuildPagedCacheKey(constants.EntityTransaction, p)
-	return common.FetchWithCache(ctx, ts.rdb, cacheKey, constants.CacheTTLPaged, func(ctx context.Context) (models.TransactionsPagedModel, error) {
+	result, err := common.FetchWithCache(ctx, ts.rdb, cacheKey, constants.CacheTTLPaged, func(ctx context.Context) (models.TransactionsPagedModel, error) {
 		return ts.rpts.Tsct.GetPaged(ctx, p)
 	}, "transaction")
+
+	// Spawn a goroutine per transaction for parallel indexing (especially important for Redis I/O)
+	for _, txn := range result.Items {
+		if txn.Latitude == nil || txn.Longitude == nil {
+			continue
+		}
+		go func(id int64, lat, lng float64) {
+			ts.geoIndexMgr.Index(context.Background(), id, lat, lng)
+		}(txn.ID, *txn.Latitude, *txn.Longitude)
+	}
+
+	return result, err
 }
 
 func (ts TransactionService) GetDetail(ctx context.Context, id int64) (models.TransactionModel, error) {
 	cacheKey := common.BuildDetailCacheKey(constants.EntityTransaction, id)
-	return common.FetchWithCache(ctx, ts.rdb, cacheKey, constants.CacheTTLDetail, func(ctx context.Context) (models.TransactionModel, error) {
+	result, err := common.FetchWithCache(ctx, ts.rdb, cacheKey, constants.CacheTTLDetail, func(ctx context.Context) (models.TransactionModel, error) {
 		return ts.rpts.Tsct.GetDetail(ctx, id)
 	}, "transaction")
+
+	// Async index geolocation if coordinates exist
+	if err == nil && result.Latitude != nil && result.Longitude != nil {
+		go func() {
+			ts.geoIndexMgr.Index(context.Background(), result.ID, *result.Latitude, *result.Longitude)
+		}()
+	}
+
+	return result, err
 }
 
 func (ts TransactionService) Create(ctx context.Context, p models.CreateTransactionModel) (models.TransactionModel, error) {
+	// Validate coordinates: both must be present or both must be nil
+	if (p.Latitude != nil && p.Longitude == nil) || (p.Latitude == nil && p.Longitude != nil) {
+		return models.TransactionModel{}, huma.Error400BadRequest("Both latitude and longitude must be provided together or neither")
+	}
+
 	if err := ts.validateReferences(ctx, p.Type, p.AccountID, p.DestinationAccountID, &p.CategoryID); err != nil {
 		return models.TransactionModel{}, err
 	}
@@ -65,6 +112,13 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
+	// Fire async goroutine to index in Redis Geo if coordinates provided
+	if p.Latitude != nil && p.Longitude != nil {
+		go func() {
+			ts.geoIndexMgr.Index(context.Background(), transaction.ID, *p.Latitude, *p.Longitude)
+		}()
+	}
+
 	if err := common.InvalidateCacheForEntity(ctx, ts.rdb, constants.EntityTransaction, map[string]interface{}{
 		"transactionId": transaction.ID,
 		"accountId":     p.AccountID,
@@ -77,6 +131,11 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 }
 
 func (ts TransactionService) Update(ctx context.Context, id int64, p models.UpdateTransactionModel) (models.TransactionModel, error) {
+	// Validate coordinates: both must be present or both must be nil
+	if (p.Latitude != nil && p.Longitude == nil) || (p.Latitude == nil && p.Longitude != nil) {
+		return models.TransactionModel{}, huma.Error400BadRequest("Both latitude and longitude must be provided together or neither")
+	}
+
 	tx, err := ts.rpts.Pool.Begin(ctx)
 	if err != nil {
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to start transaction")
@@ -138,6 +197,19 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 		return models.TransactionModel{}, huma.Error422UnprocessableEntity("failed to commit transaction")
 	}
 
+	// Fire async goroutine to update geo index if coordinates changed
+	if p.Latitude != nil && p.Longitude != nil {
+		// Update with new coordinates
+		go func() {
+			ts.geoIndexMgr.Update(context.Background(), transaction.ID, *p.Latitude, *p.Longitude)
+		}()
+	} else if p.Latitude == nil && p.Longitude == nil && existing.Latitude != nil && existing.Longitude != nil {
+		// Remove from geo index if coordinates were cleared
+		go func() {
+			ts.geoIndexMgr.Remove(context.Background(), transaction.ID)
+		}()
+	}
+
 	if err := common.InvalidateCacheForEntity(ctx, ts.rdb, constants.EntityTransaction, map[string]interface{}{
 		"transactionId": transaction.ID,
 		"accountId":     existing.Account.ID,
@@ -186,6 +258,13 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 
 	if err := tx.Commit(ctx); err != nil {
 		return huma.Error422UnprocessableEntity("failed to commit transaction")
+	}
+
+	// Fire async goroutine to remove from geo index if coordinates exist
+	if existing.Latitude != nil && existing.Longitude != nil {
+		go func() {
+			ts.geoIndexMgr.Remove(context.Background(), existing.ID)
+		}()
 	}
 
 	if err := common.InvalidateCacheForEntity(ctx, ts.rdb, constants.EntityTransaction, map[string]interface{}{

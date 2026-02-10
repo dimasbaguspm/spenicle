@@ -18,6 +18,9 @@ type TransactionsSearchModel struct {
 	EndDate               string   `query:"endDate" doc:"Filter by end date (YYYY-MM-DD)" format:"date-time"`
 	MinAmount             int64    `query:"minAmount" doc:"Filter by minimum amount" minimum:"0"`
 	MaxAmount             int64    `query:"maxAmount" doc:"Filter by maximum amount" minimum:"0"`
+	Latitude              *float64 `query:"latitude" doc:"Latitude for geospatial search" minimum:"-90" maximum:"90"`
+	Longitude             *float64 `query:"longitude" doc:"Longitude for geospatial search" minimum:"-180" maximum:"180"`
+	RadiusMeters          int      `query:"radiusMeters" default:"500" minimum:"100" maximum:"50000" doc:"Search radius in meters"`
 }
 
 type TransactionAccountEmbedded struct {
@@ -59,6 +62,8 @@ type TransactionModel struct {
 	Account            TransactionAccountEmbedded   `json:"account" doc:"Source account details"`
 	Category           TransactionCategoryEmbedded  `json:"category" doc:"Category details"`
 	DestinationAccount *TransactionAccountEmbedded  `json:"destinationAccount,omitempty" doc:"Destination account (transfers only)"`
+	Latitude           *float64                     `json:"latitude,omitempty" doc:"Transaction latitude" minimum:"-90" maximum:"90"`
+	Longitude          *float64                     `json:"longitude,omitempty" doc:"Transaction longitude" minimum:"-180" maximum:"180"`
 	Tags               []TransactionTagEmbedded     `json:"tags" doc:"Transaction tags"`
 	Template           *TransactionTemplateEmbedded `json:"template" doc:"Associated transaction template details"`
 	Note               *string                      `json:"note,omitempty" doc:"Transaction notes"`
@@ -82,6 +87,8 @@ type CreateTransactionModel struct {
 	AccountID            int64     `json:"accountId" required:"true" minimum:"1" doc:"Source account ID"`
 	CategoryID           int64     `json:"categoryId" required:"true" minimum:"1" doc:"Category ID"`
 	DestinationAccountID *int64    `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
+	Latitude             *float64  `json:"latitude,omitempty" doc:"Transaction latitude" minimum:"-90" maximum:"90"`
+	Longitude            *float64  `json:"longitude,omitempty" doc:"Transaction longitude" minimum:"-180" maximum:"180"`
 	Note                 *string   `json:"note,omitempty" doc:"Optional transaction notes"`
 }
 
@@ -92,5 +99,7 @@ type UpdateTransactionModel struct {
 	AccountID            *int64     `json:"accountId,omitempty" minimum:"1" doc:"Source account ID"`
 	CategoryID           *int64     `json:"categoryId,omitempty" minimum:"1" doc:"Category ID"`
 	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
+	Latitude             *float64   `json:"latitude,omitempty" doc:"Transaction latitude" minimum:"-90" maximum:"90"`
+	Longitude            *float64   `json:"longitude,omitempty" doc:"Transaction longitude" minimum:"-180" maximum:"180"`
 	Note                 *string    `json:"note,omitempty" doc:"Transaction notes"`
 }
