@@ -2,10 +2,11 @@ package resources
 
 import (
 	"context"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
@@ -89,6 +90,8 @@ func (cr CategoryResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoriesPagedModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("categories", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start")
 	resp, err := cr.sevs.Cat.GetPaged(ctx, input.CategoriesSearchModel)
@@ -108,6 +111,8 @@ func (cr CategoryResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoryModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("categories", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Get", "category_id", input.ID)
 	logger.Info("start")
 	resp, err := cr.sevs.Cat.GetDetail(ctx, input.ID)
@@ -127,6 +132,8 @@ func (cr CategoryResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoryModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("categories", "POST", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start")
 	resp, err := cr.sevs.Cat.Create(ctx, input.Body)
@@ -147,6 +154,8 @@ func (cr CategoryResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.CategoryModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("categories", "PATCH", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start", "category_id", input.ID)
 	resp, err := cr.sevs.Cat.Update(ctx, input.ID, input.Body)
@@ -164,6 +173,8 @@ func (cr CategoryResource) Update(ctx context.Context, input *struct {
 func (cr CategoryResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the category" example:"1"`
 }) (*struct{}, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("categories", "DELETE", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start", "category_id", input.ID)
 	err := cr.sevs.Cat.Delete(ctx, input.ID)
@@ -177,6 +188,8 @@ func (cr CategoryResource) Delete(ctx context.Context, input *struct {
 func (cr CategoryResource) Reorder(ctx context.Context, input *struct {
 	Body models.ReorderCategoriesModel
 }) (*struct{}, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("categories", "POST", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "CategoryResource.Reorder")
 	logger.Info("start")
 	err := cr.sevs.Cat.Reorder(ctx, input.Body)

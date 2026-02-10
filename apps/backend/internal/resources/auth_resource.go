@@ -2,10 +2,11 @@ package resources
 
 import (
 	"context"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
@@ -35,6 +36,8 @@ func (ar AuthResource) Routes(api huma.API) {
 	}, ar.Refresh)
 }
 func (ar AuthResource) Login(ctx context.Context, input *struct{ Body models.LoginRequestModel }) (*struct{ Body models.LoginResponseModel }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("auth", "POST", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AuthResource.Login")
 	logger.Info("start")
 	resp, err := ar.as.Login(input.Body)
@@ -48,6 +51,8 @@ func (ar AuthResource) Login(ctx context.Context, input *struct{ Body models.Log
 	}, nil
 }
 func (ar AuthResource) Refresh(ctx context.Context, input *struct{ Body models.RefreshRequestModel }) (*struct{ Body models.RefreshResponseModel }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("auth", "POST", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AuthResource.Refresh")
 	logger.Info("start")
 	resp, err := ar.as.Refresh(input.Body)

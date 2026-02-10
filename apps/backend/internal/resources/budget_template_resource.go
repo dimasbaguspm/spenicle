@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
@@ -95,12 +96,15 @@ func (btr BudgetTemplateResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, btr.GetGeneratedBudgetDetail)
+
 }
 func (btr BudgetTemplateResource) GetPaged(ctx context.Context, input *struct {
 	models.BudgetTemplatesSearchModel
 }) (*struct {
 	Body models.BudgetTemplatesPagedModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("budgets", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := btr.sevs.BudgTem.GetPaged(ctx, input.BudgetTemplatesSearchModel)
@@ -118,6 +122,8 @@ func (btr BudgetTemplateResource) GetDetail(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("budgets", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.ID)
 	item, err := btr.sevs.BudgTem.GetDetail(ctx, input.ID)
@@ -135,6 +141,8 @@ func (btr BudgetTemplateResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("budgets", "POST", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := btr.sevs.BudgTem.Create(ctx, input.Body)
@@ -153,6 +161,8 @@ func (btr BudgetTemplateResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.BudgetTemplateModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("budgets", "PATCH", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.ID)
 
@@ -179,6 +189,8 @@ func (btr BudgetTemplateResource) GetRelatedBudgets(ctx context.Context, input *
 }) (*struct {
 	Body models.BudgetsPagedModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("budgets", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "template_id", input.ID)
 	resp, err := btr.sevs.BudgTem.GetRelatedBudgets(ctx, input.ID, input.BudgetTemplateRelatedBudgetsSearchModel)
@@ -199,6 +211,8 @@ func (btr BudgetTemplateResource) UpdateBudget(ctx context.Context, input *struc
 }) (*struct {
 	Body models.BudgetModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("budgets", "PATCH", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "BudgetTemplateResource.UpdateBudget")
 	logger.Info("start", "template_id", input.TemplateID, "budget_id", input.BudgetID)
 
@@ -226,6 +240,8 @@ func (btr BudgetTemplateResource) GetGeneratedBudgetDetail(ctx context.Context, 
 }) (*struct {
 	Body models.BudgetModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("budgets", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "BudgetTemplateResource.GetGeneratedBudgetDetail")
 	logger.Info("start", "template_id", input.TemplateID, "budget_id", input.BudgetID)
 

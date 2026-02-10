@@ -85,7 +85,7 @@ func (ttw *TransactionTemplateWorker) processTemplates(ctx context.Context) erro
 
 	logger.Info("completed", "processed_count", len(dueTemplates))
 	observability.TransactionTemplatesProcessed.Add(float64(len(dueTemplates)))
-	observability.TransactionWorkerLastRun.Set(float64(time.Now().Unix()))
+	observability.TransactionWorkerRuns.Inc()
 	return nil
 }
 

@@ -1,14 +1,19 @@
 package resources
+
 import (
 	"context"
+	"time"
+
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
+
 type TransactionResource struct {
 	sevs services.RootService
 }
+
 func NewTransactionResource(sevs services.RootService) TransactionResource {
 	return TransactionResource{sevs}
 }
@@ -229,6 +234,8 @@ func (tr TransactionResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionsPagedModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("transactions", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.Tsct.GetPaged(ctx, input.TransactionsSearchModel)
@@ -248,6 +255,8 @@ func (tr TransactionResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("transactions", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.ID)
 	resp, err := tr.sevs.Tsct.GetDetail(ctx, input.ID)
@@ -267,6 +276,8 @@ func (tr TransactionResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("transactions", "POST", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.Tsct.Create(ctx, input.Body)
@@ -287,6 +298,8 @@ func (tr TransactionResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TransactionModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("transactions", "PATCH", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.ID)
 	resp, err := tr.sevs.Tsct.Update(ctx, input.ID, input.Body)
@@ -304,6 +317,8 @@ func (tr TransactionResource) Update(ctx context.Context, input *struct {
 func (tr TransactionResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the transaction" example:"1"`
 }) (*struct{}, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("transactions", "DELETE", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "transaction_id", input.ID)
 	err := tr.sevs.Tsct.Delete(ctx, input.ID)
@@ -314,6 +329,7 @@ func (tr TransactionResource) Delete(ctx context.Context, input *struct {
 	logger.Info("start", "transaction_id", input.ID)
 	return &struct{}{}, nil
 }
+
 // Transaction Relation Handlers
 func (tr TransactionResource) ListRelations(ctx context.Context, input *struct {
 	models.TransactionRelationsSearchModel
@@ -384,6 +400,7 @@ func (tr TransactionResource) DeleteRelation(ctx context.Context, input *struct 
 	logger.Info("start", "source_transaction_id", input.SourceTransactionID, "relation_id", input.RelationID)
 	return nil, nil
 }
+
 // Transaction Tag Handlers
 func (tr TransactionResource) ListTags(ctx context.Context, input *struct {
 	models.TransactionTagsSearchModel
@@ -458,6 +475,7 @@ func (tr TransactionResource) DeleteTag(ctx context.Context, input *struct {
 	logger.Info("start", "transaction_id", input.TransactionID, "tag_id", input.TagID)
 	return &struct{}{}, nil
 }
+
 // Transaction Template Handlers
 func (tr TransactionResource) ListTemplates(ctx context.Context, input *struct {
 	models.TransactionTemplatesSearchModel

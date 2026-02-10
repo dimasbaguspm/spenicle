@@ -53,7 +53,6 @@ func ObservabilityMiddleware(next http.Handler) http.Handler {
 		duration := time.Since(start)
 		observability.RequestsTotal.WithLabelValues(r.Method, strconv.Itoa(rw.statusCode), r.URL.Path).Inc()
 		observability.RequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration.Seconds())
-		observability.LastRequestTime.WithLabelValues(r.Method, r.URL.Path).Set(float64(time.Now().Unix()))
 
 		// Track HTTP errors (4xx and 5xx)
 		if rw.statusCode >= 400 {

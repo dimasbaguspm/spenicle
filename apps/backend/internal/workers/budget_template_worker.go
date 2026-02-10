@@ -79,7 +79,7 @@ func (btw *BudgetTemplateWorker) processTemplates(ctx context.Context) error {
 
 	logger.Info("completed", "processed_count", len(dueTemplates))
 	observability.BudgetTemplatesProcessed.Add(float64(len(dueTemplates)))
-	observability.BudgetWorkerLastRun.Set(float64(time.Now().Unix()))
+	observability.BudgetWorkerRuns.Inc()
 
 	return nil
 }

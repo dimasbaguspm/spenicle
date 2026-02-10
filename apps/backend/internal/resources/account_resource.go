@@ -2,10 +2,11 @@ package resources
 
 import (
 	"context"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
@@ -89,6 +90,8 @@ func (ar AccountResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountsPagedModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("accounts", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountResource.List")
 	logger.Info("start")
 	resp, err := ar.sevs.Acc.GetPaged(ctx, input.AccountsSearchModel)
@@ -108,6 +111,8 @@ func (ar AccountResource) Get(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("accounts", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Get", "account_id", input.ID)
 	logger.Info("start")
 	resp, err := ar.sevs.Acc.GetDetail(ctx, input.ID)
@@ -127,6 +132,8 @@ func (ar AccountResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("accounts", "POST", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Create", "name", input.Body.Name)
 	logger.Info("start")
 	resp, err := ar.sevs.Acc.Create(ctx, input.Body)
@@ -147,6 +154,8 @@ func (ar AccountResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.AccountModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("accounts", "PATCH", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Update", "account_id", input.ID)
 	logger.Info("start")
 	resp, err := ar.sevs.Acc.Update(ctx, input.ID, input.Body)
@@ -164,6 +173,8 @@ func (ar AccountResource) Update(ctx context.Context, input *struct {
 func (ar AccountResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the account" example:"1"`
 }) (*struct{}, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("accounts", "DELETE", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Delete", "account_id", input.ID)
 	logger.Info("start")
 	err := ar.sevs.Acc.Delete(ctx, input.ID)
@@ -177,6 +188,8 @@ func (ar AccountResource) Delete(ctx context.Context, input *struct {
 func (ar AccountResource) Reorder(ctx context.Context, input *struct {
 	Body models.ReorderAccountsModel
 }) (*struct{}, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("accounts", "POST", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountResource.Reorder")
 	logger.Info("start")
 	err := ar.sevs.Acc.Reorder(ctx, input.Body)

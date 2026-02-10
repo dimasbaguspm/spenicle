@@ -1,18 +1,24 @@
 package resources
+
 import (
 	"context"
 	"net/http"
+	"time"
+
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
+
 type SummaryResource struct {
 	sevs services.RootService
 }
+
 func NewSummaryResource(sevs services.RootService) SummaryResource {
 	return SummaryResource{sevs}
 }
+
 // Routes registers all summary routes
 func (sr SummaryResource) Routes(api huma.API) {
 	huma.Register(api, huma.Operation{
@@ -54,6 +60,8 @@ func (sr SummaryResource) GetTransactionSummary(ctx context.Context, input *stru
 }) (*struct {
 	Body models.SummaryTransactionListModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("summary", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := sr.sevs.Sum.GetTransactionSummary(ctx, input.SummaryTransactionSearchModel)
@@ -73,6 +81,8 @@ func (sr SummaryResource) GetAccountSummary(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.SummaryAccountListModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("summary", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := sr.sevs.Sum.GetAccountSummary(ctx, input.SummarySearchModel)
@@ -92,6 +102,8 @@ func (sr SummaryResource) GetCategorySummary(ctx context.Context, input *struct 
 }) (*struct {
 	Body models.SummaryCategoryListModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("summary", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := sr.sevs.Sum.GetCategorySummary(ctx, input.SummarySearchModel)

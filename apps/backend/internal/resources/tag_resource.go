@@ -1,14 +1,19 @@
 package resources
+
 import (
 	"context"
+	"time"
+
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
+
 type TagResource struct {
 	sevs services.RootService
 }
+
 func NewTagResource(sevs services.RootService) TagResource {
 	return TagResource{sevs}
 }
@@ -74,6 +79,8 @@ func (tr TagResource) List(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TagsPagedModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("tags", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.Tag.GetPaged(ctx, input.TagsSearchModel)
@@ -91,6 +98,8 @@ func (tr TagResource) List(ctx context.Context, input *struct {
 func (tr TagResource) Get(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
 }) (*struct{ Body models.TagModel }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("tags", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "tag_id", input.ID)
 	resp, err := tr.sevs.Tag.GetDetail(ctx, input.ID)
@@ -108,6 +117,8 @@ func (tr TagResource) Create(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TagModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("tags", "POST", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start")
 	resp, err := tr.sevs.Tag.Create(ctx, input.Body)
@@ -128,6 +139,8 @@ func (tr TagResource) Update(ctx context.Context, input *struct {
 }) (*struct {
 	Body models.TagModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("tags", "PATCH", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "tag_id", input.ID)
 	resp, err := tr.sevs.Tag.Update(ctx, input.ID, input.Body)
@@ -145,6 +158,8 @@ func (tr TagResource) Update(ctx context.Context, input *struct {
 func (tr TagResource) Delete(ctx context.Context, input *struct {
 	ID int64 `path:"id" minimum:"1" doc:"Unique identifier of the tag" example:"1"`
 }) (*struct{}, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("tags", "DELETE", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "Resource")
 	logger.Info("start", "tag_id", input.ID)
 	err := tr.sevs.Tag.Delete(ctx, input.ID)

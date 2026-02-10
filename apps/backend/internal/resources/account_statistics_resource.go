@@ -3,10 +3,11 @@ package resources
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
+	"github.com/dimasbaguspm/spenicle-api/internal/observability"
 	"github.com/dimasbaguspm/spenicle-api/internal/services"
 )
 
@@ -115,6 +116,8 @@ func (sr AccountStatisticsResource) GetAccountStatistics(ctx context.Context, in
 }) (*struct {
 	Body models.AccountStatisticsResponse
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("account-statistics", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetAccountStatistics", "account_id", input.ID)
 	logger.Info("start")
 
@@ -146,6 +149,8 @@ func (sr AccountStatisticsResource) GetCategoryHeatmap(ctx context.Context, inpu
 }) (*struct {
 	Body models.AccountStatisticsCategoryHeatmapModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("account-statistics", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetCategoryHeatmap", "account_id", input.ID)
 	logger.Info("start")
 
@@ -170,6 +175,8 @@ func (sr AccountStatisticsResource) GetMonthlyVelocity(ctx context.Context, inpu
 }) (*struct {
 	Body models.AccountStatisticsMonthlyVelocityModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("account-statistics", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetMonthlyVelocity", "account_id", input.ID)
 	logger.Info("start")
 
@@ -194,6 +201,8 @@ func (sr AccountStatisticsResource) GetTimeFrequencyHeatmap(ctx context.Context,
 }) (*struct {
 	Body models.AccountStatisticsTimeFrequencyHeatmapModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("account-statistics", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetTimeFrequencyHeatmap", "account_id", input.ID)
 	logger.Info("start")
 
@@ -218,6 +227,8 @@ func (sr AccountStatisticsResource) GetCashFlowPulse(ctx context.Context, input 
 }) (*struct {
 	Body models.AccountStatisticsCashFlowPulseModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("account-statistics", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetCashFlowPulse", "account_id", input.ID)
 	logger.Info("start")
 
@@ -242,6 +253,8 @@ func (sr AccountStatisticsResource) GetBurnRate(ctx context.Context, input *stru
 }) (*struct {
 	Body models.AccountStatisticsBurnRateModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("account-statistics", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetBurnRate", "account_id", input.ID)
 	logger.Info("start")
 
@@ -266,6 +279,8 @@ func (sr AccountStatisticsResource) GetBudgetHealth(ctx context.Context, input *
 }) (*struct {
 	Body models.AccountStatisticsBudgetHealthModel
 }, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("account-statistics", "GET", time.Since(start).Seconds()) }()
 	logger := observability.GetLogger(ctx).With("resource", "AccountStatisticsResource.GetBudgetHealth", "account_id", input.ID)
 	logger.Info("start")
 
