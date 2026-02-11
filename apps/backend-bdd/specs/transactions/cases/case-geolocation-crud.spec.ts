@@ -106,7 +106,7 @@ async function waitForGeoIndexRemoval(
   }
 }
 
-test.describe.only("Transactions - Geolocation CRUD", () => {
+test.describe("Transactions - Geolocation CRUD", () => {
   test("POST /transactions with geolocation - create and search by location", async ({
     transactionAPI,
     accountAPI,
