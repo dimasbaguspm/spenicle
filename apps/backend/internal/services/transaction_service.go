@@ -49,6 +49,14 @@ func (ts TransactionService) GetPaged(ctx context.Context, p models.Transactions
 				ids[i] = int(id)
 			}
 			p.IDs = ids
+		} else {
+			return models.TransactionsPagedModel{
+				Items:      []models.TransactionModel{},
+				TotalPages: 1,
+				PageNumber: p.PageSize,
+				PageSize:   p.PageSize,
+				TotalCount: 0,
+			}, nil
 		}
 	}
 
@@ -57,7 +65,6 @@ func (ts TransactionService) GetPaged(ctx context.Context, p models.Transactions
 		return ts.rpts.Tsct.GetPaged(ctx, p)
 	}, "transaction")
 
-	// Spawn a goroutine per transaction for parallel indexing (especially important for Redis I/O)
 	for _, txn := range result.Items {
 		if txn.Latitude == nil || txn.Longitude == nil {
 			continue

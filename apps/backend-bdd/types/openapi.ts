@@ -2020,6 +2020,16 @@ export interface components {
              * @description Destination account ID (transfers only)
              */
             destinationAccountId?: number;
+            /**
+             * Format: double
+             * @description Transaction latitude
+             */
+            latitude?: number;
+            /**
+             * Format: double
+             * @description Transaction longitude
+             */
+            longitude?: number;
             /** @description Optional transaction notes */
             note?: string;
             /**
@@ -2500,6 +2510,16 @@ export interface components {
              * @description Unique identifier
              */
             id: number;
+            /**
+             * Format: double
+             * @description Transaction latitude
+             */
+            latitude?: number;
+            /**
+             * Format: double
+             * @description Transaction longitude
+             */
+            longitude?: number;
             /** @description Transaction notes */
             note?: string;
             /** @description Transaction tags */
@@ -2881,6 +2901,16 @@ export interface components {
              * @description Destination account ID (transfers only)
              */
             destinationAccountId?: number;
+            /**
+             * Format: double
+             * @description Transaction latitude
+             */
+            latitude?: number;
+            /**
+             * Format: double
+             * @description Transaction longitude
+             */
+            longitude?: number;
             /** @description Transaction notes */
             note?: string;
             /**
@@ -4919,6 +4949,12 @@ export interface operations {
                 minAmount?: number;
                 /** @description Filter by maximum amount */
                 maxAmount?: number;
+                /** @description Latitude for geospatial search */
+                latitude?: number;
+                /** @description Longitude for geospatial search */
+                longitude?: number;
+                /** @description Search radius in meters */
+                radiusMeters?: number;
             };
             header?: never;
             path?: never;
