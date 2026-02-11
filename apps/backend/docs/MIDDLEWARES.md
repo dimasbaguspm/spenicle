@@ -81,15 +81,16 @@ requestID := r.Context().Value(observability.RequestIDKey).(string)
 
 ## 2. RateLimitMiddleware
 
-**File:** `internal/middleware/rate_limiter_middleware.go`
+**File:** `internal/middleware/rate_limiter_middleware.go`, `internal/common/rate_limit.go`
 
-**Purpose:** Prevent abuse by limiting requests per IP address
+**Purpose:** Prevent abuse by limiting requests per IP address and track comprehensive request metadata
 
 **Applied to:** All routes (server level), **production only**
 
 ### Configuration
 
 ```go
+// Defined in internal/constants/rate_limit_constant.go
 const (
     RateLimitRequests  = 100         // requests per window
     RateLimitWindow    = time.Minute // time window
@@ -97,24 +98,92 @@ const (
 )
 ```
 
-### Algorithm: Sliding Window
+### Redis Key Construction
 
-Uses Redis INCR with EXPIRE for atomic sliding window:
+Rate limit keys are built using centralized builder functions from `internal/common/rate_limit.go`:
+
+- `BuildRateLimitWindowKey(ip, windowStart)` - Constructs window counter keys
+- `BuildRateLimitMetadataKey(ip)` - Constructs metadata storage keys
+- `BuildRateLimitWindowPattern()` - Returns wildcard pattern for window keys
+- `BuildRateLimitMetadataPattern()` - Returns wildcard pattern for metadata keys
+
+**Key patterns** are defined in `internal/constants/rate_limit_constant.go` for centralized management:
 
 ```go
-func (rl *RateLimiter) IsAllowed(ctx context.Context, key string) (bool, int, time.Duration, error) {
-    now := time.Now()
-    windowStart := now.Truncate(RateLimitWindow)
+// RateLimitCachePatterns defines wildcard patterns for bulk operations
+var RateLimitCachePatterns = map[string][]string{
+    EntityRateLimit: {
+        "rate_limit:window:*",
+        "rate_limit:metadata:*",
+    },
+}
+```
 
-    redisKey := fmt.Sprintf("%srate_limit:%s:%s", RateLimitKeyPrefix, key, windowStart.Format("2006-01-02T15:04"))
+This approach ensures:
+- Single source of truth for key formats
+- Consistent key construction across the codebase
+- Easy maintenance if key formats need to change
 
-    count, _ := rl.rdb.Incr(ctx, redisKey).Result()
+### Architecture: Two-Tier Redis Storage
 
+The rate limiter uses a dual-storage approach for performance and observability:
+
+**1. Window Counters (Existing):**
+- Key pattern: `rate_limit:window:{IP}:{windowStart}`
+- TTL: 1 minute
+- Used for actual rate limit decisions (fast INCR operations)
+
+**2. Metadata Storage (NEW):**
+- Key pattern: `rate_limit:metadata:{IP}`
+- TTL: 24 hours
+- Stores comprehensive request tracking data
+- Updated asynchronously (non-blocking)
+
+### Rate Limit Metadata
+
+The system tracks rich metadata for each IP address:
+
+```go
+type RateLimitMetadata struct {
+    IP                 string     // Client IP address
+    FirstSeenAt        time.Time  // First time this IP was seen
+    LastAccessAt       time.Time  // Most recent request time
+    TotalRequests      int64      // Lifetime request count
+    TodayRequests      int64      // Requests today (resets at midnight)
+    CurrentWindowCount int        // Current window count (1-min window)
+    WindowStartTime    time.Time  // Current window start time
+    IsBlocked          bool       // Whether IP is currently blocked
+    BlockCount         int64      // Total times this IP was blocked
+    LastBlockedAt      *time.Time // Most recent block time
+}
+```
+
+### Algorithm: Sliding Window with Metadata
+
+```go
+func (m *RateLimitManager) IsAllowed(ctx context.Context, ip string) (bool, RateLimitMetadata, int, time.Duration, error) {
+    // 1. Check window counter (Redis INCR)
+    windowKey := BuildRateLimitWindowKey(ip, windowStart)  // Uses centralized builder
+    count, _ := m.rdb.Incr(ctx, windowKey).Result()
+
+    // 2. Set TTL on first request
     if count == 1 {
-        rl.rdb.Expire(ctx, redisKey, RateLimitWindow)
+        m.rdb.Expire(ctx, windowKey, constants.RateLimitWindow)
     }
 
-    return count <= RateLimitRequests, int(count), resetDuration, nil
+    // 3. Get existing metadata (non-blocking)
+    metadata, _ := m.getMetadata(ctx, ip)  // Uses BuildRateLimitMetadataKey() internally
+
+    // 4. Update metadata
+    metadata.LastAccessAt = time.Now()
+    metadata.TotalRequests++
+    metadata.TodayRequests++
+
+    // 5. Save metadata asynchronously
+    go m.setMetadata(ctx, metadata)  // Uses BuildRateLimitMetadataKey() internally
+
+    // 6. Return decision
+    return count <= constants.RateLimitRequests, metadata, count, resetDuration, nil
 }
 ```
 
@@ -125,6 +194,7 @@ func (rl *RateLimiter) IsAllowed(ctx context.Context, key string) (bool, int, ti
   - `X-RateLimit-Limit: 100`
   - `X-RateLimit-Remaining: N`
   - `X-RateLimit-Reset: N` (seconds)
+- Stores metadata in context for downstream use
 - Continues to next middleware
 
 **When exceeded (count > 100):**
@@ -134,19 +204,127 @@ func (rl *RateLimiter) IsAllowed(ctx context.Context, key string) (bool, int, ti
   - `X-RateLimit-Remaining: 0`
   - `X-RateLimit-Reset: N`
   - `Retry-After: N`
-- Logs warning with client IP, count, reset time
+- Updates BlockCount and LastBlockedAt in metadata
+- Logs warning with client IP, count, reset time, total requests, block count
 
 **Development mode:**
 - Completely bypassed when `env.AppStage != configs.AppStageProd`
 - No rate limiting applied in development
 
-### Redis Key Pattern
+### Context Access (NEW)
 
-```
-rate_limit:rate_limit:127.0.0.1:2024-01-04T10:15
+Downstream code can access rate limit metadata from context:
+
+```go
+// In any resource handler
+func (r AccountResource) List(ctx context.Context, req *ListRequest) (*ListResponse, error) {
+    // Get metadata from context
+    if metadata := common.GetRateLimitMetadata(ctx); metadata != nil {
+        logger := observability.GetLogger(ctx)
+        logger.Info("request_info",
+            "ip", metadata.IP,
+            "total_requests", metadata.TotalRequests,
+            "last_access", common.FormatLastAccess(metadata.LastAccessAt),
+        )
+        // Output: "last_access": "5 minutes ago"
+    }
+
+    // ... handler logic ...
+}
+
+// Get current user's IP
+clientIP := common.GetClientIP(ctx)  // Returns IP from metadata or "unknown"
 ```
 
-Keys auto-expire after 1 minute.
+### Direct Query Functions (NEW)
+
+Query metadata for any IP without needing a service layer:
+
+```go
+// Query metadata for specific IP (from anywhere with Redis client)
+func GetUserActivity(ctx context.Context, rdb *redis.Client, ip string) {
+    metadata, err := common.QueryMetadataForIP(ctx, rdb, ip)
+    if err != nil {
+        // Handle error
+        return
+    }
+
+    if metadata != nil {
+        fmt.Printf("IP: %s\n", metadata.IP)
+        fmt.Printf("First seen: %s\n", metadata.FirstSeenAt)
+        fmt.Printf("Last access: %s\n", common.FormatLastAccess(metadata.LastAccessAt))
+        fmt.Printf("Total requests: %d\n", metadata.TotalRequests)
+        fmt.Printf("Today requests: %d\n", metadata.TodayRequests)
+        fmt.Printf("Block count: %d\n", metadata.BlockCount)
+    }
+}
+```
+
+### Redis Key Patterns
+
+**Window keys (1-minute TTL):**
+```
+rate_limit:window:127.0.0.1:2024-01-04T10:15
+rate_limit:window:192.168.1.100:2024-01-04T10:16
+```
+
+**Metadata keys (24-hour TTL):**
+```
+rate_limit:metadata:127.0.0.1
+rate_limit:metadata:192.168.1.100
+```
+
+### Startup Cleanup
+
+On every application startup, all rate limit data is cleared:
+
+```go
+// In main.go
+rateLimitMgr := common.NewRateLimitManager(rdb)
+if err := rateLimitMgr.ClearAllRateLimitData(ctx); err != nil {
+    slog.Warn("Failed to clear rate limit data on startup", "error", err)
+}
+```
+
+This ensures a fresh start and prevents stale data accumulation.
+
+### Prometheus Metrics (NEW)
+
+**Available metrics:**
+
+```go
+// Request tracking
+spenicle_rate_limit_requests_total{status="allowed"}  // Allowed requests
+spenicle_rate_limit_requests_total{status="blocked"}  // Blocked requests
+
+// Active IPs
+spenicle_rate_limit_active_ips  // Unique IPs in last 24h
+
+// Per-IP blocking
+spenicle_rate_limit_blocked_ips_total{ip="127.0.0.1"}  // Block count per IP
+
+// Metadata operations
+spenicle_rate_limit_metadata_lookups_total{status="hit"}    // Cache hits
+spenicle_rate_limit_metadata_lookups_total{status="miss"}   // Cache misses
+spenicle_rate_limit_metadata_lookups_total{status="error"}  // Lookup errors
+```
+
+**Example Prometheus queries:**
+
+```promql
+# Calculate rate limit hit rate
+rate(spenicle_rate_limit_requests_total{status="blocked"}[5m])
+/
+rate(spenicle_rate_limit_requests_total[5m]) * 100
+
+# Top blocked IPs
+topk(10, spenicle_rate_limit_blocked_ips_total)
+
+# Metadata cache hit rate
+sum(rate(spenicle_rate_limit_metadata_lookups_total{status="hit"}[5m]))
+/
+sum(rate(spenicle_rate_limit_metadata_lookups_total[5m]))
+```
 
 ---
 
@@ -315,14 +493,22 @@ Request arrives at HTTP server
 │
 ├─ RateLimitMiddleware (Layer 2, production only)
 │  ├─ Extract client IP from r.RemoteAddr
-│  ├─ Build Redis key: "rate_limit:127.0.0.1:2024-01-04T10:15"
+│  ├─ Build window key: "rate_limit:window:127.0.0.1:2024-01-04T10:15"
 │  ├─ INCR counter in Redis (atomic)
 │  ├─ If count == 1: SET EXPIRE 1 minute
+│  ├─ Get metadata from Redis: "rate_limit:metadata:127.0.0.1"
+│  ├─ Update metadata: LastAccessAt, TotalRequests, TodayRequests, CurrentWindowCount
+│  ├─ Save metadata asynchronously (non-blocking)
+│  ├─ Store metadata in context: ctx = context.WithValue(ctx, RateLimitMetadataKey, metadata)
 │  ├─ If count > 100:
+│  │  ├─ Update BlockCount and LastBlockedAt
 │  │  ├─ Set X-RateLimit-* headers
+│  │  ├─ Record Prometheus metric: rate_limit_requests_total{status="blocked"}
 │  │  ├─ Return HTTP 429 Too Many Requests
 │  │  └─ Stop (don't continue)
-│  ├─ Else: Set X-RateLimit-* headers
+│  ├─ Else:
+│  │  ├─ Set X-RateLimit-* headers
+│  │  ├─ Record Prometheus metric: rate_limit_requests_total{status="allowed"}
 │  └─ Continue to next →
 │
 ├─ CORS Middleware (Layer 3)

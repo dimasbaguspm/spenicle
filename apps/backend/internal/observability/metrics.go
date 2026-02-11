@@ -157,6 +157,38 @@ var (
 		},
 		[]string{"query_type", "table"},
 	)
+
+	// Rate limit metrics - used for: Request tracking, abuse monitoring, metadata lookup stats
+	RateLimitRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "spenicle_rate_limit_requests_total",
+			Help: "Total requests processed by rate limiter (Panel: Line chart showing allowed vs blocked requests)",
+		},
+		[]string{"status"}, // "allowed" or "blocked"
+	)
+
+	RateLimitActiveIPs = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "spenicle_rate_limit_active_ips",
+			Help: "Number of unique IPs with requests in last 24 hours (Panel: Gauge showing active user count)",
+		},
+	)
+
+	RateLimitBlockedIPs = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "spenicle_rate_limit_blocked_ips_total",
+			Help: "Total IPs that hit rate limit (Panel: Bar chart showing most blocked IPs)",
+		},
+		[]string{"ip"},
+	)
+
+	RateLimitMetadataLookups = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "spenicle_rate_limit_metadata_lookups_total",
+			Help: "Total metadata lookups from Redis (Panel: Line chart showing hit/miss/error rates)",
+		},
+		[]string{"status"}, // "hit", "miss", "error"
+	)
 )
 
 // RecordHTTPError records an HTTP error metric

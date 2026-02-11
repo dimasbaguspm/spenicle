@@ -9,11 +9,11 @@ import (
 
 // CronTask represents a scheduled task to be executed by the cron worker
 type CronTask struct {
-	ID              string        // Unique identifier for the task
-	Name            string        // Human-readable name
-	Schedule        time.Duration // How often to run the task
-	Handler         CronHandler   // Function to execute
-	RunImmediately  bool          // If true, execute the handler once before starting the ticker loop
+	ID             string        // Unique identifier for the task
+	Name           string        // Human-readable name
+	Schedule       time.Duration // How often to run the task
+	Handler        CronHandler   // Function to execute
+	RunImmediately bool          // If true, execute the handler once before starting the ticker loop
 }
 
 // CronHandler is the function signature for cron task handlers
