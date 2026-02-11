@@ -29,7 +29,6 @@ func (ps PreferenceService) RefreshGeoCache(ctx context.Context, latitude *float
 	logger.Info("background job started")
 
 	go func() {
-		// Use context.Background() to avoid context cancellation from HTTP request
 		bgCtx := context.Background()
 		transactions, err := ps.rpts.Tsct.GetGeotaggedTransactions(bgCtx, latitude, longitude, 100)
 		if err != nil {

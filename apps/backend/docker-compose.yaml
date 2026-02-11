@@ -1,6 +1,6 @@
 services:
   spenicle-backend-postgres:
-    image: postgis/postgis:16-3.4-alpine
+    image: postgres:16-alpine
     container_name: spenicle-backend-postgres
     environment:
       POSTGRES_USER: db_user

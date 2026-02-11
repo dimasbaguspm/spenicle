@@ -457,7 +457,7 @@ func (tr TransactionRepository) GetGeotaggedTransactions(ctx context.Context, la
 	defer cancel()
 
 	var sql string
-	var args []interface{}
+	var args []any
 
 	baseSQL := `
 		SELECT 
@@ -476,13 +476,14 @@ func (tr TransactionRepository) GetGeotaggedTransactions(ctx context.Context, la
 	`
 
 	if latitude != nil && longitude != nil {
-		// Order by distance using PostGIS ST_Distance function
-		sql = baseSQL + ` ORDER BY ST_Distance(ST_Point(t.longitude, t.latitude)::geography, ST_Point($1, $2)::geography) ASC LIMIT $3`
-		args = []interface{}{*longitude, *latitude, limit}
+		// Order by approximate distance using Pythagorean theorem
+		// This is a simple approximation and not accurate for long distances
+		sql = baseSQL + ` ORDER BY SQRT(POW(t.latitude - $1, 2) + POW(t.longitude - $2, 2)) ASC LIMIT $3`
+		args = []any{*latitude, *longitude, limit}
 	} else {
 		// Default order by creation date descending
 		sql = baseSQL + ` ORDER BY t.created_at DESC LIMIT $1`
-		args = []interface{}{limit}
+		args = []any{limit}
 	}
 
 	rows, err := tr.db.Query(ctx, sql, args...)
