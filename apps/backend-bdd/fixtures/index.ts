@@ -9,6 +9,7 @@ import { TagAPIClient } from "./tag-client";
 import { SummaryAPIClient } from "./summary-client";
 import { BudgetTemplateAPIClient } from "./budget-template-client";
 import { TransactionTemplateAPIClient } from "./transaction-template-client";
+import { PreferenceAPIClient } from "./preference-client";
 import type { TestContext } from "../types/common";
 import * as fs from "fs";
 import * as path from "path";
@@ -28,6 +29,7 @@ type APIFixtures = {
   summaryAPI: SummaryAPIClient;
   budgetTemplateAPI: BudgetTemplateAPIClient;
   transactionTemplateAPI: TransactionTemplateAPIClient;
+  preferenceAPI: PreferenceAPIClient;
   authenticatedContext: TestContext;
   ensureCleanDB: () => Promise<void>;
 };
@@ -206,6 +208,14 @@ export const test = base.extend<APIFixtures>({
    */
   transactionTemplateAPI: async ({ request, testContext }, use) => {
     const client = new TransactionTemplateAPIClient(request, testContext);
+    await use(client);
+  },
+
+  /**
+   * Preference API client
+   */
+  preferenceAPI: async ({ request, testContext }, use) => {
+    const client = new PreferenceAPIClient(request, testContext);
     await use(client);
   },
 

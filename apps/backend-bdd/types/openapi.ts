@@ -540,6 +540,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/preferences/refresh-geo-cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh geolocation cache
+         * @description Triggers background refresh of geolocation cache from database. Accepts optional user location to prioritize nearby transactions.
+         */
+        post: operations["refresh-geo-cache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/seed/development": {
         parameters: {
             query?: never;
@@ -2208,6 +2228,18 @@ export interface components {
             access_token: string;
             /** @description Refresh token valid for 30 days */
             refresh_token: string;
+        };
+        RefreshGeoCache: {
+            /**
+             * Format: double
+             * @description User's latitude for distance-based ordering (optional)
+             */
+            latitude: number | null;
+            /**
+             * Format: double
+             * @description User's longitude for distance-based ordering (optional)
+             */
+            longitude: number | null;
         };
         RefreshRequestModel: {
             /** @description Refresh token */
@@ -4323,6 +4355,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CategoryStatisticSpendingVelocityModel"];
                 };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "refresh-geo-cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshGeoCache"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Error */
             default: {

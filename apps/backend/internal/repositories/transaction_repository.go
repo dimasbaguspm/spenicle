@@ -501,16 +501,33 @@ func (tr TransactionRepository) GetGeotaggedTransactions(ctx context.Context, la
 		var templateRecurrence *string
 		var templateStartDate time.Time
 		var templateEndDate *time.Time
+		var destAccountID *int64
+		var destAccountName *string
+		var destAccountType *string
+		var destAccountAmount *int64
+		var destAccountIcon *string
+		var destAccountColor *string
 
 		err := rows.Scan(
 			&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.Latitude, &item.Longitude, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 			&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
 			&item.Account.ID, &item.Account.Name, &item.Account.Type, &item.Account.Amount, &item.Account.Icon, &item.Account.IconColor,
 			&item.Category.ID, &item.Category.Name, &item.Category.Type, &item.Category.Icon, &item.Category.IconColor,
-			&item.DestinationAccount.ID, &item.DestinationAccount.Name, &item.DestinationAccount.Type, &item.DestinationAccount.Amount, &item.DestinationAccount.Icon, &item.DestinationAccount.IconColor,
+			&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountColor,
 		)
 		if err != nil {
 			return nil, err
+		}
+
+		if destAccountID != nil {
+			item.DestinationAccount = &models.TransactionAccountEmbedded{
+				ID:        *destAccountID,
+				Name:      *destAccountName,
+				Type:      *destAccountType,
+				Amount:    *destAccountAmount,
+				Icon:      destAccountIcon,
+				IconColor: destAccountColor,
+			}
 		}
 
 		if templateID != nil {

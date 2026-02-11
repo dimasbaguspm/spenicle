@@ -1783,6 +1783,25 @@ components:
         - access_token
         - refresh_token
       type: object
+    RefreshGeoCache:
+      additionalProperties: false
+      properties:
+        latitude:
+          description: User's latitude for distance-based ordering (optional)
+          format: double
+          type:
+            - number
+            - "null"
+        longitude:
+          description: User's longitude for distance-based ordering (optional)
+          format: double
+          type:
+            - number
+            - "null"
+      required:
+        - latitude
+        - longitude
+      type: object
     RefreshRequestModel:
       additionalProperties: false
       properties:
@@ -4626,6 +4645,30 @@ paths:
       summary: Get category spending velocity trend
       tags:
         - Categories
+  /preferences/refresh-geo-cache:
+    post:
+      description: Triggers background refresh of geolocation cache from database. Accepts optional user location to prioritize nearby transactions.
+      operationId: refresh-geo-cache
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshGeoCache"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Refresh geolocation cache
+      tags:
+        - Preferences
   /seed/development:
     post:
       description: Seed the database with development data.
