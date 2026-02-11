@@ -43,6 +43,7 @@ func RegisterPrivateRoutes(ctx context.Context, huma huma.API, db *pgxpool.Pool,
 	resources.NewSummaryResource(sevs).Routes(huma)
 	resources.NewBudgetTemplateResource(sevs).Routes(huma)
 	resources.NewTagResource(sevs).Routes(huma)
+	resources.NewPreferenceResource(sevs).Routes(huma)
 	resources.NewSeedResource(db, rdb).Routes(huma)
 }
 

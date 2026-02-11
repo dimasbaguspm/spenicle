@@ -451,6 +451,88 @@ func (tr TransactionRepository) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
+// GetGeotaggedTransactions fetches transactions with geolocation data, ordered by distance if coordinates provided
+func (tr TransactionRepository) GetGeotaggedTransactions(ctx context.Context, latitude *float64, longitude *float64, limit int) ([]models.TransactionModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
+	var sql string
+	var args []interface{}
+
+	baseSQL := `
+		SELECT 
+			t.id, t.type, t.date, t.amount, t.note, t.latitude, t.longitude, t.created_at, t.updated_at, t.deleted_at,
+			tt.id as template_id, tt.name as template_name, tt.amount as template_amount, tt.recurrence as template_recurrence, tt.start_date as template_start_date, tt.end_date as template_end_date,
+			a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
+			c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
+			da.id as dest_account_id, da.name as dest_account_name, da.type as dest_account_type, da.amount as dest_account_amount, da.icon as dest_account_icon, da.icon_color as dest_account_color
+		FROM transactions t
+		LEFT JOIN transaction_template_relations r ON r.transaction_id = t.id
+		LEFT JOIN transaction_templates tt ON r.template_id = tt.id
+		LEFT JOIN accounts a ON t.account_id = a.id
+		LEFT JOIN categories c ON t.category_id = c.id
+		LEFT JOIN accounts da ON t.destination_account_id = da.id
+		WHERE t.deleted_at IS NULL AND t.latitude IS NOT NULL AND t.longitude IS NOT NULL
+	`
+
+	if latitude != nil && longitude != nil {
+		// Order by distance using PostGIS ST_Distance function
+		sql = baseSQL + ` ORDER BY ST_Distance(ST_Point(t.longitude, t.latitude)::geography, ST_Point($1, $2)::geography) ASC LIMIT $3`
+		args = []interface{}{*longitude, *latitude, limit}
+	} else {
+		// Default order by creation date descending
+		sql = baseSQL + ` ORDER BY t.created_at DESC LIMIT $1`
+		args = []interface{}{limit}
+	}
+
+	rows, err := tr.db.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []models.TransactionModel
+	for rows.Next() {
+		var item models.TransactionModel
+		var templateID *int64
+		var templateName *string
+		var templateAmount *int64
+		var templateRecurrence *string
+		var templateStartDate time.Time
+		var templateEndDate *time.Time
+
+		err := rows.Scan(
+			&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.Latitude, &item.Longitude, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
+			&item.Account.ID, &item.Account.Name, &item.Account.Type, &item.Account.Amount, &item.Account.Icon, &item.Account.IconColor,
+			&item.Category.ID, &item.Category.Name, &item.Category.Type, &item.Category.Icon, &item.Category.IconColor,
+			&item.DestinationAccount.ID, &item.DestinationAccount.Name, &item.DestinationAccount.Type, &item.DestinationAccount.Amount, &item.DestinationAccount.Icon, &item.DestinationAccount.IconColor,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if templateID != nil {
+			item.Template = &models.TransactionTemplateEmbedded{
+				ID:         *templateID,
+				Name:       *templateName,
+				Amount:     *templateAmount,
+				Recurrence: *templateRecurrence,
+				StartDate:  templateStartDate,
+				EndDate:    templateEndDate,
+			}
+		}
+
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
 func (tr TransactionRepository) UpdateAccountBalance(ctx context.Context, accountID int64, deltaAmount int64) error {
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
