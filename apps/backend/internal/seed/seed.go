@@ -127,38 +127,93 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 	}
 
 	// Seed transactions - 3 months of data for realistic testing
+	// User is based in Yogyakarta, Indonesia
 	startDate := time.Now().AddDate(0, 0, -90)
 	var transactions []models.CreateTransactionModel
 
-	// Monthly income - 3 months
+	// Helper functions for coordinates
+	ptr := func(v float64) *float64 { return &v }
+
+	// Yogyakarta location coordinates
+	type Location struct {
+		Name string
+		Lat  float64
+		Lon  float64
+	}
+
+	yogyaLocations := []Location{
+		{"Kantor PT Maju Jaya (Sleman)", -7.770910, 110.377533},        // Near UGM
+		{"Malioboro Street", -7.792786, 110.365463},                    // Shopping area
+		{"Jogja City Mall", -7.781898, 110.378433},                     // Mall
+		{"Hartono Mall", -7.752947, 110.409752},                        // Mall
+		{"Beringharjo Market", -7.798481, 110.365128},                  // Traditional market
+		{"Warung Makan Gudeg Yu Djum", -7.797523, 110.364584},          // Famous restaurant
+		{"Kopi Klotok Pakem", -7.669235, 110.418729},                   // Coffee shop north
+		{"Angkringan Tugu", -7.789423, 110.363847},                     // Street food
+		{"Mirota Kampus Supermarket", -7.782014, 110.364882},           // Supermarket
+		{"Alfamart Gejayan", -7.776441, 110.380022},                    // Convenience store
+		{"Indomaret Seturan", -7.750389, 110.408694},                   // Convenience store
+		{"SPBU Pertamina Gejayan", -7.776904, 110.379234},              // Gas station
+		{"SPBU Shell Ringroad", -7.757211, 110.409183},                 // Gas station
+		{"RS Sardjito", -7.768611, 110.373583},                         // Hospital
+		{"Apotek K24 Kaliurang", -7.768230, 110.400841},                // Pharmacy
+		{"Gramedia Ambarukmo Plaza", -7.781667, 110.401472},            // Bookstore
+		{"Bioskop XXI Ambarukmo", -7.781563, 110.401328},               // Cinema
+		{"GoWork Jogja", -7.782452, 110.378011},                        // Coworking space
+		{"Bakpia Pathok 25", -7.801234, 110.366789},                    // Souvenir shop
+		{"Warung Makan Soto Kadipiro", -7.771234, 110.381567},          // Local restaurant
+		{"Cafe Roaster and Bear", -7.787654, 110.368321},               // Cafe
+		{"Jogja Expo Center", -7.746891, 110.416234},                   // Convention center
+		{"Prambanan Temple Area", -7.752020, 110.491474},               // Tourist area
+		{"Terminal Giwangan", -7.826123, 110.390456},                   // Bus terminal
+		{"Stasiun Lempuyangan", -7.784567, 110.375123},                 // Train station
+	}
+
+	// Monthly income - 3 months (salary received at office/bank)
 	for i := 0; i < 3; i++ {
 		transactions = append(transactions, models.CreateTransactionModel{
 			Type:       "income",
 			Date:       startDate.AddDate(0, i, 5),
-			Amount:     8000000,
+			Amount:     8500000, // 8.5 million IDR monthly salary
 			AccountID:  accountMap["Rekening Gaji"],
 			CategoryID: categoryMap["Gaji"],
+			Latitude:   ptr(yogyaLocations[0].Lat), // Office location
+			Longitude:  ptr(yogyaLocations[0].Lon),
 			Note:       func() *string { s := fmt.Sprintf("Gaji bulan ke-%d", i+1); return &s }(),
 		})
 	}
 
-	// Freelance income - sporadic
+	// Freelance income - sporadic (coworking space)
 	transactions = append(transactions,
 		models.CreateTransactionModel{
 			Type:       "income",
 			Date:       startDate.AddDate(0, 0, 15),
-			Amount:     2500000,
+			Amount:     3200000, // 3.2 million IDR for website project
 			AccountID:  accountMap["Tabungan Mandiri"],
 			CategoryID: categoryMap["Freelance"],
-			Note:       func() *string { s := "Proyek website perusahaan"; return &s }(),
+			Latitude:   ptr(yogyaLocations[17].Lat), // GoWork Jogja
+			Longitude:  ptr(yogyaLocations[17].Lon),
+			Note:       func() *string { s := "Proyek website perusahaan e-commerce"; return &s }(),
 		},
 		models.CreateTransactionModel{
 			Type:       "income",
 			Date:       startDate.AddDate(0, 1, 20),
-			Amount:     3000000,
+			Amount:     4500000, // 4.5 million IDR for database consulting
 			AccountID:  accountMap["Tabungan Mandiri"],
 			CategoryID: categoryMap["Freelance"],
-			Note:       func() *string { s := "Konsultasi sistem database"; return &s }(),
+			Latitude:   ptr(yogyaLocations[17].Lat), // GoWork Jogja
+			Longitude:  ptr(yogyaLocations[17].Lon),
+			Note:       func() *string { s := "Konsultasi sistem database PostgreSQL"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "income",
+			Date:       startDate.AddDate(0, 2, 12),
+			Amount:     2800000, // 2.8 million IDR for mobile app
+			AccountID:  accountMap["Tabungan Mandiri"],
+			CategoryID: categoryMap["Freelance"],
+			Latitude:   ptr(yogyaLocations[17].Lat), // GoWork Jogja
+			Longitude:  ptr(yogyaLocations[17].Lon),
+			Note:       func() *string { s := "Desain UI/UX aplikasi mobile"; return &s }(),
 		},
 	)
 
@@ -166,159 +221,405 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 	transactions = append(transactions, models.CreateTransactionModel{
 		Type:       "income",
 		Date:       startDate.AddDate(0, 0, 10),
-		Amount:     1500000,
+		Amount:     2500000, // 2.5 million IDR year-end bonus
 		AccountID:  accountMap["Tabungan Darurat"],
 		CategoryID: categoryMap["Bonus"],
-		Note:       func() *string { s := "Bonus akhir tahun"; return &s }(),
+		Latitude:   ptr(yogyaLocations[0].Lat), // Office
+		Longitude:  ptr(yogyaLocations[0].Lon),
+		Note:       func() *string { s := "Bonus akhir tahun dari perusahaan"; return &s }(),
 	})
 
-	// Weekly groceries - ~13 weeks over 3 months
+	// Weekly groceries - ~13 weeks over 3 months (rotating between supermarket and traditional market)
 	for i := 0; i < 13; i++ {
+		var loc Location
+		var note string
+		var amount int64
+
+		if i%2 == 0 {
+			loc = yogyaLocations[8]                                // Mirota Kampus Supermarket
+			note = fmt.Sprintf("Belanja mingguan supermarket #%d", i+1)
+			amount = 280000 + int64((i%3)*70000) // 280k-420k IDR
+		} else {
+			loc = yogyaLocations[4]                             // Beringharjo Market
+			note = fmt.Sprintf("Belanja pasar tradisional #%d", i+1)
+			amount = 220000 + int64((i%4)*50000) // 220k-370k IDR
+		}
+
 		transactions = append(transactions, models.CreateTransactionModel{
 			Type:       "expense",
 			Date:       startDate.AddDate(0, 0, i*7+2),
-			Amount:     200000 + int64((i%3)*50000),
+			Amount:     amount,
 			AccountID:  accountMap["Dompet Utama"],
 			CategoryID: categoryMap["Makanan & Minuman"],
-			Note:       func() *string { s := fmt.Sprintf("Belanja mingguan ke-%d", i+1); return &s }(),
+			Latitude:   ptr(loc.Lat),
+			Longitude:  ptr(loc.Lon),
+			Note:       func() *string { s := note; return &s }(),
 		})
 	}
 
-	// Monthly bills - 3 months each for electricity, internet, phone
+	// Monthly bills - 3 months each for electricity, internet, phone, water
+	// Bills paid at convenience stores (Alfamart/Indomaret)
 	for i := 0; i < 3; i++ {
+		convStore := yogyaLocations[9] // Alfamart
+		if i%2 == 1 {
+			convStore = yogyaLocations[10] // Indomaret
+		}
+
 		transactions = append(transactions,
 			models.CreateTransactionModel{
 				Type:       "expense",
 				Date:       startDate.AddDate(0, i, 12),
-				Amount:     450000,
+				Amount:     520000, // 520k IDR electricity (AC usage in Java heat)
 				AccountID:  accountMap["Dompet Utama"],
 				CategoryID: categoryMap["Tagihan"],
-				Note:       func() *string { s := fmt.Sprintf("Tagihan listrik bulan ke-%d", i+1); return &s }(),
+				Latitude:   ptr(convStore.Lat),
+				Longitude:  ptr(convStore.Lon),
+				Note:       func() *string { s := fmt.Sprintf("Tagihan listrik PLN bulan ke-%d", i+1); return &s }(),
 			},
 			models.CreateTransactionModel{
 				Type:       "expense",
 				Date:       startDate.AddDate(0, i, 15),
-				Amount:     350000,
+				Amount:     385000, // 385k IDR internet (50 Mbps Indihome)
 				AccountID:  accountMap["Dompet Utama"],
 				CategoryID: categoryMap["Tagihan"],
-				Note:       func() *string { s := fmt.Sprintf("Tagihan internet bulan ke-%d", i+1); return &s }(),
+				Latitude:   ptr(convStore.Lat),
+				Longitude:  ptr(convStore.Lon),
+				Note:       func() *string { s := fmt.Sprintf("Tagihan internet Indihome bulan ke-%d", i+1); return &s }(),
 			},
 			models.CreateTransactionModel{
 				Type:       "expense",
 				Date:       startDate.AddDate(0, i, 18),
-				Amount:     200000,
+				Amount:     150000, // 150k IDR phone (Telkomsel Halo)
 				AccountID:  accountMap["Dompet Utama"],
 				CategoryID: categoryMap["Tagihan"],
-				Note:       func() *string { s := fmt.Sprintf("Tagihan telepon bulan ke-%d", i+1); return &s }(),
+				Latitude:   ptr(convStore.Lat),
+				Longitude:  ptr(convStore.Lon),
+				Note:       func() *string { s := fmt.Sprintf("Tagihan Telkomsel Halo bulan ke-%d", i+1); return &s }(),
+			},
+			models.CreateTransactionModel{
+				Type:       "expense",
+				Date:       startDate.AddDate(0, i, 20),
+				Amount:     85000, // 85k IDR water bill (PDAM)
+				AccountID:  accountMap["Dompet Utama"],
+				CategoryID: categoryMap["Tagihan"],
+				Latitude:   ptr(convStore.Lat),
+				Longitude:  ptr(convStore.Lon),
+				Note:       func() *string { s := fmt.Sprintf("Tagihan air PDAM bulan ke-%d", i+1); return &s }(),
 			},
 		)
 	}
 
 	// Fuel/transport - biweekly over 3 months (~6 times)
 	for i := 0; i < 6; i++ {
+		// Fuel - alternating between gas stations
+		gasStation := yogyaLocations[11] // SPBU Pertamina
+		if i%2 == 1 {
+			gasStation = yogyaLocations[12] // SPBU Shell
+		}
+
 		transactions = append(transactions, models.CreateTransactionModel{
 			Type:       "expense",
 			Date:       startDate.AddDate(0, 0, i*14+3),
-			Amount:     300000,
+			Amount:     180000, // 180k IDR fuel (Pertalite ~12 liters)
 			AccountID:  accountMap["Kartu Kredit BCA"],
 			CategoryID: categoryMap["Transportasi"],
-			Note:       func() *string { s := "Bensin motor"; return &s }(),
+			Latitude:   ptr(gasStation.Lat),
+			Longitude:  ptr(gasStation.Lon),
+			Note:       func() *string { s := "Isi bensin Pertalite motor"; return &s }(),
 		})
+
+		// GoRide/GoCar - various pickup locations
+		pickupLocations := []Location{
+			yogyaLocations[24], // Train station
+			yogyaLocations[2],  // Mall
+			yogyaLocations[0],  // Office
+		}
+		pickup := pickupLocations[i%3]
+
 		transactions = append(transactions, models.CreateTransactionModel{
 			Type:       "expense",
 			Date:       startDate.AddDate(0, 0, i*14+8),
-			Amount:     50000,
+			Amount:     25000 + int64((i%4)*8000), // 25k-49k IDR
 			AccountID:  accountMap["Dompet Digital GoPay"],
 			CategoryID: categoryMap["Transportasi"],
-			Note:       func() *string { s := "GoRide ke kantor"; return &s }(),
+			Latitude:   ptr(pickup.Lat),
+			Longitude:  ptr(pickup.Lon),
+			Note:       func() *string { s := "GoRide perjalanan dalam kota"; return &s }(),
 		})
 	}
 
-	// Coffee/snacks - frequent small purchases (~19 times)
-	for i := 0; i < 19; i++ {
-		transactions = append(transactions, models.CreateTransactionModel{
-			Type:       "expense",
-			Date:       startDate.AddDate(0, 0, i*4+1),
-			Amount:     25000 + int64((i%4)*10000),
-			AccountID:  accountMap["Dompet Utama"],
-			CategoryID: categoryMap["Makanan & Minuman"],
-			Note:       func() *string { s := "Kopi dan snack"; return &s }(),
-		})
-	}
-
-	// One-time expenses - shopping, doctor, entertainment
+	// Additional transportation - intercity travel, parking, etc.
 	transactions = append(transactions,
 		models.CreateTransactionModel{
 			Type:       "expense",
+			Date:       startDate.AddDate(0, 1, 14),
+			Amount:     150000, // Bus to Solo
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Transportasi"],
+			Latitude:   ptr(yogyaLocations[23].Lat), // Terminal Giwangan
+			Longitude:  ptr(yogyaLocations[23].Lon),
+			Note:       func() *string { s := "Bus Yogya-Solo PP"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 2, 7),
+			Amount:     95000, // Train ticket
+			AccountID:  accountMap["Dompet Digital GoPay"],
+			CategoryID: categoryMap["Transportasi"],
+			Latitude:   ptr(yogyaLocations[24].Lat), // Stasiun Lempuyangan
+			Longitude:  ptr(yogyaLocations[24].Lon),
+			Note:       func() *string { s := "KA Prambanan Ekspres ke Solo"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, 28),
+			Amount:     15000, // Parking at mall
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Transportasi"],
+			Latitude:   ptr(yogyaLocations[3].Lat), // Hartono Mall
+			Longitude:  ptr(yogyaLocations[3].Lon),
+			Note:       func() *string { s := "Parkir motor Hartono Mall"; return &s }(),
+		},
+	)
+
+	// Coffee/snacks - frequent small purchases at various cafes and street food
+	coffeeLocations := []Location{
+		yogyaLocations[6],  // Kopi Klotok
+		yogyaLocations[7],  // Angkringan Tugu
+		yogyaLocations[20], // Cafe Roaster and Bear
+		yogyaLocations[5],  // Gudeg Yu Djum
+		yogyaLocations[19], // Warung Soto
+	}
+
+	for i := 0; i < 25; i++ {
+		loc := coffeeLocations[i%len(coffeeLocations)]
+		var note string
+		var amount int64
+
+		switch i % 5 {
+		case 0:
+			note = "Kopi susu + pisang goreng"
+			amount = 28000
+		case 1:
+			note = "Angkringan malam (nasi kucing + wedang jahe)"
+			amount = 22000
+		case 2:
+			note = "Lunch gudeg komplit"
+			amount = 35000
+		case 3:
+			note = "Soto ayam + es teh manis"
+			amount = 25000
+		case 4:
+			note = "Kopi latte + roti bakar"
+			amount = 42000
+		}
+
+		transactions = append(transactions, models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, i*3+1),
+			Amount:     amount,
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Makanan & Minuman"],
+			Latitude:   ptr(loc.Lat),
+			Longitude:  ptr(loc.Lon),
+			Note:       func() *string { s := note; return &s }(),
+		})
+	}
+
+	// Restaurant meals - larger food purchases
+	transactions = append(transactions,
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, 16),
+			Amount:     125000, // Dinner for 2
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Makanan & Minuman"],
+			Latitude:   ptr(-7.782345), // Restaurant in Jogja
+			Longitude:  ptr(110.375678),
+			Note:       func() *string { s := "Makan malam di restoran Jawa"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 1, 22),
+			Amount:     95000, // Lunch
+			AccountID:  accountMap["Dompet Digital GoPay"],
+			CategoryID: categoryMap["Makanan & Minuman"],
+			Latitude:   ptr(-7.756789), // Restaurant
+			Longitude:  ptr(110.412345),
+			Note:       func() *string { s := "Pesan GoFood ayam geprek + es jeruk"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 2, 18),
+			Amount:     165000, // Weekend brunch
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Makanan & Minuman"],
+			Latitude:   ptr(yogyaLocations[2].Lat), // Jogja City Mall
+			Longitude:  ptr(yogyaLocations[2].Lon),
+			Note:       func() *string { s := "Brunch di kafe mall (pasta + coffee)"; return &s }(),
+		},
+	)
+
+	// One-time expenses - shopping, doctor, entertainment, education
+	transactions = append(transactions,
+		// Shopping - mix of online and in-store
+		models.CreateTransactionModel{
+			Type:       "expense",
 			Date:       startDate.AddDate(0, 0, 8),
-			Amount:     500000,
+			Amount:     650000, // Shoes at mall
 			AccountID:  accountMap["Kartu Kredit BCA"],
 			CategoryID: categoryMap["Belanja Online"],
-			Note:       func() *string { s := "Beli sepatu olahraga"; return &s }(),
+			Latitude:   ptr(yogyaLocations[3].Lat), // Hartono Mall
+			Longitude:  ptr(yogyaLocations[3].Lon),
+			Note:       func() *string { s := "Sepatu olahraga Nike di Hartono Mall"; return &s }(),
 		},
 		models.CreateTransactionModel{
 			Type:       "expense",
 			Date:       startDate.AddDate(0, 1, 5),
-			Amount:     750000,
+			Amount:     1250000, // Laptop accessories online (Tokopedia)
 			AccountID:  accountMap["Kartu Kredit BCA"],
 			CategoryID: categoryMap["Belanja Online"],
-			Note:       func() *string { s := "Beli laptop accessories"; return &s }(),
+			Note:       func() *string { s := "Tokopedia: mouse wireless + keyboard mekanikal"; return &s }(),
 		},
 		models.CreateTransactionModel{
 			Type:       "expense",
 			Date:       startDate.AddDate(0, 2, 10),
-			Amount:     300000,
+			Amount:     425000, // Programming books
 			AccountID:  accountMap["Kartu Kredit BCA"],
 			CategoryID: categoryMap["Belanja Online"],
-			Note:       func() *string { s := "Beli buku programming"; return &s }(),
+			Latitude:   ptr(yogyaLocations[15].Lat), // Gramedia
+			Longitude:  ptr(yogyaLocations[15].Lon),
+			Note:       func() *string { s := "Buku Clean Code + Design Patterns di Gramedia"; return &s }(),
 		},
 		models.CreateTransactionModel{
 			Type:       "expense",
 			Date:       startDate.AddDate(0, 2, 25),
-			Amount:     1200000,
+			Amount:     3200000, // Monitor 27"
 			AccountID:  accountMap["Kartu Kredit BCA"],
 			CategoryID: categoryMap["Belanja Online"],
-			Note:       func() *string { s := "Beli monitor 27 inch"; return &s }(),
+			Note:       func() *string { s := "Shopee: Monitor LG 27 inch 4K"; return &s }(),
 		},
 		models.CreateTransactionModel{
 			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, 35),
+			Amount:     185000, // Batik shirt
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Belanja Online"],
+			Latitude:   ptr(yogyaLocations[1].Lat), // Malioboro
+			Longitude:  ptr(yogyaLocations[1].Lon),
+			Note:       func() *string { s := "Batik kemeja di Malioboro"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 1, 12),
+			Amount:     95000, // Souvenirs
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Belanja Online"],
+			Latitude:   ptr(yogyaLocations[18].Lat), // Bakpia Pathok
+			Longitude:  ptr(yogyaLocations[18].Lon),
+			Note:       func() *string { s := "Oleh-oleh bakpia untuk keluarga"; return &s }(),
+		},
+
+		// Healthcare
+		models.CreateTransactionModel{
+			Type:       "expense",
 			Date:       startDate.AddDate(0, 0, 20),
-			Amount:     200000,
+			Amount:     350000, // Dentist
 			AccountID:  accountMap["Kartu Kredit BCA"],
 			CategoryID: categoryMap["Kesehatan"],
-			Note:       func() *string { s := "Kontrol ke dokter gigi"; return &s }(),
+			Latitude:   ptr(yogyaLocations[13].Lat), // RS Sardjito
+			Longitude:  ptr(yogyaLocations[13].Lon),
+			Note:       func() *string { s := "Scaling gigi di klinik gigi RS Sardjito"; return &s }(),
 		},
 		models.CreateTransactionModel{
 			Type:       "expense",
 			Date:       startDate.AddDate(0, 1, 25),
-			Amount:     350000,
-			AccountID:  accountMap["Kartu Kredit BCA"],
+			Amount:     185000, // Medicine
+			AccountID:  accountMap["Dompet Utama"],
 			CategoryID: categoryMap["Kesehatan"],
-			Note:       func() *string { s := "Beli obat dan vitamin"; return &s }(),
+			Latitude:   ptr(yogyaLocations[14].Lat), // Apotek K24
+			Longitude:  ptr(yogyaLocations[14].Lon),
+			Note:       func() *string { s := "Vitamin C + multivitamin di K24"; return &s }(),
 		},
 		models.CreateTransactionModel{
 			Type:       "expense",
+			Date:       startDate.AddDate(0, 2, 8),
+			Amount:     450000, // Medical checkup
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Kesehatan"],
+			Latitude:   ptr(yogyaLocations[13].Lat), // RS Sardjito
+			Longitude:  ptr(yogyaLocations[13].Lon),
+			Note:       func() *string { s := "Medical checkup tahunan + lab"; return &s }(),
+		},
+
+		// Entertainment
+		models.CreateTransactionModel{
+			Type:       "expense",
 			Date:       startDate.AddDate(0, 0, 22),
-			Amount:     100000,
+			Amount:     85000, // Cinema (2 tickets)
 			AccountID:  accountMap["Dompet Utama"],
 			CategoryID: categoryMap["Hiburan"],
-			Note:       func() *string { s := "Tiket bioskop"; return &s }(),
+			Latitude:   ptr(yogyaLocations[16].Lat), // XXI Ambarukmo
+			Longitude:  ptr(yogyaLocations[16].Lon),
+			Note:       func() *string { s := "Tiket bioskop XXI Ambarukmo (2 orang)"; return &s }(),
 		},
 		models.CreateTransactionModel{
 			Type:       "expense",
 			Date:       startDate.AddDate(0, 1, 18),
-			Amount:     150000,
+			Amount:     120000, // Mobile game top-up
 			AccountID:  accountMap["Dompet Digital GoPay"],
 			CategoryID: categoryMap["Hiburan"],
-			Note:       func() *string { s := "Beli game online"; return &s }(),
+			Note:       func() *string { s := "Top up Mobile Legends diamonds"; return &s }(),
 		},
 		models.CreateTransactionModel{
 			Type:       "expense",
 			Date:       startDate.AddDate(0, 2, 15),
-			Amount:     450000,
+			Amount:     750000, // Concert
 			AccountID:  accountMap["Kartu Kredit BCA"],
 			CategoryID: categoryMap["Hiburan"],
-			Note:       func() *string { s := "Tiket konser musik"; return &s }(),
+			Latitude:   ptr(yogyaLocations[21].Lat), // Jogja Expo Center
+			Longitude:  ptr(yogyaLocations[21].Lon),
+			Note:       func() *string { s := "Tiket konser musik indie di JEC (2 tiket)"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 2, 3),
+			Amount:     125000, // Weekend trip
+			AccountID:  accountMap["Dompet Utama"],
+			CategoryID: categoryMap["Hiburan"],
+			Latitude:   ptr(yogyaLocations[22].Lat), // Prambanan
+			Longitude:  ptr(yogyaLocations[22].Lon),
+			Note:       func() *string { s := "Tiket masuk Candi Prambanan"; return &s }(),
+		},
+
+		// Education
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 0, 18),
+			Amount:     850000, // Online course
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Pendidikan"],
+			Note:       func() *string { s := "Udemy course: Advanced React & TypeScript"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 1, 9),
+			Amount:     1500000, // Workshop
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Pendidikan"],
+			Latitude:   ptr(yogyaLocations[17].Lat), // GoWork
+			Longitude:  ptr(yogyaLocations[17].Lon),
+			Note:       func() *string { s := "Workshop fullstack development 2 hari"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:       "expense",
+			Date:       startDate.AddDate(0, 2, 21),
+			Amount:     325000, // Books
+			AccountID:  accountMap["Kartu Kredit BCA"],
+			CategoryID: categoryMap["Pendidikan"],
+			Latitude:   ptr(yogyaLocations[15].Lat), // Gramedia
+			Longitude:  ptr(yogyaLocations[15].Lon),
+			Note:       func() *string { s := "Buku sistem design + database fundamentals"; return &s }(),
 		},
 	)
 
