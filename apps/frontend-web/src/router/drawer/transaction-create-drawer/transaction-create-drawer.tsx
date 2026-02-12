@@ -11,6 +11,7 @@ import type { FC } from "react";
 import { Form, formId } from "./form";
 import type { TransactionCreateFormSchema } from "./types";
 import { useDrawerProvider } from "@/providers/drawer-provider";
+import { useWebAPIProvider } from "@/providers/web-api-provider";
 import {
   useApiAccountQuery,
   useApiCategoryQuery,
@@ -31,6 +32,7 @@ export const TransactionCreateDrawer: FC<TransactionCreateDrawerProps> = ({
   const params = useParams();
   const { closeDrawer } = useDrawerProvider();
   const { showSnack } = useSnackbars();
+  const { geolocation } = useWebAPIProvider();
   const isDesktop = useDesktopBreakpoint();
 
   const defaultValues = formatDefaultValues({
@@ -68,6 +70,8 @@ export const TransactionCreateDrawer: FC<TransactionCreateDrawerProps> = ({
 
     date = date.set("hour", hour).set("minute", minute);
 
+    const coords = geolocation.getCoordinates();
+
     await createTransaction({
       type: data.type,
       date: date.toISOString(),
@@ -77,6 +81,7 @@ export const TransactionCreateDrawer: FC<TransactionCreateDrawerProps> = ({
       categoryId: data.categoryId,
       amount: data.amount,
       note: data.notes,
+      ...coords,
     });
     showSnack("success", "Transaction created successfully");
     closeDrawer();

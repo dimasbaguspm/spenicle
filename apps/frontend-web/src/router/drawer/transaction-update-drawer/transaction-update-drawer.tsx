@@ -74,6 +74,11 @@ export const TransactionUpdateDrawer: FC<TransactionUpdateDrawerProps> = ({
 
     date = date.set("hour", hour).set("minute", minute);
 
+    // Preserve existing coordinates if they exist
+    const coords = transactionData?.latitude != null && transactionData?.longitude != null
+      ? { latitude: transactionData.latitude, longitude: transactionData.longitude }
+      : { latitude: undefined, longitude: undefined };
+
     await updateTransaction({
       id: transactionId,
       type: data.type,
@@ -84,6 +89,7 @@ export const TransactionUpdateDrawer: FC<TransactionUpdateDrawerProps> = ({
       categoryId: data.categoryId,
       amount: data.amount,
       note: data.notes,
+      ...coords,
     });
     showSnack("success", "Transaction updated successfully");
     closeDrawer();

@@ -17,6 +17,7 @@ import { BottomSheetRouter } from "../bottom-sheet/bottom-sheet-router";
 import { AuthProvider, useAuthProvider } from "@/providers/auth-provider";
 import { PageLoader } from "@dimasbaguspm/versaur";
 import { SessionProvider } from "@/providers/session-provider";
+import { WebAPIProvider } from "@/providers/web-api-provider";
 import { DRAWER_ROUTES } from "@/constant/drawer-routes";
 import { PAGE_HANDLES } from "@/constant/page-handles";
 import { FloatingActions } from "../floating-actions";
@@ -47,9 +48,11 @@ const router = createBrowserRouter([
     element: (
       <SessionProvider>
         <AuthProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Outlet />
-          </Suspense>
+          <WebAPIProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
+          </WebAPIProvider>
         </AuthProvider>
       </SessionProvider>
     ),
