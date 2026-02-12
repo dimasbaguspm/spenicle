@@ -3,6 +3,7 @@ import {
   ChartColumnIcon,
   HomeIcon,
   ListCollapseIcon,
+  MapPinnedIcon,
   TagsIcon,
   WalletCardsIcon,
 } from "lucide-react";
@@ -15,6 +16,7 @@ export const PAGE_ROUTES = {
   INSIGHTS: "/insights",
   INSIGHTS_ACCOUNTS: "accounts",
   INSIGHTS_CATEGORIES: "categories",
+  INSIGHTS_MAP: "map",
   SETTINGS: "/settings",
   SETTINGS_ACCOUNTS: "accounts",
   SETTINGS_CATEGORIES: "categories",
@@ -53,6 +55,11 @@ export const DEEP_PAGE_LINKS = {
     path: `${PAGE_ROUTES.INSIGHTS}/${PAGE_ROUTES.INSIGHTS_CATEGORIES}`,
     title: "Categories Insights",
     icon: TagsIcon,
+  },
+  INSIGHTS_MAP: {
+    path: `${PAGE_ROUTES.INSIGHTS}/${PAGE_ROUTES.INSIGHTS_MAP}`,
+    title: "Map Insights",
+    icon: MapPinnedIcon,
   },
   SETTINGS: {
     path: PAGE_ROUTES.SETTINGS,

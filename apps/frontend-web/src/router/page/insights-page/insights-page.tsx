@@ -2,6 +2,8 @@ import { PAGE_ROUTES } from "@/constant/page-routes";
 import { useApiInsightsTransactionsSummaryQuery } from "@/hooks/use-api";
 import { useInsightFilter } from "@/hooks/use-filter-state";
 import {
+  ChipSingleInput,
+  Icon,
   PageContent,
   PageHeader,
   PageLayout,
@@ -15,6 +17,7 @@ import {
   InsightsTabs,
   InsightsDateRangeSelector,
 } from "./components";
+import { ChartBarIcon, MapPinnedIcon } from "lucide-react";
 
 const InsightsPage = () => {
   const navigate = useNavigate();
@@ -31,6 +34,8 @@ const InsightsPage = () => {
     frequency,
   });
 
+  const isMapInsight = location.pathname.includes(PAGE_ROUTES.INSIGHTS_MAP);
+
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes(PAGE_ROUTES.INSIGHTS_ACCOUNTS)) return "accounts";
@@ -39,6 +44,23 @@ const InsightsPage = () => {
   };
 
   const activeTab = getActiveTab();
+
+  const handleInsightTypeChange = (value: string) => {
+    switch (value) {
+      case "chart":
+        navigate({
+          pathname: PAGE_ROUTES.INSIGHTS,
+          search: location.search,
+        });
+        break;
+      case "map":
+        navigate({
+          pathname: PAGE_ROUTES.INSIGHTS_MAP,
+          search: location.search,
+        });
+        break;
+    }
+  };
 
   const handleTabChange = (value: string) => {
     switch (value) {
@@ -66,17 +88,55 @@ const InsightsPage = () => {
   return (
     <PageLayout>
       <PageLayout.HeaderRegion>
-        <PageHeader title="Insights" size="wide" />
+        <PageHeader
+          title="Insights"
+          size="wide"
+          actions={
+            <ChipSingleInput
+              name="type"
+              value={isMapInsight ? "map" : "chart"}
+              onChange={handleInsightTypeChange}
+            >
+              <ChipSingleInput.Option value="chart">
+                <Icon as={ChartBarIcon} color="inherit" size="sm" />
+                Chart
+              </ChipSingleInput.Option>
+              <ChipSingleInput.Option value="map">
+                <Icon as={MapPinnedIcon} color="inherit" size="sm" />
+                Map
+              </ChipSingleInput.Option>
+            </ChipSingleInput>
+          }
+          mobileActions={
+            <ChipSingleInput
+              name="type"
+              value={isMapInsight ? "map" : "chart"}
+              onChange={handleInsightTypeChange}
+            >
+              <ChipSingleInput.Option value="chart">
+                <Icon as={ChartBarIcon} color="inherit" size="sm" />
+              </ChipSingleInput.Option>
+              <ChipSingleInput.Option value="map">
+                <Icon as={MapPinnedIcon} color="inherit" size="sm" />
+              </ChipSingleInput.Option>
+            </ChipSingleInput>
+          }
+        />
       </PageLayout.HeaderRegion>
       <PageLayout.ContentRegion>
         <Suspense fallback={<PageLoader />}>
-          <PageContent size={isMobile ? "narrow" : "wide"} className="pb-4">
-            <InsightsBalanceCard
-              summaryTransactions={transactionSummary?.data ?? []}
-            />
-            <InsightsTabs activeTab={activeTab} onTabChange={handleTabChange} />
-            <InsightsDateRangeSelector />
-          </PageContent>
+          {!isMapInsight && (
+            <PageContent size={isMobile ? "narrow" : "wide"} className="pb-4">
+              <InsightsBalanceCard
+                summaryTransactions={transactionSummary?.data ?? []}
+              />
+              <InsightsTabs
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+              />
+              <InsightsDateRangeSelector />
+            </PageContent>
+          )}
 
           <Outlet />
         </Suspense>
