@@ -15,123 +15,139 @@ import {
   captureGeolocation,
 } from "./helpers/geolocation";
 
+interface GeolocationState {
+  status: PermissionStatus;
+  coordinates: GeolocationCoordinates | null;
+  error: GeolocationError | null;
+  isCapturing: boolean;
+  isInitializing: boolean;
+}
+
 export const useGeolocation = () => {
-  const [status, setStatus] = useState<PermissionStatus>('prompt');
-  const [coordinates, setCoordinates] = useState<GeolocationCoordinates | null>(null);
-  const [error, setError] = useState<GeolocationError | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [state, setState] = useState<GeolocationState>({
+    status: "prompt",
+    coordinates: null,
+    error: null,
+    isCapturing: false,
+    isInitializing: true,
+  });
 
   // Initialize permission status and capture location on mount
   useEffect(() => {
     if (!isGeolocationSupported()) {
-      setStatus('unavailable');
-      setIsInitializing(false);
+      setState((prev) => ({
+        ...prev,
+        status: "unavailable",
+        isInitializing: false,
+      }));
       return;
     }
 
+    let permissionListener: (() => void) | null = null;
+
     const initGeolocation = async () => {
-      // Check permission status first
-      const permissionStatus = await queryPermissionStatus('geolocation');
-      setStatus(permissionStatus);
+      const permissionStatus = await queryPermissionStatus("geolocation");
 
       // Proactively capture location if granted or prompt
       // This ensures coordinates are ready before user needs them
-      if (permissionStatus === 'granted' || permissionStatus === 'prompt') {
+      if (permissionStatus === "granted" || permissionStatus === "prompt") {
         try {
           const coords = await captureGeolocation({ silent: true });
-          setCoordinates(coords);
-          setStatus('granted');
+          setState((prev) => ({
+            ...prev,
+            status: "granted",
+            coordinates: coords,
+            isInitializing: false,
+          }));
         } catch (err) {
           const geoError = err as GeolocationError;
-          // Update status based on error code
-          if (geoError.code === 1) {
-            setStatus('denied');
-          }
-          // Don't set error during initialization (silent mode)
+          setState((prev) => ({
+            ...prev,
+            status: geoError.code === 1 ? "denied" : permissionStatus,
+            isInitializing: false,
+          }));
         }
+      } else {
+        setState((prev) => ({
+          ...prev,
+          status: permissionStatus,
+          isInitializing: false,
+        }));
       }
-
-      setIsInitializing(false);
     };
 
     initGeolocation();
 
-    // Listen for permission changes (if supported)
     if (isPermissionsAPISupported()) {
-      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((result) => {
-        const handleChange = () => {
-          setStatus(result.state as PermissionStatus);
-        };
-        result.addEventListener('change', handleChange);
-      }).catch(() => {
-        // Ignore if permissions API query fails
-      });
+      navigator.permissions
+        .query({ name: "geolocation" })
+        .then((result) => {
+          const handleChange = () => {
+            setState((prev) => ({
+              ...prev,
+              status: result.state as PermissionStatus,
+            }));
+          };
+          result.addEventListener("change", handleChange);
+          permissionListener = () =>
+            result.removeEventListener("change", handleChange);
+        })
+        .catch(() => {
+          // Ignore if permissions API query fails
+        });
     }
+
+    return () => {
+      permissionListener?.();
+    };
   }, []);
 
   const captureLocation = useCallback(
     async (options?: CaptureOptions): Promise<GeolocationCoordinates> => {
-      setIsCapturing(true);
-      setError(null);
+      setState((prev) => ({ ...prev, isCapturing: true, error: null }));
 
       try {
         const coords = await captureGeolocation(options);
-        setCoordinates(coords);
-        setStatus('granted');
-        setIsCapturing(false);
+        setState((prev) => ({
+          ...prev,
+          coordinates: coords,
+          status: "granted",
+          isCapturing: false,
+        }));
         return coords;
       } catch (err) {
         const geoError = err as GeolocationError;
-
-        if (!options?.silent) {
-          setError(geoError);
-        }
-
-        // Update status based on error code
-        if (geoError.code === 1) {
-          setStatus('denied');
-        }
-
-        setIsCapturing(false);
+        setState((prev) => ({
+          ...prev,
+          error: options?.silent ? prev.error : geoError,
+          status: geoError.code === 1 ? "denied" : prev.status,
+          isCapturing: false,
+        }));
         throw geoError;
       }
     },
-    []
+    [],
   );
 
   const clearLocation = useCallback(() => {
-    setCoordinates(null);
-    setError(null);
+    setState((prev) => ({ ...prev, coordinates: null, error: null }));
   }, []);
 
-  const getCoordinates = useCallback((): { latitude?: number; longitude?: number } => {
-    // Return cached coordinates instantly (no async wait)
-    // Coordinates are already captured during initialization
-    if (coordinates) {
-      return {
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-      };
-    }
-
-    // Return undefined if no coordinates available
+  const getCoordinates = useCallback((): {
+    latitude?: number;
+    longitude?: number;
+  } => {
     return {
-      latitude: undefined,
-      longitude: undefined,
+      latitude: state.coordinates?.latitude,
+      longitude: state.coordinates?.longitude,
     };
-  }, [coordinates]);
+  }, [state.coordinates]);
 
-  // Use reusable pattern for permission flags
-  const flags = useMemo(() => getPermissionFlags(status), [status]);
+  const flags = useMemo(() => getPermissionFlags(state.status), [state.status]);
 
   return {
-    status,
-    coordinates,
-    error,
-    isCapturing,
-    isInitializing,
-    ...flags, // isGranted, isDenied, isPrompt, isUnavailable
+    ...state,
+    ...flags,
     captureLocation,
     clearLocation,
     getCoordinates,
