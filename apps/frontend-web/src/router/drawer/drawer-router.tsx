@@ -30,6 +30,7 @@ import { CategoryComparisonDrawer } from "./category-comparison-drawer";
 import { BudgetCreateDrawer } from "./budget-create-drawer";
 import { BudgetUpdateDrawer } from "./budget-update-drawer";
 import { BudgetGeneratedUpdateDrawer } from "./budget-generated-update-drawer";
+import { TransactionSelectSingleDrawer } from "./transaction-select-single-drawer";
 
 interface DrawerParams {
   accountId?: number;
@@ -65,6 +66,7 @@ export const DrawerRouter = () => {
     [
       DRAWER_ROUTES.SELECT_SINGLE_ACCOUNT,
       DRAWER_ROUTES.SELECT_SINGLE_CATEGORY,
+      DRAWER_ROUTES.SELECT_SINGLE_TRANSACTION,
     ] as string[]
   ).includes(drawerId || "");
 
@@ -183,6 +185,17 @@ export const DrawerRouter = () => {
         hasState("returnToDrawer") &&
         hasParam("payloadId") && (
           <CategorySelectSingleDrawer
+            payloadId={params.payloadId!}
+            payload={state.payload!}
+            returnToDrawer={state.returnToDrawer!}
+            returnToDrawerId={state.returnToDrawerId!}
+          />
+        )}
+      {is(DRAWER_ROUTES.SELECT_SINGLE_TRANSACTION) &&
+        hasState("payload") &&
+        hasState("returnToDrawer") &&
+        hasParam("payloadId") && (
+          <TransactionSelectSingleDrawer
             payloadId={params.payloadId!}
             payload={state.payload!}
             returnToDrawer={state.returnToDrawer!}

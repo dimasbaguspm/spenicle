@@ -20,6 +20,9 @@ export interface TransactionFilterModel {
   sortOrder?: TransactionSearchModel["sortOrder"];
   pageNumber?: TransactionSearchModel["pageNumber"];
   pageSize?: TransactionSearchModel["pageSize"];
+  lat?: TransactionSearchModel["latitude"];
+  lng?: TransactionSearchModel["longitude"];
+  maxRadius?: TransactionSearchModel["radiusMeters"];
 }
 
 export interface UseTransactionFilterReturn extends UseFilterStateReturn<TransactionFilterModel> {
@@ -42,6 +45,9 @@ const transactionFilterModel = new Map<keyof TransactionFilterModel, string>([
   ["sortOrder", "Sort Order"],
   ["pageNumber", "Page Number"],
   ["pageSize", "Page Size"],
+  ["lat", "Latitude"],
+  ["lng", "Longitude"],
+  ["maxRadius", "Max Radius"],
 ] as const);
 
 export const transactionFilterModelKeys = Array.from(
@@ -108,6 +114,18 @@ const isValidTypeArray = (
   return (
     Array.isArray(value) && value.every((item) => isValidTransactionType(item))
   );
+};
+
+const isValidLatitude = (value: any): value is number => {
+  return isValidNumber(value) && value >= -90 && value <= 90;
+};
+
+const isValidLongitude = (value: any): value is number => {
+  return isValidNumber(value) && value >= -180 && value <= 180;
+};
+
+const isValidMaxRadius = (value: any): value is number => {
+  return isValidPositiveNumber(value) && value >= 100 && value <= 50000;
 };
 
 export const useTransactionFilter = (
@@ -182,6 +200,21 @@ export const useTransactionFilter = (
       const numSize = size ? Number(size) : undefined;
       return isValidPageSize(numSize) ? numSize : 25;
     })(),
+    lat: (() => {
+      const lat = filters.getSingle("lat");
+      const numLat = lat ? Number(lat) : undefined;
+      return isValidLatitude(numLat) ? numLat : undefined;
+    })(),
+    lng: (() => {
+      const lng = filters.getSingle("lng");
+      const numLng = lng ? Number(lng) : undefined;
+      return isValidLongitude(numLng) ? numLng : undefined;
+    })(),
+    maxRadius: (() => {
+      const radius = filters.getSingle("maxRadius");
+      const numRadius = radius ? Number(radius) : undefined;
+      return isValidMaxRadius(numRadius) ? numRadius : undefined;
+    })(),
   };
 
   const humanizedFilters = transactionFilterModelKeys.reduce(
@@ -245,6 +278,21 @@ export const useTransactionFilter = (
           break;
         case "pageSize":
           if (appliedFilters?.pageSize) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "lat":
+          if (appliedFilters?.lat !== undefined) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "lng":
+          if (appliedFilters?.lng !== undefined) {
+            acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
+          }
+          break;
+        case "maxRadius":
+          if (appliedFilters?.maxRadius !== undefined) {
             acc.push([typedKey, transactionFilterModel.get(typedKey)!]);
           }
           break;
