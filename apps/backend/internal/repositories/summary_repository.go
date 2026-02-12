@@ -270,3 +270,99 @@ func (sr SummaryRepository) GetCategorySummary(ctx context.Context, p models.Sum
 		Data: items,
 	}, nil
 }
+
+func (sr SummaryRepository) GetGeospatialSummary(ctx context.Context, p models.SummaryGeospatialSearchModel) (models.SummaryGeospatialListModel, error) {
+	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
+	defer cancel()
+
+	sql := `
+		WITH radius_filtered_transactions AS (
+			SELECT
+				id,
+				type,
+				amount,
+				latitude,
+				longitude,
+				-- Haversine distance calculation in kilometers
+				(6371 * acos(
+					cos(radians($1)) * cos(radians(latitude)) *
+					cos(radians(longitude) - radians($2)) +
+					sin(radians($1)) * sin(radians(latitude))
+				)) as distance_km
+			FROM transactions
+			WHERE deleted_at IS NULL
+				AND latitude IS NOT NULL
+				AND longitude IS NOT NULL
+				AND date >= $3::timestamptz
+				AND date <= $4::timestamptz
+		),
+		grid_aggregation AS (
+			SELECT
+				ROUND(latitude::numeric, $6) as grid_lat,
+				ROUND(longitude::numeric, $6) as grid_lon,
+				COUNT(*) as transaction_count,
+				COALESCE(SUM(amount), 0) as total_amount,
+				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as income_amount,
+				COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) as expense_amount,
+				COUNT(*) FILTER (WHERE type = 'income') as income_count,
+				COUNT(*) FILTER (WHERE type = 'expense') as expense_count,
+				COUNT(*) FILTER (WHERE type = 'transfer') as transfer_count
+			FROM radius_filtered_transactions
+			WHERE distance_km <= ($5::numeric / 1000.0)
+			GROUP BY grid_lat, grid_lon
+		)
+		SELECT
+			grid_lat,
+			grid_lon,
+			transaction_count,
+			total_amount,
+			income_amount,
+			expense_amount,
+			income_count,
+			expense_count,
+			transfer_count
+		FROM grid_aggregation
+		ORDER BY transaction_count DESC
+	`
+
+	queryStart := time.Now()
+	rows, err := sr.db.Query(ctx, sql, p.Latitude, p.Longitude, p.StartDate, p.EndDate, p.RadiusMeters, p.GridPrecision)
+	if err != nil {
+		observability.RecordError("database")
+		return models.SummaryGeospatialListModel{}, huma.Error500InternalServerError("query geospatial summary: %w", err)
+	}
+	defer rows.Close()
+	observability.RecordQueryDuration("SELECT", "transactions", time.Since(queryStart).Seconds())
+
+	var items []models.SummaryGeospatialGridCell
+	for rows.Next() {
+		var item models.SummaryGeospatialGridCell
+		if err := rows.Scan(
+			&item.GridLat,
+			&item.GridLon,
+			&item.TransactionCount,
+			&item.TotalAmount,
+			&item.IncomeAmount,
+			&item.ExpenseAmount,
+			&item.IncomeCount,
+			&item.ExpenseCount,
+			&item.TransferCount,
+		); err != nil {
+			return models.SummaryGeospatialListModel{}, huma.Error500InternalServerError("scan geospatial summary: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	if items == nil {
+		items = []models.SummaryGeospatialGridCell{}
+	}
+
+	return models.SummaryGeospatialListModel{
+		CenterLat:     p.Latitude,
+		CenterLon:     p.Longitude,
+		RadiusMeters:  p.RadiusMeters,
+		GridPrecision: p.GridPrecision,
+		TotalCells:    len(items),
+		Data:          items,
+	}, nil
+}

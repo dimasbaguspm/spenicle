@@ -54,6 +54,17 @@ func (sr SummaryResource) Routes(api huma.API) {
 			{"bearer": {}},
 		},
 	}, sr.GetCategorySummary)
+	huma.Register(api, huma.Operation{
+		OperationID: "get-geospatial-summary",
+		Method:      http.MethodGet,
+		Path:        "/summary/geospatial",
+		Summary:     "Get geospatial transaction summary",
+		Description: "Returns transaction summary aggregated by geographic grid cells within a radius",
+		Tags:        []string{"Summary"},
+		Security: []map[string][]string{
+			{"bearer": {}},
+		},
+	}, sr.GetGeospatialSummary)
 }
 func (sr SummaryResource) GetTransactionSummary(ctx context.Context, input *struct {
 	models.SummaryTransactionSearchModel
@@ -114,6 +125,28 @@ func (sr SummaryResource) GetCategorySummary(ctx context.Context, input *struct 
 	logger.Info("start")
 	return &struct {
 		Body models.SummaryCategoryListModel
+	}{
+		Body: resp,
+	}, nil
+}
+
+func (sr SummaryResource) GetGeospatialSummary(ctx context.Context, input *struct {
+	models.SummaryGeospatialSearchModel
+}) (*struct {
+	Body models.SummaryGeospatialListModel
+}, error) {
+	start := time.Now()
+	defer func() { observability.RecordServiceOperation("summary", "GET", time.Since(start).Seconds()) }()
+	logger := observability.GetLogger(ctx).With("resource", "SummaryResource", "operation", "GetGeospatialSummary")
+	logger.Info("start")
+	resp, err := sr.sevs.Sum.GetGeospatialSummary(ctx, input.SummaryGeospatialSearchModel)
+	if err != nil {
+		logger.Error("error", "error", err)
+		return nil, err
+	}
+	logger.Info("complete", "totalCells", resp.TotalCells)
+	return &struct {
+		Body models.SummaryGeospatialListModel
 	}{
 		Body: resp,
 	}, nil

@@ -157,6 +157,13 @@ export type InsightsTransactionsSearchModel = NonNullable<
 export type InsightsTransactionModel =
   paths["/summary/transactions"]["get"]["responses"]["200"]["content"]["application/json"];
 
+// Geospatial Summary Types
+export type InsightsGeospatialSearchModel = NonNullable<
+  paths["/summary/geospatial"]["get"]["parameters"]["query"]
+>;
+export type InsightsGeospatialModel =
+  paths["/summary/geospatial"]["get"]["responses"]["200"]["content"]["application/json"];
+
 // export type InsightsTotalSearchModel = NonNullable<
 //   paths["/summary/total"]["get"]["parameters"]["query"]
 // >;

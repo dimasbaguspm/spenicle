@@ -1995,6 +1995,122 @@ components:
         - expenseAmount
         - net
       type: object
+    SummaryGeospatialGridCell:
+      additionalProperties: false
+      properties:
+        expenseAmount:
+          description: Total expense amount
+          examples:
+            - 3000000
+          format: int64
+          type: integer
+        expenseCount:
+          description: Number of expense transactions
+          examples:
+            - 28
+          format: int64
+          type: integer
+        gridLat:
+          description: Grid cell center latitude
+          examples:
+            - -6.175
+          format: double
+          type: number
+        gridLon:
+          description: Grid cell center longitude
+          examples:
+            - 106.827
+          format: double
+          type: number
+        incomeAmount:
+          description: Total income amount
+          examples:
+            - 2000000
+          format: int64
+          type: integer
+        incomeCount:
+          description: Number of income transactions
+          examples:
+            - 15
+          format: int64
+          type: integer
+        totalAmount:
+          description: Total transaction amount in this grid cell
+          examples:
+            - 5000000
+          format: int64
+          type: integer
+        transactionCount:
+          description: Total number of transactions in this grid cell
+          examples:
+            - 45
+          format: int64
+          type: integer
+        transferCount:
+          description: Number of transfer transactions
+          examples:
+            - 2
+          format: int64
+          type: integer
+      required:
+        - gridLat
+        - gridLon
+        - transactionCount
+        - totalAmount
+        - incomeAmount
+        - expenseAmount
+        - incomeCount
+        - expenseCount
+        - transferCount
+      type: object
+    SummaryGeospatialListModel:
+      additionalProperties: false
+      properties:
+        centerLat:
+          description: Search center latitude
+          examples:
+            - -6.175
+          format: double
+          type: number
+        centerLon:
+          description: Search center longitude
+          examples:
+            - 106.827
+          format: double
+          type: number
+        data:
+          description: Grid cells with aggregated transaction data
+          items:
+            $ref: "#/components/schemas/SummaryGeospatialGridCell"
+          type:
+            - array
+            - "null"
+        gridPrecision:
+          description: Grid cell precision level
+          examples:
+            - 3
+          format: int64
+          type: integer
+        radiusMeters:
+          description: Search radius in meters
+          examples:
+            - 5000
+          format: int64
+          type: integer
+        totalCells:
+          description: Total number of grid cells with transactions
+          examples:
+            - 8
+          format: int64
+          type: integer
+      required:
+        - centerLat
+        - centerLon
+        - radiusMeters
+        - gridPrecision
+        - totalCells
+        - data
+      type: object
     SummaryTransactionListModel:
       additionalProperties: false
       properties:
@@ -4783,6 +4899,109 @@ paths:
       security:
         - bearer: []
       summary: Get category summary
+      tags:
+        - Summary
+  /summary/geospatial:
+    get:
+      description: Returns transaction summary aggregated by geographic grid cells within a radius
+      operationId: get-geospatial-summary
+      parameters:
+        - description: Start date for filtering (ISO 8601 format)
+          example: "2024-01-01T00:00:00Z"
+          explode: false
+          in: query
+          name: startDate
+          required: true
+          schema:
+            description: Start date for filtering (ISO 8601 format)
+            examples:
+              - "2024-01-01T00:00:00Z"
+            format: date-time
+            type: string
+        - description: End date for filtering (ISO 8601 format)
+          example: "2024-12-31T23:59:59Z"
+          explode: false
+          in: query
+          name: endDate
+          required: true
+          schema:
+            description: End date for filtering (ISO 8601 format)
+            examples:
+              - "2024-12-31T23:59:59Z"
+            format: date-time
+            type: string
+        - description: Center latitude for geographic search
+          example: -6.175
+          explode: false
+          in: query
+          name: latitude
+          required: true
+          schema:
+            description: Center latitude for geographic search
+            examples:
+              - -6.175
+            format: double
+            maximum: 90
+            minimum: -90
+            type: number
+        - description: Center longitude for geographic search
+          example: 106.827
+          explode: false
+          in: query
+          name: longitude
+          required: true
+          schema:
+            description: Center longitude for geographic search
+            examples:
+              - 106.827
+            format: double
+            maximum: 180
+            minimum: -180
+            type: number
+        - description: Search radius in meters
+          example: 5000
+          explode: false
+          in: query
+          name: radiusMeters
+          schema:
+            default: 5000
+            description: Search radius in meters
+            examples:
+              - 5000
+            format: int64
+            maximum: 50000
+            minimum: 100
+            type: integer
+        - description: Grid cell precision (1=~11km, 2=~1.1km, 3=~110m, 4=~11m)
+          example: 3
+          explode: false
+          in: query
+          name: gridPrecision
+          schema:
+            default: 3
+            description: Grid cell precision (1=~11km, 2=~1.1km, 3=~110m, 4=~11m)
+            examples:
+              - 3
+            format: int64
+            maximum: 4
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryGeospatialListModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - bearer: []
+      summary: Get geospatial transaction summary
       tags:
         - Summary
   /summary/transactions:

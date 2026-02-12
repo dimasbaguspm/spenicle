@@ -56,3 +56,32 @@ type SummaryCategoryModel struct {
 type SummaryCategoryListModel struct {
 	Data []SummaryCategoryModel `json:"data" doc:"Summary data grouped by category"`
 }
+
+type SummaryGeospatialSearchModel struct {
+	SummarySearchModel
+	Latitude      float64 `query:"latitude" required:"true" minimum:"-90" maximum:"90" doc:"Center latitude for geographic search" example:"-6.175"`
+	Longitude     float64 `query:"longitude" required:"true" minimum:"-180" maximum:"180" doc:"Center longitude for geographic search" example:"106.827"`
+	RadiusMeters  int     `query:"radiusMeters" default:"5000" minimum:"100" maximum:"50000" doc:"Search radius in meters" example:"5000"`
+	GridPrecision int     `query:"gridPrecision" default:"3" minimum:"1" maximum:"4" doc:"Grid cell precision (1=~11km, 2=~1.1km, 3=~110m, 4=~11m)" example:"3"`
+}
+
+type SummaryGeospatialGridCell struct {
+	GridLat          float64 `json:"gridLat" doc:"Grid cell center latitude" example:"-6.175"`
+	GridLon          float64 `json:"gridLon" doc:"Grid cell center longitude" example:"106.827"`
+	TransactionCount int     `json:"transactionCount" doc:"Total number of transactions in this grid cell" example:"45"`
+	TotalAmount      int64   `json:"totalAmount" doc:"Total transaction amount in this grid cell" example:"5000000"`
+	IncomeAmount     int64   `json:"incomeAmount" doc:"Total income amount" example:"2000000"`
+	ExpenseAmount    int64   `json:"expenseAmount" doc:"Total expense amount" example:"3000000"`
+	IncomeCount      int     `json:"incomeCount" doc:"Number of income transactions" example:"15"`
+	ExpenseCount     int     `json:"expenseCount" doc:"Number of expense transactions" example:"28"`
+	TransferCount    int     `json:"transferCount" doc:"Number of transfer transactions" example:"2"`
+}
+
+type SummaryGeospatialListModel struct {
+	CenterLat     float64                      `json:"centerLat" doc:"Search center latitude" example:"-6.175"`
+	CenterLon     float64                      `json:"centerLon" doc:"Search center longitude" example:"106.827"`
+	RadiusMeters  int                          `json:"radiusMeters" doc:"Search radius in meters" example:"5000"`
+	GridPrecision int                          `json:"gridPrecision" doc:"Grid cell precision level" example:"3"`
+	TotalCells    int                          `json:"totalCells" doc:"Total number of grid cells with transactions" example:"8"`
+	Data          []SummaryGeospatialGridCell  `json:"data" doc:"Grid cells with aggregated transaction data"`
+}

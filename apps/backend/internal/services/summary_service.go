@@ -52,3 +52,14 @@ func (ss SummaryService) GetCategorySummary(ctx context.Context, p models.Summar
 		return ss.rpts.Sum.GetCategorySummary(ctx, p)
 	}, "summary")
 }
+
+func (ss SummaryService) GetGeospatialSummary(ctx context.Context, p models.SummaryGeospatialSearchModel) (models.SummaryGeospatialListModel, error) {
+	if p.EndDate.Before(p.StartDate) {
+		return models.SummaryGeospatialListModel{}, huma.Error400BadRequest("endDate must be after or equal to startDate")
+	}
+
+	cacheKey := common.BuildPagedCacheKey(constants.SummaryGeospatial, p)
+	return common.FetchWithCache(ctx, ss.rdb, cacheKey, constants.CacheTTLSummary, func(ctx context.Context) (models.SummaryGeospatialListModel, error) {
+		return ss.rpts.Sum.GetGeospatialSummary(ctx, p)
+	}, "summary")
+}

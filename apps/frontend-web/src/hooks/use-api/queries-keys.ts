@@ -191,6 +191,11 @@ export const QUERY_KEYS = {
       "transactions-summary",
       JSON.stringify(params ?? {}),
     ],
+    GEOSPATIAL_SUMMARY: (params: object = {}) => [
+      ...BASE_QUERY_KEYS.INSIGHTS,
+      "geospatial-summary",
+      JSON.stringify(params ?? {}),
+    ],
     TOTAL_SUMMARY: (params: object = {}) => [
       ...BASE_QUERY_KEYS.INSIGHTS,
       "total-summary",

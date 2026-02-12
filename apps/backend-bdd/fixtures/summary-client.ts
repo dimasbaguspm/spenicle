@@ -12,6 +12,8 @@ export type SummaryCategoryResponseModel =
   components["schemas"]["SummaryCategoryListModel"];
 export type SummaryTransactionResponseModel =
   components["schemas"]["SummaryTransactionListModel"];
+export type SummaryGeospatialResponseModel =
+  components["schemas"]["SummaryGeospatialListModel"];
 
 /**
  * Query parameter types
@@ -22,6 +24,8 @@ export type CategorySummaryParams =
   operations["get-category-summary"]["parameters"]["query"];
 export type TransactionSummaryParams =
   operations["get-transaction-summary"]["parameters"]["query"];
+export type GeospatialSummaryParams =
+  operations["get-geospatial-summary"]["parameters"]["query"];
 
 /**
  * Summary API client for analytics and aggregation endpoints
@@ -63,6 +67,19 @@ export class SummaryAPIClient extends BaseAPIClient {
   ): Promise<APIResponse<SummaryTransactionResponseModel>> {
     return this.get<SummaryTransactionResponseModel>(
       "/summary/transactions",
+      params
+    );
+  }
+
+  /**
+   * Get geospatial transaction aggregation
+   * Returns transactions aggregated by geographic grid cells within a radius
+   */
+  async getGeospatialSummary(
+    params: GeospatialSummaryParams
+  ): Promise<APIResponse<SummaryGeospatialResponseModel>> {
+    return this.get<SummaryGeospatialResponseModel>(
+      "/summary/geospatial",
       params
     );
   }

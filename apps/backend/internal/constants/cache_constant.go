@@ -20,6 +20,7 @@ const (
 	SummaryAccount     = "summary:account"
 	SummaryCategory    = "summary:category"
 	SummaryTransaction = "summary:transaction"
+	SummaryGeospatial  = "summary:geospatial"
 )
 
 // Cache TTLs for different cache operation types
@@ -75,6 +76,7 @@ var EntityCachePatterns = map[string][]string{
 		SummaryTransaction + ":*",
 		SummaryAccount + ":*",
 		SummaryCategory + ":*",
+		SummaryGeospatial + ":*",
 	},
 	EntityTransactionTag: {
 		"transaction_tag:detail:*",

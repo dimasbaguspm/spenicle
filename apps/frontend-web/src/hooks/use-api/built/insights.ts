@@ -5,6 +5,8 @@ import type {
   InsightsCategorySearchModel,
   InsightsTransactionModel,
   InsightsTransactionsSearchModel,
+  InsightsGeospatialSearchModel,
+  InsightsGeospatialModel,
 } from "@/types/schemas";
 
 import { ENDPOINTS } from "../constant";
@@ -65,4 +67,22 @@ export const useApiInsightsTransactionsSummaryQuery = (
       path: ENDPOINTS.INSIGHTS.TRANSACTIONS_SUMMARY,
     },
   );
+};
+
+export const useApiInsightsGeospatialSummaryQuery = (
+  params: InsightsGeospatialSearchModel,
+  options?: Partial<
+    UseApiQueryOptions<
+      InsightsGeospatialModel,
+      InsightsGeospatialSearchModel,
+      unknown
+    >
+  >,
+) => {
+  return useApiQuery<InsightsGeospatialModel, InsightsGeospatialSearchModel>({
+    ...options,
+    queryParams: params,
+    queryKey: QUERY_KEYS.INSIGHTS.GEOSPATIAL_SUMMARY(params),
+    path: ENDPOINTS.INSIGHTS.GEOSPATIAL_SUMMARY,
+  });
 };

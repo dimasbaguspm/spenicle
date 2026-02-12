@@ -620,6 +620,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/summary/geospatial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get geospatial transaction summary
+         * @description Returns transaction summary aggregated by geographic grid cells within a radius
+         */
+        get: operations["get-geospatial-summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/summary/transactions": {
         parameters: {
             query?: never;
@@ -2354,6 +2374,96 @@ export interface components {
              * @enum {string}
              */
             type: "income" | "expense" | "transfer";
+        };
+        SummaryGeospatialGridCell: {
+            /**
+             * Format: int64
+             * @description Total expense amount
+             * @example 3000000
+             */
+            expenseAmount: number;
+            /**
+             * Format: int64
+             * @description Number of expense transactions
+             * @example 28
+             */
+            expenseCount: number;
+            /**
+             * Format: double
+             * @description Grid cell center latitude
+             * @example -6.175
+             */
+            gridLat: number;
+            /**
+             * Format: double
+             * @description Grid cell center longitude
+             * @example 106.827
+             */
+            gridLon: number;
+            /**
+             * Format: int64
+             * @description Total income amount
+             * @example 2000000
+             */
+            incomeAmount: number;
+            /**
+             * Format: int64
+             * @description Number of income transactions
+             * @example 15
+             */
+            incomeCount: number;
+            /**
+             * Format: int64
+             * @description Total transaction amount in this grid cell
+             * @example 5000000
+             */
+            totalAmount: number;
+            /**
+             * Format: int64
+             * @description Total number of transactions in this grid cell
+             * @example 45
+             */
+            transactionCount: number;
+            /**
+             * Format: int64
+             * @description Number of transfer transactions
+             * @example 2
+             */
+            transferCount: number;
+        };
+        SummaryGeospatialListModel: {
+            /**
+             * Format: double
+             * @description Search center latitude
+             * @example -6.175
+             */
+            centerLat: number;
+            /**
+             * Format: double
+             * @description Search center longitude
+             * @example 106.827
+             */
+            centerLon: number;
+            /** @description Grid cells with aggregated transaction data */
+            data: components["schemas"]["SummaryGeospatialGridCell"][] | null;
+            /**
+             * Format: int64
+             * @description Grid cell precision level
+             * @example 3
+             */
+            gridPrecision: number;
+            /**
+             * Format: int64
+             * @description Search radius in meters
+             * @example 5000
+             */
+            radiusMeters: number;
+            /**
+             * Format: int64
+             * @description Total number of grid cells with transactions
+             * @example 8
+             */
+            totalCells: number;
         };
         SummaryTransactionListModel: {
             /** @description Summary data grouped by period */
@@ -4494,6 +4604,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SummaryCategoryListModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-geospatial-summary": {
+        parameters: {
+            query: {
+                /**
+                 * @description Start date for filtering (ISO 8601 format)
+                 * @example 2024-01-01T00:00:00Z
+                 */
+                startDate: string;
+                /**
+                 * @description End date for filtering (ISO 8601 format)
+                 * @example 2024-12-31T23:59:59Z
+                 */
+                endDate: string;
+                /**
+                 * @description Center latitude for geographic search
+                 * @example -6.175
+                 */
+                latitude: number;
+                /**
+                 * @description Center longitude for geographic search
+                 * @example 106.827
+                 */
+                longitude: number;
+                /**
+                 * @description Search radius in meters
+                 * @example 5000
+                 */
+                radiusMeters?: number;
+                /**
+                 * @description Grid cell precision (1=~11km, 2=~1.1km, 3=~110m, 4=~11m)
+                 * @example 3
+                 */
+                gridPrecision?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryGeospatialListModel"];
                 };
             };
             /** @description Error */

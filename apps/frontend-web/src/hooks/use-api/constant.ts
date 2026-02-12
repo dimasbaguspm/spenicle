@@ -73,6 +73,7 @@ export const ENDPOINTS = {
     ACCOUNTS_SUMMARY: "/summary/accounts",
     CATEGORIES_SUMMARY: "/summary/categories",
     TRANSACTIONS_SUMMARY: "/summary/transactions",
+    GEOSPATIAL_SUMMARY: "/summary/geospatial",
   },
   TAGS: {
     PAGINATED: "/tags",
