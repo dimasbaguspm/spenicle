@@ -5,3 +5,4 @@ export * from "./transactions";
 export * from "./insights";
 export * from "./transaction-templates";
 export * from "./budgets";
+export * from "./preferences";

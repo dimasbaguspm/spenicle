@@ -9,6 +9,7 @@ export const BASE_QUERY_KEYS = {
   TRANSACTION_TEMPLATES: ["transaction-templates"],
   INSIGHTS: ["insights"],
   BUDGETS: ["budgets"],
+  PREFERENCES: ["preferences"],
 };
 
 export const ENDPOINTS = {
@@ -89,5 +90,8 @@ export const ENDPOINTS = {
       templateId: number | string,
       budgetId: number | string,
     ) => `/budgets/${templateId}/list/${budgetId}`,
+  },
+  PREFERENCES: {
+    REFRESH_GEO_CACHE: "/preferences/refresh-geo-cache",
   },
 };

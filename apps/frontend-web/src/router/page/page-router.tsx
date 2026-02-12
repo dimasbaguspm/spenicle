@@ -6,6 +6,7 @@ import {
 } from "react-router";
 
 import { AppLayout } from "@/components/app-layout";
+import { GeoCacheInitializer } from "@/components/geo-cache-initializer";
 import { lazy, Suspense } from "react";
 import { PAGE_ROUTES } from "@/constant/page-routes";
 import { DrawerProvider } from "@/providers/drawer-provider";
@@ -77,6 +78,7 @@ const router = createBrowserRouter([
                 <ModalProvider>
                   <BottomSheetProvider>
                     <AppLayout>
+                      <GeoCacheInitializer />
                       <Outlet />
                       <DrawerRouter />
                       <ModalRouter />

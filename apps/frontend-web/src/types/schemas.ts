@@ -230,3 +230,6 @@ export type TransactionTemplateDeleteModel =
   paths["/transaction-templates/{templateId}"]["delete"]["parameters"]["path"];
 export type TransactionTemplateModel =
   paths["/transaction-templates/{templateId}"]["get"]["responses"]["200"]["content"]["application/json"];
+
+export type RefreshGeoCacheRequestModel =
+  paths["/preferences/refresh-geo-cache"]["post"]["requestBody"]["content"]["application/json"];

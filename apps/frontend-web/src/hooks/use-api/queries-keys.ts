@@ -197,4 +197,7 @@ export const QUERY_KEYS = {
       JSON.stringify(params ?? {}),
     ],
   },
+  PREFERENCES: {
+    GEO_CACHE: () => [...BASE_QUERY_KEYS.PREFERENCES, "geo-cache"],
+  },
 };
