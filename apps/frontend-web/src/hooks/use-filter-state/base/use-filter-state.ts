@@ -27,18 +27,14 @@ export interface UseFilterStateReturn<T extends object> {
   /**
    * Replace all filters with new values
    */
-  replaceAll: (
-    filters: Partial<
-      Record<keyof T, string | string[] | number | number[] | undefined>
-    >
-  ) => void;
+  replaceAll: (filters: Partial<T>) => void;
 
   /**
    * Replace a single filter with new value(s)
    */
   replaceSingle: (
     key: keyof T,
-    value: string | string[] | number | number[] | undefined
+    value: string | string[] | number | number[] | undefined,
   ) => void;
 
   /**
@@ -92,7 +88,7 @@ export interface UseFilterStateOptions<T> {
  * Provides CRUD operations with clear responsibilities
  */
 export const useFilterState = <T extends object>(
-  options: UseFilterStateOptions<T> = {}
+  options: UseFilterStateOptions<T> = {},
 ): UseFilterStateReturn<T> => {
   const {
     defaultValues = {},
@@ -104,7 +100,7 @@ export const useFilterState = <T extends object>(
   // Built-in adapters
   const urlAdapter = (): FilterStateAdapter => {
     const [searchParams, setSearchParams] = useSearchParams(
-      new URLSearchParams(defaultValues as Record<string, string>)
+      new URLSearchParams(defaultValues as Record<string, string>),
     );
     return {
       getParams: () => searchParams,
@@ -114,7 +110,7 @@ export const useFilterState = <T extends object>(
 
   const stateAdapter = (): FilterStateAdapter => {
     const [searchParams, setSearchParams] = useState(
-      () => new URLSearchParams(defaultValues as Record<string, string>)
+      () => new URLSearchParams(defaultValues as Record<string, string>),
     );
     return {
       getParams: () => searchParams,
@@ -137,11 +133,7 @@ export const useFilterState = <T extends object>(
     return searchParams.getAll(String(key));
   };
 
-  const replaceAll = (
-    filters: Partial<
-      Record<keyof T, string | string[] | number | number[] | undefined>
-    >
-  ) => {
+  const replaceAll = (filters: Partial<T>) => {
     const newParams = new URLSearchParams();
 
     Object.entries(filters).forEach(([key, value]) => {
@@ -165,7 +157,7 @@ export const useFilterState = <T extends object>(
 
   const replaceSingle = (
     key: keyof T,
-    value: string | string[] | number | number[] | undefined
+    value: string | string[] | number | number[] | undefined,
   ) => {
     const newParams = new URLSearchParams(searchParams);
     const keyStr = String(key);

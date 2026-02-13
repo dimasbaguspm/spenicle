@@ -1,4 +1,4 @@
-import { PAGE_ROUTES } from "@/constant/page-routes";
+import { DEEP_PAGE_LINKS, PAGE_ROUTES } from "@/constant/page-routes";
 import { useApiInsightsTransactionsSummaryQuery } from "@/hooks/use-api";
 import { useInsightFilter } from "@/hooks/use-filter-state";
 import {
@@ -49,13 +49,13 @@ const InsightsPage = () => {
     switch (value) {
       case "chart":
         navigate({
-          pathname: PAGE_ROUTES.INSIGHTS,
+          pathname: DEEP_PAGE_LINKS.INSIGHTS.path,
           search: location.search,
         });
         break;
       case "map":
         navigate({
-          pathname: PAGE_ROUTES.INSIGHTS_MAP,
+          pathname: DEEP_PAGE_LINKS.INSIGHTS_MAP.path,
           search: location.search,
         });
         break;
@@ -66,19 +66,19 @@ const InsightsPage = () => {
     switch (value) {
       case "overview":
         navigate({
-          pathname: PAGE_ROUTES.INSIGHTS,
+          pathname: DEEP_PAGE_LINKS.INSIGHTS.path,
           search: location.search,
         });
         break;
       case "accounts":
         navigate({
-          pathname: PAGE_ROUTES.INSIGHTS_ACCOUNTS,
+          pathname: DEEP_PAGE_LINKS.INSIGHTS_ACCOUNTS.path,
           search: location.search,
         });
         break;
       case "categories":
         navigate({
-          pathname: PAGE_ROUTES.INSIGHTS_CATEGORIES,
+          pathname: DEEP_PAGE_LINKS.INSIGHTS_CATEGORIES.path,
           search: location.search,
         });
         break;
