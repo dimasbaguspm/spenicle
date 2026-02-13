@@ -276,19 +276,17 @@ func (sr SummaryRepository) GetGeospatialSummary(ctx context.Context, p models.S
 	defer cancel()
 
 	sql := `
-		WITH radius_filtered_transactions AS (
+		WITH
+		-- Step 1: Round all transactions to grid cells
+		geo_transactions AS (
 			SELECT
 				id,
 				type,
 				amount,
 				latitude,
 				longitude,
-				-- Haversine distance calculation in kilometers
-				(6371 * acos(
-					cos(radians($1)) * cos(radians(latitude)) *
-					cos(radians(longitude) - radians($2)) +
-					sin(radians($1)) * sin(radians(latitude))
-				)) as distance_km
+				ROUND(latitude::numeric, $6) as grid_lat,
+				ROUND(longitude::numeric, $6) as grid_lon
 			FROM transactions
 			WHERE deleted_at IS NULL
 				AND latitude IS NOT NULL
@@ -296,10 +294,33 @@ func (sr SummaryRepository) GetGeospatialSummary(ctx context.Context, p models.S
 				AND date >= $3::timestamptz
 				AND date <= $4::timestamptz
 		),
+
+		-- Step 2: Calculate distance from center to GRID CELL CENTER (not individual transactions)
+		filtered_grid_cells AS (
+			SELECT DISTINCT
+				grid_lat,
+				grid_lon,
+				-- Haversine distance to grid cell center
+				(6371 * acos(
+					cos(radians($1)) * cos(radians(grid_lat)) *
+					cos(radians(grid_lon) - radians($2)) +
+					sin(radians($1)) * sin(radians(grid_lat))
+				)) as distance_km
+			FROM geo_transactions
+		),
+
+		-- Step 3: Keep only grid cells within radius
+		included_cells AS (
+			SELECT grid_lat, grid_lon
+			FROM filtered_grid_cells
+			WHERE distance_km <= ($5::numeric / 1000.0)
+		),
+
+		-- Step 4: Aggregate ALL transactions in included grid cells
 		grid_aggregation AS (
 			SELECT
-				ROUND(latitude::numeric, $6) as grid_lat,
-				ROUND(longitude::numeric, $6) as grid_lon,
+				gt.grid_lat,
+				gt.grid_lon,
 				COUNT(*) as transaction_count,
 				COALESCE(SUM(amount), 0) as total_amount,
 				COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) as income_amount,
@@ -307,10 +328,13 @@ func (sr SummaryRepository) GetGeospatialSummary(ctx context.Context, p models.S
 				COUNT(*) FILTER (WHERE type = 'income') as income_count,
 				COUNT(*) FILTER (WHERE type = 'expense') as expense_count,
 				COUNT(*) FILTER (WHERE type = 'transfer') as transfer_count
-			FROM radius_filtered_transactions
-			WHERE distance_km <= ($5::numeric / 1000.0)
-			GROUP BY grid_lat, grid_lon
+			FROM geo_transactions gt
+			INNER JOIN included_cells ic
+				ON gt.grid_lat = ic.grid_lat
+				AND gt.grid_lon = ic.grid_lon
+			GROUP BY gt.grid_lat, gt.grid_lon
 		)
+
 		SELECT
 			grid_lat,
 			grid_lon,
