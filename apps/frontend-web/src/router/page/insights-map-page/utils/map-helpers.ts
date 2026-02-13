@@ -1,8 +1,8 @@
 export const getPrecisionFromZoom = (zoom: number): 1 | 2 | 3 | 4 => {
-  if (zoom <= 10) return 1;  // World/country: 11km grids
-  if (zoom <= 13) return 2;  // Regional: 1.1km grids
-  if (zoom <= 16) return 3;  // City: 110m grids
-  return 4;                  // Neighborhood: 11m grids
+  if (zoom <= 11) return 1; // World/country: 11km grids
+  if (zoom <= 13) return 2; // Regional: 1.1km grids
+  if (zoom <= 16) return 3; // City: 110m grids
+  return 4; // Neighborhood: 11m grids
 };
 
 export const getZoomFromPrecision = (precision: 1 | 2 | 3 | 4): number => {
@@ -16,10 +16,10 @@ export const getZoomFromPrecision = (precision: 1 | 2 | 3 | 4): number => {
  */
 export const getRadiusFromPrecision = (precision: 1 | 2 | 3 | 4): number => {
   const radiusMap = {
-    1: 20000,  // 20km for world/country view (~11km grids)
-    2: 10000,  // 10km for regional view (~1.1km grids)
-    3: 5000,   // 5km for city view (~110m grids)
-    4: 2000,   // 2km for neighborhood view (~11m grids)
+    1: 20000, // 20km for world/country view (~11km grids)
+    2: 10000, // 10km for regional view (~1.1km grids)
+    3: 5000, // 5km for city view (~110m grids)
+    4: 2000, // 2km for neighborhood view (~11m grids)
   };
   return radiusMap[precision];
 };
@@ -30,7 +30,7 @@ export const getRadiusFromPrecision = (precision: 1 | 2 | 3 | 4): number => {
  */
 export const normalizeLongitude = (lng: number): number => {
   // Normalize to -180 to 180 range
-  return ((lng + 180) % 360 + 360) % 360 - 180;
+  return ((((lng + 180) % 360) + 360) % 360) - 180;
 };
 
 /**
@@ -43,7 +43,10 @@ export const normalizeLatitude = (lat: number): number => {
 /**
  * Normalize both coordinates to valid ranges
  */
-export const normalizeCoordinates = (lat: number, lng: number): { lat: number; lng: number } => {
+export const normalizeCoordinates = (
+  lat: number,
+  lng: number,
+): { lat: number; lng: number } => {
   return {
     lat: normalizeLatitude(lat),
     lng: normalizeLongitude(lng),
