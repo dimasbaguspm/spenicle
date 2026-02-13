@@ -821,6 +821,127 @@ components:
         - totalCount
         - totalPages
       type: object
+    BulkTransactionCommitResponseModel:
+      additionalProperties: false
+      properties:
+        durationMs:
+          description: Total processing time in milliseconds
+          format: int64
+          type: integer
+        successCount:
+          description: Number of successfully updated transactions
+          format: int64
+          type: integer
+        updatedIds:
+          description: List of updated transaction IDs
+          items:
+            format: int64
+            type: integer
+          type:
+            - array
+            - "null"
+      required:
+        - successCount
+        - updatedIds
+        - durationMs
+      type: object
+    BulkTransactionDraftModel:
+      additionalProperties: false
+      properties:
+        updates:
+          description: List of transaction updates (max 500)
+          items:
+            $ref: "#/components/schemas/BulkTransactionUpdateItemModel"
+          maxLength: 500
+          minLength: 1
+          type:
+            - array
+            - "null"
+      required:
+        - updates
+      type: object
+    BulkTransactionDraftResponseModel:
+      additionalProperties: false
+      properties:
+        createdAt:
+          description: Draft creation timestamp
+          format: date-time
+          type: string
+        expiresAt:
+          description: Draft expiration timestamp
+          format: date-time
+          type: string
+        transactionCount:
+          description: Number of transactions in draft
+          format: int64
+          type: integer
+        updatedAt:
+          description: Draft last update timestamp
+          format: date-time
+          type: string
+      required:
+        - transactionCount
+        - createdAt
+        - updatedAt
+        - expiresAt
+      type: object
+    BulkTransactionUpdateItemModel:
+      additionalProperties: false
+      properties:
+        accountId:
+          description: Source account ID
+          format: int64
+          minimum: 1
+          type: integer
+        amount:
+          description: Transaction amount
+          format: int64
+          minimum: 1
+          type: integer
+        categoryId:
+          description: Category ID
+          format: int64
+          minimum: 1
+          type: integer
+        date:
+          description: Transaction date
+          format: date-time
+          type: string
+        destinationAccountId:
+          description: Destination account ID (transfers only)
+          format: int64
+          type: integer
+        id:
+          description: Transaction ID to update
+          format: int64
+          minimum: 1
+          type: integer
+        latitude:
+          description: Transaction latitude
+          format: double
+          maximum: 90
+          minimum: -90
+          type: number
+        longitude:
+          description: Transaction longitude
+          format: double
+          maximum: 180
+          minimum: -180
+          type: number
+        note:
+          description: Transaction notes
+          type: string
+        type:
+          description: Transaction type
+          enum:
+            - expense
+            - income
+            - transfer
+          minLength: 1
+          type: string
+      required:
+        - id
+      type: object
     CategoriesPagedModel:
       additionalProperties: false
       properties:
@@ -5945,6 +6066,100 @@ paths:
       security:
         - bearer: []
       summary: Create transaction
+      tags:
+        - Transactions
+  /transactions/bulk/draft:
+    delete:
+      description: Discards pending draft changes without applying them to database.
+      operationId: delete-transactions-bulk-draft
+      responses:
+        "204":
+          description: No Content
+          headers:
+            StatusCode:
+              schema:
+                format: int64
+                type: integer
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Delete draft without committing
+      tags:
+        - Transactions
+    get:
+      description: Retrieves saved draft from Redis to resume editing. One draft per user.
+      operationId: get-transactions-bulk-draft
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkTransactionDraftModel"
+          description: OK
+          headers:
+            Metadata:
+              schema:
+                $ref: "#/components/schemas/BulkTransactionDraftResponseModel"
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Retrieve bulk transaction draft
+      tags:
+        - Transactions
+    patch:
+      description: Saves pending transaction updates to Redis as a draft/savepoint. One draft per user - overwrites existing draft. Expires after 24 hours.
+      operationId: patch-transactions-bulk-draft
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkTransactionDraftModel"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkTransactionDraftResponseModel"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Save bulk transaction updates as draft
+      tags:
+        - Transactions
+  /transactions/bulk/draft/commit:
+    post:
+      description: Applies all draft changes to database in a single transaction (all-or-nothing). Invalidates caches and deletes draft.
+      operationId: post-transactions-bulk-commit
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkTransactionCommitResponseModel"
+          description: OK
+          headers:
+            StatusCode:
+              schema:
+                format: int64
+                type: integer
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Commit bulk transaction updates atomically
       tags:
         - Transactions
   /transactions/{id}:

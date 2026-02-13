@@ -103,3 +103,29 @@ type UpdateTransactionModel struct {
 	Longitude            *float64   `json:"longitude,omitempty" doc:"Transaction longitude" minimum:"-180" maximum:"180"`
 	Note                 *string    `json:"note,omitempty" doc:"Transaction notes"`
 }
+
+// Request model for saving draft (no draftId needed - one draft per user)
+type BulkTransactionDraftModel struct {
+	Updates []BulkTransactionUpdateItemModel `json:"updates" minLength:"1" maxLength:"500" doc:"List of transaction updates (max 500)"`
+}
+
+// Individual transaction update in bulk request
+type BulkTransactionUpdateItemModel struct {
+	ID int64 `json:"id" minimum:"1" doc:"Transaction ID to update"`
+	UpdateTransactionModel
+}
+
+// Response model for draft operations
+type BulkTransactionDraftResponseModel struct {
+	TransactionCount int       `json:"transactionCount" doc:"Number of transactions in draft"`
+	CreatedAt        time.Time `json:"createdAt" doc:"Draft creation timestamp" format:"date-time"`
+	UpdatedAt        time.Time `json:"updatedAt" doc:"Draft last update timestamp" format:"date-time"`
+	ExpiresAt        time.Time `json:"expiresAt" doc:"Draft expiration timestamp" format:"date-time"`
+}
+
+// Response model for commit operation
+type BulkTransactionCommitResponseModel struct {
+	SuccessCount int     `json:"successCount" doc:"Number of successfully updated transactions"`
+	UpdatedIDs   []int64 `json:"updatedIds" doc:"List of updated transaction IDs"`
+	DurationMs   int64   `json:"durationMs" doc:"Total processing time in milliseconds"`
+}

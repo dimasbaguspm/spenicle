@@ -22,6 +22,15 @@ export type TransactionRelationsPagedModel =
   components["schemas"]["TransactionRelationsPagedModel"];
 export type TransactionRelationModel =
   components["schemas"]["TransactionRelationModel"];
+
+export type BulkTransactionUpdateItemModel =
+  components["schemas"]["BulkTransactionUpdateItemModel"];
+export type BulkTransactionDraftModel =
+  components["schemas"]["BulkTransactionDraftModel"];
+export type BulkTransactionDraftResponseModel =
+  components["schemas"]["BulkTransactionDraftResponseModel"];
+export type BulkTransactionCommitResponseModel =
+  components["schemas"]["BulkTransactionCommitResponseModel"];
 /**
  * Transaction API client
  */
@@ -165,5 +174,43 @@ export class TransactionAPIClient extends BaseAPIClient {
     return this.post<void>(`/transactions/${transactionId}/link-template`, {
       templateId,
     });
+  }
+
+  /**
+   * Save bulk transaction draft
+   */
+  async saveBulkDraft(data: {
+    updates: BulkTransactionUpdateItemModel[];
+  }): Promise<APIResponse<BulkTransactionDraftResponseModel>> {
+    return this.patch<BulkTransactionDraftResponseModel>(
+      "/transactions/bulk/draft",
+      data,
+    );
+  }
+
+  /**
+   * Get bulk transaction draft
+   */
+  async getBulkDraft(): Promise<APIResponse<BulkTransactionDraftModel>> {
+    return this.get<BulkTransactionDraftModel>("/transactions/bulk/draft");
+  }
+
+  /**
+   * Commit bulk transaction draft
+   */
+  async commitBulkDraft(): Promise<
+    APIResponse<BulkTransactionCommitResponseModel>
+  > {
+    return this.post<BulkTransactionCommitResponseModel>(
+      "/transactions/bulk/draft/commit",
+      {},
+    );
+  }
+
+  /**
+   * Delete bulk transaction draft
+   */
+  async deleteBulkDraft(): Promise<APIResponse<void>> {
+    return this.delete<void>("/transactions/bulk/draft");
   }
 }

@@ -23,12 +23,18 @@ const (
 	SummaryGeospatial  = "summary:geospatial"
 )
 
+// Cache keys for special features
+const (
+	BulkDraftKey = "bulk_draft" // Global bulk transaction draft key
+)
+
 // Cache TTLs for different cache operation types
 const (
 	CacheTTLDetail     = 10 * time.Minute // Detail queries (single item)
 	CacheTTLPaged      = 5 * time.Minute  // Paged queries (list operations)
 	CacheTTLStatistics = 30 * time.Minute // Statistics queries (expensive to compute)
 	CacheTTLSummary    = 5 * time.Minute  // Summary queries
+	CacheTTLBulkDraft  = 24 * time.Hour   // Bulk transaction draft savepoint
 )
 
 // Statistics method types

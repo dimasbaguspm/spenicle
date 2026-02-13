@@ -78,10 +78,10 @@ type SummaryGeospatialGridCell struct {
 }
 
 type SummaryGeospatialListModel struct {
-	CenterLat     float64                      `json:"centerLat" doc:"Search center latitude" example:"-6.175"`
-	CenterLon     float64                      `json:"centerLon" doc:"Search center longitude" example:"106.827"`
-	RadiusMeters  int                          `json:"radiusMeters" doc:"Search radius in meters" example:"5000"`
-	GridPrecision int                          `json:"gridPrecision" doc:"Grid cell precision level" example:"3"`
-	TotalCells    int                          `json:"totalCells" doc:"Total number of grid cells with transactions" example:"8"`
-	Data          []SummaryGeospatialGridCell  `json:"data" doc:"Grid cells with aggregated transaction data"`
+	CenterLat     float64                     `json:"centerLat" doc:"Search center latitude" example:"-6.175"`
+	CenterLon     float64                     `json:"centerLon" doc:"Search center longitude" example:"106.827"`
+	RadiusMeters  int                         `json:"radiusMeters" doc:"Search radius in meters" example:"5000"`
+	GridPrecision int                         `json:"gridPrecision" doc:"Grid cell precision level" example:"3"`
+	TotalCells    int                         `json:"totalCells" doc:"Total number of grid cells with transactions" example:"8"`
+	Data          []SummaryGeospatialGridCell `json:"data" doc:"Grid cells with aggregated transaction data"`
 }

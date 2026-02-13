@@ -142,31 +142,31 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 	}
 
 	yogyaLocations := []Location{
-		{"Kantor PT Maju Jaya (Sleman)", -7.770910, 110.377533},        // Near UGM
-		{"Malioboro Street", -7.792786, 110.365463},                    // Shopping area
-		{"Jogja City Mall", -7.781898, 110.378433},                     // Mall
-		{"Hartono Mall", -7.752947, 110.409752},                        // Mall
-		{"Beringharjo Market", -7.798481, 110.365128},                  // Traditional market
-		{"Warung Makan Gudeg Yu Djum", -7.797523, 110.364584},          // Famous restaurant
-		{"Kopi Klotok Pakem", -7.669235, 110.418729},                   // Coffee shop north
-		{"Angkringan Tugu", -7.789423, 110.363847},                     // Street food
-		{"Mirota Kampus Supermarket", -7.782014, 110.364882},           // Supermarket
-		{"Alfamart Gejayan", -7.776441, 110.380022},                    // Convenience store
-		{"Indomaret Seturan", -7.750389, 110.408694},                   // Convenience store
-		{"SPBU Pertamina Gejayan", -7.776904, 110.379234},              // Gas station
-		{"SPBU Shell Ringroad", -7.757211, 110.409183},                 // Gas station
-		{"RS Sardjito", -7.768611, 110.373583},                         // Hospital
-		{"Apotek K24 Kaliurang", -7.768230, 110.400841},                // Pharmacy
-		{"Gramedia Ambarukmo Plaza", -7.781667, 110.401472},            // Bookstore
-		{"Bioskop XXI Ambarukmo", -7.781563, 110.401328},               // Cinema
-		{"GoWork Jogja", -7.782452, 110.378011},                        // Coworking space
-		{"Bakpia Pathok 25", -7.801234, 110.366789},                    // Souvenir shop
-		{"Warung Makan Soto Kadipiro", -7.771234, 110.381567},          // Local restaurant
-		{"Cafe Roaster and Bear", -7.787654, 110.368321},               // Cafe
-		{"Jogja Expo Center", -7.746891, 110.416234},                   // Convention center
-		{"Prambanan Temple Area", -7.752020, 110.491474},               // Tourist area
-		{"Terminal Giwangan", -7.826123, 110.390456},                   // Bus terminal
-		{"Stasiun Lempuyangan", -7.784567, 110.375123},                 // Train station
+		{"Kantor PT Maju Jaya (Sleman)", -7.770910, 110.377533}, // Near UGM
+		{"Malioboro Street", -7.792786, 110.365463},             // Shopping area
+		{"Jogja City Mall", -7.781898, 110.378433},              // Mall
+		{"Hartono Mall", -7.752947, 110.409752},                 // Mall
+		{"Beringharjo Market", -7.798481, 110.365128},           // Traditional market
+		{"Warung Makan Gudeg Yu Djum", -7.797523, 110.364584},   // Famous restaurant
+		{"Kopi Klotok Pakem", -7.669235, 110.418729},            // Coffee shop north
+		{"Angkringan Tugu", -7.789423, 110.363847},              // Street food
+		{"Mirota Kampus Supermarket", -7.782014, 110.364882},    // Supermarket
+		{"Alfamart Gejayan", -7.776441, 110.380022},             // Convenience store
+		{"Indomaret Seturan", -7.750389, 110.408694},            // Convenience store
+		{"SPBU Pertamina Gejayan", -7.776904, 110.379234},       // Gas station
+		{"SPBU Shell Ringroad", -7.757211, 110.409183},          // Gas station
+		{"RS Sardjito", -7.768611, 110.373583},                  // Hospital
+		{"Apotek K24 Kaliurang", -7.768230, 110.400841},         // Pharmacy
+		{"Gramedia Ambarukmo Plaza", -7.781667, 110.401472},     // Bookstore
+		{"Bioskop XXI Ambarukmo", -7.781563, 110.401328},        // Cinema
+		{"GoWork Jogja", -7.782452, 110.378011},                 // Coworking space
+		{"Bakpia Pathok 25", -7.801234, 110.366789},             // Souvenir shop
+		{"Warung Makan Soto Kadipiro", -7.771234, 110.381567},   // Local restaurant
+		{"Cafe Roaster and Bear", -7.787654, 110.368321},        // Cafe
+		{"Jogja Expo Center", -7.746891, 110.416234},            // Convention center
+		{"Prambanan Temple Area", -7.752020, 110.491474},        // Tourist area
+		{"Terminal Giwangan", -7.826123, 110.390456},            // Bus terminal
+		{"Stasiun Lempuyangan", -7.784567, 110.375123},          // Train station
 	}
 
 	// Monthly income - 3 months (salary received at office/bank)
@@ -236,11 +236,11 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 		var amount int64
 
 		if i%2 == 0 {
-			loc = yogyaLocations[8]                                // Mirota Kampus Supermarket
+			loc = yogyaLocations[8] // Mirota Kampus Supermarket
 			note = fmt.Sprintf("Belanja mingguan supermarket #%d", i+1)
 			amount = 280000 + int64((i%3)*70000) // 280k-420k IDR
 		} else {
-			loc = yogyaLocations[4]                             // Beringharjo Market
+			loc = yogyaLocations[4] // Beringharjo Market
 			note = fmt.Sprintf("Belanja pasar tradisional #%d", i+1)
 			amount = 220000 + int64((i%4)*50000) // 220k-370k IDR
 		}

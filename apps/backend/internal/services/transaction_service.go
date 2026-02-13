@@ -101,7 +101,7 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, huma.Error400BadRequest("Both latitude and longitude must be provided together or neither")
 	}
 
-	if err := ts.validateReferences(ctx, p.Type, p.AccountID, p.DestinationAccountID, &p.CategoryID); err != nil {
+	if err := ts.ValidateReferences(ctx, p.Type, p.AccountID, p.DestinationAccountID, &p.CategoryID); err != nil {
 		return models.TransactionModel{}, err
 	}
 
@@ -118,7 +118,7 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, err
 	}
 
-	if err := ts.applyBalanceChanges(ctx, rootTx, p.Type, p.Amount, p.AccountID, p.DestinationAccountID); err != nil {
+	if err := ts.ApplyBalanceChanges(ctx, rootTx, p.Type, p.Amount, p.AccountID, p.DestinationAccountID); err != nil {
 		return models.TransactionModel{}, err
 	}
 
@@ -168,7 +168,7 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 	if existing.DestinationAccount != nil {
 		oldDestAccountID = &existing.DestinationAccount.ID
 	}
-	if err := ts.revertBalanceChanges(ctx, rootTx, existing.Type, existing.Amount, existing.Account.ID, oldDestAccountID); err != nil {
+	if err := ts.RevertBalanceChanges(ctx, rootTx, existing.Type, existing.Amount, existing.Account.ID, oldDestAccountID); err != nil {
 		return models.TransactionModel{}, err
 	}
 
@@ -201,11 +201,11 @@ func (ts TransactionService) Update(ctx context.Context, id int64, p models.Upda
 		newDestAccountID = p.DestinationAccountID
 	}
 
-	if err := ts.validateReferences(ctx, newType, newAccountID, newDestAccountID, &newCategoryID); err != nil {
+	if err := ts.ValidateReferences(ctx, newType, newAccountID, newDestAccountID, &newCategoryID); err != nil {
 		return models.TransactionModel{}, err
 	}
 
-	if err := ts.applyBalanceChanges(ctx, rootTx, newType, newAmount, newAccountID, newDestAccountID); err != nil {
+	if err := ts.ApplyBalanceChanges(ctx, rootTx, newType, newAmount, newAccountID, newDestAccountID); err != nil {
 		return models.TransactionModel{}, err
 	}
 
@@ -264,7 +264,7 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 	if existing.DestinationAccount != nil {
 		oldDestAccountID = &existing.DestinationAccount.ID
 	}
-	if err := ts.revertBalanceChanges(ctx, rootTx, existing.Type, existing.Amount, existing.Account.ID, oldDestAccountID); err != nil {
+	if err := ts.RevertBalanceChanges(ctx, rootTx, existing.Type, existing.Amount, existing.Account.ID, oldDestAccountID); err != nil {
 		return err
 	}
 
@@ -294,7 +294,7 @@ func (ts TransactionService) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (ts TransactionService) applyBalanceChanges(ctx context.Context, root repositories.RootRepository, txType string, amount int64, accountID int64, destAccountID *int64) error {
+func (ts TransactionService) ApplyBalanceChanges(ctx context.Context, root repositories.RootRepository, txType string, amount int64, accountID int64, destAccountID *int64) error {
 	switch txType {
 	case "transfer":
 		if destAccountID != nil {
@@ -317,7 +317,7 @@ func (ts TransactionService) applyBalanceChanges(ctx context.Context, root repos
 	return nil
 }
 
-func (ts TransactionService) revertBalanceChanges(ctx context.Context, root repositories.RootRepository, txType string, amount int64, accountID int64, destAccountID *int64) error {
+func (ts TransactionService) RevertBalanceChanges(ctx context.Context, root repositories.RootRepository, txType string, amount int64, accountID int64, destAccountID *int64) error {
 	switch txType {
 	case "transfer":
 		if destAccountID != nil {
@@ -340,7 +340,7 @@ func (ts TransactionService) revertBalanceChanges(ctx context.Context, root repo
 	return nil
 }
 
-func (ts TransactionService) validateReferences(ctx context.Context, txType string, accountID int64, destAccountID *int64, categoryID *int64) error {
+func (ts TransactionService) ValidateReferences(ctx context.Context, txType string, accountID int64, destAccountID *int64, categoryID *int64) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {

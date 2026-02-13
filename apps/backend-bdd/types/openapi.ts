@@ -808,6 +808,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/transactions/bulk/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retrieve bulk transaction draft
+         * @description Retrieves saved draft from Redis to resume editing. One draft per user.
+         */
+        get: operations["get-transactions-bulk-draft"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete draft without committing
+         * @description Discards pending draft changes without applying them to database.
+         */
+        delete: operations["delete-transactions-bulk-draft"];
+        options?: never;
+        head?: never;
+        /**
+         * Save bulk transaction updates as draft
+         * @description Saves pending transaction updates to Redis as a draft/savepoint. One draft per user - overwrites existing draft. Expires after 24 hours.
+         */
+        patch: operations["patch-transactions-bulk-draft"];
+        trace?: never;
+    };
+    "/transactions/bulk/draft/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commit bulk transaction updates atomically
+         * @description Applies all draft changes to database in a single transaction (all-or-nothing). Invalidates caches and deletes draft.
+         */
+        post: operations["post-transactions-bulk-commit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transactions/{id}": {
         parameters: {
             query?: never;
@@ -1543,6 +1591,95 @@ export interface components {
              * @description Total number of pages
              */
             totalPages: number;
+        };
+        BulkTransactionCommitResponseModel: {
+            /**
+             * Format: int64
+             * @description Total processing time in milliseconds
+             */
+            durationMs: number;
+            /**
+             * Format: int64
+             * @description Number of successfully updated transactions
+             */
+            successCount: number;
+            /** @description List of updated transaction IDs */
+            updatedIds: number[] | null;
+        };
+        BulkTransactionDraftModel: {
+            /** @description List of transaction updates (max 500) */
+            updates: components["schemas"]["BulkTransactionUpdateItemModel"][] | null;
+        };
+        BulkTransactionDraftResponseModel: {
+            /**
+             * Format: date-time
+             * @description Draft creation timestamp
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Draft expiration timestamp
+             */
+            expiresAt: string;
+            /**
+             * Format: int64
+             * @description Number of transactions in draft
+             */
+            transactionCount: number;
+            /**
+             * Format: date-time
+             * @description Draft last update timestamp
+             */
+            updatedAt: string;
+        };
+        BulkTransactionUpdateItemModel: {
+            /**
+             * Format: int64
+             * @description Source account ID
+             */
+            accountId?: number;
+            /**
+             * Format: int64
+             * @description Transaction amount
+             */
+            amount?: number;
+            /**
+             * Format: int64
+             * @description Category ID
+             */
+            categoryId?: number;
+            /**
+             * Format: date-time
+             * @description Transaction date
+             */
+            date?: string;
+            /**
+             * Format: int64
+             * @description Destination account ID (transfers only)
+             */
+            destinationAccountId?: number;
+            /**
+             * Format: int64
+             * @description Transaction ID to update
+             */
+            id: number;
+            /**
+             * Format: double
+             * @description Transaction latitude
+             */
+            latitude?: number;
+            /**
+             * Format: double
+             * @description Transaction longitude
+             */
+            longitude?: number;
+            /** @description Transaction notes */
+            note?: string;
+            /**
+             * @description Transaction type
+             * @enum {string}
+             */
+            type?: "expense" | "income" | "transfer";
         };
         CategoriesPagedModel: {
             /** @description List of categories */
@@ -5235,6 +5372,127 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-transactions-bulk-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    Metadata?: components["schemas"]["BulkTransactionDraftResponseModel"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTransactionDraftModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-transactions-bulk-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    StatusCode?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "patch-transactions-bulk-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkTransactionDraftModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTransactionDraftResponseModel"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "post-transactions-bulk-commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    StatusCode?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTransactionCommitResponseModel"];
                 };
             };
             /** @description Error */
