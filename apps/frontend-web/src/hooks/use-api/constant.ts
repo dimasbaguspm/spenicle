@@ -64,6 +64,9 @@ export const ENDPOINTS = {
       relationId: number | string,
     ) => `/transactions/${id}/relations/${relationId}`,
     BY_ID_TAGS: (id: number | string) => `/transactions/${id}/tags`,
+    // Bulk transaction update endpoints
+    BULK_DRAFT: "/transactions/bulk/draft",
+    BULK_DRAFT_COMMIT: "/transactions/bulk/draft/commit",
   },
   TRANSACTION_TEMPLATES: {
     PAGINATED: "/transaction-templates",

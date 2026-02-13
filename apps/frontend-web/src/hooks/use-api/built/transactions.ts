@@ -5,6 +5,10 @@ import type {
   TransactionCreateModel,
   TransactionUpdateModel,
   TransactionDeleteModel,
+  BulkTransactionDraftModel,
+  BulkTransactionDraftGetModel,
+  BulkTransactionDraftResponseModel,
+  BulkTransactionCommitResponseModel,
 } from "@/types/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -123,6 +127,103 @@ export const useApiDeleteTransaction = () => {
       queryClient.invalidateQueries({
         queryKey: BASE_QUERY_KEYS.INSIGHTS,
         exact: false,
+      });
+    },
+  });
+};
+
+/**
+ * Save bulk transaction updates as draft to Redis
+ * Auto-save mechanism - call this every 5s after user stops editing
+ */
+export const useApiSaveBulkDraft = () => {
+  const queryClient = useQueryClient();
+
+  return useApiMutate<
+    BulkTransactionDraftResponseModel,
+    BulkTransactionDraftModel
+  >({
+    path: ENDPOINTS.TRANSACTIONS.BULK_DRAFT,
+    method: "PATCH",
+    onSuccess: (data) => {
+      // Update the draft query with the response metadata
+      queryClient.setQueryData(QUERY_KEYS.TRANSACTIONS.BULK_DRAFT(), data);
+    },
+  });
+};
+
+/**
+ * Retrieve saved draft from Redis
+ * Call on page load to restore unsaved edits
+ */
+export const useApiGetBulkDraft = () => {
+  return useApiQuery<BulkTransactionDraftGetModel, never>({
+    path: ENDPOINTS.TRANSACTIONS.BULK_DRAFT,
+    queryKey: QUERY_KEYS.TRANSACTIONS.BULK_DRAFT(),
+    // Don't retry on 404 - it just means no draft exists
+    retry: false,
+    // Don't show error toast on 404
+    silentError: true,
+  });
+};
+
+/**
+ * Commit all draft changes atomically to database
+ * All-or-nothing: either all transactions update or none do
+ */
+export const useApiCommitBulkDraft = () => {
+  const queryClient = useQueryClient();
+
+  return useApiMutate<BulkTransactionCommitResponseModel, void>({
+    path: ENDPOINTS.TRANSACTIONS.BULK_DRAFT_COMMIT,
+    method: "POST",
+    onSuccess: () => {
+      // Invalidate all transaction queries (they've been updated)
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.TRANSACTIONS.PAGINATED().slice(0, 2),
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.TRANSACTIONS.INFINITE().slice(0, 2),
+        exact: false,
+      });
+      // Invalidate individual transaction queries (they may have changed)
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.TRANSACTIONS.BY_ID(0).slice(0, 2), // Match all BY_ID queries
+        exact: false,
+      });
+      // Invalidate insights (balances and summaries affected)
+      queryClient.invalidateQueries({
+        queryKey: BASE_QUERY_KEYS.INSIGHTS,
+        exact: false,
+      });
+      // Invalidate account queries (balances changed)
+      queryClient.invalidateQueries({
+        queryKey: BASE_QUERY_KEYS.ACCOUNTS,
+        exact: false,
+      });
+      // Remove draft from cache (it's been committed)
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.TRANSACTIONS.BULK_DRAFT(),
+      });
+    },
+  });
+};
+
+/**
+ * Delete draft without committing changes
+ * Discards all pending edits
+ */
+export const useApiDeleteBulkDraft = () => {
+  const queryClient = useQueryClient();
+
+  return useApiMutate<void, void>({
+    path: ENDPOINTS.TRANSACTIONS.BULK_DRAFT,
+    method: "DELETE",
+    onSuccess: () => {
+      // Remove draft from cache
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.TRANSACTIONS.BULK_DRAFT(),
       });
     },
   });

@@ -240,3 +240,20 @@ export type TransactionTemplateModel =
 
 export type RefreshGeoCacheRequestModel =
   paths["/preferences/refresh-geo-cache"]["post"]["requestBody"]["content"]["application/json"];
+
+// Bulk transaction update types
+export type BulkTransactionDraftModel =
+  paths["/transactions/bulk/draft"]["patch"]["requestBody"]["content"]["application/json"];
+
+export type BulkTransactionDraftGetModel =
+  paths["/transactions/bulk/draft"]["get"]["responses"]["200"]["content"]["application/json"];
+
+export type BulkTransactionDraftResponseModel =
+  paths["/transactions/bulk/draft"]["patch"]["responses"]["200"]["content"]["application/json"];
+
+export type BulkTransactionCommitResponseModel =
+  paths["/transactions/bulk/draft/commit"]["post"]["responses"]["200"]["content"]["application/json"];
+
+export type BulkTransactionUpdateItemModel = NonNullable<
+  BulkTransactionDraftModel["updates"]
+>[number]; // Extract array item type

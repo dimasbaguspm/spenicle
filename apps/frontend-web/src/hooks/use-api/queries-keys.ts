@@ -131,6 +131,8 @@ export const QUERY_KEYS = {
       id,
       JSON.stringify(params ?? {}),
     ],
+    // Bulk draft query key (only one draft exists at a time)
+    BULK_DRAFT: () => [...BASE_QUERY_KEYS.TRANSACTIONS, "bulk-draft"],
   },
   TRANSACTION_TEMPLATES: {
     INFINITE: (params: object = {}) => [
