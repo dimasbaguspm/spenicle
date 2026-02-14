@@ -1,46 +1,34 @@
-import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
+import { useState } from "react";
+import { MapContainer, TileLayer } from "react-leaflet";
 import { PageContent, useMobileBreakpoint } from "@dimasbaguspm/versaur";
 import { useWebAPIProvider } from "@/providers/web-api-provider";
 import { useApiInsightsGeospatialSummaryQuery } from "@/hooks/use-api";
-import { UserLocationMarker, TransactionCountMarkers } from "./components";
+import {
+  MapEventHandler,
+  UserLocationMarker,
+  TransactionCountMarkers,
+} from "./components";
 import { useInsightsMapFilter } from "./hooks";
 import {
   DEFAULT_CENTER,
-  getZoomFromPrecision,
   getPrecisionFromZoom,
+  getRadiusFromPrecision,
   normalizeCoordinates,
 } from "./utils/map-helpers";
 import "leaflet/dist/leaflet.css";
 
-// Component to handle map events
-const MapEventHandler = ({
-  onPrecisionChange,
-  onMapMove,
-}: {
-  onPrecisionChange: (p: 1 | 2 | 3 | 4) => void;
-  onMapMove: (lat: number, lng: number) => void;
-}) => {
-  const map = useMapEvents({
-    zoomend: () => {
-      const zoom = map.getZoom();
-      const newPrecision = getPrecisionFromZoom(zoom);
-      onPrecisionChange(newPrecision);
-    },
-    moveend: () => {
-      const center = map.getCenter();
-      onMapMove(center.lat, center.lng);
-    },
-  });
-  return null;
-};
-
 const InsightsMapPage = () => {
   const isMobile = useMobileBreakpoint();
   const { geolocation } = useWebAPIProvider();
-  const { appliedFilters, setMapPrecision, setMapView } =
-    useInsightsMapFilter();
+  const { appliedFilters, setMapCenter } = useInsightsMapFilter();
 
-  // Fetch geospatial data
+  // Zoom is local UI state, not persisted in filters
+  const [zoom, setZoom] = useState(14); // Default: city view (precision 3)
+
+  // Calculate precision and radius dynamically from zoom
+  const precision = getPrecisionFromZoom(zoom);
+  const radius = getRadiusFromPrecision(precision);
+
   const [geospatialData, , { isLoading }] =
     useApiInsightsGeospatialSummaryQuery(
       {
@@ -48,16 +36,14 @@ const InsightsMapPage = () => {
         endDate: appliedFilters.endDate,
         latitude: appliedFilters.mapLat!,
         longitude: appliedFilters.mapLng!,
-        radiusMeters: appliedFilters.mapRadius ?? 5000,
-        gridPrecision: appliedFilters.mapPrecision ?? 3,
+        radiusMeters: radius,
+        gridPrecision: precision,
       },
       { enabled: !!appliedFilters.mapLat && !!appliedFilters.mapLng },
     );
 
-  const handlePrecisionChange = (newPrecision: 1 | 2 | 3 | 4) => {
-    if (newPrecision !== appliedFilters.mapPrecision) {
-      setMapPrecision(newPrecision);
-    }
+  const handleZoomChange = (newZoom: number) => {
+    setZoom(newZoom);
   };
 
   const handleMapMove = (lat: number, lng: number) => {
@@ -71,7 +57,7 @@ const InsightsMapPage = () => {
       Math.abs(normalized.lng - (appliedFilters.mapLng ?? 0)) > 0.0001;
 
     if (latChanged || lngChanged) {
-      setMapView(normalized.lat, normalized.lng);
+      setMapCenter(normalized.lat, normalized.lng);
     }
   };
 
@@ -79,7 +65,6 @@ const InsightsMapPage = () => {
     appliedFilters.mapLat ?? DEFAULT_CENTER.lat,
     appliedFilters.mapLng ?? DEFAULT_CENTER.lng,
   ];
-  const zoom = getZoomFromPrecision(appliedFilters.mapPrecision ?? 3);
 
   // Get actual user location (separate from map center)
   const userCoords = geolocation.getCoordinates();
@@ -103,7 +88,7 @@ const InsightsMapPage = () => {
           />
 
           <MapEventHandler
-            onPrecisionChange={handlePrecisionChange}
+            onZoomChange={handleZoomChange}
             onMapMove={handleMapMove}
           />
 

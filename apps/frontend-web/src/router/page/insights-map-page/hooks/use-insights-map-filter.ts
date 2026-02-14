@@ -5,12 +5,10 @@ import { useWebAPIProvider } from "@/providers/web-api-provider";
 import dayjs from "dayjs";
 import { DEFAULT_CENTER, normalizeCoordinates } from "../utils/map-helpers";
 
-// Constant search radius (5km) regardless of zoom/precision
-const SEARCH_RADIUS_METERS = 5000;
-
 /**
  * Filter model for insights map page
  * Combines date filters from insights with map-specific parameters
+ * Note: mapRadius and mapPrecision are calculated from zoom, not stored in filters
  */
 export interface InsightsMapFilterModel {
   // Date filters (inherited from insights)
@@ -20,15 +18,11 @@ export interface InsightsMapFilterModel {
   // Map-specific parameters
   mapLat?: number;
   mapLng?: number;
-  mapRadius?: number;      // 100-50000 meters
-  mapPrecision?: 1 | 2 | 3 | 4;  // Grid precision level
 }
 
 export interface UseInsightsMapFilterReturn extends UseFilterStateReturn<InsightsMapFilterModel> {
   appliedFilters: InsightsMapFilterModel;
-  setMapView: (lat: number, lng: number, precision?: 1 | 2 | 3 | 4) => void;
   setMapCenter: (lat: number, lng: number) => void;
-  setMapPrecision: (precision: 1 | 2 | 3 | 4) => void;
 }
 
 /**
@@ -50,20 +44,11 @@ export const useInsightsMapFilter = (): UseInsightsMapFilterReturn => {
       ? normalizeCoordinates(rawLat, rawLng)
       : { lat: rawLat, lng: rawLng };
 
-    const precision = filters.getSingle("mapPrecision")
-      ? (Number(filters.getSingle("mapPrecision")) as 1 | 2 | 3 | 4)
-      : 3; // Default precision
-
-    // Always use constant 5km radius
-    const radius = SEARCH_RADIUS_METERS;
-
     return {
       startDate: filters.getSingle("startDate") || now.subtract(3, "month").startOf("month").toISOString(),
       endDate: filters.getSingle("endDate") || now.endOf("month").toISOString(),
       mapLat: normalizedCoords.lat,
       mapLng: normalizedCoords.lng,
-      mapRadius: radius,
-      mapPrecision: precision,
     };
   }, [filters]);
 
@@ -87,14 +72,12 @@ export const useInsightsMapFilter = (): UseInsightsMapFilterReturn => {
     // Normalize coordinates to ensure they're within valid ranges
     const { lat, lng } = normalizeCoordinates(rawLat, rawLng);
 
-    // Initialize all map params with defaults using replaceAll
+    // Initialize map center with defaults using replaceAll
     filters.replaceAll({
       startDate: appliedFilters.startDate,
       endDate: appliedFilters.endDate,
       mapLat: lat,
       mapLng: lng,
-      mapRadius: SEARCH_RADIUS_METERS,  // Constant 5km radius
-      mapPrecision: 3,                   // Default precision
     });
   }, [geolocation.isInitializing, appliedFilters.mapLat, appliedFilters.mapLng]);
 
@@ -110,38 +93,9 @@ export const useInsightsMapFilter = (): UseInsightsMapFilterReturn => {
     });
   };
 
-  /**
-   * Update grid precision (radius stays constant at 5km)
-   */
-  const setMapPrecision = (precision: 1 | 2 | 3 | 4) => {
-    filters.replaceSingle("mapPrecision", precision);
-  };
-
-  /**
-   * Update map view (center and optionally precision) atomically (with validation)
-   */
-  const setMapView = (lat: number, lng: number, precision?: 1 | 2 | 3 | 4) => {
-    const { lat: normalizedLat, lng: normalizedLng } = normalizeCoordinates(lat, lng);
-
-    if (precision) {
-      // Update all at once for atomic change
-      filters.replaceAll({
-        ...appliedFilters,
-        mapLat: normalizedLat,
-        mapLng: normalizedLng,
-        mapPrecision: precision,
-      });
-    } else {
-      // Just update center
-      setMapCenter(normalizedLat, normalizedLng);
-    }
-  };
-
   return {
     ...filters,
     appliedFilters,
-    setMapView,
     setMapCenter,
-    setMapPrecision,
   };
 };
