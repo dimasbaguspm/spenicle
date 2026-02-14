@@ -8,7 +8,7 @@ import {
 import { AppLayout } from "@/components/app-layout";
 import { GeoCacheInitializer } from "@/components/geo-cache-initializer";
 import { lazy, Suspense } from "react";
-import { PAGE_ROUTES } from "@/constant/page-routes";
+import { DEEP_PAGE_LINKS, PAGE_ROUTES } from "@/constant/page-routes";
 import { DrawerProvider } from "@/providers/drawer-provider";
 import { ModalProvider } from "@/providers/modal-provider";
 import { BottomSheetProvider } from "@/providers/bottom-sheet-provider";
@@ -135,16 +135,35 @@ const router = createBrowserRouter([
                   },
                   {
                     path: PAGE_ROUTES.TRANSACTIONS_GRID,
-                    Component: lazy(() => import("./transactions-grid-page")),
-                    handle: {
-                      floatingActionButton: [
-                        {
-                          label: "New Transaction",
-                          link: DRAWER_ROUTES.TRANSACTION_CREATE,
-                          type: PAGE_HANDLES.DRAWER,
+                    children: [
+                      {
+                        index: true,
+                        Component: lazy(
+                          () =>
+                            import("./transactions-grid-page/transactions-grid-page"),
+                        ),
+                        handle: {
+                          floatingActionButton: [
+                            {
+                              label: "New Transaction",
+                              link: DRAWER_ROUTES.TRANSACTION_CREATE,
+                              type: PAGE_HANDLES.DRAWER,
+                            },
+                            {
+                              label: "Edit Transactions",
+                              link: DEEP_PAGE_LINKS.TRANSACTIONS_GRID_EDIT.path,
+                              type: PAGE_HANDLES.PAGE,
+                            },
+                          ],
                         },
-                      ],
-                    },
+                      },
+                      {
+                        path: PAGE_ROUTES.TRANSACTIONS_GRID_EDIT,
+                        Component: lazy(
+                          () => import("./transactions-grid-edit-page"),
+                        ),
+                      },
+                    ],
                   },
                 ],
               },

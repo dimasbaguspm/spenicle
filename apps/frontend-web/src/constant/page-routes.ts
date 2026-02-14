@@ -15,6 +15,7 @@ export const PAGE_ROUTES = {
   TRANSACTIONS: "/transactions",
   TRANSACTIONS_LIST: "list",
   TRANSACTIONS_GRID: "grid",
+  TRANSACTIONS_GRID_EDIT: "edit",
   TRANSACTIONS_DATE: ":year/:month/:day",
   INSIGHTS: "/insights",
   INSIGHTS_ACCOUNTS: "accounts",
@@ -51,6 +52,11 @@ export const DEEP_PAGE_LINKS = {
   TRANSACTIONS_GRID: {
     path: `${PAGE_ROUTES.TRANSACTIONS}/${PAGE_ROUTES.TRANSACTIONS_GRID}`,
     title: "Transactions Grid",
+    icon: LayoutGridIcon,
+  },
+  TRANSACTIONS_GRID_EDIT: {
+    path: `${PAGE_ROUTES.TRANSACTIONS}/${PAGE_ROUTES.TRANSACTIONS_GRID}/${PAGE_ROUTES.TRANSACTIONS_GRID_EDIT}`,
+    title: "Edit Transactions",
     icon: LayoutGridIcon,
   },
   TRANSACTIONS_GRID_DATE: {
