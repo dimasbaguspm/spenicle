@@ -105,14 +105,37 @@ const router = createBrowserRouter([
               },
               {
                 path: PAGE_ROUTES.TRANSACTIONS,
+                Component: lazy(() => import("./transactions-page")),
                 children: [
                   {
-                    index: true,
-                    Component: lazy(() => import("./transactions-page")),
+                    path: PAGE_ROUTES.TRANSACTIONS_LIST,
+                    children: [
+                      {
+                        index: true,
+                        Component: lazy(
+                          () => import("./transactions-list-page"),
+                        ),
+                      },
+                      {
+                        path: PAGE_ROUTES.TRANSACTIONS_DATE,
+                        Component: lazy(
+                          () => import("./transactions-list-page"),
+                        ),
+                        handle: {
+                          floatingActionButton: [
+                            {
+                              label: "New Transaction",
+                              link: DRAWER_ROUTES.TRANSACTION_CREATE,
+                              type: PAGE_HANDLES.DRAWER,
+                            },
+                          ],
+                        },
+                      },
+                    ],
                   },
                   {
-                    path: PAGE_ROUTES.TRANSACTIONS_DATE,
-                    Component: lazy(() => import("./transactions-page")),
+                    path: PAGE_ROUTES.TRANSACTIONS_GRID,
+                    Component: lazy(() => import("./transactions-grid-page")),
                     handle: {
                       floatingActionButton: [
                         {

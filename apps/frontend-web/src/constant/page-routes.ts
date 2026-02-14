@@ -2,6 +2,7 @@ import {
   BoltIcon,
   ChartColumnIcon,
   HomeIcon,
+  LayoutGridIcon,
   ListCollapseIcon,
   MapPinnedIcon,
   TagsIcon,
@@ -12,6 +13,8 @@ export const PAGE_ROUTES = {
   LOGIN: "/login",
   DASHBOARD: "/",
   TRANSACTIONS: "/transactions",
+  TRANSACTIONS_LIST: "list",
+  TRANSACTIONS_GRID: "grid",
   TRANSACTIONS_DATE: ":year/:month/:day",
   INSIGHTS: "/insights",
   INSIGHTS_ACCOUNTS: "accounts",
@@ -33,6 +36,28 @@ export const DEEP_PAGE_LINKS = {
     path: PAGE_ROUTES.TRANSACTIONS,
     title: "Transactions",
     icon: ListCollapseIcon,
+  },
+  TRANSACTIONS_LIST: {
+    path: `${PAGE_ROUTES.TRANSACTIONS}/${PAGE_ROUTES.TRANSACTIONS_LIST}`,
+    title: "Transactions List",
+    icon: ListCollapseIcon,
+  },
+  TRANSACTIONS_LIST_DATE: {
+    path: (year: number, month: number, day: number) =>
+      `${PAGE_ROUTES.TRANSACTIONS}/${PAGE_ROUTES.TRANSACTIONS_LIST}/${year}/${month}/${day}`,
+    title: "Transactions List by Date",
+    icon: ListCollapseIcon,
+  },
+  TRANSACTIONS_GRID: {
+    path: `${PAGE_ROUTES.TRANSACTIONS}/${PAGE_ROUTES.TRANSACTIONS_GRID}`,
+    title: "Transactions Grid",
+    icon: LayoutGridIcon,
+  },
+  TRANSACTIONS_GRID_DATE: {
+    path: (year: number, month: number, day: number) =>
+      `${PAGE_ROUTES.TRANSACTIONS}/${PAGE_ROUTES.TRANSACTIONS_GRID}/${year}/${month}/${day}`,
+    title: "Transactions Grid by Date",
+    icon: LayoutGridIcon,
   },
   TRANSACTIONS_DATE: {
     path: (year: number, month: number, day: number) =>

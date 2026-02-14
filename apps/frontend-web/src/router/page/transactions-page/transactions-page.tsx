@@ -1,127 +1,67 @@
-import { useApiTransactionsInfiniteQuery } from "@/hooks/use-api";
 import { DateFormat, formatDate } from "@/lib/format-date";
-import { useDrawerProvider } from "@/providers/drawer-provider";
 import type { Dayjs } from "dayjs";
 import type { FC } from "react";
+import { Suspense } from "react";
 import {
   Navigate,
+  Outlet,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
 } from "react-router";
-import { DEEP_PAGE_LINKS } from "@/constant/page-routes";
-import { DRAWER_ROUTES } from "@/constant/drawer-routes";
-import type { TransactionModel } from "@/types/schemas";
-import { useSwipeable } from "react-swipeable";
+import { DEEP_PAGE_LINKS, PAGE_ROUTES } from "@/constant/page-routes";
 import {
-  Button,
-  ButtonGroup,
+  ChipSingleInput,
   Icon,
-  NoResults,
-  PageContent,
   PageHeader,
   PageLayout,
   PageLoader,
 } from "@dimasbaguspm/versaur";
-import { When } from "@/lib/when";
-import { PlusIcon, SearchXIcon } from "lucide-react";
 import { TabsDate } from "./components/tabs-date";
 import dayjs from "dayjs";
-import { TransactionCard } from "@/ui/transaction-card";
-import { useTransactionFilter } from "@/hooks/use-filter-state";
-import { ActionsControl } from "./components/actions-control";
+import { LayoutGridIcon, ListCollapseIcon } from "lucide-react";
 
 interface TransactionsPageProps {
   startDate: Dayjs;
 }
 
 const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
-  const { openDrawer } = useDrawerProvider();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const filters = useTransactionFilter({ adapter: "url" });
-  const [
-    transactions,
-    ,
-    { hasNextPage, isLoading, isFetchingNextPage },
-    { fetchNextPage },
-  ] = useApiTransactionsInfiniteQuery({
-    startDate: formatDate(startDate.startOf("day"), DateFormat.ISO_DATETIME),
-    endDate: formatDate(startDate.endOf("day"), DateFormat.ISO_DATETIME),
-    pageSize: 15,
-    sortBy: "date",
-    sortOrder: "desc",
-    type: filters.appliedFilters.type,
-  });
-
-  // Helper function to navigate while preserving search params
-  const navigateWithSearchParams = (path: string) => {
-    const currentParams = searchParams.toString();
-    const separator = currentParams ? "?" : "";
-    navigate(`${path}${separator}${currentParams}`);
-  };
+  const isGridView = location.pathname.includes(PAGE_ROUTES.TRANSACTIONS_GRID);
+  const activeView = isGridView ? "grid" : "list";
 
   const handleOnDateChange = (date: Dayjs) => {
-    navigateWithSearchParams(
-      DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
-        date.year(),
-        date.month(),
-        date.date(),
-      ),
-    );
-  };
+    const pathBuilder = isGridView
+      ? DEEP_PAGE_LINKS.TRANSACTIONS_GRID_DATE.path
+      : DEEP_PAGE_LINKS.TRANSACTIONS_LIST_DATE.path;
 
-  const handleOnNewTransactionClick = () => {
-    openDrawer(DRAWER_ROUTES.TRANSACTION_CREATE, undefined, {
-      state: {
-        payload: {
-          date: formatDate(startDate, DateFormat.ISO_DATE),
-          time: formatDate(startDate, DateFormat.TIME_24H),
-        },
-      },
+    navigate({
+      pathname: pathBuilder(date.year(), date.month(), date.date()),
+      search: searchParams.toString(),
     });
   };
 
-  const handleOnTransactionClick = (transaction: TransactionModel) => {
-    openDrawer(DRAWER_ROUTES.TRANSACTION_VIEW, {
-      transactionId: transaction.id,
-    });
-  };
-
-  const handleOnCalendarDateChange = (date: Dayjs) => {
-    navigateWithSearchParams(
-      DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
-        date.year(),
-        date.month(),
-        date.date(),
-      ),
-    );
-  };
-
-  const containerHandlers = useSwipeable({
-    onSwipedRight: () => {
-      const previousDate = startDate.subtract(1, "d");
-      navigateWithSearchParams(
-        DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
-          previousDate.year(),
-          previousDate.month(),
-          previousDate.date(),
+  const handleViewTypeChange = (value: string) => {
+    if (value === "grid") {
+      navigate({
+        pathname: DEEP_PAGE_LINKS.TRANSACTIONS_GRID.path,
+        search: searchParams.toString(),
+      });
+    } else {
+      navigate({
+        pathname: DEEP_PAGE_LINKS.TRANSACTIONS_LIST_DATE.path(
+          startDate.year(),
+          startDate.month(),
+          startDate.date(),
         ),
-      );
-    },
-    onSwipedLeft: () => {
-      const nextDate = startDate.add(1, "d");
-      navigateWithSearchParams(
-        DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
-          nextDate.year(),
-          nextDate.month(),
-          nextDate.date(),
-        ),
-      );
-    },
-    trackMouse: false,
-  });
+        search: searchParams.toString(),
+      });
+    }
+  };
 
   return (
     <PageLayout>
@@ -130,68 +70,48 @@ const TransactionsPage: FC<TransactionsPageProps> = ({ startDate }) => {
           title="Transactions"
           size="wide"
           subtitle={formatDate(startDate, DateFormat.MONTH_YEAR)}
-          tabs={<TabsDate date={startDate} onDateChange={handleOnDateChange} />}
+          tabs={
+            !isGridView ? (
+              <TabsDate date={startDate} onDateChange={handleOnDateChange} />
+            ) : undefined
+          }
+          actions={
+            <ChipSingleInput
+              name="view-type"
+              value={activeView}
+              onChange={handleViewTypeChange}
+            >
+              <ChipSingleInput.Option value="list">
+                <Icon as={ListCollapseIcon} color="inherit" size="sm" />
+                List
+              </ChipSingleInput.Option>
+              <ChipSingleInput.Option value="grid">
+                <Icon as={LayoutGridIcon} color="inherit" size="sm" />
+                Grid
+              </ChipSingleInput.Option>
+            </ChipSingleInput>
+          }
+          mobileActions={
+            <ChipSingleInput
+              name="view-type-mobile"
+              value={activeView}
+              onChange={handleViewTypeChange}
+            >
+              <ChipSingleInput.Option value="list">
+                <Icon as={ListCollapseIcon} color="inherit" size="sm" />
+              </ChipSingleInput.Option>
+              <ChipSingleInput.Option value="grid">
+                <Icon as={LayoutGridIcon} color="inherit" size="sm" />
+              </ChipSingleInput.Option>
+            </ChipSingleInput>
+          }
         />
       </PageLayout.HeaderRegion>
 
       <PageLayout.ContentRegion>
-        <PageContent
-          {...containerHandlers}
-          size="wide"
-          className="min-h-[calc(100dvh-25dvh)]"
-        >
-          <ActionsControl
-            date={startDate}
-            onDateChange={handleOnCalendarDateChange}
-          />
-          <When condition={isLoading}>
-            <PageLoader />
-          </When>
-          <When condition={!isLoading}>
-            <When condition={!transactions.length}>
-              <NoResults
-                title="No Transactions"
-                subtitle="You have no transactions for this date."
-                icon={SearchXIcon}
-                action={
-                  <ButtonGroup alignment="center">
-                    <Button
-                      onClick={handleOnNewTransactionClick}
-                      variant="outline"
-                    >
-                      <Icon as={PlusIcon} color="inherit" />
-                      Add Transaction
-                    </Button>
-                  </ButtonGroup>
-                }
-              />
-            </When>
-            <When condition={!!transactions.length}>
-              <ul className="flex flex-col mb-4">
-                {transactions.map((transaction) => {
-                  return (
-                    <li key={transaction.id} className="border-b border-border">
-                      <TransactionCard
-                        transaction={transaction}
-                        onClick={handleOnTransactionClick}
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
-              <When condition={[hasNextPage]}>
-                <ButtonGroup alignment="center">
-                  <Button
-                    onClick={() => fetchNextPage()}
-                    disabled={isFetchingNextPage}
-                  >
-                    Load More
-                  </Button>
-                </ButtonGroup>
-              </When>
-            </When>
-          </When>
-        </PageContent>
+        <Suspense fallback={<PageLoader />}>
+          <Outlet context={{ startDate }} />
+        </Suspense>
       </PageLayout.ContentRegion>
     </PageLayout>
   );
@@ -203,26 +123,56 @@ const TransactionsPageWrapper = () => {
     month: string;
     day: string;
   }>();
+  const location = useLocation();
   const maxValidDateRange = dayjs().add(5, "year");
-  const hasParams = year && month && day;
 
-  const initialDate = hasParams
-    ? dayjs()
-        .set("y", parseInt(year))
-        .set("M", parseInt(month))
-        .set("D", parseInt(day))
-    : dayjs();
+  const isGridView = location.pathname.includes(PAGE_ROUTES.TRANSACTIONS_GRID);
+  const isListView = location.pathname.includes(PAGE_ROUTES.TRANSACTIONS_LIST);
 
-  if (
-    !initialDate.isValid() ||
-    initialDate.isAfter(maxValidDateRange) ||
-    !hasParams
-  ) {
+  if (!isListView && !isGridView) {
     const today = dayjs();
-
     return (
       <Navigate
-        to={DEEP_PAGE_LINKS.TRANSACTIONS_DATE.path(
+        to={DEEP_PAGE_LINKS.TRANSACTIONS_LIST_DATE.path(
+          today.year(),
+          today.month(),
+          today.date(),
+        )}
+        replace
+      />
+    );
+  }
+
+  if (isGridView) {
+    return <TransactionsPage startDate={dayjs()} />;
+  }
+
+  const hasParams = year && month && day;
+
+  if (!hasParams) {
+    const today = dayjs();
+    return (
+      <Navigate
+        to={DEEP_PAGE_LINKS.TRANSACTIONS_LIST_DATE.path(
+          today.year(),
+          today.month(),
+          today.date(),
+        )}
+        replace
+      />
+    );
+  }
+
+  const initialDate = dayjs()
+    .set("y", parseInt(year))
+    .set("M", parseInt(month))
+    .set("D", parseInt(day));
+
+  if (!initialDate.isValid() || initialDate.isAfter(maxValidDateRange)) {
+    const today = dayjs();
+    return (
+      <Navigate
+        to={DEEP_PAGE_LINKS.TRANSACTIONS_LIST_DATE.path(
           today.year(),
           today.month(),
           today.date(),
