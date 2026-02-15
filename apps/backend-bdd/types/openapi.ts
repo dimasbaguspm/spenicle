@@ -2253,7 +2253,7 @@ export interface components {
             accountId: number;
             /**
              * Format: int64
-             * @description Template amount
+             * @description Template amount in base currency (IDR)
              */
             amount: number;
             /**
@@ -2261,6 +2261,8 @@ export interface components {
              * @description Category ID
              */
             categoryId: number;
+            /** @description ISO 4217 currency code (optional, defaults to base currency) */
+            currencyCode?: string;
             /**
              * Format: int64
              * @description Destination account ID (transfers only)
@@ -2986,7 +2988,7 @@ export interface components {
             account: components["schemas"]["TransactionAccountEmbedded"];
             /**
              * Format: int64
-             * @description Template amount
+             * @description Template amount in base currency (IDR)
              */
             amount: number;
             /** @description Category details */
@@ -2996,8 +2998,8 @@ export interface components {
              * @description Creation timestamp
              */
             createdAt: string;
-            /** @description ISO 4217 currency code (reserved for future multi-currency support) */
-            currency?: string;
+            /** @description ISO 4217 currency code (null = base currency only) */
+            currencyCode?: string;
             /**
              * Format: date-time
              * @description Soft delete timestamp
@@ -3231,7 +3233,7 @@ export interface components {
             accountId?: number;
             /**
              * Format: int64
-             * @description Template amount
+             * @description Template amount in base currency (IDR)
              */
             amount?: number;
             /**
@@ -3239,6 +3241,8 @@ export interface components {
              * @description Category ID
              */
             categoryId?: number;
+            /** @description ISO 4217 currency code (null = base currency only, affects future-dated transactions) */
+            currencyCode?: string;
             /**
              * Format: int64
              * @description Destination account ID (transfers only)

@@ -12,8 +12,8 @@ type TransactionTemplateModel struct {
 	ID                 int64                             `json:"id" doc:"Unique identifier"`
 	Name               string                            `json:"name" doc:"Template name"`
 	Type               string                            `json:"type" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
-	Amount             int64                             `json:"amount" doc:"Template amount"`
-	Currency           *string                           `json:"currency,omitempty" doc:"ISO 4217 currency code (reserved for future multi-currency support)"`
+	Amount             int64                             `json:"amount" doc:"Template amount in base currency (IDR)"`
+	CurrencyCode       *string                           `json:"currencyCode,omitempty" doc:"ISO 4217 currency code (null = base currency only)"`
 	Account            TransactionAccountEmbedded        `json:"account" doc:"Source account details"`
 	Category           TransactionCategoryEmbedded       `json:"category" doc:"Category details"`
 	DestinationAccount *TransactionAccountEmbedded       `json:"destinationAccount,omitempty" doc:"Destination account details (transfers only)"`
@@ -52,7 +52,8 @@ type TransactionTemplatesPagedModel struct {
 type CreateTransactionTemplateModel struct {
 	Name                 string     `json:"name" required:"true" minLength:"1" maxLength:"100" doc:"Template name"`
 	Type                 string     `json:"type" required:"true" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
-	Amount               int64      `json:"amount" required:"true" minimum:"1" doc:"Template amount"`
+	Amount               int64      `json:"amount" required:"true" minimum:"1" doc:"Template amount in base currency (IDR)"`
+	CurrencyCode         *string    `json:"currencyCode,omitempty" minLength:"3" maxLength:"3" doc:"ISO 4217 currency code (optional, defaults to base currency)"`
 	AccountID            int64      `json:"accountId" required:"true" minimum:"1" doc:"Source account ID"`
 	CategoryID           int64      `json:"categoryId" required:"true" minimum:"1" doc:"Category ID"`
 	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
@@ -65,7 +66,8 @@ type CreateTransactionTemplateModel struct {
 type UpdateTransactionTemplateModel struct {
 	Name                 *string    `json:"name,omitempty" minLength:"1" maxLength:"100" doc:"Template name"`
 	Type                 *string    `json:"type,omitempty" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
-	Amount               *int64     `json:"amount,omitempty" minimum:"1" doc:"Template amount"`
+	Amount               *int64     `json:"amount,omitempty" minimum:"1" doc:"Template amount in base currency (IDR)"`
+	CurrencyCode         *string    `json:"currencyCode,omitempty" minLength:"3" maxLength:"3" doc:"ISO 4217 currency code (null = base currency only, affects future-dated transactions)"`
 	AccountID            *int64     `json:"accountId,omitempty" minimum:"1" doc:"Source account ID"`
 	CategoryID           *int64     `json:"categoryId,omitempty" minimum:"1" doc:"Category ID"`
 	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`

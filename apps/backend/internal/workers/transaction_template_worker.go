@@ -118,6 +118,7 @@ func (ttw *TransactionTemplateWorker) processTemplate(ctx context.Context, templ
 		Type:                 template.Type,
 		Date:                 time.Now().Truncate(24 * time.Hour),
 		Amount:               template.Amount,
+		CurrencyCode:         template.CurrencyCode,
 		AccountID:            template.Account.ID,
 		CategoryID:           template.Category.ID,
 		DestinationAccountID: destAccountID,

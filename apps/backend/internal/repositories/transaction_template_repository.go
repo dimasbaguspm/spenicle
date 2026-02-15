@@ -51,6 +51,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 				tt.name,
 				tt.type,
 				tt.amount,
+				tt.currency_code,
 				a.id as account_id,
 				a.name as account_name,
 				a.type as account_type,
@@ -98,18 +99,19 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 				AND a.deleted_at IS NULL
 				AND c.deleted_at IS NULL
 				AND (da.deleted_at IS NULL OR da.id IS NULL)
-				AND ($1::text = '' OR tt.name ILIKE '%' || $1::text || '%')
+				AND ($1::text = '' OR tt.name ILIKE $1::text)
 				AND ($2::text = '' OR tt.type = $2::text)
 				AND ($3::int8 = 0 OR tt.account_id = $3::int8)
 				AND ($4::int8 = 0 OR tt.category_id = $4::int8)
 				AND ($5::int8 = 0 OR tt.destination_account_id = $5::int8)
-			GROUP BY tt.id, a.id, a.name, a.type, a.amount, a.icon, a.icon_color, c.id, c.name, c.type, c.icon, c.icon_color, da.id, da.name, da.type, da.amount, da.icon, da.icon_color, tt.name, tt.type, tt.amount, tt.note, tt.recurrence, tt.start_date, tt.end_date, tt.next_due_at, tt.last_executed_at, tt.created_at, tt.updated_at, tt.deleted_at
+			GROUP BY tt.id, a.id, a.name, a.type, a.amount, a.icon, a.icon_color, c.id, c.name, c.type, c.icon, c.icon_color, da.id, da.name, da.type, da.amount, da.icon, da.icon_color, tt.name, tt.type, tt.amount, tt.currency_code, tt.note, tt.recurrence, tt.start_date, tt.end_date, tt.next_due_at, tt.last_executed_at, tt.created_at, tt.updated_at, tt.deleted_at
 		)
 		SELECT
 			id,
 			name,
 			type,
 			amount,
+			currency_code,
 			account_id,
 			account_name,
 			account_type,
@@ -167,6 +169,7 @@ func (ttr TransactionTemplateRepository) GetPaged(ctx context.Context, p models.
 
 		if err := rows.Scan(
 			&item.ID, &item.Name, &item.Type, &item.Amount,
+			&item.CurrencyCode,
 			&item.Account.ID, &item.Account.Name, &item.Account.Type, &item.Account.Amount,
 			&item.Account.Icon, &item.Account.IconColor,
 			&item.Category.ID, &item.Category.Name, &item.Category.Type, &item.Category.Icon, &item.Category.IconColor,
@@ -233,6 +236,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 			tt.name,
 			tt.type,
 			tt.amount,
+			tt.currency_code,
 			a.id,
 			a.name,
 			a.type,
@@ -272,6 +276,7 @@ func (ttr TransactionTemplateRepository) GetDetail(ctx context.Context, id int64
 	queryStart := time.Now()
 	err := ttr.db.QueryRow(ctx, sql, id).Scan(
 		&data.ID, &data.Name, &data.Type, &data.Amount,
+		&data.CurrencyCode,
 		&data.Account.ID, &data.Account.Name, &data.Account.Type, &data.Account.Amount,
 		&data.Account.Icon, &data.Account.IconColor,
 		&data.Category.ID, &data.Category.Name, &data.Category.Type, &data.Category.Icon, &data.Category.IconColor,
@@ -373,8 +378,8 @@ func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload mod
 	}
 
 	sql := `
-		INSERT INTO transaction_templates (name, type, amount, account_id, category_id, destination_account_id, note, recurrence, start_date, end_date, next_due_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO transaction_templates (name, type, amount, currency_code, account_id, category_id, destination_account_id, note, recurrence, start_date, end_date, next_due_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id
 	`
 
@@ -385,6 +390,7 @@ func (ttr TransactionTemplateRepository) Create(ctx context.Context, payload mod
 		payload.Name,
 		payload.Type,
 		payload.Amount,
+		payload.CurrencyCode,
 		payload.AccountID,
 		payload.CategoryID,
 		payload.DestinationAccountID,
@@ -414,6 +420,7 @@ func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, p
 		SET name = COALESCE($1, name),
 			type = COALESCE($2, type),
 			amount = COALESCE($3, amount),
+			currency_code = COALESCE($10, currency_code),
 			account_id = COALESCE($4, account_id),
 			category_id = COALESCE($5, category_id),
 			destination_account_id = COALESCE($6, destination_account_id),
@@ -438,7 +445,7 @@ func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, p
 				ELSE next_due_at
 			END,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $10 AND deleted_at IS NULL
+		WHERE id = $11 AND deleted_at IS NULL
 		RETURNING id
 	`
 
@@ -456,6 +463,7 @@ func (ttr TransactionTemplateRepository) Update(ctx context.Context, id int64, p
 		payload.Note,
 		payload.Recurrence,
 		payload.EndDate,
+		payload.CurrencyCode,
 		id,
 	).Scan(&returnedID)
 
@@ -519,6 +527,7 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 			tt.name,
 			tt.type,
 			tt.amount,
+			tt.currency_code,
 			tt.note,
 			tt.recurrence,
 			tt.start_date,
@@ -549,7 +558,7 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 			AND a.deleted_at IS NULL
 			AND c.deleted_at IS NULL
 			AND (da.deleted_at IS NULL OR da.id IS NULL)
-		GROUP BY tt.id, a.id, a.name, a.type, a.amount, a.icon, a.icon_color, c.id, c.name, c.type, c.icon, c.icon_color, da.id, da.name, da.type, da.amount, da.icon, da.icon_color, tt.name, tt.type, tt.amount, tt.note, tt.recurrence, tt.start_date, tt.end_date, tt.next_due_at, tt.last_executed_at, tt.created_at, tt.updated_at, tt.deleted_at
+		GROUP BY tt.id, a.id, a.name, a.type, a.amount, a.icon, a.icon_color, c.id, c.name, c.type, c.icon, c.icon_color, da.id, da.name, da.type, da.amount, da.icon, da.icon_color, tt.name, tt.type, tt.amount, tt.currency_code, tt.note, tt.recurrence, tt.start_date, tt.end_date, tt.next_due_at, tt.last_executed_at, tt.created_at, tt.updated_at, tt.deleted_at
 		ORDER BY tt.next_due_at ASC
 	`
 
@@ -578,8 +587,8 @@ func (ttr TransactionTemplateRepository) GetDueTemplates(ctx context.Context) ([
 			&item.Account.Icon, &item.Account.IconColor,
 			&item.Category.ID, &item.Category.Name, &item.Category.Type, &item.Category.Icon, &item.Category.IconColor,
 			&destAccountID, &destAccountName, &destAccountType, &destAccountAmount, &destAccountIcon, &destAccountIconColor,
-			&item.Name, &item.Type, &item.Amount, &item.Note,
-			&item.Recurrence, &item.StartDate, &item.EndDate, &item.NextDueAt, &item.LastExecutedAt,
+			&item.Name, &item.Type, &item.Amount, &item.CurrencyCode,
+			&item.Note, &item.Recurrence, &item.StartDate, &item.EndDate, &item.NextDueAt, &item.LastExecutedAt,
 			&item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 			&item.RecurringStats.Occurrences, &item.RecurringStats.TotalSpent, &item.RecurringStats.Remaining,
 		); err != nil {

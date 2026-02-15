@@ -1726,7 +1726,7 @@ components:
           minimum: 1
           type: integer
         amount:
-          description: Template amount
+          description: Template amount in base currency (IDR)
           format: int64
           minimum: 1
           type: integer
@@ -1735,6 +1735,11 @@ components:
           format: int64
           minimum: 1
           type: integer
+        currencyCode:
+          description: ISO 4217 currency code (optional, defaults to base currency)
+          maxLength: 3
+          minLength: 3
+          type: string
         destinationAccountId:
           description: Destination account ID (transfers only)
           format: int64
@@ -2739,7 +2744,7 @@ components:
           $ref: "#/components/schemas/TransactionAccountEmbedded"
           description: Source account details
         amount:
-          description: Template amount
+          description: Template amount in base currency (IDR)
           format: int64
           type: integer
         category:
@@ -2749,8 +2754,8 @@ components:
           description: Creation timestamp
           format: date-time
           type: string
-        currency:
-          description: ISO 4217 currency code (reserved for future multi-currency support)
+        currencyCode:
+          description: ISO 4217 currency code (null = base currency only)
           type: string
         deletedAt:
           description: Soft delete timestamp
@@ -3074,7 +3079,7 @@ components:
           minimum: 1
           type: integer
         amount:
-          description: Template amount
+          description: Template amount in base currency (IDR)
           format: int64
           minimum: 1
           type: integer
@@ -3083,6 +3088,11 @@ components:
           format: int64
           minimum: 1
           type: integer
+        currencyCode:
+          description: ISO 4217 currency code (null = base currency only, affects future-dated transactions)
+          maxLength: 3
+          minLength: 3
+          type: string
         destinationAccountId:
           description: Destination account ID (transfers only)
           format: int64
