@@ -37,6 +37,7 @@ ENV SNAPEXCHANGE_PORT=8081
 ENV DIST_PATH=/app/frontend-web/dist
 ENV BACKEND_PATH=/app/spenicle-api
 ENV SNAPEXCHANGE_PATH=/app/snapexchange
+ENV SNAP_EXCHANGE_URL=http://localhost:8081
 
 COPY --from=backend-builder /app/spenicle-api /app/spenicle-api
 COPY --from=backend-builder /build/migrations /app/migrations

@@ -987,7 +987,7 @@ export interface components {
         AccountModel: {
             /**
              * Format: int64
-             * @description Current balance
+             * @description Current balance in base currency
              */
             amount: number;
             /**
@@ -1640,7 +1640,7 @@ export interface components {
             accountId?: number;
             /**
              * Format: int64
-             * @description Transaction amount
+             * @description Transaction amount in the specified currency
              */
             amount?: number;
             /**
@@ -1648,6 +1648,8 @@ export interface components {
              * @description Category ID
              */
             categoryId?: number;
+            /** @description ISO 4217 currency code (e.g., USD, EUR) */
+            currencyCode?: string;
             /**
              * Format: date-time
              * @description Transaction date
@@ -2179,7 +2181,7 @@ export interface components {
             accountId: number;
             /**
              * Format: int64
-             * @description Transaction amount
+             * @description Transaction amount in the specified currency (defaults to base currency if currencyCode not provided)
              */
             amount: number;
             /**
@@ -2187,6 +2189,8 @@ export interface components {
              * @description Category ID
              */
             categoryId: number;
+            /** @description ISO 4217 currency code (e.g., USD, EUR). If omitted, amount is treated as base currency. */
+            currencyCode?: string;
             /**
              * Format: date-time
              * @description Transaction date
@@ -2762,9 +2766,14 @@ export interface components {
             account: components["schemas"]["TransactionAccountEmbedded"];
             /**
              * Format: int64
-             * @description Transaction amount
+             * @description Transaction amount in base currency (IDR)
              */
             amount: number;
+            /**
+             * Format: int64
+             * @description Foreign currency amount (as input by user). Null if transaction is in base currency.
+             */
+            amountForeign?: number;
             /** @description Category details */
             category: components["schemas"]["TransactionCategoryEmbedded"];
             /**
@@ -2772,6 +2781,8 @@ export interface components {
              * @description Creation timestamp
              */
             createdAt: string;
+            /** @description ISO 4217 currency code for foreign amount (e.g., USD, EUR). Null if transaction is in base currency. */
+            currencyCode?: string;
             /**
              * Format: date-time
              * @description Transaction date
@@ -2784,6 +2795,16 @@ export interface components {
             deletedAt?: string;
             /** @description Destination account (transfers only) */
             destinationAccount?: components["schemas"]["TransactionAccountEmbedded"];
+            /**
+             * Format: date-time
+             * @description Timestamp when the currency conversion was applied. Null for base currency transactions.
+             */
+            exchangeAt?: string;
+            /**
+             * Format: double
+             * @description Exchange rate applied: foreign_currency → base_currency (IDR). e.g., 16500.5 for USD→IDR. Null if no conversion.
+             */
+            exchangeRate?: number;
             /**
              * Format: int64
              * @description Unique identifier
@@ -2975,6 +2996,8 @@ export interface components {
              * @description Creation timestamp
              */
             createdAt: string;
+            /** @description ISO 4217 currency code (reserved for future multi-currency support) */
+            currency?: string;
             /**
              * Format: date-time
              * @description Soft delete timestamp
@@ -3162,7 +3185,7 @@ export interface components {
             accountId?: number;
             /**
              * Format: int64
-             * @description Transaction amount
+             * @description Transaction amount in the specified currency
              */
             amount?: number;
             /**
@@ -3170,6 +3193,8 @@ export interface components {
              * @description Category ID
              */
             categoryId?: number;
+            /** @description ISO 4217 currency code (e.g., USD, EUR) */
+            currencyCode?: string;
             /**
              * Format: date-time
              * @description Transaction date
@@ -5311,6 +5336,8 @@ export interface operations {
                 templateId?: number[] | null;
                 /** @description Filter by tag IDs */
                 tagId?: number[] | null;
+                /** @description Filter by currency codes (e.g., USD, EUR) */
+                currencyCode?: string[] | null;
                 /** @description Filter by start date (YYYY-MM-DD) */
                 startDate?: string;
                 /** @description Filter by end date (YYYY-MM-DD) */

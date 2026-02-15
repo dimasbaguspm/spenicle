@@ -4,7 +4,7 @@ components:
       additionalProperties: false
       properties:
         amount:
-          description: Current balance
+          description: Current balance in base currency
           format: int64
           type: integer
         archivedAt:
@@ -894,7 +894,7 @@ components:
           minimum: 1
           type: integer
         amount:
-          description: Transaction amount
+          description: Transaction amount in the specified currency
           format: int64
           minimum: 1
           type: integer
@@ -903,6 +903,9 @@ components:
           format: int64
           minimum: 1
           type: integer
+        currencyCode:
+          description: ISO 4217 currency code (e.g., USD, EUR)
+          type: string
         date:
           description: Transaction date
           format: date-time
@@ -1627,7 +1630,7 @@ components:
           minimum: 1
           type: integer
         amount:
-          description: Transaction amount
+          description: Transaction amount in the specified currency (defaults to base currency if currencyCode not provided)
           format: int64
           minimum: 1
           type: integer
@@ -1636,6 +1639,9 @@ components:
           format: int64
           minimum: 1
           type: integer
+        currencyCode:
+          description: ISO 4217 currency code (e.g., USD, EUR). If omitted, amount is treated as base currency.
+          type: string
         date:
           description: Transaction date
           format: date-time
@@ -2448,7 +2454,11 @@ components:
           $ref: "#/components/schemas/TransactionAccountEmbedded"
           description: Source account details
         amount:
-          description: Transaction amount
+          description: Transaction amount in base currency (IDR)
+          format: int64
+          type: integer
+        amountForeign:
+          description: Foreign currency amount (as input by user). Null if transaction is in base currency.
           format: int64
           type: integer
         category:
@@ -2457,6 +2467,9 @@ components:
         createdAt:
           description: Creation timestamp
           format: date-time
+          type: string
+        currencyCode:
+          description: ISO 4217 currency code for foreign amount (e.g., USD, EUR). Null if transaction is in base currency.
           type: string
         date:
           description: Transaction date
@@ -2469,6 +2482,14 @@ components:
         destinationAccount:
           $ref: "#/components/schemas/TransactionAccountEmbedded"
           description: Destination account (transfers only)
+        exchangeAt:
+          description: Timestamp when the currency conversion was applied. Null for base currency transactions.
+          format: date-time
+          type: string
+        exchangeRate:
+          description: "Exchange rate applied: foreign_currency → base_currency (IDR). e.g., 16500.5 for USD→IDR. Null if no conversion."
+          format: double
+          type: number
         id:
           description: Unique identifier
           format: int64
@@ -2727,6 +2748,9 @@ components:
         createdAt:
           description: Creation timestamp
           format: date-time
+          type: string
+        currency:
+          description: ISO 4217 currency code (reserved for future multi-currency support)
           type: string
         deletedAt:
           description: Soft delete timestamp
@@ -2997,7 +3021,7 @@ components:
           minimum: 1
           type: integer
         amount:
-          description: Transaction amount
+          description: Transaction amount in the specified currency
           format: int64
           minimum: 1
           type: integer
@@ -3006,6 +3030,9 @@ components:
           format: int64
           minimum: 1
           type: integer
+        currencyCode:
+          description: ISO 4217 currency code (e.g., USD, EUR)
+          type: string
         date:
           description: Transaction date
           format: date-time
@@ -5955,6 +5982,17 @@ paths:
             items:
               format: int64
               type: integer
+            type:
+              - array
+              - "null"
+        - description: Filter by currency codes (e.g., USD, EUR)
+          explode: false
+          in: query
+          name: currencyCode
+          schema:
+            description: Filter by currency codes (e.g., USD, EUR)
+            items:
+              type: string
             type:
               - array
               - "null"
