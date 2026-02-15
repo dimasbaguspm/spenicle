@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -24,7 +25,7 @@ type SnapExchangeClient struct {
 
 func NewSnapExchangeClient() *SnapExchangeClient {
 	return &SnapExchangeClient{
-		baseURL: "http://localhost:8081",
+		baseURL: os.Getenv("SNAP_EXCHANGE_URL"),
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},

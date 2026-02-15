@@ -9,6 +9,7 @@ import (
 )
 
 const DefaultBaseCurrency = "IDR"
+const DefaultSnapExchangeURL = "http://localhost:8081"
 
 // InitializeBaseCurrencyConfig ensures the base currency config table has exactly one row.
 // On first run, it inserts the baseCurrency value.

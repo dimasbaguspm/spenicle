@@ -8,17 +8,18 @@ import (
 )
 
 const (
-	APP_PORT_ENV       = "APP_PORT"
-	IS_DEV_ENV         = "IS_DEV_ENV"
-	DB_HOST_ENV        = "DB_HOST"
-	DB_PORT_ENV        = "DB_PORT"
-	DB_USER_ENV        = "DB_USER"
-	DB_PASSWORD_ENV    = "DB_PASSWORD"
-	DB_NAME_ENV        = "DB_NAME"
-	JWT_SECRET_ENV     = "JWT_SECRET"
-	ADMIN_USERNAME_ENV = "ADMIN_USERNAME"
-	ADMIN_PASSWORD_ENV = "ADMIN_PASSWORD"
-	BASE_CURRENCY_ENV  = "BASE_CURRENCY"
+	APP_PORT_ENV          = "APP_PORT"
+	IS_DEV_ENV            = "IS_DEV_ENV"
+	DB_HOST_ENV           = "DB_HOST"
+	DB_PORT_ENV           = "DB_PORT"
+	DB_USER_ENV           = "DB_USER"
+	DB_PASSWORD_ENV       = "DB_PASSWORD"
+	DB_NAME_ENV           = "DB_NAME"
+	JWT_SECRET_ENV        = "JWT_SECRET"
+	ADMIN_USERNAME_ENV    = "ADMIN_USERNAME"
+	ADMIN_PASSWORD_ENV    = "ADMIN_PASSWORD"
+	BASE_CURRENCY_ENV     = "BASE_CURRENCY"
+	SNAP_EXCHANGE_URL_ENV = "SNAP_EXCHANGE_URL"
 )
 
 const (
@@ -29,18 +30,19 @@ const (
 var _ = godotenv.Load()
 
 type Environment struct {
-	AppPort       string
-	AppStage      string
-	DBHost        string
-	DBPort        string
-	DBUser        string
-	DBPassword    string
-	DBName        string
-	DatabaseURL   string
-	RedisURL      string
-	AdminUsername string
-	AdminPassword string
-	BaseCurrency  string
+	AppPort         string
+	AppStage        string
+	DBHost          string
+	DBPort          string
+	DBUser          string
+	DBPassword      string
+	DBName          string
+	DatabaseURL     string
+	RedisURL        string
+	AdminUsername   string
+	AdminPassword   string
+	BaseCurrency    string
+	SnapExchangeURL string
 }
 
 func NewEnvironment() Environment {
@@ -67,18 +69,24 @@ func NewEnvironment() Environment {
 		baseCurrency = DefaultBaseCurrency
 	}
 
+	snapExchangeURL := os.Getenv(SNAP_EXCHANGE_URL_ENV)
+	if snapExchangeURL == "" {
+		snapExchangeURL = DefaultSnapExchangeURL
+	}
+
 	return Environment{
-		AppPort:       os.Getenv(APP_PORT_ENV),
-		AppStage:      stage,
-		DBHost:        dbHost,
-		DBPort:        dbPort,
-		DBUser:        dbUser,
-		DBPassword:    dbPassword,
-		DBName:        dbName,
-		DatabaseURL:   databaseURL,
-		RedisURL:      redisURL,
-		AdminUsername: os.Getenv(ADMIN_USERNAME_ENV),
-		AdminPassword: os.Getenv(ADMIN_PASSWORD_ENV),
-		BaseCurrency:  baseCurrency,
+		AppPort:         os.Getenv(APP_PORT_ENV),
+		AppStage:        stage,
+		DBHost:          dbHost,
+		DBPort:          dbPort,
+		DBUser:          dbUser,
+		DBPassword:      dbPassword,
+		DBName:          dbName,
+		DatabaseURL:     databaseURL,
+		RedisURL:        redisURL,
+		AdminUsername:   os.Getenv(ADMIN_USERNAME_ENV),
+		AdminPassword:   os.Getenv(ADMIN_PASSWORD_ENV),
+		BaseCurrency:    baseCurrency,
+		SnapExchangeURL: snapExchangeURL,
 	}
 }

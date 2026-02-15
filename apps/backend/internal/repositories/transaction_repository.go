@@ -86,7 +86,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			GROUP BY tt.transaction_id
 		)
 		SELECT
-			ft.id, ft.type, ft.date, ft.amount, ft.amount_foreign, ft.currency_code, ft.exchange_rate, ft.note, ft.latitude, ft.longitude, ft.created_at, ft.updated_at, ft.deleted_at,
+			ft.id, ft.type, ft.date, ft.amount, ft.amount_foreign, ft.currency_code, ft.exchange_rate, ft.exchange_at, ft.note, ft.latitude, ft.longitude, ft.created_at, ft.updated_at, ft.deleted_at,
 			ft.template_id, ft.template_name, ft.template_amount, ft.template_recurrence, ft.template_start_date, ft.template_end_date,
 			ft.account_id, ft.account_name, ft.account_type, ft.account_amount, ft.account_icon, ft.account_color,
 			ft.category_id, ft.category_name, ft.category_type, ft.category_icon, ft.category_color,
@@ -524,7 +524,7 @@ func (tr TransactionRepository) GetGeotaggedTransactions(ctx context.Context, la
 		var templateName *string
 		var templateAmount *int64
 		var templateRecurrence *string
-		var templateStartDate time.Time
+		var templateStartDate *time.Time
 		var templateEndDate *time.Time
 		var destAccountID *int64
 		var destAccountName *string
@@ -561,7 +561,7 @@ func (tr TransactionRepository) GetGeotaggedTransactions(ctx context.Context, la
 				Name:       *templateName,
 				Amount:     *templateAmount,
 				Recurrence: *templateRecurrence,
-				StartDate:  templateStartDate,
+				StartDate:  *templateStartDate,
 				EndDate:    templateEndDate,
 			}
 		}

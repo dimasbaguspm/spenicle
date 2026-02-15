@@ -1,19 +1,15 @@
-version: '3.8'
-
 services:
   snapexchange:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
-      - APP_PORT=8080
+      - APP_PORT=8081
       - ECB_URL=https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
       - LOG_LEVEL=debug
     volumes:
-      # Mount source code for hot reload
       - .:/app
-      # Exclude tmp directory from host
       - /app/tmp
     restart: unless-stopped
