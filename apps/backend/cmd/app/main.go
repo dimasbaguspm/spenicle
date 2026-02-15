@@ -31,11 +31,14 @@ func main() {
 	db := configs.NewDatabase(ctx, env)
 	rdb := configs.NewRedisClient(ctx, env)
 
-	snapExchangeClient := clients.NewSnapExchangeClient()
-	if err := snapExchangeClient.HealthCheck(ctx); err != nil {
-		slog.Warn("SnapExchange service unavailable on startup", "error", err)
-	} else {
-		slog.Info("SnapExchange service connected")
+	excClient := clients.NewSnapExchangeClient()
+	if err := excClient.HealthCheck(ctx); err != nil {
+		slog.Warn("SnapExchangeClient health check failed, exchange rate features may not work", "error", err)
+	}
+
+	if err := configs.InitializeBaseCurrencyConfig(ctx, db, env.BaseCurrency); err != nil {
+		slog.Error("Failed to initialize base currency config", "error", err)
+		return
 	}
 
 	rateLimitMgr := common.NewRateLimitManager(rdb)

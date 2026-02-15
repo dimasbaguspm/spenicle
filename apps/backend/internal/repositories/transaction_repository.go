@@ -45,7 +45,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 	sql := `
 		WITH filtered_transactions AS (
 			SELECT 
-				t.id, t.type, t.date, t.amount, t.note, t.latitude, t.longitude, t.created_at, t.updated_at, t.deleted_at,
+				t.id, t.type, t.date, t.amount, t.amount_foreign, t.currency_code, t.exchange_rate, t.exchange_at, t.note, t.latitude, t.longitude, t.created_at, t.updated_at, t.deleted_at,
 				tt.id as template_id, tt.name as template_name, tt.amount as template_amount, tt.recurrence as template_recurrence, tt.start_date as template_start_date, tt.end_date as template_end_date,
 				a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
 				c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
@@ -73,6 +73,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 						FROM transaction_tags tt
 						WHERE tt.tag_id = ANY($13::int8[])
 					))
+				AND (array_length($14::text[], 1) IS NULL OR t.currency_code = ANY($14::text[]))
 			ORDER BY t.` + sortColumn + ` ` + sortOrder + `
 			LIMIT $1 OFFSET $2
 		),
@@ -85,7 +86,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			GROUP BY tt.transaction_id
 		)
 		SELECT
-			ft.id, ft.type, ft.date, ft.amount, ft.note, ft.latitude, ft.longitude, ft.created_at, ft.updated_at, ft.deleted_at,
+			ft.id, ft.type, ft.date, ft.amount, ft.amount_foreign, ft.currency_code, ft.exchange_rate, ft.note, ft.latitude, ft.longitude, ft.created_at, ft.updated_at, ft.deleted_at,
 			ft.template_id, ft.template_name, ft.template_amount, ft.template_recurrence, ft.template_start_date, ft.template_end_date,
 			ft.account_id, ft.account_name, ft.account_type, ft.account_amount, ft.account_icon, ft.account_color,
 			ft.category_id, ft.category_name, ft.category_type, ft.category_icon, ft.category_color,
@@ -105,6 +106,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		destAccountIDs []int64
 		templateIDs    []int64
 		tagIDs         []int64
+		currencyCodes  []string
 		minAmountParam *int64
 		maxAmountParam *int64
 		startDateParam *string
@@ -144,6 +146,9 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 			tagIDs = append(tagIDs, int64(id))
 		}
 	}
+	if len(p.CurrencyCodes) > 0 {
+		currencyCodes = p.CurrencyCodes
+	}
 	if p.MinAmount > 0 {
 		minAmountParam = &p.MinAmount
 	}
@@ -163,7 +168,7 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		ids, types, accountIDs, categoryIDs, destAccountIDs,
 		minAmountParam, maxAmountParam,
 		startDateParam, endDateParam,
-		templateIDs, tagIDs,
+		templateIDs, tagIDs, currencyCodes,
 	)
 	if err != nil {
 		observability.RecordError("database")
@@ -193,9 +198,13 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 		var templateRecurrence *string
 		var templateStartDate *time.Time
 		var templateEndDate *time.Time
+		var amountForeign *int64
+		var currencyCode *string
+		var exchangeRate *float64
+		var exchangeAt *time.Time
 
 		err := rows.Scan(
-			&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.Latitude, &item.Longitude, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+			&item.ID, &item.Type, &item.Date, &item.Amount, &amountForeign, &currencyCode, &exchangeRate, &exchangeAt, &item.Note, &item.Latitude, &item.Longitude, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 			&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
 			&account.ID, &account.Name, &account.Type, &account.Amount, &account.Icon, &account.IconColor,
 			&category.ID, &category.Name, &category.Type, &category.Icon, &category.IconColor,
@@ -239,6 +248,12 @@ func (tr TransactionRepository) GetPaged(ctx context.Context, p models.Transacti
 				EndDate:    templateEndDate,
 			}
 		}
+
+		// Set currency fields
+		item.AmountForeign = amountForeign
+		item.CurrencyCode = currencyCode
+		item.ExchangeRate = exchangeRate
+		item.ExchangeAt = exchangeAt
 
 		items = append(items, item)
 	}
@@ -286,10 +301,14 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 	var templateRecurrence *string
 	var templateStartDate *time.Time
 	var templateEndDate *time.Time
+	var amountForeign *int64
+	var currencyCode *string
+	var exchangeRate *float64
+	var exchangeAt *time.Time
 
 	sql := `
 		WITH transaction_detail AS (
-			SELECT t.id, t.type, t.date, t.amount, t.note, t.latitude, t.longitude, t.created_at, t.updated_at, t.deleted_at,
+			SELECT t.id, t.type, t.date, t.amount, t.amount_foreign, t.currency_code, t.exchange_rate, t.exchange_at, t.note, t.latitude, t.longitude, t.created_at, t.updated_at, t.deleted_at,
 				tt.id as template_id, tt.name as template_name, tt.amount as template_amount, tt.recurrence as template_recurrence, tt.start_date as template_start_date, tt.end_date as template_end_date,
 				a.id as account_id, a.name as account_name, a.type as account_type, a.amount as account_amount, a.icon as account_icon, a.icon_color as account_color,
 				c.id as category_id, c.name as category_name, c.type as category_type, c.icon as category_icon, c.icon_color as category_color,
@@ -311,7 +330,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 			GROUP BY tt.transaction_id
 		)
 		SELECT
-			td.id, td.type, td.date, td.amount, td.note, td.latitude, td.longitude, td.created_at, td.updated_at, td.deleted_at,
+			td.id, td.type, td.date, td.amount, td.amount_foreign, td.currency_code, td.exchange_rate, td.exchange_at, td.note, td.latitude, td.longitude, td.created_at, td.updated_at, td.deleted_at,
 			td.template_id, td.template_name, td.template_amount, td.template_recurrence, td.template_start_date, td.template_end_date,
 			td.account_id, td.account_name, td.account_type, td.account_amount, td.account_icon, td.account_color,
 			td.category_id, td.category_name, td.category_type, td.category_icon, td.category_color,
@@ -322,7 +341,7 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 
 	queryStart := time.Now()
 	err := tr.db.QueryRow(ctx, sql, id).Scan(
-		&item.ID, &item.Type, &item.Date, &item.Amount, &item.Note, &item.Latitude, &item.Longitude, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
+		&item.ID, &item.Type, &item.Date, &item.Amount, &amountForeign, &currencyCode, &exchangeRate, &exchangeAt, &item.Note, &item.Latitude, &item.Longitude, &item.CreatedAt, &item.UpdatedAt, &item.DeletedAt,
 		&templateID, &templateName, &templateAmount, &templateRecurrence, &templateStartDate, &templateEndDate,
 		&account.ID, &account.Name, &account.Type, &account.Amount, &account.Icon, &account.IconColor,
 		&category.ID, &category.Name, &category.Type, &category.Icon, &category.IconColor,
@@ -372,21 +391,27 @@ func (tr TransactionRepository) GetDetail(ctx context.Context, id int64) (models
 		}
 	}
 
+	// Set currency fields
+	item.AmountForeign = amountForeign
+	item.CurrencyCode = currencyCode
+	item.ExchangeRate = exchangeRate
+	item.ExchangeAt = exchangeAt
+
 	return item, nil
 }
 
-func (tr TransactionRepository) Create(ctx context.Context, p models.CreateTransactionModel) (models.TransactionModel, error) {
+func (tr TransactionRepository) Create(ctx context.Context, p models.CreateTransactionModel, amountForeign *int64, exchangeRate *float64, exchangeAt *time.Time) (models.TransactionModel, error) {
 	var id int64
 
 	ctx, cancel := context.WithTimeout(ctx, constants.DBTimeout)
 	defer cancel()
 
-	sql := `INSERT INTO transactions (type, date, amount, account_id, category_id, destination_account_id, note, latitude, longitude)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	sql := `INSERT INTO transactions (type, date, amount, amount_foreign, currency_code, exchange_rate, exchange_at, account_id, category_id, destination_account_id, note, latitude, longitude)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 			RETURNING id`
 
 	queryStart := time.Now()
-	err := tr.db.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, p.Latitude, p.Longitude).Scan(&id)
+	err := tr.db.QueryRow(ctx, sql, p.Type, p.Date, p.Amount, amountForeign, p.CurrencyCode, exchangeRate, exchangeAt, p.AccountID, p.CategoryID, p.DestinationAccountID, p.Note, p.Latitude, p.Longitude).Scan(&id)
 
 	if err != nil {
 		observability.RecordError("database")

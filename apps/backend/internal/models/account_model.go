@@ -31,7 +31,7 @@ type AccountModel struct {
 	Name           string          `json:"name" minLength:"1" doc:"Account name"`
 	Type           string          `json:"type" minLength:"1" enum:"expense,income" doc:"Account type (expense or income)"`
 	Note           string          `json:"note" doc:"Account notes"`
-	Amount         int64           `json:"amount" doc:"Current balance"`
+	Amount         int64           `json:"amount" doc:"Current balance in base currency"`
 	Icon           *string         `json:"icon,omitempty" doc:"Icon identifier"`
 	IconColor      *string         `json:"iconColor,omitempty" doc:"Icon color code"`
 	DisplayOrder   int             `json:"displayOrder" doc:"Display order sequence"`

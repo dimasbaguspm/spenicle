@@ -14,6 +14,7 @@ type TransactionsSearchModel struct {
 	DestinationAccountIDs []int    `query:"destinationAccountId" doc:"Filter by destination account IDs (transfers)"`
 	TemplateIDs           []int    `query:"templateId" doc:"Filter by transaction template IDs"`
 	TagIDs                []int    `query:"tagId" doc:"Filter by tag IDs"`
+	CurrencyCodes         []string `query:"currencyCode" doc:"Filter by currency codes (e.g., USD, EUR)"`
 	StartDate             string   `query:"startDate" doc:"Filter by start date (YYYY-MM-DD)" format:"date-time"`
 	EndDate               string   `query:"endDate" doc:"Filter by end date (YYYY-MM-DD)" format:"date-time"`
 	MinAmount             int64    `query:"minAmount" doc:"Filter by minimum amount" minimum:"0"`
@@ -58,7 +59,11 @@ type TransactionModel struct {
 	ID                 int64                        `json:"id" doc:"Unique identifier"`
 	Type               string                       `json:"type" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
 	Date               time.Time                    `json:"date" doc:"Transaction date" format:"date-time"`
-	Amount             int64                        `json:"amount" doc:"Transaction amount"`
+	Amount             int64                        `json:"amount" doc:"Transaction amount in base currency (IDR)"`
+	AmountForeign      *int64                       `json:"amountForeign,omitempty" doc:"Foreign currency amount (as input by user). Null if transaction is in base currency."`
+	CurrencyCode       *string                      `json:"currencyCode,omitempty" doc:"ISO 4217 currency code for foreign amount (e.g., USD, EUR). Null if transaction is in base currency."`
+	ExchangeRate       *float64                     `json:"exchangeRate,omitempty" doc:"Exchange rate applied: foreign_currency → base_currency (IDR). e.g., 16500.5 for USD→IDR. Null if no conversion."`
+	ExchangeAt         *time.Time                   `json:"exchangeAt,omitempty" doc:"Timestamp when the currency conversion was applied. Null for base currency transactions." format:"date-time"`
 	Account            TransactionAccountEmbedded   `json:"account" doc:"Source account details"`
 	Category           TransactionCategoryEmbedded  `json:"category" doc:"Category details"`
 	DestinationAccount *TransactionAccountEmbedded  `json:"destinationAccount,omitempty" doc:"Destination account (transfers only)"`
@@ -83,7 +88,8 @@ type TransactionsPagedModel struct {
 type CreateTransactionModel struct {
 	Type                 string    `json:"type" minLength:"1" required:"true" enum:"expense,income,transfer" doc:"Transaction type"`
 	Date                 time.Time `json:"date" required:"true" doc:"Transaction date" format:"date-time"`
-	Amount               int64     `json:"amount" required:"true" minimum:"1" doc:"Transaction amount"`
+	Amount               int64     `json:"amount" required:"true" minimum:"1" doc:"Transaction amount in the specified currency (defaults to base currency if currencyCode not provided)"`
+	CurrencyCode         *string   `json:"currencyCode,omitempty" doc:"ISO 4217 currency code (e.g., USD, EUR). If omitted, amount is treated as base currency."`
 	AccountID            int64     `json:"accountId" required:"true" minimum:"1" doc:"Source account ID"`
 	CategoryID           int64     `json:"categoryId" required:"true" minimum:"1" doc:"Category ID"`
 	DestinationAccountID *int64    `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`
@@ -95,7 +101,8 @@ type CreateTransactionModel struct {
 type UpdateTransactionModel struct {
 	Type                 *string    `json:"type,omitempty" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
 	Date                 *time.Time `json:"date,omitempty" doc:"Transaction date" format:"date-time"`
-	Amount               *int64     `json:"amount,omitempty" minimum:"1" doc:"Transaction amount"`
+	Amount               *int64     `json:"amount,omitempty" minimum:"1" doc:"Transaction amount in the specified currency"`
+	CurrencyCode         *string    `json:"currencyCode,omitempty" doc:"ISO 4217 currency code (e.g., USD, EUR)"`
 	AccountID            *int64     `json:"accountId,omitempty" minimum:"1" doc:"Source account ID"`
 	CategoryID           *int64     `json:"categoryId,omitempty" minimum:"1" doc:"Category ID"`
 	DestinationAccountID *int64     `json:"destinationAccountId,omitempty" doc:"Destination account ID (transfers only)"`

@@ -18,6 +18,7 @@ const (
 	JWT_SECRET_ENV     = "JWT_SECRET"
 	ADMIN_USERNAME_ENV = "ADMIN_USERNAME"
 	ADMIN_PASSWORD_ENV = "ADMIN_PASSWORD"
+	BASE_CURRENCY_ENV  = "BASE_CURRENCY"
 )
 
 const (
@@ -39,6 +40,7 @@ type Environment struct {
 	RedisURL      string
 	AdminUsername string
 	AdminPassword string
+	BaseCurrency  string
 }
 
 func NewEnvironment() Environment {
@@ -60,6 +62,11 @@ func NewEnvironment() Environment {
 		stage = AppStageProd
 	}
 
+	baseCurrency := os.Getenv(BASE_CURRENCY_ENV)
+	if baseCurrency == "" {
+		baseCurrency = DefaultBaseCurrency
+	}
+
 	return Environment{
 		AppPort:       os.Getenv(APP_PORT_ENV),
 		AppStage:      stage,
@@ -72,5 +79,6 @@ func NewEnvironment() Environment {
 		RedisURL:      redisURL,
 		AdminUsername: os.Getenv(ADMIN_USERNAME_ENV),
 		AdminPassword: os.Getenv(ADMIN_PASSWORD_ENV),
+		BaseCurrency:  baseCurrency,
 	}
 }

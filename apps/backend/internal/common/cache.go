@@ -159,6 +159,13 @@ func BuildStatisticsCacheKey(entity string, entityID int64, statisticType string
 	return fmt.Sprintf("%s:statistics:%d:%s:%s", entity, entityID, statisticType, hash)
 }
 
+// BuildConfigCacheKey constructs a configuration cache key in format "config:{configType}"
+// This matches the EntityCachePatterns format and is used by configuration service methods
+// Example: BuildConfigCacheKey("baseCurrency") → "config:baseCurrency"
+func BuildConfigCacheKey(configType string) string {
+	return fmt.Sprintf("config:%s", configType)
+}
+
 // FetchWithCache is a generic helper that fetches data with caching
 // It attempts to retrieve cached data first, and on cache miss or error,
 // it executes the fetcher function and caches the result

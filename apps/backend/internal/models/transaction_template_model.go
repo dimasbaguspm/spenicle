@@ -13,6 +13,7 @@ type TransactionTemplateModel struct {
 	Name               string                            `json:"name" doc:"Template name"`
 	Type               string                            `json:"type" minLength:"1" enum:"expense,income,transfer" doc:"Transaction type"`
 	Amount             int64                             `json:"amount" doc:"Template amount"`
+	Currency           *string                           `json:"currency,omitempty" doc:"ISO 4217 currency code (reserved for future multi-currency support)"`
 	Account            TransactionAccountEmbedded        `json:"account" doc:"Source account details"`
 	Category           TransactionCategoryEmbedded       `json:"category" doc:"Category details"`
 	DestinationAccount *TransactionAccountEmbedded       `json:"destinationAccount,omitempty" doc:"Destination account details (transfers only)"`

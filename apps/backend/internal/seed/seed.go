@@ -15,6 +15,7 @@ import (
 
 func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client) error {
 	slog.Info("Starting development data seeding")
+	slog.Info("Seeding includes multi-currency transactions: USD, EUR, SGD will be converted to base currency (IDR)")
 
 	// Initialize repositories and services
 	repos := repositories.NewRootRepository(ctx, pool)
@@ -214,6 +215,26 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 			Latitude:   ptr(yogyaLocations[17].Lat), // GoWork Jogja
 			Longitude:  ptr(yogyaLocations[17].Lon),
 			Note:       func() *string { s := "Desain UI/UX aplikasi mobile"; return &s }(),
+		},
+
+		// Multi-currency freelance income - international clients
+		models.CreateTransactionModel{
+			Type:         "income",
+			Date:         startDate.AddDate(0, 1, 3),
+			Amount:       1500, // USD - US client project
+			AccountID:    accountMap["Tabungan Mandiri"],
+			CategoryID:   categoryMap["Freelance"],
+			CurrencyCode: func() *string { s := "USD"; return &s }(),
+			Note:         func() *string { s := "Upwork: Backend API development untuk startup US"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:         "income",
+			Date:         startDate.AddDate(0, 2, 8),
+			Amount:       900, // EUR - European client project
+			AccountID:    accountMap["Tabungan Mandiri"],
+			CategoryID:   categoryMap["Freelance"],
+			CurrencyCode: func() *string { s := "EUR"; return &s }(),
+			Note:         func() *string { s := "Freelancer.com: React frontend design untuk Berlin startup"; return &s }(),
 		},
 	)
 
@@ -520,6 +541,38 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 			Note:       func() *string { s := "Oleh-oleh bakpia untuk keluarga"; return &s }(),
 		},
 
+		// Multi-currency international purchases
+		models.CreateTransactionModel{
+			Type:         "expense",
+			Date:         startDate.AddDate(0, 0, 42),
+			Amount:       99, // USD - Amazon book purchase
+			AccountID:    accountMap["Kartu Kredit BCA"],
+			CategoryID:   categoryMap["Belanja Online"],
+			CurrencyCode: func() *string { s := "USD"; return &s }(),
+			Note: func() *string {
+				s := "Amazon: 'The Pragmatic Programmer' + 'Microservices Patterns' (international)"
+				return &s
+			}(),
+		},
+		models.CreateTransactionModel{
+			Type:         "expense",
+			Date:         startDate.AddDate(0, 0, 55),
+			Amount:       49, // SGD - international download service
+			AccountID:    accountMap["Kartu Kredit BCA"],
+			CategoryID:   categoryMap["Belanja Online"],
+			CurrencyCode: func() *string { s := "SGD"; return &s }(),
+			Note:         func() *string { s := "Udemy: International course purchase (Singapore currency)"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:         "expense",
+			Date:         startDate.AddDate(0, 1, 28),
+			Amount:       99, // EUR - European tech store
+			AccountID:    accountMap["Kartu Kredit BCA"],
+			CategoryID:   categoryMap["Belanja Online"],
+			CurrencyCode: func() *string { s := "EUR"; return &s }(),
+			Note:         func() *string { s := "Thomann: Studio monitor headphones (Europe)"; return &s }(),
+		},
+
 		// Healthcare
 		models.CreateTransactionModel{
 			Type:       "expense",
@@ -590,6 +643,35 @@ func SeedDevelopmentData(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cli
 			Latitude:   ptr(yogyaLocations[22].Lat), // Prambanan
 			Longitude:  ptr(yogyaLocations[22].Lon),
 			Note:       func() *string { s := "Tiket masuk Candi Prambanan"; return &s }(),
+		},
+
+		// Multi-currency travel and international entertainment
+		models.CreateTransactionModel{
+			Type:         "expense",
+			Date:         startDate.AddDate(0, 0, 50),
+			Amount:       189, // SGD - flight to Singapore
+			AccountID:    accountMap["Kartu Kredit BCA"],
+			CategoryID:   categoryMap["Hiburan"],
+			CurrencyCode: func() *string { s := "SGD"; return &s }(),
+			Note:         func() *string { s := "AirAsia: Yogya-Singapore-Bangkok return flight (booked abroad)"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:         "expense",
+			Date:         startDate.AddDate(0, 1, 8),
+			Amount:       125, // USD - international hotel booking
+			AccountID:    accountMap["Kartu Kredit BCA"],
+			CategoryID:   categoryMap["Hiburan"],
+			CurrencyCode: func() *string { s := "USD"; return &s }(),
+			Note:         func() *string { s := "Booking.com: 2 nights hotel di Bangkok"; return &s }(),
+		},
+		models.CreateTransactionModel{
+			Type:         "expense",
+			Date:         startDate.AddDate(0, 2, 20),
+			Amount:       29, // USD - international streaming service
+			AccountID:    accountMap["Dompet Digital GoPay"],
+			CategoryID:   categoryMap["Hiburan"],
+			CurrencyCode: func() *string { s := "USD"; return &s }(),
+			Note:         func() *string { s := "Netflix: monthly subscription (international payment)"; return &s }(),
 		},
 
 		// Education

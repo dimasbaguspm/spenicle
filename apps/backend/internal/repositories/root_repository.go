@@ -15,57 +15,60 @@ type DBQuerier interface {
 }
 
 type RootRepository struct {
-	Pool    *pgxpool.Pool
-	db      DBQuerier
-	Acc     AccountRepository
-	Ath     AuthRepository
-	BudgTem BudgetTemplateRepository
-	Cat     CategoryRepository
-	AccStat AccountStatisticsRepository
-	CatStat CategoryStatisticsRepository
-	Sum     SummaryRepository
-	Tag     TagRepository
-	Tsct    TransactionRepository
-	TsctRel TransactionRelationRepository
-	TsctTag TransactionTagRepository
-	TsctTem TransactionTemplateRepository
+	Pool      *pgxpool.Pool
+	db        DBQuerier
+	Acc       AccountRepository
+	Ath       AuthRepository
+	BudgTem   BudgetTemplateRepository
+	Cat       CategoryRepository
+	AccStat   AccountStatisticsRepository
+	CatStat   CategoryStatisticsRepository
+	CurConfig CurrencyConfigRepository
+	Sum       SummaryRepository
+	Tag       TagRepository
+	Tsct      TransactionRepository
+	TsctRel   TransactionRelationRepository
+	TsctTag   TransactionTagRepository
+	TsctTem   TransactionTemplateRepository
 }
 
 func NewRootRepository(ctx context.Context, pgx *pgxpool.Pool) RootRepository {
 	db := DBQuerier(pgx)
 	return RootRepository{
-		Pool:    pgx,
-		db:      db,
-		Acc:     NewAccountRepository(db),
-		Ath:     NewAuthRepository(ctx),
-		BudgTem: NewBudgetTemplateRepository(db),
-		Cat:     NewCategoryRepository(db),
-		AccStat: NewAccountStatisticsRepository(db),
-		CatStat: NewCategoryStatisticsRepository(db),
-		Sum:     NewSummaryRepository(db),
-		Tag:     NewTagRepository(db),
-		Tsct:    NewTransactionRepository(db),
-		TsctRel: NewTransactionRelationRepository(db),
-		TsctTag: NewTransactionTagRepository(db),
-		TsctTem: NewTransactionTemplateRepository(db),
+		Pool:      pgx,
+		db:        db,
+		Acc:       NewAccountRepository(db),
+		Ath:       NewAuthRepository(ctx),
+		BudgTem:   NewBudgetTemplateRepository(db),
+		Cat:       NewCategoryRepository(db),
+		AccStat:   NewAccountStatisticsRepository(db),
+		CatStat:   NewCategoryStatisticsRepository(db),
+		CurConfig: NewCurrencyConfigRepository(db),
+		Sum:       NewSummaryRepository(db),
+		Tag:       NewTagRepository(db),
+		Tsct:      NewTransactionRepository(db),
+		TsctRel:   NewTransactionRelationRepository(db),
+		TsctTag:   NewTransactionTagRepository(db),
+		TsctTem:   NewTransactionTemplateRepository(db),
 	}
 }
 
 func (r RootRepository) WithTx(ctx context.Context, tx pgx.Tx) RootRepository {
 	return RootRepository{
-		Pool:    r.Pool,
-		db:      tx,
-		Acc:     NewAccountRepository(tx),
-		Ath:     NewAuthRepository(ctx),
-		BudgTem: NewBudgetTemplateRepository(tx),
-		Cat:     NewCategoryRepository(tx),
-		AccStat: NewAccountStatisticsRepository(tx),
-		CatStat: NewCategoryStatisticsRepository(tx),
-		Sum:     NewSummaryRepository(tx),
-		Tag:     NewTagRepository(tx),
-		Tsct:    NewTransactionRepository(tx),
-		TsctRel: NewTransactionRelationRepository(tx),
-		TsctTag: NewTransactionTagRepository(tx),
-		TsctTem: NewTransactionTemplateRepository(tx),
+		Pool:      r.Pool,
+		db:        tx,
+		Acc:       NewAccountRepository(tx),
+		Ath:       NewAuthRepository(ctx),
+		BudgTem:   NewBudgetTemplateRepository(tx),
+		Cat:       NewCategoryRepository(tx),
+		AccStat:   NewAccountStatisticsRepository(tx),
+		CatStat:   NewCategoryStatisticsRepository(tx),
+		CurConfig: NewCurrencyConfigRepository(tx),
+		Sum:       NewSummaryRepository(tx),
+		Tag:       NewTagRepository(tx),
+		Tsct:      NewTransactionRepository(tx),
+		TsctRel:   NewTransactionRelationRepository(tx),
+		TsctTag:   NewTransactionTagRepository(tx),
+		TsctTem:   NewTransactionTemplateRepository(tx),
 	}
 }

@@ -13,6 +13,7 @@ const (
 	EntityBudgetTemplate      = "budget_template"
 	EntityTag                 = "tag"
 	EntityTransactionTemplate = "transaction_template"
+	EntityConfig              = "config"
 )
 
 // Summary entity names for summary cache keys
@@ -25,7 +26,9 @@ const (
 
 // Cache keys for special features
 const (
-	BulkDraftKey = "bulk_draft" // Global bulk transaction draft key
+	BulkDraftKey            = "bulk_draft"            // Global bulk transaction draft key
+	ConfigBaseCurrencyKey   = "config:baseCurrency"   // Base currency configuration key
+	ConfigBaseCurrencyTSKey = "config:baseCurrencyTs" // Base currency with timestamp key
 )
 
 // Cache TTLs for different cache operation types

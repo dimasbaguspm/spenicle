@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dimasbaguspm/spenicle-api/clients"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
 	"github.com/dimasbaguspm/spenicle-api/internal/constants"
 	"github.com/dimasbaguspm/spenicle-api/internal/models"
@@ -15,9 +16,10 @@ import (
 )
 
 type TransactionService struct {
-	rpts        *repositories.RootRepository
-	rdb         *redis.Client
-	geoIndexMgr *common.GeoIndexManager
+	rpts           *repositories.RootRepository
+	rdb            *redis.Client
+	geoIndexMgr    *common.GeoIndexManager
+	exchangeClient *clients.SnapExchangeClient
 }
 
 func NewTransactionService(rpts *repositories.RootRepository, rdb *redis.Client) TransactionService {
@@ -30,6 +32,7 @@ func NewTransactionService(rpts *repositories.RootRepository, rdb *redis.Client)
 		rpts,
 		rdb,
 		common.NewGeoIndexManager(rdb, geoConfig),
+		clients.NewSnapExchangeClient(),
 	}
 }
 
@@ -101,6 +104,21 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 		return models.TransactionModel{}, huma.Error400BadRequest("Both latitude and longitude must be provided together or neither")
 	}
 
+	// Get base currency
+	baseCurrency, err := ts.rpts.CurConfig.GetBaseCurrency(ctx)
+	if err != nil {
+		return models.TransactionModel{}, huma.Error500InternalServerError("Failed to retrieve base currency config")
+	}
+
+	// Apply currency conversion if foreign currency is provided
+	baseAmount, amountForeign, exchangeRate, err := ts.ApplyCurrencyConversion(ctx, baseCurrency, p.Amount, p.CurrencyCode)
+	if err != nil {
+		return models.TransactionModel{}, err
+	}
+
+	// Update the request model with calculated base amount
+	p.Amount = baseAmount
+
 	if err := ts.ValidateReferences(ctx, p.Type, p.AccountID, p.DestinationAccountID, &p.CategoryID); err != nil {
 		return models.TransactionModel{}, err
 	}
@@ -113,7 +131,15 @@ func (ts TransactionService) Create(ctx context.Context, p models.CreateTransact
 	defer tx.Rollback(ctx)
 
 	rootTx := ts.rpts.WithTx(ctx, tx)
-	transaction, err := rootTx.Tsct.Create(ctx, p)
+
+	// Set exchangeAt if currency conversion was applied
+	var exchangeAt *time.Time
+	if exchangeRate != nil {
+		now := time.Now()
+		exchangeAt = &now
+	}
+
+	transaction, err := rootTx.Tsct.Create(ctx, p, amountForeign, exchangeRate, exchangeAt)
 	if err != nil {
 		return models.TransactionModel{}, err
 	}
@@ -344,7 +370,8 @@ func (ts TransactionService) ValidateReferences(ctx context.Context, txType stri
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		if _, err := ts.rpts.Acc.GetDetail(ctx, accountID); err != nil {
+		_, err := ts.rpts.Acc.GetDetail(ctx, accountID)
+		if err != nil {
 			return huma.Error400BadRequest("Account not found", err)
 		}
 		return nil
@@ -357,9 +384,12 @@ func (ts TransactionService) ValidateReferences(ctx context.Context, txType stri
 			}
 		}
 		if destAccountID != nil && *destAccountID != 0 {
-			if _, err := ts.rpts.Acc.GetDetail(ctx, *destAccountID); err != nil {
+			destAcc, err := ts.rpts.Acc.GetDetail(ctx, *destAccountID)
+			if err != nil {
 				return huma.Error400BadRequest("Destination account not found", err)
 			}
+			// Cross-currency transfers are now supported via amount/amountForeign/exchangeRate tracking
+			_ = destAcc // destAcc is fetched to ensure it exists, but no currency check needed
 		}
 		return nil
 	})
@@ -383,4 +413,54 @@ func (ts TransactionService) ValidateReferences(ctx context.Context, txType stri
 		return err
 	}
 	return nil
+}
+
+// ApplyCurrencyConversion handles currency conversion for transactions
+// Input: amount in the transaction's currency, currencyCode (optional)
+//
+// Returns:
+//
+//   - If currencyCode is provided, valid, and DIFFERENT from baseCurrency:
+//
+//   - Fetches exchange rate from SnapExchange
+//
+//   - Returns: baseAmount (converted), amountForeign (original input), exchangeRate, nil error
+//
+//   - These will be stored in DB; exchangeAt will be set to NOW() by service
+//
+//   - If currencyCode is nil, empty, or MATCHES baseCurrency:
+//
+//   - No conversion needed
+//
+//   - Returns: amount as-is, nil amountForeign, nil exchangeRate, nil error
+//
+//   - DB will store: amount=<value>, amountForeign=NULL, exchangeRate=NULL, exchangeAt=NULL
+func (ts TransactionService) ApplyCurrencyConversion(ctx context.Context, baseCurrency string, amount int64, currencyCode *string) (baseAmount int64, amountForeign *int64, exchangeRate *float64, err error) {
+	// No currency code provided - use base currency as-is, no foreign amount
+	if currencyCode == nil || *currencyCode == "" {
+		return amount, nil, nil, nil
+	}
+
+	// If currencyCode matches base currency, no conversion needed, no foreign amount
+	if *currencyCode == baseCurrency {
+		return amount, nil, nil, nil
+	}
+
+	// SnapExchangeClient should not be nil if currency conversion is needed
+	if ts.exchangeClient == nil {
+		return 0, nil, nil, huma.Error503ServiceUnavailable("Exchange rate service unavailable")
+	}
+
+	// Fetch conversion rate from SnapExchange: currencyCode → baseCurrency
+	rate, err := ts.exchangeClient.GetConversionRate(ctx, *currencyCode, baseCurrency)
+	if err != nil {
+		return 0, nil, nil, huma.Error503ServiceUnavailable("Failed to fetch exchange rate from "+*currencyCode+" to "+baseCurrency, err)
+	}
+
+	// Calculate base amount: amount (in foreign currency) * rate
+	// Both stored as integers (cents), preserve precision
+	baseAmount = int64(float64(amount) * rate)
+
+	// Return: converted amount, original foreign amount, exchange rate
+	return baseAmount, &amount, &rate, nil
 }
