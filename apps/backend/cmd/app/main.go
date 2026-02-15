@@ -31,11 +31,11 @@ func main() {
 	db := configs.NewDatabase(ctx, env)
 	rdb := configs.NewRedisClient(ctx, env)
 
-	snapExchangeClient := clients.NewSnapExchangeClient("http://localhost:8081")
+	snapExchangeClient := clients.NewSnapExchangeClient()
 	if err := snapExchangeClient.HealthCheck(ctx); err != nil {
 		slog.Warn("SnapExchange service unavailable on startup", "error", err)
 	} else {
-		slog.Info("SnapExchange service connected", "url", "http://localhost:8081")
+		slog.Info("SnapExchange service connected")
 	}
 
 	rateLimitMgr := common.NewRateLimitManager(rdb)

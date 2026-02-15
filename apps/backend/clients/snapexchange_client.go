@@ -22,9 +22,9 @@ type SnapExchangeClient struct {
 	httpClient *http.Client
 }
 
-func NewSnapExchangeClient(baseURL string) *SnapExchangeClient {
+func NewSnapExchangeClient() *SnapExchangeClient {
 	return &SnapExchangeClient{
-		baseURL: baseURL,
+		baseURL: "http://localhost:8081",
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
