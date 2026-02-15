@@ -44,8 +44,8 @@ var (
 
 	HTTPRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: "snapexchange_http_request_duration_seconds",
-			Help: "HTTP request latency in seconds",
+			Name:    "snapexchange_http_request_duration_seconds",
+			Help:    "HTTP request latency in seconds",
 			Buckets: []float64{0.0001, 0.0005, 0.001, 0.005, 0.01},
 		},
 		[]string{"method", "endpoint"},

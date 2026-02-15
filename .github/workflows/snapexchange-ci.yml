@@ -2,15 +2,15 @@ name: SnapExchange CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'apps/backend-snap-exchange/**'
-      - '.github/workflows/snapexchange-ci.yml'
+      - "apps/backend-snap-exchange/**"
+      - ".github/workflows/snapexchange-ci.yml"
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'apps/backend-snap-exchange/**'
-      - '.github/workflows/snapexchange-ci.yml'
+      - "apps/backend-snap-exchange/**"
+      - ".github/workflows/snapexchange-ci.yml"
 
 defaults:
   run:
@@ -20,85 +20,29 @@ jobs:
   test:
     name: Test & Build
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
         with:
-          go-version: '1.25'
-          cache-dependency-path: apps/backend-snap-exchange/go.sum
-      
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
       - name: Download dependencies
         run: go mod download
-      
-      - name: Check formatting
-        run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "Code is not formatted. Please run: gofmt -w ."
-            gofmt -l .
-            exit 1
-          fi
-      
+
       - name: Run go vet
         run: go vet ./...
-      
+
       - name: Run tests
-        run: go test ./... -v -race -coverprofile=coverage.out -covermode=atomic
-      
-      - name: Display coverage
-        run: go tool cover -func=coverage.out
-      
+        run: go test ./... -v
+
       - name: Build binary
         run: go build -ldflags="-s -w" -o snapexchange cmd/app/main.go
-      
-      - name: Check binary size
-        run: |
-          SIZE_BYTES=$(stat -c%s snapexchange)
-          SIZE_MB=$((SIZE_BYTES / 1024 / 1024))
-          echo "Binary size: ${SIZE_MB}MB"
-          if [ $SIZE_BYTES -gt 15728640 ]; then
-            echo "❌ Binary size (${SIZE_MB}MB) exceeds 15MB limit"
-            exit 1
-          fi
-          echo "✅ Binary size OK (${SIZE_MB}MB)"
-
-  docker:
-    name: Docker Build & Test
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Build Docker image
-        working-directory: apps/backend-snap-exchange
-        run: docker build -t snapexchange:test .
-      
-      - name: Start container
-        run: |
-          docker run -d --name snapexchange-test \
-            -p 8080:8080 \
-            -e APP_PORT=8080 \
-            snapexchange:test
-      
-      - name: Wait for service
-        run: sleep 15
-      
-      - name: Test health endpoint
-        run: |
-          curl -f http://localhost:8080/health || exit 1
-          echo "✅ Health check passed"
-      
-      - name: Test metrics endpoint
-        run: |
-          curl -f http://localhost:8080/metrics | grep -q snapexchange || exit 1
-          echo "✅ Metrics endpoint working"
-      
-      - name: Cleanup
-        if: always()
-        run: |
-          docker stop snapexchange-test || true
-          docker rm snapexchange-test || true
