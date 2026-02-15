@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/dimasbaguspm/spenicle-api/clients"
 	"github.com/dimasbaguspm/spenicle-api/internal"
 	"github.com/dimasbaguspm/spenicle-api/internal/common"
 	"github.com/dimasbaguspm/spenicle-api/internal/configs"
@@ -29,6 +30,13 @@ func main() {
 	env := configs.NewEnvironment()
 	db := configs.NewDatabase(ctx, env)
 	rdb := configs.NewRedisClient(ctx, env)
+
+	snapExchangeClient := clients.NewSnapExchangeClient("http://localhost:8081")
+	if err := snapExchangeClient.HealthCheck(ctx); err != nil {
+		slog.Warn("SnapExchange service unavailable on startup", "error", err)
+	} else {
+		slog.Info("SnapExchange service connected", "url", "http://localhost:8081")
+	}
 
 	rateLimitMgr := common.NewRateLimitManager(rdb)
 	if err := rateLimitMgr.ClearAllRateLimitData(ctx); err != nil {
