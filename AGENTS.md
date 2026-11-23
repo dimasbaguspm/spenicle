@@ -90,14 +90,21 @@ Un-prefixed, all optional except `PASSWORD` in practice:
 | `ADDR` | `:8080` | listen address |
 | `BASE_CURRENCY` | `IDR` | locked at first boot |
 | `PASSWORD` | — | single user's password |
-| `APP_SECRET` | — | ≥ 16 bytes; seals sensitive columns. Unset = honest passthrough |
+| `APP_SECRET` | **required** | ≥ 16 bytes; seals sensitive columns, identifies the database |
+| `APP_SECRET_RESET` | `false` | recovery only: boot despite a fingerprint mismatch and blank sealed payloads |
 | `EXTRACTION_API_KEY` | — | enables the extraction vendor; unset = manual entry |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | empty = tracing/metrics are no-ops |
 
-Only these seven are environment variables. **Every other knob — DB path, HTTP
+`APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`
+fails when its fingerprint does not match `settings.secret_fingerprint`. The only
+recovery from a lost secret is `APP_SECRET_RESET=true`, which discards the sealed
+capture payloads, records `secret_reset` in `audit_log`, and re-records the
+fingerprint — the ledger is plaintext and survives by design.
+
+Only these eight are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 and tracer names — has its default in `internal/common/config/config.go`**, and the
-resulting value object is `entity.AppConfig`. No viper, on purpose: seven variables
+resulting value object is `entity.AppConfig`. No viper, on purpose: eight variables
 and one file beat a precedence chain nobody can predict. A new knob means a new
 constant and field in those two files, nothing else.
 

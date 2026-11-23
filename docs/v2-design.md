@@ -17,7 +17,7 @@ place to defer a decision. v2 fixes all three.
 | storage | SQLite, single binary, no Redis |
 | deployment | one `docker run` / one compose file, port 8080 |
 | auth | optional password for the browser; scoped API tokens for agents and scripts |
-| sealing | `APP_SECRET` encrypts captures, artifacts and cookies; ledger stays readable plaintext |
+| sealing | `APP_SECRET` is mandatory; it encrypts captures, artifacts and cookies, and the ledger stays readable plaintext |
 | capture | PWA share target + offline IndexedDB outbox |
 | review | single `captures` queue for every channel |
 | ledger | double-entry: `ledger_entries` + `ledger_postings`, zero-sum per entry |
@@ -66,7 +66,7 @@ module: it is initial data, and its rules come from `entity`.
 Configuration is one file: `internal/common/config/config.go` holds every environment
 variable, **every default** (DB path, HTTP timeouts, shutdown budgets, body cap, pool
 sizes, service and tracer names) and the validation; the resolved value is
-`entity.AppConfig`. No config file, no viper: seven variables do not need a
+`entity.AppConfig`. No config file, no viper: eight variables do not need a
 precedence chain, and one struct with defaults is testable without a framework.
 
 ### Contexts and spans
@@ -300,9 +300,33 @@ encryption — a promise that a stolen `spenicle.db` is not a stolen mailbox.
 | **not** sealed, on purpose | ledger, postings, accounts, amounts |
 
 The ledger stays plaintext so `sqlite3` still answers "what did I spend" when the secret is lost
-or the app is broken. `settings.secret_fingerprint` is compared at boot; a mismatch refuses to
-start with a clear error rather than returning garbage. `spenicle reseal` re-encrypts after a
-secret rotation.
+or the app is broken.
+
+`APP_SECRET` is required: the process does not boot without it, and
+`settings.secret_fingerprint` is compared at boot — a mismatch refuses to start rather than
+returning garbage. The error names both options.
+
+### Recovery from a changed secret
+
+Sealed columns cannot be decrypted without the key that wrote them, so there is no
+re-encryption path that does not have the old secret. The recovery is explicit and lossy:
+
+```bash
+APP_SECRET=<new secret> APP_SECRET_RESET=true docker run …
+```
+
+That one boot, in a single transaction:
+
+1. blanks every sealed capture payload (`raw_text`, `draft_json`, `extraction_error`,
+   `resolution_note`),
+2. writes `secret_reset` to `audit_log`,
+3. records the new fingerprint.
+
+Consequences, stated plainly: captures that were waiting for review lose their text and
+draft and must be retyped or re-imported; artifact files under `DATA_DIR/raw/` are
+unreadable afterwards and should be deleted by the operator. Nothing in the ledger,
+accounts, postings or reports is touched. After the boot, unset `APP_SECRET_RESET`:
+leaving it on would silently accept any future mismatch.
 
 Whole-file encryption is out of scope: `modernc.org/sqlite` has no codec, and SQLCipher needs
 cgo, which kills the static binary. LUKS the volume instead.

@@ -112,7 +112,7 @@ Docker tags cannot contain `+`, which is why the image uses `v0.2.0` and
 make lint    # four groups, all must be clean
 make test    # unit + UAT
 docker build -t spenicle:local .
-docker run --rm -p 8080:8080 -v spenicle-data:/data spenicle:local
+docker run --rm -p 8080:8080 -v spenicle-data:/data -e APP_SECRET="local-test-secret-16" spenicle:local
 curl -s localhost:8080/healthz
 ```
 

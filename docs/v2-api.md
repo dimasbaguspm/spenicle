@@ -28,7 +28,8 @@ never floats. Errors: `{"error":{"code":"...","message":"...","details":{}}}`.
 | --- | --- | --- |
 | `DATA_DIR` | `/data` | SQLite file and `raw/` artifacts |
 | `PASSWORD` | unset | enables `POST /api/session`; unset means open on your network |
-| `APP_SECRET` | unset | seals cookies, artifacts, capture payloads, token hashes |
+| `APP_SECRET` | **required** | seals cookies, artifacts, capture payloads, token hashes |
+| `APP_SECRET_RESET` | `false` | one-shot recovery: accept a changed secret by discarding sealed payloads |
 | `EXTRACTION_API_KEY` | unset | enables the extraction worker |
 
 Names carry no prefix on purpose. If several self-hosted services share one `env_file`, qualify
@@ -49,9 +50,9 @@ Consequences, stated plainly:
 
 1. Losing the secret loses capture payloads and receipt images. The ledger survives. Back the
    secret up next to the database.
-2. Changing the secret requires `spenicle reseal` (re-encrypt artifacts and capture columns).
-   A `secret_fingerprint` row in `settings` is compared at boot; mismatch aborts with a clear
-   error instead of silently returning garbage.
+2. Changing the secret is refused at boot (`settings.secret_fingerprint` mismatch). Without the
+   old secret there is no re-encryption path; `APP_SECRET_RESET=true` accepts the new one by
+   blanking the sealed capture payloads and auditing the reset, once. The ledger is unaffected.
 3. Whole-file encryption is **not** offered: `modernc.org/sqlite` has no codec, and SQLCipher
    needs cgo, which breaks the static single binary. Use LUKS on the volume if you want that.
 

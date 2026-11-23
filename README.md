@@ -63,11 +63,19 @@ sudo chown -R 10001:10001 ./data
 | --- | --- | --- |
 | `DATA_DIR` | `/data` | SQLite file and `raw/` artifacts |
 | `PASSWORD` | unset | enables the login screen; unset means open on your LAN |
-| `APP_SECRET` | unset | encrypts capture payloads, artifacts and cookies |
+| `APP_SECRET` | **required** | ≥ 16 bytes; seals capture payloads, artifacts and cookies |
+| `APP_SECRET_RESET` | `false` | recovery: start despite a changed secret, discarding sealed payloads |
 | `EXTRACTION_API_KEY` | unset | enables receipt/statement extraction |
 
-Set `APP_SECRET` if the machine is not exclusively yours. Set `PASSWORD` if it
-is reachable from anywhere except your own bed.
+`APP_SECRET` is required: the process refuses to boot without it, and refuses to
+boot when it does not match the database it is opening. Generate one once and keep
+it with your backups:
+
+```bash
+openssl rand -base64 32
+```
+
+Set `PASSWORD` if the instance is reachable from anywhere except your own bed.
 
 ## First run
 
@@ -142,7 +150,7 @@ That agent can add captures and read the dashboard. It cannot touch the ledger. 
 
 | symptom | cause |
 | --- | --- |
-| container exits with `secret mismatch` | `APP_SECRET` differs from the one that sealed the data; restore it or run `spenicle reseal` |
+| container exits with `app secret mismatch` | `APP_SECRET` differs from the one that sealed this database. Restore the original secret. If it is gone for good, set `APP_SECRET_RESET=true` once: the ledger survives, every sealed capture payload is discarded and the reset is written to `audit_log` |
 | `/healthz` returns 503 | database not writable, or secret fingerprint mismatch |
 | captures stay `pending` with no draft | extraction is disabled (no API key); typing the fields works fine |
 | no share target on iPhone | iOS Safari has none; use a Shortcut that POSTs to `/api/captures` |
