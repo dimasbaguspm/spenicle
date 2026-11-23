@@ -1,0 +1,47 @@
+// Package sqlite is the driven adapter: it owns the file, the schema and SQL.
+// Nothing outside this package knows SQLite exists.
+package sqlite
+
+import (
+	"database/sql"
+	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+
+	_ "modernc.org/sqlite" // pure Go driver, keeps the binary static
+)
+
+// Config is everything the adapter needs to open a database.
+type Config struct {
+	Path string
+}
+
+// Open creates the data directory if needed and returns a WAL-mode handle.
+func Open(cfg Config) (*sql.DB, error) {
+	if err := os.MkdirAll(filepath.Dir(cfg.Path), 0o750); err != nil {
+		return nil, fmt.Errorf("create data dir: %w", err)
+	}
+
+	dsn := "file:" + url.PathEscape(cfg.Path) +
+		"?_pragma=busy_timeout(5000)" +
+		"&_pragma=journal_mode(WAL)" +
+		"&_pragma=foreign_keys(1)" +
+		"&_pragma=synchronous(NORMAL)"
+
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("open sqlite: %w", err)
+	}
+
+	// WAL allows concurrent readers, but this deployment is one process with a
+	// single writer. Fewer connections keeps BUSY retries predictable.
+	db.SetMaxOpenConns(4)
+	db.SetMaxIdleConns(2)
+
+	if err := db.Ping(); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("ping sqlite: %w", err)
+	}
+	return db, nil
+}

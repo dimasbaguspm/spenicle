@@ -1,6 +1,11 @@
 .env
-spenicle-api
 
-**/node_modules/**
-**/dist/**
-**/*.tsbuildinfo
+# runtime data: the sqlite file, WAL sidecars and sealed artifacts
+/data/
+*.db
+*.db-shm
+*.db-wal
+
+# build output
+/bin/
+/spenicle
