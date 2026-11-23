@@ -13,15 +13,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dimasbaguspm/spenicle/internal/adapter/httpapi"
-	"github.com/dimasbaguspm/spenicle/internal/adapter/sqlite"
+	"github.com/dimasbaguspm/spenicle/internal/app"
 	"github.com/dimasbaguspm/spenicle/internal/config"
-	"github.com/dimasbaguspm/spenicle/internal/platform/clockx"
 	"github.com/dimasbaguspm/spenicle/internal/platform/otelx"
 	"github.com/dimasbaguspm/spenicle/internal/platform/seal"
 	"github.com/dimasbaguspm/spenicle/internal/port"
-	"github.com/dimasbaguspm/spenicle/internal/usecase/bootstrap"
-	"github.com/dimasbaguspm/spenicle/internal/usecase/ledger"
 )
 
 // version is stamped at build time.
@@ -67,36 +63,20 @@ func run() error {
 		return err
 	}
 
-	db, err := sqlite.Open(sqlite.Config{Path: filepath.Join(cfg.DataDir, "spenicle.db")})
+	application, err := app.New(ctx, app.Config{
+		DBPath:       filepath.Join(cfg.DataDir, "spenicle.db"),
+		BaseCurrency: cfg.BaseCurrency,
+		Sealer:       sealer,
+		Logger:       logger,
+	})
 	if err != nil {
 		return err
 	}
-	defer func() { _ = db.Close() }()
-
-	if err := sqlite.Migrate(ctx, db); err != nil {
-		return fmt.Errorf("migrate: %w", err)
-	}
-
-	store := sqlite.NewStore(db)
-
-	baseCurrency, err := bootstrap.New(store, store).EnsureBaseline(ctx, cfg.BaseCurrency, sealer.Fingerprint())
-	if err != nil {
-		return fmt.Errorf("bootstrap: %w", err)
-	}
-
-	ledgerService := ledger.New(store, store, clockx.Clock{}, clockx.IDs{})
-
-	api := httpapi.New(httpapi.Deps{
-		Ledger:       ledgerService,
-		Health:       store,
-		Sealer:       sealer,
-		BaseCurrency: baseCurrency,
-		Logger:       logger,
-	})
+	defer func() { _ = application.Close() }()
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           api.Handler(),
+		Handler:           application.Handler,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -105,8 +85,11 @@ func run() error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		logger.Info("listening", "addr", cfg.Addr, "base_currency", baseCurrency,
-			"sealed", cfg.Sealed(), "version", version)
+		logger.Info("listening",
+			"addr", cfg.Addr,
+			"base_currency", application.BaseCurrency,
+			"sealed", cfg.Sealed(),
+			"version", version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
