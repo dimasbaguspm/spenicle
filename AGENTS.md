@@ -192,7 +192,7 @@ the build you think it is.
 | --- | --- |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | branches, commits, MR body, ticket shape, review gates |
 | [`skills/`](./skills/README.md) | task recipes: release, observability, updates, contribute, ai-integration |
-| [`docs/endpoints.md`](./docs/endpoints.md) | every implemented route: purpose, upstream/downstream, params, body, limitations, sequence |
+| [`docs/endpoints/`](./docs/endpoints/README.md) | one page per route; same sections everywhere, including the sequence diagram |
 | [`.env.example`](./.env.example) | every variable with its default, copy to `.env` |
 | [`LICENSE`](./LICENSE) | source-available: personal unmodified use only, no commercial use |
 
