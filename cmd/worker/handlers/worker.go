@@ -41,6 +41,7 @@ type Runner struct {
 	store     Store
 	entries   ledger.Contract
 	artifacts repository.Artifacts
+	imports   repository.Imports
 	files     ArtifactFiles
 	retention time.Duration
 	clock     TimeSource
@@ -52,6 +53,7 @@ func New(
 	store Store,
 	entries ledger.Contract,
 	artifacts repository.Artifacts,
+	imports repository.Imports,
 	files ArtifactFiles,
 	retention time.Duration,
 	clock TimeSource,
@@ -63,7 +65,7 @@ func New(
 
 	return &Runner{
 		rules: rules, store: store, entries: entries, artifacts: artifacts,
-		files: files, retention: retention, clock: clock, logger: logger,
+		imports: imports, files: files, retention: retention, clock: clock, logger: logger,
 	}
 }
 

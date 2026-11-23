@@ -1,0 +1,33 @@
+{
+  "client_id": "statement-1",
+  "created_at": "<timestamp>",
+  "currency": "IDR",
+  "expires_at": "<timestamp>",
+  "file_hash": "74a52feceb7f1b056d2be245e30cc90e8a051d4d4e6524afa3ee799f3d3dad79",
+  "filename": "march.csv",
+  "ref": "<ref>",
+  "rows": [
+    {
+      "account_ref": "<ref>",
+      "amount_minor": "-15000",
+      "clash_entry_ref": "<ref>",
+      "clash_kind": "duplicate",
+      "description": "COFFEE",
+      "occurred_on": "2025-01-02",
+      "ref": "<ref>",
+      "row_index": 0,
+      "status": "skipped"
+    },
+    {
+      "account_ref": "<ref>",
+      "amount_minor": "-20000",
+      "description": "GROCERIES",
+      "occurred_on": "2025-02-10",
+      "ref": "<ref>",
+      "row_index": 1,
+      "status": "pending"
+    }
+  ],
+  "rows_total": 2,
+  "status": "draft"
+}

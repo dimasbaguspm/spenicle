@@ -38,14 +38,20 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with:$`, sendWithBody)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with headers/query:$`, sendWithRequestTable)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with the artifact "([^"]*)"$`, sendWithArtifact)
+	sc.Step(`^I upload the statement "([^"]*)" with the client id "([^"]*)":$`, uploadStatement)
+	sc.Step(`^I upload the statement "([^"]*)" with the client id "([^"]*)" on the account "([^"]*)":$`,
+		uploadStatementOnAccount)
+	sc.Step(`^the ledger holds an entry with client id prefix "([^"]*)" and source "([^"]*)"$`,
+		theLedgerHoldsEntry)
 
 	sc.Step(`^the response status is (\d+)$`, responseStatusIs)
+	sc.Step(`^the artifact garbage collector runs$`, theArtifactGarbageCollectorRuns)
 	sc.Step(`^the response header "([^"]*)" is "([^"]*)"$`, responseHeaderIs)
 	sc.Step(`^the response header "([^"]*)" contains "([^"]*)"$`, responseHeaderContains)
+	sc.Step(`^the import draft is older than its expiry$`, theImportDraftIsExpired)
 	sc.Step(`^the response body hashes to "([^"]*)"$`, responseBodyHashesTo)
 	sc.Step(`^the capture artifact predates the retention$`, theCaptureArtifactPredatesTheRetention)
 	sc.Step(`^the capture artifact is gone$`, theCaptureArtifactIsGone)
-	sc.Step(`^the artifact garbage collector runs$`, theArtifactGarbageCollectorRuns)
 	sc.Step(`^the database is cleared$`, theDatabaseIsCleared)
 	sc.Step(`^the local cache is cleared$`, theLocalCacheIsCleared)
 	sc.Step(`^the connection is broken$`, theConnectionIsBroken)
@@ -60,6 +66,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the recurring worker runs$`, theRecurringWorkerRuns)
 	sc.Step(`^the store holds:$`, theStoreHolds)
 	sc.Step(`^the last ref is remembered as "([^"]*)"$`, theLastRefIsRemembered)
+	sc.Step(`^the last ref is still "([^"]*)"$`, theLastRefIsStill)
 	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)
 	sc.Step(`^the database matches the snapshot "([^"]*)"$`, databaseMatchesSnapshot)
 	sc.Step(`^the export JSON matches the snapshot "([^"]*)"$`, exportMatchesSnapshot)
@@ -753,4 +760,126 @@ func theExportManifestReports(ctx context.Context, name, rows string) (context.C
 	}
 
 	return ctx, nil
+}
+
+func uploadStatement(
+	ctx context.Context,
+	filename, clientID string,
+	statement *godog.DocString,
+) (context.Context, error) {
+	return uploadStatementFor(ctx, filename, clientID, "", statement)
+}
+
+func uploadStatementOnAccount(
+	ctx context.Context,
+	filename, clientID, account string,
+	statement *godog.DocString,
+) (context.Context, error) {
+	return uploadStatementFor(ctx, filename, clientID, account, statement)
+}
+
+func uploadStatementFor(
+	ctx context.Context,
+	filename, clientID, account string,
+	statement *godog.DocString,
+) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	var body bytes.Buffer
+
+	form := multipart.NewWriter(&body)
+
+	part, err := form.CreateFormFile("file", filename)
+	if err != nil {
+		return ctx, fmt.Errorf("file part: %w", err)
+	}
+
+	if _, err = part.Write([]byte(statement.Content)); err != nil {
+		return ctx, fmt.Errorf("statement: %w", err)
+	}
+
+	if err = form.WriteField("client_id", clientID); err != nil {
+		return ctx, fmt.Errorf("client id field: %w", err)
+	}
+
+	if account != "" {
+		ref, ok := w.accounts[account]
+		if !ok {
+			return ctx, fmt.Errorf(
+				`unknown account %q: create it with "the account ... exists as ..."`, account)
+		}
+
+		if err = form.WriteField("account_ref", ref); err != nil {
+			return ctx, fmt.Errorf("account field: %w", err)
+		}
+	}
+
+	if err = form.Close(); err != nil {
+		return ctx, fmt.Errorf("close form: %w", err)
+	}
+
+	headers := http.Header{"Content-Type": []string{form.FormDataContentType()}}
+
+	return ctx, w.doWith(ctx, http.MethodPost, "/api/imports", body.Bytes(), headers, nil)
+}
+
+func theLedgerHoldsEntry(ctx context.Context, prefix, source string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.store == nil {
+		return ctx, errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	var count int
+
+	query := `SELECT COUNT(*) FROM ledger_entries WHERE client_id LIKE ? ESCAPE '\' AND source = ?`
+
+	row := w.store.DB().QueryRowContext(ctx, query, escapeLikeForUAT(prefix)+"%", source)
+
+	if err = row.Scan(&count); err != nil {
+		return ctx, fmt.Errorf("count imported entries: %w", err)
+	}
+
+	if count == 0 {
+		return ctx, fmt.Errorf("no entry holds a client id starting with %q and source %q", prefix, source)
+	}
+
+	return ctx, nil
+}
+
+func escapeLikeForUAT(value string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(value)
+}
+
+func theLastRefIsStill(ctx context.Context, name string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	ref, ok := w.refs[name]
+	if !ok {
+		return ctx, fmt.Errorf(`unknown ref %q: add "the last ref is remembered as ..."`, name)
+	}
+
+	if w.lastRef != ref {
+		return ctx, fmt.Errorf("the last ref is %s, want the remembered %s", w.lastRef, ref)
+	}
+
+	return ctx, nil
+}
+
+func theImportDraftIsExpired(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.ageImportBatch(ctx)
 }

@@ -77,6 +77,21 @@ const (
 	ShiftPrev = "prev"
 )
 
+const (
+	ImportStatusDraft     = "draft"
+	ImportStatusCommitted = "committed"
+	ImportStatusRejected  = "rejected"
+
+	ImportRowStatusPending  = "pending"
+	ImportRowStatusAccepted = "accepted"
+	ImportRowStatusSkipped  = "skipped"
+
+	ImportClashAlreadyImported = "already_imported"
+	ImportClashDuplicate       = "duplicate"
+	ImportClashPossible        = "possible_duplicate"
+	ImportClashInvalidRow      = "invalid_row"
+)
+
 const SessionCookie = "spenicle_session"
 
 const (

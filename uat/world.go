@@ -31,6 +31,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
+	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
@@ -111,7 +112,7 @@ func (w *world) runRecurring(ctx context.Context) error {
 	}
 
 	runner := workerhandlers.New(
-		w.store, w.store, w.ledger, w.store, w.artifacts, w.limits.ArtifactRetention,
+		w.store, w.store, w.ledger, w.store, w.store, w.artifacts, w.limits.ArtifactRetention,
 		clockSource, slog.New(w.logs),
 	)
 
@@ -131,6 +132,21 @@ func (w *world) ageArtifact(ctx context.Context) error {
 	if _, err := w.store.DB().ExecContext(ctx,
 		`UPDATE artifacts SET created_at = ?`, at.Format(constant.TimestampLayout)); err != nil {
 		return fmt.Errorf("age artifact: %w", err)
+	}
+
+	return nil
+}
+
+func (w *world) ageImportBatch(ctx context.Context) error {
+	if w.store == nil {
+		return errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	at := time.Now().UTC().Add(-time.Hour)
+
+	if _, err := w.store.DB().ExecContext(ctx,
+		`UPDATE import_batches SET expires_at = ?`, at.Format(constant.TimestampLayout)); err != nil {
+		return fmt.Errorf("age import batch: %w", err)
 	}
 
 	return nil
@@ -363,8 +379,11 @@ func (w *world) boot(ctx context.Context) error {
 	)
 
 	w.server = httptest.NewServer(httpcmd.New(handlers.Deps{
-		Ledger:        ledgerService,
-		Captures:      queue,
+		Ledger:   ledgerService,
+		Captures: queue,
+		Imports: imports.New(
+			store, store, store, ledgerService, artifacts, settingsService, clockSystem,
+		),
 		Accounts:      store,
 		Payees:        store,
 		Recurring:     store,
@@ -504,6 +523,8 @@ func (w *world) clearDatabase(ctx context.Context) error {
 	}
 
 	clearOrder := []string{
+		"import_rows",
+		"import_batches",
 		"artifacts",
 		"ledger_postings",
 		"captures",

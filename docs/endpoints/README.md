@@ -32,6 +32,12 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `POST` | `/api/captures` | park something unconfirmed | [`POST_api_captures.md`](./POST_api_captures.md) |
 | `PATCH` | `/api/captures/{ref}` | approve, reject or retry a capture | [`PATCH_api_captures_ref.md`](./PATCH_api_captures_ref.md) |
 | `GET` | `/api/captures/{ref}/artifact` | download the document behind a capture | [`GET_api_captures_ref_artifact.md`](./GET_api_captures_ref_artifact.md) |
+| `POST` | `/api/imports` | upload a CSV statement as a reviewable draft | [`POST_api_imports.md`](./POST_api_imports.md) |
+| `GET` | `/api/imports` | every statement batch, newest first | [`GET_api_imports.md`](./GET_api_imports.md) |
+| `GET` | `/api/imports/{ref}` | one batch with its rows | [`GET_api_imports_ref.md`](./GET_api_imports_ref.md) |
+| `PATCH` | `/api/imports/{ref}/rows/{index}` | edit, accept or skip one drafted row | [`PATCH_api_imports_rows.md`](./PATCH_api_imports_rows.md) |
+| `POST` | `/api/imports/{ref}/commit` | post the accepted rows to the ledger | [`POST_api_imports_commit.md`](./POST_api_imports_commit.md) |
+| `POST` | `/api/imports/{ref}/reject` | discard the draft and keep its rows for audit | [`POST_api_imports_reject.md`](./POST_api_imports_reject.md) |
 | `GET` | `/api/analytics/months` | spend and income per calendar month | [`GET_api_analytics_months.md`](./GET_api_analytics_months.md) |
 | `GET` | `/api/analytics/categories` | spend per category for a range | [`GET_api_analytics_categories.md`](./GET_api_analytics_categories.md) |
 | `POST` | `/api/analytics/custom` | save a named analytics view | [`POST_api_analytics_custom.md`](./POST_api_analytics_custom.md) |

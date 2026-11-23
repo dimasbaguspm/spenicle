@@ -1,0 +1,19 @@
+{
+  "imports": [
+    {
+      "client_id": "statement-1",
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "expires_at": "<timestamp>",
+      "file_hash": "1b6392a63496ec05151a272a38da30af2daaa6f84231d2febc1a010c182bae9b",
+      "filename": "march.csv",
+      "ref": "<ref>",
+      "rows_total": 1,
+      "status": "draft"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

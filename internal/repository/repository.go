@@ -18,6 +18,7 @@ type Ledger interface {
 	ListEntries(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
 	VoidEntry(ctx context.Context, ref, reason string, at time.Time) (entity.Entry, error)
 	UpdateEntryPayee(ctx context.Context, ref string, payeeID *int64) (entity.Entry, bool, error)
+	MatchingEntryRef(ctx context.Context, probe entity.EntryProbe) (string, bool, error)
 }
 
 type Captures interface {
@@ -85,6 +86,19 @@ type Recurring interface {
 		ref string,
 		from, to, postedAt time.Time,
 	) (bool, error)
+}
+
+type Imports interface {
+	InsertImportBatch(ctx context.Context, batch entity.ImportBatch) (entity.ImportBatch, error)
+	ImportBatchByRef(ctx context.Context, ref string) (entity.ImportBatch, bool, error)
+	ImportBatchByClientID(ctx context.Context, clientID string) (entity.ImportBatch, bool, error)
+	ListImportBatches(ctx context.Context, filter entity.ImportFilter) ([]entity.ImportBatch, error)
+	CloseImportBatch(ctx context.Context, ref, status string, at time.Time) (entity.ImportBatch, error)
+	ExtendImportBatch(ctx context.Context, ref string, expiresAt time.Time) error
+	ImportRows(ctx context.Context, batchID int64) ([]entity.ImportRow, error)
+	UpdateImportRow(ctx context.Context, row entity.ImportRow) (entity.ImportRow, error)
+	ExpiredImportBatches(ctx context.Context, now time.Time, limit int) ([]entity.ImportBatch, error)
+	DropImportBatch(ctx context.Context, ref string) (int, error)
 }
 
 // Exporter reads whole tables for the export document: no filter, no cursor and

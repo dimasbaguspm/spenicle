@@ -79,6 +79,8 @@
       "source": "ecb"
     }
   ],
+  "import_batches": [],
+  "import_rows": [],
   "ledger_entries": [],
   "ledger_postings": [],
   "settings": [

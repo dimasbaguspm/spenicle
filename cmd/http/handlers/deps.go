@@ -9,6 +9,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
+	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
@@ -22,6 +23,7 @@ type ArtifactFiles interface {
 type Deps struct {
 	Ledger            ledger.Contract
 	Settings          settings.Contract
+	Imports           imports.Contract
 	Captures          captures.Contract
 	Rates             rates.Contract
 	Accounts          repository.Accounts

@@ -11,7 +11,7 @@ import (
 
 func Serve(ctx context.Context, process *config.Process) {
 	runner := handlers.New(
-		process.Store, process.Store, process.Ledger, process.Store, process.Artifacts,
+		process.Store, process.Store, process.Ledger, process.Store, process.Store, process.Artifacts,
 		process.Cfg.ArtifactRetention, clock.System{}, process.Logger,
 	)
 

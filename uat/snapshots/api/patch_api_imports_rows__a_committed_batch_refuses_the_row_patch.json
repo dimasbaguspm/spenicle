@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "import_committed",
+    "message": "import batch is already committed or rejected: <ref> is committed"
+  }
+}

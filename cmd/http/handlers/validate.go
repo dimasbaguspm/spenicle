@@ -48,41 +48,16 @@ func newValidator() *validator.Validate {
 
 			return err == nil
 		},
-		"capturekind": func(field validator.FieldLevel) bool {
-			switch field.Field().String() {
-			case constant.CaptureKindShare, constant.CaptureKindImage,
-				constant.CaptureKindEmail, constant.CaptureKindStatement,
-				constant.CaptureKindRecurring, constant.CaptureKindManual:
-				return true
-			default:
-				return false
-			}
-		},
-		"source": func(field validator.FieldLevel) bool {
-			switch field.Field().String() {
-			case constant.EntrySourceManual, constant.EntrySourceShare, constant.EntrySourceEmail,
-				constant.EntrySourceStatement, constant.EntrySourceRecurring,
-				constant.EntrySourceAdjustment:
-				return true
-			default:
-				return false
-			}
-		},
-		"ref":            validRef,
-		"accountkind":    validAccountKind,
-		"cadence":        validCadence,
-		"recurringstate": validRecurringState,
-		"shift":          validShift,
-		"capturestatus": func(field validator.FieldLevel) bool {
-			switch field.Field().String() {
-			case constant.CaptureStatusExtracting, constant.CaptureStatusPending,
-				constant.CaptureStatusDuplicate, constant.CaptureStatusApproved,
-				constant.CaptureStatusRejected, constant.CaptureStatusFailed:
-				return true
-			default:
-				return false
-			}
-		},
+		"capturekind":     validCaptureKind,
+		"source":          validEntrySource,
+		"ref":             validRef,
+		"accountkind":     validAccountKind,
+		"cadence":         validCadence,
+		"importstatus":    validImportStatus,
+		"importrowstatus": validImportRowStatus,
+		"recurringstate":  validRecurringState,
+		"shift":           validShift,
+		"capturestatus":   validCaptureStatus,
 	}
 
 	for tag, rule := range rules {
@@ -250,6 +225,57 @@ func validRecurringState(field validator.FieldLevel) bool {
 func validShift(field validator.FieldLevel) bool {
 	switch field.Field().String() {
 	case constant.ShiftNone, constant.ShiftNext, constant.ShiftPrev:
+		return true
+	default:
+		return false
+	}
+}
+
+func validImportStatus(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.ImportStatusDraft, constant.ImportStatusCommitted, constant.ImportStatusRejected:
+		return true
+	default:
+		return false
+	}
+}
+
+func validImportRowStatus(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.ImportRowStatusAccepted, constant.ImportRowStatusSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
+func validCaptureKind(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.CaptureKindShare, constant.CaptureKindImage,
+		constant.CaptureKindEmail, constant.CaptureKindStatement,
+		constant.CaptureKindRecurring, constant.CaptureKindManual:
+		return true
+	default:
+		return false
+	}
+}
+
+func validEntrySource(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.EntrySourceManual, constant.EntrySourceShare, constant.EntrySourceEmail,
+		constant.EntrySourceStatement, constant.EntrySourceRecurring,
+		constant.EntrySourceAdjustment:
+		return true
+	default:
+		return false
+	}
+}
+
+func validCaptureStatus(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.CaptureStatusExtracting, constant.CaptureStatusPending,
+		constant.CaptureStatusDuplicate, constant.CaptureStatusApproved,
+		constant.CaptureStatusRejected, constant.CaptureStatusFailed:
 		return true
 	default:
 		return false

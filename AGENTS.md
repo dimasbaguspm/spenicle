@@ -52,7 +52,7 @@ internal/common/       no business logic: config (also the process graph), clock
                        otel, httpx, uuid, binding, list
 internal/constant/     every fixed value shared by more than one package
 internal/entity/       shared structs + invariants; imports stdlib + constant only
-internal/module/       business logic: ledger, captures, rates, settings
+internal/module/       business logic: ledger, captures, imports, rates, settings
 internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore,
                        extraction/{snaptojson,openai}
 ```
@@ -177,6 +177,25 @@ per run) and stamps `deleted_at`, which is what makes the download route answer 
 `ArtifactMaxBytes` (default `10 << 20`) is the upload ceiling the API refuses above;
 `ArtifactDir` is derived from `DATA_DIR`, so none of the three is an environment
 variable.
+
+**Statement import is two-phase, and the file is the client's.** `POST /api/imports`
+takes a multipart `file`, a `client_id` (≤ 64) and an optional `account_ref`, parses a
+CSV whose header is exactly `occurred_on,amount_minor,description`, and writes a
+**draft**: `import_batches` plus one `import_rows` row per line, in one transaction, with
+the bytes put through `internal/repository/filestore` and only `file_hash` kept on the
+batch. Nothing reaches the ledger until `POST /api/imports/{ref}/commit` posts the rows
+the user marked `accepted`, each with `client_id = import:<file_hash>:<row_index>` and
+`source = statement`, which is what makes a replayed commit a no-op. Clash detection runs
+once, at upload, and is deterministic: `already_imported` (that row's `client_id` is
+already in the ledger), `duplicate` (same day, currency and absolute amount, with a
+posting on the batch account), `possible_duplicate` (same amount and currency within 3
+days), `invalid_row` (the line does not parse). A row with any clash defaults to
+`skipped`; `PATCH /api/imports/{ref}/rows/{index}` takes absolute values only, so a retry
+changes nothing, and it bumps `expires_at`. A `draft` lives `24h` past its last edit and
+the worker reclaims an expired one (blob and rows, 50 per run) — a `committed` or
+`rejected` batch keeps its rows for audit. `client_id` is the idempotency key: the same
+key with the same bytes resumes the draft (`200`), the same key with different bytes is
+`409 import_conflict`, and any request against a closed batch is `409 import_committed`.
 
 Only these nine are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
@@ -345,7 +364,8 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
-  Two files today (`0001_init.sql`, `0002_artifacts.sql`) and nothing has shipped, so the
+  Three files today (`0001_init.sql`, `0002_artifacts.sql`, `0003_imports.sql`) and nothing
+  has shipped, so the
   schema is still squashed into a base plus forwards. Once a release exists, forwards
   only — never edit an applied migration, add the next number. The splitter is naive:
   no `;` inside a migration comment.

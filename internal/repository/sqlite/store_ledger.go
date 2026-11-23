@@ -575,3 +575,43 @@ func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, e
 
 	return entry, nil
 }
+
+func (s *Store) MatchingEntryRef(
+	ctx context.Context,
+	probe entity.EntryProbe,
+) (string, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.MatchingEntryRef")
+	defer endSpan()
+
+	from := probe.OccurredOn.AddDate(0, 0, -probe.DayWindow)
+	to := probe.OccurredOn.AddDate(0, 0, probe.DayWindow)
+
+	var ref string
+
+	err := s.db.QueryRowContext(ctx, `
+		SELECT e.ref FROM ledger_entries e
+		JOIN ledger_postings p ON p.entry_id = e.id
+		JOIN accounts a ON a.id = p.account_id
+		WHERE a.ref = ?
+		  AND e.currency = ?
+		  AND e.voided_at IS NULL
+		  AND ABS(p.amount_minor) = ?
+		  AND e.occurred_on >= ? AND e.occurred_on <= ?
+		ORDER BY e.occurred_on ASC, e.id ASC
+		LIMIT 1`,
+		probe.AccountRef,
+		probe.Currency,
+		probe.AmountMinor,
+		from.Format(constant.DateLayout),
+		to.Format(constant.DateLayout),
+	).Scan(&ref)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+
+	if err != nil {
+		return "", false, fmt.Errorf("select matching entry: %w", err)
+	}
+
+	return ref, true, nil
+}

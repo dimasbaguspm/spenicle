@@ -28,6 +28,8 @@ var allowedTables = []string{
 	"audit_log",
 	"captures",
 	"fx_rates",
+	"import_batches",
+	"import_rows",
 	"ledger_entries",
 	"ledger_postings",
 	"settings",

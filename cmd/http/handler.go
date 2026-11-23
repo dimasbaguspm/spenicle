@@ -17,6 +17,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
+	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
@@ -97,6 +98,12 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /api/captures", s.api.CreateCapture)
 	mux.HandleFunc("PATCH /api/captures/{ref}", s.api.PatchCapture)
 	mux.HandleFunc("GET /api/captures/{ref}/artifact", s.api.GetCaptureArtifact)
+	mux.HandleFunc("GET /api/imports", s.api.ListImports)
+	mux.HandleFunc("POST /api/imports", s.api.CreateImport)
+	mux.HandleFunc("GET /api/imports/{ref}", s.api.GetImport)
+	mux.HandleFunc("PATCH /api/imports/{ref}/rows/{index}", s.api.PatchImportRow)
+	mux.HandleFunc("POST /api/imports/{ref}/commit", s.api.CommitImport)
+	mux.HandleFunc("POST /api/imports/{ref}/reject", s.api.RejectImport)
 
 	mux.HandleFunc("GET /api/rates", s.api.GetRate)
 	mux.HandleFunc("GET /api/export", s.api.Export)
@@ -219,7 +226,10 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 			Clock:         clock.System{},
 			BaseCurrency:  process.BaseCurrency,
 		},
-		Settings:          process.Settings,
+		Settings: process.Settings,
+		Imports: imports.New(
+			store, store, store, process.Ledger, process.Artifacts, process.Settings, clock.System{},
+		),
 		Health:            store,
 		Sealer:            process.Sealer,
 		BaseCurrency:      process.BaseCurrency,
