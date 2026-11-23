@@ -1,4 +1,6 @@
-package handlers
+// Package binding copies raw strings from a query string or a path value onto a
+// struct's fields, then hands it to the caller's validator.
+package binding
 
 import (
 	"errors"
@@ -19,7 +21,34 @@ const (
 
 var timeType = reflect.TypeOf(time.Time{}) //nolint:gochecknoglobals // a type, read-only
 
-func reflectValue(target any) reflect.Value { return reflect.ValueOf(target) }
+func Fill(target any, tag string, lookup func(string) (string, bool)) error {
+	inspect := reflect.ValueOf(target)
+	if inspect.Kind() != kindPtr || inspect.Elem().Kind() != kindStruct {
+		return errors.New("bind target must be a pointer to a struct")
+	}
+
+	element := inspect.Elem()
+
+	for index := range element.NumField() {
+		field := element.Type().Field(index)
+		name := field.Tag.Get(tag)
+
+		if name == "" {
+			continue
+		}
+
+		raw, ok := lookup(name)
+		if !ok {
+			continue
+		}
+
+		if err := setField(element.Field(index), raw); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+
+	return nil
+}
 
 func setField(field reflect.Value, raw string) error {
 	if !field.CanSet() {

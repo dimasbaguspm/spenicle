@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dimasbaguspm/spenicle/cmd/http/middlewares"
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
@@ -70,11 +69,11 @@ func New(deps Deps) http.Handler {
 
 	mux.HandleFunc("/", instance.handleNotFound)
 
-	return middlewares.Chain(instance.requireSession(mux),
-		middlewares.CORS(deps.WebOrigin),
-		middlewares.Recover(deps.Logger),
-		middlewares.Observe(),
-		middlewares.Log(deps.Logger),
+	return httpx.Chain(instance.requireSession(mux),
+		httpx.CORS(deps.WebOrigin),
+		httpx.Recover(deps.Logger),
+		httpx.Observe(),
+		httpx.Log(deps.Logger),
 	)
 }
 

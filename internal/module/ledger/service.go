@@ -136,16 +136,7 @@ func (s *Service) Void(ctx context.Context, ref, reason string) (entity.Entry, e
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Void")
 	defer endSpan()
 
-	original, found, err := s.entries.EntryByRef(ctx, ref)
-	if err != nil {
-		return entity.Entry{}, err
-	}
-
-	if !found {
-		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
-	}
-
-	reversal, err := s.entries.VoidEntry(ctx, original.ID, reason, s.clock.Now())
+	reversal, err := s.entries.VoidEntry(ctx, ref, reason, s.clock.Now())
 	if err != nil {
 		return entity.Entry{}, err
 	}

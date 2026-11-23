@@ -8,6 +8,7 @@ import (
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -24,7 +25,7 @@ func (s *Store) SaveRates(ctx context.Context, rates []entity.Rate) error {
 		for _, rate := range rates {
 			ref := rate.Ref
 			if ref == "" {
-				ref = entity.NewRef()
+				ref = uuid.New()
 			}
 
 			if _, err := tx.ExecContext(ctx, `

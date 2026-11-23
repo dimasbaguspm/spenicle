@@ -7,6 +7,7 @@ import (
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -75,7 +76,7 @@ func (s *Store) seedAccounts(ctx context.Context, baseCurrency string) error {
 			if _, err := tx.ExecContext(ctx, `
 				INSERT INTO accounts (ref, name, kind, parent_id, currency, icon, archived_at, created_at)
 				VALUES (?, ?, ?, NULL, ?, NULL, NULL, ?)`,
-				entity.NewRef(),
+				uuid.New(),
 				seed.name,
 				seed.kind,
 				baseCurrency,

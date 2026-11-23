@@ -1,7 +1,4 @@
-// Package middlewares holds the HTTP layers that wrap every route: recovery,
-// tracing and structured request logging. They know nothing about the ledger, so
-// they would wrap any handler this process ever serves.
-package middlewares
+package httpx
 
 import (
 	"log/slog"
@@ -12,15 +9,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-
-	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 )
 
-func Chain(handler http.Handler, layers ...httpx.Middleware) http.Handler {
-	return httpx.Chain(handler, layers...)
-}
-
-func Recover(logger *slog.Logger) httpx.Middleware {
+func Recover(logger *slog.Logger) Middleware {
 	//nolint:contextcheck // the panic guard calls no downstream function to inherit a context into
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -29,8 +20,7 @@ func Recover(logger *slog.Logger) httpx.Middleware {
 					logger.ErrorContext(r.Context(), "panic",
 						slog.Any("value", recovered),
 						slog.String("path", r.URL.Path))
-					httpx.WriteError(w, http.StatusInternalServerError,
-						"internal_error", "unexpected failure")
+					WriteError(w, http.StatusInternalServerError, "internal_error", "unexpected failure")
 				}
 			}()
 
@@ -39,7 +29,7 @@ func Recover(logger *slog.Logger) httpx.Middleware {
 	}
 }
 
-func Observe() httpx.Middleware {
+func Observe() Middleware {
 	tracer := otel.Tracer("spenicle/http")
 
 	return func(next http.Handler) http.Handler {
@@ -47,7 +37,7 @@ func Observe() httpx.Middleware {
 			ctx, span := tracer.Start(r.Context(), r.Method+" "+r.URL.Path)
 			defer span.End()
 
-			recorder := &httpx.Recorder{ResponseWriter: w}
+			recorder := &Recorder{ResponseWriter: w}
 			next.ServeHTTP(recorder, r.WithContext(ctx))
 
 			span.SetAttributes(
@@ -63,11 +53,11 @@ func Observe() httpx.Middleware {
 	}
 }
 
-func Log(logger *slog.Logger) httpx.Middleware {
+func Log(logger *slog.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			recorder := &httpx.Recorder{ResponseWriter: w}
+			recorder := &Recorder{ResponseWriter: w}
 
 			next.ServeHTTP(recorder, r)
 
@@ -81,7 +71,7 @@ func Log(logger *slog.Logger) httpx.Middleware {
 	}
 }
 
-func CORS(allowedOrigin string) httpx.Middleware {
+func CORS(allowedOrigin string) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Vary", "Origin")

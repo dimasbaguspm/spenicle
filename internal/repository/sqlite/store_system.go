@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
-	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
 )
 
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
@@ -60,7 +60,7 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO settings (ref, k, v) VALUES (?, ?, ?)
-		ON CONFLICT (k) DO UPDATE SET v = excluded.v`, entity.NewRef(), key, value)
+		ON CONFLICT (k) DO UPDATE SET v = excluded.v`, uuid.New(), key, value)
 	if err != nil {
 		return fmt.Errorf("set setting %q: %w", key, err)
 	}

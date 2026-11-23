@@ -8,6 +8,7 @@ import (
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -21,7 +22,7 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 	defer endSpan()
 
 	if capture.Ref == "" {
-		capture.Ref = entity.NewRef()
+		capture.Ref = uuid.New()
 	}
 
 	res, err := s.db.ExecContext(ctx, `
@@ -77,14 +78,6 @@ func (s *Store) CaptureByRef(ctx context.Context, ref string) (entity.Capture, b
 
 	return s.scanCapture(ctx, s.db.QueryRowContext(ctx,
 		`SELECT `+captureColumns+` FROM captures WHERE ref = ?`, ref))
-}
-
-func (s *Store) CaptureByID(ctx context.Context, id int64) (entity.Capture, bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CaptureByID")
-	defer endSpan()
-
-	return s.scanCapture(ctx, s.db.QueryRowContext(ctx,
-		`SELECT `+captureColumns+` FROM captures WHERE id = ?`, id))
 }
 
 func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) ([]entity.Capture, error) {

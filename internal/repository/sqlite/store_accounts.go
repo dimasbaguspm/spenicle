@@ -8,6 +8,7 @@ import (
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -31,7 +32,7 @@ func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) 
 	defer endSpan()
 
 	createdAt := time.Now().UTC()
-	ref := entity.NewRef()
+	ref := uuid.New()
 
 	res, err := s.db.ExecContext(
 		ctx,

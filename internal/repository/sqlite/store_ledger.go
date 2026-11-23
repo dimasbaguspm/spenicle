@@ -8,6 +8,7 @@ import (
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -27,7 +28,7 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 
 	var entryID int64
 
-	entryRef := entity.NewRef()
+	entryRef := uuid.New()
 
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
@@ -63,7 +64,7 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 		if _, auditErr := tx.ExecContext(ctx, `
 			INSERT INTO audit_log (ref, entity_table, entity_id, action, from_json, to_json, actor, at)
 			VALUES (?, 'ledger_entries', ?, 'create', NULL, NULL, 'user', ?)`,
-			entity.NewRef(),
+			uuid.New(),
 			entryID,
 			createdAt.Format(constant.TimestampLayout),
 		); auditErr != nil {
@@ -183,7 +184,7 @@ func insertPostings(ctx context.Context, tx *sql.Tx, entryID int64, postings []e
 				(ref, entry_id, account_id, amount_minor, base_amount_minor,
 				 fx_rate, fx_rate_date, fx_source)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			entity.NewRef(), entryID, p.AccountID, p.AmountMinor, p.BaseAmountMinor,
+			uuid.New(), entryID, p.AccountID, p.AmountMinor, p.BaseAmountMinor,
 			orDefault(p.FXRate, "1"), nullString(p.FXRateDate),
 			orDefault(p.FXSource, constant.FXSourceIdentity),
 		); err != nil {
@@ -192,29 +193,6 @@ func insertPostings(ctx context.Context, tx *sql.Tx, entryID int64, postings []e
 	}
 
 	return nil
-}
-
-func (s *Store) EntryByID(ctx context.Context, id int64) (entity.Entry, bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EntryByID")
-	defer endSpan()
-
-	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
-		SELECT id, ref, occurred_on, payee_id, note, currency, source, client_id,
-		       reverses_entry_id, voided_at, created_at
-		FROM ledger_entries WHERE id = ?`, id))
-	if errors.Is(err, sql.ErrNoRows) {
-		return entity.Entry{}, false, nil
-	}
-
-	if err != nil {
-		return entity.Entry{}, false, err
-	}
-
-	if entry.Postings, err = s.postingsByEntryID(ctx, entry.ID); err != nil {
-		return entity.Entry{}, false, err
-	}
-
-	return entry, true, nil
 }
 
 func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool, error) {
@@ -326,20 +304,19 @@ func entryQuery(filter entity.EntryFilter) (string, []any) {
 
 func (s *Store) VoidEntry(
 	ctx context.Context,
-	id int64,
-	reason string,
+	ref, reason string,
 	at time.Time,
 ) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.VoidEntry")
 	defer endSpan()
 
-	original, found, err := s.EntryByID(ctx, id)
+	original, found, err := s.EntryByRef(ctx, ref)
 	if err != nil {
 		return entity.Entry{}, err
 	}
 
 	if !found {
-		return entity.Entry{}, fmt.Errorf("%w: entry %d", entity.ErrNotFound, id)
+		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
 	}
 
 	reversal := entity.Entry{
@@ -348,7 +325,7 @@ func (s *Store) VoidEntry(
 		Note:       reason,
 		Currency:   original.Currency,
 		Source:     constant.EntrySourceAdjustment,
-		ReversesID: &id,
+		ReversesID: &original.ID,
 		CreatedAt:  at,
 	}
 
@@ -366,7 +343,7 @@ func (s *Store) VoidEntry(
 		res, execErr := tx.ExecContext(ctx, `
 			UPDATE ledger_entries SET voided_at = ?
 			WHERE id = ? AND voided_at IS NULL`,
-			at.Format(constant.TimestampLayout), id)
+			at.Format(constant.TimestampLayout), original.ID)
 		if execErr != nil {
 			return fmt.Errorf("mark voided: %w", execErr)
 		}
@@ -377,16 +354,16 @@ func (s *Store) VoidEntry(
 		}
 
 		if affected == 0 {
-			return fmt.Errorf("%w: entry %d is already voided", entity.ErrInvalidState, id)
+			return fmt.Errorf("%w: entry %s is already voided", entity.ErrInvalidState, ref)
 		}
 
-		return insertReversal(ctx, tx, id, reversal)
+		return insertReversal(ctx, tx, original.ID, reversal)
 	})
 	if err != nil {
 		return entity.Entry{}, err
 	}
 
-	return s.reversalByReversesID(ctx, id)
+	return s.reversalByReversesID(ctx, original.ID)
 }
 
 func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal entity.Entry) error {
@@ -395,7 +372,7 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 			(ref, occurred_on, payee_id, note, currency, source, recurring_rule_id,
 			 client_id, reverses_entry_id, voided_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL, ?)`,
-		entity.NewRef(),
+		uuid.New(),
 		reversal.OccurredOn.Format(constant.DateLayout),
 		nullInt(reversal.PayeeID),
 		nullString(reversal.Note),
@@ -420,7 +397,7 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO audit_log (ref, entity_table, entity_id, action, from_json, to_json, actor, at)
 		VALUES (?, 'ledger_entries', ?, 'void', NULL, NULL, 'user', ?)`,
-		entity.NewRef(), reversalID, reversal.CreatedAt.Format(constant.TimestampLayout)); err != nil {
+		uuid.New(), reversalID, reversal.CreatedAt.Format(constant.TimestampLayout)); err != nil {
 		return fmt.Errorf("audit void: %w", err)
 	}
 

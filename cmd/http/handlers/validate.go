@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 
+	"github.com/dimasbaguspm/spenicle/internal/common/binding"
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
@@ -129,7 +130,7 @@ func bindBody(w http.ResponseWriter, r *http.Request, limit int64, target any) b
 func bindQuery(r *http.Request, target any) error {
 	values := r.URL.Query()
 
-	if err := fillFrom(target, "query", func(name string) (string, bool) {
+	if err := binding.Fill(target, "query", func(name string) (string, bool) {
 		value := values.Get(name)
 
 		return value, value != ""
@@ -141,7 +142,7 @@ func bindQuery(r *http.Request, target any) error {
 }
 
 func bindPath(r *http.Request, target any) error {
-	if err := fillFrom(target, "path", func(name string) (string, bool) {
+	if err := binding.Fill(target, "path", func(name string) (string, bool) {
 		value := strings.TrimSpace(r.PathValue(name))
 
 		return value, value != ""
@@ -155,35 +156,6 @@ func bindPath(r *http.Request, target any) error {
 func validateBound(target any) error {
 	if err := validate.Struct(target); err != nil {
 		return fmt.Errorf("invalid binding: %w", err)
-	}
-
-	return nil
-}
-
-func fillFrom(target any, tag string, lookup func(string) (string, bool)) error {
-	inspect := reflectValue(target)
-	if inspect.Kind() != kindPtr || inspect.Elem().Kind() != kindStruct {
-		return errors.New("bind target must be a pointer to a struct")
-	}
-
-	element := inspect.Elem()
-
-	for index := range element.NumField() {
-		field := element.Type().Field(index)
-		name := field.Tag.Get(tag)
-
-		if name == "" {
-			continue
-		}
-
-		raw, ok := lookup(name)
-		if !ok {
-			continue
-		}
-
-		if err := setField(element.Field(index), raw); err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
 	}
 
 	return nil

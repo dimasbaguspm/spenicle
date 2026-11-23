@@ -39,7 +39,7 @@ place to defer a decision. v2 fixes all three.
 ```
 cmd/http/             binary: main.go, bootstrap.go (composition root + wiring)
 cmd/http/handlers/    one file per endpoint group; owns the route table
-cmd/http/middlewares/ recovery, tracing, request logging
+internal/common/httpx/ recovery, tracing, request logging
 uat/                  Gherkin suite: uat.go (entry point), steps.go, world.go, features/
 internal/common/      utilities with no business logic: config, clock, seal, otel, httpx
 internal/constant/    every fixed value shared by more than one package

@@ -42,7 +42,7 @@ cmd/http/              main.go · bootstrap.go (composition root; owns the wirin
 cmd/http/handlers/     route table + one file per endpoint group
 cmd/http/middlewares/  recovery, span per request, structured request log
 uat/                   godog suite: uat.go, steps.go, world.go, features/
-internal/common/       no business logic: config, clock, seal, otel, httpx
+internal/common/       no business logic: config, clock, seal, otel, httpx, uuid, binding
 internal/constant/     every fixed value shared by more than one package
 internal/entity/       shared structs + invariants; imports stdlib + constant only
 internal/module/       business logic: ledger, captures, rates, settings
