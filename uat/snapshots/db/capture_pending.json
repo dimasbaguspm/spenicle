@@ -31,6 +31,7 @@
       "draft_json": null,
       "extraction_error": null,
       "extraction_job_ref": null,
+      "extraction_model": null,
       "extraction_rail": null,
       "id": 1,
       "kind": "share",

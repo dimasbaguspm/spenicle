@@ -61,6 +61,8 @@ func New(apiKey, model, baseURL string, timeout time.Duration) (*Client, error) 
 
 func (c *Client) Rail() string { return RailName }
 
+func (c *Client) Model() string { return c.model }
+
 func (c *Client) Poll(context.Context, string) (extraction.Report, error) {
 	return extraction.Report{}, fmt.Errorf("openai: %w", extraction.ErrNoPolling)
 }
@@ -116,6 +118,7 @@ func (c *Client) Submit(
 
 	return extraction.Report{
 		Rail:   RailName,
+		Model:  c.model,
 		Status: extraction.StatusCompleted,
 		Data:   data,
 		Valid:  true,

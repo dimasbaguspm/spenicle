@@ -481,7 +481,9 @@ render top-down without sorting.
 
 **Upstream.** Review screen, agent checking what is waiting.
 **Downstream.** `Module.Captures.List` → `Repository.Sqlite.ListCaptures`; each row's
-`raw_text`, `draft_json` and `resolution_note` are unsealed before returning.
+`raw_text`, `draft_json` and `resolution_note` are unsealed before returning. Each row
+also carries its provenance: `extraction_rail` (who read it), `extraction_model` (with
+which model) and `job_ref` (the vendor's handle on that run).
 
 **Query params**
 
@@ -495,7 +497,8 @@ Ordering: `extracting` first, then `pending` oldest-first, then the resolved tai
 
 **200** `{"captures":[{"id":1,"kind":"share","status":"pending","raw_text":"…","received_at":"…"}],"next_cursor":0}`
 
-**Errors.** `400 invalid_cursor` / `400 invalid_limit`.
+**Errors.** `422 invalid_request` for an unknown `status`, a negative `cursor` or a
+`limit` over 200.
 
 **Limitations.** No `batch_id` filter yet; no unread counts; a payload sealed with a
 previous `APP_SECRET` cannot be opened, so those fields come back empty rather than
@@ -529,7 +532,8 @@ approved. Accepts JSON text or a multipart upload.
 **Downstream.** `Module.Captures.Create`: dedupe key `sha256(kind|client_id|artifact_hash|raw_text)`,
 seal the payload, insert the row, then — when `SNAPTOJSON_API_KEY` is set — submit the
 file to the configured rail (`Repository.Snaptojson.Posting` or
-`Repository.OpenAI.Posting`) and store the answer, tagged with `extraction_rail`.
+`Repository.OpenAI.Posting`) and store the answer, tagged with the `extraction_rail` that
+read it and the `extraction_model` it ran on.
 
 **Body (JSON)**
 

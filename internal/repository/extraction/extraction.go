@@ -35,6 +35,7 @@ type Violation struct {
 
 type Report struct {
 	Rail       string
+	Model      string
 	Status     string
 	JobRef     string
 	Data       json.RawMessage
@@ -45,6 +46,7 @@ type Report struct {
 
 type Extractor interface {
 	Rail() string
+	Model() string
 	Submit(ctx context.Context, artifact Artifact) (Report, error)
 	Poll(ctx context.Context, jobRef string) (Report, error)
 }

@@ -243,6 +243,7 @@ func (s *Service) extract(
 	report, err := s.extractor.Submit(ctx, *artifact)
 	if err != nil {
 		capture.ExtractionRail = s.extractor.Rail()
+		capture.ExtractionModel = s.extractor.Model()
 		capture.ExtractionError = err.Error()
 
 		return s.captures.UpdateCapture(ctx, capture)
@@ -258,6 +259,7 @@ func (s *Service) applyReport(
 ) (entity.Capture, error) {
 	capture.JobRef = report.JobRef
 	capture.ExtractionRail = report.Rail
+	capture.ExtractionModel = report.Model
 
 	switch report.Status {
 	case extraction.StatusCompleted:

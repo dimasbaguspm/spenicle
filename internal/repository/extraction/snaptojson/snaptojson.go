@@ -70,6 +70,8 @@ func New(endpoint, apiKey string, timeout time.Duration) (*Client, error) {
 
 func (c *Client) Rail() string { return RailName }
 
+func (c *Client) Model() string { return "" }
+
 func (c *Client) Submit(
 	ctx context.Context,
 	artifact extraction.Artifact,

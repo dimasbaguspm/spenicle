@@ -43,17 +43,18 @@ type captureApprove struct {
 }
 
 type captureResponse struct {
-	ID             int64  `json:"id"`
-	Kind           string `json:"kind"`
-	Status         string `json:"status"`
-	RawText        string `json:"raw_text,omitempty"`
-	DraftJSON      string `json:"draft_json,omitempty"`
-	ResolutionNote string `json:"resolution_note,omitempty"`
-	JobRef         string `json:"job_ref,omitempty"`
-	ExtractionRail string `json:"extraction_rail,omitempty"`
-	EntryID        *int64 `json:"resolved_entry_id,omitempty"`
-	ReceivedAt     string `json:"received_at"`
-	ResolvedAt     string `json:"resolved_at,omitempty"`
+	ID              int64  `json:"id"`
+	Kind            string `json:"kind"`
+	Status          string `json:"status"`
+	RawText         string `json:"raw_text,omitempty"`
+	DraftJSON       string `json:"draft_json,omitempty"`
+	ResolutionNote  string `json:"resolution_note,omitempty"`
+	JobRef          string `json:"job_ref,omitempty"`
+	ExtractionRail  string `json:"extraction_rail,omitempty"`
+	ExtractionModel string `json:"extraction_model,omitempty"`
+	EntryID         *int64 `json:"resolved_entry_id,omitempty"`
+	ReceivedAt      string `json:"received_at"`
+	ResolvedAt      string `json:"resolved_at,omitempty"`
 }
 
 type captureListResponse struct {
@@ -314,16 +315,17 @@ func readCaptureForm(r *http.Request) (captureRequest, error) {
 
 func toCaptureResponse(capture entity.Capture) captureResponse {
 	out := captureResponse{
-		ID:             capture.ID,
-		Kind:           capture.Kind,
-		Status:         capture.Status,
-		RawText:        capture.RawText,
-		DraftJSON:      capture.DraftJSON,
-		ResolutionNote: capture.ResolutionNote,
-		JobRef:         capture.JobRef,
-		ExtractionRail: capture.ExtractionRail,
-		EntryID:        capture.ResolvedEntryID,
-		ReceivedAt:     capture.ReceivedAt.Format(constant.TimestampLayout),
+		ID:              capture.ID,
+		Kind:            capture.Kind,
+		Status:          capture.Status,
+		RawText:         capture.RawText,
+		DraftJSON:       capture.DraftJSON,
+		ResolutionNote:  capture.ResolutionNote,
+		JobRef:          capture.JobRef,
+		ExtractionRail:  capture.ExtractionRail,
+		ExtractionModel: capture.ExtractionModel,
+		EntryID:         capture.ResolvedEntryID,
+		ReceivedAt:      capture.ReceivedAt.Format(constant.TimestampLayout),
 	}
 
 	if capture.ResolvedAt != nil {

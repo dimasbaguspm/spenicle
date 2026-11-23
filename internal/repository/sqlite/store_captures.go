@@ -14,7 +14,7 @@ import (
 
 const captureColumns = `id, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
 	raw_text, draft_json, extraction_error, extraction_job_ref, extraction_rail,
-	resolved_entry_id, resolution_note, received_at, resolved_at`
+	extraction_model, resolved_entry_id, resolution_note, received_at, resolved_at`
 
 func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertCapture")
@@ -24,8 +24,9 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 		INSERT INTO captures
 			(kind, status, client_id, dedupe_key, batch_id, artifact_hash,
 			 raw_text, draft_json, extraction_error, extraction_job_ref,
-			 extraction_rail, resolved_entry_id, resolution_note, received_at, resolved_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 extraction_rail, extraction_model, resolved_entry_id, resolution_note,
+			 received_at, resolved_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		capture.Kind,
 		capture.Status,
 		nullString(capture.ClientID),
@@ -37,6 +38,7 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 		nullString(capture.ExtractionError),
 		nullString(capture.JobRef),
 		nullString(capture.ExtractionRail),
+		nullString(capture.ExtractionModel),
 		nullInt(capture.ResolvedEntryID),
 		nullString(capture.ResolutionNote),
 		capture.ReceivedAt.Format(constant.TimestampLayout),
@@ -127,13 +129,15 @@ func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (enti
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE captures SET
 			status = ?, draft_json = ?, extraction_error = ?, extraction_job_ref = ?,
-			extraction_rail = ?, resolved_entry_id = ?, resolution_note = ?, resolved_at = ?
+			extraction_rail = ?, extraction_model = ?,
+			resolved_entry_id = ?, resolution_note = ?, resolved_at = ?
 		WHERE id = ?`,
 		capture.Status,
 		nullString(capture.DraftJSON),
 		nullString(capture.ExtractionError),
 		nullString(capture.JobRef),
 		nullString(capture.ExtractionRail),
+		nullString(capture.ExtractionModel),
 		nullInt(capture.ResolvedEntryID),
 		nullString(capture.ResolutionNote),
 		nullTime(capture.ResolvedAt),
@@ -181,6 +185,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 		extractErr  sql.NullString
 		jobRef      sql.NullString
 		rail        sql.NullString
+		model       sql.NullString
 		resolvedID  sql.NullInt64
 		resolvedNt  sql.NullString
 		receivedRaw string
@@ -189,7 +194,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 
 	err := scanner.Scan(
 		&capture.ID, &capture.Kind, &capture.Status, &clientID, &capture.DedupeKey,
-		&batchID, &artifact, &rawText, &draft, &extractErr, &jobRef, &rail, &resolvedID,
+		&batchID, &artifact, &rawText, &draft, &extractErr, &jobRef, &rail, &model, &resolvedID,
 		&resolvedNt, &receivedRaw, &resolvedRaw,
 	)
 	if err != nil {
@@ -204,6 +209,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 	capture.ExtractionError = extractErr.String
 	capture.JobRef = jobRef.String
 	capture.ExtractionRail = rail.String
+	capture.ExtractionModel = model.String
 	capture.ResolutionNote = resolvedNt.String
 
 	if resolvedID.Valid {
