@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	maxClaim = 5
-	maxSweep = 20
+	maxClaim  = 5
+	maxSweep  = 20
+	maxResume = 200
 )
 
 type ArtifactStore interface {
@@ -43,6 +44,7 @@ type Contract interface {
 	) (entity.Export, error)
 	Fail(ctx context.Context, ref, message string) (entity.Export, error)
 	Sweep(ctx context.Context, staleBefore time.Time) (Summary, error)
+	Resume(ctx context.Context) (int, error)
 }
 
 type CreateInput struct {

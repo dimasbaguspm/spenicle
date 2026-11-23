@@ -234,7 +234,7 @@ The document is refs only, no sealed value, and byte-identical for the same data
 `summary` beside `data` carries the balances, the months and the categories the screen
 wants without recomputing them. `export_events` mirrors `import_events`: `queued`,
 `resumed`, `started`, `completed`, `failed`, `downloaded`, `expired`, `swept`, with
-`actor = user` for the API paths and `actor = worker` for the claim and the sweep. A
+`actor = user` for the API paths and `actor = worker` for the claim, the sweep and the resume: a job left `running` by a restart is put back to `queued` before the worker claims, with a `resumed` event, so the document is produced instead of being failed. A
 `client_id` replay returns the same job (`200`); the same `client_id` with another
 `format` is `409 export_conflict`. A `running` job older than `ExportStaleAfter` is
 failed (`swept`), and a `ready` job past `ExportRetention` loses its blob and answers

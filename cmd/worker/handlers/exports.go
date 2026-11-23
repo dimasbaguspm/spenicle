@@ -25,6 +25,11 @@ func (r *Runner) runExports(ctx context.Context, now time.Time) {
 		return
 	}
 
+	requeued, err := r.jobs.Resume(ctx)
+	if err != nil {
+		r.logger.WarnContext(ctx, "export worker could not resume orphaned jobs", slog.Any("error", err))
+	}
+
 	claimed, err := r.jobs.Claim(ctx, exportJobBatch)
 	if err != nil {
 		r.logger.WarnContext(ctx, "export worker could not claim a job", slog.Any("error", err))
@@ -42,6 +47,7 @@ func (r *Runner) runExports(ctx context.Context, now time.Time) {
 	}
 
 	r.logger.InfoContext(ctx, "export run finished",
+		slog.Int("resumed", requeued),
 		slog.Int("claimed", len(claimed)),
 		slog.Int("rendered", rendered),
 		slog.Int("failed", failed),

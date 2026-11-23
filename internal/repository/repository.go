@@ -139,6 +139,7 @@ type Exports interface {
 type ExportQueue interface {
 	QueuedExports(ctx context.Context, limit int) ([]entity.Export, error)
 	ClaimExport(ctx context.Context, ref string, at time.Time) (bool, error)
+	RequeueExport(ctx context.Context, ref string) (bool, error)
 	StaleExports(ctx context.Context, startedBefore time.Time, limit int) ([]entity.Export, error)
 	ExpiredExports(ctx context.Context, now time.Time, limit int) ([]entity.Export, error)
 }

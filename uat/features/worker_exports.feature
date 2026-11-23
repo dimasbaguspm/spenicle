@@ -32,3 +32,16 @@ Feature: Worker export jobs
     Then I send a GET to "/api/exports"
     And the response status is 200
     And the response JSON matches the snapshot "worker_exports__a_run_with_nothing_queued_leaves_the_queue_empty"
+
+  Scenario: A job orphaned by a restart is resumed and finished
+    Given a running API
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-restart","format":"json"}
+      """
+    Then the response status is 201
+    When the export worker claims the job and dies
+    And the export worker runs
+    When I send a GET to "/api/exports/{{ref}}/events"
+    Then the response status is 200
+    And the export events are "queued,started,resumed,started,completed"

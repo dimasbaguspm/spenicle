@@ -76,6 +76,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the export manifest reports "([^"]*)" rows "(\d+)"$`, theExportManifestReports)
 	sc.Step(`^the export summary matches the snapshot "([^"]*)"$`, theExportSummaryMatches)
 	sc.Step(`^the export worker runs$`, theExportWorkerRuns)
+	sc.Step(`^the export worker claims the job and dies$`, theExportWorkerClaimsAndDies)
 	sc.Step(`^the export job predates the retention$`, theExportJobPredatesTheRetention)
 	sc.Step(`^the export event log holds (\d+) events? of kind "([a-z_]+)"$`, theExportEventLogHolds)
 	sc.Step(`^the export events are "([^"]*)"$`, theExportEventsAre)
@@ -975,6 +976,24 @@ func theImportEventLogHolds(ctx context.Context, want int, kind string) (context
 
 	if got != want {
 		return ctx, fmt.Errorf("the import event log holds %d %q events, want %d", got, kind, want)
+	}
+
+	return ctx, nil
+}
+
+func theExportWorkerClaimsAndDies(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	claimed, err := w.exports.Claim(ctx, 1)
+	if err != nil {
+		return ctx, err
+	}
+
+	if len(claimed) == 0 {
+		return ctx, errors.New("no queued export job was claimed")
 	}
 
 	return ctx, nil

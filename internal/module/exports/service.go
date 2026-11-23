@@ -216,6 +216,38 @@ func (s *Service) Fail(ctx context.Context, ref, message string) (entity.Export,
 	return s.fail(ctx, ref, message, constant.ExportEventFailed)
 }
 
+func (s *Service) Resume(ctx context.Context) (int, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Exports.Resume")
+	defer endSpan()
+
+	orphaned, err := s.jobs.StaleExports(ctx, s.clock.Now().Add(time.Second), maxResume)
+	if err != nil {
+		return 0, err
+	}
+
+	requeued := 0
+
+	for _, job := range orphaned {
+		swapped, swapErr := s.jobs.RequeueExport(ctx, job.Ref)
+		if swapErr != nil {
+			return requeued, swapErr
+		}
+
+		if !swapped {
+			continue
+		}
+
+		recordErr := s.record(ctx, job, constant.ExportEventResumed, constant.ExportActorWorker)
+		if recordErr != nil {
+			return requeued, recordErr
+		}
+
+		requeued++
+	}
+
+	return requeued, nil
+}
+
 func (s *Service) Sweep(ctx context.Context, staleBefore time.Time) (Summary, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Exports.Sweep")
 	defer endSpan()

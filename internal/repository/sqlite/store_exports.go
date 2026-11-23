@@ -191,6 +191,15 @@ func (s *Store) StaleExports(
 	)
 }
 
+func (s *Store) RequeueExport(ctx context.Context, ref string) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.RequeueExport")
+	defer endSpan()
+
+	return execAffected(ctx, s.db,
+		`UPDATE exports SET status = ?, started_at = NULL WHERE ref = ? AND status = ?`,
+		constant.ExportStatusQueued, ref, constant.ExportStatusRunning)
+}
+
 func (s *Store) ExpiredExports(
 	ctx context.Context,
 	now time.Time,
