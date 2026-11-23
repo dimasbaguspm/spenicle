@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -10,6 +12,8 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
+
+const sessionTTL = 30 * 24 * time.Hour
 
 type sessionRequest struct {
 	Password string `json:"password" validate:"required"`
@@ -58,27 +62,25 @@ func (s *server) handleSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := s.deps.Settings.SessionToken(ctx)
-	if err != nil {
+	if err := s.issueSession(ctx, w, r); err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
 
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     constant.SessionCookie,
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   r.TLS != nil,
-		MaxAge:   int((30 * 24 * time.Hour).Seconds()),
-	})
-
 	httpx.WriteJSON(w, http.StatusOK, sessionResponse{
 		Status:     "signed_in",
 		MustChange: settings.PasswordMustChange,
 	})
+}
+
+func (s *server) handleDestroySession(w http.ResponseWriter, r *http.Request) {
+	_, endSpan := telemetry.StartSpan(r.Context(), "Handler.Session.Destroy")
+	defer endSpan()
+
+	s.clearSession(w, r)
+
+	httpx.WriteJSON(w, http.StatusOK, sessionResponse{Status: "signed_out"})
 }
 
 func (s *server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +96,12 @@ func (s *server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		status, code := classify(err)
 		httpx.WriteError(w, status, code, err.Error())
+
+		return
+	}
+
+	if err := s.issueSession(ctx, w, r); err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
 
 		return
 	}
@@ -152,8 +160,15 @@ func toSettingsResponse(settings entity.Settings) settingsResponse {
 
 func (s *server) requireSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/session" || r.Method == http.MethodOptions {
+		if r.Method == http.MethodOptions || r.URL.Path == "/api/session" {
 			next.ServeHTTP(w, r)
+
+			return
+		}
+
+		if !s.crossOriginAllowed(r) {
+			httpx.WriteError(w, http.StatusForbidden, "cross_origin_denied",
+				"this request came from another origin and was refused")
 
 			return
 		}
@@ -165,8 +180,15 @@ func (s *server) requireSession(next http.Handler) http.Handler {
 			return
 		}
 
-		if settings.Password == "" {
+		if !settings.HasPassword() {
 			next.ServeHTTP(w, r)
+
+			return
+		}
+
+		if settings.PasswordMustChange && r.URL.Path != "/api/password" {
+			httpx.WriteError(w, http.StatusConflict, "password_change_required",
+				"sign in with the generated password, then set your own at /api/password")
 
 			return
 		}
@@ -187,4 +209,64 @@ func (s *server) requireSession(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *server) issueSession(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	token, err := s.deps.Settings.SessionToken(ctx)
+	if err != nil {
+		return err
+	}
+
+	s.writeSession(w, r, token, int(sessionTTL.Seconds()))
+
+	return nil
+}
+
+func (s *server) clearSession(w http.ResponseWriter, r *http.Request) {
+	s.writeSession(w, r, "", -1)
+}
+
+func (s *server) writeSession(w http.ResponseWriter, r *http.Request, value string, maxAge int) {
+	w.Header().Add("Cache-Control", "no-store")
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     constant.SessionCookie,
+		Value:    value,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   requestIsSecure(r),
+		MaxAge:   maxAge,
+	})
+}
+
+func requestIsSecure(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+
+	return strings.EqualFold(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")), "https")
+}
+
+func (s *server) crossOriginAllowed(r *http.Request) bool {
+	switch r.Method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return true
+	}
+
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
+	if origin == "" {
+		return true
+	}
+
+	parsed, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+
+	if strings.EqualFold(parsed.Host, r.Host) {
+		return true
+	}
+
+	return s.deps.WebOrigin != "" && strings.EqualFold(origin, s.deps.WebOrigin)
 }

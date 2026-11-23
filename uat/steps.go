@@ -29,6 +29,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the response JSON at "([^"]*)" is "([^"]*)"$`, responseJSONIs)
 	sc.Step(`^the response JSON at "([^"]*)" contains "([^"]*)"$`, responseJSONContains)
 	sc.Step(`^the response header "([^"]*)" is "([^"]*)"$`, responseHeaderIs)
+	sc.Step(`^the response header "([^"]*)" contains "([^"]*)"$`, responseHeaderContains)
 	sc.Step(`^the store holds:$`, theStoreHolds)
 	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)
 	sc.Step(`^the database matches the snapshot "([^"]*)"$`, databaseMatchesSnapshot)
@@ -190,6 +191,20 @@ func responseHeaderIs(ctx context.Context, name, want string) (context.Context, 
 	got := w.header.Get(name)
 	if got != want {
 		return ctx, fmt.Errorf("header %s is %q, want %q", name, got, want)
+	}
+
+	return ctx, nil
+}
+
+func responseHeaderContains(ctx context.Context, name, want string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	got := w.header.Get(name)
+	if !strings.Contains(got, want) {
+		return ctx, fmt.Errorf("header %s is %q, want it to contain %q", name, got, want)
 	}
 
 	return ctx, nil

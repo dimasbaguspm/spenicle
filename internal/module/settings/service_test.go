@@ -1,7 +1,9 @@
 package settings_test
 
 import (
+	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
@@ -33,12 +35,16 @@ func newService(t *testing.T) *settings.Service {
 	return settings.New(sqlite.NewStore(db), sealer, clock.System{})
 }
 
-func TestEnsureInitialDefaultsToIDR(t *testing.T) {
+func TestEnsureInitialDefaultsToIDRAndHashesThePassword(t *testing.T) {
 	service := newService(t)
 
-	seeded, err := service.EnsureInitial(t.Context(), "initial-password-123")
+	seeded, created, err := service.EnsureInitial(t.Context(), "initial-password-123")
 	if err != nil {
 		t.Fatalf("ensure: %v", err)
+	}
+
+	if !created {
+		t.Fatal("a fresh database reports that the row was created")
 	}
 
 	if seeded.BaseCurrency != "IDR" {
@@ -49,61 +55,67 @@ func TestEnsureInitialDefaultsToIDR(t *testing.T) {
 		t.Fatal("a generated password must be flagged for change")
 	}
 
-	loaded, err := service.Load(t.Context())
-	if err != nil {
-		t.Fatalf("load: %v", err)
+	if !strings.HasPrefix(seeded.PasswordHash, "pbkdf2-sha256$") {
+		t.Fatalf("password hash = %q, want the pbkdf2 envelope", seeded.PasswordHash)
 	}
 
-	if loaded.BaseCurrency != "IDR" || loaded.Password != "initial-password-123" {
-		t.Fatalf("loaded = %+v", loaded)
+	if strings.Contains(seeded.PasswordHash, "initial-password-123") {
+		t.Fatal("the plaintext password must never be stored")
 	}
 }
 
 func TestEnsureInitialIsIdempotent(t *testing.T) {
 	service := newService(t)
 
-	if _, err := service.EnsureInitial(t.Context(), "first-password-123"); err != nil {
+	first, _, err := service.EnsureInitial(t.Context(), "first-password-123")
+	if err != nil {
 		t.Fatalf("first: %v", err)
 	}
 
-	second, err := service.EnsureInitial(t.Context(), "second-password-123")
+	second, created, err := service.EnsureInitial(t.Context(), "second-password-123")
 	if err != nil {
 		t.Fatalf("second: %v", err)
 	}
 
-	if second.Password != "first-password-123" {
-		t.Fatalf("password was regenerated: %q", second.Password)
+	if created {
+		t.Fatal("the second boot must not create the row again")
+	}
+
+	if second.PasswordHash != first.PasswordHash {
+		t.Fatalf("password was regenerated: %q -> %q", first.PasswordHash, second.PasswordHash)
 	}
 }
 
-func TestSetBaseCurrencyIsLockedByTheFirstEntry(t *testing.T) {
+func TestAuthenticateVerifiesTheHash(t *testing.T) {
 	service := newService(t)
 
-	if _, err := service.SetBaseCurrency(t.Context(), "usd"); err != nil {
-		t.Fatalf("empty ledger must accept a currency: %v", err)
-	}
-
-	if got, _ := service.BaseCurrency(t.Context()); got != "USD" {
-		t.Fatalf("base currency = %q, want USD", got)
-	}
-
-	if _, err := service.Load(t.Context()); err != nil {
-		t.Fatalf("load: %v", err)
-	}
-}
-
-func TestAuthenticateAndChangePassword(t *testing.T) {
-	service := newService(t)
-
-	if _, err := service.EnsureInitial(t.Context(), "initial-password-123"); err != nil {
+	if _, _, err := service.EnsureInitial(t.Context(), "initial-password-123"); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
-	if _, _, err := service.Authenticate(t.Context(), "wrong-password-123"); err == nil {
-		t.Fatal("a wrong password must fail")
+	if _, found, err := service.Authenticate(t.Context(), "initial-password-123"); err != nil || !found {
+		t.Fatalf("the right password must authenticate: found=%v err=%v", found, err)
 	}
 
-	changed, err := service.ChangePassword(t.Context(), "initial-password-123", "my-own-password-456")
+	if _, _, err := service.Authenticate(t.Context(), "wrong-password-123"); !errors.Is(err, entity.ErrPasswordMismatch) {
+		t.Fatalf("a wrong password must answer ErrPasswordMismatch, got %v", err)
+	}
+}
+
+func TestChangePasswordRotatesTheSession(t *testing.T) {
+	service := newService(t)
+	ctx := t.Context()
+
+	if _, _, err := service.EnsureInitial(ctx, "initial-password-123"); err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+
+	before, err := service.SessionToken(ctx)
+	if err != nil {
+		t.Fatalf("token before: %v", err)
+	}
+
+	changed, err := service.ChangePassword(ctx, "initial-password-123", "my-own-password-456")
 	if err != nil {
 		t.Fatalf("change: %v", err)
 	}
@@ -112,28 +124,64 @@ func TestAuthenticateAndChangePassword(t *testing.T) {
 		t.Fatal("choosing your own password clears the flag")
 	}
 
-	if _, _, err := service.Authenticate(t.Context(), "my-own-password-456"); err != nil {
-		t.Fatalf("new password must authenticate: %v", err)
+	after, err := service.SessionToken(ctx)
+	if err != nil {
+		t.Fatalf("token after: %v", err)
+	}
+
+	if before == after {
+		t.Fatal("changing the password must invalidate every existing session")
+	}
+
+	if _, found, authErr := service.Authenticate(ctx, "my-own-password-456"); authErr != nil || !found {
+		t.Fatalf("the new password must authenticate: found=%v err=%v", found, authErr)
+	}
+
+	if _, _, authErr := service.Authenticate(ctx, "initial-password-123"); !errors.Is(authErr, entity.ErrPasswordMismatch) {
+		t.Fatalf("the old password must stop working, got %v", authErr)
+	}
+}
+
+func TestSessionTokenIsStableForOnePassword(t *testing.T) {
+	service := newService(t)
+	ctx := t.Context()
+
+	if _, _, err := service.EnsureInitial(ctx, "initial-password-123"); err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+
+	first, err := service.SessionToken(ctx)
+	if err != nil {
+		t.Fatalf("first token: %v", err)
+	}
+
+	second, err := service.SessionToken(ctx)
+	if err != nil {
+		t.Fatalf("second token: %v", err)
+	}
+
+	if first != second {
+		t.Fatalf("the token must be stable across calls: %q vs %q", first, second)
 	}
 }
 
 func TestChangePasswordRejectsShortPassword(t *testing.T) {
 	service := newService(t)
 
-	if _, err := service.EnsureInitial(t.Context(), "initial-password-123"); err != nil {
+	if _, _, err := service.EnsureInitial(t.Context(), "initial-password-123"); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
 	_, err := service.ChangePassword(t.Context(), "initial-password-123", "short")
-	if err == nil {
-		t.Fatal("a short password must be refused")
+	if !errors.Is(err, entity.ErrWeakPassword) {
+		t.Fatalf("a short password must be refused, got %v", err)
 	}
 }
 
 func TestOpenModeHasNoPassword(t *testing.T) {
 	service := newService(t)
 
-	if _, err := service.EnsureInitial(t.Context(), ""); err != nil {
+	if _, _, err := service.EnsureInitial(t.Context(), ""); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 

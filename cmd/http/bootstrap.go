@@ -97,6 +97,7 @@ func newApp(
 			Version:           version,
 			HealthTimeout:     cfg.HealthTimeout,
 			MaxBodyBytes:      cfg.MaxBodyBytes,
+			WebOrigin:         cfg.WebOrigin,
 			ExtractionEnabled: cfg.SnapToJSONAPIKey != "",
 			Logger:            logger,
 		}),
@@ -140,14 +141,14 @@ func prepare(
 		return nil, "", err
 	}
 
-	appSettings, err := service.EnsureInitial(ctx, freshPassword)
+	appSettings, created, err := service.EnsureInitial(ctx, freshPassword)
 	if err != nil {
 		return nil, "", fmt.Errorf("settings: %w", err)
 	}
 
-	if appSettings.PasswordMustChange {
+	if created && freshPassword != "" {
 		logger.WarnContext(ctx, "generated the initial password; change it after the first sign-in",
-			slog.String("password", appSettings.Password))
+			slog.String("password", freshPassword))
 	}
 
 	baseCurrency, err := store.EnsureBaseline(ctx, appSettings.BaseCurrency, sealer.Fingerprint())

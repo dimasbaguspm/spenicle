@@ -114,16 +114,19 @@ with `APP_SECRET`), then `Module.Settings.SessionToken`.
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
-| `password` | string | yes | compared in constant time |
+| `password` | string | yes | verified against the stored PBKDF2-SHA256 hash, constant time |
 
 **200** `{"status":"signed_in","must_change":true}` + `Set-Cookie: spenicle_session=…`
-(`HttpOnly`, `SameSite=Lax`, `Secure` when served over TLS, 30 days).
+(`HttpOnly`, `SameSite=Lax`, `Secure` when served over TLS or when `X-Forwarded-Proto`
+says so, 30 days, `Cache-Control: no-store`).
 
 **Errors.** `401 invalid_password`; `409 no_password_set` when the instance is in open
-mode; `400 invalid_json`.
+mode; `400 invalid_json`; `403 cross_origin_denied` for a mutating request from another
+origin.
 
-**Limitations.** No rate limiting yet; no logout route (clear the cookie client-side);
-one user, no usernames.
+**Limitations.** No rate limiting yet; one user, no usernames. The cookie value is not
+a database row: it is `sha256(fingerprint, password hash)` truncated, so it cannot be
+revoked per device — changing the password rotates it for everyone.
 
 ```mermaid
 sequenceDiagram
@@ -147,7 +150,24 @@ sequenceDiagram
 
 ---
 
-## 3. `POST /api/password`
+## 3. `DELETE /api/session`
+
+**Purpose.** Sign out: clear the cookie. Works in open mode too, so a client can always
+reset its own state.
+
+**Upstream.** Sign-out button.
+**Downstream.** Nothing — the cookie is a digest of state that lives in `settings`.
+
+**200** `{"status":"signed_out"}` + `Set-Cookie: spenicle_session=; Max-Age=0`
+
+**Errors.** None. The route is exempt from the session check, like `POST /api/session`.
+
+**Limitations.** Stateless: it forgets the browser's copy and nothing else. Sessions
+are not listed anywhere, and one cookie class serves the whole instance.
+
+---
+
+## 4. `POST /api/password`
 
 **Purpose.** Replace the generated password with the user's own and clear
 `password_must_change`.
@@ -167,8 +187,9 @@ sequenceDiagram
 **Errors.** `401 invalid_password` (wrong current, or no password set);
 `422 weak_password`; `400 invalid_json`.
 
-**Limitations.** No history, no reuse check, no "sign out other devices" — one cookie
-per deployment, derived from the secret.
+**Limitations.** No history, no reuse check, no "sign out other devices" — the new hash
+is folded into the cookie, so every existing session dies at once. The response sets a
+fresh cookie for the caller.
 
 ```mermaid
 sequenceDiagram

@@ -112,6 +112,7 @@ Un-prefixed, all optional except `APP_SECRET`:
 | `OPENAI_API_KEY` | — | second extraction rail; used when SnapToJSON is unset |
 | `OPENAI_MODEL` | `gpt-4o-mini` | vision model for the OpenAI rail |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
+| `WEB_ORIGIN` | — | the one browser origin allowed to call the API with a cookie; unset = same-origin only |
 
 `APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`
 fails when its fingerprint does not match `settings.secret_fingerprint`. There is no
@@ -123,10 +124,12 @@ plaintext and survives either way.
 The base currency and the login password are **not** environment variables: they are
 the sealed JSON row in `settings` (`entity.Settings`), owned by `module/settings`. A
 fresh boot generates the first password, prints it once, and requires a change after
-the first sign-in. The base currency is editable while the ledger is empty and locked
-after the first entry.
+the first sign-in. The password is stored as a PBKDF2-SHA256 hash inside that sealed
+row, and the session cookie is a digest of `APP_SECRET`'s fingerprint plus that hash:
+changing the password invalidates every cookie at once. The base currency is editable
+while the ledger is empty and locked after the first entry.
 
-Only these eight are environment variables. **Every other knob — DB path, HTTP
+Only these nine are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 name (also the tracer name) — has its default in `internal/common/config/config.go`**, and the
 resulting value object is `entity.AppConfig`. No viper, on purpose: eight variables

@@ -19,6 +19,8 @@ type AppConfig struct {
 
 	ServiceName string
 
+	WebOrigin string
+
 	ReadHeaderTimeout        time.Duration
 	ReadTimeout              time.Duration
 	WriteTimeout             time.Duration

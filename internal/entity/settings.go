@@ -13,7 +13,7 @@ var (
 
 type Settings struct {
 	BaseCurrency       string `json:"base_currency"`
-	Password           string `json:"password,omitempty"`
+	PasswordHash       string `json:"password_hash,omitempty"`
 	PasswordMustChange bool   `json:"password_must_change,omitempty"`
 	ExtractionEnabled  bool   `json:"extraction_enabled,omitempty"`
 }
@@ -30,3 +30,5 @@ func (s Settings) Validate() error {
 
 	return nil
 }
+
+func (s Settings) HasPassword() bool { return s.PasswordHash != "" }

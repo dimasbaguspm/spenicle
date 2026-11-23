@@ -119,7 +119,7 @@ func (w *world) boot(ctx context.Context) error {
 	limits := config.Defaults()
 
 	settingsService := settings.New(store, sealer, clockSystem)
-	if _, settingsErr := settingsService.EnsureInitial(ctx, ""); settingsErr != nil {
+	if _, _, settingsErr := settingsService.EnsureInitial(ctx, ""); settingsErr != nil {
 		_ = store.Close(ctx)
 
 		return fmt.Errorf("settings: %w", settingsErr)

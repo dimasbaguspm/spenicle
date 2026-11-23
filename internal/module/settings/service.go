@@ -2,12 +2,16 @@ package settings
 
 import (
 	"context"
+	"crypto/pbkdf2"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +22,14 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
+)
+
+const (
+	hashScheme     = "pbkdf2-sha256"
+	hashIterations = 600_000
+	hashSaltBytes  = 16
+	hashKeyBytes   = 32
+	hashFields     = 4
 )
 
 var validate = validator.New() //nolint:gochecknoglobals // one registry, built once
@@ -62,28 +74,39 @@ func (s *Service) BaseCurrency(ctx context.Context) (string, error) {
 	return settings.BaseCurrency, nil
 }
 
-func (s *Service) EnsureInitial(ctx context.Context, initialPassword string) (entity.Settings, error) {
+func (s *Service) EnsureInitial(
+	ctx context.Context,
+	initialPassword string,
+) (entity.Settings, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.EnsureInitial")
 	defer endSpan()
 
 	settings, exists, err := s.load(ctx)
 	if err != nil {
-		return entity.Settings{}, err
+		return entity.Settings{}, false, err
 	}
 
 	if exists {
-		return settings, nil
+		return settings, false, nil
 	}
 
 	settings = entity.DefaultSettings()
-	settings.PasswordMustChange = initialPassword != ""
-	settings.Password = initialPassword
 
-	if err := s.save(ctx, settings); err != nil {
-		return entity.Settings{}, err
+	if initialPassword != "" {
+		encoded, hashErr := hashPassword(initialPassword)
+		if hashErr != nil {
+			return entity.Settings{}, false, hashErr
+		}
+
+		settings.PasswordHash = encoded
+		settings.PasswordMustChange = true
 	}
 
-	return settings, nil
+	if err := s.save(ctx, settings); err != nil {
+		return entity.Settings{}, false, err
+	}
+
+	return settings, true, nil
 }
 
 func (s *Service) Authenticate(
@@ -98,12 +121,12 @@ func (s *Service) Authenticate(
 		return entity.Settings{}, false, err
 	}
 
-	if settings.Password == "" {
+	if !settings.HasPassword() {
 		return settings, false, nil
 	}
 
-	if subtle.ConstantTimeCompare([]byte(settings.Password), []byte(password)) != 1 {
-		return entity.Settings{}, true, entity.ErrPasswordMismatch
+	if err := verifyPassword(settings.PasswordHash, password); err != nil {
+		return entity.Settings{}, true, err
 	}
 
 	return settings, true, nil
@@ -125,11 +148,20 @@ func (s *Service) ChangePassword(
 		return entity.Settings{}, fmt.Errorf("%w: no password is set", entity.ErrPasswordMismatch)
 	}
 
-	if err := validate.Struct(passwordChange{Current: current, Next: strings.TrimSpace(next)}); err != nil {
+	trimmed := strings.TrimSpace(next)
+
+	change := passwordChange{Current: current, Next: trimmed}
+
+	if validationErr := validate.Struct(change); validationErr != nil {
 		return entity.Settings{}, entity.ErrWeakPassword
 	}
 
-	settings.Password = next
+	encoded, err := hashPassword(trimmed)
+	if err != nil {
+		return entity.Settings{}, err
+	}
+
+	settings.PasswordHash = encoded
 	settings.PasswordMustChange = false
 
 	if err := s.save(ctx, settings); err != nil {
@@ -175,9 +207,68 @@ func (s *Service) SessionToken(ctx context.Context) (string, error) {
 	_, endSpan := telemetry.StartSpan(ctx, "Module.Settings.SessionToken")
 	defer endSpan()
 
-	sum := sha256.Sum256([]byte("spenicle/session/v1\x00" + s.sealer.Fingerprint()))
+	settings, _, err := s.load(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	sum := sha256.Sum256([]byte(strings.Join(
+		[]string{"spenicle/session/v2", s.sealer.Fingerprint(), settings.PasswordHash}, "\x00",
+	)))
 
 	return hex.EncodeToString(sum[:16]), nil
+}
+
+func hashPassword(password string) (string, error) {
+	salt := make([]byte, hashSaltBytes)
+	if _, err := rand.Read(salt); err != nil {
+		return "", fmt.Errorf("password salt: %w", err)
+	}
+
+	key, err := pbkdf2.Key(sha256.New, password, salt, hashIterations, hashKeyBytes)
+	if err != nil {
+		return "", fmt.Errorf("password hash: %w", err)
+	}
+
+	return strings.Join([]string{
+		hashScheme,
+		strconv.Itoa(hashIterations),
+		base64.RawStdEncoding.EncodeToString(salt),
+		base64.RawStdEncoding.EncodeToString(key),
+	}, "$"), nil
+}
+
+func verifyPassword(encoded, password string) error {
+	parts := strings.Split(encoded, "$")
+	if len(parts) != hashFields || parts[0] != hashScheme {
+		return fmt.Errorf("%w: unsupported password hash", entity.ErrPasswordMismatch)
+	}
+
+	iterations, err := strconv.Atoi(parts[1])
+	if err != nil || iterations <= 0 {
+		return fmt.Errorf("%w: bad iteration count", entity.ErrPasswordMismatch)
+	}
+
+	salt, err := base64.RawStdEncoding.DecodeString(parts[2])
+	if err != nil {
+		return fmt.Errorf("%w: bad salt", entity.ErrPasswordMismatch)
+	}
+
+	want, err := base64.RawStdEncoding.DecodeString(parts[3])
+	if err != nil {
+		return fmt.Errorf("%w: bad digest", entity.ErrPasswordMismatch)
+	}
+
+	got, err := pbkdf2.Key(sha256.New, password, salt, iterations, len(want))
+	if err != nil {
+		return fmt.Errorf("password hash: %w", err)
+	}
+
+	if subtle.ConstantTimeCompare(got, want) != 1 {
+		return entity.ErrPasswordMismatch
+	}
+
+	return nil
 }
 
 func (s *Service) load(ctx context.Context) (entity.Settings, bool, error) {
@@ -208,7 +299,6 @@ func (s *Service) save(ctx context.Context, settings entity.Settings) error {
 		return err
 	}
 
-	//nolint:gosec // G117: the password is inside this blob, and the very next step seals it
 	encoded, err := json.Marshal(settings)
 	if err != nil {
 		return fmt.Errorf("encode settings: %w", err)

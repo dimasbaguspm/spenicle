@@ -29,6 +29,7 @@ type Deps struct {
 	Version           string
 	HealthTimeout     time.Duration
 	MaxBodyBytes      int64
+	WebOrigin         string
 	ExtractionEnabled bool
 	Logger            *slog.Logger
 }
@@ -50,6 +51,7 @@ func New(deps Deps) http.Handler {
 	mux.HandleFunc("GET /healthz", instance.handleHealth)
 
 	mux.HandleFunc("POST /api/session", instance.handleSession)
+	mux.HandleFunc("DELETE /api/session", instance.handleDestroySession)
 	mux.HandleFunc("GET /api/settings", instance.handleGetSettings)
 	mux.HandleFunc("PATCH /api/settings", instance.handlePatchSettings)
 	mux.HandleFunc("POST /api/password", instance.handlePasswordChange)
@@ -70,6 +72,7 @@ func New(deps Deps) http.Handler {
 	mux.HandleFunc("/", instance.handleNotFound)
 
 	return middlewares.Chain(instance.requireSession(mux),
+		middlewares.CORS(deps.WebOrigin),
 		middlewares.Recover(deps.Logger),
 		middlewares.Observe(),
 		middlewares.Log(deps.Logger),

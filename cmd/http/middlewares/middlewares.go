@@ -6,6 +6,7 @@ package middlewares
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -76,6 +77,31 @@ func Log(logger *slog.Logger) httpx.Middleware {
 				slog.Int("status", recorder.Status),
 				slog.Int("bytes", recorder.Bytes),
 				slog.Int64("duration_ms", time.Since(start).Milliseconds()))
+		})
+	}
+}
+
+func CORS(allowedOrigin string) httpx.Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Vary", "Origin")
+
+			origin := r.Header.Get("Origin")
+			if allowedOrigin != "" && strings.EqualFold(origin, allowedOrigin) {
+				w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+				w.Header().Set("Access-Control-Max-Age", "600")
+			}
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+
+				return
+			}
+
+			next.ServeHTTP(w, r)
 		})
 	}
 }

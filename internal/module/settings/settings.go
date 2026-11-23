@@ -14,7 +14,7 @@ import (
 type Contract interface {
 	Load(ctx context.Context) (entity.Settings, error)
 	BaseCurrency(ctx context.Context) (string, error)
-	EnsureInitial(ctx context.Context, initialPassword string) (entity.Settings, error)
+	EnsureInitial(ctx context.Context, initialPassword string) (entity.Settings, bool, error)
 	Authenticate(ctx context.Context, password string) (entity.Settings, bool, error)
 	ChangePassword(ctx context.Context, current, next string) (entity.Settings, error)
 	SetBaseCurrency(ctx context.Context, code string) (entity.Settings, error)

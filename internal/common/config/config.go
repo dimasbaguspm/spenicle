@@ -32,6 +32,7 @@ const (
 	EnvOpenAIModel        = "OPENAI_MODEL"
 	EnvSnapToJSONEndpoint = "SNAPTOJSON_ENDPOINT"
 	EnvOTLPEndpoint       = "OTEL_EXPORTER_OTLP_ENDPOINT"
+	EnvWebOrigin          = "WEB_ORIGIN"
 )
 
 const (
@@ -102,6 +103,7 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.OpenAIAPIKey = os.Getenv(EnvOpenAIAPIKey)
 	cfg.OpenAIModel = env(EnvOpenAIModel, DefaultOpenAIModel)
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
+	cfg.WebOrigin = env(EnvWebOrigin, cfg.WebOrigin)
 
 	if err := validate.Struct(cfg); err != nil {
 		return entity.AppConfig{}, fmt.Errorf(
