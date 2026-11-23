@@ -46,5 +46,9 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/dashboard` | the landing tiles in one response | [`GET_api_dashboard.md`](./GET_api_dashboard.md) |
 | `POST` | `/api/setup` | open the ledger with a base currency | [`POST_api_setup.md`](./POST_api_setup.md) |
 | `GET` | `/api/rates` | the cached ECB reference rate for one day | [`GET_api_rates.md`](./GET_api_rates.md) |
-| `GET` | `/api/export` | the whole ledger as one JSON document or a zip of CSV sheets | [`GET_api_export.md`](./GET_api_export.md) |
+| `POST` | `/api/exports` | queue an export the worker renders | [`POST_api_exports.md`](./POST_api_exports.md) |
+| `GET` | `/api/exports` | every export job, newest first | [`GET_api_exports.md`](./GET_api_exports.md) |
+| `GET` | `/api/exports/{ref}` | one export job and its status | [`GET_api_exports_ref.md`](./GET_api_exports_ref.md) |
+| `GET` | `/api/exports/{ref}/events` | the append-only log of one job | [`GET_api_exports_ref_events.md`](./GET_api_exports_ref_events.md) |
+| `GET` | `/api/exports/{ref}/download` | the rendered document or zip | [`GET_api_exports_ref_download.md`](./GET_api_exports_ref_download.md) |
 

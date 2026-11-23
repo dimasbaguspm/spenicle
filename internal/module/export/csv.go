@@ -13,7 +13,10 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
-const manifestName = "manifest.json"
+const (
+	manifestName = "manifest.json"
+	summaryName  = "summary.json"
+)
 
 type sheet struct {
 	name   string
@@ -52,6 +55,15 @@ func encodeZIP(snap *snapshot) ([]byte, error) {
 		if err := writeEntry(writer, current.name, body); err != nil {
 			return nil, err
 		}
+	}
+
+	summaryBody, summaryErr := json.Marshal(snap.summarise())
+	if summaryErr != nil {
+		return nil, fmt.Errorf("summary: %w", summaryErr)
+	}
+
+	if err := writeEntry(writer, summaryName, summaryBody); err != nil {
+		return nil, err
 	}
 
 	manifestBody, err := json.Marshal(manifest)

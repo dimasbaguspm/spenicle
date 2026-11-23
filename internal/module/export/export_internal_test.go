@@ -90,10 +90,15 @@ func TestExportCarriesEveryRowPastOnePage(t *testing.T) {
 		document := exportedJSON(t, deps)
 
 		var decoded struct {
-			Accounts  []json.RawMessage `json:"accounts"`
-			Payees    []json.RawMessage `json:"payees"`
-			Captures  []json.RawMessage `json:"captures"`
-			Recurring []json.RawMessage `json:"recurring"`
+			Data struct {
+				Accounts  []json.RawMessage `json:"accounts"`
+				Payees    []json.RawMessage `json:"payees"`
+				Captures  []json.RawMessage `json:"captures"`
+				Recurring []json.RawMessage `json:"recurring"`
+			} `json:"data"`
+			Summary struct {
+				Counts map[string]int `json:"counts"`
+			} `json:"summary"`
 		}
 
 		if err := json.Unmarshal(document, &decoded); err != nil {
@@ -101,15 +106,20 @@ func TestExportCarriesEveryRowPastOnePage(t *testing.T) {
 		}
 
 		counts := map[string]int{
-			"accounts":  len(decoded.Accounts),
-			"payees":    len(decoded.Payees),
-			"captures":  len(decoded.Captures),
-			"recurring": len(decoded.Recurring),
+			"accounts":  len(decoded.Data.Accounts),
+			"payees":    len(decoded.Data.Payees),
+			"captures":  len(decoded.Data.Captures),
+			"recurring": len(decoded.Data.Recurring),
 		}
 
 		for name, rows := range counts {
 			if rows != exportedRows {
 				t.Fatalf("%s carries %d rows, want %d", name, rows, exportedRows)
+			}
+
+			if decoded.Summary.Counts[name] != exportedRows {
+				t.Fatalf("the summary counts %d %s rows, want %d",
+					decoded.Summary.Counts[name], name, exportedRows)
 			}
 		}
 	})
@@ -128,41 +138,23 @@ func TestExportCarriesEveryRowPastOnePage(t *testing.T) {
 func exportedJSON(t *testing.T, deps Deps) []byte {
 	t.Helper()
 
-	body, err := JSON(t.Context(), deps)
+	document, err := Render(t.Context(), deps, constant.ExportFormatJSON)
 	if err != nil {
 		t.Fatalf("json export: %v", err)
 	}
 
-	document, err := io.ReadAll(body)
-	if err != nil {
-		t.Fatalf("read json export: %v", err)
-	}
-
-	if err := body.Close(); err != nil {
-		t.Fatalf("close json export: %v", err)
-	}
-
-	return document
+	return document.Bytes
 }
 
 func exportedArchive(t *testing.T, deps Deps) []byte {
 	t.Helper()
 
-	body, err := CSV(t.Context(), deps)
+	document, err := Render(t.Context(), deps, constant.ExportFormatCSV)
 	if err != nil {
 		t.Fatalf("csv export: %v", err)
 	}
 
-	archive, err := io.ReadAll(body)
-	if err != nil {
-		t.Fatalf("read csv export: %v", err)
-	}
-
-	if err := body.Close(); err != nil {
-		t.Fatalf("close csv export: %v", err)
-	}
-
-	return archive
+	return document.Bytes
 }
 
 func manifestRows(t *testing.T, archive []byte) map[string]int {

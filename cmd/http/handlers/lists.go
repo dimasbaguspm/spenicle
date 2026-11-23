@@ -140,6 +140,33 @@ func bindListParams[T any](
 	return filter, true
 }
 
+type pageRequest struct {
+	Cursor string `query:"cursor" validate:"omitempty,ref"`
+	Limit  int64  `query:"limit"  validate:"omitempty,gte=0,lte=200"`
+}
+
+func writeEventPage[T, R any](
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	server *Server,
+	fetch func(cursor string, limit int) ([]T, error),
+	refOf func(T) string,
+	toRow func(T) R,
+) {
+	var request pageRequest
+	if err := bindQuery(r, &request); err != nil {
+		writeInvalid(w, err)
+
+		return
+	}
+
+	limit := list.ClampLimit(request.Limit)
+
+	writeList(ctx, w, server, "events", limit,
+		func() ([]T, error) { return fetch(request.Cursor, limit) }, refOf, toRow)
+}
+
 func writeList[T, R any](
 	ctx context.Context,
 	w http.ResponseWriter,

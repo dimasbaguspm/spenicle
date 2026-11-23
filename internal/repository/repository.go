@@ -125,3 +125,25 @@ type RateStore interface {
 	RateOn(ctx context.Context, base, quote string, on time.Time) (entity.Rate, bool, error)
 	ListRates(ctx context.Context) ([]entity.Rate, error)
 }
+
+type Exports interface {
+	InsertExport(ctx context.Context, job entity.Export) (entity.Export, error)
+	ExportByRef(ctx context.Context, ref string) (entity.Export, bool, error)
+	ExportByClientID(ctx context.Context, clientID string) (entity.Export, bool, error)
+	ListExports(ctx context.Context, filter entity.ExportFilter) ([]entity.Export, error)
+	FinishExport(ctx context.Context, job entity.Export) (entity.Export, error)
+	FailExport(ctx context.Context, ref, message string, at time.Time) (entity.Export, error)
+	ExpireExport(ctx context.Context, ref string, at time.Time) (bool, error)
+}
+
+type ExportQueue interface {
+	QueuedExports(ctx context.Context, limit int) ([]entity.Export, error)
+	ClaimExport(ctx context.Context, ref string, at time.Time) (bool, error)
+	StaleExports(ctx context.Context, startedBefore time.Time, limit int) ([]entity.Export, error)
+	ExpiredExports(ctx context.Context, now time.Time, limit int) ([]entity.Export, error)
+}
+
+type ExportEvents interface {
+	InsertExportEvent(ctx context.Context, event entity.ExportEvent) (entity.ExportEvent, error)
+	ListExportEvents(ctx context.Context, filter entity.ExportEventFilter) ([]entity.ExportEvent, error)
+}

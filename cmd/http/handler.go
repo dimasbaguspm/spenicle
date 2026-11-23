@@ -16,7 +16,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
-	"github.com/dimasbaguspm/spenicle/internal/module/export"
+	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
@@ -105,8 +105,13 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /api/imports/{ref}/events", s.api.ListImportEvents)
 	mux.HandleFunc("PATCH /api/imports/{ref}/rows/{index}", s.api.PatchImportRow)
 
+	mux.HandleFunc("GET /api/exports", s.api.ListExports)
+	mux.HandleFunc("POST /api/exports", s.api.CreateExport)
+	mux.HandleFunc("GET /api/exports/{ref}", s.api.GetExport)
+	mux.HandleFunc("GET /api/exports/{ref}/events", s.api.ListExportEvents)
+	mux.HandleFunc("GET /api/exports/{ref}/download", s.api.DownloadExport)
+
 	mux.HandleFunc("GET /api/rates", s.api.GetRate)
-	mux.HandleFunc("GET /api/export", s.api.Export)
 
 	mux.HandleFunc("/", s.api.NotFound)
 
@@ -217,15 +222,9 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		CustomQueries: store,
 		Artifacts:     store,
 		ArtifactFiles: process.Artifacts,
-		Export: export.Deps{
-			Ledger:        store,
-			Exporter:      store,
-			CustomQueries: store,
-			Rates:         store,
-			System:        store,
-			Clock:         clock.System{},
-			BaseCurrency:  process.BaseCurrency,
-		},
+		Exports: exports.New(
+			store, store, store, process.Artifacts, process.Cfg.ExportRetention, clock.System{},
+		),
 		Settings: process.Settings,
 		Imports: imports.New(
 			store, store, store, store, process.Ledger, process.Artifacts, process.Settings, clock.System{},

@@ -12,8 +12,12 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/module/export"
+	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
+	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 )
 
 type Store interface {
@@ -26,6 +30,7 @@ type Store interface {
 
 type ArtifactFiles interface {
 	Remove(ctx context.Context, sha string) error
+	Put(ctx context.Context, artifact extraction.Artifact) (filestore.Record, error)
 }
 
 type TimeSource interface{ Now() time.Time }
@@ -37,15 +42,18 @@ type Summary struct {
 }
 
 type Runner struct {
-	rules     repository.Recurring
-	store     Store
-	entries   ledger.Contract
-	artifacts repository.Artifacts
-	imports   repository.Imports
-	files     ArtifactFiles
-	retention time.Duration
-	clock     TimeSource
-	logger    *slog.Logger
+	rules      repository.Recurring
+	store      Store
+	entries    ledger.Contract
+	artifacts  repository.Artifacts
+	imports    repository.Imports
+	files      ArtifactFiles
+	retention  time.Duration
+	jobs       exports.Contract
+	documents  export.Deps
+	staleAfter time.Duration
+	clock      TimeSource
+	logger     *slog.Logger
 }
 
 func New(
@@ -56,6 +64,9 @@ func New(
 	imports repository.Imports,
 	files ArtifactFiles,
 	retention time.Duration,
+	jobs exports.Contract,
+	documents export.Deps,
+	staleAfter time.Duration,
 	clock TimeSource,
 	logger *slog.Logger,
 ) *Runner {
@@ -65,7 +76,9 @@ func New(
 
 	return &Runner{
 		rules: rules, store: store, entries: entries, artifacts: artifacts,
-		imports: imports, files: files, retention: retention, clock: clock, logger: logger,
+		imports: imports, files: files, retention: retention,
+		jobs: jobs, documents: documents, staleAfter: staleAfter,
+		clock: clock, logger: logger,
 	}
 }
 

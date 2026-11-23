@@ -210,7 +210,8 @@ is `409 import_closed`.
 Only these nine are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, artifact dir,
-retention and size cap, pool sizes, service name (also the tracer name) — has its
+retention and size cap, export retention and stale window, pool sizes, service name
+(also the tracer name) — has its
 default in `internal/common/config/config.go`**, and the
 resulting value object is `entity.AppConfig`. No viper, on purpose: eight variables
 and one file beat a precedence chain nobody can predict. A new knob means a new
@@ -223,10 +224,25 @@ worker writes into `settings`, so the `http` process reports it even though it n
 runs the worker itself. Use it to prove a running container is the build you think it
 is, and that both services are alive.
 
-The way out is `GET /api/export`: one JSON document, or a zip of CSV sheets plus
-`manifest.json` — refs only, no sealed value, and byte-identical for the same data.
-Import is the other half and is not built; the contract is in
-[`docs/endpoints/GET_api_export.md`](./docs/endpoints/GET_api_export.md).
+The way out is a job, not a request. `POST /api/exports` writes a `queued` row and
+answers `201`; the worker claims it, renders the ledger through `internal/module/export`
+(one JSON document, or a zip of CSV sheets plus `summary.json` and `manifest.json`),
+stores the bytes in the same artifact store and marks it `ready`. `GET
+/api/exports/{ref}/download` streams that blob and records a `downloaded` event;
+`GET /api/exports/{ref}` and `GET /api/exports` are how a client watches the queue.
+The document is refs only, no sealed value, and byte-identical for the same data, and
+`summary` beside `data` carries the balances, the months and the categories the screen
+wants without recomputing them. `export_events` mirrors `import_events`: `queued`,
+`resumed`, `started`, `completed`, `failed`, `downloaded`, `expired`, `swept`, with
+`actor = user` for the API paths and `actor = worker` for the claim and the sweep. A
+`client_id` replay returns the same job (`200`); the same `client_id` with another
+`format` is `409 export_conflict`. A `running` job older than `ExportStaleAfter` is
+failed (`swept`), and a `ready` job past `ExportRetention` loses its blob and answers
+`410 gone` — 20 of each per run. Import is the other half and is not built.
+
+The worker does four things per run, in this order: post the due recurring rules, reclaim
+the artifacts of rejected captures, drop expired import drafts, then claim up to 5 export
+jobs and sweep the queue.
 
 ## Dependencies
 
@@ -374,8 +390,8 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
-  Four files today (`0001_init.sql`, `0002_artifacts.sql`, `0003_imports.sql`,
-  `0004_import_events.sql`) and nothing has shipped, so the schema is still squashed into
-  a base plus forwards. Once a release exists, forwards
+  Five files today (`0001_init.sql`, `0002_artifacts.sql`, `0003_imports.sql`,
+  `0004_import_events.sql`, `0005_exports.sql`) and nothing has shipped, so the schema
+  is still squashed into a base plus forwards. Once a release exists, forwards
   only — never edit an applied migration, add the next number. The splitter is naive:
   no `;` inside a migration comment.

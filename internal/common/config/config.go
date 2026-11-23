@@ -44,6 +44,9 @@ const (
 	DefaultArtifactRetention = 720 * time.Hour
 	DefaultArtifactMaxBytes  = 10 << 20
 
+	DefaultExportRetention  = 24 * time.Hour
+	DefaultExportStaleAfter = 15 * time.Minute
+
 	DefaultSnapToJSONEndpoint = "https://api.snaptojson.com/partner/v1/snaps"
 	DefaultSnapToJSONTimeout  = 30 * time.Second
 	DefaultOpenAIModel        = "gpt-4o-mini"
@@ -77,6 +80,8 @@ func Defaults() entity.AppConfig {
 		ArtifactDir:              filepath.Join(DefaultDataDir, DefaultArtifactDirName),
 		ArtifactRetention:        DefaultArtifactRetention,
 		ArtifactMaxBytes:         DefaultArtifactMaxBytes,
+		ExportRetention:          DefaultExportRetention,
+		ExportStaleAfter:         DefaultExportStaleAfter,
 		DBPath:                   filepath.Join(DefaultDataDir, DefaultDBFile),
 		SnapToJSONEndpoint:       DefaultSnapToJSONEndpoint,
 		SnapToJSONTimeout:        DefaultSnapToJSONTimeout,

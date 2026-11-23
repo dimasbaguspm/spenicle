@@ -1,0 +1,26 @@
+{
+  "events": [
+    {
+      "actor": "worker",
+      "at": "<timestamp>",
+      "kind": "completed",
+      "ref": "<ref>"
+    },
+    {
+      "actor": "worker",
+      "at": "<timestamp>",
+      "kind": "started",
+      "ref": "<ref>"
+    },
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "queued",
+      "ref": "<ref>"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

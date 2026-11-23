@@ -118,22 +118,35 @@ func encodeJSON(snap *snapshot, out io.Writer) error {
 	writer.value(stamp(snap.exportedAt))
 	writer.raw(`,"base_currency":`)
 	writer.value(snap.baseCurrency)
+	writer.raw(`,"summary":`)
+	writer.value(snap.summarise())
+	writer.raw(`,"data":{`)
 
-	writeArray(writer, "accounts", snap.accounts, snap.accountRow)
-	writeArray(writer, "payees", snap.payees, snap.payeeRow)
-	writeArray(writer, "entries", snap.entries, snap.entryRow)
-	writeArray(writer, "captures", snap.captures, snap.captureRow)
-	writeArray(writer, "recurring", snap.recurring, snap.recurringRow)
-	writeArray(writer, "rates", snap.rates, snap.rateRow)
-	writeArray(writer, "custom_queries", snap.customQueries, snap.customQueryRow)
+	writeArray(writer, true, "accounts", snap.accounts, snap.accountRow)
+	writeArray(writer, false, "payees", snap.payees, snap.payeeRow)
+	writeArray(writer, false, "entries", snap.entries, snap.entryRow)
+	writeArray(writer, false, "captures", snap.captures, snap.captureRow)
+	writeArray(writer, false, "recurring", snap.recurring, snap.recurringRow)
+	writeArray(writer, false, "rates", snap.rates, snap.rateRow)
+	writeArray(writer, false, "custom_queries", snap.customQueries, snap.customQueryRow)
 
-	writer.raw("}")
+	writer.raw("}}")
 
 	return writer.err
 }
 
-func writeArray[T any](writer *documentWriter, key string, rows []T, convert func(T) any) {
-	writer.raw(`,"` + key + `":[`)
+func writeArray[T any](
+	writer *documentWriter,
+	first bool,
+	key string,
+	rows []T,
+	convert func(T) any,
+) {
+	if !first {
+		writer.raw(",")
+	}
+
+	writer.raw(`"` + key + `":[`)
 
 	for index, row := range rows {
 		if index > 0 {

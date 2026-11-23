@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -73,6 +74,11 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the export JSON matches the snapshot "([^"]*)"$`, exportMatchesSnapshot)
 	sc.Step(`^the export archive holds "([^"]*)"$`, theExportArchiveHolds)
 	sc.Step(`^the export manifest reports "([^"]*)" rows "(\d+)"$`, theExportManifestReports)
+	sc.Step(`^the export summary matches the snapshot "([^"]*)"$`, theExportSummaryMatches)
+	sc.Step(`^the export worker runs$`, theExportWorkerRuns)
+	sc.Step(`^the export job predates the retention$`, theExportJobPredatesTheRetention)
+	sc.Step(`^the export event log holds (\d+) events? of kind "([a-z_]+)"$`, theExportEventLogHolds)
+	sc.Step(`^the export events are "([^"]*)"$`, theExportEventsAre)
 }
 
 func aFreshWorld(options Options) func(context.Context, *godog.Scenario) (context.Context, error) {
@@ -758,6 +764,77 @@ func theExportManifestReports(ctx context.Context, name, rows string) (context.C
 
 	if got != want {
 		return ctx, fmt.Errorf("%s reports %d rows, want %d", name, got, want)
+	}
+
+	return ctx, nil
+}
+
+func theExportSummaryMatches(ctx context.Context, name string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.assertExportSummarySnapshot(name)
+}
+
+func theExportWorkerRuns(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.runRecurring(ctx)
+}
+
+func theExportJobPredatesTheRetention(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.ageExport(ctx)
+}
+
+func theExportEventLogHolds(ctx context.Context, want int, kind string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	got, err := w.countExportEvents(ctx, kind)
+	if err != nil {
+		return ctx, err
+	}
+
+	if got != want {
+		return ctx, fmt.Errorf("the export event log holds %d %q events, want %d", got, kind, want)
+	}
+
+	return ctx, nil
+}
+
+func theExportEventsAre(ctx context.Context, expected string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	got, err := w.exportEventKinds()
+	if err != nil {
+		return ctx, err
+	}
+
+	want := make([]string, 0)
+
+	for _, kind := range strings.Split(expected, ",") {
+		if trimmed := strings.TrimSpace(kind); trimmed != "" {
+			want = append(want, trimmed)
+		}
+	}
+
+	if !slices.Equal(got, want) {
+		return ctx, fmt.Errorf("the export events are %v, want %v", got, want)
 	}
 
 	return ctx, nil

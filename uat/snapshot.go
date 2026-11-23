@@ -295,3 +295,17 @@ func sortedArrays(value any) any {
 		return value
 	}
 }
+
+func (w *world) assertExportSummarySnapshot(name string) error {
+	value, err := w.exportSummary()
+	if err != nil {
+		return err
+	}
+
+	if err := walkContract("$.summary", value); err != nil {
+		return err
+	}
+
+	return compareSnapshot(filepath.Join(snapshotRoot, "api", name+".json"),
+		sortedArrays(normalise(value)))
+}

@@ -353,4 +353,8 @@ var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{entity.ErrImportConflict, http.StatusConflict, "import_conflict"},
 	{entity.ErrImportClosed, http.StatusConflict, "import_closed"},
 	{entity.ErrInvalidImport, http.StatusUnprocessableEntity, "invalid_request"},
+	{entity.ErrExportConflict, http.StatusConflict, "export_conflict"},
+	{entity.ErrExportNotReady, http.StatusConflict, "export_not_ready"},
+	{entity.ErrExportFailed, http.StatusConflict, "export_failed"},
+	{entity.ErrExportExpired, http.StatusGone, "gone"},
 }

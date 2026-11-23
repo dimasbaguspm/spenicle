@@ -1,0 +1,30 @@
+{
+  "exports": [
+    {
+      "bytes": 1316,
+      "client_id": "export-1",
+      "counts": {
+        "accounts": 2,
+        "captures": 0,
+        "custom_queries": 0,
+        "entries": 0,
+        "payees": 0,
+        "postings": 0,
+        "rates": 3,
+        "recurring": 0
+      },
+      "created_at": "<timestamp>",
+      "expires_at": "<timestamp>",
+      "finished_at": "<timestamp>",
+      "format": "json",
+      "ref": "<ref>",
+      "schema_version": 5,
+      "started_at": "<timestamp>",
+      "status": "ready"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

@@ -29,7 +29,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
 | 14 | `PATCH /api/captures/{id}` | partial: `approve`, `reject`, `retry`; `match`/`extracted` next |
 | 21 | `GET /healthz` | live |
-| 22 | `GET /api/export` | live: one JSON document, or a zip of CSV sheets and `manifest.json` |
+| 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `client_id` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `client_id` |
 | 1 | `POST /api/setup` | next (wizard) |
 | 2 | `POST /api/session`, `POST /api/password` | live: cookie session, password rotation |
@@ -984,3 +984,5 @@ sequenceDiagram
 | `RateWorker` | boot + 16:30 CET | `fx_rates`, memory cache |
 | `IntegrityWorker` | boot + after import | zero-sum verification, reports to `audit_log` |
 | `ArtifactPruner` | hourly with the recurring run | deletes the file of a `rejected` capture older than `ArtifactRetention`, stamps `artifacts.deleted_at`, ledger untouched |
+| `ExportWorker` | every worker run, 5 jobs per pass | renders a `queued` export into the artifact store, stamps `exports.file_hash`, `bytes`, `counts_json`, `finished_at` and `expires_at = now + ExportRetention` |
+| `ExportSweeper` | every worker run, after the claims | fails a `running` export older than `ExportStaleAfter`, drops the blob of a `ready` export past `expires_at` and marks it `expired`, 20 per run |

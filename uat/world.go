@@ -31,6 +31,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
+	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
@@ -92,6 +93,8 @@ type world struct {
 
 	ledger        ledger.Contract
 	artifacts     *filestore.Store
+	exports       exports.Contract
+	exportDeps    export.Deps
 	limits        entity.AppConfig
 	asOf          time.Time
 	workerSummary workerhandlers.Summary
@@ -113,6 +116,7 @@ func (w *world) runRecurring(ctx context.Context) error {
 
 	runner := workerhandlers.New(
 		w.store, w.store, w.ledger, w.store, w.store, w.artifacts, w.limits.ArtifactRetention,
+		w.exports, w.exportDeps, w.limits.ExportStaleAfter,
 		clockSource, slog.New(w.logs),
 	)
 
@@ -165,6 +169,72 @@ func (w *world) countImportEvents(ctx context.Context, kind string) (int, error)
 	}
 
 	return count, nil
+}
+
+func (w *world) ageExport(ctx context.Context) error {
+	if w.store == nil {
+		return errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	at := time.Now().UTC().Add(-time.Hour)
+
+	if _, err := w.store.DB().ExecContext(ctx,
+		`UPDATE exports SET expires_at = ?`, at.Format(constant.TimestampLayout)); err != nil {
+		return fmt.Errorf("age export: %w", err)
+	}
+
+	return nil
+}
+
+func (w *world) countExportEvents(ctx context.Context, kind string) (int, error) {
+	if w.store == nil {
+		return 0, errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	var count int
+
+	if err := w.store.DB().QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM export_events WHERE kind = ?`, kind).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count %s events: %w", kind, err)
+	}
+
+	return count, nil
+}
+
+func (w *world) exportSummary() (any, error) {
+	var document struct {
+		Summary any `json:"summary"`
+	}
+
+	if err := json.Unmarshal(w.body, &document); err != nil {
+		return nil, fmt.Errorf("the export is not JSON (%q): %w", preview(string(w.body)), err)
+	}
+
+	if document.Summary == nil {
+		return nil, errors.New("the export carries no summary")
+	}
+
+	return document.Summary, nil
+}
+
+func (w *world) exportEventKinds() ([]string, error) {
+	var document struct {
+		Events []struct {
+			Kind string `json:"kind"`
+		} `json:"events"`
+	}
+
+	if err := json.Unmarshal(w.body, &document); err != nil {
+		return nil, fmt.Errorf("the event page is not JSON (%q): %w", preview(string(w.body)), err)
+	}
+
+	kinds := make([]string, 0, len(document.Events))
+
+	for index := len(document.Events) - 1; index >= 0; index-- {
+		kinds = append(kinds, document.Events[index].Kind)
+	}
+
+	return kinds, nil
 }
 
 func (w *world) artifactIsGone(ctx context.Context) error {
@@ -393,26 +463,32 @@ func (w *world) boot(ctx context.Context) error {
 		store, ledgerService, sealer, artifacts, store, built.extractor, clockSystem, clockSystem,
 	)
 
+	w.exportDeps = export.Deps{
+		Ledger:        store,
+		Exporter:      store,
+		CustomQueries: store,
+		Rates:         store,
+		System:        store,
+		Clock:         clockSystem,
+		BaseCurrency:  baseCurrency,
+	}
+
+	w.exports = exports.New(
+		store, store, store, artifacts, limits.ExportRetention, clockSystem,
+	)
+
 	w.server = httptest.NewServer(httpcmd.New(handlers.Deps{
 		Ledger:   ledgerService,
 		Captures: queue,
 		Imports: imports.New(
 			store, store, store, store, ledgerService, artifacts, settingsService, clockSystem,
 		),
-		Accounts:      store,
-		Payees:        store,
-		Recurring:     store,
-		Analytics:     store,
-		CustomQueries: store,
-		Export: export.Deps{
-			Ledger:        store,
-			Exporter:      store,
-			CustomQueries: store,
-			Rates:         store,
-			System:        store,
-			Clock:         clockSystem,
-			BaseCurrency:  baseCurrency,
-		},
+		Accounts:          store,
+		Payees:            store,
+		Recurring:         store,
+		Analytics:         store,
+		CustomQueries:     store,
+		Exports:           w.exports,
 		Artifacts:         store,
 		ArtifactFiles:     artifacts,
 		Health:            store,
@@ -538,6 +614,8 @@ func (w *world) clearDatabase(ctx context.Context) error {
 	}
 
 	clearOrder := []string{
+		"export_events",
+		"exports",
 		"import_events",
 		"import_rows",
 		"import_batches",

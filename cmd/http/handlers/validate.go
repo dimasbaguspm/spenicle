@@ -58,6 +58,7 @@ func newValidator() *validator.Validate {
 		"recurringstate":  validRecurringState,
 		"shift":           validShift,
 		"capturestatus":   validCaptureStatus,
+		"exportstatus":    validExportStatus,
 	}
 
 	for tag, rule := range rules {
@@ -276,6 +277,16 @@ func validCaptureStatus(field validator.FieldLevel) bool {
 	case constant.CaptureStatusExtracting, constant.CaptureStatusPending,
 		constant.CaptureStatusDuplicate, constant.CaptureStatusApproved,
 		constant.CaptureStatusRejected, constant.CaptureStatusFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+func validExportStatus(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.ExportStatusQueued, constant.ExportStatusRunning, constant.ExportStatusReady,
+		constant.ExportStatusFailed, constant.ExportStatusExpired:
 		return true
 	default:
 		return false

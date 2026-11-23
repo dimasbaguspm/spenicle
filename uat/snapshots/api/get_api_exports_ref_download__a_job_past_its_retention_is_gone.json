@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "gone",
+    "message": "export expired: <ref>"
+  }
+}

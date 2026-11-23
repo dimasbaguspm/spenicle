@@ -11,6 +11,9 @@ type AppConfig struct {
 	ArtifactRetention time.Duration
 	ArtifactMaxBytes  int64
 
+	ExportRetention  time.Duration
+	ExportStaleAfter time.Duration
+
 	AppSecret          string `validate:"required,min=16"`
 	SnapToJSONAPIKey   string
 	SnapToJSONEndpoint string

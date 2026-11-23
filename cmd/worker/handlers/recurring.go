@@ -46,6 +46,7 @@ func (r *Runner) Run(ctx context.Context) (Summary, error) {
 	r.record(ctx, now)
 	r.collect(ctx, now)
 	r.collectImports(ctx, now)
+	r.runExports(ctx, now)
 
 	return summary, firstErr
 }

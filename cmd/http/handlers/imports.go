@@ -82,11 +82,6 @@ type importReviewRequest struct {
 	Reason string `json:"reason" validate:"max=1000"`
 }
 
-type importEventListRequest struct {
-	Cursor string `query:"cursor" validate:"omitempty,ref"`
-	Limit  int64  `query:"limit"  validate:"omitempty,gte=0,lte=200"`
-}
-
 type importEventResponse struct {
 	Ref      string          `json:"ref"`
 	Kind     string          `json:"kind"`
@@ -256,21 +251,11 @@ func (s *Server) ListImportEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var request importEventListRequest
-	if err := bindQuery(r, &request); err != nil {
-		writeInvalid(w, err)
-
-		return
-	}
-
-	filter := entity.ImportEventFilter{
-		Cursor: request.Cursor,
-		Limit:  list.ClampLimit(request.Limit),
-	}
-
-	writeList(
-		ctx, w, s, "events", filter.Limit,
-		func() ([]entity.ImportEvent, error) { return s.deps.Imports.ListEvents(ctx, ref, filter) },
+	writeEventPage(ctx, w, r, s,
+		func(cursor string, limit int) ([]entity.ImportEvent, error) {
+			return s.deps.Imports.ListEvents(ctx, ref,
+				entity.ImportEventFilter{Cursor: cursor, Limit: limit})
+		},
 		func(event entity.ImportEvent) string { return event.Ref },
 		toImportEventResponse,
 	)
