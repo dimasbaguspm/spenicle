@@ -102,8 +102,18 @@ func (s *Service) EnsureInitial(
 		settings.PasswordMustChange = true
 	}
 
-	if err := s.save(ctx, settings); err != nil {
+	created, err := s.create(ctx, settings)
+	if err != nil {
 		return entity.Settings{}, false, err
+	}
+
+	if !created {
+		stored, _, loadErr := s.load(ctx)
+		if loadErr != nil {
+			return entity.Settings{}, false, loadErr
+		}
+
+		return stored, false, nil
 	}
 
 	return settings, true, nil
@@ -295,18 +305,9 @@ func (s *Service) load(ctx context.Context) (entity.Settings, bool, error) {
 }
 
 func (s *Service) save(ctx context.Context, settings entity.Settings) error {
-	if err := settings.Validate(); err != nil {
+	sealed, err := s.encode(ctx, settings)
+	if err != nil {
 		return err
-	}
-
-	encoded, err := json.Marshal(settings)
-	if err != nil {
-		return fmt.Errorf("encode settings: %w", err)
-	}
-
-	sealed, err := s.sealer.Seal(ctx, encoded)
-	if err != nil {
-		return fmt.Errorf("seal settings: %w", err)
 	}
 
 	if err := s.store.SetSetting(ctx, constant.SettingAppSettings, sealed); err != nil {
@@ -314,6 +315,38 @@ func (s *Service) save(ctx context.Context, settings entity.Settings) error {
 	}
 
 	return nil
+}
+
+func (s *Service) create(ctx context.Context, settings entity.Settings) (bool, error) {
+	sealed, err := s.encode(ctx, settings)
+	if err != nil {
+		return false, err
+	}
+
+	created, err := s.store.CreateSetting(ctx, constant.SettingAppSettings, sealed)
+	if err != nil {
+		return false, fmt.Errorf("store settings: %w", err)
+	}
+
+	return created, nil
+}
+
+func (s *Service) encode(ctx context.Context, settings entity.Settings) (string, error) {
+	if err := settings.Validate(); err != nil {
+		return "", err
+	}
+
+	encoded, err := json.Marshal(settings)
+	if err != nil {
+		return "", fmt.Errorf("encode settings: %w", err)
+	}
+
+	sealed, err := s.sealer.Seal(ctx, encoded)
+	if err != nil {
+		return "", fmt.Errorf("seal settings: %w", err)
+	}
+
+	return sealed, nil
 }
 
 func IsPasswordMismatch(err error) bool {

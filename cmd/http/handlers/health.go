@@ -25,36 +25,37 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(ctx, s.deps.HealthTimeout)
 	defer cancel()
 
-	schemaVersion, err := s.deps.Health.SchemaVersion(ctx)
-	if err == nil {
-		err = s.deps.Health.Ping(ctx)
-	}
-
+	response, err := s.health(ctx)
 	if err != nil {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "degraded", err.Error())
 
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, healthResponse{
+	httpx.WriteJSON(w, http.StatusOK, response)
+}
+
+func (s *server) health(ctx context.Context) (healthResponse, error) {
+	schemaVersion, err := s.deps.Health.SchemaVersion(ctx)
+	if err != nil {
+		return healthResponse{}, err
+	}
+
+	if pingErr := s.deps.Health.Ping(ctx); pingErr != nil {
+		return healthResponse{}, pingErr
+	}
+
+	lastRun, _, err := s.deps.Health.Setting(ctx, constant.SettingWorkerLastRunAt)
+	if err != nil {
+		return healthResponse{}, err
+	}
+
+	return healthResponse{
 		Status:          "ok",
 		Version:         s.deps.Version,
 		SchemaVersion:   schemaVersion,
 		AppSecret:       s.deps.Sealer.Fingerprint(),
 		BaseCurrency:    s.deps.BaseCurrency,
-		WorkerLastRunAt: s.workerLastRunAt(),
-	})
-}
-
-func (s *server) workerLastRunAt() string {
-	if s.deps.WorkerLastRun == nil {
-		return ""
-	}
-
-	last := s.deps.WorkerLastRun()
-	if last.IsZero() {
-		return ""
-	}
-
-	return last.Format(constant.TimestampLayout)
+		WorkerLastRunAt: lastRun,
+	}, nil
 }

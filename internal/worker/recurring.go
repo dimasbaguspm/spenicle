@@ -43,7 +43,7 @@ func (r *Runner) Run(ctx context.Context) (Summary, error) {
 		}
 	}
 
-	r.record(now)
+	r.record(ctx, now)
 
 	return summary, firstErr
 }

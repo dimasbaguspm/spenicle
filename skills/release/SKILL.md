@@ -58,7 +58,7 @@ docker pull ghcr.io/dimasbaguspm/spenicle:v0.1.1
 docker run --rm -e APP_SECRET=0123456789abcdef \
   -p 8080:8080 ghcr.io/dimasbaguspm/spenicle:v0.1.1 &
 curl -s localhost:8080/healthz               # version must be v0.1.1+<sha7>
-docker run --rm --entrypoint /usr/local/bin/spenicle \
+docker run --rm --entrypoint /spenicle \
   ghcr.io/dimasbaguspm/spenicle:v0.1.1 --help 2>/dev/null || true
 ```
 

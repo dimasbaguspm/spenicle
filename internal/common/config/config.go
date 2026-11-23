@@ -41,6 +41,8 @@ const (
 	DefaultDBFile  = "spenicle.db"
 
 	DefaultServiceName = "spenicle"
+	ServiceNameHTTP    = "spenicle-http"
+	ServiceNameWorker  = "spenicle-worker"
 
 	DefaultSnapToJSONEndpoint = "https://api.snaptojson.com/partner/v1/snaps"
 	DefaultSnapToJSONTimeout  = 30 * time.Second
@@ -63,7 +65,10 @@ const (
 	DefaultDBMaxIdleConns       = 2
 )
 
-var validate = validator.New() //nolint:gochecknoglobals // one registry, built once
+var (
+	validate = validator.New() //nolint:gochecknoglobals // one registry, built once
+	Version  = "dev"           //nolint:gochecknoglobals // the build stamp, set once with -ldflags -X
+)
 
 func Defaults() entity.AppConfig {
 	return entity.AppConfig{

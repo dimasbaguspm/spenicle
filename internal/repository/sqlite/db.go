@@ -3,12 +3,14 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
-	_ "modernc.org/sqlite" // registers the driver
+	sqlite3 "modernc.org/sqlite"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
@@ -23,6 +25,14 @@ const (
 	dataDirPerm  = 0o750
 	maxOpenConns = 4
 	maxIdleConns = 2
+
+	openAttempts = 10
+	openBackoff  = 200 * time.Millisecond
+)
+
+const (
+	sqliteBusy   = 5
+	sqliteLocked = 6
 )
 
 func pickMax(want, fallback int) int {
@@ -45,8 +55,49 @@ func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
 		"?_pragma=busy_timeout(5000)" +
 		"&_pragma=journal_mode(WAL)" +
 		"&_pragma=foreign_keys(1)" +
-		"&_pragma=synchronous(NORMAL)"
+		"&_pragma=synchronous(NORMAL)" +
+		"&_txlock=immediate"
 
+	db, err := openWithRetry(ctx, dsn, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+func openWithRetry(ctx context.Context, dsn string, cfg Config) (*sql.DB, error) {
+	var locked error
+
+	for attempt := range openAttempts {
+		if attempt > 0 {
+			timer := time.NewTimer(openBackoff)
+
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+
+				return nil, fmt.Errorf("open sqlite: %w", ctx.Err())
+			case <-timer.C:
+			}
+		}
+
+		db, err := connect(ctx, dsn, cfg)
+		if err == nil {
+			return db, nil
+		}
+
+		if !isLocked(err) {
+			return nil, err
+		}
+
+		locked = err
+	}
+
+	return nil, fmt.Errorf("sqlite stayed locked after %d attempts: %w", openAttempts, locked)
+}
+
+func connect(ctx context.Context, dsn string, cfg Config) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
@@ -57,8 +108,19 @@ func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
 
 	if err := db.PingContext(ctx); err != nil {
 		_ = db.Close()
+
 		return nil, fmt.Errorf("ping sqlite: %w", err)
 	}
 
 	return db, nil
+}
+
+func isLocked(err error) bool {
+	var driverErr *sqlite3.Error
+
+	if !errors.As(err, &driverErr) {
+		return false
+	}
+
+	return driverErr.Code() == sqliteBusy || driverErr.Code() == sqliteLocked
 }

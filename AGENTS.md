@@ -32,27 +32,49 @@ the document wins until you change the document too.
 5. **Base currency is locked** at first boot (`settings.base_currency`). A foreign
    currency is a property of one transaction, never of an account.
 6. **Capture ≠ ledger.** A capture never writes a ledger entry on its own. Approval does.
-7. **Single process, single file.** No Postgres, no Redis, no queue, no sidecar.
-   Adding infrastructure needs a design-doc change first.
+7. **One container, two supervised processes, one SQLite file.** `spenicle http` is
+   the only listener, `spenicle worker` only posts due rules, and s6-overlay in the
+   image supervises both. No Postgres, no Redis, no queue, no sidecar: adding
+   infrastructure needs a design-doc change first.
 
 ## Layout
 
 ```
-cmd/spenicle/          main.go: the mode argument and the signal wiring only
-internal/app/          composition root: reads config, owns the wiring, runs a mode
+main.go                the cobra root: signal wiring and the hidden `all` command
+cmd/http/              package httpcmd: `spenicle http`, the handler graph and serve loop
 cmd/http/handlers/     route table + one file per endpoint group
+cmd/worker/            package workercmd: `spenicle worker`, the recurring loop
+deploy/s6/s6-rc.d/     the two longrun services s6-overlay starts in the image
 uat/                   godog suite: uat.go, steps.go, world.go, features/
-internal/common/       no business logic: config, clock, seal, otel, httpx, uuid, binding
+internal/common/       no business logic: config (also the process graph), clock, seal,
+                       otel, httpx, uuid, binding, list
 internal/constant/     every fixed value shared by more than one package
 internal/entity/       shared structs + invariants; imports stdlib + constant only
 internal/module/       business logic: ledger, captures, rates, settings
 internal/repository/   contracts, plus the adapters: sqlite, ecb, extraction/{snaptojson,openai}
 ```
 
-The binary takes one argument, `spenicle [http|worker|all]`, defaulting to `all`:
-`http` serves the API only, `worker` posts the due recurring rules only and opens no
-port, `all` runs both in this one process under the same context. Anything else is a
-usage error and exit code 2.
+The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` posts the
+due recurring rules and opens no port (it ignores `ADDR`), and the hidden
+`spenicle all` runs both in one process for local development. Each command owns its
+composition root — `cmd/http/http.go` and `cmd/worker/worker.go` — and the graph they
+share (config, logger, telemetry identity, store + migrate, sealer, settings, ledger,
+rates) is `config.Start`/`config.Process` in `internal/common/config/process.go`. An
+unknown subcommand is cobra's usage error and exit code 1.
+
+### Two processes, one SQLite file
+
+`http` and `worker` are separate OS processes on the same database, so the write path
+is designed for it: the DSN carries `_txlock=immediate`, which takes the write lock
+when a transaction begins instead of upgrading mid-transaction (that upgrade is what
+turns into `SQLITE_BUSY` between two processes), `busy_timeout(5000)` keeps the loser
+waiting rather than failing, WAL lets readers proceed during a write, and migrations
+re-check `schema_migrations` inside the transaction, so two processes booting at once
+apply each version exactly once. Switch to WAL is the one statement `busy_timeout`
+does not queue for, so `sqlite.Open` retries a locked connection for a couple of
+seconds: a fresh file can be opened by both processes at once without one of them
+dying. The result is one writer at a time across the container, never two: anything
+that needs more than that is a design-doc change.
 
 Rules that keep it pluggable:
 
@@ -75,7 +97,7 @@ Rules that keep it pluggable:
 - Every method that crosses a boundary takes `ctx context.Context` first and opens one
   span named after the layer: `Repository.Sqlite.InsertEntry`, `Module.Ledger.Post`,
   `Handler.Entries.Post`, `Common.Seal.Seal`. There is exactly one
-  `context.Background()`, in `cmd/spenicle/main.go`, wrapped in `signal.NotifyContext`;
+  `context.Background()`, in the root `main.go`, wrapped in `signal.NotifyContext`;
   everything derives from it. Pure value code (`entity` validation, `clock`) takes no
   context and opens no span.
 
@@ -84,7 +106,7 @@ Rules that keep it pluggable:
 ```bash
 make hooks      # install the git hook (build + lint + test + UAT before commit)
 make build      # bin/spenicle
-make run        # DATA_DIR=./data ADDR=:8080 go run ./cmd/spenicle
+make run        # DATA_DIR=./data ADDR=:8080 go run . all
 make test       # go test ./... (unit + UAT)
 make uat        # the Gherkin suite plus the containerised mock services (needs Docker)
 make uat-snapshots   # rewrite snapshot files, then review the diff
@@ -147,8 +169,19 @@ constant and field in those two files, nothing else.
 
 `/healthz` returns `status`, `version` (`<tag>+<sha7>`), `schema_version`,
 `app_secret` fingerprint, `base_currency` and `worker_last_run_at` (RFC3339, empty
-until the worker finishes a run, and in `http` mode). Use it to prove a running
-process is the build you think it is.
+until the worker finishes a run). The heartbeat is the `worker_last_run_at` row the
+worker writes into `settings`, so the `http` process reports it even though it never
+runs the worker itself. Use it to prove a running container is the build you think it
+is, and that both services are alive.
+
+## Dependencies
+
+Five direct ones, each earning its place: `spf13/cobra` for the CLI (a root command,
+`http`, `worker` and the hidden `all`), `go-playground/validator` for the declarative
+`validate` tags, `modernc.org/sqlite` as the cgo-free driver, `openai/openai-go` for
+the second extraction rail and the `opentelemetry-go` modules for traces and metrics.
+`cucumber/godog` and `testcontainers-go` are test-only. A new dependency needs a
+reason in the MR, not a `go get`.
 
 ## Testing
 
@@ -204,10 +237,10 @@ process is the build you think it is.
   carry the `@vendors` tag and skip when Docker is absent; `the extraction rail is
   "..."`, `the extraction|rates vendor is down` and `the extraction|rates vendor breaks
   its contract` pick the wiring before `a running API` boots.
-- `uat` assembles the dependency graph by hand because `cmd/spenicle` is `package main`
-  and therefore not importable. Adding a dependency to `internal/app/bootstrap.go` means
-  adding it to `uat/world.go` too. Seeds, schema and first-boot settings live in the
-  adapter (`sqlite.EnsureBaseline`), not in a module.
+- `uat` assembles the dependency graph by hand instead of importing a command: the
+  commands own their wiring and are not importable as a composition root. Adding a
+  dependency to `config.Start` means adding it to `uat/world.go` too. Seeds, schema and
+  first-boot settings live in the adapter (`sqlite.EnsureBaseline`), not in a module.
 
 ## Where the rest lives
 
@@ -257,7 +290,9 @@ git push origin v0.2.0
 
 `OTEL_EXPORTER_OTLP_ENDPOINT` is OTLP/HTTP (port 4318). A bare host is treated as
 **HTTPS**; `http://` must be written on purpose. `ServiceName` is the only identity:
-it becomes `resource.service.name` and the tracer name. Span names are
+it becomes `resource.service.name` and the tracer name, and each command sets its own
+before telemetry starts: `spenicle-http` (`config.ServiceNameHTTP`), `spenicle-worker`
+(`config.ServiceNameWorker`) and `spenicle` for the hidden `all`. Span names are
 layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
 `telemetry.StartSpan` — never through a local wrapper. Details and failure modes:
 [`skills/observability`](./skills/observability/SKILL.md).
@@ -265,7 +300,9 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
 ## Known traps
 
 - `docker run` as uid `10001`: use a **named volume** (`-v spenicle-data:/data`). A bind
-  mount needs `chown -R 10001:10001 ./data` first.
+  mount needs `chown -R 10001:10001 ./data` first. PID 1 is s6-overlay as root; the two
+  services drop to `10001` through `s6-setuidgid`, so a file written by one is the same
+  owner for the other.
 - The telemetry flush uses `context.WithoutCancel`; the signal that stops the process
   already cancelled the root context, and without this the last span batch is lost.
 - `golangci-lint` `dupword --fix` has silently eaten SQL (`NULL` removed from a

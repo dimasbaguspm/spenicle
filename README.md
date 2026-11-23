@@ -35,6 +35,13 @@ docker run -d --name spenicle \
 Then open `http://localhost:8080`. Migrations run on boot, and the container log carries
 the generated first password once — sign in with it and pick your own.
 
+The image runs two supervised processes from the same environment: `spenicle http`
+(the API, the only listener, on `ADDR`) and `spenicle worker` (the due recurring
+rules, no port, so it ignores `ADDR`). Inside the container `s6-svstat
+/run/service/spenicle-worker` reports either one and `s6-svc -d` stops it alone. A
+one-shot debug run skips supervision: `docker run --rm --entrypoint /spenicle -e
+APP_SECRET=… <image> worker`.
+
 Releases are container images only — there are no binary downloads. Pin a specific
 release by tag (`:v0.2.0`) or by digest (`@sha256:…`) from its release notes.
 
@@ -54,7 +61,8 @@ volumes:
   spenicle-data:
 ```
 
-The container runs as uid `10001`, not root. A **named volume** (above) inherits the
+The container starts s6-overlay as root (that is what supervises the two services) and
+both services drop to uid `10001`. A **named volume** (above) inherits the
 right ownership automatically. If you prefer a bind mount for easier backups, give the
 host directory to that uid first:
 

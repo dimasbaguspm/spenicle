@@ -8,9 +8,9 @@ package worker
 import (
 	"context"
 	"log/slog"
-	"sync"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
@@ -21,6 +21,7 @@ type Store interface {
 	AdvanceRecurring(ctx context.Context, ref string, from, to, postedAt time.Time) (bool, error)
 	PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool, error)
 	FindAccount(ctx context.Context, name, kind string) (entity.Account, bool, error)
+	SetSetting(ctx context.Context, key, value string) error
 }
 
 type TimeSource interface{ Now() time.Time }
@@ -37,9 +38,6 @@ type Runner struct {
 	entries ledger.Contract
 	clock   TimeSource
 	logger  *slog.Logger
-
-	mu      sync.Mutex
-	lastRun time.Time
 }
 
 func New(
@@ -56,16 +54,10 @@ func New(
 	return &Runner{rules: rules, store: store, entries: entries, clock: clock, logger: logger}
 }
 
-func (r *Runner) LastRun() time.Time {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *Runner) record(ctx context.Context, at time.Time) {
+	value := at.UTC().Format(constant.TimestampLayout)
 
-	return r.lastRun
-}
-
-func (r *Runner) record(at time.Time) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.lastRun = at
+	if err := r.store.SetSetting(ctx, constant.SettingWorkerLastRunAt, value); err != nil {
+		r.logger.WarnContext(ctx, "worker heartbeat not stored", slog.Any("error", err))
+	}
 }

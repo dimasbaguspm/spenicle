@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"sort"
@@ -74,6 +75,15 @@ func applyOne(ctx context.Context, db *sql.DB, version int, body string) error {
 
 	defer func() { _ = tx.Rollback() }()
 
+	recorded, err := alreadyApplied(ctx, tx, version)
+	if err != nil {
+		return err
+	}
+
+	if recorded {
+		return nil
+	}
+
 	for _, stmt := range splitStatements(body) {
 		if _, execErr := tx.ExecContext(ctx, stmt); execErr != nil {
 			return fmt.Errorf("statement %q: %w", firstLine(stmt), execErr)
@@ -91,6 +101,21 @@ func applyOne(ctx context.Context, db *sql.DB, version int, body string) error {
 	}
 
 	return nil
+}
+
+func alreadyApplied(ctx context.Context, tx *sql.Tx, version int) (bool, error) {
+	var one int
+
+	err := tx.QueryRowContext(ctx, `SELECT 1 FROM schema_migrations WHERE version = ?`, version).Scan(&one)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("check migration %d: %w", version, err)
+	}
+
+	return true, nil
 }
 
 func appliedVersions(ctx context.Context, db *sql.DB) (map[int]bool, error) {

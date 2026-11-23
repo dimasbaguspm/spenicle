@@ -68,6 +68,25 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 	return nil
 }
 
+func (s *Store) CreateSetting(ctx context.Context, key, value string) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreateSetting")
+	defer endSpan()
+
+	result, err := s.db.ExecContext(ctx, `
+		INSERT INTO settings (ref, k, v) VALUES (?, ?, ?)
+		ON CONFLICT (k) DO NOTHING`, uuid.New(), key, value)
+	if err != nil {
+		return false, fmt.Errorf("create setting %q: %w", key, err)
+	}
+
+	inserted, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("create setting %q: %w", key, err)
+	}
+
+	return inserted == 1, nil
+}
+
 func (s *Store) HasEntries(ctx context.Context) (bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.HasEntries")
 	defer endSpan()
