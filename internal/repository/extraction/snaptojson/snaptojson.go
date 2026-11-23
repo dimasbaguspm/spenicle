@@ -1,4 +1,4 @@
-// Package snaptojson is the adapter for the extraction vendor. Contract source:
+// Package snaptojson is the SnapToJSON rail. Contract source:
 // https://snaptojson.com/docs/api — one partner route, one verb:
 //
 //	POST {endpoint}                       submit a file, or read a snap back
@@ -6,12 +6,8 @@
 //	multipart/form-data                   file=<bytes> or snap_id=<job_ref>
 //
 // Answers 200 (terminal SnapReport), 202 (still running, post the id back) or an
-// ErrorEnvelope. The vendor owns its schema; this package only knows how to hand it
-// bytes and hand back the envelope the capture queue stores.
-//
-// It is deliberately inert until an API key is configured: with no key, captures
-// stay raw and the user types the fields, which is the honest default for a
-// self-hosted box.
+// ErrorEnvelope. This package owns that wire format and returns the unified
+// extraction.Report, so nothing upstream knows the vendor's words.
 package snaptojson
 
 import (
@@ -28,10 +24,14 @@ import (
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 )
 
+// RailName is the stable name recorded on every capture this rail produces.
+const RailName = "snaptojson"
+
 // ErrNotConfigured reports that no API key was supplied.
-var ErrNotConfigured = errors.New("extraction provider is not configured")
+var ErrNotConfigured = errors.New("snaptojson rail is not configured")
 
 const (
 	// maxArtifactBytes is the vendor's hard limit: 10 MiB, refused before reading.
@@ -39,48 +39,6 @@ const (
 	// maxErrorBody bounds what an error response can make us allocate.
 	maxErrorBody = 64 << 10
 )
-
-// Extractor is the contract the capture module depends on. A local model, a
-// different vendor, or a stub in tests all satisfy it.
-type Extractor interface {
-	// Submit posts the artifact and returns the vendor's report. A 202 is not an
-	// error: it means "still running", and JobRef is how to read it back.
-	Submit(ctx context.Context, artifact Artifact) (Report, error)
-	// Fetch reads a snap back by its JobRef.
-	Fetch(ctx context.Context, jobRef string) (Report, error)
-}
-
-// Artifact is one document on its way to the vendor.
-type Artifact struct {
-	Filename    string
-	ContentType string
-	Bytes       []byte
-}
-
-// Report is SnapReport: the body of a submit and of every read-back.
-type Report struct {
-	JobRef string `json:"job_ref"`
-	// Status is REGISTERED, EXECUTING, COMPLETED or FAILED. Only the last two are
-	// terminal.
-	Status       string  `json:"status"`
-	Result       *Result `json:"result"`
-	ErrorMessage string  `json:"error_message"`
-}
-
-// Result is SnapResult: what the reader answered. Valid=false is an answer, not a
-// failure, and comes with violations.
-type Result struct {
-	Data       json.RawMessage `json:"data"`
-	Valid      bool            `json:"valid"`
-	Violations []Violation     `json:"violations"`
-}
-
-// Violation is one field the document did not satisfy, named the way JSON Schema
-// names it.
-type Violation struct {
-	Pointer string `json:"pointer"`
-	Error   string `json:"error"`
-}
 
 // APIError is the vendor's ErrorEnvelope, unwrapped. Code is stable; Message is for
 // a log, never for parsing.
@@ -102,14 +60,14 @@ type Client struct {
 	http     *http.Client
 }
 
-// New returns an extractor, or ErrNotConfigured when the key is empty.
-func New(endpoint, apiKey string, timeout time.Duration) (Extractor, error) {
+// New returns the rail, or ErrNotConfigured when the key is empty.
+func New(endpoint, apiKey string, timeout time.Duration) (*Client, error) {
 	if strings.TrimSpace(apiKey) == "" {
 		return nil, ErrNotConfigured
 	}
 
 	if strings.TrimSpace(endpoint) == "" {
-		return nil, errors.New("extraction endpoint is required")
+		return nil, errors.New("snaptojson endpoint is required")
 	}
 
 	return &Client{
@@ -119,9 +77,15 @@ func New(endpoint, apiKey string, timeout time.Duration) (Extractor, error) {
 	}, nil
 }
 
-// Submit posts one file. A 202 report is returned as a report, not an error: the
-// caller stores JobRef and reads it back later.
-func (c *Client) Submit(ctx context.Context, artifact Artifact) (Report, error) {
+// Rail is the unified name of this adapter.
+func (c *Client) Rail() string { return RailName }
+
+// Submit posts one file. A 202 is a running report, not an error: the caller stores
+// JobRef and polls it later.
+func (c *Client) Submit(
+	ctx context.Context,
+	artifact extraction.Artifact,
+) (extraction.Report, error) {
 	// Posting and Polling are separate spans on purpose: an expensive, billed submit
 	// and a free read-back are different events, and a trace should say which one it
 	// was without reading the arguments.
@@ -129,11 +93,11 @@ func (c *Client) Submit(ctx context.Context, artifact Artifact) (Report, error) 
 	defer endSpan()
 
 	if len(artifact.Bytes) == 0 {
-		return Report{}, errors.New("snaptojson: empty artifact")
+		return extraction.Report{}, errors.New("snaptojson: empty artifact")
 	}
 
 	if len(artifact.Bytes) > maxArtifactBytes {
-		return Report{}, &APIError{
+		return extraction.Report{}, &APIError{
 			Status: http.StatusRequestEntityTooLarge, Code: "image_too_large",
 			Message: "artifact is over 10 MiB",
 		}
@@ -149,84 +113,94 @@ func (c *Client) Submit(ctx context.Context, artifact Artifact) (Report, error) 
 		contentType = "application/octet-stream"
 	}
 
-	return c.post(ctx, func(writer *multipart.Writer) error {
-		part, err := writer.CreatePart(filePart(filename, contentType))
-		if err != nil {
-			return fmt.Errorf("snaptojson: form part: %w", err)
+	report, err := c.post(ctx, func(writer *multipart.Writer) error {
+		part, partErr := writer.CreatePart(filePart(filename, contentType))
+		if partErr != nil {
+			return fmt.Errorf("snaptojson: form part: %w", partErr)
 		}
 
-		if _, err = part.Write(artifact.Bytes); err != nil {
-			return fmt.Errorf("snaptojson: write part: %w", err)
+		if _, partErr = part.Write(artifact.Bytes); partErr != nil {
+			return fmt.Errorf("snaptojson: write part: %w", partErr)
 		}
 
 		return nil
 	})
+	if err != nil {
+		return extraction.Report{}, err
+	}
+
+	return unify(report), nil
 }
 
-// Fetch reads a snap back by id. This is how a 202 is polled and how a retry works:
-// the vendor is charged once, the read-back is free.
-func (c *Client) Fetch(ctx context.Context, jobRef string) (Report, error) {
+// Poll reads a snap back by id. This is how a 202 is followed up and how a retry
+// works: the vendor is charged once, the read-back is free.
+func (c *Client) Poll(ctx context.Context, jobRef string) (extraction.Report, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Snaptojson.Polling")
 	defer endSpan()
 
 	if strings.TrimSpace(jobRef) == "" {
-		return Report{}, errors.New("snaptojson: job_ref is required")
+		return extraction.Report{}, errors.New("snaptojson: job_ref is required")
 	}
 
-	return c.post(ctx, func(writer *multipart.Writer) error {
+	report, err := c.post(ctx, func(writer *multipart.Writer) error {
 		return writer.WriteField("snap_id", jobRef)
 	})
+	if err != nil {
+		return extraction.Report{}, err
+	}
+
+	return unify(report), nil
 }
 
-// post sends one multipart request and decodes either a report or an error
-// envelope. One request shape for both halves of the contract is what keeps this
-// adapter honest to the vendor's "one route, one verb".
-func (c *Client) post(
-	ctx context.Context,
-	build func(*multipart.Writer) error,
-) (Report, error) {
-	var body bytes.Buffer
+// snapReport is SnapReport: the body of a submit and of every read-back.
+type snapReport struct {
+	JobRef string      `json:"job_ref"`
+	Status string      `json:"status"`
+	Result *snapResult `json:"result"`
+	Error  string      `json:"error_message"`
+}
 
-	writer := multipart.NewWriter(&body)
-	if err := build(writer); err != nil {
-		return Report{}, err
+// snapResult is SnapResult: what the reader answered.
+type snapResult struct {
+	Data       json.RawMessage `json:"data"`
+	Valid      bool            `json:"valid"`
+	Violations []struct {
+		Pointer string `json:"pointer"`
+		Error   string `json:"error"`
+	} `json:"violations"`
+}
+
+// unify maps the vendor's four states and its result shape onto extraction.Report.
+func unify(report snapReport) extraction.Report {
+	unified := extraction.Report{
+		Rail:   RailName,
+		JobRef: report.JobRef,
+		Error:  report.Error,
 	}
 
-	if err := writer.Close(); err != nil {
-		return Report{}, fmt.Errorf("snaptojson: close form: %w", err)
+	switch report.Status {
+	case "COMPLETED":
+		unified.Status = extraction.StatusCompleted
+	case "FAILED":
+		unified.Status = extraction.StatusFailed
+	default:
+		// REGISTERED and EXECUTING are both "still working".
+		unified.Status = extraction.StatusRunning
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, &body)
-	if err != nil {
-		return Report{}, fmt.Errorf("snaptojson: request: %w", err)
-	}
+	if report.Result != nil {
+		unified.Data = report.Result.Data
+		unified.Valid = report.Result.Valid
 
-	request.Header.Set("Authorization", "Bearer "+c.apiKey)
-	request.Header.Set("Content-Type", writer.FormDataContentType())
-	request.Header.Set("Accept", "application/json")
-
-	response, err := c.http.Do(request)
-	if err != nil {
-		return Report{}, fmt.Errorf("snaptojson: call: %w", err)
-	}
-
-	defer func() { _ = response.Body.Close() }()
-
-	raw, err := io.ReadAll(io.LimitReader(response.Body, maxArtifactBytes))
-	if err != nil {
-		return Report{}, fmt.Errorf("snaptojson: read body: %w", err)
-	}
-
-	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusAccepted {
-		var report Report
-		if err := json.Unmarshal(raw, &report); err != nil {
-			return Report{}, fmt.Errorf("snaptojson: decode report: %w", err)
+		for _, violation := range report.Result.Violations {
+			unified.Violations = append(unified.Violations, extraction.Violation{
+				Pointer: violation.Pointer,
+				Error:   violation.Error,
+			})
 		}
-
-		return report, nil
 	}
 
-	return Report{}, decodeError(response.StatusCode, raw)
+	return unified
 }
 
 // filePart builds the one form part the vendor expects: a file named "file".
@@ -236,6 +210,57 @@ func filePart(filename, contentType string) textproto.MIMEHeader {
 	header.Set("Content-Type", contentType)
 
 	return header
+}
+
+// post sends one multipart request and decodes either a report or an error
+// envelope. One request shape for both halves of the contract is what keeps this
+// adapter honest to the vendor's "one route, one verb".
+func (c *Client) post(
+	ctx context.Context,
+	build func(*multipart.Writer) error,
+) (snapReport, error) {
+	var body bytes.Buffer
+
+	writer := multipart.NewWriter(&body)
+	if err := build(writer); err != nil {
+		return snapReport{}, err
+	}
+
+	if err := writer.Close(); err != nil {
+		return snapReport{}, fmt.Errorf("snaptojson: close form: %w", err)
+	}
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, &body)
+	if err != nil {
+		return snapReport{}, fmt.Errorf("snaptojson: request: %w", err)
+	}
+
+	request.Header.Set("Authorization", "Bearer "+c.apiKey)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	request.Header.Set("Accept", "application/json")
+
+	response, err := c.http.Do(request)
+	if err != nil {
+		return snapReport{}, fmt.Errorf("snaptojson: call: %w", err)
+	}
+
+	defer func() { _ = response.Body.Close() }()
+
+	raw, err := io.ReadAll(io.LimitReader(response.Body, maxArtifactBytes))
+	if err != nil {
+		return snapReport{}, fmt.Errorf("snaptojson: read body: %w", err)
+	}
+
+	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusAccepted {
+		var report snapReport
+		if err := json.Unmarshal(raw, &report); err != nil {
+			return snapReport{}, fmt.Errorf("snaptojson: decode report: %w", err)
+		}
+
+		return report, nil
+	}
+
+	return snapReport{}, decodeError(response.StatusCode, raw)
 }
 
 // decodeError reads ErrorEnvelope. An unparseable error body still has to become a

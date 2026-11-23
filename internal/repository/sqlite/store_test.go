@@ -53,8 +53,8 @@ func TestMigrateIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("schema version: %v", err)
 	}
-	if v != 2 {
-		t.Fatalf("schema version = %d, want 2", v)
+	if v != 3 {
+		t.Fatalf("schema version = %d, want 3", v)
 	}
 }
 
@@ -96,7 +96,7 @@ func TestInsertEntryRoundTrip(t *testing.T) {
 		t.Fatalf("source = %q, want share", back.Source)
 	}
 	if len(back.Postings) != 2 {
-		t.Fatalf("postings = %d, want 2", len(back.Postings))
+		t.Fatalf("postings = %d, want 3", len(back.Postings))
 	}
 	if err := entity.CheckZeroSum(back.Postings); err != nil {
 		t.Fatalf("stored postings do not balance: %v", err)

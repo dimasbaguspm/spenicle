@@ -27,6 +27,9 @@ const (
 	EnvAppSecret = "APP_SECRET"
 	//nolint:gosec // G101: this is the environment variable name, not a credential
 	EnvSnapToJSONAPIKey = "SNAPTOJSON_API_KEY"
+	//nolint:gosec // G101: an environment variable name, not a credential
+	EnvOpenAIAPIKey = "OPENAI_API_KEY"
+	EnvOpenAIModel  = "OPENAI_MODEL"
 	// EnvSnapToJSONEndpoint overrides the vendor route, for a proxy or a staging
 	// account. Unset means the documented production endpoint.
 	EnvSnapToJSONEndpoint = "SNAPTOJSON_ENDPOINT"
@@ -51,6 +54,8 @@ const (
 	// DefaultSnapToJSONTimeout is long on purpose: the vendor holds a submit for up
 	// to ten seconds before answering 202, and we must outlast that.
 	DefaultSnapToJSONTimeout = 30 * time.Second
+	// DefaultOpenAIModel is a vision-capable model that is cheap enough to try.
+	DefaultOpenAIModel = "gpt-4o-mini"
 
 	DefaultReadHeaderTimeout = 5 * time.Second
 	DefaultReadTimeout       = 15 * time.Second
@@ -80,6 +85,7 @@ func Defaults() entity.AppConfig {
 		DBPath:                   filepath.Join(DefaultDataDir, DefaultDBFile),
 		SnapToJSONEndpoint:       DefaultSnapToJSONEndpoint,
 		SnapToJSONTimeout:        DefaultSnapToJSONTimeout,
+		OpenAIModel:              DefaultOpenAIModel,
 		ServiceName:              DefaultServiceName,
 		ReadHeaderTimeout:        DefaultReadHeaderTimeout,
 		ReadTimeout:              DefaultReadTimeout,
@@ -108,6 +114,8 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.AppSecret = os.Getenv(EnvAppSecret)
 	cfg.SnapToJSONAPIKey = os.Getenv(EnvSnapToJSONAPIKey)
 	cfg.SnapToJSONEndpoint = env(EnvSnapToJSONEndpoint, cfg.SnapToJSONEndpoint)
+	cfg.OpenAIAPIKey = os.Getenv(EnvOpenAIAPIKey)
+	cfg.OpenAIModel = env(EnvOpenAIModel, DefaultOpenAIModel)
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
 
 	if err := validate(cfg); err != nil {

@@ -16,7 +16,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
-	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 )
 
 // Service owns the review queue.
@@ -26,9 +26,10 @@ type Service struct {
 	sealer   seal.Sealer
 	clock    TimeSource
 	ids      IDSource
-	// extractor is nil when SNAPTOJSON_API_KEY is unset. Nil is a supported mode:
-	// captures stay raw and the user types the fields.
-	extractor snaptojson.Extractor
+	// extractor is whichever rail is configured, or nil. Nil is a supported mode:
+	// captures stay raw and the user types the fields. The module never learns the
+	// vendor's name — the rail reports it, and it is stored with the draft.
+	extractor extraction.Extractor
 }
 
 // TimeSource and IDSource are the module's ambient dependencies; clock.System
@@ -43,7 +44,7 @@ func New(
 	captures repository.Captures,
 	entries ledger.Contract,
 	sealer seal.Sealer,
-	extractor snaptojson.Extractor,
+	extractor extraction.Extractor,
 	clock TimeSource,
 	ids IDSource,
 ) *Service {
@@ -219,14 +220,21 @@ func (s *Service) Retry(ctx context.Context, id int64) (entity.Capture, error) {
 	}
 
 	if s.extractor == nil {
-		return entity.Capture{}, snaptojson.ErrNotConfigured
+		return entity.Capture{}, fmt.Errorf("%w: no extraction rail is configured", entity.ErrInvalidState)
 	}
 
 	if capture.JobRef == "" {
 		return entity.Capture{}, fmt.Errorf("%w: capture %d was never submitted", entity.ErrInvalidState, id)
 	}
 
-	report, err := s.extractor.Fetch(ctx, capture.JobRef)
+	report, err := s.extractor.Poll(ctx, capture.JobRef)
+	if errors.Is(err, extraction.ErrNoPolling) {
+		return entity.Capture{}, fmt.Errorf(
+			"%w: the %s rail answers in one call, there is nothing to poll",
+			entity.ErrInvalidState, capture.ExtractionRail,
+		)
+	}
+
 	if err != nil {
 		return entity.Capture{}, err
 	}
@@ -245,7 +253,7 @@ func (s *Service) Retry(ctx context.Context, id int64) (entity.Capture, error) {
 func (s *Service) extract(
 	ctx context.Context,
 	capture entity.Capture,
-	artifact *snaptojson.Artifact,
+	artifact *extraction.Artifact,
 ) (entity.Capture, error) {
 	if s.extractor == nil || artifact == nil {
 		return capture, nil
@@ -253,14 +261,12 @@ func (s *Service) extract(
 
 	report, err := s.extractor.Submit(ctx, *artifact)
 	if err != nil {
-		var apiErr *snaptojson.APIError
-		if errors.As(err, &apiErr) {
-			capture.ExtractionError = apiErr.Code + ": " + apiErr.Message
+		// A rail that refuses or fails must not lose the document the user just
+		// handed over: the capture stays, the reason is recorded on it.
+		capture.ExtractionRail = s.extractor.Rail()
+		capture.ExtractionError = err.Error()
 
-			return s.captures.UpdateCapture(ctx, capture)
-		}
-
-		return entity.Capture{}, err
+		return s.captures.UpdateCapture(ctx, capture)
 	}
 
 	return s.applyReport(ctx, capture, report)
@@ -268,39 +274,44 @@ func (s *Service) extract(
 
 // applyReport maps the vendor's four states onto the queue's statuses, sealing the
 // draft so the fields the vendor read never sit in plaintext.
+// applyReport maps the unified report onto the queue's statuses. One switch for every
+// rail: a new vendor cannot invent a new capture state.
 func (s *Service) applyReport(
 	ctx context.Context,
 	capture entity.Capture,
-	report snaptojson.Report,
+	report extraction.Report,
 ) (entity.Capture, error) {
 	capture.JobRef = report.JobRef
+	capture.ExtractionRail = report.Rail
 
 	switch report.Status {
-	case constant.SnapStatusCompleted:
+	case extraction.StatusCompleted:
 		capture.Status = constant.CaptureStatusPending
 		capture.ExtractionError = ""
 
-		if report.Result != nil {
-			raw, err := json.Marshal(report.Result)
-			if err != nil {
-				return entity.Capture{}, fmt.Errorf("encode draft: %w", err)
-			}
-
-			if capture.DraftJSON, err = s.sealText(ctx, string(raw)); err != nil {
-				return entity.Capture{}, err
-			}
+		draft, err := json.Marshal(struct {
+			Data       json.RawMessage        `json:"data,omitempty"`
+			Valid      bool                   `json:"valid"`
+			Violations []extraction.Violation `json:"violations,omitempty"`
+		}{Data: report.Data, Valid: report.Valid, Violations: report.Violations})
+		if err != nil {
+			return entity.Capture{}, fmt.Errorf("encode draft: %w", err)
 		}
 
-	case constant.SnapStatusFailed:
-		capture.Status = constant.CaptureStatusFailed
-		capture.ExtractionError = report.ErrorMessage
+		if capture.DraftJSON, err = s.sealText(ctx, string(draft)); err != nil {
+			return entity.Capture{}, err
+		}
 
-	case constant.SnapStatusRegistered, constant.SnapStatusExecuting:
+	case extraction.StatusFailed:
+		capture.Status = constant.CaptureStatusFailed
+		capture.ExtractionError = report.Error
+
+	case extraction.StatusRunning:
 		capture.Status = constant.CaptureStatusExtracting
 
 	default:
 		capture.Status = constant.CaptureStatusFailed
-		capture.ExtractionError = "unknown snap status " + report.Status
+		capture.ExtractionError = "unknown rail status " + report.Status
 	}
 
 	return s.captures.UpdateCapture(ctx, capture)

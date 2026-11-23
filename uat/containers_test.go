@@ -22,7 +22,8 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
-	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -123,7 +124,7 @@ func TestContainerVendorSubmitAndReadBack(t *testing.T) {
 
 	capture, created, err := service.Create(ctx, captures.CreateInput{
 		Kind: constant.CaptureKindImage,
-		Artifact: &snaptojson.Artifact{
+		Artifact: &extraction.Artifact{
 			Filename:    "receipt.jpg",
 			ContentType: "image/jpeg",
 			Bytes:       []byte("not really a jpeg"),

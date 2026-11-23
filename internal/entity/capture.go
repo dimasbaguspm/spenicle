@@ -50,7 +50,10 @@ type Capture struct {
 	ExtractionError string
 	// JobRef is the vendor's id for this snap, used to read the result back when
 	// the submit answered 202 instead of 200.
-	JobRef          string
+	JobRef string
+	// ExtractionRail names the vendor that produced the draft: snaptojson, openai,
+	// anything that implements the extraction contract. Empty means none yet.
+	ExtractionRail  string
 	ResolvedEntryID *int64
 	ResolutionNote  string
 	ReceivedAt      time.Time

@@ -26,6 +26,10 @@ type AppConfig struct {
 	SnapToJSONEndpoint string
 	// SnapToJSONTimeout bounds one submit or read-back call.
 	SnapToJSONTimeout time.Duration
+	// OpenAIAPIKey enables the OpenAI rail when SNAPTOJSON_API_KEY is absent.
+	OpenAIAPIKey string
+	// OpenAIModel is the vision model that reads the document.
+	OpenAIModel string
 	// OTLPEndpoint is host:port, optionally with a scheme. Empty disables export.
 	OTLPEndpoint string
 

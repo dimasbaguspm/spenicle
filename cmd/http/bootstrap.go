@@ -16,7 +16,9 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
-	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -147,19 +149,48 @@ func buildExtractor(
 	ctx context.Context,
 	cfg entity.AppConfig,
 	logger *slog.Logger,
-) (snaptojson.Extractor, error) {
-	if cfg.SnapToJSONAPIKey == "" {
-		logger.InfoContext(ctx, "SNAPTOJSON_API_KEY is unset: extraction disabled, captures stay manual")
-
-		return nil, nil //nolint:nilnil // nil extractor is the documented "disabled" mode
-	}
-
-	extractor, err := snaptojson.New(cfg.SnapToJSONEndpoint, cfg.SnapToJSONAPIKey, cfg.SnapToJSONTimeout)
+) (extraction.Extractor, error) {
+	rail, err := selectRail(ctx, cfg, logger)
 	if err != nil {
-		return nil, fmt.Errorf("extractor: %w", err)
+		return nil, err
 	}
 
-	return extractor, nil
+	return rail, nil
+}
+
+// selectRail is the whole rail policy in one place: SnapToJSON wins when its key is
+// set, OpenAI is the fallback, and no key means extraction is off. The module never
+// learns which one it got.
+func selectRail(
+	ctx context.Context,
+	cfg entity.AppConfig,
+	logger *slog.Logger,
+) (extraction.Extractor, error) {
+	if cfg.SnapToJSONAPIKey != "" {
+		rail, err := snaptojson.New(cfg.SnapToJSONEndpoint, cfg.SnapToJSONAPIKey, cfg.SnapToJSONTimeout)
+		if err != nil {
+			return nil, fmt.Errorf("snaptojson rail: %w", err)
+		}
+
+		logger.InfoContext(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))
+
+		return rail, nil
+	}
+
+	if cfg.OpenAIAPIKey != "" {
+		rail, err := openai.New(cfg.OpenAIAPIKey, cfg.OpenAIModel, "", cfg.SnapToJSONTimeout)
+		if err != nil {
+			return nil, fmt.Errorf("openai rail: %w", err)
+		}
+
+		logger.InfoContext(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))
+
+		return rail, nil
+	}
+
+	logger.InfoContext(ctx, "no extraction rail configured: captures stay manual")
+
+	return nil, nil //nolint:nilnil // nil extractor is the documented "disabled" mode
 }
 
 // passwordBytes is long enough to survive being written on paper.

@@ -17,7 +17,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
-	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 )
 
 type captureRequest struct {
@@ -35,6 +35,7 @@ type captureResponse struct {
 	DraftJSON      string `json:"draft_json,omitempty"`
 	ResolutionNote string `json:"resolution_note,omitempty"`
 	JobRef         string `json:"job_ref,omitempty"`
+	ExtractionRail string `json:"extraction_rail,omitempty"`
 	EntryID        *int64 `json:"resolved_entry_id,omitempty"`
 	ReceivedAt     string `json:"received_at"`
 	ResolvedAt     string `json:"resolved_at,omitempty"`
@@ -283,7 +284,7 @@ func readCaptureForm(r *http.Request) (captures.CreateInput, error) {
 		RawText:      r.FormValue("raw_text"),
 		BatchID:      r.FormValue("batch_id"),
 		ArtifactHash: hex.EncodeToString(sum[:]),
-		Artifact: &snaptojson.Artifact{
+		Artifact: &extraction.Artifact{
 			Filename:    header.Filename,
 			ContentType: header.Header.Get("Content-Type"),
 			Bytes:       body,
@@ -300,6 +301,7 @@ func toCaptureResponse(capture entity.Capture) captureResponse {
 		DraftJSON:      capture.DraftJSON,
 		ResolutionNote: capture.ResolutionNote,
 		JobRef:         capture.JobRef,
+		ExtractionRail: capture.ExtractionRail,
 		EntryID:        capture.ResolvedEntryID,
 		ReceivedAt:     capture.ReceivedAt.Format(constant.TimestampLayout),
 	}

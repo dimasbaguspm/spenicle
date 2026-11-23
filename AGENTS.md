@@ -42,7 +42,7 @@ internal/common/       no business logic: config, clock, seal, otel, httpx
 internal/constant/     every fixed value shared by more than one package
 internal/entity/       shared structs + invariants; imports stdlib + constant only
 internal/module/       business logic: ledger, captures, settings
-internal/repository/   contracts, plus the adapters: sqlite, snaptojson
+internal/repository/   contracts, plus the adapters: sqlite, extraction/{snaptojson,openai}
 ```
 
 Rules that keep it pluggable:
@@ -98,6 +98,8 @@ Un-prefixed, all optional except `APP_SECRET`:
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals sensitive columns, identifies the database |
 | `SNAPTOJSON_API_KEY` | — | enables the SnapToJSON extraction vendor; unset = manual entry |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override for a proxy or a staging account |
+| `OPENAI_API_KEY` | — | second extraction rail; used when SnapToJSON is unset |
+| `OPENAI_MODEL` | `gpt-4o-mini` | vision model for the OpenAI rail |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
 
 `APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`
@@ -113,7 +115,7 @@ fresh boot generates the first password, prints it once, and requires a change a
 the first sign-in. The base currency is editable while the ledger is empty and locked
 after the first entry.
 
-Only these six are environment variables. **Every other knob — DB path, HTTP
+Only these nine are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 name (also the tracer name) — has its default in `internal/common/config/config.go`**, and the
 resulting value object is `entity.AppConfig`. No viper, on purpose: seven variables

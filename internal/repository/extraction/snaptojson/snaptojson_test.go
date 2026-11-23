@@ -15,18 +15,17 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
-	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 )
 
-// newServer answers one route the way https://snaptojson.com/docs/api documents it
-// and records what it received, so the test proves the wire shape, not just the
-// decode.
+// captured records what the fake vendor received, so a test proves the wire shape and
+// not only the decode.
 type captured struct {
-	apiKey      string
-	contentType string
-	fileName    string
-	fileBody    string
-	snapID      string
+	apiKey   string
+	fileName string
+	fileBody string
+	snapID   string
 }
 
 func newServer(t *testing.T, status int, body string) (*httptest.Server, *captured) {
@@ -36,7 +35,6 @@ func newServer(t *testing.T, status int, body string) (*httptest.Server, *captur
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		seen.apiKey = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		seen.contentType = r.Header.Get("Content-Type")
 
 		mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if err != nil || mediaType != "multipart/form-data" {
@@ -46,7 +44,7 @@ func newServer(t *testing.T, status int, body string) (*httptest.Server, *captur
 		reader := multipart.NewReader(r.Body, params["boundary"])
 		for {
 			part, partErr := reader.NextPart()
-			if partErr == io.EOF {
+			if errors.Is(partErr, io.EOF) {
 				break
 			}
 
@@ -77,7 +75,7 @@ func newServer(t *testing.T, status int, body string) (*httptest.Server, *captur
 	return server, seen
 }
 
-func TestSubmitSendsTheDocumentedShape(t *testing.T) {
+func TestSubmitSendsTheDocumentedShapeAndUnifies(t *testing.T) {
 	server, seen := newServer(t, http.StatusOK, `{
 		"job_ref":"snap_123",
 		"status":"COMPLETED",
@@ -85,12 +83,16 @@ func TestSubmitSendsTheDocumentedShape(t *testing.T) {
 		"error_message":""
 	}`)
 
-	extractor, err := snaptojson.New(server.URL, "project-key", 5*time.Second)
+	rail, err := snaptojson.New(server.URL, "project-key", 5*time.Second)
 	if err != nil {
 		t.Fatalf("new: %v", err)
 	}
 
-	report, err := extractor.Submit(t.Context(), snaptojson.Artifact{
+	if rail.Rail() != "snaptojson" {
+		t.Fatalf("rail = %q", rail.Rail())
+	}
+
+	report, err := rail.Submit(t.Context(), extraction.Artifact{
 		Filename:    "receipt.jpg",
 		ContentType: "image/jpeg",
 		Bytes:       []byte("jpeg bytes"),
@@ -100,65 +102,58 @@ func TestSubmitSendsTheDocumentedShape(t *testing.T) {
 	}
 
 	if seen.apiKey != "project-key" {
-		t.Fatalf("authorization = %q, want the project key", seen.apiKey)
+		t.Fatalf("authorization = %q", seen.apiKey)
 	}
 
 	if seen.fileName != "receipt.jpg" || seen.fileBody != "jpeg bytes" {
 		t.Fatalf("file part = %q / %q", seen.fileName, seen.fileBody)
 	}
 
-	if report.JobRef != "snap_123" || report.Status != "COMPLETED" {
+	if report.Rail != "snaptojson" || report.Status != extraction.StatusCompleted {
 		t.Fatalf("report = %+v", report)
 	}
 
-	if report.Result == nil || !report.Result.Valid {
-		t.Fatalf("result = %+v", report.Result)
+	if !report.Valid {
+		t.Fatal("a valid vendor result must stay valid after unification")
 	}
 
-	if got := string(report.Result.Data); got != `{"total":"25000"}` {
+	if got := string(report.Data); got != `{"total":"25000"}` {
 		t.Fatalf("data = %s", got)
 	}
 }
 
-func TestSubmitReturnsAStillRunningReport(t *testing.T) {
+func TestSubmitReturnsARunningReport(t *testing.T) {
 	server, _ := newServer(t, http.StatusAccepted, `{"job_ref":"snap_456","status":"EXECUTING"}`)
 
-	extractor, _ := snaptojson.New(server.URL, "k", 5*time.Second)
+	rail, _ := snaptojson.New(server.URL, "k", 5*time.Second)
 
-	report, err := extractor.Submit(t.Context(), snaptojson.Artifact{
-		Filename: "receipt.jpg", ContentType: "image/jpeg", Bytes: []byte("x"),
-	})
+	report, err := rail.Submit(t.Context(), extraction.Artifact{Bytes: []byte("x")})
 	if err != nil {
 		t.Fatalf("202 is not an error: %v", err)
 	}
 
-	if report.Status != "EXECUTING" || report.JobRef != "snap_456" {
+	if report.Status != extraction.StatusRunning || report.JobRef != "snap_456" {
 		t.Fatalf("report = %+v", report)
 	}
 }
 
-func TestFetchPostsSnapID(t *testing.T) {
+func TestPollPostsSnapIDAndKeepsViolations(t *testing.T) {
 	server, seen := newServer(t, http.StatusOK, `{"job_ref":"snap_789","status":"COMPLETED",
 		"result":{"data":{},"valid":false,"violations":[{"pointer":"/total","error":"required"}]}}`)
 
-	extractor, _ := snaptojson.New(server.URL, "k", 5*time.Second)
+	rail, _ := snaptojson.New(server.URL, "k", 5*time.Second)
 
-	report, err := extractor.Fetch(t.Context(), "snap_789")
+	report, err := rail.Poll(t.Context(), "snap_789")
 	if err != nil {
-		t.Fatalf("fetch: %v", err)
+		t.Fatalf("poll: %v", err)
 	}
 
-	if seen.snapID != "snap_789" {
-		t.Fatalf("snap_id = %q", seen.snapID)
+	if seen.snapID != "snap_789" || seen.fileName != "" {
+		t.Fatalf("read-back must send snap_id only, got snap_id=%q file=%q", seen.snapID, seen.fileName)
 	}
 
-	if seen.fileName != "" {
-		t.Fatalf("a read-back must not send a file, got %q", seen.fileName)
-	}
-
-	if report.Result == nil || len(report.Result.Violations) != 1 ||
-		report.Result.Violations[0].Pointer != "/total" {
-		t.Fatalf("violations = %+v", report.Result)
+	if report.Valid || len(report.Violations) != 1 || report.Violations[0].Pointer != "/total" {
+		t.Fatalf("violations = %+v", report)
 	}
 }
 
@@ -178,9 +173,9 @@ func TestErrorsCarryTheEnvelope(t *testing.T) {
 		t.Run(code, func(t *testing.T) {
 			server, _ := newServer(t, status, `{"error":{"code":"`+code+`","message":"nope"}}`)
 
-			extractor, _ := snaptojson.New(server.URL, "k", 5*time.Second)
+			rail, _ := snaptojson.New(server.URL, "k", 5*time.Second)
 
-			_, err := extractor.Submit(t.Context(), snaptojson.Artifact{Bytes: []byte("x")})
+			_, err := rail.Submit(t.Context(), extraction.Artifact{Bytes: []byte("x")})
 
 			var apiErr *snaptojson.APIError
 			if !errors.As(err, &apiErr) {
@@ -200,9 +195,9 @@ func TestNewRefusesAnEmptyKey(t *testing.T) {
 	}
 }
 
-// TestSubmitAndFetchUseDistinctSpans keeps the o11y contract: a billed submit and a
-// free read-back must be tellable apart in a trace without reading the span payload.
-func TestSubmitAndFetchUseDistinctSpans(t *testing.T) {
+// TestPostingAndPollingUseDistinctSpans keeps the o11y contract: a billed submit and
+// a free read-back must be tellable apart in a trace.
+func TestPostingAndPollingUseDistinctSpans(t *testing.T) {
 	server, _ := newServer(t, http.StatusOK, `{"job_ref":"snap_1","status":"COMPLETED"}`)
 
 	recorder := tracetest.NewSpanRecorder()
@@ -213,17 +208,14 @@ func TestSubmitAndFetchUseDistinctSpans(t *testing.T) {
 	otel.SetTracerProvider(provider)
 	t.Cleanup(func() { otel.SetTracerProvider(previous) })
 
-	extractor, err := snaptojson.New(server.URL, "k", 5*time.Second)
-	if err != nil {
-		t.Fatalf("new: %v", err)
-	}
+	rail, _ := snaptojson.New(server.URL, "k", 5*time.Second)
 
-	if _, err := extractor.Submit(t.Context(), snaptojson.Artifact{Bytes: []byte("x")}); err != nil {
+	if _, err := rail.Submit(t.Context(), extraction.Artifact{Bytes: []byte("x")}); err != nil {
 		t.Fatalf("submit: %v", err)
 	}
 
-	if _, err := extractor.Fetch(t.Context(), "snap_1"); err != nil {
-		t.Fatalf("fetch: %v", err)
+	if _, err := rail.Poll(t.Context(), "snap_1"); err != nil {
+		t.Fatalf("poll: %v", err)
 	}
 
 	seen := map[string]bool{}

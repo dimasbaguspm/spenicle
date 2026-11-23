@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/entity"
-	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 )
 
 // Contract is what the transport layer is allowed to call.
@@ -37,7 +37,7 @@ type CreateInput struct {
 	// Artifact is the uploaded document. When the extractor is configured it is
 	// submitted once, here, and never stored: the vendor keeps the id, we keep the
 	// hash.
-	Artifact *snaptojson.Artifact
+	Artifact *extraction.Artifact
 }
 
 // ApproveInput is the human decision: the fields they typed or confirmed.

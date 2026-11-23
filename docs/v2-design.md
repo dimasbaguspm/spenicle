@@ -184,6 +184,23 @@ Nothing leaves the table. Rejected items keep their reason and can be reopened.
 
 ## Extraction contract
 
+Two rails are implemented, and they share one contract
+(`internal/repository/extraction`): `Rail()`, `Submit`, `Poll`. A rail owns its vendor's
+wire format and answers the unified `extraction.Report` — rail name, status
+(`running`/`completed`/`failed`), job ref, JSON data, violations, error. Nothing
+upstream knows which vendor produced a draft, and the rail name is stored on the
+capture.
+
+| rail | call shape | polling | span |
+| --- | --- | --- | --- |
+| `snaptojson` | multipart, one partner route | yes (`snap_id`) | `Repository.Snaptojson.Posting` / `.Polling` |
+| `openai` | one vision chat completion, JSON answer | no (`ErrNoPolling`) | `Repository.OpenAI.Posting` |
+
+Selection is config: `SNAPTOJSON_API_KEY` wins, `OPENAI_API_KEY` is the fallback,
+neither means extraction is off.
+
+### SnapToJSON
+
 The vendor owns the schema and the route. Contract source:
 [`snaptojson.com/docs/api`](https://snaptojson.com/docs/api). One route, one verb:
 
