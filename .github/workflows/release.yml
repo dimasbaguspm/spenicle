@@ -24,7 +24,7 @@ jobs:
     name: publish image and notes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -54,9 +54,9 @@ jobs:
 
       # QEMU runs the arm64 toolchain on the amd64 runner; without it the second
       # platform fails with "exec format error".
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
         run: |
@@ -65,7 +65,7 @@ jobs:
 
       - name: Publish image
         id: image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true

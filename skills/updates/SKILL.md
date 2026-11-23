@@ -49,6 +49,20 @@ Bump `actions/checkout`, `actions/setup-go`, `docker/setup-{qemu,buildx}-action`
 actionlint .github/workflows/release.yml .github/workflows/ci.yml
 ```
 
+**The Node runtime is decided by the action, not by us.** GitHub ships `node20` and
+`node24`; there is no `node26`. A "targets Node 20" annotation means the action's own
+`runs.using` is old — the fix is a newer major, and the way to check is the action
+itself:
+
+```bash
+gh api "repos/docker/build-push-action/contents/action.yml?ref=v7.4.0" \
+  --jq .content | base64 -d | grep -A2 '^runs:'
+```
+
+Pinned today (all `node24`): `actions/checkout@v7`, `actions/setup-go@v7`,
+`golangci/golangci-lint-action@v8`, `docker/setup-qemu-action@v4`,
+`docker/setup-buildx-action@v4`, `docker/build-push-action@v7`.
+
 ## 4. The published image
 
 ```bash
