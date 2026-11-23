@@ -74,7 +74,7 @@ func newApp(
 	clockSystem := clock.System{}
 	ledgerService := ledger.New(store, store, settingsService, clockSystem, clockSystem)
 
-	ratesService, err := ratesFor(ctx, cfg, store, clockSystem)
+	ratesService, err := ratesFor(ctx, cfg, store, clockSystem, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -104,11 +104,24 @@ func newApp(
 	}, nil
 }
 
+func warmRates(ctx context.Context, service *rates.Service, logger *slog.Logger) {
+	report, err := service.Refresh(ctx)
+	if err != nil {
+		logger.WarnContext(ctx, "reference rates refresh failed; serving stored rates",
+			slog.Any("error", err))
+
+		return
+	}
+
+	logger.InfoContext(ctx, "reference rates cached", slog.Int("stored", report.Stored))
+}
+
 func ratesFor(
 	ctx context.Context,
 	cfg entity.AppConfig,
 	store *sqlite.Store,
 	clockSystem clock.System,
+	logger *slog.Logger,
 ) (*rates.Service, error) {
 	source, err := ecb.New(cfg.ECBEndpoint, cfg.ECBTimeout, clockSystem)
 	if err != nil {
@@ -117,7 +130,10 @@ func ratesFor(
 		return nil, fmt.Errorf("ecb rates: %w", err)
 	}
 
-	return rates.New(source, store, clockSystem), nil
+	service := rates.New(source, store, clockSystem)
+	warmRates(ctx, service, logger)
+
+	return service, nil
 }
 
 func (a *app) Close(ctx context.Context) error {

@@ -22,6 +22,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
@@ -131,14 +132,14 @@ func (w *world) boot(ctx context.Context) error {
 	var ratesService rates.Contract
 
 	if w.ratesEndpoint != "" {
-		source, rateErr := ecb.New(w.ratesEndpoint, limits.ECBTimeout, clockSystem)
-		if rateErr != nil {
+		service, ratesErr := bootRates(ctx, w.ratesEndpoint, store, limits, clockSystem)
+		if ratesErr != nil {
 			_ = store.Close(ctx)
 
-			return fmt.Errorf("ecb: %w", rateErr)
+			return ratesErr
 		}
 
-		ratesService = rates.New(source, store, clockSystem)
+		ratesService = service
 	}
 
 	accounts, err := store.ListAccounts(ctx)
@@ -169,6 +170,27 @@ func (w *world) boot(ctx context.Context) error {
 	}))
 
 	return nil
+}
+
+func bootRates(
+	ctx context.Context,
+	endpoint string,
+	store *sqlite.Store,
+	limits entity.AppConfig,
+	clockSystem clock.System,
+) (*rates.Service, error) {
+	source, err := ecb.New(endpoint, limits.ECBTimeout, clockSystem)
+	if err != nil {
+		return nil, fmt.Errorf("ecb: %w", err)
+	}
+
+	service := rates.New(source, store, clockSystem)
+
+	if _, err := service.Refresh(ctx); err != nil {
+		return nil, fmt.Errorf("rates: %w", err)
+	}
+
+	return service, nil
 }
 
 func (w *world) shutdown(ctx context.Context) {

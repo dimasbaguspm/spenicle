@@ -406,8 +406,7 @@ postings + `audit_log`). Zero-sum is checked again inside the transaction.
 `422 invalid_rate`, `422 invalid_request` (bad date or amount), `400 invalid_json`.
 
 **Limitations.** No automatic rate resolution yet: the ledger does not read `fx_rates`,
-so a foreign entry must send `fx_rate` (`POST /api/rates/refresh` fills the table for the
-next slice). No field edits after posting (void and re-post). No payee validation.
+so a foreign entry must send `fx_rate` (the system scrapes the ECB sheet at boot and keeps it in memory). No field edits after posting (void and re-post). No payee validation.
 
 ```mermaid
 sequenceDiagram
@@ -681,10 +680,10 @@ sequenceDiagram
 
 ## `GET /api/rates`
 
-**Purpose.** The reference rate for one pair on one day, exactly as the last refresh
-stored it.
+**Purpose.** The reference rate for one pair on one day, from the in-memory cache the
+system filled at boot.
 
-**Upstream.** `rates.Contract.Rate` → `Store.RateOn` (`fx_rates`). Nothing downstream.
+**Upstream.** `rates.Contract.Rate` → the in-memory cache, falling back to `fx_rates` on a miss. Nothing downstream.
 
 **Query params.**
 
@@ -700,26 +699,9 @@ stored it.
 malformed date or an unknown currency code.
 
 **Limitations.** Exact day only — no nearest-earlier-business-day fallback, and no cross
-rates: an `IDR` → `USD` conversion is not derived from two EUR legs yet.
-
----
-
-## `POST /api/rates/refresh`
-
-**Purpose.** Scrape the ECB daily reference file and store every rate it carries. The
-vendor's XML is the adapter's business; the module only sees `entity.Rate` values.
-
-**Upstream.** `rates.Contract.Refresh` → `ecb.Client.Daily` (`GET
-eurofxref-daily.xml`) → `Store.SaveRates` (one transaction, upsert on
-`base, quote, on_date`).
-
-**200** `{"stored":29,"on_date":"2026-11-20","source":"ecb"}`
-
-**Errors.** No body. A failed fetch or a shape the parser rejects answers `500
-internal_error` — the row is only written when the whole sheet parsed.
-
-**Limitations.** One sheet, one currency (EUR) as base; no history backfill, no retry
-policy, no scheduler — a refresh happens when a client asks for it.
+rates: an `IDR` → `USD` conversion is not derived from two EUR legs yet. There is no
+public write: the scrape happens at boot, so a long-running process serves the sheet it
+started with.
 
 ---
 

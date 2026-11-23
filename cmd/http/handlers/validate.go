@@ -95,6 +95,8 @@ type validationFailure struct {
 
 var validationCodes = []validationFailure{ //nolint:gochecknoglobals // read-only table
 	{field: "Currency", tag: "currency", code: "unknown_currency"},
+	{field: "Base", tag: "currency", code: "unknown_currency"},
+	{field: "Quote", tag: "currency", code: "unknown_currency"},
 	{field: "Kind", tag: "capturekind", code: "unknown_capture_kind"},
 	{field: "Postings", tag: "min", code: "invalid_postings"},
 	{field: "FXRate", tag: "rate", code: "invalid_rate"},

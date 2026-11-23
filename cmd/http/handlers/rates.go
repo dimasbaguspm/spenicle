@@ -25,32 +25,6 @@ type rateResponse struct {
 	FetchedAt string `json:"fetched_at"`
 }
 
-type ratesRefreshResponse struct {
-	Stored int    `json:"stored"`
-	OnDate string `json:"on_date"`
-	Source string `json:"source"`
-}
-
-func (s *server) handleRefreshRates(w http.ResponseWriter, r *http.Request) {
-	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Rates.Refresh")
-	defer endSpan()
-
-	report, err := s.deps.Rates.Refresh(ctx)
-	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
-
-		return
-	}
-
-	out := ratesRefreshResponse{Stored: report.Stored, Source: report.Source}
-	if !report.OnDate.IsZero() {
-		out.OnDate = report.OnDate.Format(constant.DateLayout)
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, out)
-}
-
 func (s *server) handleGetRate(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Rates.Get")
 	defer endSpan()

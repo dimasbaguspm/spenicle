@@ -67,7 +67,6 @@ func New(deps Deps) http.Handler {
 	mux.HandleFunc("PATCH /api/captures/{ref}", instance.handlePatchCapture)
 
 	mux.HandleFunc("GET /api/rates", instance.handleGetRate)
-	mux.HandleFunc("POST /api/rates/refresh", instance.handleRefreshRates)
 
 	mux.HandleFunc("/", instance.handleNotFound)
 

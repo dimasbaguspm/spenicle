@@ -37,7 +37,38 @@
     }
   ],
   "captures": [],
-  "fx_rates": [],
+  "fx_rates": [
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 1,
+      "on_date": "2026-11-20",
+      "quote": "USD",
+      "rate": "1.0990",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 2,
+      "on_date": "2026-11-20",
+      "quote": "JPY",
+      "rate": "174.35",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 3,
+      "on_date": "2026-11-20",
+      "quote": "IDR",
+      "rate": "16000.50",
+      "ref": "<ref>",
+      "source": "ecb"
+    }
+  ],
   "ledger_entries": [
     {
       "client_id": null,
