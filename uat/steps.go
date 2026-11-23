@@ -1,16 +1,19 @@
 package uat
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/cucumber/godog"
+
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
 func RegisterSteps(sc *godog.ScenarioContext, options Options) {
@@ -21,17 +24,24 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^a running API$`, aRunningAPI)
 	sc.Step(`^the account "([^"]*)" exists as "([^"]*)"$`, theAccountExists)
 
+	sc.Step(`^the extraction rail is "([^"]*)"$`, theExtractionRailIs)
+	sc.Step(`^the extraction vendor is down$`, theExtractionVendorIsDown)
+	sc.Step(`^the rates vendor is down$`, theRatesVendorIsDown)
+	sc.Step(`^the extraction vendor breaks its contract$`, theExtractionVendorBreaksItsContract)
+	sc.Step(`^the rates vendor breaks its contract$`, theRatesVendorBreaksItsContract)
+
 	sc.Step(`^the request body is:$`, theRequestBodyIs)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)"$`, sendWithoutBody)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with:$`, sendWithBody)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with headers/query:$`, sendWithRequestTable)
+	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with the artifact "([^"]*)"$`, sendWithArtifact)
 
 	sc.Step(`^the response status is (\d+)$`, responseStatusIs)
-	sc.Step(`^the response JSON at "([^"]*)" is "([^"]*)"$`, responseJSONIs)
-	sc.Step(`^the response JSON at "([^"]*)" contains "([^"]*)"$`, responseJSONContains)
 	sc.Step(`^the response header "([^"]*)" is "([^"]*)"$`, responseHeaderIs)
 	sc.Step(`^the response header "([^"]*)" contains "([^"]*)"$`, responseHeaderContains)
-	sc.Step(`^the response JSON is contract-clean$`, responseIsContractClean)
+	sc.Step(`^the database is cleared$`, theDatabaseIsCleared)
+	sc.Step(`^the local cache is cleared$`, theLocalCacheIsCleared)
+	sc.Step(`^the connection is broken$`, theConnectionIsBroken)
 	sc.Step(`^the store holds:$`, theStoreHolds)
 	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)
 	sc.Step(`^the database matches the snapshot "([^"]*)"$`, databaseMatchesSnapshot)
@@ -43,8 +53,22 @@ func aFreshWorld(options Options) func(context.Context, *godog.Scenario) (contex
 			return ctx, godog.ErrSkip
 		}
 
+		if tagged(scenario, "vendors") && !options.vendorsReady() {
+			return ctx, godog.ErrSkip
+		}
+
 		return context.WithValue(ctx, worldKey{}, newWorld(options)), nil
 	}
+}
+
+func tagged(scenario *godog.Scenario, name string) bool {
+	for _, tag := range scenario.Tags {
+		if strings.TrimPrefix(tag.Name, "@") == name {
+			return true
+		}
+	}
+
+	return false
 }
 
 func tearDownWorld(ctx context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
@@ -141,44 +165,6 @@ func responseStatusIs(ctx context.Context, want int) (context.Context, error) {
 
 	if w.status != want {
 		return ctx, fmt.Errorf("status is %d, want %d (body: %s)", w.status, want, string(w.body))
-	}
-
-	return ctx, nil
-}
-
-func responseJSONIs(ctx context.Context, path, want string) (context.Context, error) {
-	w, err := worldFrom(ctx)
-	if err != nil {
-		return ctx, err
-	}
-
-	got, err := w.jsonPath(path)
-	if err != nil {
-		return ctx, err
-	}
-
-	want = w.expandFingerprint(want)
-
-	if got != want {
-		return ctx, fmt.Errorf("%s is %q, want %q (body: %s)", path, got, want, string(w.body))
-	}
-
-	return ctx, nil
-}
-
-func responseJSONContains(ctx context.Context, path, want string) (context.Context, error) {
-	w, err := worldFrom(ctx)
-	if err != nil {
-		return ctx, err
-	}
-
-	got, err := w.jsonPath(path)
-	if err != nil {
-		return ctx, err
-	}
-
-	if !strings.Contains(got, w.expandFingerprint(want)) {
-		return ctx, fmt.Errorf("%s is %q, does not contain %q", path, got, want)
 	}
 
 	return ctx, nil
@@ -340,20 +326,6 @@ func databaseMatchesSnapshot(ctx context.Context, name string) (context.Context,
 	return ctx, w.assertDBSnapshot(ctx, name)
 }
 
-func responseIsContractClean(ctx context.Context) (context.Context, error) {
-	w, err := worldFrom(ctx)
-	if err != nil {
-		return ctx, err
-	}
-
-	var document any
-	if err := json.Unmarshal(w.body, &document); err != nil {
-		return ctx, fmt.Errorf("response is not JSON (%q): %w", preview(string(w.body)), err)
-	}
-
-	return ctx, walkContract("$", document)
-}
-
 func walkContract(path string, value any) error {
 	switch typed := value.(type) {
 	case map[string]any:
@@ -382,7 +354,7 @@ func checkKey(path, key string, value any) error {
 		return fmt.Errorf("%s: integer ids never leave the database", path)
 	}
 
-	if strings.HasSuffix(key, "_ref") || key == "ref" {
+	if isOurRef(key) {
 		ref, ok := value.(string)
 		if !ok || !refPattern.MatchString(ref) {
 			return fmt.Errorf("%s.%s is %v, want a 32-hex ref", path, key, value)
@@ -396,4 +368,146 @@ func checkKey(path, key string, value any) error {
 	}
 
 	return nil
+}
+
+const foreignJobRef = "job_ref"
+
+func isOurRef(key string) bool {
+	return (key == "ref" || strings.HasSuffix(key, "_ref")) && key != foreignJobRef
+}
+
+func theDatabaseIsCleared(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.clearDatabase(ctx)
+}
+
+func theLocalCacheIsCleared(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.rates == nil {
+		return ctx, errors.New("no rates service: start the API with a rates endpoint")
+	}
+
+	w.rates.Clear()
+
+	return ctx, nil
+}
+
+func theConnectionIsBroken(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.store == nil {
+		return ctx, errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	if closeErr := w.store.Close(ctx); closeErr != nil {
+		return ctx, closeErr
+	}
+
+	w.dbBroken = true
+
+	return ctx, nil
+}
+
+func theExtractionRailIs(ctx context.Context, rail string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.server != nil {
+		return ctx, errors.New("choose the extraction rail before starting the API")
+	}
+
+	w.rail = rail
+
+	return ctx, nil
+}
+
+func theExtractionVendorIsDown(ctx context.Context) (context.Context, error) {
+	return setExtractionFault(ctx, faultDown)
+}
+
+func theExtractionVendorBreaksItsContract(ctx context.Context) (context.Context, error) {
+	return setExtractionFault(ctx, faultBroken)
+}
+
+func theRatesVendorIsDown(ctx context.Context) (context.Context, error) {
+	return setRatesFault(ctx, faultDown)
+}
+
+func theRatesVendorBreaksItsContract(ctx context.Context) (context.Context, error) {
+	return setRatesFault(ctx, faultBroken)
+}
+
+func setExtractionFault(ctx context.Context, fault faultType) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.server != nil {
+		return ctx, errors.New("break the extraction vendor before starting the API")
+	}
+
+	w.extractionFault = fault
+
+	return ctx, nil
+}
+
+func setRatesFault(ctx context.Context, fault faultType) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.server != nil {
+		return ctx, errors.New("break the rates vendor before starting the API")
+	}
+
+	w.ratesFault = fault
+
+	return ctx, nil
+}
+
+func sendWithArtifact(ctx context.Context, method, path, filename string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	var body bytes.Buffer
+
+	form := multipart.NewWriter(&body)
+
+	part, err := form.CreateFormFile("file", filename)
+	if err != nil {
+		return ctx, fmt.Errorf("file part: %w", err)
+	}
+
+	if _, err = part.Write([]byte("uat artifact bytes")); err != nil {
+		return ctx, fmt.Errorf("artifact: %w", err)
+	}
+
+	if err = form.WriteField("kind", constant.CaptureKindImage); err != nil {
+		return ctx, fmt.Errorf("kind field: %w", err)
+	}
+
+	if err = form.Close(); err != nil {
+		return ctx, fmt.Errorf("close form: %w", err)
+	}
+
+	headers := http.Header{"Content-Type": []string{form.FormDataContentType()}}
+
+	return ctx, w.doWith(ctx, method, path, body.Bytes(), headers, nil)
 }

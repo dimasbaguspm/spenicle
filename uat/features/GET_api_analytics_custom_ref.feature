@@ -12,13 +12,10 @@ Feature: GET /api/analytics/custom/{ref}
       | query | from | 2026-01-01 |
       | query | to   | 2026-03-31 |
     Then the response status is 200
-    And the response JSON at "$.query.namespace" is "months"
-    And the response JSON at "$.query.chart" is "line"
-    And the response JSON at "$.from" is "2026-01-01"
-    And the response JSON at "$.to" is "2026-03-31"
+    And the response JSON matches the snapshot "get_api_analytics_custom_ref__a_saved_months_query_runs_over_the_requested_window"
 
   Scenario: An unknown ref answers 404
     Given a running API
     When I send a GET to "/api/analytics/custom/00000000000000000000000000000000"
     Then the response status is 404
-    And the response JSON at "$.error.code" is "not_found"
+    And the response JSON matches the snapshot "get_api_analytics_custom_ref__an_unknown_ref_answers_404"

@@ -101,6 +101,13 @@ func (s *Service) Rate(
 	return rate, nil
 }
 
+func (s *Service) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.cache = make(map[string]entity.Rate)
+}
+
 func (s *Service) stored(ctx context.Context, rates []entity.Rate) []entity.Rate {
 	saved := make([]entity.Rate, 0, len(rates))
 

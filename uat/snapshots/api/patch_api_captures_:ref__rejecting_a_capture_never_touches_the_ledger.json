@@ -1,0 +1,9 @@
+{
+  "kind": "share",
+  "raw_text": "not my card",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "resolution_note": "wrong card",
+  "resolved_at": "<timestamp>",
+  "status": "rejected"
+}

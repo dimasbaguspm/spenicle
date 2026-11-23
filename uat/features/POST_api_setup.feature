@@ -8,7 +8,7 @@ Feature: POST /api/setup
       {"base_currency":"usd"}
       """
     Then the response status is 200
-    And the response JSON at "$.base_currency" is "USD"
+    And the response JSON matches the snapshot "post_api_setup__the_base_currency_is_chosen_before_the_first_entry"
 
   Scenario: An empty setup is refused
     Given a running API
@@ -17,7 +17,7 @@ Feature: POST /api/setup
       {}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "empty_setup"
+    And the response JSON matches the snapshot "post_api_setup__an_empty_setup_is_refused"
 
   Scenario: The currency is locked after the first entry
     Given a running API
@@ -36,4 +36,4 @@ Feature: POST /api/setup
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 409
-    And the response JSON at "$.error.code" is "base_currency_locked"
+    And the response JSON matches the snapshot "post_api_setup__the_currency_is_locked_after_the_first_entry"

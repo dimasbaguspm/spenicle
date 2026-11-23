@@ -12,16 +12,10 @@ Feature: GET /api/dashboard
       | header | Content-Type | application/json |
     When I send a GET to "/api/dashboard"
     Then the response status is 200
-    And the response JSON at "$.base_currency" is "IDR"
-    And the response JSON is contract-clean
-    And the response JSON at "$.spend_minor" is "10000"
-    And the response JSON at "$.net_minor" is "-10000"
-    And the response JSON at "$.pending_captures" is "0"
-    And the response JSON at "$.top_category.account_name" is "Unsorted"
+    And the response JSON matches the snapshot "get_api_dashboard__the_tiles_come_from_the_ledger_not_from_a_stored_counter"
 
   Scenario: An empty ledger answers zeroes instead of an error
     Given a running API
     When I send a GET to "/api/dashboard"
     Then the response status is 200
-    And the response JSON at "$.spend_minor" is "0"
-    And the response JSON at "$.income_minor" is "0"
+    And the response JSON matches the snapshot "get_api_dashboard__an_empty_ledger_answers_zeroes_instead_of_an_error"

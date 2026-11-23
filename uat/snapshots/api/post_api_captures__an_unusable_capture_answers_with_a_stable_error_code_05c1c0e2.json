@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "unknown_capture_kind",
+    "message": "Kind failed capturekind"
+  }
+}

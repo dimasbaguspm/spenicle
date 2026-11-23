@@ -26,8 +26,7 @@ Feature: POST /api/entries
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is <status>
-    And the response JSON at "$.error.code" is "<code>"
-    And the response JSON is contract-clean
+    And the response JSON matches the snapshot "post_api_entries__an_unusable_entry_answers_with_a_stable_error_code_{{bodyhash}}"
 
     Examples:
       | body                                                                                                                                                        | status | code                  |
@@ -49,10 +48,7 @@ Feature: POST /api/entries
       {"client_id":"bdd-balanced","occurred_on":"2025-09-14","currency":"IDR","source":"share","note":"flat white","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     Then the response status is 201
-    And the response JSON at "$.currency" is "IDR"
-    And the response JSON at "$.source" is "share"
-    And the response JSON at "$.postings[0].base_amount_minor" is "25000"
-    And the response JSON at "$.postings[0].fx_source" is "identity"
+    And the response JSON matches the snapshot "post_api_entries__a_balanced_expense_is_accepted_and_stored_once"
     And the store holds:
       | table           | count |
       | ledger_entries  | 1     |
@@ -77,6 +73,7 @@ Feature: POST /api/entries
       | table           | count |
       | ledger_entries  | 1     |
       | ledger_postings | 2     |
+    And the response JSON matches the snapshot "post_api_entries__replaying_a_client_id_returns_the_stored_entry"
 
   Scenario: Postings that do not balance are refused
     Given the base currency is "IDR"
@@ -88,8 +85,7 @@ Feature: POST /api/entries
       {"occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-24000"}]}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "postings_not_balanced"
-    And the response JSON at "$.error.message" contains "do not sum to zero"
+    And the response JSON matches the snapshot "post_api_entries__postings_that_do_not_balance_are_refused"
     And the store holds:
       | table          | count |
       | ledger_entries | 0     |
@@ -104,7 +100,7 @@ Feature: POST /api/entries
       {"occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"0"}]}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "invalid_postings"
+    And the response JSON matches the snapshot "post_api_entries__a_single_posting_is_refused"
 
   Scenario: A foreign amount without a rate is refused rather than guessed
     Given the base currency is "IDR"
@@ -116,8 +112,7 @@ Feature: POST /api/entries
       {"occurred_on":"2025-09-14","currency":"USD","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"800"},{"account_ref":"{{account:Cash}}","amount_minor":"-800"}]}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "invalid_rate"
-    And the response JSON at "$.error.message" contains "rate required for USD to IDR"
+    And the response JSON matches the snapshot "post_api_entries__a_foreign_amount_without_a_rate_is_refused_rather_than_guessed"
 
   Scenario: A foreign amount with a rate is converted once
     Given the base currency is "IDR"
@@ -129,11 +124,7 @@ Feature: POST /api/entries
       {"occurred_on":"2025-09-14","currency":"USD","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"800","fx_rate":"16250.42"},{"account_ref":"{{account:Cash}}","amount_minor":"-800","fx_rate":"16250.42"}]}
       """
     Then the response status is 201
-    And the response JSON at "$.currency" is "USD"
-    And the response JSON at "$.postings[0].amount_minor" is "800"
-    And the response JSON at "$.postings[0].base_amount_minor" is "130003"
-    And the response JSON at "$.postings[0].fx_rate" is "16250.42"
-    And the response JSON at "$.postings[0].fx_source" is "manual"
+    And the response JSON matches the snapshot "post_api_entries__a_foreign_amount_with_a_rate_is_converted_once"
 
   Scenario: An unknown currency is refused
     Given the base currency is "IDR"
@@ -145,7 +136,7 @@ Feature: POST /api/entries
       {"occurred_on":"2025-09-14","currency":"XXX","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"100"},{"account_ref":"{{account:Cash}}","amount_minor":"-100"}]}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "unknown_currency"
+    And the response JSON matches the snapshot "post_api_entries__an_unknown_currency_is_refused"
 
   Scenario: A late entry in a past month is accepted
     Given the base currency is "IDR"
@@ -157,7 +148,7 @@ Feature: POST /api/entries
       {"occurred_on":"2024-01-31","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"15000"},{"account_ref":"{{account:Cash}}","amount_minor":"-15000"}]}
       """
     Then the response status is 201
-    And the response JSON at "$.occurred_on" is "2024-01-31"
+    And the response JSON matches the snapshot "post_api_entries__a_late_entry_in_a_past_month_is_accepted"
     And the store holds:
       | table          | count |
       | ledger_entries | 1     |
@@ -172,7 +163,7 @@ Feature: POST /api/entries
       {"occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25.000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25.000"}]}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "invalid_request"
+    And the response JSON matches the snapshot "post_api_entries__a_malformed_amount_is_refused_before_it_reaches_the_ledger"
     And the store holds:
       | table          | count |
       | ledger_entries | 0     |
@@ -188,7 +179,7 @@ Feature: POST /api/entries
       | header | Origin       | https://evil.example |
       | header | Content-Type | application/json     |
     Then the response status is 403
-    And the response JSON at "$.error.code" is "cross_origin_denied"
+    And the response JSON matches the snapshot "post_api_entries__a_mutating_request_from_another_origin_is_refused"
 
   Scenario: A request without an Origin header is allowed
     Given a running API
@@ -200,6 +191,7 @@ Feature: POST /api/entries
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 201
+    And the response JSON matches the snapshot "post_api_entries__a_request_without_an_origin_header_is_allowed"
 
   Scenario: An unknown field is refused instead of ignored
     Given a running API
@@ -208,5 +200,14 @@ Feature: POST /api/entries
       {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1","fx_rte":"1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}
       """
     Then the response status is 400
-    And the response JSON at "$.error.code" is "invalid_json"
-    And the response JSON at "$.error.message" contains "unknown field"
+    And the response JSON matches the snapshot "post_api_entries__an_unknown_field_is_refused_instead_of_ignored"
+
+  Scenario: A broken database connection answers 500
+    Given a running API
+    And the connection is broken
+    When I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-04-01","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-100"},{"account_ref":"{{account:Unsorted}}","amount_minor":"100"}]}
+      """
+    Then the response status is 500
+    And the response JSON matches the snapshot "post_api_entries__a_broken_database_connection_answers_500"

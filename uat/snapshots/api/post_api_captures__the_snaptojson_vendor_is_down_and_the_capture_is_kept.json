@@ -1,0 +1,7 @@
+{
+  "extraction_rail": "snaptojson",
+  "kind": "image",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "status": "pending"
+}

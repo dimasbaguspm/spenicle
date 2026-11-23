@@ -6,8 +6,5 @@ Feature: GET /healthz
     And a running API
     When I send a GET to "/healthz"
     Then the response status is 200
-    And the response JSON at "$.status" is "ok"
-    And the response JSON at "$.schema_version" is "1"
-    And the response JSON at "$.base_currency" is "IDR"
-    And the response JSON at "$.app_secret" is "{{fingerprint}}"
+    And the response JSON matches the snapshot "get_healthz__health_reports_the_running_state"
     And the response header "Content-Type" is "application/json; charset=utf-8"

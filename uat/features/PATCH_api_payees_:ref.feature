@@ -15,7 +15,7 @@ Feature: PATCH /api/payees/{ref}
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 200
-    And the response JSON at "$.name" is "Kopi Kenangan"
+    And the response JSON matches the snapshot "patch_api_payees_:ref__a_payee_is_renamed"
 
   Scenario: An unknown ref answers 404
     Given a running API
@@ -27,4 +27,4 @@ Feature: PATCH /api/payees/{ref}
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 404
-    And the response JSON at "$.error.code" is "not_found"
+    And the response JSON matches the snapshot "patch_api_payees_:ref__an_unknown_ref_answers_404"

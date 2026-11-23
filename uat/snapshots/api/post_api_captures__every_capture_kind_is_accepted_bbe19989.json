@@ -1,0 +1,7 @@
+{
+  "kind": "recurring",
+  "raw_text": "recurring capture",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "status": "pending"
+}

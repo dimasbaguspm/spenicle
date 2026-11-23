@@ -5,4 +5,4 @@ Feature: GET /nope
     Given a running API
     When I send a GET to "/nope"
     Then the response status is 404
-    And the response JSON at "$.error.code" is "not_found"
+    And the response JSON matches the snapshot "get_nope__an_unknown_route_answers_with_a_json_error_not_html"

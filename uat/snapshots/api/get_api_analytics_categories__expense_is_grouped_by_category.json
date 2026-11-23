@@ -1,0 +1,12 @@
+{
+  "categories": [
+    {
+      "account_name": "Unsorted",
+      "account_ref": "<ref>",
+      "amount_minor": "25000"
+    }
+  ],
+  "from": "2026-02-01",
+  "kind": "expense",
+  "to": "2026-02-28"
+}

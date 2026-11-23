@@ -151,15 +151,24 @@ the build you think it is.
   `context.Background()`.
 - UAT is Gherkin via godog, over the **real** handler and a **real** SQLite file in a
   temp dir — no mocks. Steps are generic (`I send a POST to "/api/entries" with:`,
-  `the response JSON at $.postings[0].amount_minor is "-15000"`), so a new endpoint
-  usually needs no new step. `{{account:Cash}}` placeholders expand to the id created
-  earlier in the scenario.
+  `the response JSON matches the snapshot "..."`), so a new endpoint usually needs no
+  new step. `{{account:Cash}}`, `{{ref}}` and `{{bodyhash}}` expand from the scenario
+  so far.
+- Every response is asserted as a whole body — there is no field-path step — and the
+  status step carries the intent. The compare runs the contract invariants over the
+  body first (no `id` key, 32-hex refs, money as strings), so a snapshot cannot bless
+  a leak.
 - Snapshots: `the response JSON matches the snapshot "x"` compares
   `uat/snapshots/api/x.json`; `the database matches the snapshot "x"` dumps the
-  allow-listed tables to `uat/snapshots/db/x.json`. Timestamps, sealed envelopes, the
-  build version and the secret fingerprint are normalised. A missing snapshot is
-  written and fails the step; `UAT_UPDATE_SNAPSHOTS=1` (`make uat-snapshots`) rewrites
-  them on purpose.
+  allow-listed tables to `uat/snapshots/db/x.json`. Timestamps, refs (also inside
+  prose), sealed envelopes, the build version and the secret fingerprint are
+  normalised. A missing snapshot is written and fails the step;
+  `UAT_UPDATE_SNAPSHOTS=1` (`make uat-snapshots`) rewrites them on purpose.
+- Fixtures reach states no request can: `the database is cleared` (children first, see
+  `clearOrder` in `uat/world.go`), `the local cache is cleared` (the rates cache, so
+  the next read proves the database fallback), `the connection is broken` (the store
+  is closed, so the next call must answer `500 internal_error`), plus `the store
+  holds:` for row counts and `the account "Cash" exists as "asset"` for seeds.
 - Requests with headers or query parameters use a table, the body stays a docstring:
 
   ```gherkin
@@ -177,10 +186,14 @@ the build you think it is.
   never per behaviour: a failing file names the endpoint. Repetition goes in
   `Scenario Outline` + `Examples` inside that file.
 - External services are the only things mocked, and they are Go programs under
-  `uat/mock/`: one container serves the SnapToJSON partner route and the ECB daily
-  sheet. `uat/mock_test.go` starts it through testcontainers in `TestMain` and hands
-  the base URL to the Gherkin suite (`uat.Options`) and to the adapter tests. No Docker
-  means those tests skip.
+  `uat/mock/`: one container serves the SnapToJSON partner route, the OpenAI chat
+  completion and the ECB daily sheet, each with two twins: `/down` answers `503` and
+  `/malformed` answers `200` with a body the adapter cannot parse. `uat/mock_test.go`
+  starts it through testcontainers in `TestMain` and hands the endpoints of every vendor
+  to the Gherkin suite (`uat.Options`) and to the adapter tests. Scenarios that need it
+  carry the `@vendors` tag and skip when Docker is absent; `the extraction rail is
+  "..."`, `the extraction|rates vendor is down` and `the extraction|rates vendor breaks
+  its contract` pick the wiring before `a running API` boots.
 - `uat` assembles the dependency graph by hand because `cmd/http` is `package main`
   and therefore not importable. Adding a dependency to `cmd/http/bootstrap.go` means
   adding it to `uat/world.go` too. Seeds, schema and first-boot settings live in the

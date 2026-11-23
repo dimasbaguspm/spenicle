@@ -15,8 +15,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dimasbaguspm/spenicle/cmd/http/handlers"
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
@@ -28,6 +28,9 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/ecb"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
+	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -35,38 +38,68 @@ const (
 	maxPreview = 120
 
 	appSecret = "uat-secret-0123456789"
+
+	stubKey       = "project-key"
+	stubModel     = "gpt-4o-mini"
+	vendorTimeout = 10 * time.Second
+)
+
+type faultType string
+
+const (
+	faultNone   faultType = ""
+	faultDown   faultType = "down"
+	faultBroken faultType = "broken"
 )
 
 type worldKey struct{}
 
 type world struct {
-	baseCurrency  string
-	fingerprint   string
-	dbPath        string
-	store         *sqlite.Store
-	server        *httptest.Server
-	accounts      map[string]string
-	ratesEndpoint string
+	baseCurrency string
+	dbPath       string
+	store        *sqlite.Store
+	server       *httptest.Server
+	accounts     map[string]string
+	options      Options
+
+	rail            string
+	extractionFault faultType
+	ratesFault      faultType
 
 	status int
 	body   []byte
 	header http.Header
 
 	pendingBody []byte
+	rates       *rates.Service
+	dbBroken    bool
 	lastRef     string
 }
 
-// Options is what the harness injects: the endpoints of the mocked services.
+// Options is what the harness injects: a healthy endpoint per vendor plus the two ways a
+// vendor can fail — down (503) and contract broken (a body that does not parse).
 type Options struct {
-	RatesEndpoint string
+	RatesEndpoint        string
+	RatesDownEndpoint    string
+	RatesBrokenEndpoint  string
+	SnapEndpoint         string
+	SnapDownEndpoint     string
+	SnapBrokenEndpoint   string
+	OpenAIEndpoint       string
+	OpenAIDownEndpoint   string
+	OpenAIBrokenEndpoint string
 }
 
 func newWorld(options Options) *world {
 	return &world{
-		baseCurrency:  "IDR",
-		accounts:      map[string]string{},
-		ratesEndpoint: options.RatesEndpoint,
+		baseCurrency: "IDR",
+		accounts:     map[string]string{},
+		options:      options,
 	}
+}
+
+func (o Options) vendorsReady() bool {
+	return o.RatesEndpoint != "" && o.SnapEndpoint != "" && o.OpenAIEndpoint != ""
 }
 
 func worldFrom(ctx context.Context) (*world, error) {
@@ -108,8 +141,6 @@ func (w *world) boot(ctx context.Context) error {
 		return fmt.Errorf("sealer: %w", err)
 	}
 
-	w.fingerprint = sealer.Fingerprint()
-
 	baseCurrency, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint())
 	if err != nil {
 		_ = store.Close(ctx)
@@ -129,18 +160,14 @@ func (w *world) boot(ctx context.Context) error {
 
 	ledgerService := ledger.New(store, store, settingsService, clockSystem, clockSystem)
 
-	var ratesService rates.Contract
+	built, buildErr := w.dependencies(ctx, store, limits, clockSystem)
+	if buildErr != nil {
+		_ = store.Close(ctx)
 
-	if w.ratesEndpoint != "" {
-		service, ratesErr := bootRates(ctx, w.ratesEndpoint, store, limits, clockSystem)
-		if ratesErr != nil {
-			_ = store.Close(ctx)
-
-			return ratesErr
-		}
-
-		ratesService = service
+		return buildErr
 	}
+
+	w.rates = built.cache
 
 	accounts, err := store.ListAccounts(ctx)
 	if err != nil {
@@ -154,23 +181,27 @@ func (w *world) boot(ctx context.Context) error {
 	}
 
 	w.store = store
+
+	queue := captures.New(store, ledgerService, sealer, built.extractor, clockSystem, clockSystem)
+
 	w.server = httptest.NewServer(handlers.New(handlers.Deps{
-		Ledger:        ledgerService,
-		Captures:      captures.New(store, ledgerService, sealer, nil, clockSystem, clockSystem),
-		Accounts:      store,
-		Payees:        store,
-		Recurring:     store,
-		Analytics:     store,
-		CustomQueries: store,
-		Health:        store,
-		Settings:      settingsService,
-		Rates:         ratesService,
-		Sealer:        sealer,
-		BaseCurrency:  baseCurrency,
-		Version:       "uat",
-		HealthTimeout: limits.HealthTimeout,
-		MaxBodyBytes:  limits.MaxBodyBytes,
-		Logger:        slog.New(slog.DiscardHandler),
+		Ledger:            ledgerService,
+		Captures:          queue,
+		Accounts:          store,
+		Payees:            store,
+		Recurring:         store,
+		Analytics:         store,
+		CustomQueries:     store,
+		Health:            store,
+		Settings:          settingsService,
+		Rates:             built.rates,
+		Sealer:            sealer,
+		BaseCurrency:      baseCurrency,
+		Version:           "uat",
+		HealthTimeout:     limits.HealthTimeout,
+		MaxBodyBytes:      limits.MaxBodyBytes,
+		ExtractionEnabled: w.rail != "",
+		Logger:            slog.New(slog.DiscardHandler),
 	}))
 
 	return nil
@@ -190,11 +221,119 @@ func bootRates(
 
 	service := rates.New(source, store, clockSystem)
 
-	if _, err := service.Refresh(ctx); err != nil {
-		return nil, fmt.Errorf("rates: %w", err)
+	_, refreshErr := service.Refresh(ctx)
+
+	return service, refreshErr
+}
+
+func (w *world) ratesTarget() string {
+	return pickEndpoint(w.ratesFault,
+		w.options.RatesEndpoint, w.options.RatesDownEndpoint, w.options.RatesBrokenEndpoint)
+}
+
+func pickEndpoint(fault faultType, healthy, down, broken string) string {
+	switch fault {
+	case faultDown:
+		return down
+	case faultBroken:
+		return broken
+	case faultNone:
+		return healthy
 	}
 
-	return service, nil
+	return healthy
+}
+
+type dependencies struct {
+	rates     rates.Contract
+	cache     *rates.Service
+	extractor extraction.Extractor
+}
+
+func (w *world) dependencies(
+	ctx context.Context,
+	store *sqlite.Store,
+	limits entity.AppConfig,
+	clockSystem clock.System,
+) (dependencies, error) {
+	var built dependencies
+
+	if target := w.ratesTarget(); target != "" {
+		service, ratesErr := bootRates(ctx, target, store, limits, clockSystem)
+		if service == nil {
+			return dependencies{}, fmt.Errorf("rates: %w", ratesErr)
+		}
+
+		built.rates = service
+		built.cache = service
+	}
+
+	if w.rail == "" {
+		return built, nil
+	}
+
+	extractor, err := w.newExtractor()
+	if err != nil {
+		return dependencies{}, err
+	}
+
+	built.extractor = extractor
+
+	return built, nil
+}
+
+//nolint:ireturn // the two rails share only the Extractor contract; the caller wants no vendor type
+func (w *world) newExtractor() (extraction.Extractor, error) {
+	switch w.rail {
+	case snaptojson.RailName:
+		endpoint := pickEndpoint(w.extractionFault,
+			w.options.SnapEndpoint, w.options.SnapDownEndpoint, w.options.SnapBrokenEndpoint)
+
+		if endpoint == "" {
+			return nil, errors.New("the snaptojson rail needs the mock service: run with Docker")
+		}
+
+		return snaptojson.New(endpoint, stubKey, vendorTimeout)
+	case openai.RailName:
+		base := pickEndpoint(w.extractionFault,
+			w.options.OpenAIEndpoint, w.options.OpenAIDownEndpoint, w.options.OpenAIBrokenEndpoint)
+
+		if base == "" {
+			return nil, errors.New("the openai rail needs the mock service: run with Docker")
+		}
+
+		return openai.New(stubKey, stubModel, base, vendorTimeout)
+	default:
+		return nil, fmt.Errorf("unknown extraction rail %q", w.rail)
+	}
+}
+
+func (w *world) clearDatabase(ctx context.Context) error {
+	if w.store == nil {
+		return errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	clearOrder := []string{
+		"ledger_postings",
+		"captures",
+		"ledger_entries",
+		"audit_log",
+		"recurring_rules",
+		"custom_queries",
+		"payees",
+		"fx_rates",
+		"accounts",
+		"settings",
+		"api_tokens",
+	}
+
+	for _, table := range clearOrder {
+		if _, err := w.store.DB().ExecContext(ctx, `DELETE FROM `+table); err != nil {
+			return fmt.Errorf("clear %s: %w", table, err)
+		}
+	}
+
+	return nil
 }
 
 func (w *world) shutdown(ctx context.Context) {
@@ -202,7 +341,7 @@ func (w *world) shutdown(ctx context.Context) {
 		w.server.Close()
 	}
 
-	if w.store != nil {
+	if w.store != nil && !w.dbBroken {
 		_ = w.store.Close(ctx)
 	}
 
@@ -244,14 +383,14 @@ func (w *world) doWith(
 		return fmt.Errorf("build request: %w", err)
 	}
 
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
 	for key, values := range headers {
 		for _, value := range values {
 			req.Header.Add(key, value)
 		}
+	}
+
+	if body != nil && req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
 	resp, err := w.server.Client().Do(req)
@@ -310,20 +449,6 @@ func refOf(body []byte) string {
 
 var accountPlaceholder = regexp.MustCompile(`\{\{account:([^}]+)\}\}`)
 
-func (w *world) expandFingerprint(want string) string {
-	want = strings.ReplaceAll(want, "{{fingerprint}}", w.fingerprint)
-	want = strings.ReplaceAll(want, "{{ref}}", w.lastRef)
-
-	return accountPlaceholder.ReplaceAllStringFunc(want, func(match string) string {
-		ref, ok := w.accounts[accountPlaceholder.FindStringSubmatch(match)[1]]
-		if !ok {
-			return match
-		}
-
-		return ref
-	})
-}
-
 func (w *world) expand(body string) (string, error) {
 	var missing []string
 
@@ -370,122 +495,6 @@ func (w *world) countTable(ctx context.Context, table string) (int, error) {
 	}
 
 	return count, nil
-}
-
-func (w *world) jsonPath(path string) (string, error) {
-	var document any
-
-	if err := json.Unmarshal(w.body, &document); err != nil {
-		return "", fmt.Errorf("response is not JSON (%q): %w", preview(string(w.body)), err)
-	}
-
-	value, err := walk(path, document)
-	if err != nil {
-		return "", err
-	}
-
-	switch typed := value.(type) {
-	case string:
-		return typed, nil
-	case nil:
-		return "", nil
-	case float64:
-		return strconv.FormatFloat(typed, 'f', -1, 64), nil
-	case bool:
-		return strconv.FormatBool(typed), nil
-	default:
-		encoded, err := json.Marshal(typed)
-		if err != nil {
-			return "", fmt.Errorf("encode %s: %w", path, err)
-		}
-
-		return string(encoded), nil
-	}
-}
-
-func walk(path string, document any) (any, error) {
-	current := document
-
-	for _, token := range tokenize(path) {
-		next, err := step(path, current, token)
-		if err != nil {
-			return nil, err
-		}
-
-		current = next
-	}
-
-	return current, nil
-}
-
-func step(path string, current any, token string) (any, error) {
-	switch node := current.(type) {
-	case map[string]any:
-		value, ok := node[token]
-		if !ok {
-			return nil, fmt.Errorf("path %s: key %q not present", path, token)
-		}
-
-		return value, nil
-	case []any:
-		index, err := strconv.Atoi(token)
-		if err != nil {
-			return nil, fmt.Errorf("path %s: %q is not an array index", path, token)
-		}
-
-		if index < 0 || index >= len(node) {
-			return nil, fmt.Errorf("path %s: index %d out of range (%d items)", path, index, len(node))
-		}
-
-		return node[index], nil
-	default:
-		return nil, fmt.Errorf("path %s: cannot descend into %T at %q", path, current, token)
-	}
-}
-
-func tokenize(path string) []string {
-	path = strings.TrimSpace(path)
-	path = strings.TrimPrefix(path, "$")
-	path = strings.TrimPrefix(path, ".")
-
-	var tokens []string
-
-	for _, part := range strings.Split(path, ".") {
-		if part == "" {
-			continue
-		}
-
-		tokens = append(tokens, splitBrackets(part)...)
-	}
-
-	return tokens
-}
-
-func splitBrackets(part string) []string {
-	var tokens []string
-
-	for {
-		open := strings.IndexByte(part, '[')
-		if open < 0 {
-			return append(tokens, part)
-		}
-
-		if open > 0 {
-			tokens = append(tokens, part[:open])
-		}
-
-		closing := strings.IndexByte(part, ']')
-		if closing < 0 {
-			return append(tokens, part[open+1:])
-		}
-
-		tokens = append(tokens, part[open+1:closing])
-
-		part = part[closing+1:]
-		if part == "" {
-			return tokens
-		}
-	}
 }
 
 func preview(body string) string {

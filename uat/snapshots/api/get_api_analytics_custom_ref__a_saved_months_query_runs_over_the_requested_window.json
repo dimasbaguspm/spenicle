@@ -1,0 +1,11 @@
+{
+  "from": "2026-01-01",
+  "query": {
+    "chart": "line",
+    "created_at": "<timestamp>",
+    "name": "Monthly spend",
+    "namespace": "months",
+    "ref": "<ref>"
+  },
+  "to": "2026-03-31"
+}

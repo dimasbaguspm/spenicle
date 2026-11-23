@@ -27,12 +27,19 @@ import (
 )
 
 const (
-	mockImage  = "gcr.io/distroless/static-debian12:nonroot"
-	mockPort   = "8080/tcp"
-	mockKey    = "project-key"
-	mockBinary = "mock"
-	mockSnaps  = "/partner/v1/snaps"
-	mockRates  = "/stats/eurofxref/eurofxref-daily.xml"
+	mockImage        = "gcr.io/distroless/static-debian12:nonroot"
+	mockPort         = "8080/tcp"
+	mockKey          = "project-key"
+	mockBinary       = "mock"
+	mockSnaps        = "/partner/v1/snaps"
+	mockSnapsDown    = "/partner/v1/down"
+	mockSnapsBroken  = "/partner/v1/malformed"
+	mockRates        = "/stats/eurofxref/eurofxref-daily.xml"
+	mockRatesDown    = "/stats/eurofxref/down.xml"
+	mockRatesBroken  = "/stats/eurofxref/malformed.xml"
+	mockOpenAI       = "/v1/ok/"
+	mockOpenAIDown   = "/v1/down/"
+	mockOpenAIBroken = "/v1/malformed/"
 )
 
 var mockBase string //nolint:gochecknoglobals // one container per package run, read-only afterwards
@@ -127,12 +134,12 @@ func requireMock(t *testing.T) string {
 	return mockBase
 }
 
-func ratesEndpoint() string {
+func endpoint(path string) string {
 	if mockBase == "" {
 		return ""
 	}
 
-	return mockBase + mockRates
+	return mockBase + path
 }
 
 func newCaptures(t *testing.T, endpoint string) *captures.Service {

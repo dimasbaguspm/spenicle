@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "not_found",
+    "message": "not found: no EUR/USD rate on 2020-01-01"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "from": "2026-01-01",
+  "months": [
+    {
+      "income_minor": "0",
+      "month": "2026-01",
+      "net_minor": "-10000",
+      "spend_minor": "10000"
+    },
+    {
+      "income_minor": "0",
+      "month": "2026-02",
+      "net_minor": "-25000",
+      "spend_minor": "25000"
+    }
+  ],
+  "to": "2026-02-28"
+}

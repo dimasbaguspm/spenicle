@@ -17,9 +17,7 @@ Feature: PATCH /api/captures/{{ref}}
       {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     Then the response status is 201
-    And the response JSON at "$.entry.source" is "email"
-    And the response JSON at "$.entry.postings[0].base_amount_minor" is "25000"
-    And the response JSON at "$.capture.status" is "approved"
+    And the response JSON matches the snapshot "patch_api_captures_:ref__approving_a_capture_posts_the_entry_and_resolves_the_queue_item"
     And the store holds:
       | table           | count |
       | ledger_entries  | 2     |
@@ -41,7 +39,7 @@ Feature: PATCH /api/captures/{{ref}}
       {"action":"approve","occurred_on":"2026-02-15","currency":"IDR","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"100"},{"account_ref":"{{account:Cash}}","amount_minor":"-100"}]}
       """
     Then the response status is 409
-    And the response JSON at "$.error.code" is "capture_resolved"
+    And the response JSON matches the snapshot "patch_api_captures_:ref__an_approved_capture_cannot_be_approved_twice"
     And the store holds:
       | table          | count |
       | ledger_entries | 1     |
@@ -57,8 +55,7 @@ Feature: PATCH /api/captures/{{ref}}
       {"action":"reject","reason":"wrong card"}
       """
     Then the response status is 200
-    And the response JSON at "$.status" is "rejected"
-    And the response JSON at "$.resolution_note" is "wrong card"
+    And the response JSON matches the snapshot "patch_api_captures_:ref__rejecting_a_capture_never_touches_the_ledger"
     And the store holds:
       | table    | count |
       | captures | 1     |

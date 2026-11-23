@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_rate",
+    "message": "posting 0: invalid rate: rate required for USD to IDR"
+  }
+}

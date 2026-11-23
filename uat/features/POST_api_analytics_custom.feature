@@ -8,9 +8,7 @@ Feature: POST /api/analytics/custom
       {"name":"Spend per month","namespace":"months","chart":"bar"}
       """
     Then the response status is 201
-    And the response JSON at "$.name" is "Spend per month"
-    And the response JSON at "$.namespace" is "months"
-    And the response JSON at "$.chart" is "bar"
+    And the response JSON matches the snapshot "post_api_analytics_custom__a_saved_query_remembers_its_namespace_and_chart"
 
   Scenario: An unknown namespace is refused
     Given a running API
@@ -19,4 +17,4 @@ Feature: POST /api/analytics/custom
       {"name":"Nope","namespace":"quarters","chart":"bar"}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "invalid_request"
+    And the response JSON matches the snapshot "post_api_analytics_custom__an_unknown_namespace_is_refused"

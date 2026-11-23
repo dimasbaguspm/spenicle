@@ -8,4 +8,4 @@ Feature: POST /api/session
       {"password":"anything-at-all"}
       """
     Then the response status is 409
-    And the response JSON at "$.error.code" is "no_password_set"
+    And the response JSON matches the snapshot "post_api_session__signing_in_on_an_instance_without_a_password_answers_409"

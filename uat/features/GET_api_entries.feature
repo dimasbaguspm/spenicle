@@ -17,8 +17,7 @@ Feature: GET /api/entries
       | query | to   | <to>       |
       | query | limit | <limit>   |
     Then the response status is 200
-    And the response JSON at "$.entries[0].note" is "<newest>"
-    And the response JSON is contract-clean
+    And the response JSON matches the snapshot "get_api_entries__the_ledger_listing_honours_its_range_{{bodyhash}}"
 
     Examples:
       | from       | to         | limit | newest   |
@@ -38,8 +37,7 @@ Feature: GET /api/entries
       """
     When I send a GET to "/api/entries"
     Then the response status is 200
-    And the response JSON at "$.entries[0].note" is "second"
-    And the response JSON at "$.entries[1].note" is "first"
+    And the response JSON matches the snapshot "get_api_entries__listing_returns_the_newest_entry_first"
 
   Scenario: The date range narrows the listing
     Given a running API
@@ -53,7 +51,22 @@ Feature: GET /api/entries
       """
     When I send a GET to "/api/entries?from=2026-02-01&to=2026-02-28"
     Then the response status is 200
-    And the response JSON at "$.entries[0].note" is "february"
+    And the response JSON matches the snapshot "get_api_entries__the_date_range_narrows_the_listing"
     And the store holds:
       | table          | count |
       | ledger_entries | 2     |
+
+  Scenario: Clearing the database leaves an empty listing
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-03-01","currency":"IDR","note":"wiped","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"500"}]}
+      """
+    And the response status is 201
+    But the database is cleared
+    When I send a GET to "/api/entries"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__clearing_the_database_leaves_an_empty_listing"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 0     |

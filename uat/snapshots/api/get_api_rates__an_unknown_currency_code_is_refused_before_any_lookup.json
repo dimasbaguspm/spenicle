@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "unknown_currency",
+    "message": "Quote failed currency"
+  }
+}

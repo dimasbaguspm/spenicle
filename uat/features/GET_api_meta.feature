@@ -5,13 +5,7 @@ Feature: GET /api/meta
     Given a running API
     When I send a GET to "/api/meta"
     Then the response status is 200
-    And the response JSON at "$.settings.base_currency" is "IDR"
-    And the response JSON is contract-clean
-    And the response JSON at "$.settings.extraction_enabled" is "false"
-    And the response JSON at "$.accounts[0].name" is "Cash"
-    And the response JSON at "$.accounts[0].kind" is "asset"
-    And the response JSON at "$.accounts[0].base_amount_minor" is "0"
-    And the response JSON at "$.accounts[1].name" is "Unsorted"
+    And the response JSON matches the snapshot "get_api_meta__a_fresh_database_bootstraps_with_the_seeded_accounts"
 
   Scenario: Balances come from postings, not from a stored column
     Given a running API
@@ -21,12 +15,10 @@ Feature: GET /api/meta
       """
     When I send a GET to "/api/meta"
     Then the response status is 200
-    And the response JSON at "$.accounts[0].base_amount_minor" is "-25000"
-    And the response JSON at "$.accounts[1].base_amount_minor" is "25000"
+    And the response JSON matches the snapshot "get_api_meta__balances_come_from_postings_not_from_a_stored_column"
 
   Scenario: The currency list is embedded, not a table
     Given a running API
     When I send a GET to "/api/meta"
     Then the response status is 200
-    And the response JSON at "$.currencies[0].code" is "AUD"
-    And the response JSON at "$.currencies[0].minor_units" is "2"
+    And the response JSON matches the snapshot "get_api_meta__the_currency_list_is_embedded_not_a_table"

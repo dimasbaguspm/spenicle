@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "postings_not_balanced",
+    "message": "postings do not sum to zero: native sum 1"
+  }
+}

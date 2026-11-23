@@ -1,0 +1,7 @@
+{
+  "kind": "statement",
+  "raw_text": "statement capture",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "status": "pending"
+}

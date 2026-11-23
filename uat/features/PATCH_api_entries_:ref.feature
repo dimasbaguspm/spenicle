@@ -12,9 +12,7 @@ Feature: PATCH /api/entries/{{ref}}
       {"void":true,"reason":"duplicate of 811"}
       """
     Then the response status is 200
-    And the response JSON at "$.source" is "adjustment"
-    And the response JSON at "$.note" is "duplicate of 811"
-    And the response JSON at "$.postings[0].amount_minor" is "15000"
+    And the response JSON matches the snapshot "patch_api_entries_:ref__voiding_writes_a_reversal_and_keeps_the_original"
     And the store holds:
       | table           | count |
       | ledger_entries  | 2     |
@@ -35,7 +33,7 @@ Feature: PATCH /api/entries/{{ref}}
       {"void":true,"reason":"again"}
       """
     Then the response status is 409
-    And the response JSON at "$.error.code" is "invalid_state"
+    And the response JSON matches the snapshot "patch_api_entries_:ref__an_entry_cannot_be_voided_twice"
 
   Scenario: Voiding something that is not there answers 404
     Given a running API
@@ -44,4 +42,4 @@ Feature: PATCH /api/entries/{{ref}}
       {"void":true,"reason":"nothing"}
       """
     Then the response status is 404
-    And the response JSON at "$.error.code" is "not_found"
+    And the response JSON matches the snapshot "patch_api_entries_:ref__voiding_something_that_is_not_there_answers_404"

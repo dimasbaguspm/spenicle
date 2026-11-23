@@ -22,13 +22,7 @@ Feature: GET /api/analytics/months
       | query | from | 2026-01-01 |
       | query | to   | 2026-02-28 |
     Then the response status is 200
-    And the response JSON at "$.from" is "2026-01-01"
-    And the response JSON is contract-clean
-    And the response JSON at "$.to" is "2026-02-28"
-    And the response JSON at "$.months[0].month" is "2026-01"
-    And the response JSON at "$.months[0].spend_minor" is "10000"
-    And the response JSON at "$.months[1].month" is "2026-02"
-    And the response JSON at "$.months[1].spend_minor" is "25000"
+    And the response JSON matches the snapshot "get_api_analytics_months__expense_is_grouped_into_the_month_it_happened"
 
   Scenario: A voided entry leaves no trace in the series
     Given a running API
@@ -51,7 +45,7 @@ Feature: GET /api/analytics/months
       | query | from | 2026-03-01 |
       | query | to   | 2026-03-31 |
     Then the response status is 200
-    And the response JSON at "$.months" is "[]"
+    And the response JSON matches the snapshot "get_api_analytics_months__a_voided_entry_leaves_no_trace_in_the_series"
 
   Scenario: A malformed date is refused
     Given a running API
@@ -59,4 +53,4 @@ Feature: GET /api/analytics/months
       | type  | key  | value      |
       | query | from | 2026-13-01 |
     Then the response status is 422
-    And the response JSON at "$.error.code" is "invalid_request"
+    And the response JSON matches the snapshot "get_api_analytics_months__a_malformed_date_is_refused"

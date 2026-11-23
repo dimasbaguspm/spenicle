@@ -8,8 +8,7 @@ Feature: POST /api/payees
       {"name":"Kopi Kenangan","default_category_ref":"{{account:Unsorted}}"}
       """
     Then the response status is 201
-    And the response JSON at "$.name" is "Kopi Kenangan"
-    And the response JSON at "$.default_category_ref" is "{{account:Unsorted}}"
+    And the response JSON matches the snapshot "post_api_payees__a_payee_remembers_its_default_account"
 
   Scenario: An unknown default account is refused
     Given a running API
@@ -18,7 +17,7 @@ Feature: POST /api/payees
       {"name":"Nobody","default_account_ref":"00000000000000000000000000000000"}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "unknown_reference"
+    And the response JSON matches the snapshot "post_api_payees__an_unknown_default_account_is_refused"
 
   Scenario: A missing name is refused
     Given a running API
@@ -27,4 +26,4 @@ Feature: POST /api/payees
       {}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "invalid_request"
+    And the response JSON matches the snapshot "post_api_payees__a_missing_name_is_refused"

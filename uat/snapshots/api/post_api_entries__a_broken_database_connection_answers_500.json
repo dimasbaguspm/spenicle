@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "internal_error",
+    "message": "setting \"app_settings\": sql: database is closed"
+  }
+}

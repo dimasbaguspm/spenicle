@@ -1,0 +1,22 @@
+{
+  "currency": "USD",
+  "occurred_on": "2025-09-14",
+  "postings": [
+    {
+      "account_ref": "<ref>",
+      "amount_minor": "800",
+      "base_amount_minor": "130003",
+      "fx_rate": "16250.42",
+      "fx_source": "manual"
+    },
+    {
+      "account_ref": "<ref>",
+      "amount_minor": "-800",
+      "base_amount_minor": "-130003",
+      "fx_rate": "16250.42",
+      "fx_source": "manual"
+    }
+  ],
+  "ref": "<ref>",
+  "source": "manual"
+}

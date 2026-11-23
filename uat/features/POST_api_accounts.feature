@@ -8,10 +8,7 @@ Feature: POST /api/accounts
       {"name":"Groceries","kind":"expense"}
       """
     Then the response status is 201
-    And the response JSON at "$.name" is "Groceries"
-    And the response JSON at "$.kind" is "expense"
-    And the response JSON at "$.currency" is "IDR"
-    And the response JSON at "$.archived" is "false"
+    And the response JSON matches the snapshot "post_api_accounts__a_new_category_is_created_with_the_base_currency"
 
   Scenario: An unknown kind is refused
     Given a running API
@@ -20,7 +17,7 @@ Feature: POST /api/accounts
       {"name":"Nowhere","kind":"imaginary"}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "invalid_request"
+    And the response JSON matches the snapshot "post_api_accounts__an_unknown_kind_is_refused"
 
   Scenario: An unknown currency is refused
     Given a running API
@@ -29,4 +26,4 @@ Feature: POST /api/accounts
       {"name":"Nowhere","kind":"asset","currency":"XXX"}
       """
     Then the response status is 422
-    And the response JSON at "$.error.code" is "unknown_currency"
+    And the response JSON matches the snapshot "post_api_accounts__an_unknown_currency_is_refused"

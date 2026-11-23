@@ -22,8 +22,7 @@ Feature: PATCH /api/recurring/{ref}
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 200
-    And the response JSON at "$.state" is "paused"
-    And the response JSON at "$.amount_minor" is "10900"
+    And the response JSON matches the snapshot "patch_api_recurring_:ref__a_rule_is_paused_and_its_amount_corrected"
 
   Scenario: An unknown ref answers 404
     Given a running API
@@ -35,4 +34,4 @@ Feature: PATCH /api/recurring/{ref}
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 404
-    And the response JSON at "$.error.code" is "not_found"
+    And the response JSON matches the snapshot "patch_api_recurring_:ref__an_unknown_ref_answers_404"

@@ -15,8 +15,7 @@ Feature: PATCH /api/accounts/{ref}
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 200
-    And the response JSON at "$.name" is "Side Gigs"
-    And the response JSON at "$.archived" is "true"
+    And the response JSON matches the snapshot "patch_api_accounts_:ref__a_category_is_renamed_and_archived"
 
   Scenario: An unknown ref answers 404
     Given a running API
@@ -28,4 +27,4 @@ Feature: PATCH /api/accounts/{ref}
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 404
-    And the response JSON at "$.error.code" is "not_found"
+    And the response JSON matches the snapshot "patch_api_accounts_:ref__an_unknown_ref_answers_404"

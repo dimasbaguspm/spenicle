@@ -5,4 +5,4 @@ Feature: POST /api/rates/refresh
     Given a running API
     When I send a POST to "/api/rates/refresh"
     Then the response status is 404
-    And the response JSON at "$.error.code" is "not_found"
+    And the response JSON matches the snapshot "post_api_rates_refresh__triggering_a_refresh_over_http_is_not_a_route"

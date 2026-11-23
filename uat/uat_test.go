@@ -12,7 +12,17 @@ func TestFeatures(t *testing.T) {
 	suite := godog.TestSuite{
 		Name: "spenicle",
 		ScenarioInitializer: func(sc *godog.ScenarioContext) {
-			uat.InitializeScenario(sc, uat.Options{RatesEndpoint: ratesEndpoint()})
+			uat.InitializeScenario(sc, uat.Options{
+				RatesEndpoint:        endpoint(mockRates),
+				RatesDownEndpoint:    endpoint(mockRatesDown),
+				RatesBrokenEndpoint:  endpoint(mockRatesBroken),
+				SnapEndpoint:         endpoint(mockSnaps),
+				SnapDownEndpoint:     endpoint(mockSnapsDown),
+				SnapBrokenEndpoint:   endpoint(mockSnapsBroken),
+				OpenAIEndpoint:       endpoint(mockOpenAI),
+				OpenAIDownEndpoint:   endpoint(mockOpenAIDown),
+				OpenAIBrokenEndpoint: endpoint(mockOpenAIBroken),
+			})
 		},
 		Options: &godog.Options{
 			Format:   "pretty",

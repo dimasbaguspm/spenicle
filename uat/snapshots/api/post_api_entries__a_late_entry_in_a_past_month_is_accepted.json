@@ -1,0 +1,22 @@
+{
+  "currency": "IDR",
+  "occurred_on": "2024-01-31",
+  "postings": [
+    {
+      "account_ref": "<ref>",
+      "amount_minor": "15000",
+      "base_amount_minor": "15000",
+      "fx_rate": "1",
+      "fx_source": "identity"
+    },
+    {
+      "account_ref": "<ref>",
+      "amount_minor": "-15000",
+      "base_amount_minor": "-15000",
+      "fx_rate": "1",
+      "fx_source": "identity"
+    }
+  ],
+  "ref": "<ref>",
+  "source": "manual"
+}

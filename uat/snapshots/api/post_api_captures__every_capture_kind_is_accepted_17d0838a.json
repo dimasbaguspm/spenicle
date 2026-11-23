@@ -1,0 +1,7 @@
+{
+  "kind": "image",
+  "raw_text": "image capture",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "status": "pending"
+}

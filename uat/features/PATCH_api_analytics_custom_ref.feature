@@ -15,8 +15,7 @@ Feature: PATCH /api/analytics/custom/{ref}
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 200
-    And the response JSON at "$.name" is "Spend by category"
-    And the response JSON at "$.chart" is "bar"
+    And the response JSON matches the snapshot "patch_api_analytics_custom_ref__a_saved_query_is_renamed_and_its_chart_changed"
 
   Scenario: An unknown ref answers 404
     Given a running API
@@ -28,4 +27,4 @@ Feature: PATCH /api/analytics/custom/{ref}
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 404
-    And the response JSON at "$.error.code" is "not_found"
+    And the response JSON matches the snapshot "patch_api_analytics_custom_ref__an_unknown_ref_answers_404"

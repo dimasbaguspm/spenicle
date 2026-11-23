@@ -1,0 +1,9 @@
+{
+  "base": "EUR",
+  "fetched_at": "<timestamp>",
+  "on_date": "2026-11-20",
+  "quote": "USD",
+  "rate": "1.0990",
+  "ref": "<ref>",
+  "source": "ecb"
+}

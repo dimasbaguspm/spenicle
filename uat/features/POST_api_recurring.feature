@@ -15,12 +15,7 @@ Feature: POST /api/recurring
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 201
-    And the response JSON at "$.cadence" is "monthly"
-    And the response JSON at "$.interval_n" is "1"
-    And the response JSON at "$.day_of_month" is "20"
-    And the response JSON at "$.state" is "active"
-    And the response JSON at "$.origin" is "user"
-    And the response JSON at "$.next_due_on" is "2026-12-20"
+    And the response JSON matches the snapshot "post_api_recurring__a_monthly_rule_is_created_in_the_active_state"
 
   Scenario: An unknown cadence is refused
     Given a running API
@@ -36,4 +31,4 @@ Feature: POST /api/recurring
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 422
-    And the response JSON at "$.error.code" is "invalid_request"
+    And the response JSON matches the snapshot "post_api_recurring__an_unknown_cadence_is_refused"

@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "currency": "IDR",
+      "note": "february",
+      "occurred_on": "2026-02-15",
+      "postings": [
+        {
+          "account_ref": "<ref>",
+          "amount_minor": "-200",
+          "base_amount_minor": "-200",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        },
+        {
+          "account_ref": "<ref>",
+          "amount_minor": "200",
+          "base_amount_minor": "200",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        }
+      ],
+      "ref": "<ref>",
+      "source": "manual"
+    }
+  ]
+}

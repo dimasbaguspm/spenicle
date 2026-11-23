@@ -1,0 +1,101 @@
+{
+  "accounts": [
+    {
+      "archived": false,
+      "base_amount_minor": "-25000",
+      "currency": "IDR",
+      "kind": "asset",
+      "name": "Cash",
+      "ref": "<ref>"
+    },
+    {
+      "archived": false,
+      "base_amount_minor": "25000",
+      "currency": "IDR",
+      "kind": "expense",
+      "name": "Unsorted",
+      "ref": "<ref>"
+    }
+  ],
+  "currencies": [
+    {
+      "code": "AUD",
+      "minor_units": 2,
+      "symbol": "A$"
+    },
+    {
+      "code": "CHF",
+      "minor_units": 2,
+      "symbol": "CHF"
+    },
+    {
+      "code": "CNY",
+      "minor_units": 2,
+      "symbol": "¥"
+    },
+    {
+      "code": "EUR",
+      "minor_units": 2,
+      "symbol": "€"
+    },
+    {
+      "code": "GBP",
+      "minor_units": 2,
+      "symbol": "£"
+    },
+    {
+      "code": "IDR",
+      "minor_units": 0,
+      "symbol": "Rp"
+    },
+    {
+      "code": "INR",
+      "minor_units": 2,
+      "symbol": "₹"
+    },
+    {
+      "code": "JPY",
+      "minor_units": 0,
+      "symbol": "¥"
+    },
+    {
+      "code": "KRW",
+      "minor_units": 0,
+      "symbol": "₩"
+    },
+    {
+      "code": "KWD",
+      "minor_units": 3,
+      "symbol": "د.ك"
+    },
+    {
+      "code": "MYR",
+      "minor_units": 2,
+      "symbol": "RM"
+    },
+    {
+      "code": "SGD",
+      "minor_units": 2,
+      "symbol": "S$"
+    },
+    {
+      "code": "THB",
+      "minor_units": 2,
+      "symbol": "฿"
+    },
+    {
+      "code": "USD",
+      "minor_units": 2,
+      "symbol": "$"
+    },
+    {
+      "code": "VND",
+      "minor_units": 0,
+      "symbol": "₫"
+    }
+  ],
+  "settings": {
+    "base_currency": "IDR",
+    "extraction_enabled": false
+  }
+}

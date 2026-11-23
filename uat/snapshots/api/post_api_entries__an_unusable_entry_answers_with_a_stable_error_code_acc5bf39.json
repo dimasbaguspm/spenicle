@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_postings",
+    "message": "Postings failed min"
+  }
+}

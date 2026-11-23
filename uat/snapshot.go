@@ -3,7 +3,9 @@ package uat
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,13 +36,24 @@ var timestampPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(
 
 var refPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
+var refInText = regexp.MustCompile(`(^|[^0-9a-f])([0-9a-f]{32})([^0-9a-f]|$)`)
+
 func (w *world) assertAPISnapshot(name string) error {
 	var document any
 	if err := json.Unmarshal(w.body, &document); err != nil {
 		return fmt.Errorf("response is not JSON (%q): %w", preview(string(w.body)), err)
 	}
 
-	return compareSnapshot(filepath.Join(snapshotRoot, "api", name+".json"), normalise(document))
+	if err := walkContract("$", document); err != nil {
+		return err
+	}
+
+	normalised := normalise(document)
+
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%v", normalised)))
+	name = strings.ReplaceAll(name, "{{bodyhash}}", hex.EncodeToString(sum[:4]))
+
+	return compareSnapshot(filepath.Join(snapshotRoot, "api", name+".json"), normalised)
 }
 
 func (w *world) assertDBSnapshot(ctx context.Context, name string) error {
@@ -236,5 +249,5 @@ func normaliseString(value string) string {
 		return "<ref>"
 	}
 
-	return value
+	return refInText.ReplaceAllString(value, "${1}<ref>${3}")
 }

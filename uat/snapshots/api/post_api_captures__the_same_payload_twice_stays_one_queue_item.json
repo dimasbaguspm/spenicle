@@ -1,0 +1,7 @@
+{
+  "kind": "share",
+  "raw_text": "same receipt",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "status": "pending"
+}

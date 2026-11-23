@@ -1,0 +1,14 @@
+{
+  "account_ref": "<ref>",
+  "amount_minor": "10900",
+  "business_day_shift": "none",
+  "cadence": "monthly",
+  "created_at": "<timestamp>",
+  "currency": "IDR",
+  "interval_n": 1,
+  "next_due_on": "2026-12-01",
+  "origin": "user",
+  "payee_ref": "<ref>",
+  "ref": "<ref>",
+  "state": "paused"
+}

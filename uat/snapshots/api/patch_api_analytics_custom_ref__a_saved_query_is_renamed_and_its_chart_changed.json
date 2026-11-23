@@ -1,0 +1,7 @@
+{
+  "chart": "bar",
+  "created_at": "<timestamp>",
+  "name": "Spend by category",
+  "namespace": "categories",
+  "ref": "<ref>"
+}

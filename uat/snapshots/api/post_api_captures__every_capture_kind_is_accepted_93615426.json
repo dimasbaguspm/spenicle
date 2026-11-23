@@ -1,0 +1,7 @@
+{
+  "kind": "email",
+  "raw_text": "email capture",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "status": "pending"
+}

@@ -1,0 +1,97 @@
+{
+  "accounts": [
+    {
+      "archived_at": null,
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "icon": null,
+      "id": 1,
+      "kind": "asset",
+      "name": "Cash",
+      "parent_id": null,
+      "ref": "<ref>"
+    },
+    {
+      "archived_at": null,
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "icon": null,
+      "id": 2,
+      "kind": "expense",
+      "name": "Unsorted",
+      "parent_id": null,
+      "ref": "<ref>"
+    }
+  ],
+  "audit_log": [],
+  "captures": [
+    {
+      "artifact_hash": "b3be5f5a9d30ee36242604380bd4ce604ee24fa17095cc02b062086e09983819",
+      "batch_id": null,
+      "client_id": null,
+      "dedupe_key": "b3d404a8a768d93686079ceda9c5f0d5c37956db7d4dbce0d0a8d189d4da027c",
+      "draft_json": null,
+      "extraction_error": "snaptojson: decode report: unexpected end of JSON input",
+      "extraction_job_ref": null,
+      "extraction_model": null,
+      "extraction_rail": "snaptojson",
+      "id": 1,
+      "kind": "image",
+      "raw_text": null,
+      "received_at": "<timestamp>",
+      "ref": "<ref>",
+      "resolution_note": null,
+      "resolved_at": null,
+      "resolved_entry_id": null,
+      "status": "pending"
+    }
+  ],
+  "fx_rates": [
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 1,
+      "on_date": "2026-11-20",
+      "quote": "USD",
+      "rate": "1.0990",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 2,
+      "on_date": "2026-11-20",
+      "quote": "JPY",
+      "rate": "174.35",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 3,
+      "on_date": "2026-11-20",
+      "quote": "IDR",
+      "rate": "16000.50",
+      "ref": "<ref>",
+      "source": "ecb"
+    }
+  ],
+  "ledger_entries": [],
+  "ledger_postings": [],
+  "settings": [
+    {
+      "id": 1,
+      "k": "secret_fingerprint",
+      "ref": "<ref>",
+      "v": "47ed2e331b50a9ee"
+    },
+    {
+      "id": 2,
+      "k": "app_settings",
+      "ref": "<ref>",
+      "v": "<sealed>"
+    }
+  ]
+}

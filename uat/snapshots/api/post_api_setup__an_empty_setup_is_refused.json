@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "empty_setup",
+    "message": "send base_currency to open the ledger"
+  }
+}

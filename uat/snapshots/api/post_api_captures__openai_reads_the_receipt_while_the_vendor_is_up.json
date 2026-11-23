@@ -1,0 +1,9 @@
+{
+  "draft_json": "{\"data\":{\"total\":\"25000\",\"merchant\":\"KOPI KENANGAN\"},\"valid\":true}",
+  "extraction_model": "gpt-4o-mini",
+  "extraction_rail": "openai",
+  "kind": "image",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "status": "pending"
+}

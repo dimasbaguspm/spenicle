@@ -15,9 +15,7 @@ Feature: GET /api/analytics/categories
       | query | from | 2026-02-01 |
       | query | to   | 2026-02-28 |
     Then the response status is 200
-    And the response JSON at "$.kind" is "expense"
-    And the response JSON at "$.categories[0].account_name" is "Unsorted"
-    And the response JSON at "$.categories[0].amount_minor" is "25000"
+    And the response JSON matches the snapshot "get_api_analytics_categories__expense_is_grouped_by_category"
 
   Scenario: An unknown kind is refused
     Given a running API
@@ -25,4 +23,4 @@ Feature: GET /api/analytics/categories
       | type  | key  | value   |
       | query | kind | neither |
     Then the response status is 422
-    And the response JSON at "$.error.code" is "invalid_request"
+    And the response JSON matches the snapshot "get_api_analytics_categories__an_unknown_kind_is_refused"
