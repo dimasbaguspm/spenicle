@@ -22,6 +22,7 @@ import (
 type Config struct {
 	DBPath       string
 	BaseCurrency string
+	Version      string
 	Sealer       port.Sealer
 	Logger       *slog.Logger
 }
@@ -68,6 +69,7 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 		Health:       store,
 		Sealer:       cfg.Sealer,
 		BaseCurrency: baseCurrency,
+		Version:      cfg.Version,
 		Logger:       cfg.Logger,
 	})
 

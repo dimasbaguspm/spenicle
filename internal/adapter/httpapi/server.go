@@ -17,6 +17,7 @@ type Deps struct {
 	Health       port.Health
 	Sealer       port.Sealer
 	BaseCurrency string
+	Version      string
 	Logger       *slog.Logger
 }
 

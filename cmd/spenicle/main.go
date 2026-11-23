@@ -73,6 +73,7 @@ func run() error {
 	application, err := app.New(ctx, app.Config{
 		DBPath:       filepath.Join(cfg.DataDir, "spenicle.db"),
 		BaseCurrency: cfg.BaseCurrency,
+		Version:      version,
 		Sealer:       sealer,
 		Logger:       logger,
 	})

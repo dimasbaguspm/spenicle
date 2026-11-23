@@ -74,6 +74,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 type healthResponse struct {
 	Status        string `json:"status"`
+	Version       string `json:"version"`
 	SchemaVersion int    `json:"schema_version"`
 	AppSecret     string `json:"app_secret"`
 	BaseCurrency  string `json:"base_currency"`
@@ -95,6 +96,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, healthResponse{
 		Status:        "ok",
+		Version:       s.deps.Version,
 		SchemaVersion: version,
 		AppSecret:     s.deps.Sealer.Fingerprint(),
 		BaseCurrency:  s.deps.BaseCurrency,
