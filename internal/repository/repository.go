@@ -87,6 +87,16 @@ type Recurring interface {
 	) (bool, error)
 }
 
+// Exporter reads whole tables for the export document: no filter, no cursor and
+// no limit. Paging a table that is ordered by something other than id drops the
+// rows behind the cursor, and a single user's ledger fits in memory anyway.
+type Exporter interface {
+	AllAccounts(ctx context.Context) ([]entity.Account, error)
+	AllPayees(ctx context.Context) ([]entity.Payee, error)
+	AllCaptures(ctx context.Context) ([]entity.Capture, error)
+	AllRecurring(ctx context.Context) ([]entity.Recurring, error)
+}
+
 type RateSource interface {
 	Daily(ctx context.Context) ([]entity.Rate, error)
 }

@@ -1,11 +1,18 @@
 package export
 
 import (
+	"archive/zip"
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
 func TestEncodedExportIsByteIdenticalForTheSameData(t *testing.T) {
@@ -64,6 +71,227 @@ func TestJSONEnvelopeKeepsItsKeyOrder(t *testing.T) {
 	}
 }
 
+func TestExportCarriesEveryRowPastOnePage(t *testing.T) {
+	t.Parallel()
+
+	store := exportedStore(t)
+
+	deps := Deps{
+		Ledger:        store,
+		Exporter:      store,
+		CustomQueries: store,
+		Rates:         store,
+		System:        store,
+		Clock:         fixedClock{at: time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)},
+		BaseCurrency:  "IDR",
+	}
+
+	t.Run("json", func(t *testing.T) {
+		document := exportedJSON(t, deps)
+
+		var decoded struct {
+			Accounts  []json.RawMessage `json:"accounts"`
+			Payees    []json.RawMessage `json:"payees"`
+			Captures  []json.RawMessage `json:"captures"`
+			Recurring []json.RawMessage `json:"recurring"`
+		}
+
+		if err := json.Unmarshal(document, &decoded); err != nil {
+			t.Fatalf("decode export: %v", err)
+		}
+
+		counts := map[string]int{
+			"accounts":  len(decoded.Accounts),
+			"payees":    len(decoded.Payees),
+			"captures":  len(decoded.Captures),
+			"recurring": len(decoded.Recurring),
+		}
+
+		for name, rows := range counts {
+			if rows != exportedRows {
+				t.Fatalf("%s carries %d rows, want %d", name, rows, exportedRows)
+			}
+		}
+	})
+
+	t.Run("csv", func(t *testing.T) {
+		counts := manifestRows(t, exportedArchive(t, deps))
+
+		for _, name := range []string{"accounts.csv", "payees.csv", "captures.csv", "recurring.csv"} {
+			if counts[name] != exportedRows {
+				t.Fatalf("%s carries %d rows, want %d", name, counts[name], exportedRows)
+			}
+		}
+	})
+}
+
+func exportedJSON(t *testing.T, deps Deps) []byte {
+	t.Helper()
+
+	body, err := JSON(t.Context(), deps)
+	if err != nil {
+		t.Fatalf("json export: %v", err)
+	}
+
+	document, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("read json export: %v", err)
+	}
+
+	if err := body.Close(); err != nil {
+		t.Fatalf("close json export: %v", err)
+	}
+
+	return document
+}
+
+func exportedArchive(t *testing.T, deps Deps) []byte {
+	t.Helper()
+
+	body, err := CSV(t.Context(), deps)
+	if err != nil {
+		t.Fatalf("csv export: %v", err)
+	}
+
+	archive, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("read csv export: %v", err)
+	}
+
+	if err := body.Close(); err != nil {
+		t.Fatalf("close csv export: %v", err)
+	}
+
+	return archive
+}
+
+func manifestRows(t *testing.T, archive []byte) map[string]int {
+	t.Helper()
+
+	reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
+	if err != nil {
+		t.Fatalf("read archive: %v", err)
+	}
+
+	for _, file := range reader.File {
+		if file.Name != manifestName {
+			continue
+		}
+
+		body, err := file.Open()
+		if err != nil {
+			t.Fatalf("open manifest: %v", err)
+		}
+
+		payload, err := io.ReadAll(body)
+		_ = body.Close()
+
+		if err != nil {
+			t.Fatalf("read manifest: %v", err)
+		}
+
+		var manifest manifestDocument
+		if err := json.Unmarshal(payload, &manifest); err != nil {
+			t.Fatalf("decode manifest: %v", err)
+		}
+
+		counts := make(map[string]int, len(manifest.Files))
+
+		for _, entry := range manifest.Files {
+			counts[entry.Name] = entry.Rows
+		}
+
+		return counts
+	}
+
+	t.Fatal("the archive carries no manifest.json")
+
+	return nil
+}
+
+func exportedStore(t *testing.T) *sqlite.Store {
+	t.Helper()
+
+	ctx := t.Context()
+
+	db, err := sqlite.Open(ctx, sqlite.Config{Path: filepath.Join(t.TempDir(), "export.db")})
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+
+	t.Cleanup(func() { _ = db.Close() })
+
+	if err := sqlite.Migrate(ctx, db); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	store := sqlite.NewStore(db)
+
+	seedExportedRows(t, store)
+
+	return store
+}
+
+func seedExportedRows(t *testing.T, store *sqlite.Store) {
+	t.Helper()
+
+	ctx := t.Context()
+	start := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	accounts := make([]entity.Account, 0, exportedRows)
+
+	for i := range exportedRows {
+		account, err := store.CreateAccount(ctx, fmt.Sprintf("Account %03d", i), "expense", "IDR")
+		if err != nil {
+			t.Fatalf("create account %d: %v", i, err)
+		}
+
+		accounts = append(accounts, account)
+	}
+
+	payees := make([]entity.Payee, 0, exportedRows)
+
+	for i := range exportedRows {
+		payee, err := store.CreatePayee(ctx, entity.Payee{Name: fmt.Sprintf("Payee %03d", i)})
+		if err != nil {
+			t.Fatalf("create payee %d: %v", i, err)
+		}
+
+		payees = append(payees, payee)
+	}
+
+	for i := range exportedRows {
+		if _, err := store.InsertCapture(ctx, entity.Capture{
+			Kind:       constant.CaptureKindShare,
+			Status:     constant.CaptureStatusPending,
+			DedupeKey:  fmt.Sprintf("dedupe-%03d", i),
+			ReceivedAt: start.Add(time.Duration(i) * time.Minute),
+		}); err != nil {
+			t.Fatalf("insert capture %d: %v", i, err)
+		}
+	}
+
+	for i := range exportedRows {
+		if _, err := store.CreateRecurring(ctx, entity.Recurring{
+			PayeeRef:         payees[i].Ref,
+			AccountRef:       accounts[i].Ref,
+			AmountMinor:      int64(1_000 + i),
+			Currency:         "IDR",
+			Cadence:          constant.RecurringCadenceMonthly,
+			IntervalN:        1,
+			NextDueOn:        start.AddDate(0, 0, i),
+			BusinessDayShift: constant.ShiftNone,
+			State:            constant.RecurringStateActive,
+		}); err != nil {
+			t.Fatalf("create recurring %d: %v", i, err)
+		}
+	}
+}
+
+type fixedClock struct{ at time.Time }
+
+func (c fixedClock) Now() time.Time { return c.at }
+
 func encodeDocument(t *testing.T, snap *snapshot) []byte {
 	t.Helper()
 
@@ -120,6 +348,8 @@ func ptr(value int64) *int64 {
 }
 
 const (
+	exportedRows = 250
+
 	refA = "00000000000000000000000000000001"
 	refB = "00000000000000000000000000000002"
 	refC = "00000000000000000000000000000003"

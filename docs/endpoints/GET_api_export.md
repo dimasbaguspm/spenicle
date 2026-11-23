@@ -15,9 +15,10 @@ A backup before an upgrade, a spreadsheet, or the import half of the next slice.
 
 ## Downstream
 
-Every read model, paged: `ListAccounts`, `ListPayees`, `ListEntries` (with its
-postings), `ListCaptures`, `ListRecurring`, `ListRates` and `ListCustomQueries`, plus
-`SchemaVersion`. Nothing writes.
+Every read model: `AllAccounts`, `AllPayees`, `AllCaptures` and `AllRecurring` read
+their whole table ordered by id, `ListEntries` (with its postings) pages through
+`id DESC`, and `ListRates` plus `ListCustomQueries` read whole, with `SchemaVersion`
+first. Nothing writes.
 
 ## Path / query params
 
@@ -75,17 +76,14 @@ never sent.
 - The whole document is gathered before the first byte leaves, so a failing read
   answers `500` instead of a truncated `200`. The JSON body is then streamed through
   a pipe; the zip is built in memory because `manifest.json` hashes every sheet.
-- Lists come from the same cursor pages the API serves, and each list is written
-  sorted: by ref, by `occurred_on` then ref for entries, by `on_date`, `base`,
-  `quote` for rates. `exported_at` is the only field that differs between two
-  exports of the same data, and a zeroed zip modtime keeps the archive
+- Lists are written sorted: by ref, by `occurred_on` then ref for entries, by
+  `on_date`, `base`, `quote` for rates. `exported_at` is the only field that differs
+  between two exports of the same data, and a zeroed zip modtime keeps the archive
   byte-identical for identical data.
-- A list longer than one page (200 rows) is only guaranteed complete for entries:
-  that is the one list whose store order (`id DESC`) matches its cursor (`id <`).
-  Accounts (`kind, name, id`), payees (`name, id`), recurring (`next_due_on, id`) and
-  captures (status bucket, `received_at, id`) order by something else, so truncating
-  such a page can skip a row that the next page never reaches. A personal ledger sits
-  far below that ceiling; a bigger one needs an `id`-ordered list on the store first.
+- Every table is read whole, ordered by `id` (`entries` newest first), with no page
+  and no cursor, so the document is complete however many rows the ledger holds.
+  Only `entries` still goes through its cursor page, whose store order already
+  matches the cursor, so no row is skipped.
 - `rates.csv` only holds what this database fetched; an export is not a rate
   archive, and an import is expected to refetch.
 - Captures travel without their text, draft or artifact: an export is metadata for
@@ -102,7 +100,7 @@ sequenceDiagram
     participant DB as SQLite
     C->>H: GET /api/export?format=json|csv
     H->>M: JSON(deps) or CSV(deps)
-    M->>DB: paged lists, schema version
+    M->>DB: whole-table reads, paged entries, schema version
     alt a read fails
         DB-->>M: error
         M-->>H: error

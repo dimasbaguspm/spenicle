@@ -38,11 +38,11 @@ func collect(ctx context.Context, deps Deps) (*snapshot, error) {
 		baseCurrency:  deps.BaseCurrency,
 	}
 
-	if out.accounts, err = listAccounts(ctx, deps.Accounts); err != nil {
+	if out.accounts, err = deps.Exporter.AllAccounts(ctx); err != nil {
 		return nil, err
 	}
 
-	if out.payees, err = listPayees(ctx, deps.Payees); err != nil {
+	if out.payees, err = deps.Exporter.AllPayees(ctx); err != nil {
 		return nil, err
 	}
 
@@ -50,11 +50,11 @@ func collect(ctx context.Context, deps Deps) (*snapshot, error) {
 		return nil, err
 	}
 
-	if out.captures, err = listCaptures(ctx, deps.Captures); err != nil {
+	if out.captures, err = deps.Exporter.AllCaptures(ctx); err != nil {
 		return nil, err
 	}
 
-	if out.recurring, err = listRecurring(ctx, deps.Recurring); err != nil {
+	if out.recurring, err = deps.Exporter.AllRecurring(ctx); err != nil {
 		return nil, err
 	}
 
@@ -154,32 +154,8 @@ func paginate[T any](
 	}
 }
 
-func listAccounts(ctx context.Context, store repository.Accounts) ([]entity.Account, error) {
-	return paginate(func(cursor string) ([]entity.Account, error) {
-		return store.ListAccounts(ctx, entity.AccountFilter{Cursor: cursor, Limit: pageLimit})
-	}, func(account entity.Account) string { return account.Ref })
-}
-
-func listPayees(ctx context.Context, store repository.Payees) ([]entity.Payee, error) {
-	return paginate(func(cursor string) ([]entity.Payee, error) {
-		return store.ListPayees(ctx, entity.PayeeFilter{Cursor: cursor, Limit: pageLimit})
-	}, func(payee entity.Payee) string { return payee.Ref })
-}
-
 func listEntries(ctx context.Context, store repository.Ledger) ([]entity.Entry, error) {
 	return paginate(func(cursor string) ([]entity.Entry, error) {
 		return store.ListEntries(ctx, entity.EntryFilter{Cursor: cursor, Limit: pageLimit})
 	}, func(entry entity.Entry) string { return entry.Ref })
-}
-
-func listCaptures(ctx context.Context, store repository.Captures) ([]entity.Capture, error) {
-	return paginate(func(cursor string) ([]entity.Capture, error) {
-		return store.ListCaptures(ctx, entity.CaptureFilter{Cursor: cursor, Limit: pageLimit})
-	}, func(capture entity.Capture) string { return capture.Ref })
-}
-
-func listRecurring(ctx context.Context, store repository.Recurring) ([]entity.Recurring, error) {
-	return paginate(func(cursor string) ([]entity.Recurring, error) {
-		return store.ListRecurring(ctx, entity.RecurringFilter{Cursor: cursor, Limit: pageLimit})
-	}, func(rule entity.Recurring) string { return rule.Ref })
 }

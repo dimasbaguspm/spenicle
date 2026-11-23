@@ -20,10 +20,7 @@ type TimeSource interface{ Now() time.Time }
 
 type Deps struct {
 	Ledger        repository.Ledger
-	Captures      repository.Captures
-	Accounts      repository.Accounts
-	Payees        repository.Payees
-	Recurring     repository.Recurring
+	Exporter      repository.Exporter
 	CustomQueries repository.CustomQueries
 	Rates         repository.RateStore
 	System        repository.System

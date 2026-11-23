@@ -372,10 +372,7 @@ func (w *world) boot(ctx context.Context) error {
 		CustomQueries: store,
 		Export: export.Deps{
 			Ledger:        store,
-			Captures:      store,
-			Accounts:      store,
-			Payees:        store,
-			Recurring:     store,
+			Exporter:      store,
 			CustomQueries: store,
 			Rates:         store,
 			System:        store,

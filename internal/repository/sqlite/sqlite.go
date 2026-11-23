@@ -56,4 +56,5 @@ var (
 	_ repository.Analytics     = (*Store)(nil)
 	_ repository.Artifacts     = (*Store)(nil)
 	_ repository.CustomQueries = (*Store)(nil)
+	_ repository.Exporter      = (*Store)(nil)
 )

@@ -212,10 +212,7 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		ArtifactFiles: process.Artifacts,
 		Export: export.Deps{
 			Ledger:        store,
-			Captures:      store,
-			Accounts:      store,
-			Payees:        store,
-			Recurring:     store,
+			Exporter:      store,
 			CustomQueries: store,
 			Rates:         store,
 			System:        store,
