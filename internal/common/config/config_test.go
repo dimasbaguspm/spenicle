@@ -92,6 +92,10 @@ func TestLoadReadsEnvironment(t *testing.T) {
 		t.Fatalf("db path = %q, want %q", cfg.DBPath, want)
 	}
 
+	if want := filepath.Join(dataDir, config.DefaultArtifactDirName); cfg.ArtifactDir != want {
+		t.Fatalf("artifact dir = %q, want %q", cfg.ArtifactDir, want)
+	}
+
 	if !cfg.Sealed() {
 		t.Fatal("APP_SECRET is set, Sealed must be true")
 	}

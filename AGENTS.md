@@ -33,7 +33,7 @@ the document wins until you change the document too.
    currency is a property of one transaction, never of an account.
 6. **Capture ≠ ledger.** A capture never writes a ledger entry on its own. Approval does.
 7. **One container, two supervised processes, one SQLite file.** `spenicle http` is
-   the only listener, `spenicle worker` only posts due rules, and s6-overlay in the
+   the only listener, `spenicle worker` only posts due rules, and runit in the
    image supervises both. No Postgres, no Redis, no queue, no sidecar: adding
    infrastructure needs a design-doc change first.
 
@@ -46,8 +46,8 @@ cmd/http/              package httpcmd: `spenicle http`, the handler graph, the 
 cmd/http/handlers/     `Server`: one file per endpoint group, no route, no middleware
 cmd/worker/            package workercmd: `spenicle worker`, the recurring loop
 cmd/worker/handlers/   `Runner`: the recurring rules, the catch-up cap and the heartbeat
-config/s6/s6-rc.d/     the two longrun services s6-overlay starts in the image
-uat/                   godog suite: uat.go, steps.go, world.go, features/
+config/runit/          the two runit services the image supervises: run + finish each
+uat/                   godog suite: uat.go, steps_*.go, world_*.go, snapshot*.go, features/
 internal/common/       no business logic: config (also the process graph), clock, seal,
                        otel, httpx, uuid, binding, validating, list
 internal/constant/     every fixed value shared by more than one package
@@ -335,6 +335,13 @@ reason in the MR, not a `go get`.
   `the response JSON matches the snapshot "..."`), so a new endpoint usually needs no
   new step. `{{account:Cash}}`, `{{ref}}` and `{{bodyhash}}` expand from the scenario
   so far.
+- The suite is one `uat` package split by topic: `steps.go` wires every regex,
+  `steps_requests.go`, `steps_responses.go`, `steps_fixtures.go`, `steps_snapshots.go`,
+  `steps_vendors.go`, `steps_worker.go`, `steps_exports.go`, `steps_imports.go` and
+  `steps_boot.go` hold the steps, `world.go` the scenario state,
+  `world_boot.go`, `world_graph.go`, `world_http.go`, `world_database.go` and
+  `world_worker.go` its plumbing, and `snapshot.go`, `snapshot_compare.go` and
+  `snapshot_export.go` the snapshot machinery.
 - Every response is asserted as a whole body — there is no field-path step — and the
   status step carries the intent. The compare runs the contract invariants over the
   body first (no `id` key, 32-hex refs, money as strings), so a snapshot cannot bless
@@ -346,7 +353,7 @@ reason in the MR, not a `go get`.
   normalised. A missing snapshot is written and fails the step;
   `UAT_UPDATE_SNAPSHOTS=1` (`make uat-snapshots`) rewrites them on purpose.
 - Fixtures reach states no request can: `the database is cleared` (children first, see
-  `clearOrder` in `uat/world.go`), `the local cache is cleared` (the rates cache, so
+  `clearOrder` in `uat/world_database.go`), `the local cache is cleared` (the rates cache, so
   the next read proves the database fallback), `the connection is broken` (the store
   is closed, so the next call must answer `500 internal_error` with the generic message
   `internal error`, plus `the failure is logged`, `the store holds:` for row counts and
@@ -383,7 +390,7 @@ reason in the MR, not a `go get`.
   commands own their wiring and are not importable as a composition root. It imports
   only the HTTP surface (`httpcmd.New` — route table plus middleware) and the worker's
   `cmd/worker/handlers.New`. Adding a dependency to `config.Start` means adding it to
-  `uat/world.go` too. Seeds, schema and first-boot settings live in the adapter
+  `uat/world_graph.go` too. Seeds, schema and first-boot settings live in the adapter
   (`sqlite.EnsureBaseline`), not in a module.
 
 ## Where the rest lives
@@ -445,9 +452,15 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
 ## Known traps
 
 - `docker run` as uid `10001`: use a **named volume** (`-v spenicle-data:/data`). A bind
-  mount needs `chown -R 10001:10001 ./data` first. PID 1 is s6-overlay as root; the two
-  services drop to `10001` through `s6-setuidgid`, so a file written by one is the same
-  owner for the other.
+  mount needs `chown -R 10001:10001 ./data` first. PID 1 is `runsvdir` as root; the two
+  services drop to `10001` through `chpst`, so a file written by one is the same owner
+  for the other.
+- `sv` is the supervisor's handle, not `docker stop`: `docker exec <c> sv status
+  /etc/service/spenicle-http /etc/service/spenicle-worker` answers `run:` or `down:`,
+  `sv restart spenicle-worker` restarts one process while the other keeps serving, and a
+  `down` file in the service dir keeps it stopped across a restart. The worker opens no
+  port, so it ignores `ADDR`; a `docker stop` is a clean exit because runit forwards the
+  signal and waits for both processes.
 - The telemetry flush uses `context.WithoutCancel`; the signal that stops the process
   already cancelled the root context, and without this the last span batch is lost.
 - `golangci-lint` `dupword --fix` has silently eaten SQL (`NULL` removed from a

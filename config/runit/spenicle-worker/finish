@@ -1,2 +1,2 @@
-#!/command/with-contenv sh
+#!/bin/sh
 echo "spenicle-worker exited with ${1}"

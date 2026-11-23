@@ -1,7 +1,6 @@
 package uat
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -9,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -157,155 +155,4 @@ func tableColumns(ctx context.Context, db *sql.DB, table string) ([]string, erro
 	sort.Strings(columns)
 
 	return columns, nil
-}
-
-func compareSnapshot(path string, actual any) error {
-	var buffer bytes.Buffer
-
-	encoder := json.NewEncoder(&buffer)
-	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "  ")
-
-	if err := encoder.Encode(actual); err != nil {
-		return fmt.Errorf("encode snapshot: %w", err)
-	}
-
-	rendered := buffer.Bytes()
-
-	expected, readErr := os.ReadFile(path)
-	if readErr == nil && !updatingSnapshots() {
-		if bytes.Equal(expected, rendered) {
-			return nil
-		}
-
-		return fmt.Errorf("snapshot %s differs\n--- want\n%s\n--- got\n%s", path, expected, rendered)
-	}
-
-	if readErr != nil && !os.IsNotExist(readErr) {
-		return fmt.Errorf("read snapshot %s: %w", path, readErr)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(path), snapshotDirPerm); err != nil {
-		return fmt.Errorf("create snapshot dir: %w", err)
-	}
-
-	//nolint:forbidigo // golden files are repository content, not DATA_DIR artifacts
-	if err := os.WriteFile(path, rendered, 0o600); err != nil {
-		return fmt.Errorf("write snapshot %s: %w", path, err)
-	}
-
-	if readErr != nil && !updatingSnapshots() {
-		return fmt.Errorf("snapshot %s did not exist and was written; review it and re-run", path)
-	}
-
-	return nil
-}
-
-func updatingSnapshots() bool {
-	//nolint:forbidigo // a test toggle, read here on purpose; not application configuration
-	value := strings.ToLower(strings.TrimSpace(os.Getenv(snapshotEnv)))
-
-	return value != "" && value != "0" && value != "false"
-}
-
-func normalise(value any) any {
-	switch typed := value.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(typed))
-
-		for key, inner := range typed {
-			switch key {
-			case "version":
-				out[key] = "<version>"
-			case "app_secret":
-				out[key] = "<fingerprint>"
-			default:
-				out[key] = normalise(inner)
-			}
-		}
-
-		return out
-	case []any:
-		out := make([]any, len(typed))
-		for index, inner := range typed {
-			out[index] = normalise(inner)
-		}
-
-		return out
-	case string:
-		return normaliseString(typed)
-	default:
-		return value
-	}
-}
-
-func normaliseString(value string) string {
-	if timestampPattern.MatchString(value) {
-		return "<timestamp>"
-	}
-
-	if strings.HasPrefix(value, "v1:") {
-		return "<sealed>"
-	}
-
-	if refPattern.MatchString(value) {
-		return "<ref>"
-	}
-
-	return refInText.ReplaceAllString(value, "${1}<ref>${3}")
-}
-
-func (w *world) assertExportSnapshot(name string) error {
-	var document any
-	if err := json.Unmarshal(w.body, &document); err != nil {
-		return fmt.Errorf("the export is not JSON (%q): %w", preview(string(w.body)), err)
-	}
-
-	if err := walkContract("$", document); err != nil {
-		return err
-	}
-
-	return compareSnapshot(filepath.Join(snapshotRoot, "api", name+".json"),
-		sortedArrays(normalise(document)))
-}
-
-func sortedArrays(value any) any {
-	switch typed := value.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(typed))
-
-		for key, inner := range typed {
-			out[key] = sortedArrays(inner)
-		}
-
-		return out
-	case []any:
-		out := make([]any, len(typed))
-
-		for index, inner := range typed {
-			out[index] = sortedArrays(inner)
-		}
-
-		sort.SliceStable(out, func(left, right int) bool {
-			return fmt.Sprintf("%v", out[left]) < fmt.Sprintf("%v", out[right])
-		})
-
-		return out
-	default:
-		return value
-	}
-}
-
-func (w *world) assertExportSummarySnapshot(name string) error {
-	value, err := w.exportSummary()
-	if err != nil {
-		return err
-	}
-
-	if err := walkContract("$.summary", value); err != nil {
-		return err
-	}
-
-	return compareSnapshot(filepath.Join(snapshotRoot, "api", name+".json"),
-		sortedArrays(normalise(value)))
 }

@@ -116,11 +116,11 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	defer endSpan()
 
 	cfg := Defaults()
-	cfg.ArtifactDir = filepath.Join(cfg.DataDir, DefaultArtifactDirName)
-
 	cfg.Addr = env(EnvAddr, cfg.Addr)
 	cfg.DataDir = env(EnvDataDir, cfg.DataDir)
 	cfg.DBPath = filepath.Join(cfg.DataDir, DefaultDBFile)
+	cfg.ArtifactDir = filepath.Join(cfg.DataDir, DefaultArtifactDirName)
+
 	cfg.AppSecret = os.Getenv(EnvAppSecret)
 	cfg.SnapToJSONAPIKey = os.Getenv(EnvSnapToJSONAPIKey)
 	cfg.SnapToJSONEndpoint = env(EnvSnapToJSONEndpoint, cfg.SnapToJSONEndpoint)

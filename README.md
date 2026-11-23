@@ -37,8 +37,9 @@ the generated first password once — sign in with it and pick your own.
 
 The image runs two supervised processes from the same environment: `spenicle http`
 (the API, the only listener, on `ADDR`) and `spenicle worker` (the due recurring
-rules, no port, so it ignores `ADDR`). Inside the container `s6-svstat
-/run/service/spenicle-worker` reports either one and `s6-svc -d` stops it alone. A
+rules, no port, so it ignores `ADDR`). Inside the container `sv status
+/etc/service/spenicle-worker` reports either one, `sv restart spenicle-worker` restarts
+it alone and a `down` file next to its `run` script keeps it stopped. A
 one-shot debug run skips supervision: `docker run --rm --entrypoint /spenicle -e
 APP_SECRET=… <image> worker`.
 
@@ -61,8 +62,8 @@ volumes:
   spenicle-data:
 ```
 
-The container starts s6-overlay as root (that is what supervises the two services) and
-both services drop to uid `10001`. A **named volume** (above) inherits the
+The container starts `runsvdir` as root (that is what supervises the two services) and
+both run scripts drop to uid `10001` through `chpst`. A **named volume** (above) inherits the
 right ownership automatically. If you prefer a bind mount for easier backups, give the
 host directory to that uid first:
 

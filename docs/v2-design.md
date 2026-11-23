@@ -42,9 +42,9 @@ cmd/http/             httpcmd: the API composition root, the route table and the
 cmd/http/handlers/    one file per endpoint group; no route table, no middleware
 cmd/worker/           workercmd: the worker composition root and the recurring loop
 cmd/worker/handlers/  the recurring rules the worker posts
-config/s6/s6-rc.d/    the two longrun services s6-overlay supervises in the image
+config/runit/         the two runit services the image supervises
 internal/common/httpx/ recovery, tracing, request logging
-uat/                  Gherkin suite: uat.go (entry point), steps.go, world.go, features/
+uat/                  Gherkin suite: uat.go (entry point), steps_*.go, world_*.go, snapshot*.go, features/
 internal/common/      utilities with no business logic: config, clock, seal, otel, httpx
 internal/constant/    every fixed value shared by more than one package
 internal/entity/      shared structs and the invariants that must hold forever

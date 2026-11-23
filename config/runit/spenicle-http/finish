@@ -1,2 +1,2 @@
-#!/command/with-contenv sh
+#!/bin/sh
 echo "spenicle-http exited with ${1}"
