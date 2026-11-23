@@ -1,0 +1,158 @@
+name: release
+
+# Two ways in:
+#   - push a tag:  git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0
+#   - dispatch:    Actions > release > Run workflow, type v0.1.0
+# The dispatched path creates the tag itself, so a release is one click.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag to create and release, e.g. v0.1.0'
+        required: true
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: build, publish, announce
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve version
+        id: v
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            VERSION="$INPUT_VERSION"
+            case "$VERSION" in
+              v[0-9]*.[0-9]*.[0-9]*) ;;
+              *) echo "version must look like v1.2.3, got '$VERSION'" >&2; exit 1 ;;
+            esac
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$VERSION" -m "release $VERSION"
+            git push origin "$VERSION"
+          else
+            VERSION="${GITHUB_REF_NAME}"
+          fi
+
+          SHA7="$(git rev-parse --short=7 HEAD)"
+
+          {
+            echo "version=$VERSION"
+            echo "short=${VERSION#v}"
+            echo "sha7=$SHA7"
+            echo "full=${VERSION}+${SHA7}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "releasing $VERSION at $SHA7"
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build binaries
+        env:
+          VERSION: ${{ steps.v.outputs.full }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          for target in linux/amd64 linux/arm64 darwin/arm64; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            name="spenicle_${os}_${arch}"
+
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build \
+              -trimpath \
+              -ldflags "-s -w -X main.version=${VERSION}" \
+              -o "dist/${name}" ./cmd/spenicle
+
+            tar -C dist -czf "dist/${name}.tar.gz" "$name"
+            rm "dist/${name}"
+          done
+
+          (cd dist && sha256sum ./*.tar.gz > checksums.txt)
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            VERSION=${{ steps.v.outputs.full }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.v.outputs.version }}
+            ghcr.io/${{ github.repository }}:${{ steps.v.outputs.short }}
+            ghcr.io/${{ github.repository }}:sha-${{ steps.v.outputs.sha7 }}
+            ghcr.io/${{ github.repository }}:latest
+          labels: |
+            org.opencontainers.image.version=${{ steps.v.outputs.full }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Collect the changes
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          FULL: ${{ steps.v.outputs.full }}
+          SHA7: ${{ steps.v.outputs.sha7 }}
+        run: |
+          set -euo pipefail
+
+          prev="$(git describe --tags --abbrev=0 "${VERSION}^" 2>/dev/null || true)"
+          if [ -n "$prev" ]; then
+            range="${prev}..${VERSION}"
+            heading="Changes since ${prev}"
+          else
+            range="${VERSION}"
+            heading="Every commit up to ${VERSION}"
+          fi
+
+          {
+            echo "### ${heading}"
+            echo
+            git log --no-merges --pretty='- `%h` %s' "$range"
+            echo
+            echo "### Artifacts"
+            echo
+            echo "- Image: \`ghcr.io/${GITHUB_REPOSITORY}:${VERSION}\`"
+            echo "- Version inside the binary: \`${FULL}\`"
+            echo "- Commit: \`${SHA7}\`"
+          } > notes.md
+
+          cat notes.md
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          gh release create "$VERSION" \
+            dist/*.tar.gz dist/checksums.txt \
+            --title "$VERSION" \
+            --notes-file notes.md
