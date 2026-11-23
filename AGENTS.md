@@ -41,7 +41,7 @@ uat/                   godog suite: uat.go, steps.go, world.go, features/
 internal/common/       no business logic: config, clock, seal, otel, httpx
 internal/constant/     every fixed value shared by more than one package
 internal/entity/       shared structs + invariants; imports stdlib + constant only
-internal/module/       business logic: ledger, captures
+internal/module/       business logic: ledger, captures, settings
 internal/repository/   contracts, plus the adapters: sqlite, snaptojson
 ```
 
@@ -88,8 +88,6 @@ Un-prefixed, all optional except `PASSWORD` in practice:
 |---|---|---|
 | `DATA_DIR` | `./data` | SQLite file and artifacts live here |
 | `ADDR` | `:8080` | listen address |
-| `BASE_CURRENCY` | `IDR` | locked at first boot |
-| `PASSWORD` | — | single user's password |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals sensitive columns, identifies the database |
 | `SNAPTOJSON_API_KEY` | — | enables the SnapToJSON extraction vendor; unset = manual entry |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override for a proxy or a staging account |
@@ -102,7 +100,13 @@ a fresh database (delete `spenicle.db`; the next boot migrates and seeds it). Th
 sealed capture payloads are unrecoverable without the old key; the ledger is
 plaintext and survives either way.
 
-Only these eight are environment variables. **Every other knob — DB path, HTTP
+The base currency and the login password are **not** environment variables: they are
+the sealed JSON row in `settings` (`entity.Settings`), owned by `module/settings`. A
+fresh boot generates the first password, prints it once, and requires a change after
+the first sign-in. The base currency is editable while the ledger is empty and locked
+after the first entry.
+
+Only these six are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 name (also the tracer name) — has its default in `internal/common/config/config.go`**, and the
 resulting value object is `entity.AppConfig`. No viper, on purpose: seven variables

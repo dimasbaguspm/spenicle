@@ -19,14 +19,3 @@ Feature: Health
     When I send a GET to "/nope"
     Then the response status is 404
     And the response JSON at "$.error.code" is "not_found"
-
-  Scenario: The base currency cannot be changed after it is locked
-    Given the base currency is "USD"
-    And a running API
-    When I send a POST to "/api/entries" with:
-      """json
-      {"occurred_on":"2025-09-14","currency":"USD","postings":[{"account_id":1,"amount_minor":"100"},{"account_id":2,"amount_minor":"-100"}]}
-      """
-    Then the response status is 201
-    And the response JSON at "$.postings[0].base_amount_minor" is "100"
-    And the response JSON at "$.postings[0].fx_source" is "identity"

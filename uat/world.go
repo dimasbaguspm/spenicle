@@ -22,6 +22,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
+	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -114,7 +115,14 @@ func (w *world) boot(ctx context.Context) error {
 	clockSystem := clock.System{}
 	limits := config.Defaults()
 
-	ledgerService := ledger.New(store, store, clockSystem, clockSystem)
+	settingsService := settings.New(store, sealer, clockSystem)
+	if _, settingsErr := settingsService.EnsureInitial(ctx, ""); settingsErr != nil {
+		_ = store.Close(ctx)
+
+		return fmt.Errorf("settings: %w", settingsErr)
+	}
+
+	ledgerService := ledger.New(store, settingsService, clockSystem, clockSystem)
 
 	w.store = store
 	w.server = httptest.NewServer(handlers.New(handlers.Deps{
@@ -122,6 +130,7 @@ func (w *world) boot(ctx context.Context) error {
 		Captures:      captures.New(store, ledgerService, sealer, nil, clockSystem, clockSystem),
 		Accounts:      store,
 		Health:        store,
+		Settings:      settingsService,
 		Sealer:        sealer,
 		BaseCurrency:  baseCurrency,
 		Version:       "uat",

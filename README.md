@@ -68,7 +68,6 @@ sudo chown -R 10001:10001 ./data
 | var | default | meaning |
 | --- | --- | --- |
 | `DATA_DIR` | `/data` | SQLite file and `raw/` artifacts |
-| `PASSWORD` | unset | enables the login screen; unset means open on your LAN |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals capture payloads, artifacts and cookies |
 | `SNAPTOJSON_API_KEY` | unset | enables receipt/statement extraction through SnapToJSON |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | OTLP/HTTP collector; HTTPS assumed, `http://` for plaintext |
@@ -85,6 +84,12 @@ Every variable is listed with defaults in [`.env.example`](./.env.example); copy
 to `.env` and fill in `APP_SECRET`.
 
 Set `PASSWORD` if the instance is reachable from anywhere except your own bed.
+
+The base currency and the login password are **not** environment variables. They live
+in the app's settings table: a fresh boot generates the first password and prints it
+once, the login screen accepts it, and you are asked to change it. The base currency
+is editable until the first entry exists — after that it is locked, because the
+numbers would stop meaning the same thing.
 
 ## First run
 
@@ -159,6 +164,7 @@ That agent can add captures and read the dashboard. It cannot touch the ledger. 
 
 | symptom | cause |
 | --- | --- |
+| `SNAPTOJSON_API_KEY` env is unset | extraction stays off; captures are typed by hand — set it to enable the vendor |
 | container exits with `app secret mismatch` | `APP_SECRET` differs from the one that sealed this database. Restore the original secret. If it is gone for good, start over: stop the container, delete `spenicle.db`, boot again — the ledger you keep is the one you backed up |
 | `/healthz` returns 503 | database not writable, or secret fingerprint mismatch |
 | captures stay `pending` with no draft | extraction is disabled (no API key); typing the fields works fine |

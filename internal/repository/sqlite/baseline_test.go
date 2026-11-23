@@ -71,18 +71,6 @@ func TestEnsureBaselineIsIdempotent(t *testing.T) {
 	}
 }
 
-func TestEnsureBaselineRefusesToChangeCurrency(t *testing.T) {
-	store := newStore(t)
-
-	if _, err := store.EnsureBaseline(t.Context(), "IDR", "fingerprint-a"); err != nil {
-		t.Fatalf("first baseline: %v", err)
-	}
-
-	if _, err := store.EnsureBaseline(t.Context(), "USD", "fingerprint-a"); err == nil {
-		t.Fatal("changing the base currency must fail")
-	}
-}
-
 func TestEnsureBaselineRefusesForeignSecret(t *testing.T) {
 	store := newStore(t)
 

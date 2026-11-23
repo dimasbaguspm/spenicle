@@ -21,9 +21,14 @@ type Contract interface {
 // Service posts entries to the book of record.
 type Service struct {
 	entries repository.Ledger
-	system  repository.System
+	base    BaseCurrencySource
 	clock   TimeSource
 	ids     IDSource
+}
+
+// BaseCurrencySource is the reporting currency, sourced from settings.
+type BaseCurrencySource interface {
+	BaseCurrency(ctx context.Context) (string, error)
 }
 
 // TimeSource and IDSource are the two ambient dependencies of this module. Both
@@ -34,8 +39,13 @@ type (
 )
 
 // New wires the module.
-func New(entries repository.Ledger, system repository.System, clock TimeSource, ids IDSource) *Service {
-	return &Service{entries: entries, system: system, clock: clock, ids: ids}
+func New(
+	entries repository.Ledger,
+	base BaseCurrencySource,
+	clock TimeSource,
+	ids IDSource,
+) *Service {
+	return &Service{entries: entries, base: base, clock: clock, ids: ids}
 }
 
 var _ Contract = (*Service)(nil)

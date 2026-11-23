@@ -26,42 +26,15 @@ func (s *Store) EnsureBaseline(ctx context.Context, baseCurrency, fingerprint st
 		return "", err
 	}
 
-	locked, err := s.ensureBaseCurrency(ctx, baseCurrency)
-	if err != nil {
-		return "", err
-	}
-
 	if err := s.ensureFingerprint(ctx, fingerprint); err != nil {
 		return "", err
 	}
 
-	if err := s.seedAccounts(ctx, locked); err != nil {
+	if err := s.seedAccounts(ctx, baseCurrency); err != nil {
 		return "", err
 	}
 
-	return locked, nil
-}
-
-// ensureBaseCurrency either claims the currency or insists on the stored one.
-func (s *Store) ensureBaseCurrency(ctx context.Context, baseCurrency string) (string, error) {
-	existing, found, err := s.Setting(ctx, constant.SettingBaseCurrency)
-	if err != nil {
-		return "", err
-	}
-
-	if !found {
-		if err := s.SetSetting(ctx, constant.SettingBaseCurrency, baseCurrency); err != nil {
-			return "", err
-		}
-
-		return baseCurrency, nil
-	}
-
-	if existing != baseCurrency {
-		return "", fmt.Errorf("base currency is already %s and cannot change to %s", existing, baseCurrency)
-	}
-
-	return existing, nil
+	return baseCurrency, nil
 }
 
 // ensureFingerprint refuses to open data sealed with a different secret. There is no

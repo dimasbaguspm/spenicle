@@ -6,7 +6,6 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
-	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
@@ -38,7 +37,7 @@ func (s *server) handleMeta(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Meta.Get")
 	defer endSpan()
 
-	baseCurrency, found, err := s.deps.Health.Setting(ctx, constant.SettingBaseCurrency)
+	appSettings, err := s.deps.Settings.Load(ctx)
 	if err != nil {
 		status, code := classify(err)
 		httpx.WriteError(w, status, code, err.Error())
@@ -46,9 +45,7 @@ func (s *server) handleMeta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !found {
-		baseCurrency = s.deps.BaseCurrency
-	}
+	baseCurrency := appSettings.BaseCurrency
 
 	accounts, err := s.deps.Accounts.ListAccounts(ctx)
 	if err != nil {

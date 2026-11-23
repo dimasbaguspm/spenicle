@@ -10,14 +10,12 @@ package config
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
-	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
@@ -41,10 +39,9 @@ const (
 // are here rather than next to the code that uses them, so one file answers "what
 // does this process do if nobody configures it".
 const (
-	DefaultAddr         = ":8080"
-	DefaultDataDir      = "./data"
-	DefaultDBFile       = "spenicle.db"
-	DefaultBaseCurrency = "IDR"
+	DefaultAddr    = ":8080"
+	DefaultDataDir = "./data"
+	DefaultDBFile  = "spenicle.db"
 
 	// DefaultServiceName is also the tracer name: one identity for spans, metrics
 	// and logs.
@@ -83,7 +80,6 @@ func Defaults() entity.AppConfig {
 		Addr:                     DefaultAddr,
 		DataDir:                  DefaultDataDir,
 		DBPath:                   filepath.Join(DefaultDataDir, DefaultDBFile),
-		BaseCurrency:             DefaultBaseCurrency,
 		SnapToJSONEndpoint:       DefaultSnapToJSONEndpoint,
 		SnapToJSONTimeout:        DefaultSnapToJSONTimeout,
 		ServiceName:              DefaultServiceName,
@@ -111,12 +107,10 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.Addr = env(EnvAddr, cfg.Addr)
 	cfg.DataDir = env(EnvDataDir, cfg.DataDir)
 	cfg.DBPath = filepath.Join(cfg.DataDir, DefaultDBFile)
-	cfg.Password = os.Getenv(EnvPassword)
 	cfg.AppSecret = os.Getenv(EnvAppSecret)
 	cfg.SnapToJSONAPIKey = os.Getenv(EnvSnapToJSONAPIKey)
 	cfg.SnapToJSONEndpoint = env(EnvSnapToJSONEndpoint, cfg.SnapToJSONEndpoint)
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
-	cfg.BaseCurrency = strings.ToUpper(env(EnvBaseCurrency, cfg.BaseCurrency))
 
 	if err := validate(cfg); err != nil {
 		return entity.AppConfig{}, err
@@ -134,10 +128,6 @@ func validate(cfg entity.AppConfig) error {
 
 	if len(cfg.AppSecret) < minSecretBytes {
 		return errors.New("APP_SECRET must be at least 16 bytes")
-	}
-
-	if len(cfg.BaseCurrency) != constant.ISOCodeLength {
-		return fmt.Errorf("BASE_CURRENCY must be an ISO 4217 code, got %q", cfg.BaseCurrency)
 	}
 
 	return nil

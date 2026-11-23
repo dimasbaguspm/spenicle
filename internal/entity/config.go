@@ -17,8 +17,8 @@ type AppConfig struct {
 	// DBPath is already joined from DataDir and the database file name.
 	DBPath string
 
-	// Credentials. AppSecret is mandatory: every sealed column depends on it.
-	Password         string
+	// Credentials. AppSecret is mandatory: every sealed column depends on it. The
+	// user's login password is not configuration: it lives in entity.Settings.
 	AppSecret        string
 	SnapToJSONAPIKey string
 	// SnapToJSONEndpoint is the vendor's partner route. Fixed for now: one API,
@@ -28,8 +28,6 @@ type AppConfig struct {
 	SnapToJSONTimeout time.Duration
 	// OTLPEndpoint is host:port, optionally with a scheme. Empty disables export.
 	OTLPEndpoint string
-	// BaseCurrency is locked at first boot.
-	BaseCurrency string
 
 	// ServiceName is the single reference this process reports under: it becomes
 	// resource.service.name, the tracer name, and the log field. One name, not two

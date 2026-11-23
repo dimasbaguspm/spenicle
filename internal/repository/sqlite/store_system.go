@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
-	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
@@ -71,19 +70,18 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 	return nil
 }
 
-// BaseCurrencyCode returns the locked reporting currency.
-func (s *Store) BaseCurrencyCode(ctx context.Context) (string, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.BaseCurrencyCode")
+// HasEntries reports whether the ledger has anything in it yet. It is what locks the
+// base currency: an empty ledger can still choose one.
+func (s *Store) HasEntries(ctx context.Context) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.HasEntries")
 	defer endSpan()
 
-	v, ok, err := s.Setting(ctx, constant.SettingBaseCurrency)
+	var exists int
+
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ledger_entries)`).Scan(&exists)
 	if err != nil {
-		return "", err
+		return false, fmt.Errorf("has entries: %w", err)
 	}
 
-	if !ok {
-		return "", errors.New("base_currency is not configured")
-	}
-
-	return v, nil
+	return exists == 1, nil
 }

@@ -49,5 +49,7 @@ type System interface {
 	Ping(ctx context.Context) error
 	Setting(ctx context.Context, key string) (string, bool, error)
 	SetSetting(ctx context.Context, key, value string) error
-	BaseCurrencyCode(ctx context.Context) (string, error)
+	// HasEntries reports whether any ledger entry exists. It is what locks the base
+	// currency: an empty ledger can still choose one.
+	HasEntries(ctx context.Context) (bool, error)
 }

@@ -268,28 +268,34 @@ func toEntryResponse(entry entity.Entry) entryResponse {
 	return out
 }
 
-// classify maps domain errors onto HTTP without leaking internals.
+// classify maps domain errors onto HTTP without leaking internals. A table, so a
+// new invariant is one row rather than one more branch.
 func classify(err error) (int, string) {
-	switch {
-	case errors.Is(err, entity.ErrZeroSum):
-		return http.StatusUnprocessableEntity, "postings_not_balanced"
-	case errors.Is(err, entity.ErrInvalidPostings):
-		return http.StatusUnprocessableEntity, "invalid_postings"
-	case errors.Is(err, entity.ErrUnknownCurrency):
-		return http.StatusUnprocessableEntity, "unknown_currency"
-	case errors.Is(err, entity.ErrInvalidRate), errors.Is(err, entity.ErrInvalidAmount):
-		return http.StatusUnprocessableEntity, "invalid_rate"
-	case errors.Is(err, entity.ErrSecretMismatch):
-		return http.StatusConflict, "secret_mismatch"
-	case errors.Is(err, entity.ErrNotFound):
-		return http.StatusNotFound, "not_found"
-	case errors.Is(err, entity.ErrUnknownCaptureKind):
-		return http.StatusUnprocessableEntity, "unknown_capture_kind"
-	case errors.Is(err, entity.ErrCaptureResolved):
-		return http.StatusConflict, "capture_resolved"
-	case errors.Is(err, entity.ErrInvalidState):
-		return http.StatusConflict, "invalid_state"
-	default:
-		return http.StatusInternalServerError, "internal_error"
+	for _, mapping := range errorMappings {
+		if errors.Is(err, mapping.err) {
+			return mapping.status, mapping.code
+		}
 	}
+
+	return http.StatusInternalServerError, "internal_error"
+}
+
+var errorMappings = []struct { //nolint:gochecknoglobals // read-only table
+	err    error
+	status int
+	code   string
+}{
+	{entity.ErrZeroSum, http.StatusUnprocessableEntity, "postings_not_balanced"},
+	{entity.ErrInvalidPostings, http.StatusUnprocessableEntity, "invalid_postings"},
+	{entity.ErrUnknownCurrency, http.StatusUnprocessableEntity, "unknown_currency"},
+	{entity.ErrInvalidRate, http.StatusUnprocessableEntity, "invalid_rate"},
+	{entity.ErrInvalidAmount, http.StatusUnprocessableEntity, "invalid_rate"},
+	{entity.ErrSecretMismatch, http.StatusConflict, "secret_mismatch"},
+	{entity.ErrNotFound, http.StatusNotFound, "not_found"},
+	{entity.ErrUnknownCaptureKind, http.StatusUnprocessableEntity, "unknown_capture_kind"},
+	{entity.ErrCaptureResolved, http.StatusConflict, "capture_resolved"},
+	{entity.ErrInvalidState, http.StatusConflict, "invalid_state"},
+	{entity.ErrPasswordMismatch, http.StatusUnauthorized, "invalid_password"},
+	{entity.ErrWeakPassword, http.StatusUnprocessableEntity, "weak_password"},
+	{entity.ErrBaseCurrencyLocked, http.StatusConflict, "base_currency_locked"},
 }

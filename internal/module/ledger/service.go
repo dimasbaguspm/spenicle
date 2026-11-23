@@ -27,7 +27,7 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 		}
 	}
 
-	baseCode, err := s.system.BaseCurrencyCode(ctx)
+	baseCode, err := s.base.BaseCurrency(ctx)
 	if err != nil {
 		return entity.Entry{}, false, fmt.Errorf("base currency: %w", err)
 	}

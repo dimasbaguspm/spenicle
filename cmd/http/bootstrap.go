@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,6 +15,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
+	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
@@ -56,14 +59,14 @@ func newApp(
 		return nil, fmt.Errorf("migrate: %w", migrateErr)
 	}
 
-	baseCurrency, err := store.EnsureBaseline(ctx, cfg.BaseCurrency, sealer.Fingerprint())
+	extractor, err := buildExtractor(ctx, cfg, logger)
 	if err != nil {
 		_ = store.Close(ctx)
 
-		return nil, fmt.Errorf("baseline: %w", err)
+		return nil, err
 	}
 
-	extractor, err := buildExtractor(ctx, cfg, logger)
+	settingsService, baseCurrency, err := prepare(ctx, store, sealer, logger)
 	if err != nil {
 		_ = store.Close(ctx)
 
@@ -72,7 +75,7 @@ func newApp(
 
 	// clock.System satisfies both the time and the id contract.
 	clockSystem := clock.System{}
-	ledgerService := ledger.New(store, store, clockSystem, clockSystem)
+	ledgerService := ledger.New(store, settingsService, clockSystem, clockSystem)
 
 	return &app{
 		DB:           store.DB(),
@@ -84,6 +87,7 @@ func newApp(
 				store, ledgerService, sealer, extractor, clockSystem, clockSystem,
 			),
 			Accounts:          store,
+			Settings:          settingsService,
 			Health:            store,
 			Sealer:            sealer,
 			BaseCurrency:      baseCurrency,
@@ -105,6 +109,38 @@ func (a *app) Close(ctx context.Context) error {
 	return nil
 }
 
+// prepare seeds settings, prints the first password once and applies the baseline.
+func prepare(
+	ctx context.Context,
+	store *sqlite.Store,
+	sealer seal.Sealer,
+	logger *slog.Logger,
+) (*settings.Service, string, error) {
+	service := settings.New(store, sealer, clock.System{})
+
+	freshPassword, err := generatePassword()
+	if err != nil {
+		return nil, "", err
+	}
+
+	appSettings, err := service.EnsureInitial(ctx, freshPassword)
+	if err != nil {
+		return nil, "", fmt.Errorf("settings: %w", err)
+	}
+
+	if appSettings.PasswordMustChange {
+		logger.WarnContext(ctx, "generated the initial password; change it after the first sign-in",
+			slog.String("password", appSettings.Password))
+	}
+
+	baseCurrency, err := store.EnsureBaseline(ctx, appSettings.BaseCurrency, sealer.Fingerprint())
+	if err != nil {
+		return nil, "", fmt.Errorf("baseline: %w", err)
+	}
+
+	return service, baseCurrency, nil
+}
+
 // buildExtractor returns nil when SNAPTOJSON_API_KEY is unset: no key, no vendor,
 // captures stay raw. A key means one client for the process.
 func buildExtractor(
@@ -124,4 +160,18 @@ func buildExtractor(
 	}
 
 	return extractor, nil
+}
+
+// passwordBytes is long enough to survive being written on paper.
+const passwordBytes = 18
+
+// generatePassword is what a fresh boot prints once: 18 random bytes, url-safe.
+func generatePassword() (string, error) {
+	raw := make([]byte, passwordBytes)
+
+	if _, err := rand.Read(raw); err != nil {
+		return "", fmt.Errorf("entropy: %w", err)
+	}
+
+	return base64.RawURLEncoding.EncodeToString(raw), nil
 }

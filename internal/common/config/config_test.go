@@ -14,11 +14,9 @@ func clearEnv(t *testing.T) {
 	for _, key := range []string{
 		config.EnvAddr,
 		config.EnvDataDir,
-		config.EnvPassword,
 		config.EnvAppSecret,
 		config.EnvSnapToJSONAPIKey,
 		config.EnvOTLPEndpoint,
-		config.EnvBaseCurrency,
 	} {
 		t.Setenv(key, "")
 	}
@@ -44,10 +42,6 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	wantPath := filepath.Join(config.DefaultDataDir, config.DefaultDBFile)
 	if cfg.DBPath != wantPath {
 		t.Fatalf("db path = %q, want %q", cfg.DBPath, wantPath)
-	}
-
-	if cfg.BaseCurrency != config.DefaultBaseCurrency {
-		t.Fatalf("base currency = %q, want %q", cfg.BaseCurrency, config.DefaultBaseCurrency)
 	}
 
 	if cfg.ServiceName != config.DefaultServiceName {
@@ -82,7 +76,6 @@ func TestLoadReadsEnvironment(t *testing.T) {
 
 	t.Setenv(config.EnvAddr, "127.0.0.1:9999")
 	t.Setenv(config.EnvDataDir, dataDir)
-	t.Setenv(config.EnvBaseCurrency, "usd")
 	t.Setenv(config.EnvAppSecret, "0123456789abcdef")
 
 	cfg, err := config.Load(t.Context())
@@ -98,10 +91,6 @@ func TestLoadReadsEnvironment(t *testing.T) {
 		t.Fatalf("db path = %q, want %q", cfg.DBPath, want)
 	}
 
-	if cfg.BaseCurrency != "USD" {
-		t.Fatalf("base currency = %q, want it upper-cased", cfg.BaseCurrency)
-	}
-
 	if !cfg.Sealed() {
 		t.Fatal("APP_SECRET is set, Sealed must be true")
 	}
@@ -109,9 +98,8 @@ func TestLoadReadsEnvironment(t *testing.T) {
 
 func TestLoadRejectsUnusableValues(t *testing.T) {
 	cases := map[string]map[string]string{
-		"missing secret":    {config.EnvAppSecret: ""},
-		"short secret":      {config.EnvAppSecret: "too-short"},
-		"base not ISO 4217": {config.EnvBaseCurrency: "RUPIAH"},
+		"missing secret": {config.EnvAppSecret: ""},
+		"short secret":   {config.EnvAppSecret: "too-short"},
 	}
 
 	for name, env := range cases {

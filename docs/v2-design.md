@@ -22,7 +22,7 @@ place to defer a decision. v2 fixes all three.
 | review | single `captures` queue for every channel |
 | ledger | double-entry: `ledger_entries` + `ledger_postings`, zero-sum per entry |
 | categories | implemented as `accounts` rows with `kind IN ('expense','income')` |
-| base currency | chosen in setup wizard, locked afterwards |
+| base currency | in-app setting (default IDR), locked once the ledger has an entry |
 | currencies | embedded ISO 4217 list, not a table |
 | FX rates | ECB daily EUR reference rates (XML feed), persisted and cached in memory |
 | foreign amounts | a property of the transaction, not of the account |

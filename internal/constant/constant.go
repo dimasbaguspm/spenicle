@@ -60,11 +60,17 @@ const (
 	CaptureStatusFailed     = "failed"
 )
 
-// Settings keys stored in the settings table.
+// Settings keys stored in the settings table. Only two rows: the fingerprint, and
+// the JSON blob the application decodes into entity.Settings.
 const (
-	SettingBaseCurrency      = "base_currency"
+	SettingAppSettings       = "app_settings"
 	SettingSecretFingerprint = "secret_fingerprint"
+	// SettingLegacyBaseCurrency is the pre-JSON row, migrated into app_settings.
+	SettingLegacyBaseCurrency = "base_currency"
 )
+
+// SessionCookie is the cookie name the browser and the tests use.
+const SessionCookie = "spenicle_session"
 
 // Seed accounts created on an empty database.
 const (

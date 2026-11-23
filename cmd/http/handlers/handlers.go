@@ -12,6 +12,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
+	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
 
@@ -19,6 +20,7 @@ import (
 // not constants of this package: they arrive from entity.AppConfig.
 type Deps struct {
 	Ledger            ledger.Contract
+	Settings          settings.Contract
 	Captures          captures.Contract
 	Accounts          repository.Accounts
 	Health            repository.System
@@ -50,6 +52,11 @@ func New(deps Deps) http.Handler {
 
 	mux.HandleFunc("GET /healthz", instance.handleHealth)
 
+	mux.HandleFunc("POST /api/session", instance.handleSession)
+	mux.HandleFunc("GET /api/settings", instance.handleGetSettings)
+	mux.HandleFunc("PATCH /api/settings", instance.handlePatchSettings)
+	mux.HandleFunc("POST /api/password", instance.handlePasswordChange)
+
 	mux.HandleFunc("GET /api/meta", instance.handleMeta)
 
 	mux.HandleFunc("GET /api/entries", instance.handleListEntries)
@@ -62,7 +69,9 @@ func New(deps Deps) http.Handler {
 
 	mux.HandleFunc("/", instance.handleNotFound)
 
-	return middlewares.Chain(mux,
+	// requireSession sits inside the request middleware, outside the routes: one
+	// place decides whether a cookie is needed.
+	return middlewares.Chain(instance.requireSession(mux),
 		middlewares.Recover(deps.Logger),
 		middlewares.Observe(),
 		middlewares.Log(deps.Logger),

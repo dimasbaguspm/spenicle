@@ -24,8 +24,9 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
 | 14 | `PATCH /api/captures/{id}` | partial: `approve`, `reject`, `retry`; `match`/`extracted` next |
 | 21 | `GET /healthz` | live |
-| 1, 2 | `POST /api/setup`, `POST /api/session` | next (auth slice) |
-| 4 | `PATCH /api/settings` | next |
+| 1 | `POST /api/setup` | next (wizard) |
+| 2 | `POST /api/session`, `POST /api/password` | live: cookie session, password rotation |
+| 4 | `GET/PATCH /api/settings` | partial: `base_currency` while the ledger is empty |
 | 5, 6 | accounts create/patch | next |
 | 7, 8 | payees | next |
 | 15, 16 | recurring | next |
@@ -50,7 +51,6 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | env | default | effect |
 | --- | --- | --- |
 | `DATA_DIR` | `/data` | SQLite file and `raw/` artifacts |
-| `PASSWORD` | unset | enables `POST /api/session`; unset means open on your network |
 | `APP_SECRET` | **required** | seals cookies, artifacts, capture payloads, token hashes |
 | `SNAPTOJSON_API_KEY` | unset | enables the SnapToJSON extraction worker |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override the partner URL (proxy, staging) |
