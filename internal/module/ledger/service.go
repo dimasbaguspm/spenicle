@@ -115,3 +115,28 @@ func (s *Service) buildPostings(
 
 	return postings, nil
 }
+
+// List returns ledger entries, newest first, already narrowed by the filter.
+func (s *Service) List(
+	ctx context.Context,
+	filter entity.EntryFilter,
+) ([]entity.Entry, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.List")
+	defer endSpan()
+
+	return s.entries.ListEntries(ctx, filter)
+}
+
+// Void writes the compensating entry. The reason becomes the reversal's note, so a
+// year later the "why" is still there.
+func (s *Service) Void(ctx context.Context, id int64, reason string) (entity.Entry, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Void")
+	defer endSpan()
+
+	reversal, err := s.entries.VoidEntry(ctx, id, reason, s.clock.Now())
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	return reversal, nil
+}

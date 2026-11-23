@@ -11,6 +11,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
@@ -65,20 +66,24 @@ func newApp(
 
 	// clock.System satisfies both the time and the id contract.
 	clockSystem := clock.System{}
+	ledgerService := ledger.New(store, store, clockSystem, clockSystem)
 
 	return &app{
 		DB:           store.DB(),
 		Store:        store,
 		BaseCurrency: baseCurrency,
 		Handler: handlers.New(handlers.Deps{
-			Ledger:        ledger.New(store, store, clockSystem, clockSystem),
-			Health:        store,
-			Sealer:        sealer,
-			BaseCurrency:  baseCurrency,
-			Version:       version,
-			HealthTimeout: cfg.HealthTimeout,
-			MaxBodyBytes:  cfg.MaxBodyBytes,
-			Logger:        logger,
+			Ledger:            ledgerService,
+			Captures:          captures.New(store, ledgerService, sealer, clockSystem, clockSystem),
+			Accounts:          store,
+			Health:            store,
+			Sealer:            sealer,
+			BaseCurrency:      baseCurrency,
+			Version:           version,
+			HealthTimeout:     cfg.HealthTimeout,
+			MaxBodyBytes:      cfg.MaxBodyBytes,
+			ExtractionEnabled: cfg.SnapToJSONAPIKey != "",
+			Logger:            logger,
 		}),
 	}, nil
 }

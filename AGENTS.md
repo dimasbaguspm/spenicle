@@ -41,7 +41,7 @@ uat/                   godog suite: uat.go, steps.go, world.go, features/
 internal/common/       no business logic: config, clock, seal, otel, httpx
 internal/constant/     every fixed value shared by more than one package
 internal/entity/       shared structs + invariants; imports stdlib + constant only
-internal/module/       business logic: ledger
+internal/module/       business logic: ledger, captures
 internal/repository/   contracts, plus the adapters: sqlite, snaptojson
 ```
 

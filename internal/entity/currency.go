@@ -2,6 +2,7 @@ package entity
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/dimasbaguspm/spenicle/internal/constant"
@@ -33,6 +34,18 @@ var currencies = map[string]Currency{
 	"INR": {Code: "INR", MinorUnits: 2, Symbol: "₹"},
 	"THB": {Code: "THB", MinorUnits: 2, Symbol: "฿"},
 	"VND": {Code: "VND", MinorUnits: 0, Symbol: "₫"},
+}
+
+// Currencies returns the embedded list, sorted by code, for the bootstrap payload.
+func Currencies() []Currency {
+	out := make([]Currency, 0, len(currencies))
+	for _, currency := range currencies {
+		out = append(out, currency)
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].Code < out[j].Code })
+
+	return out
 }
 
 // CurrencyByCode resolves an ISO code, case-insensitively.

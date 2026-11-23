@@ -20,6 +20,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
+	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
@@ -113,9 +114,13 @@ func (w *world) boot(ctx context.Context) error {
 	clockSystem := clock.System{}
 	limits := config.Defaults()
 
+	ledgerService := ledger.New(store, store, clockSystem, clockSystem)
+
 	w.store = store
 	w.server = httptest.NewServer(handlers.New(handlers.Deps{
-		Ledger:        ledger.New(store, store, clockSystem, clockSystem),
+		Ledger:        ledgerService,
+		Captures:      captures.New(store, ledgerService, sealer, clockSystem, clockSystem),
+		Accounts:      store,
 		Health:        store,
 		Sealer:        sealer,
 		BaseCurrency:  baseCurrency,

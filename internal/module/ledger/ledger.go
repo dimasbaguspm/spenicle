@@ -13,6 +13,9 @@ import (
 // Contract is what the transport layer is allowed to call.
 type Contract interface {
 	Post(ctx context.Context, in PostInput) (entity.Entry, bool, error)
+	List(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
+	// Void reverses an entry and marks it voided. Nothing is deleted.
+	Void(ctx context.Context, id int64, reason string) (entity.Entry, error)
 }
 
 // Service posts entries to the book of record.

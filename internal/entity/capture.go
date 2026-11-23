@@ -1,10 +1,18 @@
 package entity
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/constant"
+)
+
+var (
+	// ErrCaptureResolved reports an action on a capture that already left the queue.
+	ErrCaptureResolved = errors.New("capture is already resolved")
+	// ErrUnknownCaptureKind reports a channel this build does not know.
+	ErrUnknownCaptureKind = errors.New("unknown capture kind")
 )
 
 var captureTransitions = map[string]map[string]bool{

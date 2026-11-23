@@ -10,6 +10,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/cmd/http/middlewares"
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
+	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
@@ -17,14 +18,17 @@ import (
 // Deps is everything the transport needs, injected. The limits are configuration,
 // not constants of this package: they arrive from entity.AppConfig.
 type Deps struct {
-	Ledger        ledger.Contract
-	Health        repository.System
-	Sealer        seal.Sealer
-	BaseCurrency  string
-	Version       string
-	HealthTimeout time.Duration
-	MaxBodyBytes  int64
-	Logger        *slog.Logger
+	Ledger            ledger.Contract
+	Captures          captures.Contract
+	Accounts          repository.Accounts
+	Health            repository.System
+	Sealer            seal.Sealer
+	BaseCurrency      string
+	Version           string
+	HealthTimeout     time.Duration
+	MaxBodyBytes      int64
+	ExtractionEnabled bool
+	Logger            *slog.Logger
 }
 
 // server holds the dependencies the handlers share.
@@ -42,7 +46,17 @@ func New(deps Deps) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", instance.handleHealth)
+
+	mux.HandleFunc("GET /api/meta", instance.handleMeta)
+
+	mux.HandleFunc("GET /api/entries", instance.handleListEntries)
 	mux.HandleFunc("POST /api/entries", instance.handlePostEntry)
+	mux.HandleFunc("PATCH /api/entries/{id}", instance.handlePatchEntry)
+
+	mux.HandleFunc("GET /api/captures", instance.handleListCaptures)
+	mux.HandleFunc("POST /api/captures", instance.handleCreateCapture)
+	mux.HandleFunc("PATCH /api/captures/{id}", instance.handlePatchCapture)
+
 	mux.HandleFunc("/", instance.handleNotFound)
 
 	return middlewares.Chain(mux,

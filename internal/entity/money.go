@@ -8,6 +8,8 @@ import (
 )
 
 var (
+	// ErrNotFound reports an id that does not exist, or is not visible any more.
+	ErrNotFound = errors.New("not found")
 	// ErrUnknownCurrency reports a code outside the ISO set.
 	ErrUnknownCurrency = errors.New("unknown currency")
 	// ErrInvalidAmount reports an amount that cannot be represented.

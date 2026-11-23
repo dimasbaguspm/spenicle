@@ -56,6 +56,7 @@ func (s *Store) Close(ctx context.Context) error {
 
 var (
 	_ repository.Ledger   = (*Store)(nil)
+	_ repository.Captures = (*Store)(nil)
 	_ repository.Accounts = (*Store)(nil)
 	_ repository.System   = (*Store)(nil)
 )

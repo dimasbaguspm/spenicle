@@ -9,6 +9,29 @@ change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, tim
 8601 UTC. Money crosses the wire as **minor-unit strings** (`"25000"`) plus a currency code,
 never floats. Errors: `{"error":{"code":"...","message":"...","details":{}}}`.
 
+## Implementation status
+
+Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
+**next** = designed, not written yet.
+
+| # | endpoint | state |
+| --- | --- | --- |
+| 3 | `GET /api/meta` | live |
+| 9 | `GET /api/entries` | live (filters, cursor, limit) |
+| 10 | `POST /api/entries` | live |
+| 11 | `PATCH /api/entries/{id}` | partial: `void` only; field edits next |
+| 12 | `GET /api/captures` | live (status filter, cursor, limit) |
+| 13 | `POST /api/captures` | partial: JSON body; multipart upload next |
+| 14 | `PATCH /api/captures/{id}` | partial: `approve`, `reject`; `retry`/`match`/`extracted` next |
+| 21 | `GET /healthz` | live |
+| 1, 2 | `POST /api/setup`, `POST /api/session` | next (auth slice) |
+| 4 | `PATCH /api/settings` | next |
+| 5, 6 | accounts create/patch | next |
+| 7, 8 | payees | next |
+| 15, 16 | recurring | next |
+| 17, 18 | months report, dashboard | next |
+| 19, 20 | tokens | next |
+
 ## Review rounds folded in
 
 | was | now | why |
