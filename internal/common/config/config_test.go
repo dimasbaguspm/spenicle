@@ -16,7 +16,7 @@ func clearEnv(t *testing.T) {
 		config.EnvDataDir,
 		config.EnvPassword,
 		config.EnvAppSecret,
-		config.EnvExtractionAPIKey,
+		config.EnvSnapToJSONAPIKey,
 		config.EnvOTLPEndpoint,
 		config.EnvBaseCurrency,
 	} {

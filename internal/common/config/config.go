@@ -25,11 +25,12 @@ import (
 // Environment variable names, exported so a deployment manifest and the code
 // cannot drift apart silently.
 const (
-	EnvAddr             = "ADDR"
-	EnvDataDir          = "DATA_DIR"
-	EnvPassword         = "PASSWORD"
-	EnvAppSecret        = "APP_SECRET"
-	EnvExtractionAPIKey = "EXTRACTION_API_KEY"
+	EnvAddr      = "ADDR"
+	EnvDataDir   = "DATA_DIR"
+	EnvPassword  = "PASSWORD"
+	EnvAppSecret = "APP_SECRET"
+	//nolint:gosec // G101: this is the environment variable name, not a credential
+	EnvSnapToJSONAPIKey = "SNAPTOJSON_API_KEY"
 	EnvOTLPEndpoint     = "OTEL_EXPORTER_OTLP_ENDPOINT"
 	EnvBaseCurrency     = "BASE_CURRENCY"
 	// EnvAppSecretReset is the one escape hatch: start despite a fingerprint
@@ -104,7 +105,7 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.DBPath = filepath.Join(cfg.DataDir, DefaultDBFile)
 	cfg.Password = os.Getenv(EnvPassword)
 	cfg.AppSecret = os.Getenv(EnvAppSecret)
-	cfg.ExtractionAPIKey = os.Getenv(EnvExtractionAPIKey)
+	cfg.SnapToJSONAPIKey = os.Getenv(EnvSnapToJSONAPIKey)
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
 	cfg.BaseCurrency = strings.ToUpper(env(EnvBaseCurrency, cfg.BaseCurrency))
 

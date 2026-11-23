@@ -65,7 +65,7 @@ sudo chown -R 10001:10001 ./data
 | `PASSWORD` | unset | enables the login screen; unset means open on your LAN |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals capture payloads, artifacts and cookies |
 | `APP_SECRET_RESET` | `false` | recovery: start despite a changed secret, discarding sealed payloads |
-| `EXTRACTION_API_KEY` | unset | enables receipt/statement extraction |
+| `SNAPTOJSON_API_KEY` | unset | enables receipt/statement extraction through SnapToJSON |
 
 `APP_SECRET` is required: the process refuses to boot without it, and refuses to
 boot when it does not match the database it is opening. Generate one once and keep

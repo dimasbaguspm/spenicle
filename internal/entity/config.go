@@ -20,7 +20,7 @@ type AppConfig struct {
 	// Credentials. AppSecret is mandatory: every sealed column depends on it.
 	Password         string
 	AppSecret        string
-	ExtractionAPIKey string
+	SnapToJSONAPIKey string
 	// AllowSecretReset lets a mismatched APP_SECRET start the process anyway by
 	// discarding the sealed payloads. Off unless the operator asks for it.
 	AllowSecretReset bool

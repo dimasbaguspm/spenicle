@@ -30,7 +30,7 @@ never floats. Errors: `{"error":{"code":"...","message":"...","details":{}}}`.
 | `PASSWORD` | unset | enables `POST /api/session`; unset means open on your network |
 | `APP_SECRET` | **required** | seals cookies, artifacts, capture payloads, token hashes |
 | `APP_SECRET_RESET` | `false` | one-shot recovery: accept a changed secret by discarding sealed payloads |
-| `EXTRACTION_API_KEY` | unset | enables the extraction worker |
+| `SNAPTOJSON_API_KEY` | unset | enables the SnapToJSON extraction worker |
 
 Names carry no prefix on purpose. If several self-hosted services share one `env_file`, qualify
 them yourself — `spenicle.env` is the cheapest separator.

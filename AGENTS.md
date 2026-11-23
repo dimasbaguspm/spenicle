@@ -92,7 +92,7 @@ Un-prefixed, all optional except `PASSWORD` in practice:
 | `PASSWORD` | — | single user's password |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals sensitive columns, identifies the database |
 | `APP_SECRET_RESET` | `false` | recovery only: boot despite a fingerprint mismatch and blank sealed payloads |
-| `EXTRACTION_API_KEY` | — | enables the extraction vendor; unset = manual entry |
+| `SNAPTOJSON_API_KEY` | — | enables the SnapToJSON extraction vendor; unset = manual entry |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | empty = tracing/metrics are no-ops |
 
 `APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`
