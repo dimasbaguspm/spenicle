@@ -1,11 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
@@ -16,20 +15,32 @@ import (
 )
 
 type postingRequest struct {
-	AccountID   int64  `json:"account_id"`
-	AmountMinor string `json:"amount_minor"`
-	FXRate      string `json:"fx_rate,omitempty"`
-	FXRateDate  string `json:"fx_rate_date,omitempty"`
+	AccountID   int64  `json:"account_id"             validate:"required,gt=0"`
+	AmountMinor string `json:"amount_minor"           validate:"required,money"`
+	FXRate      string `json:"fx_rate,omitempty"      validate:"omitempty,rate"`
+	FXRateDate  string `json:"fx_rate_date,omitempty" validate:"omitempty,datestr"`
 }
 
 type postEntryRequest struct {
-	ClientID   string           `json:"client_id,omitempty"`
-	OccurredOn string           `json:"occurred_on"`
-	PayeeID    *int64           `json:"payee_id,omitempty"`
-	Note       string           `json:"note,omitempty"`
-	Currency   string           `json:"currency"`
-	Source     string           `json:"source,omitempty"`
-	Postings   []postingRequest `json:"postings"`
+	ClientID   string           `json:"client_id,omitempty" validate:"omitempty,max=64"`
+	OccurredOn string           `json:"occurred_on"         validate:"required,datestr"`
+	PayeeID    *int64           `json:"payee_id,omitempty"  validate:"omitempty,gt=0"`
+	Note       string           `json:"note,omitempty"      validate:"max=2000"`
+	Currency   string           `json:"currency"            validate:"required,currency"`
+	Source     string           `json:"source,omitempty"    validate:"omitempty,source"`
+	Postings   []postingRequest `json:"postings"            validate:"required,min=2,dive"`
+}
+
+// entryListQuery is the listing's surface: every constraint is a tag, including the
+// page bounds, so no handler parses a number by hand.
+type entryListQuery struct {
+	From      string `query:"from"       validate:"omitempty,datestr"`
+	To        string `query:"to"         validate:"omitempty,datestr"`
+	AccountID int64  `query:"account_id" validate:"omitempty,gt=0"`
+	PayeeID   int64  `query:"payee_id"   validate:"omitempty,gt=0"`
+	Source    string `query:"source"     validate:"omitempty,source"`
+	Cursor    int64  `query:"cursor"     validate:"omitempty,gte=0"`
+	Limit     int64  `query:"limit"      validate:"omitempty,gte=0,lte=200"`
 }
 
 type postingResponse struct {
@@ -55,53 +66,45 @@ type entryListResponse struct {
 }
 
 type entryPatchRequest struct {
-	Void   bool   `json:"void,omitempty"`
-	Reason string `json:"reason,omitempty"`
+	Void   bool   `json:"void"             validate:"required"`
+	Reason string `json:"reason,omitempty" validate:"max=2000"`
 }
 
-// entryFilterFromRequest reads the listing query, rejecting anything malformed
-// before a query is built.
+// entryFilterFromRequest binds and validates the listing query, then converts the
+// dates the tags already proved valid.
 func entryFilterFromRequest(r *http.Request) (entity.EntryFilter, error) {
-	filter := entity.EntryFilter{Source: r.URL.Query().Get("source")}
+	var query entryListQuery
 
-	for name, target := range map[string]*time.Time{"from": &filter.From, "to": &filter.To} {
-		value, err := dateParam(r, name)
-		if err != nil {
-			return entity.EntryFilter{}, err
+	if err := bindQuery(r, &query); err != nil {
+		return entity.EntryFilter{}, err
+	}
+
+	filter := entity.EntryFilter{Source: query.Source, Cursor: query.Cursor, Limit: int(query.Limit)}
+
+	for raw, target := range map[string]*time.Time{"from": &filter.From, "to": &filter.To} {
+		value := query.From
+		if raw == "to" {
+			value = query.To
 		}
 
-		*target = value
+		if value == "" {
+			continue
+		}
+
+		parsed, err := time.Parse(constant.DateLayout, value)
+		if err != nil {
+			return entity.EntryFilter{}, fmt.Errorf("parse %s: %w", raw, err)
+		}
+
+		*target = parsed
 	}
 
-	accountID, err := int64Param(r, "account_id")
-	if err != nil {
-		return entity.EntryFilter{}, err
+	if query.AccountID > 0 {
+		filter.AccountID = &query.AccountID
 	}
 
-	payeeID, err := int64Param(r, "payee_id")
-	if err != nil {
-		return entity.EntryFilter{}, err
-	}
-
-	cursor, err := int64Param(r, "cursor")
-	if err != nil {
-		return entity.EntryFilter{}, err
-	}
-
-	limit, err := int64Param(r, "limit")
-	if err != nil {
-		return entity.EntryFilter{}, err
-	}
-
-	filter.Cursor = cursor
-	filter.Limit = int(limit)
-
-	if accountID > 0 {
-		filter.AccountID = &accountID
-	}
-
-	if payeeID > 0 {
-		filter.PayeeID = &payeeID
+	if query.PayeeID > 0 {
+		filter.PayeeID = &query.PayeeID
 	}
 
 	return filter, nil
@@ -114,7 +117,7 @@ func (s *server) handleListEntries(w http.ResponseWriter, r *http.Request) {
 
 	filter, err := entryFilterFromRequest(r)
 	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_filter", err.Error())
+		writeInvalid(w, err)
 
 		return
 	}
@@ -141,20 +144,15 @@ func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Patch")
 	defer endSpan()
 
-	id, err := pathID(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_id", err.Error())
+	var path pathIDRequest
+	if err := bindPath(r, &path); err != nil {
+		writeInvalid(w, err)
 
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, s.deps.MaxBodyBytes)
-
 	var request entryPatchRequest
-
-	if err = json.NewDecoder(r.Body).Decode(&request); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", err.Error())
-
+	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
 		return
 	}
 
@@ -165,7 +163,7 @@ func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reversal, err := s.deps.Ledger.Void(ctx, id, request.Reason)
+	reversal, err := s.deps.Ledger.Void(ctx, path.ID, request.Reason)
 	if err != nil {
 		status, code := classify(err)
 		httpx.WriteError(w, status, code, err.Error())
@@ -180,12 +178,8 @@ func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Post")
 	defer endSpan()
 
-	r.Body = http.MaxBytesReader(w, r.Body, s.deps.MaxBodyBytes)
-
 	var request postEntryRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", err.Error())
-
+	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
 		return
 	}
 
@@ -214,17 +208,17 @@ func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
 }
 
 func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
-	occurredOn, err := time.Parse(constant.DateLayout, strings.TrimSpace(request.OccurredOn))
+	occurredOn, err := time.Parse(constant.DateLayout, request.OccurredOn)
 	if err != nil {
-		return ledger.PostInput{}, errors.New("occurred_on must be YYYY-MM-DD")
+		return ledger.PostInput{}, fmt.Errorf("parse occurred_on: %w", err)
 	}
 
 	postings := make([]ledger.PostingInput, 0, len(request.Postings))
 
 	for _, posting := range request.Postings {
-		amount, err := strconv.ParseInt(strings.TrimSpace(posting.AmountMinor), 10, 64)
+		amount, err := strconv.ParseInt(posting.AmountMinor, 10, 64)
 		if err != nil {
-			return ledger.PostInput{}, errors.New("amount_minor must be an integer string")
+			return ledger.PostInput{}, fmt.Errorf("parse amount_minor: %w", err)
 		}
 
 		postings = append(postings, ledger.PostingInput{
@@ -280,11 +274,14 @@ func classify(err error) (int, string) {
 	return http.StatusInternalServerError, "internal_error"
 }
 
-var errorMappings = []struct { //nolint:gochecknoglobals // read-only table
+// errorMapping is one row of the domain-error table.
+type errorMapping struct {
 	err    error
 	status int
 	code   string
-}{
+}
+
+var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{entity.ErrZeroSum, http.StatusUnprocessableEntity, "postings_not_balanced"},
 	{entity.ErrInvalidPostings, http.StatusUnprocessableEntity, "invalid_postings"},
 	{entity.ErrUnknownCurrency, http.StatusUnprocessableEntity, "unknown_currency"},

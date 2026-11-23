@@ -160,14 +160,18 @@ type snapReport struct {
 	Error  string      `json:"error_message"`
 }
 
+// snapViolation is one entry of SnapResult.Violations: what the vendor's own schema
+// said was wrong with the reading.
+type snapViolation struct {
+	Pointer string `json:"pointer"`
+	Error   string `json:"error"`
+}
+
 // snapResult is SnapResult: what the reader answered.
 type snapResult struct {
 	Data       json.RawMessage `json:"data"`
 	Valid      bool            `json:"valid"`
-	Violations []struct {
-		Pointer string `json:"pointer"`
-		Error   string `json:"error"`
-	} `json:"violations"`
+	Violations []snapViolation `json:"violations"`
 }
 
 // unify maps the vendor's four states and its result shape onto extraction.Report.
@@ -263,6 +267,11 @@ func (c *Client) post(
 	return snapReport{}, decodeError(response.StatusCode, raw)
 }
 
+// errorEnvelope is ErrorEnvelope: one error object under "error".
+type errorEnvelope struct {
+	Error APIError `json:"error"`
+}
+
 // decodeError reads ErrorEnvelope. An unparseable error body still has to become a
 // useful error, so the status is the fallback.
 func decodeError(status int, raw []byte) error {
@@ -270,9 +279,7 @@ func decodeError(status int, raw []byte) error {
 		raw = raw[:maxErrorBody]
 	}
 
-	var envelope struct {
-		Error APIError `json:"error"`
-	}
+	var envelope errorEnvelope
 
 	if err := json.Unmarshal(raw, &envelope); err != nil || envelope.Error.Code == "" {
 		return &APIError{

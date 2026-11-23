@@ -60,6 +60,12 @@ func (s *Store) ensureFingerprint(ctx context.Context, fingerprint string) error
 		entity.ErrSecretMismatch, stored, fingerprint, "spenicle.db")
 }
 
+// seedAccount is one row of the first-boot chart of accounts.
+type seedAccount struct {
+	name string
+	kind string
+}
+
 // seedAccounts gives a brand new database something to post against. Both rows go
 // in one transaction: half a chart of accounts is worse than none.
 func (s *Store) seedAccounts(ctx context.Context, baseCurrency string) error {
@@ -72,9 +78,9 @@ func (s *Store) seedAccounts(ctx context.Context, baseCurrency string) error {
 		return nil
 	}
 
-	seeds := []struct{ name, kind string }{
-		{constant.SeedAssetAccount, constant.AccountKindAsset},
-		{constant.SeedExpenseAccount, constant.AccountKindExpense},
+	seeds := []seedAccount{
+		{name: constant.SeedAssetAccount, kind: constant.AccountKindAsset},
+		{name: constant.SeedExpenseAccount, kind: constant.AccountKindExpense},
 	}
 
 	return s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {

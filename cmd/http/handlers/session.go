@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -14,7 +12,7 @@ import (
 )
 
 type sessionRequest struct {
-	Password string `json:"password"`
+	Password string `json:"password" validate:"required"`
 }
 
 type sessionResponse struct {
@@ -23,12 +21,12 @@ type sessionResponse struct {
 }
 
 type passwordChangeRequest struct {
-	CurrentPassword string `json:"current_password"`
-	NewPassword     string `json:"new_password"`
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password"     validate:"required,min=12,max=200"`
 }
 
 type settingsPatchRequest struct {
-	BaseCurrency *string `json:"base_currency,omitempty"`
+	BaseCurrency *string `json:"base_currency,omitempty" validate:"omitempty,currency"`
 }
 
 type settingsResponse struct {
@@ -44,9 +42,7 @@ func (s *server) handleSession(w http.ResponseWriter, r *http.Request) {
 	defer endSpan()
 
 	var request sessionRequest
-	if err := decodeJSON(w, r, s.deps.MaxBodyBytes, &request); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", err.Error())
-
+	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
 		return
 	}
 
@@ -93,9 +89,7 @@ func (s *server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	defer endSpan()
 
 	var request passwordChangeRequest
-	if err := decodeJSON(w, r, s.deps.MaxBodyBytes, &request); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", err.Error())
-
+	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
 		return
 	}
 
@@ -116,9 +110,7 @@ func (s *server) handlePatchSettings(w http.ResponseWriter, r *http.Request) {
 	defer endSpan()
 
 	var request settingsPatchRequest
-	if err := decodeJSON(w, r, s.deps.MaxBodyBytes, &request); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", err.Error())
-
+	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
 		return
 	}
 
@@ -202,15 +194,4 @@ func (s *server) requireSession(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-// decodeJSON reads a bounded body, so a client cannot make the process allocate.
-func decodeJSON(w http.ResponseWriter, r *http.Request, limit int64, target any) error {
-	r.Body = http.MaxBytesReader(w, r.Body, limit)
-
-	if err := json.NewDecoder(r.Body).Decode(target); err != nil {
-		return fmt.Errorf("decode body: %w", err)
-	}
-
-	return nil
 }

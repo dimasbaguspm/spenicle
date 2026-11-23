@@ -3,17 +3,19 @@
 // tree answers "what is the timeout" or "where does this value come from".
 //
 // No config file, no remote config, no precedence chain: this is a self-hosted
-// single binary, and seven environment variables do not need a framework. Adding
+// single binary, and eight environment variables do not need a framework. Adding
 // one means adding a column to this file, which is the point.
 package config
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/go-playground/validator/v10"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
@@ -73,8 +75,9 @@ const (
 	DefaultDBMaxIdleConns       = 2
 )
 
-// minSecretBytes is the shortest APP_SECRET worth deriving a key from.
-const minSecretBytes = 16
+// validate is the config package's registry: the shape of every environment value is
+// a tag on entity.AppConfig, so this file only says where the value came from.
+var validate = validator.New() //nolint:gochecknoglobals // one registry, built once
 
 // Defaults is the configuration of a process started with an empty environment.
 // Tests and the UAT harness use it directly instead of reading the real env.
@@ -118,25 +121,13 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.OpenAIModel = env(EnvOpenAIModel, DefaultOpenAIModel)
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
 
-	if err := validate(cfg); err != nil {
-		return entity.AppConfig{}, err
+	if err := validate.Struct(cfg); err != nil {
+		return entity.AppConfig{}, fmt.Errorf(
+			"APP_SECRET is required, at least 16 bytes (generate one with "+
+				"`openssl rand -base64 32`): %w", err)
 	}
 
 	return cfg, nil
-}
-
-// validate rejects values that would only fail later, at a worse moment.
-func validate(cfg entity.AppConfig) error {
-	if cfg.AppSecret == "" {
-		return errors.New("APP_SECRET is required: it seals capture payloads and " +
-			"identifies this database; generate one with `openssl rand -base64 32`")
-	}
-
-	if len(cfg.AppSecret) < minSecretBytes {
-		return errors.New("APP_SECRET must be at least 16 bytes")
-	}
-
-	return nil
 }
 
 func env(key, fallback string) string {

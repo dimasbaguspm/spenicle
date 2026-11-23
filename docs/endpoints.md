@@ -437,7 +437,8 @@ WHERE voided_at IS NULL`, insert `audit_log` action `void`.
 **200** the **reversal** entry (`source":"adjustment"`, negated amounts).
 
 **Errors.** `404 not_found`; `409 invalid_state` (already voided); `422
-unsupported_patch` for any other field edit; `400 invalid_id`, `400 invalid_json`.
+unsupported_patch` for any other field edit; `422 invalid_request` when `{id}` is not a
+positive integer; `400 invalid_json`.
 
 **Limitations.** Field edits (note, payee) are not implemented — they answer 422
 rather than pretending. `voided_at` is not serialised in listings yet; the reversal row
@@ -545,8 +546,9 @@ file to the configured rail (`Repository.Snaptojson.Posting` or
 **202** created (`status` `pending`, or `extracting` when a submit answered 202),
 **200** when the same payload arrived before.
 
-**Errors.** `422 unknown_capture_kind`; `400 invalid_request` (bad JSON or missing
-`file` part); `413`-class failures from the vendor are recorded on the row, not raised.
+**Errors.** `422 unknown_capture_kind`; `400 invalid_json` (malformed body); `422
+invalid_request` (multipart body without a `file` part); `413`-class failures from the
+vendor are recorded on the row, not raised.
 
 **Limitations.** No PDF/statements support yet (the vendor reads images today); no
 `raw/` artifact storage, so a 202 is polled by `job_ref` and the bytes are gone; the
@@ -612,7 +614,7 @@ Posting shape is identical to `POST /api/entries`.
 **201** on approve: `{"entry":{…},"capture":{…}}`; **200** on reject/retry: the capture.
 
 **Errors.** `404 not_found`; `409 capture_resolved` (already approved/rejected);
-`422 unknown_action`; `422 invalid_request` (bad date/amount); `422
+`422 invalid_request` (`action` not `approve|reject|retry`, bad date/amount,
 postings_not_balanced` and friends from the ledger; `401 unauthorized`…
 `ErrNotConfigured`-style vendor gaps surface as `422`/`500` per `classify`.
 

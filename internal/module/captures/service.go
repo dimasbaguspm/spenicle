@@ -289,11 +289,11 @@ func (s *Service) applyReport(
 		capture.Status = constant.CaptureStatusPending
 		capture.ExtractionError = ""
 
-		draft, err := json.Marshal(struct {
-			Data       json.RawMessage        `json:"data,omitempty"`
-			Valid      bool                   `json:"valid"`
-			Violations []extraction.Violation `json:"violations,omitempty"`
-		}{Data: report.Data, Valid: report.Valid, Violations: report.Violations})
+		draft, err := json.Marshal(draftEnvelope{
+			Data:       report.Data,
+			Valid:      report.Valid,
+			Violations: report.Violations,
+		})
 		if err != nil {
 			return entity.Capture{}, fmt.Errorf("encode draft: %w", err)
 		}
@@ -410,6 +410,14 @@ func (s *Service) openText(ctx context.Context, sealed string) (string, error) {
 	}
 
 	return string(plain), nil
+}
+
+// draftEnvelope is what a capture stores as its draft: the rail's data, whether it
+// validated, and what it complained about. One shape for every rail.
+type draftEnvelope struct {
+	Data       json.RawMessage        `json:"data,omitempty"`
+	Valid      bool                   `json:"valid"`
+	Violations []extraction.Violation `json:"violations,omitempty"`
 }
 
 // dedupeKey is what makes "the same receipt twice" one row. A client id, when

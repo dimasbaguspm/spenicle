@@ -19,7 +19,7 @@ type AppConfig struct {
 
 	// Credentials. AppSecret is mandatory: every sealed column depends on it. The
 	// user's login password is not configuration: it lives in entity.Settings.
-	AppSecret        string
+	AppSecret        string `validate:"required,min=16"`
 	SnapToJSONAPIKey string
 	// SnapToJSONEndpoint is the vendor's partner route. Fixed for now: one API,
 	// one shape, no reason to let a deployment point it somewhere else.

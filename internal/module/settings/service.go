@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
+
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
@@ -18,8 +20,15 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
 
-// minPasswordLength is the shortest password worth storing.
-const minPasswordLength = 12
+// validate is the module's own registry: the password rules are the module's, not the
+// HTTP surface's, and both layers must agree.
+var validate = validator.New() //nolint:gochecknoglobals // one registry, built once
+
+// passwordChange is the shape a rotation must satisfy.
+type passwordChange struct {
+	Current string `validate:"required"`
+	Next    string `validate:"required,min=12,max=200"`
+}
 
 // Service reads and writes the one settings row.
 type Service struct {
@@ -130,7 +139,7 @@ func (s *Service) ChangePassword(
 		return entity.Settings{}, fmt.Errorf("%w: no password is set", entity.ErrPasswordMismatch)
 	}
 
-	if len(strings.TrimSpace(next)) < minPasswordLength {
+	if err := validate.Struct(passwordChange{Current: current, Next: strings.TrimSpace(next)}); err != nil {
 		return entity.Settings{}, entity.ErrWeakPassword
 	}
 

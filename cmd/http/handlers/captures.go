@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
@@ -21,10 +22,29 @@ import (
 )
 
 type captureRequest struct {
-	ClientID string `json:"client_id,omitempty"`
-	Kind     string `json:"kind"`
-	RawText  string `json:"raw_text,omitempty"`
-	BatchID  string `json:"batch_id,omitempty"`
+	ClientID string `json:"client_id,omitempty" validate:"omitempty,max=64"`
+	Kind     string `json:"kind"                validate:"capturekind"`
+	RawText  string `json:"raw_text,omitempty"  validate:"max=8000"`
+	BatchID  string `json:"batch_id,omitempty"  validate:"max=64"`
+	// ArtifactHash and Artifact come from the multipart part, never from JSON.
+	ArtifactHash string               `json:"-"`
+	Artifact     *extraction.Artifact `json:"-"`
+}
+
+// captureListQuery is the queue's surface: the status must be a real state, the page
+// bounds must be sane, and no handler parses a number by hand.
+type captureListQuery struct {
+	Status string `query:"status" validate:"omitempty,capturestatus"`
+	Cursor int64  `query:"cursor" validate:"omitempty,gte=0"`
+	Limit  int64  `query:"limit"  validate:"omitempty,gte=0,lte=200"`
+}
+
+// captureApprove is what an approval must carry; the posting rules are shared with
+// POST /api/entries.
+type captureApprove struct {
+	OccurredOn string           `validate:"required,datestr"`
+	Currency   string           `validate:"required,currency"`
+	Postings   []postingRequest `validate:"required,min=2,dive"`
 }
 
 type captureResponse struct {
@@ -47,13 +67,13 @@ type captureListResponse struct {
 }
 
 type capturePatchRequest struct {
-	Action     string           `json:"action"`
-	Reason     string           `json:"reason,omitempty"`
-	OccurredOn string           `json:"occurred_on,omitempty"`
-	PayeeID    *int64           `json:"payee_id,omitempty"`
-	Note       string           `json:"note,omitempty"`
-	Currency   string           `json:"currency,omitempty"`
-	Postings   []postingRequest `json:"postings,omitempty"`
+	Action     string           `json:"action"                validate:"required,oneof=approve reject retry"`
+	Reason     string           `json:"reason,omitempty"      validate:"max=2000"`
+	OccurredOn string           `json:"occurred_on,omitempty" validate:"omitempty,datestr"`
+	PayeeID    *int64           `json:"payee_id,omitempty"    validate:"omitempty,gt=0"`
+	Note       string           `json:"note,omitempty"        validate:"max=2000"`
+	Currency   string           `json:"currency,omitempty"    validate:"omitempty,currency"`
+	Postings   []postingRequest `json:"postings,omitempty"    validate:"omitempty,min=2,dive"`
 }
 
 type captureApprovedResponse struct {
@@ -67,24 +87,17 @@ func (s *server) handleListCaptures(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.List")
 	defer endSpan()
 
-	cursor, err := intParam(r, "cursor")
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_cursor", err.Error())
-
-		return
-	}
-
-	limit, err := int64Param(r, "limit")
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_limit", err.Error())
+	var query captureListQuery
+	if err := bindQuery(r, &query); err != nil {
+		writeInvalid(w, err)
 
 		return
 	}
 
 	found, err := s.deps.Captures.List(ctx, entity.CaptureFilter{
-		Status: r.URL.Query().Get("status"),
-		Cursor: cursor,
-		Limit:  int(limit),
+		Status: query.Status,
+		Cursor: query.Cursor,
+		Limit:  int(query.Limit),
 	})
 	if err != nil {
 		status, code := classify(err)
@@ -109,12 +122,20 @@ func (s *server) handleCreateCapture(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, s.deps.MaxBodyBytes)
 
-	input, err := readCapture(r)
+	request, err := readCapture(r)
 	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		writeInvalid(w, err)
 
 		return
 	}
+
+	if err = validate.Struct(request); err != nil {
+		writeInvalid(w, err)
+
+		return
+	}
+
+	input := request.input()
 
 	capture, created, err := s.deps.Captures.Create(ctx, input)
 	if err != nil {
@@ -137,29 +158,25 @@ func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Patch")
 	defer endSpan()
 
-	id, err := pathID(r)
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_id", err.Error())
+	var path pathIDRequest
+	if err := bindPath(r, &path); err != nil {
+		writeInvalid(w, err)
 
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, s.deps.MaxBodyBytes)
-
 	var request capturePatchRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", err.Error())
-
+	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
 		return
 	}
 
 	switch request.Action {
 	case "approve":
-		s.approveCapture(ctx, w, id, request)
+		s.approveCapture(ctx, w, path.ID, request)
 	case "reject":
-		s.rejectCapture(ctx, w, id, request)
+		s.rejectCapture(ctx, w, path.ID, request)
 	case "retry":
-		capture, err := s.deps.Captures.Retry(ctx, id)
+		capture, err := s.deps.Captures.Retry(ctx, path.ID)
 		if err != nil {
 			status, code := classify(err)
 			httpx.WriteError(w, status, code, err.Error())
@@ -168,9 +185,6 @@ func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
 		}
 
 		httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
-	default:
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "unknown_action",
-			"action must be approve, reject or retry")
 	}
 }
 
@@ -180,14 +194,26 @@ func (s *server) approveCapture(
 	id int64,
 	request capturePatchRequest,
 ) {
-	occurredOn, err := parseDate(request.OccurredOn)
-	if err != nil {
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", err.Error())
+	approval := captureApprove{
+		OccurredOn: request.OccurredOn,
+		Currency:   request.Currency,
+		Postings:   request.Postings,
+	}
+
+	if err := validate.Struct(approval); err != nil {
+		writeInvalid(w, err)
 
 		return
 	}
 
-	postings, err := toCapturePostingInputs(request.Postings)
+	occurredOn, err := time.Parse(constant.DateLayout, approval.OccurredOn)
+	if err != nil {
+		writeInvalid(w, err)
+
+		return
+	}
+
+	postings, err := toCapturePostingInputs(approval.Postings)
 	if err != nil {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", err.Error())
 
@@ -198,7 +224,7 @@ func (s *server) approveCapture(
 		OccurredOn: occurredOn,
 		PayeeID:    request.PayeeID,
 		Note:       request.Note,
-		Currency:   request.Currency,
+		Currency:   approval.Currency,
 		Postings:   postings,
 	})
 	if err != nil {
@@ -233,42 +259,49 @@ func (s *server) rejectCapture(
 
 // readCapture accepts both shapes the API documents: a JSON body for text, a
 // multipart body with a `file` part for images and statements.
-func readCapture(r *http.Request) (captures.CreateInput, error) {
+func readCapture(r *http.Request) (captureRequest, error) {
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		return readCaptureForm(r)
 	}
 
 	var request captureRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		return captures.CreateInput{}, fmt.Errorf("decode capture: %w", err)
+		return captureRequest{}, fmt.Errorf("decode capture: %w", err)
 	}
 
+	return request, nil
+}
+
+// input converts the validated request into the module's input.
+func (c captureRequest) input() captures.CreateInput {
 	return captures.CreateInput{
-		ClientID: request.ClientID,
-		Kind:     request.Kind,
-		RawText:  request.RawText,
-		BatchID:  request.BatchID,
-	}, nil
+		ClientID:     c.ClientID,
+		Kind:         c.Kind,
+		RawText:      c.RawText,
+		BatchID:      c.BatchID,
+		ArtifactHash: c.ArtifactHash,
+		Artifact:     c.Artifact,
+	}
 }
 
 // readCaptureForm reads the file part once, keeps its hash and hands the bytes to
 // the extractor. The document itself is not stored yet: raw/ lands with the artifact
 // milestone.
-func readCaptureForm(r *http.Request) (captures.CreateInput, error) {
+func readCaptureForm(r *http.Request) (captureRequest, error) {
 	if err := r.ParseMultipartForm(maxFormBytes); err != nil {
-		return captures.CreateInput{}, fmt.Errorf("multipart: %w", err)
+		return captureRequest{}, fmt.Errorf("multipart: %w", err)
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		return captures.CreateInput{}, errors.New("multipart body needs a file part")
+		return captureRequest{}, errors.New("invalid_request: multipart body needs a file part")
 	}
 
 	defer func() { _ = file.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(file, maxFormBytes))
 	if err != nil {
-		return captures.CreateInput{}, fmt.Errorf("read artifact: %w", err)
+		return captureRequest{}, fmt.Errorf("read artifact: %w", err)
 	}
 
 	sum := sha256.Sum256(body)
@@ -278,18 +311,21 @@ func readCaptureForm(r *http.Request) (captures.CreateInput, error) {
 		kind = constant.CaptureKindImage
 	}
 
-	return captures.CreateInput{
-		ClientID:     r.FormValue("client_id"),
-		Kind:         kind,
-		RawText:      r.FormValue("raw_text"),
-		BatchID:      r.FormValue("batch_id"),
-		ArtifactHash: hex.EncodeToString(sum[:]),
-		Artifact: &extraction.Artifact{
-			Filename:    header.Filename,
-			ContentType: header.Header.Get("Content-Type"),
-			Bytes:       body,
-		},
-	}, nil
+	request := captureRequest{
+		ClientID: r.FormValue("client_id"),
+		Kind:     kind,
+		RawText:  r.FormValue("raw_text"),
+		BatchID:  r.FormValue("batch_id"),
+	}
+
+	request.ArtifactHash = hex.EncodeToString(sum[:])
+	request.Artifact = &extraction.Artifact{
+		Filename:    header.Filename,
+		ContentType: header.Header.Get("Content-Type"),
+		Bytes:       body,
+	}
+
+	return request, nil
 }
 
 func toCaptureResponse(capture entity.Capture) captureResponse {

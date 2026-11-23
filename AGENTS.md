@@ -51,6 +51,13 @@ Rules that keep it pluggable:
   (`repository.go`, `ledger.go`, `entity.go`, `uat.go`, `sqlite.go`). A second adapter
   is one new implementation, not a new call site.
 - Dependencies point inward: `cmd` → `module` → `entity` + `repository` contracts.
+- Validation is declarative at every boundary. An outer-world struct — a request body,
+  a query binding, an app-config value — declares its shape as `validate` tags, and one
+  registry per package enforces it (`cmd/http/handlers/validate.go`,
+  `internal/common/config`). Handlers call `bindBody`/`bindQuery`/`bindPath`; nothing
+  parses a number by hand and no struct is declared inside a function. `writeInvalid`
+  turns the failure into `422` and `validationCodes` promotes a field failure back to
+  the domain code a client branches on (`unknown_currency`, `invalid_postings`).
 - Every method that crosses a boundary takes `ctx context.Context` first and opens one
   span named after the layer: `Repository.Sqlite.InsertEntry`, `Module.Ledger.Post`,
   `Handler.Entries.Post`, `Common.Seal.Seal`. There is exactly one
@@ -115,10 +122,10 @@ fresh boot generates the first password, prints it once, and requires a change a
 the first sign-in. The base currency is editable while the ledger is empty and locked
 after the first entry.
 
-Only these nine are environment variables. **Every other knob — DB path, HTTP
+Only these eight are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 name (also the tracer name) — has its default in `internal/common/config/config.go`**, and the
-resulting value object is `entity.AppConfig`. No viper, on purpose: seven variables
+resulting value object is `entity.AppConfig`. No viper, on purpose: eight variables
 and one file beat a precedence chain nobody can predict. A new knob means a new
 constant and field in those two files, nothing else.
 

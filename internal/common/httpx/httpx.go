@@ -67,12 +67,15 @@ func WriteJSON(w http.ResponseWriter, status int, payload any) {
 	_, _ = w.Write(append(body, '\n'))
 }
 
+// ErrorDetail is the single failure a response carries: one code, one message.
+type ErrorDetail struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 // ErrorBody is the envelope every failure uses.
 type ErrorBody struct {
-	Error struct {
-		Code    string `json:"code"`
-		Message string `json:"message"`
-	} `json:"error"`
+	Error ErrorDetail `json:"error"`
 }
 
 // WriteError answers with the project's error envelope.
