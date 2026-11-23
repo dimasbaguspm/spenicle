@@ -1,0 +1,172 @@
+package validating
+
+import (
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/go-playground/validator/v10"
+
+	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
+)
+
+const refLength = 32
+
+var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only rule table
+	"currency": func(field validator.FieldLevel) bool {
+		_, err := entity.CurrencyByCode(field.Field().String())
+
+		return err == nil
+	},
+	"money": func(field validator.FieldLevel) bool {
+		_, err := strconv.ParseInt(strings.TrimSpace(field.Field().String()), 10, 64)
+
+		return err == nil
+	},
+	"datestr": func(field validator.FieldLevel) bool {
+		raw := strings.TrimSpace(field.Field().String())
+		if raw == "" {
+			return false
+		}
+
+		_, err := time.Parse(constant.DateLayout, raw)
+
+		return err == nil
+	},
+	"rate": func(field validator.FieldLevel) bool {
+		_, err := entity.ParseRate(field.Field().String())
+
+		return err == nil
+	},
+	"capturekind":     validCaptureKind,
+	"source":          validEntrySource,
+	"ref":             validRef,
+	"accountkind":     validAccountKind,
+	"cadence":         validCadence,
+	"importstatus":    validImportStatus,
+	"importrowstatus": validImportRowStatus,
+	"recurringstate":  validRecurringState,
+	"shift":           validShift,
+	"capturestatus":   validCaptureStatus,
+	"exportstatus":    validExportStatus,
+}
+
+func validRef(field validator.FieldLevel) bool {
+	raw := strings.TrimSpace(field.Field().String())
+	if raw == "" {
+		return true
+	}
+
+	if len(raw) != refLength {
+		return false
+	}
+
+	for _, char := range raw {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
+			return false
+		}
+	}
+
+	return true
+}
+
+func validAccountKind(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.AccountKindAsset, constant.AccountKindLiability,
+		constant.AccountKindExpense, constant.AccountKindIncome:
+		return true
+	default:
+		return false
+	}
+}
+
+func validCadence(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.RecurringCadenceDaily, constant.RecurringCadenceWeekly,
+		constant.RecurringCadenceMonthly, constant.RecurringCadenceYearly:
+		return true
+	default:
+		return false
+	}
+}
+
+func validRecurringState(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.RecurringStateSuggested, constant.RecurringStateActive,
+		constant.RecurringStatePaused, constant.RecurringStateEnded:
+		return true
+	default:
+		return false
+	}
+}
+
+func validShift(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.ShiftNone, constant.ShiftNext, constant.ShiftPrev:
+		return true
+	default:
+		return false
+	}
+}
+
+func validImportStatus(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.ImportStatusDraft, constant.ImportStatusCommitted, constant.ImportStatusRejected:
+		return true
+	default:
+		return false
+	}
+}
+
+func validImportRowStatus(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.ImportRowStatusAccepted, constant.ImportRowStatusSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
+func validCaptureKind(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.CaptureKindShare, constant.CaptureKindImage,
+		constant.CaptureKindEmail, constant.CaptureKindStatement,
+		constant.CaptureKindRecurring, constant.CaptureKindManual:
+		return true
+	default:
+		return false
+	}
+}
+
+func validEntrySource(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.EntrySourceManual, constant.EntrySourceShare, constant.EntrySourceEmail,
+		constant.EntrySourceStatement, constant.EntrySourceRecurring,
+		constant.EntrySourceAdjustment:
+		return true
+	default:
+		return false
+	}
+}
+
+func validCaptureStatus(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.CaptureStatusExtracting, constant.CaptureStatusPending,
+		constant.CaptureStatusDuplicate, constant.CaptureStatusApproved,
+		constant.CaptureStatusRejected, constant.CaptureStatusFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+func validExportStatus(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.ExportStatusQueued, constant.ExportStatusRunning, constant.ExportStatusReady,
+		constant.ExportStatusFailed, constant.ExportStatusExpired:
+		return true
+	default:
+		return false
+	}
+}

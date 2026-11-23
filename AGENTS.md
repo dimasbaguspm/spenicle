@@ -49,7 +49,7 @@ cmd/worker/handlers/   `Runner`: the recurring rules, the catch-up cap and the h
 config/s6/s6-rc.d/     the two longrun services s6-overlay starts in the image
 uat/                   godog suite: uat.go, steps.go, world.go, features/
 internal/common/       no business logic: config (also the process graph), clock, seal,
-                       otel, httpx, uuid, binding, list
+                       otel, httpx, uuid, binding, validating, list
 internal/constant/     every fixed value shared by more than one package
 internal/entity/       shared structs + invariants; imports stdlib + constant only
 internal/module/       business logic: ledger, captures, imports, rates, settings
@@ -88,12 +88,12 @@ Rules that keep it pluggable:
   is one new implementation, not a new call site.
 - Dependencies point inward: `cmd` → `module` → `entity` + `repository` contracts.
 - Validation is declarative at every boundary. An outer-world struct — a request body,
-  a query binding, an app-config value — declares its shape as `validate` tags, and one
-  registry per package enforces it (`cmd/http/handlers/validate.go`,
-  `internal/common/config`). Handlers call `bindBody`/`bindQuery`/`bindPath`; nothing
-  parses a number by hand and no struct is declared inside a function. `writeInvalid`
-  turns the failure into `422` and `validationCodes` promotes a field failure back to
-  the domain code a client branches on (`unknown_currency`, `invalid_postings`).
+  registry per package enforces it (`internal/common/validating` for every request and
+  query struct, `internal/common/config` for the config). Handlers call
+  `bindBody`/`bindQuery`/`bindPath`; nothing parses a number by hand and no struct is
+  declared inside a function. `writeInvalid` turns the failure into `422` and the
+  `validating` code table promotes a field failure back to the domain code a client
+  branches on (`unknown_currency`, `invalid_postings`).
 - The code documents itself. No comment restates what a name already says, and no
   method carries a doc comment. The only comments left are the package doc comment
   (`revive` requires it) and toolchain directives: `//go:embed`, `//go:build`, and
@@ -390,8 +390,7 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
-  Five files today (`0001_init.sql`, `0002_artifacts.sql`, `0003_imports.sql`,
-  `0004_import_events.sql`, `0005_exports.sql`) and nothing has shipped, so the schema
-  is still squashed into a base plus forwards. Once a release exists, forwards
-  only — never edit an applied migration, add the next number. The splitter is naive:
-  no `;` inside a migration comment.
+  One file today (`0001_init.sql`), the whole schema, so `schema_version` is 1. Nothing
+  has shipped, so the schema stays squashed instead of grown. Once a release exists,
+  forwards only — never edit an applied migration, add the next number. The splitter is
+  naive: no `;` inside a migration comment.

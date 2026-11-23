@@ -27,7 +27,7 @@ None.
 ## Response
 
 ```json
-{"status":"ok","version":"v0.1.1+e0d15ce","schema_version":2,"app_secret":"41539bfba9c4a1ec","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}
+{"status":"ok","version":"v0.1.1+e0d15ce","schema_version":1,"app_secret":"41539bfba9c4a1ec","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}
 ```
 
 ## Errors

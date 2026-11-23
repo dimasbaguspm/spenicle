@@ -67,7 +67,7 @@ func (s *Store) CreateRecurring(ctx context.Context, rule entity.Recurring) (ent
 		nullInt(dayOfMonth(rule.DayOfMonth)),
 		rule.BusinessDayShift,
 		rule.NextDueOn.Format(constant.DateLayout),
-		nullTime(rule.EndsOn),
+		nullDay(rule.EndsOn),
 		rule.Origin,
 		rule.State,
 		rule.CreatedAt.Format(constant.TimestampLayout),
@@ -111,8 +111,10 @@ func (s *Store) DueRecurring(
 	defer endSpan()
 
 	rows, err := s.db.QueryContext(ctx, `SELECT `+recurringColumns+` `+recurringFrom+
-		` WHERE r.state = ? AND r.next_due_on <= ? ORDER BY r.next_due_on, r.id LIMIT ?`,
+		` WHERE r.state = ? AND r.next_due_on <= ? AND (r.ends_on IS NULL OR r.ends_on >= ?)
+		ORDER BY r.next_due_on, r.id LIMIT ?`,
 		constant.RecurringStateActive,
+		asOf.Format(constant.DateLayout),
 		asOf.Format(constant.DateLayout),
 		limit,
 	)
@@ -200,7 +202,7 @@ func (s *Store) UpdateRecurring(ctx context.Context, rule entity.Recurring) (ent
 		nullInt(dayOfMonth(rule.DayOfMonth)),
 		rule.BusinessDayShift,
 		rule.NextDueOn.Format(constant.DateLayout),
-		nullTime(rule.EndsOn),
+		nullDay(rule.EndsOn),
 		rule.State,
 		rule.Ref,
 	); err != nil {

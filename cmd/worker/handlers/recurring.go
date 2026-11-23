@@ -75,7 +75,7 @@ func (r *Runner) runRule(
 ) error {
 	due := rule.NextDueOn
 
-	for count := 0; count < catchUpCap && !due.After(now); count++ {
+	for count := 0; count < catchUpCap && !due.After(now) && !pastEnd(rule, due); count++ {
 		created, err := r.post(ctx, rule, due)
 		if err != nil {
 			summary.Failed++
@@ -185,6 +185,10 @@ func (r *Runner) tick(ctx context.Context) {
 	r.logger.InfoContext(ctx, "recurring run finished",
 		slog.Int("posted", summary.Posted),
 		slog.Int("skipped", summary.Skipped))
+}
+
+func pastEnd(rule entity.Recurring, due time.Time) bool {
+	return rule.EndsOn != nil && due.After(*rule.EndsOn)
 }
 
 func nextOccurrence(due time.Time, rule entity.Recurring) time.Time {

@@ -39,7 +39,7 @@ None.
       "client_id": "laptop-2026-02-14",
       "status": "ready",
       "format": "json",
-      "schema_version": 5,
+      "schema_version": 1,
       "counts": {"accounts": 3, "entries": 42, "postings": 84},
       "bytes": 1908,
       "created_at": "2026-02-14T09:00:00Z",

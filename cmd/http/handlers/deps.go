@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"context"
-	"io"
 	"log/slog"
 	"time"
 
@@ -15,10 +13,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
-
-type ArtifactFiles interface {
-	Open(ctx context.Context, sha string) (io.ReadCloser, error)
-}
 
 type Deps struct {
 	Ledger            ledger.Contract
@@ -33,7 +27,7 @@ type Deps struct {
 	CustomQueries     repository.CustomQueries
 	Artifacts         repository.Artifacts
 	Health            repository.System
-	ArtifactFiles     ArtifactFiles
+	ArtifactFiles     repository.ArtifactFiles
 	Exports           exports.Contract
 	Sealer            seal.Sealer
 	BaseCurrency      string

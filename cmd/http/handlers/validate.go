@@ -2,88 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
-
-	"github.com/go-playground/validator/v10"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/binding"
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
-	"github.com/dimasbaguspm/spenicle/internal/constant"
-	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 )
-
-var validate = newValidator() //nolint:gochecknoglobals // one registry, built once
-
-func newValidator() *validator.Validate {
-	instance := validator.New(validator.WithRequiredStructEnabled())
-
-	rules := map[string]validator.Func{
-		"currency": func(field validator.FieldLevel) bool {
-			_, err := entity.CurrencyByCode(field.Field().String())
-
-			return err == nil
-		},
-		"money": func(field validator.FieldLevel) bool {
-			_, err := strconv.ParseInt(strings.TrimSpace(field.Field().String()), 10, 64)
-
-			return err == nil
-		},
-		"datestr": func(field validator.FieldLevel) bool {
-			raw := strings.TrimSpace(field.Field().String())
-			if raw == "" {
-				return false
-			}
-
-			_, err := time.Parse(constant.DateLayout, raw)
-
-			return err == nil
-		},
-		"rate": func(field validator.FieldLevel) bool {
-			_, err := entity.ParseRate(field.Field().String())
-
-			return err == nil
-		},
-		"capturekind":     validCaptureKind,
-		"source":          validEntrySource,
-		"ref":             validRef,
-		"accountkind":     validAccountKind,
-		"cadence":         validCadence,
-		"importstatus":    validImportStatus,
-		"importrowstatus": validImportRowStatus,
-		"recurringstate":  validRecurringState,
-		"shift":           validShift,
-		"capturestatus":   validCaptureStatus,
-		"exportstatus":    validExportStatus,
-	}
-
-	for tag, rule := range rules {
-		_ = instance.RegisterValidation(tag, rule)
-	}
-
-	return instance
-}
-
-type validationFailure struct {
-	field string
-	tag   string
-	code  string
-}
-
-var validationCodes = []validationFailure{ //nolint:gochecknoglobals // read-only table
-	{field: "Currency", tag: "currency", code: "unknown_currency"},
-	{field: "Base", tag: "currency", code: "unknown_currency"},
-	{field: "Quote", tag: "currency", code: "unknown_currency"},
-	{field: "Kind", tag: "capturekind", code: "unknown_capture_kind"},
-	{field: "Postings", tag: "min", code: "invalid_postings"},
-	{field: "FXRate", tag: "rate", code: "invalid_rate"},
-}
-
-const refLength = 32
 
 type pathRefRequest struct {
 	Ref string `path:"ref" validate:"required,ref"`
@@ -101,7 +27,7 @@ func bindBody(w http.ResponseWriter, r *http.Request, limit int64, target any) b
 		return false
 	}
 
-	if err := validate.Struct(target); err != nil {
+	if err := validating.Struct(target); err != nil {
 		writeInvalid(w, err)
 
 		return false
@@ -137,7 +63,7 @@ func bindPath(r *http.Request, target any) error {
 }
 
 func validateBound(target any) error {
-	if err := validate.Struct(target); err != nil {
+	if err := validating.Struct(target); err != nil {
 		return fmt.Errorf("invalid binding: %w", err)
 	}
 
@@ -145,150 +71,11 @@ func validateBound(target any) error {
 }
 
 func writeInvalid(w http.ResponseWriter, err error) {
-	var invalid validator.ValidationErrors
-
-	if errors.As(err, &invalid) {
-		code := "invalid_request"
-		reasons := make([]string, 0, len(invalid))
-
-		for _, fieldErr := range invalid {
-			code = promotedCode(fieldErr, code)
-			reasons = append(reasons, fmt.Sprintf("%s failed %s", fieldErr.Field(), fieldErr.Tag()))
-		}
-
+	if code, reasons, ok := validating.Invalid(err); ok {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, code, strings.Join(reasons, "; "))
 
 		return
 	}
 
 	httpx.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
-}
-
-func promotedCode(fieldErr validator.FieldError, fallback string) string {
-	for _, failure := range validationCodes {
-		if failure.field == fieldErr.Field() && failure.tag == fieldErr.Tag() {
-			return failure.code
-		}
-	}
-
-	return fallback
-}
-
-func validRef(field validator.FieldLevel) bool {
-	raw := strings.TrimSpace(field.Field().String())
-	if raw == "" {
-		return true
-	}
-
-	if len(raw) != refLength {
-		return false
-	}
-
-	for _, char := range raw {
-		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
-			return false
-		}
-	}
-
-	return true
-}
-
-func validAccountKind(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.AccountKindAsset, constant.AccountKindLiability,
-		constant.AccountKindExpense, constant.AccountKindIncome:
-		return true
-	default:
-		return false
-	}
-}
-
-func validCadence(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.RecurringCadenceDaily, constant.RecurringCadenceWeekly,
-		constant.RecurringCadenceMonthly, constant.RecurringCadenceYearly:
-		return true
-	default:
-		return false
-	}
-}
-
-func validRecurringState(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.RecurringStateSuggested, constant.RecurringStateActive,
-		constant.RecurringStatePaused, constant.RecurringStateEnded:
-		return true
-	default:
-		return false
-	}
-}
-
-func validShift(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.ShiftNone, constant.ShiftNext, constant.ShiftPrev:
-		return true
-	default:
-		return false
-	}
-}
-
-func validImportStatus(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.ImportStatusDraft, constant.ImportStatusCommitted, constant.ImportStatusRejected:
-		return true
-	default:
-		return false
-	}
-}
-
-func validImportRowStatus(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.ImportRowStatusAccepted, constant.ImportRowStatusSkipped:
-		return true
-	default:
-		return false
-	}
-}
-
-func validCaptureKind(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.CaptureKindShare, constant.CaptureKindImage,
-		constant.CaptureKindEmail, constant.CaptureKindStatement,
-		constant.CaptureKindRecurring, constant.CaptureKindManual:
-		return true
-	default:
-		return false
-	}
-}
-
-func validEntrySource(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.EntrySourceManual, constant.EntrySourceShare, constant.EntrySourceEmail,
-		constant.EntrySourceStatement, constant.EntrySourceRecurring,
-		constant.EntrySourceAdjustment:
-		return true
-	default:
-		return false
-	}
-}
-
-func validCaptureStatus(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.CaptureStatusExtracting, constant.CaptureStatusPending,
-		constant.CaptureStatusDuplicate, constant.CaptureStatusApproved,
-		constant.CaptureStatusRejected, constant.CaptureStatusFailed:
-		return true
-	default:
-		return false
-	}
-}
-
-func validExportStatus(field validator.FieldLevel) bool {
-	switch field.Field().String() {
-	case constant.ExportStatusQueued, constant.ExportStatusRunning, constant.ExportStatusReady,
-		constant.ExportStatusFailed, constant.ExportStatusExpired:
-		return true
-	default:
-		return false
-	}
 }

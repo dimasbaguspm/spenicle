@@ -16,7 +16,7 @@
   "finished_at": "<timestamp>",
   "format": "json",
   "ref": "<ref>",
-  "schema_version": 5,
+  "schema_version": 1,
   "started_at": "<timestamp>",
   "status": "ready"
 }

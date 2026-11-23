@@ -953,7 +953,7 @@ sequenceDiagram
 
 ## 3.21 `GET /healthz`
 
-`200 {"status":"ok","schema_version":3,"app_secret":"sealed","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}`
+`200 {"status":"ok","schema_version":1,"app_secret":"sealed","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}`
 
 ```mermaid
 sequenceDiagram

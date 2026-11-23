@@ -83,3 +83,28 @@ Feature: Worker
     When I send a GET to "/api/recurring"
     Then the response status is 200
     And the response JSON matches the snapshot "worker__a_monthly_rule_due_three_months_ago_catches_up"
+
+  Scenario: A rule past its ends_on posts nothing
+    Given the recurring worker clock is "2026-04-15"
+    And a running API
+    When I send a POST to "/api/payees" with:
+      """json
+      {"name":"Kopi Kenangan"}
+      """
+    Then the response status is 201
+    When the request body is:
+      """json
+      {"payee_ref":"{{ref}}","account_ref":"{{account:Cash}}","category_ref":"{{account:Unsorted}}","amount_minor":"25000","currency":"IDR","cadence":"weekly","interval_n":1,"next_due_on":"2026-04-12","ends_on":"2026-04-13"}
+      """
+    And I send a POST to "/api/recurring" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 201
+    When I send a GET to "/api/recurring"
+    Then the response status is 200
+    And the response JSON matches the snapshot "worker__a_rule_past_its_ends_on_posts_nothing"
+    When the recurring worker runs
+    Then the recurring worker reports "0" posted
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 0     |

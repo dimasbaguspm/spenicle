@@ -39,7 +39,7 @@ None.
   "client_id": "laptop-2026-02-14",
   "status": "queued",
   "format": "json",
-  "schema_version": 5,
+  "schema_version": 1,
   "bytes": 0,
   "created_at": "2026-02-14T09:00:00Z"
 }

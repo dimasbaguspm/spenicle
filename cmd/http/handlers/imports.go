@@ -15,6 +15,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
@@ -104,7 +105,7 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = validate.Struct(request); err != nil {
+	if err = validating.Struct(request); err != nil {
 		writeInvalid(w, err)
 
 		return

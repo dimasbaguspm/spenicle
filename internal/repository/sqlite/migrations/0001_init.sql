@@ -142,6 +142,104 @@ CREATE UNIQUE INDEX ux_captures_client ON captures (client_id) WHERE client_id I
 CREATE INDEX ix_captures_queue ON captures (status, received_at);
 CREATE INDEX ix_captures_batch ON captures (batch_id);
 
+CREATE TABLE artifacts (
+  id           INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  capture_id   INTEGER NOT NULL REFERENCES captures(id),
+  sha256       TEXT NOT NULL,
+  content_type TEXT NOT NULL,
+  filename     TEXT NOT NULL,
+  plain_bytes  INTEGER NOT NULL,
+  stored_bytes INTEGER NOT NULL,
+  created_at   TEXT NOT NULL,
+  deleted_at   TEXT,
+  UNIQUE (capture_id)
+);
+
+CREATE INDEX ix_artifacts_sha256 ON artifacts (sha256);
+
+CREATE TABLE import_batches (
+  id           INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  client_id    TEXT NOT NULL UNIQUE,
+  file_hash    TEXT NOT NULL,
+  filename     TEXT NOT NULL,
+  status       TEXT NOT NULL CHECK (status IN ('draft','committed','rejected')),
+  rows_total   INTEGER NOT NULL,
+  currency     TEXT NOT NULL,
+  created_at   TEXT NOT NULL,
+  expires_at   TEXT NOT NULL,
+  committed_at TEXT,
+  rejected_at  TEXT
+);
+
+CREATE INDEX ix_import_batches_expiry ON import_batches (status, expires_at);
+
+CREATE TABLE import_rows (
+  id              INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  batch_id        INTEGER NOT NULL REFERENCES import_batches(id),
+  row_index       INTEGER NOT NULL,
+  occurred_on     TEXT NOT NULL,
+  amount_minor    INTEGER NOT NULL,
+  description     TEXT NOT NULL,
+  account_ref     TEXT NOT NULL,
+  category_ref    TEXT,
+  payee_ref       TEXT,
+  status          TEXT NOT NULL CHECK (status IN ('pending','accepted','skipped')),
+  clash_kind      TEXT,
+  clash_entry_ref TEXT,
+  created_at      TEXT NOT NULL,
+  updated_at      TEXT NOT NULL,
+  edited_at       TEXT,
+  edited_fields   TEXT,
+  UNIQUE (batch_id, row_index)
+);
+
+CREATE TABLE import_events (
+  id           INTEGER PRIMARY KEY,
+  ref          TEXT NOT NULL UNIQUE,
+  batch_id     INTEGER NOT NULL,
+  kind         TEXT NOT NULL,
+  row_index    INTEGER,
+  payload_json TEXT,
+  actor        TEXT NOT NULL,
+  at           TEXT NOT NULL
+);
+
+CREATE INDEX ix_import_events_batch ON import_events (batch_id, id);
+
+CREATE TABLE exports (
+  id             INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  client_id      TEXT NOT NULL UNIQUE,
+  status         TEXT NOT NULL CHECK (status IN ('queued','running','ready','failed','expired')),
+  format         TEXT NOT NULL,
+  schema_version INTEGER NOT NULL,
+  counts_json    TEXT,
+  file_hash      TEXT,
+  bytes          INTEGER NOT NULL DEFAULT 0,
+  created_at     TEXT NOT NULL,
+  started_at     TEXT,
+  finished_at    TEXT,
+  expires_at     TEXT,
+  error_message  TEXT
+);
+
+CREATE INDEX ix_exports_status ON exports (status, id);
+
+CREATE TABLE export_events (
+  id           INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  export_id    INTEGER NOT NULL,
+  kind         TEXT NOT NULL,
+  payload_json TEXT,
+  actor        TEXT NOT NULL,
+  at           TEXT NOT NULL
+);
+
+CREATE INDEX ix_export_events_export ON export_events (export_id, id);
+
 CREATE TABLE custom_queries (
   id         INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,

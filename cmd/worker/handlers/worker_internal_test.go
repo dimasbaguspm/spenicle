@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 )
 
 func parseDay(t *testing.T, value string) time.Time {
@@ -95,6 +97,107 @@ func TestNextOccurrence(t *testing.T) {
 			got := nextOccurrence(parseDay(t, testCase.due), testCase.rule)
 			if want := parseDay(t, testCase.want); !got.Equal(want) {
 				t.Fatalf("next occurrence = %s, want %s", got.Format(constant.DateLayout), testCase.want)
+			}
+		})
+	}
+}
+
+type stubLedger struct{ posts []ledger.PostInput }
+
+func (s *stubLedger) Post(_ context.Context, in ledger.PostInput) (entity.Entry, bool, error) {
+	s.posts = append(s.posts, in)
+
+	return entity.Entry{}, true, nil
+}
+
+func (s *stubLedger) List(context.Context, entity.EntryFilter) ([]entity.Entry, error) {
+	return nil, nil
+}
+
+func (s *stubLedger) Void(context.Context, string, string) (entity.Entry, error) {
+	return entity.Entry{}, nil
+}
+
+func (s *stubLedger) UpdatePayee(context.Context, string, string) (entity.Entry, error) {
+	return entity.Entry{}, nil
+}
+
+type stubStore struct{ advanced int }
+
+func (s *stubStore) DueRecurring(context.Context, time.Time, int) ([]entity.Recurring, error) {
+	return nil, nil
+}
+
+func (s *stubStore) AdvanceRecurring(
+	context.Context, string, time.Time, time.Time, time.Time,
+) (bool, error) {
+	s.advanced++
+
+	return true, nil
+}
+
+func (s *stubStore) PayeeByRef(context.Context, string) (entity.Payee, bool, error) {
+	return entity.Payee{Name: "Kopi Kenangan"}, true, nil
+}
+
+func (s *stubStore) FindAccount(context.Context, string, string) (entity.Account, bool, error) {
+	return entity.Account{Ref: "0123456789abcdef0123456789abcdef"}, true, nil
+}
+
+func (s *stubStore) SetSetting(context.Context, string, string) error { return nil }
+
+func TestRunRuleStopsAtEndsOn(t *testing.T) {
+	ends := parseDay(t, "2026-04-10")
+
+	cases := []struct {
+		name       string
+		nextDueOn  string
+		wantPosted int
+		wantLast   string
+	}{
+		{name: "stops at ends_on", nextDueOn: "2026-04-08", wantPosted: 3, wantLast: "2026-04-10"},
+		{name: "posts nothing past ends_on", nextDueOn: "2026-04-12", wantPosted: 0},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			rule := entity.Recurring{
+				Ref:              "0123456789abcdef0123456789abcdef",
+				PayeeRef:         "0123456789abcdef0123456789abcdef",
+				AccountRef:       "0123456789abcdef0123456789abcdef",
+				CategoryRef:      "0123456789abcdef0123456789abcdef",
+				AmountMinor:      25_000,
+				Currency:         "IDR",
+				Cadence:          constant.RecurringCadenceDaily,
+				IntervalN:        1,
+				BusinessDayShift: constant.ShiftNone,
+				NextDueOn:        parseDay(t, testCase.nextDueOn),
+				EndsOn:           &ends,
+				State:            constant.RecurringStateActive,
+			}
+
+			entries := &stubLedger{}
+			rules := &Runner{store: &stubStore{}, entries: entries}
+
+			var summary Summary
+			if err := rules.runRule(
+				t.Context(), rule, parseDay(t, "2026-04-15"), &summary); err != nil {
+				t.Fatalf("run rule: %v", err)
+			}
+
+			if len(entries.posts) != testCase.wantPosted {
+				t.Fatalf("posted %d entries, want %d", len(entries.posts), testCase.wantPosted)
+			}
+			if summary.Posted != testCase.wantPosted {
+				t.Fatalf("summary posted = %d, want %d", summary.Posted, testCase.wantPosted)
+			}
+			if testCase.wantPosted == 0 {
+				return
+			}
+
+			last := entries.posts[len(entries.posts)-1].OccurredOn.Format(constant.DateLayout)
+			if last != testCase.wantLast {
+				t.Fatalf("last posted on %s, want %s", last, testCase.wantLast)
 			}
 		})
 	}

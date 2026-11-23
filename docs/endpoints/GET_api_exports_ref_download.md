@@ -45,7 +45,7 @@ The date is the day the job finished. The JSON document:
 
 ```json
 {
-  "schema_version": 5,
+  "schema_version": 1,
   "exported_at": "2026-02-14T09:00:00Z",
   "base_currency": "IDR",
   "summary": {

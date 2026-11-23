@@ -6,6 +6,7 @@ package repository
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/entity"
@@ -44,6 +45,10 @@ type Artifacts interface {
 	ArtifactByCaptureRef(ctx context.Context, captureRef string) (entity.Artifact, bool, error)
 	ExpiredArtifacts(ctx context.Context, rejectedBefore time.Time, limit int) ([]entity.Artifact, error)
 	MarkArtifactDeleted(ctx context.Context, ref string, at time.Time) (bool, error)
+}
+
+type ArtifactFiles interface {
+	Open(ctx context.Context, sha string) (io.ReadCloser, error)
 }
 
 type System interface {
