@@ -149,6 +149,8 @@ func responseJSONIs(ctx context.Context, path, want string) (context.Context, er
 		return ctx, err
 	}
 
+	want = w.expandFingerprint(want)
+
 	if got != want {
 		return ctx, fmt.Errorf("%s is %q, want %q (body: %s)", path, got, want, string(w.body))
 	}
@@ -167,7 +169,7 @@ func responseJSONContains(ctx context.Context, path, want string) (context.Conte
 		return ctx, err
 	}
 
-	if !strings.Contains(got, want) {
+	if !strings.Contains(got, w.expandFingerprint(want)) {
 		return ctx, fmt.Errorf("%s is %q, does not contain %q", path, got, want)
 	}
 

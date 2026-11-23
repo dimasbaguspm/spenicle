@@ -1,6 +1,7 @@
 Feature: Health
-  A monitor and the boot sequence need to know the schema version, whether the
-  data is sealed, and what currency the ledger reports in.
+  A monitor and the boot sequence need to know the schema version, the secret
+  fingerprint (APP_SECRET is mandatory, so data is always sealed), and what
+  currency the ledger reports in.
 
   Scenario: Health reports the running state
     Given the base currency is "IDR"
@@ -10,7 +11,7 @@ Feature: Health
     And the response JSON at "$.status" is "ok"
     And the response JSON at "$.schema_version" is "1"
     And the response JSON at "$.base_currency" is "IDR"
-    And the response JSON at "$.app_secret" is "unsealed"
+    And the response JSON at "$.app_secret" is "{{fingerprint}}"
     And the response header "Content-Type" is "application/json; charset=utf-8"
 
   Scenario: An unknown route answers with a JSON error, not HTML

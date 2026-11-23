@@ -17,10 +17,13 @@ type AppConfig struct {
 	// DBPath is already joined from DataDir and the database file name.
 	DBPath string
 
-	// Secrets and credentials. Empty means "feature off", never "unset".
+	// Credentials. AppSecret is mandatory: every sealed column depends on it.
 	Password         string
 	AppSecret        string
 	ExtractionAPIKey string
+	// AllowSecretReset lets a mismatched APP_SECRET start the process anyway by
+	// discarding the sealed payloads. Off unless the operator asks for it.
+	AllowSecretReset bool
 	// OTLPEndpoint is host:port, optionally with a scheme. Empty disables export.
 	OTLPEndpoint string
 	// BaseCurrency is locked at first boot.
@@ -50,6 +53,6 @@ type AppConfig struct {
 	DBMaxIdleConns int
 }
 
-// Sealed reports whether an APP_SECRET was configured. Unsealed is a supported
-// mode, not a misconfiguration: the seal package is a passthrough then.
+// Sealed reports whether an APP_SECRET was configured. It is required, so this is
+// true for every running process; it stays a method so callers read like a fact.
 func (c AppConfig) Sealed() bool { return c.AppSecret != "" }

@@ -26,6 +26,7 @@ func clearEnv(t *testing.T) {
 
 func TestLoadAppliesDefaults(t *testing.T) {
 	clearEnv(t)
+	t.Setenv(config.EnvAppSecret, "0123456789abcdef")
 
 	cfg, err := config.Load(t.Context())
 	if err != nil {
@@ -61,8 +62,44 @@ func TestLoadAppliesDefaults(t *testing.T) {
 		t.Fatalf("max body = %d, want %d", cfg.MaxBodyBytes, config.DefaultMaxBodyBytes)
 	}
 
-	if cfg.Sealed() {
-		t.Fatal("an empty APP_SECRET must not report sealed")
+	if !cfg.Sealed() {
+		t.Fatal("APP_SECRET is set, Sealed must be true")
+	}
+
+	if cfg.AllowSecretReset {
+		t.Fatal("the reset flag is opt-in")
+	}
+}
+
+func TestLoadRequiresAppSecret(t *testing.T) {
+	clearEnv(t)
+
+	if _, err := config.Load(t.Context()); err == nil {
+		t.Fatal("APP_SECRET is mandatory, an empty value must fail")
+	}
+}
+
+func TestLoadParsesSecretReset(t *testing.T) {
+	clearEnv(t)
+	t.Setenv(config.EnvAppSecret, "0123456789abcdef")
+
+	for value, want := range map[string]bool{"true": true, "1": true, "false": false, "0": false} {
+		t.Setenv(config.EnvAppSecretReset, value)
+
+		cfg, err := config.Load(t.Context())
+		if err != nil {
+			t.Fatalf("reset=%q: %v", value, err)
+		}
+
+		if cfg.AllowSecretReset != want {
+			t.Fatalf("reset=%q: AllowSecretReset = %v, want %v", value, cfg.AllowSecretReset, want)
+		}
+	}
+
+	t.Setenv(config.EnvAppSecretReset, "yes-please")
+
+	if _, err := config.Load(t.Context()); err == nil {
+		t.Fatal("a non-boolean reset flag must fail")
 	}
 }
 
@@ -100,6 +137,7 @@ func TestLoadReadsEnvironment(t *testing.T) {
 
 func TestLoadRejectsUnusableValues(t *testing.T) {
 	cases := map[string]map[string]string{
+		"missing secret":    {config.EnvAppSecret: ""},
 		"short secret":      {config.EnvAppSecret: "too-short"},
 		"base not ISO 4217": {config.EnvBaseCurrency: "RUPIAH"},
 	}
@@ -107,6 +145,7 @@ func TestLoadRejectsUnusableValues(t *testing.T) {
 	for name, env := range cases {
 		t.Run(name, func(t *testing.T) {
 			clearEnv(t)
+			t.Setenv(config.EnvAppSecret, "0123456789abcdef")
 
 			for key, value := range env {
 				t.Setenv(key, value)

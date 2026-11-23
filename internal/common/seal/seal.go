@@ -26,8 +26,12 @@ const (
 	minSecretBytes = 16
 )
 
-// ErrNotSealed reports data that was never sealed.
-var ErrNotSealed = errors.New("value is not sealed")
+var (
+	// ErrNotSealed reports data that was never sealed.
+	ErrNotSealed = errors.New("value is not sealed")
+	// ErrNoSecret reports a sealer built without APP_SECRET.
+	ErrNoSecret = errors.New("APP_SECRET is required")
+)
 
 // Sealer is the contract the rest of the code depends on. Swapping AES-GCM for a
 // KMS call later means one new implementation, no call-site changes; the context
@@ -40,16 +44,6 @@ type Sealer interface {
 	Fingerprint() string
 }
 
-// Resolve returns an AES sealer when a secret is configured, and an honest
-// passthrough when it is not.
-func Resolve(secret string) (Sealer, error) {
-	if secret == "" {
-		return Passthrough{}, nil
-	}
-
-	return New(secret)
-}
-
 // AES seals with AES-256-GCM.
 type AES struct {
 	aead        cipher.AEAD
@@ -58,6 +52,10 @@ type AES struct {
 
 // New derives a key from the secret. The secret itself is never stored.
 func New(secret string) (*AES, error) {
+	if secret == "" {
+		return nil, ErrNoSecret
+	}
+
 	if len(secret) < minSecretBytes {
 		return nil, errors.New("APP_SECRET must be at least 16 bytes")
 	}
@@ -126,20 +124,3 @@ func (s *AES) Open(ctx context.Context, sealed string) ([]byte, error) {
 
 // Fingerprint identifies the secret without revealing it.
 func (s *AES) Fingerprint() string { return s.fingerprint }
-
-// Passthrough is used when APP_SECRET is unset. It is honest about doing nothing
-// rather than pretending to encrypt.
-type Passthrough struct{}
-
-// Seal returns the value unchanged.
-func (Passthrough) Seal(_ context.Context, plain []byte) (string, error) {
-	return string(plain), nil
-}
-
-// Open returns the value unchanged.
-func (Passthrough) Open(_ context.Context, sealed string) ([]byte, error) {
-	return []byte(sealed), nil
-}
-
-// Fingerprint is the literal marker stored in settings.
-func (Passthrough) Fingerprint() string { return "unsealed" }

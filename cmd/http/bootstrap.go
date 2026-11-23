@@ -34,9 +34,9 @@ func newApp(
 	version string,
 	logger *slog.Logger,
 ) (*app, error) {
-	sealer, err := resolveSealer(ctx, logger, cfg.AppSecret)
+	sealer, err := seal.New(cfg.AppSecret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sealer: %w", err)
 	}
 
 	store, err := sqlite.New(ctx, sqlite.Config{
@@ -54,7 +54,9 @@ func newApp(
 		return nil, fmt.Errorf("migrate: %w", migrateErr)
 	}
 
-	baseCurrency, err := store.EnsureBaseline(ctx, cfg.BaseCurrency, sealer.Fingerprint())
+	baseCurrency, err := store.EnsureBaseline(
+		ctx, cfg.BaseCurrency, sealer.Fingerprint(), cfg.AllowSecretReset,
+	)
 	if err != nil {
 		_ = store.Close(ctx)
 
@@ -88,21 +90,4 @@ func (a *app) Close(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// resolveSealer returns the AES sealer when APP_SECRET is set and the honest
-// passthrough when it is not.
-func resolveSealer(ctx context.Context, logger *slog.Logger, secret string) (seal.Sealer, error) {
-	if secret == "" {
-		logger.WarnContext(ctx, "APP_SECRET is unset: capture payloads and artifacts stay plaintext")
-
-		return seal.Passthrough{}, nil
-	}
-
-	sealer, err := seal.New(secret)
-	if err != nil {
-		return nil, fmt.Errorf("sealer: %w", err)
-	}
-
-	return sealer, nil
 }

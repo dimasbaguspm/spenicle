@@ -27,6 +27,10 @@ import (
 const (
 	// maxPreview bounds what a failure message can dump into the log.
 	maxPreview = 120
+
+	// appSecret is the UAT secret. It seals nothing that is asserted on, but the
+	// process refuses to boot without one, so the harness needs a real value.
+	appSecret = "uat-secret-0123456789"
 )
 
 type worldKey struct{}
@@ -34,6 +38,7 @@ type worldKey struct{}
 // world is the per-scenario state. Everything a step needs is reachable from it.
 type world struct {
 	baseCurrency string
+	fingerprint  string
 	dbPath       string
 	store        *sqlite.Store
 	server       *httptest.Server
@@ -89,9 +94,16 @@ func (w *world) boot(ctx context.Context) error {
 		return fmt.Errorf("migrate: %w", migrateErr)
 	}
 
-	sealer := seal.Passthrough{}
+	sealer, err := seal.New(appSecret)
+	if err != nil {
+		_ = store.Close(ctx)
 
-	baseCurrency, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint())
+		return fmt.Errorf("sealer: %w", err)
+	}
+
+	w.fingerprint = sealer.Fingerprint()
+
+	baseCurrency, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint(), false)
 	if err != nil {
 		_ = store.Close(ctx)
 
@@ -171,6 +183,13 @@ func (w *world) do(ctx context.Context, method, path string, body []byte) error 
 }
 
 var accountPlaceholder = regexp.MustCompile(`\{\{account:([^}]+)\}\}`)
+
+// expandFingerprint substitutes {{fingerprint}} with this scenario's sealed
+// fingerprint, so a feature can assert "the data is sealed" without hard-coding a
+// digest that depends on the harness secret.
+func (w *world) expandFingerprint(want string) string {
+	return strings.ReplaceAll(want, "{{fingerprint}}", w.fingerprint)
+}
 
 // expand substitutes {{account:Name}} with the id recorded for that account.
 // A placeholder, not a DSL: the step still just sends a body.
