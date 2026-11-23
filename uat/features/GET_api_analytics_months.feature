@@ -23,6 +23,7 @@ Feature: GET /api/analytics/months
       | query | to   | 2026-02-28 |
     Then the response status is 200
     And the response JSON at "$.from" is "2026-01-01"
+    And the response JSON is contract-clean
     And the response JSON at "$.to" is "2026-02-28"
     And the response JSON at "$.months[0].month" is "2026-01"
     And the response JSON at "$.months[0].spend_minor" is "10000"

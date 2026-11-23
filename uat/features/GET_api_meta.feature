@@ -6,6 +6,7 @@ Feature: GET /api/meta
     When I send a GET to "/api/meta"
     Then the response status is 200
     And the response JSON at "$.settings.base_currency" is "IDR"
+    And the response JSON is contract-clean
     And the response JSON at "$.settings.extraction_enabled" is "false"
     And the response JSON at "$.accounts[0].name" is "Cash"
     And the response JSON at "$.accounts[0].kind" is "asset"

@@ -10,6 +10,7 @@ Feature: GET /api/rates
       | query | on    | 2026-11-20 |
     Then the response status is 200
     And the response JSON at "$.base" is "EUR"
+    And the response JSON is contract-clean
     And the response JSON at "$.quote" is "USD"
     And the response JSON at "$.rate" is "1.0990"
     And the response JSON at "$.on_date" is "2026-11-20"

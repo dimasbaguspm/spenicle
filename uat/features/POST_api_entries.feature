@@ -27,6 +27,7 @@ Feature: POST /api/entries
       | header | Content-Type | application/json |
     Then the response status is <status>
     And the response JSON at "$.error.code" is "<code>"
+    And the response JSON is contract-clean
 
     Examples:
       | body                                                                                                                                                        | status | code                  |
@@ -199,3 +200,13 @@ Feature: POST /api/entries
       | type   | key          | value            |
       | header | Content-Type | application/json |
     Then the response status is 201
+
+  Scenario: An unknown field is refused instead of ignored
+    Given a running API
+    When I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1","fx_rte":"1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}
+      """
+    Then the response status is 400
+    And the response JSON at "$.error.code" is "invalid_json"
+    And the response JSON at "$.error.message" contains "unknown field"

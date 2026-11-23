@@ -18,6 +18,7 @@ Feature: GET /api/entries
       | query | limit | <limit>   |
     Then the response status is 200
     And the response JSON at "$.entries[0].note" is "<newest>"
+    And the response JSON is contract-clean
 
     Examples:
       | from       | to         | limit | newest   |

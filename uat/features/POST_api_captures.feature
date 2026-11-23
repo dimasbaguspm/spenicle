@@ -25,6 +25,7 @@ Feature: POST /api/captures
       """
     Then the response status is 422
     And the response JSON at "$.error.code" is "unknown_capture_kind"
+    And the response JSON is contract-clean
 
   Scenario: A capture and its approval are snapshotted
     Given a running API

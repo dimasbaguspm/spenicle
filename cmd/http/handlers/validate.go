@@ -116,7 +116,10 @@ type pathRefRequest struct {
 func bindBody(w http.ResponseWriter, r *http.Request, limit int64, target any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, limit)
 
-	if err := json.NewDecoder(r.Body).Decode(target); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(target); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", err.Error())
 
 		return false

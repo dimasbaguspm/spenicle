@@ -2,6 +2,7 @@ package uat
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -30,6 +31,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the response JSON at "([^"]*)" contains "([^"]*)"$`, responseJSONContains)
 	sc.Step(`^the response header "([^"]*)" is "([^"]*)"$`, responseHeaderIs)
 	sc.Step(`^the response header "([^"]*)" contains "([^"]*)"$`, responseHeaderContains)
+	sc.Step(`^the response JSON is contract-clean$`, responseIsContractClean)
 	sc.Step(`^the store holds:$`, theStoreHolds)
 	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)
 	sc.Step(`^the database matches the snapshot "([^"]*)"$`, databaseMatchesSnapshot)
@@ -336,4 +338,62 @@ func databaseMatchesSnapshot(ctx context.Context, name string) (context.Context,
 	}
 
 	return ctx, w.assertDBSnapshot(ctx, name)
+}
+
+func responseIsContractClean(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	var document any
+	if err := json.Unmarshal(w.body, &document); err != nil {
+		return ctx, fmt.Errorf("response is not JSON (%q): %w", preview(string(w.body)), err)
+	}
+
+	return ctx, walkContract("$", document)
+}
+
+func walkContract(path string, value any) error {
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, inner := range typed {
+			if err := checkKey(path, key, inner); err != nil {
+				return err
+			}
+
+			if err := walkContract(path+"."+key, inner); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for index, inner := range typed {
+			if err := walkContract(fmt.Sprintf("%s[%d]", path, index), inner); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func checkKey(path, key string, value any) error {
+	if key == "id" {
+		return fmt.Errorf("%s: integer ids never leave the database", path)
+	}
+
+	if strings.HasSuffix(key, "_ref") || key == "ref" {
+		ref, ok := value.(string)
+		if !ok || !refPattern.MatchString(ref) {
+			return fmt.Errorf("%s.%s is %v, want a 32-hex ref", path, key, value)
+		}
+	}
+
+	if strings.HasSuffix(key, "_minor") || key == "rate" {
+		if _, ok := value.(string); !ok {
+			return fmt.Errorf("%s.%s is %v, want a string of minor units", path, key, value)
+		}
+	}
+
+	return nil
 }

@@ -13,6 +13,7 @@ Feature: GET /api/dashboard
     When I send a GET to "/api/dashboard"
     Then the response status is 200
     And the response JSON at "$.base_currency" is "IDR"
+    And the response JSON is contract-clean
     And the response JSON at "$.spend_minor" is "10000"
     And the response JSON at "$.net_minor" is "-10000"
     And the response JSON at "$.pending_captures" is "0"
