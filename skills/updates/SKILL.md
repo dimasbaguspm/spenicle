@@ -60,7 +60,7 @@ gh api "repos/docker/build-push-action/contents/action.yml?ref=v7.4.0" \
 ```
 
 Pinned today (all `node24`): `actions/checkout@v7`, `actions/setup-go@v7`,
-`golangci/golangci-lint-action@v8`, `docker/setup-qemu-action@v4`,
+`golangci/golangci-lint-action@v9`, `docker/setup-qemu-action@v4`,
 `docker/setup-buildx-action@v4`, `docker/build-push-action@v7`.
 
 ## 4. The published image
