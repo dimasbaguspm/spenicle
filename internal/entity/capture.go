@@ -9,9 +9,7 @@ import (
 )
 
 var (
-	// ErrCaptureResolved reports an action on a capture that already left the queue.
-	ErrCaptureResolved = errors.New("capture is already resolved")
-	// ErrUnknownCaptureKind reports a channel this build does not know.
+	ErrCaptureResolved    = errors.New("capture is already resolved")
 	ErrUnknownCaptureKind = errors.New("unknown capture kind")
 )
 
@@ -35,8 +33,6 @@ var captureTransitions = map[string]map[string]bool{
 	constant.CaptureStatusRejected:  {constant.CaptureStatusPending: true},
 }
 
-// Capture is anything unconfirmed, from any channel. It never writes to the
-// ledger on its own.
 type Capture struct {
 	ID              int64
 	Kind            string
@@ -48,11 +44,7 @@ type Capture struct {
 	RawText         string
 	DraftJSON       string
 	ExtractionError string
-	// JobRef is the vendor's id for this snap, used to read the result back when
-	// the submit answered 202 instead of 200.
-	JobRef string
-	// ExtractionRail names the vendor that produced the draft: snaptojson, openai,
-	// anything that implements the extraction contract. Empty means none yet.
+	JobRef          string
 	ExtractionRail  string
 	ResolvedEntryID *int64
 	ResolutionNote  string
@@ -60,9 +52,6 @@ type Capture struct {
 	ResolvedAt      *time.Time
 }
 
-// Transition validates a status change. Terminal states cannot be silently
-// re-opened: rejected goes back to pending, approved never does (void the
-// entry instead).
 func (c Capture) Transition(to string) error {
 	allowed, known := captureTransitions[c.Status]
 	if !known {
@@ -76,7 +65,6 @@ func (c Capture) Transition(to string) error {
 	return nil
 }
 
-// IsResolved reports whether the item is out of the queue.
 func (c Capture) IsResolved() bool {
 	return c.Status == constant.CaptureStatusApproved ||
 		c.Status == constant.CaptureStatusRejected ||

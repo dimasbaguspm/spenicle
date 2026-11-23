@@ -7,7 +7,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 )
 
-// clearEnv makes the test independent of the developer's shell.
 func clearEnv(t *testing.T) {
 	t.Helper()
 

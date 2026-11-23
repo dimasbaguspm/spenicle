@@ -20,34 +20,27 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
 
-// validate is the module's own registry: the password rules are the module's, not the
-// HTTP surface's, and both layers must agree.
 var validate = validator.New() //nolint:gochecknoglobals // one registry, built once
 
-// passwordChange is the shape a rotation must satisfy.
 type passwordChange struct {
 	Current string `validate:"required"`
 	Next    string `validate:"required,min=12,max=200"`
 }
 
-// Service reads and writes the one settings row.
 type Service struct {
 	store  repository.System
 	sealer seal.Sealer
 	clock  TimeSource
 }
 
-// TimeSource is the module's only ambient dependency; clock.System satisfies it.
 type TimeSource interface{ Now() time.Time }
 
-// New wires the module.
 func New(store repository.System, sealer seal.Sealer, clock TimeSource) *Service {
 	return &Service{store: store, sealer: sealer, clock: clock}
 }
 
 var _ Contract = (*Service)(nil)
 
-// Load decodes the settings row, falling back to the defaults of a fresh database.
 func (s *Service) Load(ctx context.Context) (entity.Settings, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.Load")
 	defer endSpan()
@@ -57,8 +50,6 @@ func (s *Service) Load(ctx context.Context) (entity.Settings, error) {
 	return settings, err
 }
 
-// BaseCurrency is what the ledger module converts into: a settings value, not an
-// environment variable.
 func (s *Service) BaseCurrency(ctx context.Context) (string, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.BaseCurrency")
 	defer endSpan()
@@ -71,8 +62,6 @@ func (s *Service) BaseCurrency(ctx context.Context) (string, error) {
 	return settings.BaseCurrency, nil
 }
 
-// EnsureInitial seeds the row exactly once. A fresh database gets the default base
-// currency and, when initialPassword is set, a password the user must change.
 func (s *Service) EnsureInitial(ctx context.Context, initialPassword string) (entity.Settings, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.EnsureInitial")
 	defer endSpan()
@@ -97,8 +86,6 @@ func (s *Service) EnsureInitial(ctx context.Context, initialPassword string) (en
 	return settings, nil
 }
 
-// Authenticate compares a login attempt in constant time. found=false means "no
-// password is set", which is the open mode of a self-hosted box on a private network.
 func (s *Service) Authenticate(
 	ctx context.Context,
 	password string,
@@ -122,7 +109,6 @@ func (s *Service) Authenticate(
 	return settings, true, nil
 }
 
-// ChangePassword replaces the credential and clears the must-change flag.
 func (s *Service) ChangePassword(
 	ctx context.Context,
 	current, next string,
@@ -153,8 +139,6 @@ func (s *Service) ChangePassword(
 	return settings, nil
 }
 
-// SetBaseCurrency changes the reporting currency while the ledger is still empty.
-// After the first entry the number would mean something else, so it is locked.
 func (s *Service) SetBaseCurrency(ctx context.Context, code string) (entity.Settings, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.SetBaseCurrency")
 	defer endSpan()
@@ -187,8 +171,6 @@ func (s *Service) SetBaseCurrency(ctx context.Context, code string) (entity.Sett
 	return settings, nil
 }
 
-// SessionToken is the cookie value: derived from the secret, never stored, and
-// invalidated the moment APP_SECRET changes.
 func (s *Service) SessionToken(ctx context.Context) (string, error) {
 	_, endSpan := telemetry.StartSpan(ctx, "Module.Settings.SessionToken")
 	defer endSpan()
@@ -198,7 +180,6 @@ func (s *Service) SessionToken(ctx context.Context) (string, error) {
 	return hex.EncodeToString(sum[:16]), nil
 }
 
-// load reads and decodes the row, reporting whether it existed at all.
 func (s *Service) load(ctx context.Context) (entity.Settings, bool, error) {
 	raw, found, err := s.store.Setting(ctx, constant.SettingAppSettings)
 	if err != nil {
@@ -222,8 +203,6 @@ func (s *Service) load(ctx context.Context) (entity.Settings, bool, error) {
 	return settings, true, nil
 }
 
-// migrateLegacy lifts the pre-JSON `base_currency` row into the blob, so an upgrade
-// keeps the currency the ledger was opened with.
 func (s *Service) migrateLegacy(ctx context.Context) (entity.Settings, bool, error) {
 	settings := entity.DefaultSettings()
 
@@ -239,7 +218,6 @@ func (s *Service) migrateLegacy(ctx context.Context) (entity.Settings, bool, err
 	return settings, false, nil
 }
 
-// save seals the whole blob: one row, one envelope, no field left in plaintext.
 func (s *Service) save(ctx context.Context, settings entity.Settings) error {
 	if err := settings.Validate(); err != nil {
 		return err
@@ -263,7 +241,6 @@ func (s *Service) save(ctx context.Context, settings entity.Settings) error {
 	return nil
 }
 
-// IsPasswordMismatch is a tiny helper for the transport layer's error mapping.
 func IsPasswordMismatch(err error) bool {
 	return errors.Is(err, entity.ErrPasswordMismatch)
 }

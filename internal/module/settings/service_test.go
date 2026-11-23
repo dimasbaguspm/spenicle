@@ -147,7 +147,6 @@ func TestOpenModeHasNoPassword(t *testing.T) {
 	}
 }
 
-// settings must never lie about its own validation.
 func TestSettingsValidateRejectsUnknownCurrency(t *testing.T) {
 	if err := (entity.Settings{BaseCurrency: "RUPIAH"}).Validate(); err == nil {
 		t.Fatal("a non ISO 4217 currency must be refused")

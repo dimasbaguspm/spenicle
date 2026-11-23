@@ -19,27 +19,20 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 )
 
-// Service owns the review queue.
 type Service struct {
-	captures repository.Captures
-	entries  ledger.Contract
-	sealer   seal.Sealer
-	clock    TimeSource
-	ids      IDSource
-	// extractor is whichever rail is configured, or nil. Nil is a supported mode:
-	// captures stay raw and the user types the fields. The module never learns the
-	// vendor's name — the rail reports it, and it is stored with the draft.
+	captures  repository.Captures
+	entries   ledger.Contract
+	sealer    seal.Sealer
+	clock     TimeSource
+	ids       IDSource
 	extractor extraction.Extractor
 }
 
-// TimeSource and IDSource are the module's ambient dependencies; clock.System
-// satisfies both.
 type (
 	TimeSource interface{ Now() time.Time }
 	IDSource   interface{ NewID() string }
 )
 
-// New wires the module.
 func New(
 	captures repository.Captures,
 	entries ledger.Contract,
@@ -56,8 +49,6 @@ func New(
 
 var _ Contract = (*Service)(nil)
 
-// Create queues a capture. The payload is sealed before it reaches the database, so
-// a stolen file does not leak a bank email.
 func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Capture, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Create")
 	defer endSpan()
@@ -113,7 +104,6 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Capture, b
 	return opened, true, err
 }
 
-// List returns the queue, seal opened so a review screen can show the text.
 func (s *Service) List(
 	ctx context.Context,
 	filter entity.CaptureFilter,
@@ -140,8 +130,6 @@ func (s *Service) List(
 	return out, nil
 }
 
-// Approve posts the entry and resolves the capture. Ordering matters: if the post
-// fails, the capture stays in the queue.
 func (s *Service) Approve(
 	ctx context.Context,
 	id int64,
@@ -185,8 +173,6 @@ func (s *Service) Approve(
 	return entry, resolved, nil
 }
 
-// Reject takes a capture out of the queue without touching the ledger. The reason
-// is sealed like every other note.
 func (s *Service) Reject(ctx context.Context, id int64, reason string) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Reject")
 	defer endSpan()
@@ -204,8 +190,6 @@ func (s *Service) Reject(ctx context.Context, id int64, reason string) (entity.C
 	return s.resolve(ctx, capture, constant.CaptureStatusRejected, sealedNote, nil)
 }
 
-// Retry reads a snap back. A capture that never reached the vendor has nothing to
-// retry, and says so instead of silently doing nothing.
 func (s *Service) Retry(ctx context.Context, id int64) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Retry")
 	defer endSpan()
@@ -247,9 +231,6 @@ func (s *Service) Retry(ctx context.Context, id int64) (entity.Capture, error) {
 	return s.open(ctx, updated)
 }
 
-// extract submits an artifact when both the vendor and the document exist. Every
-// failure is recorded on the capture, never raised: a vendor outage must not lose
-// the receipt the user just shared.
 func (s *Service) extract(
 	ctx context.Context,
 	capture entity.Capture,
@@ -261,8 +242,6 @@ func (s *Service) extract(
 
 	report, err := s.extractor.Submit(ctx, *artifact)
 	if err != nil {
-		// A rail that refuses or fails must not lose the document the user just
-		// handed over: the capture stays, the reason is recorded on it.
 		capture.ExtractionRail = s.extractor.Rail()
 		capture.ExtractionError = err.Error()
 
@@ -272,10 +251,6 @@ func (s *Service) extract(
 	return s.applyReport(ctx, capture, report)
 }
 
-// applyReport maps the vendor's four states onto the queue's statuses, sealing the
-// draft so the fields the vendor read never sit in plaintext.
-// applyReport maps the unified report onto the queue's statuses. One switch for every
-// rail: a new vendor cannot invent a new capture state.
 func (s *Service) applyReport(
 	ctx context.Context,
 	capture entity.Capture,
@@ -317,7 +292,6 @@ func (s *Service) applyReport(
 	return s.captures.UpdateCapture(ctx, capture)
 }
 
-// pending loads a capture that is still allowed to move.
 func (s *Service) pending(ctx context.Context, id int64) (entity.Capture, error) {
 	capture, found, err := s.captures.CaptureByID(ctx, id)
 	if err != nil {
@@ -335,7 +309,6 @@ func (s *Service) pending(ctx context.Context, id int64) (entity.Capture, error)
 	return capture, nil
 }
 
-// resolve writes the terminal state once, and audits the decision.
 func (s *Service) resolve(
 	ctx context.Context,
 	capture entity.Capture,
@@ -361,9 +334,6 @@ func (s *Service) resolve(
 	return s.open(ctx, updated)
 }
 
-// open unseals the payloads a caller needs. A payload that cannot be opened (the
-// secret changed) is reported as an empty string, not as a failed read: the queue
-// item itself is still usable.
 func (s *Service) open(ctx context.Context, capture entity.Capture) (entity.Capture, error) {
 	var err error
 
@@ -412,16 +382,12 @@ func (s *Service) openText(ctx context.Context, sealed string) (string, error) {
 	return string(plain), nil
 }
 
-// draftEnvelope is what a capture stores as its draft: the rail's data, whether it
-// validated, and what it complained about. One shape for every rail.
 type draftEnvelope struct {
 	Data       json.RawMessage        `json:"data,omitempty"`
 	Valid      bool                   `json:"valid"`
 	Violations []extraction.Violation `json:"violations,omitempty"`
 }
 
-// dedupeKey is what makes "the same receipt twice" one row. A client id, when
-// present, is part of it: two genuinely different captures may share a text body.
 func dedupeKey(in CreateInput) string {
 	joined := strings.Join([]string{
 		in.Kind, in.ClientID, in.ArtifactHash, in.RawText,
@@ -442,8 +408,6 @@ func knownKind(kind string) bool {
 	}
 }
 
-// sourceOf records where an approved entry came from, so provenance is not guessed
-// later.
 func sourceOf(kind string) string {
 	switch kind {
 	case constant.CaptureKindShare:

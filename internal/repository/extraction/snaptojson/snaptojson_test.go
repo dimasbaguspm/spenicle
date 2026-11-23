@@ -19,8 +19,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 )
 
-// captured records what the fake vendor received, so a test proves the wire shape and
-// not only the decode.
 type captured struct {
 	apiKey   string
 	fileName string
@@ -195,8 +193,6 @@ func TestNewRefusesAnEmptyKey(t *testing.T) {
 	}
 }
 
-// TestPostingAndPollingUseDistinctSpans keeps the o11y contract: a billed submit and
-// a free read-back must be tellable apart in a trace.
 func TestPostingAndPollingUseDistinctSpans(t *testing.T) {
 	server, _ := newServer(t, http.StatusOK, `{"job_ref":"snap_1","status":"COMPLETED"}`)
 

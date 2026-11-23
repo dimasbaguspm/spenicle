@@ -8,22 +8,14 @@ import (
 )
 
 var (
-	// ErrNotFound reports an id that does not exist, or is not visible any more.
-	ErrNotFound = errors.New("not found")
-	// ErrUnknownCurrency reports a code outside the ISO set.
+	ErrNotFound        = errors.New("not found")
 	ErrUnknownCurrency = errors.New("unknown currency")
-	// ErrInvalidAmount reports an amount that cannot be represented.
-	ErrInvalidAmount = errors.New("invalid amount")
-	// ErrInvalidRate reports a conversion rate that cannot be used.
-	ErrInvalidRate = errors.New("invalid rate")
+	ErrInvalidAmount   = errors.New("invalid amount")
+	ErrInvalidRate     = errors.New("invalid rate")
 )
 
-// decimalBase is the radix behind every minor-unit shift.
 const decimalBase = 10
 
-// ConvertBase converts a native minor-unit amount into base minor units and
-// rounds exactly once, half away from zero. rate is base units per one native
-// unit, e.g. 16250.42 for USD->IDR.
 func ConvertBase(native int64, from, to Currency, rate *big.Rat) (int64, error) {
 	if rate == nil || rate.Sign() <= 0 {
 		return 0, ErrInvalidRate
@@ -31,9 +23,6 @@ func ConvertBase(native int64, from, to Currency, rate *big.Rat) (int64, error) 
 
 	rat := new(big.Rat).SetInt64(native)
 
-	// native_minor / 10^from is the native amount. Multiply by the rate to get
-	// base units, then by 10^to to get base minor units. Divide when the target
-	// has fewer decimals, never the other way round.
 	if shift := to.MinorUnits - from.MinorUnits; shift != 0 {
 		exponent := int64(shift)
 		if exponent < 0 {
@@ -60,7 +49,6 @@ func ConvertBase(native int64, from, to Currency, rate *big.Rat) (int64, error) 
 	return roundHalfAwayFromZero(rat), nil
 }
 
-// ParseRate parses an exact decimal rate. Never float64.
 func ParseRate(raw string) (*big.Rat, error) {
 	parsed, ok := new(big.Rat).SetString(strings.TrimSpace(raw))
 	if !ok || parsed.Sign() <= 0 {

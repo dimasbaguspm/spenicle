@@ -22,7 +22,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
-// app is the assembled graph. Nothing reaches for a global.
 type app struct {
 	DB           *sql.DB
 	Store        *sqlite.Store
@@ -30,11 +29,6 @@ type app struct {
 	BaseCurrency string
 }
 
-// newApp opens, migrates, seeds and wires the process. Every knob arrives in cfg;
-// the only thing this function adds is a version string stamped at build time.
-//
-// uat assembles the same graph by hand because this file is package main and
-// therefore not importable; keep the two in step when a dependency is added.
 func newApp(
 	ctx context.Context,
 	cfg entity.AppConfig,
@@ -75,7 +69,6 @@ func newApp(
 		return nil, err
 	}
 
-	// clock.System satisfies both the time and the id contract.
 	clockSystem := clock.System{}
 	ledgerService := ledger.New(store, settingsService, clockSystem, clockSystem)
 
@@ -102,7 +95,6 @@ func newApp(
 	}, nil
 }
 
-// Close releases the database handle.
 func (a *app) Close(ctx context.Context) error {
 	if err := a.Store.Close(ctx); err != nil {
 		return fmt.Errorf("close database: %w", err)
@@ -111,7 +103,6 @@ func (a *app) Close(ctx context.Context) error {
 	return nil
 }
 
-// prepare seeds settings, prints the first password once and applies the baseline.
 func prepare(
 	ctx context.Context,
 	store *sqlite.Store,
@@ -143,8 +134,6 @@ func prepare(
 	return service, baseCurrency, nil
 }
 
-// buildExtractor returns nil when SNAPTOJSON_API_KEY is unset: no key, no vendor,
-// captures stay raw. A key means one client for the process.
 func buildExtractor(
 	ctx context.Context,
 	cfg entity.AppConfig,
@@ -158,9 +147,6 @@ func buildExtractor(
 	return rail, nil
 }
 
-// selectRail is the whole rail policy in one place: SnapToJSON wins when its key is
-// set, OpenAI is the fallback, and no key means extraction is off. The module never
-// learns which one it got.
 func selectRail(
 	ctx context.Context,
 	cfg entity.AppConfig,
@@ -193,10 +179,8 @@ func selectRail(
 	return nil, nil //nolint:nilnil // nil extractor is the documented "disabled" mode
 }
 
-// passwordBytes is long enough to survive being written on paper.
 const passwordBytes = 18
 
-// generatePassword is what a fresh boot prints once: 18 random bytes, url-safe.
 func generatePassword() (string, error) {
 	raw := make([]byte, passwordBytes)
 

@@ -10,14 +10,10 @@ import (
 )
 
 var (
-	// ErrInvalidPostings reports an entry whose legs cannot be posted.
 	ErrInvalidPostings = errors.New("invalid postings")
-	// ErrZeroSum reports an entry whose legs do not balance.
-	ErrZeroSum = errors.New("postings do not sum to zero")
-	// ErrInvalidState reports a status transition that is not allowed.
-	ErrInvalidState = errors.New("invalid state transition")
-	// ErrSecretMismatch reports data sealed with a different APP_SECRET.
-	ErrSecretMismatch = errors.New("app secret mismatch")
+	ErrZeroSum         = errors.New("postings do not sum to zero")
+	ErrInvalidState    = errors.New("invalid state transition")
+	ErrSecretMismatch  = errors.New("app secret mismatch")
 )
 
 var validSources = map[string]bool{
@@ -29,8 +25,6 @@ var validSources = map[string]bool{
 	constant.EntrySourceAdjustment: true,
 }
 
-// Posting is one leg. AmountMinor is in the entry currency, BaseAmountMinor in
-// the base currency, and both are signed.
 type Posting struct {
 	AccountID       int64
 	AmountMinor     int64
@@ -40,7 +34,6 @@ type Posting struct {
 	FXSource        string
 }
 
-// Entry is what a human says happened. The postings say where the money moved.
 type Entry struct {
 	ID         int64
 	ClientID   string
@@ -55,7 +48,6 @@ type Entry struct {
 	ReversesID *int64
 }
 
-// NewEntry validates the invariants that must hold for every entry, forever.
 func NewEntry(entry Entry) (Entry, error) {
 	if _, err := CurrencyByCode(entry.Currency); err != nil {
 		return Entry{}, err
@@ -100,7 +92,6 @@ func NewEntry(entry Entry) (Entry, error) {
 	return entry, nil
 }
 
-// rateIsMalformed reports a rate that cannot be parsed when one is present.
 func (p Posting) rateIsMalformed() bool {
 	if p.FXRate == "" || p.FXRate == "1" {
 		return false
@@ -111,8 +102,6 @@ func (p Posting) rateIsMalformed() bool {
 	return err != nil
 }
 
-// CheckZeroSum is exported because the sqlite adapter re-checks it inside the
-// write transaction.
 func CheckZeroSum(postings []Posting) error {
 	native := new(big.Int)
 	base := new(big.Int)

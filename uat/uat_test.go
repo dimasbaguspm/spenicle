@@ -8,8 +8,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/uat"
 )
 
-// TestFeatures runs every .feature file with the real HTTP handler over a real
-// SQLite file. No mocks: a green scenario proves the shipped code.
 func TestFeatures(t *testing.T) {
 	suite := godog.TestSuite{
 		Name:                "spenicle",

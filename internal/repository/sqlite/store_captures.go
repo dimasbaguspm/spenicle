@@ -16,8 +16,6 @@ const captureColumns = `id, kind, status, client_id, dedupe_key, batch_id, artif
 	raw_text, draft_json, extraction_error, extraction_job_ref, extraction_rail,
 	resolved_entry_id, resolution_note, received_at, resolved_at`
 
-// InsertCapture appends one queue item. The sealed payloads are opaque here: this
-// adapter stores what the module hands it.
 func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertCapture")
 	defer endSpan()
@@ -58,7 +56,6 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 	return capture, nil
 }
 
-// CaptureByDedupeKey answers "did this exact receipt arrive twice".
 func (s *Store) CaptureByDedupeKey(ctx context.Context, key string) (entity.Capture, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CaptureByDedupeKey")
 	defer endSpan()
@@ -67,7 +64,6 @@ func (s *Store) CaptureByDedupeKey(ctx context.Context, key string) (entity.Capt
 		`SELECT `+captureColumns+` FROM captures WHERE dedupe_key = ?`, key))
 }
 
-// CaptureByID reads one queue item.
 func (s *Store) CaptureByID(ctx context.Context, id int64) (entity.Capture, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CaptureByID")
 	defer endSpan()
@@ -76,8 +72,6 @@ func (s *Store) CaptureByID(ctx context.Context, id int64) (entity.Capture, bool
 		`SELECT `+captureColumns+` FROM captures WHERE id = ?`, id))
 }
 
-// ListCaptures returns the queue: extracting first, then oldest pending, then the
-// resolved tail, so a review screen can render top-down without sorting.
 func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) ([]entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListCaptures")
 	defer endSpan()
@@ -126,8 +120,6 @@ func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) (
 	return out, nil
 }
 
-// UpdateCapture writes the mutable half of a queue item: status, draft, error,
-// resolution. Identity columns are never rewritten.
 func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateCapture")
 	defer endSpan()
@@ -163,7 +155,6 @@ func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (enti
 	return capture, nil
 }
 
-// scanCapture reads one row and reports a missing id instead of an error.
 func (s *Store) scanCapture(ctx context.Context, row *sql.Row) (entity.Capture, bool, error) {
 	_ = ctx
 
@@ -179,8 +170,6 @@ func (s *Store) scanCapture(ctx context.Context, row *sql.Row) (entity.Capture, 
 	return capture, true, nil
 }
 
-// scanCaptureRow maps the capture columns in order. Both *sql.Row and *sql.Rows
-// satisfy the Scan half, so one scanner covers read-by-id and list.
 func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Capture, error) {
 	var (
 		capture     entity.Capture
@@ -238,7 +227,6 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 	return capture, nil
 }
 
-// clampLimit keeps a caller-supplied page size inside the API's bounds.
 func clampLimit(limit int) int {
 	const (
 		defaultLimit = 50

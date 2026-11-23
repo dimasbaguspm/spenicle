@@ -15,12 +15,10 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 )
 
-// Chain applies middleware so the first argument is the outermost layer.
 func Chain(handler http.Handler, layers ...httpx.Middleware) http.Handler {
 	return httpx.Chain(handler, layers...)
 }
 
-// Recover turns a panic into a 500 instead of a dropped connection.
 func Recover(logger *slog.Logger) httpx.Middleware {
 	//nolint:contextcheck // the panic guard calls no downstream function to inherit a context into
 	return func(next http.Handler) http.Handler {
@@ -40,7 +38,6 @@ func Recover(logger *slog.Logger) httpx.Middleware {
 	}
 }
 
-// Observe starts one span per request and records the outcome on it.
 func Observe() httpx.Middleware {
 	tracer := otel.Tracer("spenicle/http")
 
@@ -65,7 +62,6 @@ func Observe() httpx.Middleware {
 	}
 }
 
-// Log writes one structured line per request.
 func Log(logger *slog.Logger) httpx.Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

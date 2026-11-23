@@ -31,8 +31,6 @@ type postEntryRequest struct {
 	Postings   []postingRequest `json:"postings"            validate:"required,min=2,dive"`
 }
 
-// entryListQuery is the listing's surface: every constraint is a tag, including the
-// page bounds, so no handler parses a number by hand.
 type entryListQuery struct {
 	From      string `query:"from"       validate:"omitempty,datestr"`
 	To        string `query:"to"         validate:"omitempty,datestr"`
@@ -70,8 +68,6 @@ type entryPatchRequest struct {
 	Reason string `json:"reason,omitempty" validate:"max=2000"`
 }
 
-// entryFilterFromRequest binds and validates the listing query, then converts the
-// dates the tags already proved valid.
 func entryFilterFromRequest(r *http.Request) (entity.EntryFilter, error) {
 	var query entryListQuery
 
@@ -110,7 +106,6 @@ func entryFilterFromRequest(r *http.Request) (entity.EntryFilter, error) {
 	return filter, nil
 }
 
-// handleListEntries answers the ledger listing: newest first, filters optional.
 func (s *server) handleListEntries(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.List")
 	defer endSpan()
@@ -138,8 +133,6 @@ func (s *server) handleListEntries(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
-// handlePatchEntry voids an entry. Field edits are a later slice and answer 422
-// rather than pretending to work.
 func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Patch")
 	defer endSpan()
@@ -198,7 +191,6 @@ func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// A replayed client id returns the stored entry untouched: 200, not 201.
 	status := http.StatusOK
 	if created {
 		status = http.StatusCreated
@@ -262,8 +254,6 @@ func toEntryResponse(entry entity.Entry) entryResponse {
 	return out
 }
 
-// classify maps domain errors onto HTTP without leaking internals. A table, so a
-// new invariant is one row rather than one more branch.
 func classify(err error) (int, string) {
 	for _, mapping := range errorMappings {
 		if errors.Is(err, mapping.err) {
@@ -274,7 +264,6 @@ func classify(err error) (int, string) {
 	return http.StatusInternalServerError, "internal_error"
 }
 
-// errorMapping is one row of the domain-error table.
 type errorMapping struct {
 	err    error
 	status int

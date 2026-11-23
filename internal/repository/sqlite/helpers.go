@@ -31,7 +31,6 @@ func orDefault(v, fallback string) string {
 	return v
 }
 
-// nullTime stores an optional timestamp in the project's wire format.
 func nullTime(v *time.Time) sql.NullString {
 	if v == nil {
 		return sql.NullString{}

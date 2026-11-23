@@ -29,7 +29,6 @@ import (
 
 const vendorKey = "project-key"
 
-// startVendor runs the contract stand-in in a container and returns its partner URL.
 func startVendor(t *testing.T) string {
 	t.Helper()
 
@@ -74,8 +73,6 @@ func startVendor(t *testing.T) string {
 	return fmt.Sprintf("http://%s:%s/partner/v1/snaps", host, mapped.Port())
 }
 
-// newCaptures wires the real capture module against a real SQLite file and the
-// containerised vendor. Nothing is mocked inside our own code.
 func newCaptures(t *testing.T, endpoint string) *captures.Service {
 	t.Helper()
 
@@ -108,14 +105,10 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 	return captures.New(store, ledgerService, sealer, extractor, clockSystem, clockSystem)
 }
 
-// fixedCurrency stands in for the settings module; the container suite does not need
-// the row to prove the vendor contract.
 type fixedCurrency struct{ code string }
 
 func (f fixedCurrency) BaseCurrency(context.Context) (string, error) { return f.code, nil }
 
-// TestContainerVendorSubmitAndReadBack proves the bridge against a real HTTP peer:
-// a submit answers 202 and parks the capture as extracting, a read-back resolves it.
 func TestContainerVendorSubmitAndReadBack(t *testing.T) {
 	endpoint := startVendor(t)
 	service := newCaptures(t, endpoint)
@@ -164,7 +157,6 @@ func TestContainerVendorSubmitAndReadBack(t *testing.T) {
 	}
 }
 
-// TestContainerVendorRefusesAReadBackWithoutAJobRef pins the "nothing to retry" path.
 func TestContainerVendorRefusesAReadBackWithoutAJobRef(t *testing.T) {
 	endpoint := startVendor(t)
 	service := newCaptures(t, endpoint)

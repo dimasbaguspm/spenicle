@@ -27,40 +27,31 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 )
 
-// RailName is the stable name recorded on every capture this rail produces.
 const RailName = "snaptojson"
 
-// ErrNotConfigured reports that no API key was supplied.
 var ErrNotConfigured = errors.New("snaptojson rail is not configured")
 
 const (
-	// maxArtifactBytes is the vendor's hard limit: 10 MiB, refused before reading.
 	maxArtifactBytes = 10 << 20
-	// maxErrorBody bounds what an error response can make us allocate.
-	maxErrorBody = 64 << 10
+	maxErrorBody     = 64 << 10
 )
 
-// APIError is the vendor's ErrorEnvelope, unwrapped. Code is stable; Message is for
-// a log, never for parsing.
 type APIError struct {
 	Status  int    `json:"-"`
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
-// Error renders the vendor's words, prefixed with the HTTP status.
 func (e *APIError) Error() string {
 	return fmt.Sprintf("snaptojson: %d %s: %s", e.Status, e.Code, e.Message)
 }
 
-// Client is the HTTP adapter. Zero value is unusable; construct with New.
 type Client struct {
 	endpoint string
 	apiKey   string
 	http     *http.Client
 }
 
-// New returns the rail, or ErrNotConfigured when the key is empty.
 func New(endpoint, apiKey string, timeout time.Duration) (*Client, error) {
 	if strings.TrimSpace(apiKey) == "" {
 		return nil, ErrNotConfigured
@@ -77,18 +68,12 @@ func New(endpoint, apiKey string, timeout time.Duration) (*Client, error) {
 	}, nil
 }
 
-// Rail is the unified name of this adapter.
 func (c *Client) Rail() string { return RailName }
 
-// Submit posts one file. A 202 is a running report, not an error: the caller stores
-// JobRef and polls it later.
 func (c *Client) Submit(
 	ctx context.Context,
 	artifact extraction.Artifact,
 ) (extraction.Report, error) {
-	// Posting and Polling are separate spans on purpose: an expensive, billed submit
-	// and a free read-back are different events, and a trace should say which one it
-	// was without reading the arguments.
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Snaptojson.Posting")
 	defer endSpan()
 
@@ -132,8 +117,6 @@ func (c *Client) Submit(
 	return unify(report), nil
 }
 
-// Poll reads a snap back by id. This is how a 202 is followed up and how a retry
-// works: the vendor is charged once, the read-back is free.
 func (c *Client) Poll(ctx context.Context, jobRef string) (extraction.Report, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Snaptojson.Polling")
 	defer endSpan()
@@ -152,7 +135,6 @@ func (c *Client) Poll(ctx context.Context, jobRef string) (extraction.Report, er
 	return unify(report), nil
 }
 
-// snapReport is SnapReport: the body of a submit and of every read-back.
 type snapReport struct {
 	JobRef string      `json:"job_ref"`
 	Status string      `json:"status"`
@@ -160,21 +142,17 @@ type snapReport struct {
 	Error  string      `json:"error_message"`
 }
 
-// snapViolation is one entry of SnapResult.Violations: what the vendor's own schema
-// said was wrong with the reading.
 type snapViolation struct {
 	Pointer string `json:"pointer"`
 	Error   string `json:"error"`
 }
 
-// snapResult is SnapResult: what the reader answered.
 type snapResult struct {
 	Data       json.RawMessage `json:"data"`
 	Valid      bool            `json:"valid"`
 	Violations []snapViolation `json:"violations"`
 }
 
-// unify maps the vendor's four states and its result shape onto extraction.Report.
 func unify(report snapReport) extraction.Report {
 	unified := extraction.Report{
 		Rail:   RailName,
@@ -188,7 +166,6 @@ func unify(report snapReport) extraction.Report {
 	case "FAILED":
 		unified.Status = extraction.StatusFailed
 	default:
-		// REGISTERED and EXECUTING are both "still working".
 		unified.Status = extraction.StatusRunning
 	}
 
@@ -207,7 +184,6 @@ func unify(report snapReport) extraction.Report {
 	return unified
 }
 
-// filePart builds the one form part the vendor expects: a file named "file".
 func filePart(filename, contentType string) textproto.MIMEHeader {
 	header := textproto.MIMEHeader{}
 	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename=%q`, filename))
@@ -216,9 +192,6 @@ func filePart(filename, contentType string) textproto.MIMEHeader {
 	return header
 }
 
-// post sends one multipart request and decodes either a report or an error
-// envelope. One request shape for both halves of the contract is what keeps this
-// adapter honest to the vendor's "one route, one verb".
 func (c *Client) post(
 	ctx context.Context,
 	build func(*multipart.Writer) error,
@@ -267,13 +240,10 @@ func (c *Client) post(
 	return snapReport{}, decodeError(response.StatusCode, raw)
 }
 
-// errorEnvelope is ErrorEnvelope: one error object under "error".
 type errorEnvelope struct {
 	Error APIError `json:"error"`
 }
 
-// decodeError reads ErrorEnvelope. An unparseable error body still has to become a
-// useful error, so the status is the fallback.
 func decodeError(status int, raw []byte) error {
 	if len(raw) > maxErrorBody {
 		raw = raw[:maxErrorBody]

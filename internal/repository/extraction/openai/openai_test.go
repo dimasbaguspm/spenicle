@@ -14,8 +14,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 )
 
-// newVendor answers /chat/completions with a canned model answer, and records the
-// request so the test proves the multimodal shape, not only the decode.
 func newVendor(t *testing.T, content string) (*httptest.Server, map[string]any) {
 	t.Helper()
 

@@ -9,9 +9,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-// baseline covers what used to live in module/bootstrap: the first-boot
-// invariants. They are the reason a fresh database is usable at all, so they are
-// tested against a real file, not a mock.
 func TestEnsureBaselineSeedsAndLocks(t *testing.T) {
 	store := newStore(t)
 	ctx := t.Context()

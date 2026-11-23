@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	// uuidVersion7 marks the layout; uuidVariant is RFC 4122 variant 10.
 	uuidVersion7 = 0x70
 	uuidVariant  = 0x80
 	maskVersion  = 0x0f
@@ -19,24 +18,18 @@ const (
 	msHighShift  = 32
 )
 
-// Clock is the time contract. The only thing a caller may do is ask what time it
-// is; anything more would be a business rule.
 type Clock interface {
 	Now() time.Time
 }
 
-// IDs is the identifier contract. UUIDv7 so that ids sort by creation time.
 type IDs interface {
 	NewID() string
 }
 
-// System is the production implementation of both contracts.
 type System struct{}
 
-// Now returns UTC time.
 func (System) Now() time.Time { return time.Now().UTC() }
 
-// NewID returns a UUIDv7 string.
 func (System) NewID() string {
 	var raw [16]byte
 
@@ -48,7 +41,6 @@ func (System) NewID() string {
 	binary.BigEndian.PutUint32(raw[2:6], uint32(ms))
 
 	if _, err := rand.Read(raw[6:]); err != nil {
-		// crypto/rand failing is unrecoverable; a fake id would be worse.
 		panic(fmt.Sprintf("clock: entropy: %v", err))
 	}
 

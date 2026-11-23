@@ -23,7 +23,6 @@ func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
 	return int(v.Int64), nil
 }
 
-// Ping proves the file is writable, not merely readable.
 func (s *Store) Ping(ctx context.Context) error {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Ping")
 	defer endSpan()
@@ -36,7 +35,6 @@ func (s *Store) Ping(ctx context.Context) error {
 	return nil
 }
 
-// Setting reads one configuration row.
 func (s *Store) Setting(ctx context.Context, key string) (string, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Setting")
 	defer endSpan()
@@ -55,7 +53,6 @@ func (s *Store) Setting(ctx context.Context, key string) (string, bool, error) {
 	return v, true, nil
 }
 
-// SetSetting upserts one configuration row.
 func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.SetSetting")
 	defer endSpan()
@@ -70,8 +67,6 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 	return nil
 }
 
-// HasEntries reports whether the ledger has anything in it yet. It is what locks the
-// base currency: an empty ledger can still choose one.
 func (s *Store) HasEntries(ctx context.Context) (bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.HasEntries")
 	defer endSpan()

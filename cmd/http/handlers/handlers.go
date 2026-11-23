@@ -16,8 +16,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
 
-// Deps is everything the transport needs, injected. The limits are configuration,
-// not constants of this package: they arrive from entity.AppConfig.
 type Deps struct {
 	Ledger            ledger.Contract
 	Settings          settings.Contract
@@ -33,15 +31,12 @@ type Deps struct {
 	Logger            *slog.Logger
 }
 
-// maxFormBytes is the vendor's upload limit plus multipart overhead.
 const maxFormBytes = 11 << 20
 
-// server holds the dependencies the handlers share.
 type server struct {
 	deps Deps
 }
 
-// New registers every route explicitly and returns the wrapped handler.
 func New(deps Deps) http.Handler {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
@@ -69,8 +64,6 @@ func New(deps Deps) http.Handler {
 
 	mux.HandleFunc("/", instance.handleNotFound)
 
-	// requireSession sits inside the request middleware, outside the routes: one
-	// place decides whether a cookie is needed.
 	return middlewares.Chain(instance.requireSession(mux),
 		middlewares.Recover(deps.Logger),
 		middlewares.Observe(),

@@ -35,8 +35,6 @@ type settingsResponse struct {
 	ExtractionEnabled  bool   `json:"extraction_enabled"`
 }
 
-// handleSession exchanges the password for a cookie. The first password is generated
-// at boot and must be changed before the app is usable.
 func (s *server) handleSession(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Session.Create")
 	defer endSpan()
@@ -83,7 +81,6 @@ func (s *server) handleSession(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handlePasswordChange replaces the generated password with the user's own.
 func (s *server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Session.ChangePassword")
 	defer endSpan()
@@ -104,7 +101,6 @@ func (s *server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toSettingsResponse(settings))
 }
 
-// handlePatchSettings changes the base currency while the ledger is still empty.
 func (s *server) handlePatchSettings(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Settings.Patch")
 	defer endSpan()
@@ -131,7 +127,6 @@ func (s *server) handlePatchSettings(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteError(w, http.StatusUnprocessableEntity, "empty_patch", "nothing to change")
 }
 
-// handleGetSettings is what the shell reads instead of environment variables.
 func (s *server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Settings.Get")
 	defer endSpan()
@@ -155,8 +150,6 @@ func toSettingsResponse(settings entity.Settings) settingsResponse {
 	}
 }
 
-// requireSession wraps /api/*: open mode passes through, a set password demands the
-// cookie issued by POST /api/session.
 func (s *server) requireSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/session" || r.Method == http.MethodOptions {

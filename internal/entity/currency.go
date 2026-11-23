@@ -8,16 +8,12 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
-// Currency is an ISO 4217 unit. MinorUnits is never assumed to be 2.
 type Currency struct {
 	Code       string
 	MinorUnits int32
 	Symbol     string
 }
 
-// A deliberately small seed set. The full ISO 4217 list replaces this when the
-// setup wizard lands; every lookup goes through CurrencyByCode so nothing else
-// has to change.
 var currencies = map[string]Currency{
 	"IDR": {Code: "IDR", MinorUnits: 0, Symbol: "Rp"},
 	"USD": {Code: "USD", MinorUnits: 2, Symbol: "$"},
@@ -36,7 +32,6 @@ var currencies = map[string]Currency{
 	"VND": {Code: "VND", MinorUnits: 0, Symbol: "₫"},
 }
 
-// Currencies returns the embedded list, sorted by code, for the bootstrap payload.
 func Currencies() []Currency {
 	out := make([]Currency, 0, len(currencies))
 	for _, currency := range currencies {
@@ -48,7 +43,6 @@ func Currencies() []Currency {
 	return out
 }
 
-// CurrencyByCode resolves an ISO code, case-insensitively.
 func CurrencyByCode(code string) (Currency, error) {
 	normalised := strings.ToUpper(strings.TrimSpace(code))
 	if len(normalised) != constant.ISOCodeLength {

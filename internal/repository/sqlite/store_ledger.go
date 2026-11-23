@@ -12,14 +12,10 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-// InsertEntry writes the entry and its postings in one transaction. It writes
-// no balances: balances are always derived from postings.
 func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertEntry")
 	defer endSpan()
 
-	// Defense in depth: the domain already validated this, and we check again
-	// inside the transaction that will commit.
 	if err := entity.CheckZeroSum(e.Postings); err != nil {
 		return entity.Entry{}, err
 	}
@@ -82,7 +78,6 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 	return e, nil
 }
 
-// EntryByClientID answers a replay without rewriting anything.
 func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.Entry, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EntryByClientID")
 	defer endSpan()
@@ -137,7 +132,6 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 	return e, true, nil
 }
 
-// postingsByEntryID loads every leg of one entry in insertion order.
 func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.Posting, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.postingsByEntryID")
 	defer endSpan()
@@ -174,7 +168,6 @@ func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.
 	return postings, nil
 }
 
-// insertPostings writes every leg of one entry inside the caller's transaction.
 func insertPostings(ctx context.Context, tx *sql.Tx, entryID int64, postings []entity.Posting) error {
 	for _, p := range postings {
 		if _, err := tx.ExecContext(ctx, `
@@ -193,7 +186,6 @@ func insertPostings(ctx context.Context, tx *sql.Tx, entryID int64, postings []e
 	return nil
 }
 
-// EntryByID reads one entry with its postings. Missing is a fact, not an error.
 func (s *Store) EntryByID(ctx context.Context, id int64) (entity.Entry, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EntryByID")
 	defer endSpan()
@@ -217,8 +209,6 @@ func (s *Store) EntryByID(ctx context.Context, id int64) (entity.Entry, bool, er
 	return entry, true, nil
 }
 
-// ListEntries returns the newest entries that match the filter. Postings come with
-// them: a listing without legs cannot be rendered or audited.
 func (s *Store) ListEntries(
 	ctx context.Context,
 	filter entity.EntryFilter,
@@ -257,7 +247,6 @@ func (s *Store) ListEntries(
 	return out, nil
 }
 
-// entryQuery renders the filter as SQL plus its arguments.
 func entryQuery(filter entity.EntryFilter) (string, []any) {
 	query := `
 		SELECT id, occurred_on, payee_id, note, currency, source, client_id,
@@ -309,8 +298,6 @@ func entryQuery(filter entity.EntryFilter) (string, []any) {
 	return query, args
 }
 
-// VoidEntry writes the reversal and marks the original, in one transaction. The
-// original stays readable; that is the whole point of not deleting.
 func (s *Store) VoidEntry(
 	ctx context.Context,
 	id int64,
@@ -376,7 +363,6 @@ func (s *Store) VoidEntry(
 	return s.reversalByReversesID(ctx, id)
 }
 
-// insertReversal writes the compensating entry and its negated legs.
 func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal entity.Entry) error {
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO ledger_entries
@@ -414,7 +400,6 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 	return nil
 }
 
-// reversalByReversesID reads back the entry that voids originalID.
 func (s *Store) reversalByReversesID(ctx context.Context, originalID int64) (entity.Entry, error) {
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
 		SELECT id, occurred_on, payee_id, note, currency, source, client_id,
@@ -431,15 +416,12 @@ func (s *Store) reversalByReversesID(ctx context.Context, originalID int64) (ent
 	return entry, nil
 }
 
-// scanEntry maps one entry row, leaving postings to the caller.
 func (s *Store) scanEntry(ctx context.Context, row *sql.Row) (entity.Entry, error) {
 	_ = ctx
 
 	return scanEntryRow(row)
 }
 
-// scanEntryRow is the single column mapping for entries; *sql.Row and *sql.Rows
-// both satisfy the Scan half.
 func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, error) {
 	var (
 		entry       entity.Entry

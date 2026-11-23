@@ -14,27 +14,12 @@ import (
 	"strings"
 )
 
-// Snapshots are the UAT's memory: a JSON document on disk that a response, or the
-// whole database, must still match. They catch the change nobody meant to make — a
-// renamed field, a dropped key, an extra row in the audit trail.
-//
-//	UAT_UPDATE_SNAPSHOTS=1 go test ./uat/     # rewrite them, then read the diff
-//	make uat-snapshots                        # same thing
-//
-// A missing snapshot is written and the step fails: nobody gets a silent new
-// contract.
-
-// snapshotRoot is relative to the uat package.
 const snapshotRoot = "snapshots"
 
-// snapshotEnv, when set to anything but empty/0/false, rewrites snapshots. This is a
-// test toggle, not application configuration.
 const snapshotEnv = "UAT_UPDATE_SNAPSHOTS"
 
-// snapshotDirPerm keeps the golden files readable by the repository owner.
 const snapshotDirPerm = 0o750
 
-// allowedTables is the same allow-list the store-count step uses.
 var allowedTables = []string{
 	"accounts",
 	"audit_log",
@@ -44,10 +29,8 @@ var allowedTables = []string{
 	"settings",
 }
 
-// timestampPattern matches RFC 3339 instants, which differ on every run.
 var timestampPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$`)
 
-// assertAPISnapshot compares the recorded response body with uat/snapshots/api/<name>.json.
 func (w *world) assertAPISnapshot(name string) error {
 	var document any
 	if err := json.Unmarshal(w.body, &document); err != nil {
@@ -57,9 +40,6 @@ func (w *world) assertAPISnapshot(name string) error {
 	return compareSnapshot(filepath.Join(snapshotRoot, "api", name+".json"), normalise(document))
 }
 
-// assertDBSnapshot compares every allow-listed table with
-// uat/snapshots/db/<name>.json. Rows are ordered by rowid, columns alphabetically,
-// so a snapshot diff means a real change in data, not in iteration order.
 func (w *world) assertDBSnapshot(ctx context.Context, name string) error {
 	if w.store == nil {
 		return errors.New(`no running API: add the step "a running API" first`)
@@ -79,8 +59,6 @@ func (w *world) assertDBSnapshot(ctx context.Context, name string) error {
 	return compareSnapshot(filepath.Join(snapshotRoot, "db", name+".json"), normalise(dump))
 }
 
-// dumpTable renders one table as [{column: value}] in rowid order. The slice is []any
-// on purpose: normalise walks []any, and []map[string]any would slip past it.
 func dumpTable(ctx context.Context, db *sql.DB, table string) ([]any, error) {
 	columns, err := tableColumns(ctx, db, table)
 	if err != nil {
@@ -126,8 +104,6 @@ func dumpTable(ctx context.Context, db *sql.DB, table string) ([]any, error) {
 	return out, nil
 }
 
-// tableColumns reads the column names and sorts them, so the dump does not depend on
-// DDL order.
 func tableColumns(ctx context.Context, db *sql.DB, table string) ([]string, error) {
 	rows, err := db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
 	if err != nil {
@@ -164,8 +140,6 @@ func tableColumns(ctx context.Context, db *sql.DB, table string) ([]string, erro
 	return columns, nil
 }
 
-// compareSnapshot reports a match, a diff, or writes the file when it is missing or
-// updating was requested.
 func compareSnapshot(path string, actual any) error {
 	var buffer bytes.Buffer
 
@@ -208,7 +182,6 @@ func compareSnapshot(path string, actual any) error {
 	return nil
 }
 
-// updatingSnapshots reports whether this run rewrites snapshots.
 func updatingSnapshots() bool {
 	//nolint:forbidigo // a test toggle, read here on purpose; not application configuration
 	value := strings.ToLower(strings.TrimSpace(os.Getenv(snapshotEnv)))
@@ -216,8 +189,6 @@ func updatingSnapshots() bool {
 	return value != "" && value != "0" && value != "false"
 }
 
-// normalise replaces the values that legitimately change between runs: instants,
-// sealed envelopes, the build version and the secret fingerprint.
 func normalise(value any) any {
 	switch typed := value.(type) {
 	case map[string]any:

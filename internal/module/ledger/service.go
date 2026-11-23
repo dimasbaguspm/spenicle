@@ -9,9 +9,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-// Post validates and writes one entry. created is false when the client id had
-// already been posted, in which case the stored entry is returned untouched and
-// the transport answers 200 instead of 201.
 func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Post")
 	defer endSpan()
@@ -104,8 +101,6 @@ func (s *Service) buildPostings(
 			posting.FXSource = constant.FXSourceManual
 
 		default:
-			// The ECB resolver lands in the FX milestone. Until then a foreign
-			// entry must present its rate instead of guessing one.
 			return nil, fmt.Errorf("posting %d: %w: rate required for %s to %s",
 				index, entity.ErrInvalidRate, nativeCurrency.Code, baseCurrency.Code)
 		}
@@ -116,7 +111,6 @@ func (s *Service) buildPostings(
 	return postings, nil
 }
 
-// List returns ledger entries, newest first, already narrowed by the filter.
 func (s *Service) List(
 	ctx context.Context,
 	filter entity.EntryFilter,
@@ -127,8 +121,6 @@ func (s *Service) List(
 	return s.entries.ListEntries(ctx, filter)
 }
 
-// Void writes the compensating entry. The reason becomes the reversal's note, so a
-// year later the "why" is still there.
 func (s *Service) Void(ctx context.Context, id int64, reason string) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Void")
 	defer endSpan()

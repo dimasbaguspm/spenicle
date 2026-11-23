@@ -8,13 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "modernc.org/sqlite" // pure Go driver, keeps the binary static
+	_ "modernc.org/sqlite" // registers the driver
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
-// Config is everything the adapter needs to open a database. Zero pool sizes fall
-// back to the small defaults below, so a test can pass only a path.
 type Config struct {
 	Path         string
 	MaxOpenConns int
@@ -22,14 +20,11 @@ type Config struct {
 }
 
 const (
-	// dataDirPerm keeps the SQLite file private to its process user.
-	dataDirPerm = 0o750
-	// maxOpenConns bounds the pool: one writer, a few readers.
+	dataDirPerm  = 0o750
 	maxOpenConns = 4
 	maxIdleConns = 2
 )
 
-// pickMax keeps the pool bounded even when the caller passes nothing.
 func pickMax(want, fallback int) int {
 	if want > 0 {
 		return want
@@ -38,7 +33,6 @@ func pickMax(want, fallback int) int {
 	return fallback
 }
 
-// Open creates the data directory if needed and returns a WAL-mode handle.
 func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Open")
 	defer endSpan()
@@ -58,8 +52,6 @@ func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 
-	// WAL allows concurrent readers, but this deployment is one process with a
-	// single writer. Fewer connections keeps BUSY retries predictable.
 	db.SetMaxOpenConns(pickMax(cfg.MaxOpenConns, maxOpenConns))
 	db.SetMaxIdleConns(pickMax(cfg.MaxIdleConns, maxIdleConns))
 

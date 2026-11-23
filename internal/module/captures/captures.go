@@ -11,22 +11,14 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 )
 
-// Contract is what the transport layer is allowed to call.
 type Contract interface {
-	// Create queues one capture. created is false when the same payload arrived
-	// before, in which case the stored item is returned untouched.
 	Create(ctx context.Context, in CreateInput) (entity.Capture, bool, error)
 	List(ctx context.Context, filter entity.CaptureFilter) ([]entity.Capture, error)
-	// Approve posts the ledger entry and resolves the capture, in that order and
-	// only once.
 	Approve(ctx context.Context, id int64, in ApproveInput) (entity.Entry, entity.Capture, error)
 	Reject(ctx context.Context, id int64, reason string) (entity.Capture, error)
-	// Retry reads a snap back from the vendor and applies the report. It is free:
-	// the charge happened at submit time.
 	Retry(ctx context.Context, id int64) (entity.Capture, error)
 }
 
-// CreateInput is one raw thing a human or a share sheet handed over.
 type CreateInput struct {
 	ClientID     string
 	Kind         string
@@ -34,13 +26,9 @@ type CreateInput struct {
 	ArtifactHash string
 	BatchID      string
 	ReceivedAt   time.Time
-	// Artifact is the uploaded document. When the extractor is configured it is
-	// submitted once, here, and never stored: the vendor keeps the id, we keep the
-	// hash.
-	Artifact *extraction.Artifact
+	Artifact     *extraction.Artifact
 }
 
-// ApproveInput is the human decision: the fields they typed or confirmed.
 type ApproveInput struct {
 	OccurredOn time.Time
 	PayeeID    *int64
@@ -49,8 +37,6 @@ type ApproveInput struct {
 	Postings   []PostingInput
 }
 
-// PostingInput is the same shape the ledger module takes; the capture module does
-// not reinterpret amounts.
 type PostingInput struct {
 	AccountID   int64
 	AmountMinor int64

@@ -8,8 +8,6 @@ package uat
 
 import "github.com/cucumber/godog"
 
-// InitializeScenario registers the shared vocabulary so another suite, or a
-// standalone godog binary, can reuse it unchanged.
 func InitializeScenario(sc *godog.ScenarioContext) {
 	RegisterSteps(sc)
 }

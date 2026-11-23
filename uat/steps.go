@@ -12,25 +12,19 @@ import (
 	"github.com/cucumber/godog"
 )
 
-// RegisterSteps wires the generic vocabulary. Every step is a mechanical
-// translation of one phrase into one operation: no step encodes a rule, so a
-// new endpoint needs no new steps.
 func RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Before(aFreshWorld)
 	sc.After(tearDownWorld)
 
-	// Given
 	sc.Step(`^the base currency is "([^"]*)"$`, theBaseCurrencyIs)
 	sc.Step(`^a running API$`, aRunningAPI)
 	sc.Step(`^the account "([^"]*)" exists as "([^"]*)"$`, theAccountExists)
 
-	// When
 	sc.Step(`^the request body is:$`, theRequestBodyIs)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)"$`, sendWithoutBody)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with:$`, sendWithBody)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with headers/query:$`, sendWithRequestTable)
 
-	// Then
 	sc.Step(`^the response status is (\d+)$`, responseStatusIs)
 	sc.Step(`^the response JSON at "([^"]*)" is "([^"]*)"$`, responseJSONIs)
 	sc.Step(`^the response JSON at "([^"]*)" contains "([^"]*)"$`, responseJSONContains)
@@ -90,7 +84,6 @@ func theAccountExists(ctx context.Context, name, kind string) (context.Context, 
 		return ctx, errors.New(`no running API: add the step "a running API" first`)
 	}
 
-	// Ensure, not create: a Given restates the world, so asking twice is legal.
 	id, found, err := w.store.FindAccount(ctx, name, kind)
 	if err != nil {
 		return ctx, err
@@ -196,11 +189,6 @@ func responseHeaderIs(ctx context.Context, name, want string) (context.Context, 
 	return ctx, nil
 }
 
-// theStoreHolds asserts row counts straight from the database, because "the
-// response looked right" is not the same as "the data is right".
-//
-//	| table          | count |
-//	| ledger_entries | 1     |
 func theStoreHolds(ctx context.Context, table *godog.Table) (context.Context, error) {
 	w, err := worldFrom(ctx)
 	if err != nil {
@@ -213,7 +201,7 @@ func theStoreHolds(ctx context.Context, table *godog.Table) (context.Context, er
 
 	for i, row := range table.Rows {
 		if i == 0 {
-			continue // header
+			continue
 		}
 
 		if len(row.Cells) < 2 {
@@ -240,9 +228,6 @@ func theStoreHolds(ctx context.Context, table *godog.Table) (context.Context, er
 	return ctx, nil
 }
 
-// theRequestBodyIs parks a body for the next "with headers/query" send. Gherkin
-// allows one argument per step, so the body and the header/query table are two
-// steps; this is that split.
 func theRequestBodyIs(ctx context.Context, body *godog.DocString) (context.Context, error) {
 	w, err := worldFrom(ctx)
 	if err != nil {
@@ -254,12 +239,6 @@ func theRequestBodyIs(ctx context.Context, body *godog.DocString) (context.Conte
 	return ctx, nil
 }
 
-// sendWithRequestTable sends a request whose headers and query parameters come from
-// the table, and whose body (if any) was set by "the request body is:".
-//
-//	| type   | key   | value |
-//	| header | X-Trace | 123 |
-//	| query  | limit | 10    |
 func sendWithRequestTable(
 	ctx context.Context,
 	method, path string,
@@ -281,7 +260,6 @@ func sendWithRequestTable(
 	return ctx, w.doWith(ctx, method, path, body, headers, query)
 }
 
-// splitRequestTable validates the three columns and sorts rows by type.
 func splitRequestTable(table *godog.Table) (http.Header, url.Values, error) {
 	if len(table.Rows) < 2 {
 		return nil, nil, errors.New("the request table needs a header and at least one row")
@@ -312,7 +290,6 @@ func splitRequestTable(table *godog.Table) (http.Header, url.Values, error) {
 	return headers, query, nil
 }
 
-// responseMatchesSnapshot compares the recorded response with a golden JSON file.
 func responseMatchesSnapshot(ctx context.Context, name string) (context.Context, error) {
 	w, err := worldFrom(ctx)
 	if err != nil {
@@ -322,7 +299,6 @@ func responseMatchesSnapshot(ctx context.Context, name string) (context.Context,
 	return ctx, w.assertAPISnapshot(name)
 }
 
-// databaseMatchesSnapshot compares the whole allow-listed database with a golden file.
 func databaseMatchesSnapshot(ctx context.Context, name string) (context.Context, error) {
 	w, err := worldFrom(ctx)
 	if err != nil {

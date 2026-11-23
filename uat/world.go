@@ -28,17 +28,13 @@ import (
 )
 
 const (
-	// maxPreview bounds what a failure message can dump into the log.
 	maxPreview = 120
 
-	// appSecret is the UAT secret. It seals nothing that is asserted on, but the
-	// process refuses to boot without one, so the harness needs a real value.
 	appSecret = "uat-secret-0123456789"
 )
 
 type worldKey struct{}
 
-// world is the per-scenario state. Everything a step needs is reachable from it.
 type world struct {
 	baseCurrency string
 	fingerprint  string
@@ -51,7 +47,6 @@ type world struct {
 	body   []byte
 	header http.Header
 
-	// pendingBody is set by "the request body is:" and consumed by the next send.
 	pendingBody []byte
 }
 
@@ -71,12 +66,6 @@ func worldFrom(ctx context.Context) (*world, error) {
 	return world, nil
 }
 
-// boot starts the real HTTP handler over the real SQLite file in a temp dir.
-// No mocks: a step that passes here has been proven against the shipped code.
-//
-// The wiring mirrors cmd/http/bootstrap.go, which is package main and therefore
-// not importable. Adding a dependency to the composition root means adding it
-// here too.
 func (w *world) boot(ctx context.Context) error {
 	if w.server != nil {
 		return nil
@@ -160,13 +149,10 @@ func (w *world) shutdown(ctx context.Context) {
 	}
 }
 
-// do performs one HTTP request and records it for the Then steps.
 func (w *world) do(ctx context.Context, method, path string, body []byte) error {
 	return w.doWith(ctx, method, path, body, nil, nil)
 }
 
-// doWith is do plus request headers and query parameters, which is what the
-// header/query table step needs.
 func (w *world) doWith(
 	ctx context.Context,
 	method, path string,
@@ -225,15 +211,10 @@ func (w *world) doWith(
 
 var accountPlaceholder = regexp.MustCompile(`\{\{account:([^}]+)\}\}`)
 
-// expandFingerprint substitutes {{fingerprint}} with this scenario's sealed
-// fingerprint, so a feature can assert "the data is sealed" without hard-coding a
-// digest that depends on the harness secret.
 func (w *world) expandFingerprint(want string) string {
 	return strings.ReplaceAll(want, "{{fingerprint}}", w.fingerprint)
 }
 
-// expand substitutes {{account:Name}} with the id recorded for that account.
-// A placeholder, not a DSL: the step still just sends a body.
 func (w *world) expand(body string) (string, error) {
 	var missing []string
 
@@ -258,7 +239,6 @@ func (w *world) expand(body string) (string, error) {
 	return out, nil
 }
 
-// countTable answers "how many rows in this table", used by the store steps.
 func (w *world) countTable(ctx context.Context, table string) (int, error) {
 	if w.store == nil {
 		return 0, errors.New(`no running API: add the step "a running API" first`)
@@ -290,7 +270,6 @@ func (w *world) countTable(ctx context.Context, table string) (int, error) {
 	return count, nil
 }
 
-// jsonPath resolves $.a.b[0].c against the recorded body.
 func (w *world) jsonPath(path string) (string, error) {
 	var document any
 
@@ -322,7 +301,6 @@ func (w *world) jsonPath(path string) (string, error) {
 	}
 }
 
-// walk descends one token at a time, reporting where it lost the trail.
 func walk(path string, document any) (any, error) {
 	current := document
 
@@ -381,7 +359,6 @@ func tokenize(path string) []string {
 	return tokens
 }
 
-// splitBrackets turns "postings[0]" into ["postings", "0"].
 func splitBrackets(part string) []string {
 	var tokens []string
 

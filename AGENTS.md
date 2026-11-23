@@ -58,6 +58,11 @@ Rules that keep it pluggable:
   parses a number by hand and no struct is declared inside a function. `writeInvalid`
   turns the failure into `422` and `validationCodes` promotes a field failure back to
   the domain code a client branches on (`unknown_currency`, `invalid_postings`).
+- The code documents itself. No comment restates what a name already says, and no
+  method carries a doc comment. The only comments left are the package doc comment
+  (`revive` requires it) and toolchain directives: `//go:embed`, `//go:build`, and
+  `//nolint` with its reason. Anything worth explaining about *why* lives here or in
+  `docs/`.
 - Every method that crosses a boundary takes `ctx context.Context` first and opens one
   span named after the layer: `Repository.Sqlite.InsertEntry`, `Module.Ledger.Post`,
   `Handler.Entries.Post`, `Common.Seal.Seal`. There is exactly one

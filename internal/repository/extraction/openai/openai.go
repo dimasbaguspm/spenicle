@@ -24,26 +24,20 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 )
 
-// RailName is the stable name recorded on every capture this rail produces.
 const RailName = "openai"
 
-// ErrNotConfigured reports that no API key was supplied.
 var ErrNotConfigured = errors.New("openai rail is not configured")
 
-// instructions is the whole prompt: reply with one JSON object, nothing else. The
-// receiving side decides what the fields mean, not the model.
 const instructions = `You read a receipt or a bank notification and reply with ONE JSON object.
 Use these keys when you can see them: total (minor units, string), currency (ISO 4217),
 occurred_on (YYYY-MM-DD), merchant (string), reference (string), card_last4 (string).
 Never invent a value: omit a key you cannot read. Reply with JSON only, no prose.`
 
-// Client is the OpenAI rail. Zero value is unusable; construct with New.
 type Client struct {
 	client openai.Client
 	model  string
 }
 
-// New builds the rail. baseURL is empty for the real API and set in tests.
 func New(apiKey, model, baseURL string, timeout time.Duration) (*Client, error) {
 	if strings.TrimSpace(apiKey) == "" {
 		return nil, ErrNotConfigured
@@ -65,15 +59,12 @@ func New(apiKey, model, baseURL string, timeout time.Duration) (*Client, error) 
 	return &Client{client: openai.NewClient(options...), model: model}, nil
 }
 
-// Rail is the unified name of this adapter.
 func (c *Client) Rail() string { return RailName }
 
-// Poll has nothing to read: OpenAI answers in one call.
 func (c *Client) Poll(context.Context, string) (extraction.Report, error) {
 	return extraction.Report{}, fmt.Errorf("openai: %w", extraction.ErrNoPolling)
 }
 
-// Submit sends one image and parses the model's JSON answer.
 func (c *Client) Submit(
 	ctx context.Context,
 	artifact extraction.Artifact,
@@ -131,7 +122,6 @@ func (c *Client) Submit(
 	}, nil
 }
 
-// normalise keeps the answer a single JSON object, tolerating a fenced block.
 func normalise(content string) (json.RawMessage, error) {
 	cleaned := strings.TrimSpace(strings.TrimPrefix(content, "```json"))
 	cleaned = strings.TrimSuffix(cleaned, "```")

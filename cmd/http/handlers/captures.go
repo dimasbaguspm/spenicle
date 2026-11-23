@@ -22,25 +22,20 @@ import (
 )
 
 type captureRequest struct {
-	ClientID string `json:"client_id,omitempty" validate:"omitempty,max=64"`
-	Kind     string `json:"kind"                validate:"capturekind"`
-	RawText  string `json:"raw_text,omitempty"  validate:"max=8000"`
-	BatchID  string `json:"batch_id,omitempty"  validate:"max=64"`
-	// ArtifactHash and Artifact come from the multipart part, never from JSON.
+	ClientID     string               `json:"client_id,omitempty" validate:"omitempty,max=64"`
+	Kind         string               `json:"kind"                validate:"capturekind"`
+	RawText      string               `json:"raw_text,omitempty"  validate:"max=8000"`
+	BatchID      string               `json:"batch_id,omitempty"  validate:"max=64"`
 	ArtifactHash string               `json:"-"`
 	Artifact     *extraction.Artifact `json:"-"`
 }
 
-// captureListQuery is the queue's surface: the status must be a real state, the page
-// bounds must be sane, and no handler parses a number by hand.
 type captureListQuery struct {
 	Status string `query:"status" validate:"omitempty,capturestatus"`
 	Cursor int64  `query:"cursor" validate:"omitempty,gte=0"`
 	Limit  int64  `query:"limit"  validate:"omitempty,gte=0,lte=200"`
 }
 
-// captureApprove is what an approval must carry; the posting rules are shared with
-// POST /api/entries.
 type captureApprove struct {
 	OccurredOn string           `validate:"required,datestr"`
 	Currency   string           `validate:"required,currency"`
@@ -81,8 +76,6 @@ type captureApprovedResponse struct {
 	Capture captureResponse `json:"capture"`
 }
 
-// handleListCaptures answers the review queue: extracting first, then oldest
-// pending, then the resolved tail.
 func (s *server) handleListCaptures(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.List")
 	defer endSpan()
@@ -114,8 +107,6 @@ func (s *server) handleListCaptures(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
-// handleCreateCapture queues one capture. It answers 202: the row exists, but
-// nothing is in the ledger until it is approved.
 func (s *server) handleCreateCapture(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Create")
 	defer endSpan()
@@ -153,7 +144,6 @@ func (s *server) handleCreateCapture(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, status, toCaptureResponse(capture))
 }
 
-// handlePatchCapture carries the deprecated verbs as body actions: approve, reject.
 func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Patch")
 	defer endSpan()
@@ -257,8 +247,6 @@ func (s *server) rejectCapture(
 	httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
 }
 
-// readCapture accepts both shapes the API documents: a JSON body for text, a
-// multipart body with a `file` part for images and statements.
 func readCapture(r *http.Request) (captureRequest, error) {
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		return readCaptureForm(r)
@@ -272,7 +260,6 @@ func readCapture(r *http.Request) (captureRequest, error) {
 	return request, nil
 }
 
-// input converts the validated request into the module's input.
 func (c captureRequest) input() captures.CreateInput {
 	return captures.CreateInput{
 		ClientID:     c.ClientID,
@@ -284,9 +271,6 @@ func (c captureRequest) input() captures.CreateInput {
 	}
 }
 
-// readCaptureForm reads the file part once, keeps its hash and hands the bytes to
-// the extractor. The document itself is not stored yet: raw/ lands with the artifact
-// milestone.
 func readCaptureForm(r *http.Request) (captureRequest, error) {
 	if err := r.ParseMultipartForm(maxFormBytes); err != nil {
 		return captureRequest{}, fmt.Errorf("multipart: %w", err)
@@ -349,7 +333,6 @@ func toCaptureResponse(capture entity.Capture) captureResponse {
 	return out
 }
 
-// toCapturePostingInputs is the capture module's posting shape.
 func toCapturePostingInputs(request []postingRequest) ([]captures.PostingInput, error) {
 	postings := make([]captures.PostingInput, 0, len(request))
 

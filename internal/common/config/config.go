@@ -21,8 +21,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-// Environment variable names, exported so a deployment manifest and the code
-// cannot drift apart silently.
 const (
 	EnvAddr      = "ADDR"
 	EnvDataDir   = "DATA_DIR"
@@ -30,43 +28,28 @@ const (
 	//nolint:gosec // G101: this is the environment variable name, not a credential
 	EnvSnapToJSONAPIKey = "SNAPTOJSON_API_KEY"
 	//nolint:gosec // G101: an environment variable name, not a credential
-	EnvOpenAIAPIKey = "OPENAI_API_KEY"
-	EnvOpenAIModel  = "OPENAI_MODEL"
-	// EnvSnapToJSONEndpoint overrides the vendor route, for a proxy or a staging
-	// account. Unset means the documented production endpoint.
+	EnvOpenAIAPIKey       = "OPENAI_API_KEY"
+	EnvOpenAIModel        = "OPENAI_MODEL"
 	EnvSnapToJSONEndpoint = "SNAPTOJSON_ENDPOINT"
 	EnvOTLPEndpoint       = "OTEL_EXPORTER_OTLP_ENDPOINT"
 )
 
-// Defaults for everything that is not environment-dependent. Timeouts and limits
-// are here rather than next to the code that uses them, so one file answers "what
-// does this process do if nobody configures it".
 const (
 	DefaultAddr    = ":8080"
 	DefaultDataDir = "./data"
 	DefaultDBFile  = "spenicle.db"
 
-	// DefaultServiceName is also the tracer name: one identity for spans, metrics
-	// and logs.
 	DefaultServiceName = "spenicle"
 
-	// DefaultSnapToJSONEndpoint is the vendor's single partner route, from
-	// https://snaptojson.com/docs/api.
 	DefaultSnapToJSONEndpoint = "https://api.snaptojson.com/partner/v1/snaps"
-	// DefaultSnapToJSONTimeout is long on purpose: the vendor holds a submit for up
-	// to ten seconds before answering 202, and we must outlast that.
-	DefaultSnapToJSONTimeout = 30 * time.Second
-	// DefaultOpenAIModel is a vision-capable model that is cheap enough to try.
-	DefaultOpenAIModel = "gpt-4o-mini"
+	DefaultSnapToJSONTimeout  = 30 * time.Second
+	DefaultOpenAIModel        = "gpt-4o-mini"
 
-	DefaultReadHeaderTimeout = 5 * time.Second
-	DefaultReadTimeout       = 15 * time.Second
-	DefaultWriteTimeout      = 30 * time.Second
-	DefaultIdleTimeout       = 60 * time.Second
-	DefaultShutdownTimeout   = 10 * time.Second
-	// DefaultTelemetryShutdownTimeout is its own budget: the signal that stopped
-	// the process has already cancelled the root context when the last batch of
-	// spans is flushed.
+	DefaultReadHeaderTimeout        = 5 * time.Second
+	DefaultReadTimeout              = 15 * time.Second
+	DefaultWriteTimeout             = 30 * time.Second
+	DefaultIdleTimeout              = 60 * time.Second
+	DefaultShutdownTimeout          = 10 * time.Second
 	DefaultTelemetryShutdownTimeout = 5 * time.Second
 	DefaultHealthTimeout            = 2 * time.Second
 
@@ -75,12 +58,8 @@ const (
 	DefaultDBMaxIdleConns       = 2
 )
 
-// validate is the config package's registry: the shape of every environment value is
-// a tag on entity.AppConfig, so this file only says where the value came from.
 var validate = validator.New() //nolint:gochecknoglobals // one registry, built once
 
-// Defaults is the configuration of a process started with an empty environment.
-// Tests and the UAT harness use it directly instead of reading the real env.
 func Defaults() entity.AppConfig {
 	return entity.AppConfig{
 		Addr:                     DefaultAddr,
@@ -103,8 +82,6 @@ func Defaults() entity.AppConfig {
 	}
 }
 
-// Load applies the environment on top of Defaults and fails fast on values that
-// cannot work. Everything that is not an environment variable keeps its default.
 func Load(ctx context.Context) (entity.AppConfig, error) {
 	_, endSpan := telemetry.StartSpan(ctx, "Common.Config.Load")
 	defer endSpan()

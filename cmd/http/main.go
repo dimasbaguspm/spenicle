@@ -17,20 +17,16 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-// version is stamped at build time.
 var version = "dev"
 
 func main() {
 	if err := run(); err != nil {
-		// No logger yet: this is the last line before the process dies.
 		fmt.Fprintf(os.Stderr, "spenicle: %v\n", err)
 		os.Exit(1)
 	}
 }
 
 func run() error {
-	// The only context.Background in the process: the root every other context
-	// derives from. It carries the signal handler, so SIGTERM cancels the tree.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -66,7 +62,6 @@ func run() error {
 	return serve(ctx, cfg, application, logger)
 }
 
-// serve blocks until the context is cancelled or the listener fails.
 func serve(
 	ctx context.Context,
 	cfg entity.AppConfig,
@@ -120,8 +115,6 @@ func flushTelemetry(
 	timeout time.Duration,
 	shutdown func(context.Context) error,
 ) {
-	// The signal that stopped the process also cancelled ctx; the flush needs a
-	// live deadline or the last batch of spans is lost.
 	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
 	defer cancel()
 

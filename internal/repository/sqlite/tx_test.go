@@ -10,7 +10,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
-// newTestDB opens a throwaway database with one table for the transaction tests.
 func newTestDB(t *testing.T) *sqlite.Store {
 	t.Helper()
 

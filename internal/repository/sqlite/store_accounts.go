@@ -12,7 +12,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-// CountAccounts reports how many accounts exist, archived or not.
 func (s *Store) CountAccounts(ctx context.Context) (int, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CountAccounts")
 	defer endSpan()
@@ -25,7 +24,6 @@ func (s *Store) CountAccounts(ctx context.Context) (int, error) {
 	return n, nil
 }
 
-// CreateAccount inserts one account and returns its id.
 func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) (int64, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreateAccount")
 	defer endSpan()
@@ -51,8 +49,6 @@ func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) 
 	return id, nil
 }
 
-// FindAccount resolves an account by name and kind. Callers use it to make a
-// create step idempotent without guessing ids.
 func (s *Store) FindAccount(ctx context.Context, name, kind string) (int64, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.FindAccount")
 	defer endSpan()
@@ -72,8 +68,6 @@ func (s *Store) FindAccount(ctx context.Context, name, kind string) (int64, bool
 	return id, true, nil
 }
 
-// ListAccounts returns the whole chart of accounts, archived rows included: a
-// picker filters them out, a report still needs them.
 func (s *Store) ListAccounts(ctx context.Context) ([]entity.Account, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListAccounts")
 	defer endSpan()
@@ -133,8 +127,6 @@ func (s *Store) ListAccounts(ctx context.Context) ([]entity.Account, error) {
 	return out, nil
 }
 
-// BalancesByAccount sums base postings per account. Postings are the only source of
-// a balance; there is no cached column to drift.
 func (s *Store) BalancesByAccount(ctx context.Context) (map[int64]int64, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.BalancesByAccount")
 	defer endSpan()

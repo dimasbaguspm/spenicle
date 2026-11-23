@@ -11,13 +11,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-// EnsureBaseline makes a fresh database usable and refuses to open one that
-// belongs to someone else: it locks the base currency, records the APP_SECRET
-// fingerprint and seeds a minimal chart of accounts on an empty file.
-//
-// It lives in the adapter, not in a module, because it is initial state — the same
-// category as the embedded migrations. The rules it enforces (a real ISO code, an
-// unchanging base currency, a matching fingerprint) still come from entity.
 func (s *Store) EnsureBaseline(ctx context.Context, baseCurrency, fingerprint string) (string, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EnsureBaseline")
 	defer endSpan()
@@ -37,9 +30,6 @@ func (s *Store) EnsureBaseline(ctx context.Context, baseCurrency, fingerprint st
 	return baseCurrency, nil
 }
 
-// ensureFingerprint refuses to open data sealed with a different secret. There is no
-// in-place reset: the sealed payloads cannot be decrypted without the old key, so the
-// only honest options are the old secret or a fresh database.
 func (s *Store) ensureFingerprint(ctx context.Context, fingerprint string) error {
 	stored, found, err := s.Setting(ctx, constant.SettingSecretFingerprint)
 	if err != nil {
@@ -60,14 +50,11 @@ func (s *Store) ensureFingerprint(ctx context.Context, fingerprint string) error
 		entity.ErrSecretMismatch, stored, fingerprint, "spenicle.db")
 }
 
-// seedAccount is one row of the first-boot chart of accounts.
 type seedAccount struct {
 	name string
 	kind string
 }
 
-// seedAccounts gives a brand new database something to post against. Both rows go
-// in one transaction: half a chart of accounts is worse than none.
 func (s *Store) seedAccounts(ctx context.Context, baseCurrency string) error {
 	count, err := s.CountAccounts(ctx)
 	if err != nil {

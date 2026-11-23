@@ -18,12 +18,9 @@ import (
 var migrationFS embed.FS
 
 const (
-	// maxErrLineWidth keeps migration errors readable in logs.
 	maxErrLineWidth = 60
 )
 
-// Migrate applies every embedded migration that has not been applied yet.
-// It is idempotent and safe to call on every boot.
 func Migrate(ctx context.Context, db *sql.DB) error {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Migrate")
 	defer endSpan()
@@ -155,8 +152,6 @@ func versionOf(name string) (int, error) {
 	return version, nil
 }
 
-// splitStatements cuts a file into single statements. The migrations avoid
-// semicolons inside strings and comments so this stays honest.
 func splitStatements(body string) []string {
 	parts := strings.Split(body, ";")
 	out := make([]string, 0, len(parts))

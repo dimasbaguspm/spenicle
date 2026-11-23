@@ -16,7 +16,6 @@ func TestConvertBase(t *testing.T) {
 		t.Fatalf("parse rate: %v", err)
 	}
 
-	// 8.00 USD (800 cents) at 16,250.42 -> 130,003 IDR (0 minor units).
 	got, err := entity.ConvertBase(800, usd, idr, rate)
 	if err != nil {
 		t.Fatalf("convert: %v", err)
@@ -30,7 +29,7 @@ func TestConvertBaseRoundsHalfAwayFromZero(t *testing.T) {
 	usd, _ := entity.CurrencyByCode("USD")
 	idr, _ := entity.CurrencyByCode("IDR")
 
-	half, _ := entity.ParseRate("50") // 1 cent * 0.01 USD * 50 = 0.5 IDR
+	half, _ := entity.ParseRate("50")
 	got, err := entity.ConvertBase(1, usd, idr, half)
 	if err != nil {
 		t.Fatalf("convert: %v", err)
@@ -52,7 +51,7 @@ func TestConvertBaseNegativeAmount(t *testing.T) {
 	idr, _ := entity.CurrencyByCode("IDR")
 
 	rate, _ := entity.ParseRate("50")
-	got, err := entity.ConvertBase(-1, usd, idr, rate) // -0.5 rounds away from zero
+	got, err := entity.ConvertBase(-1, usd, idr, rate)
 	if err != nil {
 		t.Fatalf("convert: %v", err)
 	}
@@ -69,8 +68,8 @@ func TestMinorUnitsAreNotAssumedToBeTwo(t *testing.T) {
 		t.Fatalf("seed currencies wrong: JPY=%d USD=%d", jpy.MinorUnits, usd.MinorUnits)
 	}
 
-	rate, _ := entity.ParseRate("0.0067")                // 1 JPY in USD
-	got, err := entity.ConvertBase(1000, jpy, usd, rate) // 1000 JPY -> 670 cents
+	rate, _ := entity.ParseRate("0.0067")
+	got, err := entity.ConvertBase(1000, jpy, usd, rate)
 	if err != nil {
 		t.Fatalf("convert: %v", err)
 	}
