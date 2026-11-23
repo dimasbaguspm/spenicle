@@ -43,6 +43,7 @@
       "status": "pending"
     }
   ],
+  "fx_rates": [],
   "ledger_entries": [],
   "ledger_postings": [],
   "settings": [

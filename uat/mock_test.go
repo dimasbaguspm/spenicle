@@ -31,33 +31,51 @@ const (
 	mockPort   = "8080/tcp"
 	mockKey    = "project-key"
 	mockBinary = "mock"
+	mockSnaps  = "/partner/v1/snaps"
+	mockRates  = "/stats/eurofxref/eurofxref-daily.xml"
 )
 
-func buildMock(t *testing.T) string {
-	t.Helper()
+var mockBase string //nolint:gochecknoglobals // one container per package run, read-only afterwards
 
-	binary := filepath.Join(t.TempDir(), mockBinary)
-
-	build := exec.CommandContext(t.Context(), "go", "build", "-o", binary, "./"+mockBinary)
-	build.Env = append(os.Environ(), "CGO_ENABLED=0")
-
-	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build the mock service: %v\n%s", err, output)
-	}
-
-	return binary
+func TestMain(m *testing.M) {
+	os.Exit(runSuite(m))
 }
 
-func startMock(t *testing.T) string {
-	t.Helper()
+func runSuite(m *testing.M) int {
+	base, terminate, err := startMock(context.Background())
+	if err != nil {
+		return m.Run()
+	}
 
-	ctx := t.Context()
+	defer terminate()
+
+	mockBase = base
+
+	return m.Run()
+}
+
+func startMock(ctx context.Context) (string, func(), error) {
+	dir, err := os.MkdirTemp("", "spenicle-mock")
+	if err != nil {
+		return "", nil, fmt.Errorf("temp dir: %w", err)
+	}
+
+	binary := filepath.Join(dir, mockBinary)
+
+	build := exec.CommandContext(ctx, "go", "build", "-o", binary, "./"+mockBinary)
+	build.Env = append(os.Environ(), "CGO_ENABLED=0")
+
+	if output, buildErr := build.CombinedOutput(); buildErr != nil {
+		_ = os.RemoveAll(dir)
+
+		return "", nil, fmt.Errorf("build the mock service: %w: %s", buildErr, output)
+	}
 
 	request := testcontainers.ContainerRequest{
 		Image:        mockImage,
 		ExposedPorts: []string{mockPort},
 		Files: []testcontainers.ContainerFile{{
-			HostFilePath:      buildMock(t),
+			HostFilePath:      binary,
 			ContainerFilePath: "/" + mockBinary,
 			FileMode:          0o755,
 		}},
@@ -72,24 +90,49 @@ func startMock(t *testing.T) string {
 		Started:          true,
 	})
 	if err != nil {
-		t.Skipf("Docker is not available, skipping the mock services: %v", err)
+		_ = os.RemoveAll(dir)
+
+		return "", nil, fmt.Errorf("start the mock service: %w", err)
 	}
 
-	t.Cleanup(func() {
+	terminate := func() {
 		_ = container.Terminate(context.WithoutCancel(ctx))
-	})
+		_ = os.RemoveAll(dir)
+	}
 
 	host, err := container.Host(ctx)
 	if err != nil {
-		t.Fatalf("container host: %v", err)
+		terminate()
+
+		return "", nil, fmt.Errorf("container host: %w", err)
 	}
 
 	mapped, err := container.MappedPort(ctx, mockPort)
 	if err != nil {
-		t.Fatalf("container port: %v", err)
+		terminate()
+
+		return "", nil, fmt.Errorf("container port: %w", err)
 	}
 
-	return fmt.Sprintf("http://%s/partner/v1/snaps", net.JoinHostPort(host, mapped.Port()))
+	return "http://" + net.JoinHostPort(host, mapped.Port()), terminate, nil
+}
+
+func requireMock(t *testing.T) string {
+	t.Helper()
+
+	if mockBase == "" {
+		t.Skip("Docker is not available, skipping the mock services")
+	}
+
+	return mockBase
+}
+
+func ratesEndpoint() string {
+	if mockBase == "" {
+		return ""
+	}
+
+	return mockBase + mockRates
 }
 
 func newCaptures(t *testing.T, endpoint string) *captures.Service {
@@ -129,8 +172,7 @@ type fixedCurrency struct{ code string }
 func (f fixedCurrency) BaseCurrency(context.Context) (string, error) { return f.code, nil }
 
 func TestMockVendorSubmitAndReadBack(t *testing.T) {
-	endpoint := startMock(t)
-	service := newCaptures(t, endpoint)
+	service := newCaptures(t, requireMock(t)+mockSnaps)
 
 	ctx := t.Context()
 
@@ -177,8 +219,7 @@ func TestMockVendorSubmitAndReadBack(t *testing.T) {
 }
 
 func TestMockVendorRefusesAReadBackWithoutAJobRef(t *testing.T) {
-	endpoint := startMock(t)
-	service := newCaptures(t, endpoint)
+	service := newCaptures(t, requireMock(t)+mockSnaps)
 
 	ctx := t.Context()
 

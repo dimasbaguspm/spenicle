@@ -10,8 +10,10 @@ import (
 
 func TestFeatures(t *testing.T) {
 	suite := godog.TestSuite{
-		Name:                "spenicle",
-		ScenarioInitializer: uat.InitializeScenario,
+		Name: "spenicle",
+		ScenarioInitializer: func(sc *godog.ScenarioContext) {
+			uat.InitializeScenario(sc, uat.Options{RatesEndpoint: ratesEndpoint()})
+		},
 		Options: &godog.Options{
 			Format:   "pretty",
 			Paths:    []string{"features"},

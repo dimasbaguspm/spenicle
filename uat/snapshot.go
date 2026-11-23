@@ -24,6 +24,7 @@ var allowedTables = []string{
 	"accounts",
 	"audit_log",
 	"captures",
+	"fx_rates",
 	"ledger_entries",
 	"ledger_postings",
 	"settings",

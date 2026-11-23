@@ -8,6 +8,6 @@ package uat
 
 import "github.com/cucumber/godog"
 
-func InitializeScenario(sc *godog.ScenarioContext) {
-	RegisterSteps(sc)
+func InitializeScenario(sc *godog.ScenarioContext, options Options) {
+	RegisterSteps(sc, options)
 }

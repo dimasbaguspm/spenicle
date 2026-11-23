@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -23,7 +24,9 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
+	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
+	"github.com/dimasbaguspm/spenicle/internal/repository/ecb"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -36,12 +39,13 @@ const (
 type worldKey struct{}
 
 type world struct {
-	baseCurrency string
-	fingerprint  string
-	dbPath       string
-	store        *sqlite.Store
-	server       *httptest.Server
-	accounts     map[string]int64
+	baseCurrency  string
+	fingerprint   string
+	dbPath        string
+	store         *sqlite.Store
+	server        *httptest.Server
+	accounts      map[string]int64
+	ratesEndpoint string
 
 	status int
 	body   []byte
@@ -50,10 +54,16 @@ type world struct {
 	pendingBody []byte
 }
 
-func newWorld() *world {
+// Options is what the harness injects: the endpoints of the mocked services.
+type Options struct {
+	RatesEndpoint string
+}
+
+func newWorld(options Options) *world {
 	return &world{
-		baseCurrency: "IDR",
-		accounts:     map[string]int64{},
+		baseCurrency:  "IDR",
+		accounts:      map[string]int64{},
+		ratesEndpoint: options.RatesEndpoint,
 	}
 }
 
@@ -117,6 +127,19 @@ func (w *world) boot(ctx context.Context) error {
 
 	ledgerService := ledger.New(store, settingsService, clockSystem, clockSystem)
 
+	var ratesService rates.Contract
+
+	if w.ratesEndpoint != "" {
+		source, rateErr := ecb.New(w.ratesEndpoint, limits.ECBTimeout, clockSystem)
+		if rateErr != nil {
+			_ = store.Close(ctx)
+
+			return fmt.Errorf("ecb: %w", rateErr)
+		}
+
+		ratesService = rates.New(source, store, clockSystem)
+	}
+
 	w.store = store
 	w.server = httptest.NewServer(handlers.New(handlers.Deps{
 		Ledger:        ledgerService,
@@ -124,6 +147,7 @@ func (w *world) boot(ctx context.Context) error {
 		Accounts:      store,
 		Health:        store,
 		Settings:      settingsService,
+		Rates:         ratesService,
 		Sealer:        sealer,
 		BaseCurrency:  baseCurrency,
 		Version:       "uat",
@@ -244,16 +268,7 @@ func (w *world) countTable(ctx context.Context, table string) (int, error) {
 		return 0, errors.New(`no running API: add the step "a running API" first`)
 	}
 
-	allowed := map[string]bool{
-		"ledger_entries":  true,
-		"ledger_postings": true,
-		"accounts":        true,
-		"captures":        true,
-		"audit_log":       true,
-		"settings":        true,
-	}
-
-	if !allowed[table] {
+	if !slices.Contains(allowedTables, table) {
 		return 0, fmt.Errorf("counting %q is not allowed", table)
 	}
 

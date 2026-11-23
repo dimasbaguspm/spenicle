@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -22,7 +23,26 @@ const (
 	maxMemory   = 1 << 20
 	maxBody     = 1 << 20
 	readHeader  = 5 * time.Second
+	ratesPath   = "/stats/eurofxref/eurofxref-daily.xml"
+	xmlType     = "application/xml; charset=utf-8"
 )
+
+const ratesSheet = `<?xml version="1.0" encoding="UTF-8"?>
+<gesmes:Envelope
+  xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01"
+  xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
+  <gesmes:subject>Reference rates</gesmes:subject>
+  <gesmes:Sender>
+    <gesmes:name>European Central Bank</gesmes:name>
+  </gesmes:Sender>
+  <Cube>
+    <Cube time="2026-11-20">
+      <Cube currency="USD" rate="1.0990"/>
+      <Cube currency="JPY" rate="174.35"/>
+      <Cube currency="IDR" rate="16000.50"/>
+    </Cube>
+  </Cube>
+</gesmes:Envelope>`
 
 type health struct {
 	Status string `json:"status"`
@@ -90,6 +110,8 @@ func newMux() http.Handler {
 
 	mux.HandleFunc("POST /partner/v1/snaps", handleSnaps)
 
+	mux.HandleFunc("GET "+ratesPath, handleRates)
+
 	return mux
 }
 
@@ -121,4 +143,9 @@ func handleSnaps(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusAccepted, snapReport{JobRef: jobRef, Status: "EXECUTING"})
+}
+
+func handleRates(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", xmlType)
+	_, _ = io.WriteString(w, ratesSheet)
 }

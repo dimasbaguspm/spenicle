@@ -12,8 +12,8 @@ import (
 	"github.com/cucumber/godog"
 )
 
-func RegisterSteps(sc *godog.ScenarioContext) {
-	sc.Before(aFreshWorld)
+func RegisterSteps(sc *godog.ScenarioContext, options Options) {
+	sc.Before(aFreshWorld(options))
 	sc.After(tearDownWorld)
 
 	sc.Step(`^the base currency is "([^"]*)"$`, theBaseCurrencyIs)
@@ -34,8 +34,14 @@ func RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^the database matches the snapshot "([^"]*)"$`, databaseMatchesSnapshot)
 }
 
-func aFreshWorld(ctx context.Context, _ *godog.Scenario) (context.Context, error) {
-	return context.WithValue(ctx, worldKey{}, newWorld()), nil
+func aFreshWorld(options Options) func(context.Context, *godog.Scenario) (context.Context, error) {
+	return func(ctx context.Context, scenario *godog.Scenario) (context.Context, error) {
+		if options.RatesEndpoint == "" && strings.Contains(scenario.Uri, "rates") {
+			return ctx, godog.ErrSkip
+		}
+
+		return context.WithValue(ctx, worldKey{}, newWorld(options)), nil
+	}
 }
 
 func tearDownWorld(ctx context.Context, _ *godog.Scenario, _ error) (context.Context, error) {

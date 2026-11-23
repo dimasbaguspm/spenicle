@@ -168,8 +168,10 @@ the build you think it is.
 
 - Repetition goes in `Scenario Outline` + `Examples` (`uat/features/contract.feature`).
 - External services are the only things mocked, and they are Go programs under
-  `uat/mock/`: `uat/mock_test.go` builds that binary, runs it in a container through
-  testcontainers and points the real adapter at it. No Docker means the test skips.
+  `uat/mock/`: one container serves the SnapToJSON partner route and the ECB daily
+  sheet. `uat/mock_test.go` starts it through testcontainers in `TestMain` and hands
+  the base URL to the Gherkin suite (`uat.Options`) and to the adapter tests. No Docker
+  means those tests skip.
 - `uat` assembles the dependency graph by hand because `cmd/http` is `package main`
   and therefore not importable. Adding a dependency to `cmd/http/bootstrap.go` means
   adding it to `uat/world.go` too. Seeds, schema and first-boot settings live in the
