@@ -48,8 +48,12 @@ func CurrencyByCode(code string) (Currency, error) {
 	if !ok {
 		return Currency{}, fmt.Errorf("%w: %s", ErrUnknownCurrency, code)
 	}
+
 	return c, nil
 }
+
+// decimalBase is the radix behind every minor-unit shift.
+const decimalBase = 10
 
 // ConvertBase converts a native minor-unit amount into base minor units and
 // rounds exactly once, half away from zero. rate is base units per one native
@@ -58,30 +62,36 @@ func ConvertBase(native int64, from, to Currency, rate *big.Rat) (int64, error) 
 	if rate == nil || rate.Sign() <= 0 {
 		return 0, ErrInvalidRate
 	}
-	r := new(big.Rat).SetInt64(native)
+
+	rat := new(big.Rat).SetInt64(native)
 
 	// native_minor / 10^from is the native amount. Multiply by the rate to get
 	// base units, then by 10^to to get base minor units. Divide when the target
 	// has fewer decimals, never the other way round.
-	if d := to.MinorUnits - from.MinorUnits; d != 0 {
-		exp := int64(d)
-		if exp < 0 {
-			exp = -exp
+	if shift := to.MinorUnits - from.MinorUnits; shift != 0 {
+		exponent := int64(shift)
+		if exponent < 0 {
+			exponent = -exponent
 		}
-		scale := new(big.Rat).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(exp), nil))
-		if d > 0 {
-			r.Mul(r, scale)
+
+		scale := new(big.Rat).SetInt(
+			new(big.Int).Exp(big.NewInt(decimalBase), big.NewInt(exponent), nil),
+		)
+
+		if shift > 0 {
+			rat.Mul(rat, scale)
 		} else {
-			r.Quo(r, scale)
+			rat.Quo(rat, scale)
 		}
 	}
 
-	r.Mul(r, rate)
+	rat.Mul(rat, rate)
 
-	if !r.Num().IsInt64() && r.Num().BitLen() > 62 {
+	if !rat.Num().IsInt64() && rat.Num().BitLen() > 62 {
 		return 0, fmt.Errorf("%w: overflow", ErrInvalidAmount)
 	}
-	return roundHalfAwayFromZero(r), nil
+
+	return roundHalfAwayFromZero(rat), nil
 }
 
 // ParseRate parses an exact decimal rate. Never float64.
@@ -90,6 +100,7 @@ func ParseRate(s string) (*big.Rat, error) {
 	if !ok || r.Sign() <= 0 {
 		return nil, fmt.Errorf("%w: %q", ErrInvalidRate, s)
 	}
+
 	return r, nil
 }
 
@@ -108,5 +119,6 @@ func roundHalfAwayFromZero(r *big.Rat) int64 {
 			q.Add(q, big.NewInt(1))
 		}
 	}
+
 	return q.Int64()
 }

@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+const (
+	// uuidVersion7 marks the layout; uuidVariant is RFC 4122 variant 10.
+	uuidVersion7 = 0x70
+	uuidVariant  = 0x80
+	maskVersion  = 0x0f
+	maskVariant  = 0x3f
+	msHighShift  = 32
+)
+
 // Clock is the production port.Clock.
 type Clock struct{}
 
@@ -19,17 +28,22 @@ type IDs struct{}
 
 // NewID returns a UUIDv7 string.
 func (IDs) NewID() string {
-	var b [16]byte
+	var raw [16]byte
+
 	ms := uint64(time.Now().UTC().UnixMilli())
 
-	binary.BigEndian.PutUint16(b[0:2], uint16(ms>>32))
-	binary.BigEndian.PutUint32(b[2:6], uint32(ms))
-	if _, err := rand.Read(b[6:]); err != nil {
-		// crypto/rand failing is unrecoverable; caller shouldn't see a fake id.
+	//nolint:gosec // truncation is the point: UUIDv7 keeps the low 48 bits of millis
+	binary.BigEndian.PutUint16(raw[0:2], uint16(ms>>msHighShift))
+	//nolint:gosec // truncation is the point: UUIDv7 keeps the low 48 bits of millis
+	binary.BigEndian.PutUint32(raw[2:6], uint32(ms))
+
+	if _, err := rand.Read(raw[6:]); err != nil {
+		// crypto/rand failing is unrecoverable; a fake id would be worse.
 		panic(fmt.Sprintf("clockx: entropy: %v", err))
 	}
-	b[6] = (b[6] & 0x0f) | 0x70 // version 7
-	b[8] = (b[8] & 0x3f) | 0x80 // variant 10
 
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+	raw[6] = (raw[6] & maskVersion) | uuidVersion7
+	raw[8] = (raw[8] & maskVariant) | uuidVariant
+
+	return fmt.Sprintf("%x-%x-%x-%x-%x", raw[0:4], raw[4:6], raw[6:8], raw[8:10], raw[10:16])
 }

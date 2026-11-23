@@ -25,6 +25,9 @@ type Config struct {
 	Endpoint string
 }
 
+// metricInterval is how often metrics are flushed to the collector.
+const metricInterval = 15 * time.Second
+
 // Setup installs global tracer and meter providers. The returned function
 // flushes and shuts them down.
 func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error) {
@@ -45,6 +48,7 @@ func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error)
 
 	traceOpts := []otlptracehttp.Option{otlptracehttp.WithEndpoint(endpoint)}
 	metricOpts := []otlpmetrichttp.Option{otlpmetrichttp.WithEndpoint(endpoint)}
+
 	if insecure {
 		traceOpts = append(traceOpts, otlptracehttp.WithInsecure())
 		metricOpts = append(metricOpts, otlpmetrichttp.WithInsecure())
@@ -54,6 +58,7 @@ func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error)
 	if err != nil {
 		return nil, fmt.Errorf("otlp trace exporter: %w", err)
 	}
+
 	metricExp, err := otlpmetrichttp.New(ctx, metricOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("otlp metric exporter: %w", err)
@@ -62,7 +67,7 @@ func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error)
 	tp := trace.NewTracerProvider(trace.WithBatcher(traceExp), trace.WithResource(res))
 	mp := metric.NewMeterProvider(
 		metric.WithResource(res),
-		metric.WithReader(metric.NewPeriodicReader(metricExp, metric.WithInterval(15*time.Second))),
+		metric.WithReader(metric.NewPeriodicReader(metricExp, metric.WithInterval(metricInterval))),
 	)
 
 	otel.SetTracerProvider(tp)
@@ -71,24 +76,29 @@ func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error)
 	return func(shutdownCtx context.Context) error {
 		tpErr := tp.Shutdown(shutdownCtx)
 		mpErr := mp.Shutdown(shutdownCtx)
+
 		if tpErr != nil {
 			return fmt.Errorf("shutdown traces: %w", tpErr)
 		}
+
 		if mpErr != nil {
 			return fmt.Errorf("shutdown metrics: %w", mpErr)
 		}
+
 		return nil
 	}, nil
 }
 
-func parseEndpoint(raw string) (endpoint string, insecure bool) {
+func parseEndpoint(raw string) (string, bool) {
 	raw = strings.TrimSpace(raw)
-	if strings.HasPrefix(raw, "http://") {
+
+	switch {
+	case strings.HasPrefix(raw, "http://"):
 		return strings.TrimPrefix(raw, "http://"), true
-	}
-	if strings.HasPrefix(raw, "https://") {
+	case strings.HasPrefix(raw, "https://"):
 		return strings.TrimPrefix(raw, "https://"), false
+	default:
+		// No scheme: assume a local collector, which is never TLS.
+		return raw, true
 	}
-	// No scheme: assume a local collector, which is never TLS.
-	return raw, true
 }

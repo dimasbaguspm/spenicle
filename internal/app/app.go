@@ -41,14 +41,15 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 		cfg.Logger = slog.Default()
 	}
 
-	db, err := sqlite.Open(sqlite.Config{Path: cfg.DBPath})
+	db, err := sqlite.Open(ctx, sqlite.Config{Path: cfg.DBPath})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := sqlite.Migrate(ctx, db); err != nil {
+	if migrateErr := sqlite.Migrate(ctx, db); migrateErr != nil {
 		_ = db.Close()
-		return nil, fmt.Errorf("migrate: %w", err)
+
+		return nil, fmt.Errorf("migrate: %w", migrateErr)
 	}
 
 	store := sqlite.NewStore(db)
@@ -80,4 +81,10 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 }
 
 // Close releases the database handle.
-func (a *App) Close() error { return a.DB.Close() }
+func (a *App) Close() error {
+	if err := a.DB.Close(); err != nil {
+		return fmt.Errorf("close database: %w", err)
+	}
+
+	return nil
+}

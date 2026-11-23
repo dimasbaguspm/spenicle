@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+// isoCodeLen is the width of every ISO 4217 code.
+const isoCodeLen = 3
+
 // Config is the resolved runtime configuration.
 type Config struct {
 	Addr             string
@@ -35,9 +38,11 @@ func Load() (Config, error) {
 	if cfg.AppSecret != "" && len(cfg.AppSecret) < 16 {
 		return Config{}, errors.New("APP_SECRET must be at least 16 bytes")
 	}
-	if len(cfg.BaseCurrency) != 3 {
+
+	if len(cfg.BaseCurrency) != isoCodeLen {
 		return Config{}, fmt.Errorf("BASE_CURRENCY must be an ISO 4217 code, got %q", cfg.BaseCurrency)
 	}
+
 	return cfg, nil
 }
 
@@ -48,5 +53,6 @@ func env(key, fallback string) string {
 	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
 		return v
 	}
+
 	return fallback
 }

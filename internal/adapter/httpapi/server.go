@@ -2,6 +2,7 @@
 package httpapi
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -53,6 +54,7 @@ func chain(h http.Handler, mws ...func(http.Handler) http.Handler) http.Handler 
 	for i := len(mws) - 1; i >= 0; i-- {
 		h = mws[i](h)
 	}
+
 	return h
 }
 
@@ -63,6 +65,7 @@ func (s *Server) handleNotFound(w http.ResponseWriter, r *http.Request) {
 // statusRecorder lets middleware see what the handler decided.
 type statusRecorder struct {
 	http.ResponseWriter
+
 	status int
 	bytes  int
 }
@@ -76,9 +79,15 @@ func (r *statusRecorder) Write(b []byte) (int, error) {
 	if r.status == 0 {
 		r.status = http.StatusOK
 	}
+
 	n, err := r.ResponseWriter.Write(b)
 	r.bytes += n
-	return n, err
+
+	if err != nil {
+		return n, fmt.Errorf("write response: %w", err)
+	}
+
+	return n, nil
 }
 
 func (s *Server) logRequests(next http.Handler) http.Handler {
@@ -86,23 +95,27 @@ func (s *Server) logRequests(next http.Handler) http.Handler {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w}
 		next.ServeHTTP(rec, r)
-		s.deps.Logger.Info("http",
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", rec.status,
-			"bytes", rec.bytes,
-			"duration_ms", time.Since(start).Milliseconds())
+		s.deps.Logger.InfoContext(r.Context(), "http",
+			slog.String("method", r.Method),
+			slog.String("path", r.URL.Path),
+			slog.Int("status", rec.status),
+			slog.Int("bytes", rec.bytes),
+			slog.Int64("duration_ms", time.Since(start).Milliseconds()))
 	})
 }
 
 func (s *Server) recoverPanic(next http.Handler) http.Handler {
+	//nolint:contextcheck // the panic guard calls no downstream function to inherit a context into
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if v := recover(); v != nil {
-				s.deps.Logger.Error("panic", "value", v, "path", r.URL.Path)
+				s.deps.Logger.ErrorContext(r.Context(), "panic",
+					slog.Any("value", v),
+					slog.String("path", r.URL.Path))
 				writeError(w, http.StatusInternalServerError, "internal_error", "unexpected failure")
 			}
 		}()
+
 		next.ServeHTTP(w, r)
 	})
 }

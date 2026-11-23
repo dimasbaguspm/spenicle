@@ -1,9 +1,11 @@
-package bdd
+package bdd_test
 
 import (
 	"testing"
 
 	"github.com/cucumber/godog"
+
+	"github.com/dimasbaguspm/spenicle/internal/bdd"
 )
 
 // TestFeatures runs every .feature file with the real HTTP handler over a real
@@ -11,7 +13,7 @@ import (
 func TestFeatures(t *testing.T) {
 	suite := godog.TestSuite{
 		Name:                "spenicle",
-		ScenarioInitializer: InitializeScenario,
+		ScenarioInitializer: bdd.InitializeScenario,
 		Options: &godog.Options{
 			Format:   "pretty",
 			Paths:    []string{"../../features"},
@@ -23,10 +25,4 @@ func TestFeatures(t *testing.T) {
 	if suite.Run() != 0 {
 		t.Fatal("feature suite failed")
 	}
-}
-
-// InitializeScenario registers the shared vocabulary so other suites (or a
-// standalone godog binary) can reuse it unchanged.
-func InitializeScenario(sc *godog.ScenarioContext) {
-	RegisterSteps(sc)
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -20,6 +21,11 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/app"
 	"github.com/dimasbaguspm/spenicle/internal/platform/seal"
+)
+
+const (
+	// maxPreview bounds what a failure message can dump into the log.
+	maxPreview = 120
 )
 
 type worldKey struct{}
@@ -45,11 +51,12 @@ func newWorld() *world {
 }
 
 func worldFrom(ctx context.Context) (*world, error) {
-	w, ok := ctx.Value(worldKey{}).(*world)
+	world, ok := ctx.Value(worldKey{}).(*world)
 	if !ok {
-		return nil, fmt.Errorf("scenario world is missing: run through godog")
+		return nil, errors.New("scenario world is missing: run through godog")
 	}
-	return w, nil
+
+	return world, nil
 }
 
 // boot starts the real HTTP handler over the real SQLite file in a temp dir.
@@ -65,13 +72,12 @@ func (w *world) boot() error {
 	}
 
 	w.dbPath = filepath.Join(dir, "spenicle.db")
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	application, err := app.New(context.Background(), app.Config{
 		DBPath:       w.dbPath,
 		BaseCurrency: w.baseCurrency,
 		Sealer:       seal.Passthrough{},
-		Logger:       logger,
+		Logger:       slog.New(slog.DiscardHandler),
 	})
 	if err != nil {
 		return fmt.Errorf("app: %w", err)
@@ -79,6 +85,7 @@ func (w *world) boot() error {
 
 	w.app = application
 	w.server = httptest.NewServer(application.Handler)
+
 	return nil
 }
 
@@ -86,9 +93,11 @@ func (w *world) shutdown() {
 	if w.server != nil {
 		w.server.Close()
 	}
+
 	if w.app != nil {
 		_ = w.app.Close()
 	}
+
 	if w.dbPath != "" {
 		_ = os.RemoveAll(filepath.Dir(w.dbPath))
 	}
@@ -97,18 +106,20 @@ func (w *world) shutdown() {
 // do performs one HTTP request and records it for the Then steps.
 func (w *world) do(method, path string, body []byte) error {
 	if w.server == nil {
-		return fmt.Errorf("no running API: add the step \"a running API\" first")
+		return errors.New(`no running API: add the step "a running API" first`)
 	}
 
 	var reader io.Reader
+
 	if body != nil {
 		reader = strings.NewReader(string(body))
 	}
 
-	req, err := http.NewRequest(method, w.server.URL+path, reader)
+	req, err := http.NewRequestWithContext(context.Background(), method, w.server.URL+path, reader)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
+
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -117,6 +128,7 @@ func (w *world) do(method, path string, body []byte) error {
 	if err != nil {
 		return fmt.Errorf("call %s %s: %w", method, path, err)
 	}
+
 	defer func() { _ = resp.Body.Close() }()
 
 	raw, err := io.ReadAll(resp.Body)
@@ -127,6 +139,7 @@ func (w *world) do(method, path string, body []byte) error {
 	w.status = resp.StatusCode
 	w.body = raw
 	w.header = resp.Header
+
 	return nil
 }
 
@@ -139,25 +152,29 @@ func (w *world) expand(body string) (string, error) {
 
 	out := accountPlaceholder.ReplaceAllStringFunc(body, func(match string) string {
 		name := accountPlaceholder.FindStringSubmatch(match)[1]
+
 		id, ok := w.accounts[name]
 		if !ok {
 			missing = append(missing, name)
+
 			return match
 		}
+
 		return strconv.FormatInt(id, 10)
 	})
 
 	if len(missing) > 0 {
-		return "", fmt.Errorf("unknown account(s) %s: create them with \"the account ... exists as ...\"",
+		return "", fmt.Errorf(`unknown account(s) %s: create them with "the account ... exists as ..."`,
 			strings.Join(missing, ", "))
 	}
+
 	return out, nil
 }
 
 // countTable answers "how many rows in this table", used by the store steps.
 func (w *world) countTable(table string) (int, error) {
 	if w.app == nil {
-		return 0, fmt.Errorf("no running API: add the step \"a running API\" first")
+		return 0, errors.New(`no running API: add the step "a running API" first`)
 	}
 
 	allowed := map[string]bool{
@@ -168,64 +185,94 @@ func (w *world) countTable(table string) (int, error) {
 		"audit_log":       true,
 		"settings":        true,
 	}
+
 	if !allowed[table] {
 		return 0, fmt.Errorf("counting %q is not allowed", table)
 	}
 
-	var n int
-	query := "SELECT COUNT(*) FROM " + table // table name is allow-listed above
-	err := w.app.DB.QueryRowContext(context.Background(), query).Scan(&n)
-	if err != nil && err != sql.ErrNoRows {
+	var count int
+
+	//nolint:gosec // G201: the table name is allow-listed immediately above
+	query := "SELECT COUNT(*) FROM " + table
+
+	err := w.app.DB.QueryRowContext(context.Background(), query).Scan(&count)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return 0, fmt.Errorf("count %s: %w", table, err)
 	}
-	return n, nil
+
+	return count, nil
 }
 
 // jsonPath resolves $.a.b[0].c against the recorded body.
 func (w *world) jsonPath(path string) (string, error) {
-	var doc any
-	if err := json.Unmarshal(w.body, &doc); err != nil {
-		return "", fmt.Errorf("response is not JSON (%q): %w", truncate(string(w.body)), err)
+	var document any
+
+	if err := json.Unmarshal(w.body, &document); err != nil {
+		return "", fmt.Errorf("response is not JSON (%q): %w", preview(string(w.body)), err)
 	}
 
-	cur := doc
-	for _, token := range tokenize(path) {
-		switch node := cur.(type) {
-		case map[string]any:
-			value, ok := node[token]
-			if !ok {
-				return "", fmt.Errorf("path %s: key %q not present", path, token)
-			}
-			cur = value
-		case []any:
-			index, err := strconv.Atoi(token)
-			if err != nil {
-				return "", fmt.Errorf("path %s: %q is not an array index", path, token)
-			}
-			if index < 0 || index >= len(node) {
-				return "", fmt.Errorf("path %s: index %d out of range (%d items)", path, index, len(node))
-			}
-			cur = node[index]
-		default:
-			return "", fmt.Errorf("path %s: cannot descend into %T at %q", path, cur, token)
-		}
+	value, err := walk(path, document)
+	if err != nil {
+		return "", err
 	}
 
-	switch v := cur.(type) {
+	switch typed := value.(type) {
 	case string:
-		return v, nil
+		return typed, nil
 	case nil:
 		return "", nil
 	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64), nil
+		return strconv.FormatFloat(typed, 'f', -1, 64), nil
 	case bool:
-		return strconv.FormatBool(v), nil
+		return strconv.FormatBool(typed), nil
 	default:
-		encoded, err := json.Marshal(v)
+		encoded, err := json.Marshal(typed)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("encode %s: %w", path, err)
 		}
+
 		return string(encoded), nil
+	}
+}
+
+// walk descends one token at a time, reporting where it lost the trail.
+func walk(path string, document any) (any, error) {
+	current := document
+
+	for _, token := range tokenize(path) {
+		next, err := step(path, current, token)
+		if err != nil {
+			return nil, err
+		}
+
+		current = next
+	}
+
+	return current, nil
+}
+
+func step(path string, current any, token string) (any, error) {
+	switch node := current.(type) {
+	case map[string]any:
+		value, ok := node[token]
+		if !ok {
+			return nil, fmt.Errorf("path %s: key %q not present", path, token)
+		}
+
+		return value, nil
+	case []any:
+		index, err := strconv.Atoi(token)
+		if err != nil {
+			return nil, fmt.Errorf("path %s: %q is not an array index", path, token)
+		}
+
+		if index < 0 || index >= len(node) {
+			return nil, fmt.Errorf("path %s: index %d out of range (%d items)", path, index, len(node))
+		}
+
+		return node[index], nil
+	default:
+		return nil, fmt.Errorf("path %s: cannot descend into %T at %q", path, current, token)
 	}
 }
 
@@ -235,37 +282,50 @@ func tokenize(path string) []string {
 	path = strings.TrimPrefix(path, ".")
 
 	var tokens []string
+
 	for _, part := range strings.Split(path, ".") {
 		if part == "" {
 			continue
 		}
-		for {
-			open := strings.IndexByte(part, '[')
-			if open < 0 {
-				tokens = append(tokens, part)
-				break
-			}
-			if open > 0 {
-				tokens = append(tokens, part[:open])
-			}
-			closeIdx := strings.IndexByte(part, ']')
-			if closeIdx < 0 {
-				tokens = append(tokens, part[open+1:])
-				break
-			}
-			tokens = append(tokens, part[open+1:closeIdx])
-			part = part[closeIdx+1:]
-			if part == "" {
-				break
-			}
-		}
+
+		tokens = append(tokens, splitBrackets(part)...)
 	}
+
 	return tokens
 }
 
-func truncate(s string) string {
-	if len(s) > 120 {
-		return s[:120] + "..."
+// splitBrackets turns "postings[0]" into ["postings", "0"].
+func splitBrackets(part string) []string {
+	var tokens []string
+
+	for {
+		open := strings.IndexByte(part, '[')
+		if open < 0 {
+			return append(tokens, part)
+		}
+
+		if open > 0 {
+			tokens = append(tokens, part[:open])
+		}
+
+		closing := strings.IndexByte(part, ']')
+		if closing < 0 {
+			return append(tokens, part[open+1:])
+		}
+
+		tokens = append(tokens, part[open+1:closing])
+
+		part = part[closing+1:]
+		if part == "" {
+			return tokens
+		}
 	}
-	return s
+}
+
+func preview(body string) string {
+	if len(body) > maxPreview {
+		return body[:maxPreview] + "..."
+	}
+
+	return body
 }

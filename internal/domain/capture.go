@@ -60,9 +60,11 @@ func (c Capture) Transition(to string) error {
 	if !ok {
 		return fmt.Errorf("%w: unknown status %q", ErrInvalidState, c.Status)
 	}
+
 	if !allowed[to] {
 		return fmt.Errorf("%w: %s to %s", ErrInvalidState, c.Status, to)
 	}
+
 	return nil
 }
 

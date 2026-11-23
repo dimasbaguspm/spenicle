@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -18,6 +19,8 @@ import (
 const (
 	envelopePrefix = "v1:"
 	fingerprintLen = 16
+	// minSecretBytes is the shortest secret worth deriving a key from.
+	minSecretBytes = 16
 )
 
 // ErrNotSealed reports data that was never sealed.
@@ -31,15 +34,17 @@ type Sealer struct {
 
 // New derives a key from the secret. The secret itself is never stored.
 func New(secret string) (*Sealer, error) {
-	if len(secret) < 16 {
+	if len(secret) < minSecretBytes {
 		return nil, errors.New("APP_SECRET must be at least 16 bytes")
 	}
 
 	key := sha256.Sum256([]byte("spenicle/seal/v1\x00" + secret))
+
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return nil, fmt.Errorf("cipher: %w", err)
 	}
+
 	aead, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, fmt.Errorf("gcm: %w", err)
@@ -47,9 +52,9 @@ func New(secret string) (*Sealer, error) {
 
 	mac := hmac.New(sha256.New, key[:])
 	mac.Write([]byte("fingerprint"))
-	fp := fmt.Sprintf("%x", mac.Sum(nil))[:fingerprintLen]
+	fingerprint := hex.EncodeToString(mac.Sum(nil))[:fingerprintLen]
 
-	return &Sealer{aead: aead, fingerprint: fp}, nil
+	return &Sealer{aead: aead, fingerprint: fingerprint}, nil
 }
 
 // Seal returns "v1:" plus base64(nonce|ciphertext).
@@ -58,7 +63,9 @@ func (s *Sealer) Seal(plain []byte) (string, error) {
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("nonce: %w", err)
 	}
+
 	out := s.aead.Seal(nonce, nonce, plain, nil)
+
 	return envelopePrefix + base64.StdEncoding.EncodeToString(out), nil
 }
 
@@ -67,19 +74,23 @@ func (s *Sealer) Open(sealed string) ([]byte, error) {
 	if !strings.HasPrefix(sealed, envelopePrefix) {
 		return nil, ErrNotSealed
 	}
+
 	raw, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(sealed, envelopePrefix))
 	if err != nil {
 		return nil, fmt.Errorf("decode envelope: %w", err)
 	}
+
 	if len(raw) < s.aead.NonceSize() {
 		return nil, errors.New("sealed value is truncated")
 	}
+
 	nonce, body := raw[:s.aead.NonceSize()], raw[s.aead.NonceSize():]
 
 	plain, err := s.aead.Open(nil, nonce, body, nil)
 	if err != nil {
 		return nil, fmt.Errorf("open envelope: %w", err)
 	}
+
 	return plain, nil
 }
 

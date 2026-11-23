@@ -20,11 +20,9 @@ func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 
 const dateLayout = "2006-01-02"
 
-var (
-	_ interface {
-		Code(context.Context) (string, error)
-	} = (*Store)(nil)
-)
+var _ interface {
+	Code(ctx context.Context) (string, error)
+} = (*Store)(nil)
 
 // InsertEntry writes the entry and its postings in one transaction. It writes
 // no balances: balances are always derived from postings.
@@ -44,6 +42,7 @@ func (s *Store) InsertEntry(ctx context.Context, e domain.Entry) (domain.Entry, 
 	if err != nil {
 		return domain.Entry{}, fmt.Errorf("begin: %w", err)
 	}
+
 	defer func() { _ = tx.Rollback() }()
 
 	res, err := tx.ExecContext(ctx, `
@@ -82,10 +81,13 @@ func (s *Store) InsertEntry(ctx context.Context, e domain.Entry) (domain.Entry, 
 		}
 	}
 
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO audit_log (entity_table, entity_id, action, from_json, to_json, actor, at)
-		VALUES ('ledger_entries', ?, 'create', NULL, NULL, 'user', ?)`,
-		id, createdAt.Format(time.RFC3339)); err != nil {
+	if _, err := tx.ExecContext(
+		ctx,
+		`INSERT INTO audit_log (entity_table, entity_id, action, from_json, to_json, actor, at)
+		 VALUES ('ledger_entries', ?, 'create', NULL, NULL, 'user', ?)`,
+		id,
+		createdAt.Format(time.RFC3339),
+	); err != nil {
 		return domain.Entry{}, fmt.Errorf("audit: %w", err)
 	}
 
@@ -95,6 +97,7 @@ func (s *Store) InsertEntry(ctx context.Context, e domain.Entry) (domain.Entry, 
 
 	e.ID = id
 	e.CreatedAt = createdAt
+
 	return e, nil
 }
 
@@ -111,6 +114,7 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (domain.En
 		note       sql.NullString
 		createdRaw string
 	)
+
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, occurred_on, payee_id, note, currency, source, created_at
 		FROM ledger_entries WHERE client_id = ?`, clientID).
@@ -118,6 +122,7 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (domain.En
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Entry{}, false, nil
 	}
+
 	if err != nil {
 		return domain.Entry{}, false, fmt.Errorf("select entry: %w", err)
 	}
@@ -126,13 +131,16 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (domain.En
 	if e.OccurredOn, err = time.Parse(dateLayout, occurred); err != nil {
 		return domain.Entry{}, false, fmt.Errorf("occurred_on %q: %w", occurred, err)
 	}
+
 	if e.CreatedAt, err = time.Parse(time.RFC3339, createdRaw); err != nil {
 		return domain.Entry{}, false, fmt.Errorf("created_at %q: %w", createdRaw, err)
 	}
+
 	if payeeID.Valid {
 		v := payeeID.Int64
 		e.PayeeID = &v
 	}
+
 	e.Note = note.String
 
 	rows, err := s.db.QueryContext(ctx, `
@@ -141,6 +149,7 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (domain.En
 	if err != nil {
 		return domain.Entry{}, false, fmt.Errorf("select postings: %w", err)
 	}
+
 	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
@@ -152,38 +161,53 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (domain.En
 			&p.FXRate, &rateDay, &p.FXSource); err != nil {
 			return domain.Entry{}, false, fmt.Errorf("scan posting: %w", err)
 		}
+
 		p.FXRateDate = rateDay.String
 		e.Postings = append(e.Postings, p)
 	}
-	return e, true, rows.Err()
+
+	if err := rows.Err(); err != nil {
+		return domain.Entry{}, false, fmt.Errorf("iterate postings: %w", err)
+	}
+
+	return e, true, nil
 }
 
 // SchemaVersion reports the highest applied migration.
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
 	var v sql.NullInt64
+
 	err := s.db.QueryRowContext(ctx, `SELECT MAX(version) FROM schema_migrations`).Scan(&v)
 	if err != nil {
 		return 0, fmt.Errorf("schema version: %w", err)
 	}
+
 	return int(v.Int64), nil
 }
 
 // Ping proves the file is writable, not merely readable.
 func (s *Store) Ping(ctx context.Context) error {
 	var one int
-	return s.db.QueryRowContext(ctx, `SELECT 1`).Scan(&one)
+	if err := s.db.QueryRowContext(ctx, `SELECT 1`).Scan(&one); err != nil {
+		return fmt.Errorf("ping: %w", err)
+	}
+
+	return nil
 }
 
 // Setting reads one configuration row.
 func (s *Store) Setting(ctx context.Context, key string) (string, bool, error) {
 	var v string
+
 	err := s.db.QueryRowContext(ctx, `SELECT v FROM settings WHERE k = ?`, key).Scan(&v)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", false, nil
 	}
+
 	if err != nil {
 		return "", false, fmt.Errorf("setting %q: %w", key, err)
 	}
+
 	return v, true, nil
 }
 
@@ -195,6 +219,7 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 	if err != nil {
 		return fmt.Errorf("set setting %q: %w", key, err)
 	}
+
 	return nil
 }
 
@@ -204,9 +229,11 @@ func (s *Store) Code(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if !ok {
 		return "", errors.New("base_currency is not configured")
 	}
+
 	return v, nil
 }
 
@@ -214,6 +241,7 @@ func nullString(v string) sql.NullString {
 	if v == "" {
 		return sql.NullString{}
 	}
+
 	return sql.NullString{String: v, Valid: true}
 }
 
@@ -221,6 +249,7 @@ func nullInt(v *int64) sql.NullInt64 {
 	if v == nil {
 		return sql.NullInt64{}
 	}
+
 	return sql.NullInt64{Int64: *v, Valid: true}
 }
 
@@ -228,5 +257,6 @@ func orDefault(v, fallback string) string {
 	if v == "" {
 		return fallback
 	}
+
 	return v
 }

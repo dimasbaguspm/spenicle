@@ -11,6 +11,17 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/port"
 )
 
+const (
+	settingBaseCurrency = "base_currency"
+	settingFingerprint  = "secret_fingerprint"
+
+	kindAsset   = "asset"
+	kindExpense = "expense"
+
+	seedAssetAccount   = "Cash"
+	seedExpenseAccount = "Unsorted"
+)
+
 // Service initialises a database, idempotently.
 type Service struct {
 	health   port.Health
@@ -32,47 +43,81 @@ func (s *Service) EnsureBaseline(ctx context.Context, baseCurrency, fingerprint 
 		return "", err
 	}
 
-	existing, ok, err := s.health.Setting(ctx, "base_currency")
+	locked, err := s.ensureBaseCurrency(ctx, baseCurrency)
 	if err != nil {
 		return "", err
-	}
-	switch {
-	case !ok:
-		if err := s.health.SetSetting(ctx, "base_currency", baseCurrency); err != nil {
-			return "", err
-		}
-		existing = baseCurrency
-	case existing != baseCurrency:
-		return "", fmt.Errorf("base currency is already %s and cannot change to %s",
-			existing, baseCurrency)
 	}
 
-	stored, ok, err := s.health.Setting(ctx, "secret_fingerprint")
-	if err != nil {
+	if err := s.ensureFingerprint(ctx, fingerprint); err != nil {
 		return "", err
-	}
-	switch {
-	case !ok:
-		if err := s.health.SetSetting(ctx, "secret_fingerprint", fingerprint); err != nil {
-			return "", err
-		}
-	case stored != fingerprint:
-		return "", fmt.Errorf("%w: expected %s, APP_SECRET gives %s",
-			domain.ErrSecretMismatch, stored, fingerprint)
 	}
 
-	count, err := s.accounts.CountAccounts(ctx)
+	if err := s.seedAccounts(ctx, locked); err != nil {
+		return "", err
+	}
+
+	return locked, nil
+}
+
+// ensureBaseCurrency either claims the currency or insists on the stored one.
+func (s *Service) ensureBaseCurrency(ctx context.Context, baseCurrency string) (string, error) {
+	existing, found, err := s.health.Setting(ctx, settingBaseCurrency)
 	if err != nil {
 		return "", err
 	}
-	if count == 0 {
-		if _, err := s.accounts.CreateAccount(ctx, "Cash", "asset", existing); err != nil {
-			return "", errors.Join(errors.New("seed asset account"), err)
+
+	if !found {
+		if err := s.health.SetSetting(ctx, settingBaseCurrency, baseCurrency); err != nil {
+			return "", err
 		}
-		if _, err := s.accounts.CreateAccount(ctx, "Unsorted", "expense", existing); err != nil {
-			return "", errors.Join(errors.New("seed expense account"), err)
-		}
+
+		return baseCurrency, nil
+	}
+
+	if existing != baseCurrency {
+		return "", fmt.Errorf("base currency is already %s and cannot change to %s", existing, baseCurrency)
 	}
 
 	return existing, nil
+}
+
+// ensureFingerprint refuses to open data sealed with a different secret.
+func (s *Service) ensureFingerprint(ctx context.Context, fingerprint string) error {
+	stored, found, err := s.health.Setting(ctx, settingFingerprint)
+	if err != nil {
+		return err
+	}
+
+	if !found {
+		return s.health.SetSetting(ctx, settingFingerprint, fingerprint)
+	}
+
+	if stored != fingerprint {
+		return fmt.Errorf("%w: expected %s, APP_SECRET gives %s",
+			domain.ErrSecretMismatch, stored, fingerprint)
+	}
+
+	return nil
+}
+
+// seedAccounts gives a brand new database something to post against.
+func (s *Service) seedAccounts(ctx context.Context, baseCurrency string) error {
+	count, err := s.accounts.CountAccounts(ctx)
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return nil
+	}
+
+	if _, err := s.accounts.CreateAccount(ctx, seedAssetAccount, kindAsset, baseCurrency); err != nil {
+		return errors.Join(errors.New("seed asset account"), err)
+	}
+
+	if _, err := s.accounts.CreateAccount(ctx, seedExpenseAccount, kindExpense, baseCurrency); err != nil {
+		return errors.Join(errors.New("seed expense account"), err)
+	}
+
+	return nil
 }

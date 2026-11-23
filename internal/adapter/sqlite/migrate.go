@@ -15,6 +15,11 @@ import (
 //go:embed migrations/*.sql
 var migrationFS embed.FS
 
+const (
+	// maxErrLineWidth keeps migration errors readable in logs.
+	maxErrLineWidth = 60
+)
+
 // Migrate applies every embedded migration that has not been applied yet.
 // It is idempotent and safe to call on every boot.
 func Migrate(ctx context.Context, db *sql.DB) error {
@@ -37,43 +42,53 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	}
 
 	for _, name := range names {
-		version, err := versionOf(name)
-		if err != nil {
-			return err
+		version, versionErr := versionOf(name)
+		if versionErr != nil {
+			return versionErr
 		}
+
 		if applied[version] {
 			continue
 		}
-		body, err := migrationFS.ReadFile("migrations/" + name)
-		if err != nil {
-			return fmt.Errorf("read migration %s: %w", name, err)
+
+		body, readErr := migrationFS.ReadFile("migrations/" + name)
+		if readErr != nil {
+			return fmt.Errorf("read migration %s: %w", name, readErr)
 		}
-		if err := applyOne(ctx, db, version, string(body)); err != nil {
-			return fmt.Errorf("apply migration %s: %w", name, err)
+
+		if applyErr := applyOne(ctx, db, version, string(body)); applyErr != nil {
+			return fmt.Errorf("apply migration %s: %w", name, applyErr)
 		}
 	}
+
 	return nil
 }
 
 func applyOne(ctx context.Context, db *sql.DB, version int, body string) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("begin migration %d: %w", version, err)
 	}
+
 	defer func() { _ = tx.Rollback() }()
 
 	for _, stmt := range splitStatements(body) {
-		if _, err := tx.ExecContext(ctx, stmt); err != nil {
-			return fmt.Errorf("statement %q: %w", firstLine(stmt), err)
+		if _, execErr := tx.ExecContext(ctx, stmt); execErr != nil {
+			return fmt.Errorf("statement %q: %w", firstLine(stmt), execErr)
 		}
 	}
 
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)`,
 		version, time.Now().UTC().Format(time.RFC3339)); err != nil {
-		return err
+		return fmt.Errorf("record migration %d: %w", version, err)
 	}
-	return tx.Commit()
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit migration %d: %w", version, err)
+	}
+
+	return nil
 }
 
 func appliedVersions(ctx context.Context, db *sql.DB) (map[int]bool, error) {
@@ -81,17 +96,25 @@ func appliedVersions(ctx context.Context, db *sql.DB) (map[int]bool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read applied migrations: %w", err)
 	}
+
 	defer func() { _ = rows.Close() }()
 
 	applied := map[int]bool{}
+
 	for rows.Next() {
-		var v int
-		if err := rows.Scan(&v); err != nil {
-			return nil, err
+		var version int
+		if scanErr := rows.Scan(&version); scanErr != nil {
+			return nil, fmt.Errorf("scan migration version: %w", scanErr)
 		}
-		applied[v] = true
+
+		applied[version] = true
 	}
-	return applied, rows.Err()
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate migrations: %w", err)
+	}
+
+	return applied, nil
 }
 
 func migrationNames() ([]string, error) {
@@ -99,13 +122,17 @@ func migrationNames() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list migrations: %w", err)
 	}
+
 	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
-			names = append(names, e.Name())
+
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".sql") {
+			names = append(names, entry.Name())
 		}
 	}
+
 	sort.Strings(names)
+
 	return names, nil
 }
 
@@ -114,11 +141,13 @@ func versionOf(name string) (int, error) {
 	if idx < 1 {
 		return 0, fmt.Errorf("migration %q needs a numeric prefix", name)
 	}
-	v, err := strconv.Atoi(name[:idx])
+
+	version, err := strconv.Atoi(name[:idx])
 	if err != nil {
 		return 0, fmt.Errorf("migration %q has a bad prefix: %w", name, err)
 	}
-	return v, nil
+
+	return version, nil
 }
 
 // splitStatements cuts a file into single statements. The migrations avoid
@@ -126,20 +155,24 @@ func versionOf(name string) (int, error) {
 func splitStatements(body string) []string {
 	parts := strings.Split(body, ";")
 	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if s := strings.TrimSpace(p); s != "" {
-			out = append(out, s)
+
+	for _, part := range parts {
+		if stmt := strings.TrimSpace(part); stmt != "" {
+			out = append(out, stmt)
 		}
 	}
+
 	return out
 }
 
-func firstLine(s string) string {
-	if i := strings.IndexByte(s, '\n'); i >= 0 {
-		return s[:i]
+func firstLine(stmt string) string {
+	if idx := strings.IndexByte(stmt, '\n'); idx >= 0 {
+		return stmt[:idx]
 	}
-	if len(s) > 60 {
-		return s[:60]
+
+	if len(stmt) > maxErrLineWidth {
+		return stmt[:maxErrLineWidth]
 	}
-	return s
+
+	return stmt
 }

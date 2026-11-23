@@ -46,12 +46,13 @@ type PostingInput struct {
 // Post validates and writes one entry. created is false when the client id had
 // already been posted, in which case the stored entry is returned untouched and
 // the transport answers 200 instead of 201.
-func (s *Service) Post(ctx context.Context, in PostInput) (entry domain.Entry, created bool, err error) {
+func (s *Service) Post(ctx context.Context, in PostInput) (domain.Entry, bool, error) {
 	if in.ClientID != "" {
 		existing, found, lookupErr := s.entries.EntryByClientID(ctx, in.ClientID)
 		if lookupErr != nil {
 			return domain.Entry{}, false, lookupErr
 		}
+
 		if found {
 			return existing, false, nil
 		}
@@ -61,10 +62,12 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entry domain.Entry, c
 	if err != nil {
 		return domain.Entry{}, false, fmt.Errorf("base currency: %w", err)
 	}
+
 	nativeCur, err := domain.CurrencyByCode(in.Currency)
 	if err != nil {
 		return domain.Entry{}, false, err
 	}
+
 	baseCur, err := domain.CurrencyByCode(baseCode)
 	if err != nil {
 		return domain.Entry{}, false, err
@@ -93,43 +96,46 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entry domain.Entry, c
 	if err != nil {
 		return domain.Entry{}, false, err
 	}
+
 	return saved, true, nil
 }
 
 func buildPostings(in PostInput, native, base domain.Currency) ([]domain.Posting, error) {
 	postings := make([]domain.Posting, 0, len(in.Postings))
 
-	for i, p := range in.Postings {
+	for index, input := range in.Postings {
 		posting := domain.Posting{
-			AccountID:   p.AccountID,
-			AmountMinor: p.AmountMinor,
-			FXRateDate:  p.FXRateDate,
+			AccountID:   input.AccountID,
+			AmountMinor: input.AmountMinor,
+			FXRateDate:  input.FXRateDate,
 		}
 
 		switch {
 		case native.Code == base.Code:
-			posting.BaseAmountMinor = p.AmountMinor
+			posting.BaseAmountMinor = input.AmountMinor
 			posting.FXRate = "1"
 			posting.FXSource = domain.FXIdentity
 
-		case p.FXRate != "":
-			rate, err := domain.ParseRate(p.FXRate)
+		case input.FXRate != "":
+			rate, err := domain.ParseRate(input.FXRate)
 			if err != nil {
-				return nil, fmt.Errorf("posting %d: %w", i, err)
+				return nil, fmt.Errorf("posting %d: %w", index, err)
 			}
-			baseAmount, err := domain.ConvertBase(p.AmountMinor, native, base, rate)
+
+			baseAmount, err := domain.ConvertBase(input.AmountMinor, native, base, rate)
 			if err != nil {
-				return nil, fmt.Errorf("posting %d: %w", i, err)
+				return nil, fmt.Errorf("posting %d: %w", index, err)
 			}
+
 			posting.BaseAmountMinor = baseAmount
-			posting.FXRate = p.FXRate
+			posting.FXRate = input.FXRate
 			posting.FXSource = domain.FXManual
 
 		default:
 			// The ECB resolver lands in the FX milestone. Until then a foreign
 			// entry must present its rate instead of guessing one.
 			return nil, fmt.Errorf("posting %d: %w: rate required for %s to %s",
-				i, domain.ErrInvalidRate, native.Code, base.Code)
+				index, domain.ErrInvalidRate, native.Code, base.Code)
 		}
 
 		postings = append(postings, posting)

@@ -14,7 +14,7 @@ import (
 func newStore(t *testing.T) *sqlite.Store {
 	t.Helper()
 
-	db, err := sqlite.Open(sqlite.Config{Path: filepath.Join(t.TempDir(), "test.db")})
+	db, err := sqlite.Open(context.Background(), sqlite.Config{Path: filepath.Join(t.TempDir(), "test.db")})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -27,7 +27,7 @@ func newStore(t *testing.T) *sqlite.Store {
 	return sqlite.NewStore(db)
 }
 
-func baseline(t *testing.T, store *sqlite.Store) (asset, expense int64) {
+func baseline(t *testing.T, store *sqlite.Store) (int64, int64) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -38,7 +38,7 @@ func baseline(t *testing.T, store *sqlite.Store) (asset, expense int64) {
 	if err != nil {
 		t.Fatalf("asset account: %v", err)
 	}
-	expense, err = store.CreateAccount(ctx, "Coffee", "expense", "IDR")
+	expense, err := store.CreateAccount(ctx, "Coffee", "expense", "IDR")
 	if err != nil {
 		t.Fatalf("expense account: %v", err)
 	}

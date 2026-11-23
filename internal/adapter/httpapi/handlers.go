@@ -22,6 +22,7 @@ const maxBodyBytes = 1 << 20
 // observe starts a span per request and records the outcome on it.
 func (s *Server) observe(next http.Handler) http.Handler {
 	tracer := otel.Tracer("spenicle/http")
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := tracer.Start(r.Context(), r.Method+" "+r.URL.Path)
 		defer span.End()
@@ -34,6 +35,7 @@ func (s *Server) observe(next http.Handler) http.Handler {
 			attribute.String("url.path", r.URL.Path),
 			attribute.Int("http.response.status_code", rec.status),
 		)
+
 		if rec.status >= http.StatusInternalServerError {
 			span.SetStatus(codes.Error, http.StatusText(rec.status))
 		}
@@ -49,15 +51,25 @@ type errorBody struct {
 
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	var body errorBody
+
 	body.Error.Code = code
 	body.Error.Message = message
 	writeJSON(w, status, body)
 }
 
+// writeJSON marshals first, so a failed encode never leaves a half-written body.
 func writeJSON(w http.ResponseWriter, status int, v any) {
+	body, err := json.Marshal(v)
+	if err != nil {
+		http.Error(w, `{"error":{"code":"internal_error","message":"encode failed"}}`,
+			http.StatusInternalServerError)
+
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
+	_, _ = w.Write(append(body, '\n'))
 }
 
 type healthResponse struct {
@@ -75,6 +87,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		err = s.deps.Health.Ping(ctx)
 	}
+
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "degraded", err.Error())
 		return
@@ -141,6 +154,7 @@ func (s *Server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		status, code := classify(err)
 		writeError(w, status, code, err.Error())
+
 		return
 	}
 
@@ -149,6 +163,7 @@ func (s *Server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
 	if created {
 		status = http.StatusCreated
 	}
+
 	writeJSON(w, status, toEntryResponse(entry))
 }
 
@@ -164,6 +179,7 @@ func toPostInput(req postEntryRequest) (ledger.PostInput, error) {
 		if err != nil {
 			return ledger.PostInput{}, errors.New("amount_minor must be an integer string")
 		}
+
 		postings = append(postings, ledger.PostingInput{
 			AccountID:   p.AccountID,
 			AmountMinor: amount,
@@ -200,6 +216,7 @@ func toEntryResponse(e domain.Entry) entryResponse {
 			FXSource:        p.FXSource,
 		})
 	}
+
 	return out
 }
 

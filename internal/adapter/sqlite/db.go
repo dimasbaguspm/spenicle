@@ -3,6 +3,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -17,9 +18,17 @@ type Config struct {
 	Path string
 }
 
+const (
+	// dataDirPerm keeps the SQLite file private to its process user.
+	dataDirPerm = 0o750
+	// maxOpenConns bounds the pool: one writer, a few readers.
+	maxOpenConns = 4
+	maxIdleConns = 2
+)
+
 // Open creates the data directory if needed and returns a WAL-mode handle.
-func Open(cfg Config) (*sql.DB, error) {
-	if err := os.MkdirAll(filepath.Dir(cfg.Path), 0o750); err != nil {
+func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
+	if err := os.MkdirAll(filepath.Dir(cfg.Path), dataDirPerm); err != nil {
 		return nil, fmt.Errorf("create data dir: %w", err)
 	}
 
@@ -36,12 +45,13 @@ func Open(cfg Config) (*sql.DB, error) {
 
 	// WAL allows concurrent readers, but this deployment is one process with a
 	// single writer. Fewer connections keeps BUSY retries predictable.
-	db.SetMaxOpenConns(4)
-	db.SetMaxIdleConns(2)
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("ping sqlite: %w", err)
 	}
+
 	return db, nil
 }

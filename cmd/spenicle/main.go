@@ -20,12 +20,25 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/port"
 )
 
+const (
+	serviceName = "spenicle"
+
+	telemetryShutdownTimeout = 5 * time.Second
+	httpShutdownTimeout      = 10 * time.Second
+
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 15 * time.Second
+	writeTimeout      = 30 * time.Second
+	idleTimeout       = 60 * time.Second
+)
+
 // version is stamped at build time.
 var version = "dev"
 
 func main() {
 	if err := run(); err != nil {
-		slog.Error("fatal", "error", err)
+		// No logger yet: this is the last line before the process dies.
+		fmt.Fprintf(os.Stderr, "spenicle: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -43,22 +56,16 @@ func run() error {
 	defer stop()
 
 	shutdownTelemetry, err := otelx.Setup(ctx, otelx.Config{
-		ServiceName: "spenicle",
+		ServiceName: serviceName,
 		Version:     version,
 		Endpoint:    cfg.OTLPEndpoint,
 	})
 	if err != nil {
 		return fmt.Errorf("telemetry: %w", err)
 	}
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := shutdownTelemetry(shutdownCtx); err != nil {
-			logger.Error("telemetry shutdown", "error", err)
-		}
-	}()
+	defer flushTelemetry(ctx, logger, shutdownTelemetry)
 
-	sealer, err := newSealer(cfg, logger)
+	sealer, err := newSealer(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
@@ -72,49 +79,84 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = application.Close() }()
 
+	defer func() {
+		if closeErr := application.Close(); closeErr != nil {
+			logger.ErrorContext(ctx, "close application", slog.Any("error", closeErr))
+		}
+	}()
+
+	return serve(ctx, cfg, application, logger)
+}
+
+// serve blocks until the context is cancelled or the listener fails.
+func serve(
+	ctx context.Context,
+	cfg config.Config,
+	application *app.App,
+	logger *slog.Logger,
+) error {
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           application.Handler,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 	}
 
 	errCh := make(chan error, 1)
+
 	go func() {
-		logger.Info("listening",
-			"addr", cfg.Addr,
-			"base_currency", application.BaseCurrency,
-			"sealed", cfg.Sealed(),
-			"version", version)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- err
+		logger.InfoContext(ctx, "listening",
+			slog.String("addr", cfg.Addr),
+			slog.String("base_currency", application.BaseCurrency),
+			slog.Bool("sealed", cfg.Sealed()),
+			slog.String("version", version))
+
+		if listenErr := srv.ListenAndServe(); listenErr != nil &&
+			!errors.Is(listenErr, http.ErrServerClosed) {
+			errCh <- listenErr
 		}
 	}()
 
 	select {
-	case err := <-errCh:
-		return fmt.Errorf("serve: %w", err)
+	case listenErr := <-errCh:
+		return fmt.Errorf("serve: %w", listenErr)
 	case <-ctx.Done():
-		logger.Info("shutting down")
+		logger.InfoContext(ctx, "shutting down")
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), httpShutdownTimeout)
 	defer cancel()
-	return srv.Shutdown(shutdownCtx)
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("shutdown: %w", err)
+	}
+
+	return nil
 }
 
-func newSealer(cfg config.Config, logger *slog.Logger) (port.Sealer, error) {
+func flushTelemetry(ctx context.Context, logger *slog.Logger, shutdown func(context.Context) error) {
+	shutdownCtx, cancel := context.WithTimeout(ctx, telemetryShutdownTimeout)
+	defer cancel()
+
+	if err := shutdown(shutdownCtx); err != nil {
+		logger.ErrorContext(shutdownCtx, "telemetry shutdown", slog.Any("error", err))
+	}
+}
+
+func newSealer(ctx context.Context, cfg config.Config, logger *slog.Logger) (port.Sealer, error) {
 	if !cfg.Sealed() {
-		logger.Warn("APP_SECRET is unset: capture payloads and artifacts stay plaintext")
+		logger.WarnContext(ctx, "APP_SECRET is unset: capture payloads and artifacts stay plaintext")
+
 		return seal.Passthrough{}, nil
 	}
+
 	sealer, err := seal.New(cfg.AppSecret)
 	if err != nil {
 		return nil, fmt.Errorf("sealer: %w", err)
 	}
+
 	return sealer, nil
 }

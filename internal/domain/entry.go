@@ -68,34 +68,43 @@ func NewEntry(e Entry) (Entry, error) {
 	if _, err := CurrencyByCode(e.Currency); err != nil {
 		return Entry{}, err
 	}
+
 	if e.OccurredOn.IsZero() {
 		return Entry{}, fmt.Errorf("%w: occurred_on is required", ErrInvalidPostings)
 	}
+
 	if len(e.Postings) < 2 {
 		return Entry{}, fmt.Errorf("%w: at least two postings are required", ErrInvalidPostings)
 	}
+
 	if e.Source == "" {
 		e.Source = SourceManual
 	}
+
 	if !validSources[e.Source] {
 		return Entry{}, fmt.Errorf("%w: unknown source %q", ErrInvalidPostings, e.Source)
 	}
+
 	for i := range e.Postings {
 		p := &e.Postings[i]
 		if p.AccountID == 0 {
 			return Entry{}, fmt.Errorf("%w: posting %d has no account", ErrInvalidPostings, i)
 		}
+
 		if p.FXSource == "" {
 			p.FXSource = FXIdentity
 			p.FXRate = "1"
 		}
+
 		if p.FXRatedInvalid() {
 			return Entry{}, fmt.Errorf("%w: posting %d has a malformed rate", ErrInvalidPostings, i)
 		}
 	}
+
 	if err := CheckZeroSum(e.Postings); err != nil {
 		return Entry{}, err
 	}
+
 	return e, nil
 }
 
@@ -104,7 +113,9 @@ func (p Posting) FXRatedInvalid() bool {
 	if p.FXRate == "" || p.FXRate == "1" {
 		return false
 	}
+
 	_, err := ParseRate(p.FXRate)
+
 	return err != nil
 }
 
@@ -113,15 +124,19 @@ func (p Posting) FXRatedInvalid() bool {
 func CheckZeroSum(postings []Posting) error {
 	native := new(big.Int)
 	base := new(big.Int)
+
 	for _, p := range postings {
 		native.Add(native, big.NewInt(p.AmountMinor))
 		base.Add(base, big.NewInt(p.BaseAmountMinor))
 	}
+
 	if native.Sign() != 0 {
 		return fmt.Errorf("%w: native sum %s", ErrZeroSum, native.String())
 	}
+
 	if base.Sign() != 0 {
 		return fmt.Errorf("%w: base sum %s", ErrZeroSum, base.String())
 	}
+
 	return nil
 }
