@@ -1,0 +1,31 @@
+{
+  "client_id": "chunked-1",
+  "created_at": "<timestamp>",
+  "currency": "IDR",
+  "expires_at": "<timestamp>",
+  "file_hash": "2d661900c7fd7267dbe714e3565676414a2c0a574e75d52da1d9295953ff827a",
+  "filename": "march.csv",
+  "ref": "<ref>",
+  "rows": [
+    {
+      "account_ref": "<ref>",
+      "amount_minor": "-20000",
+      "description": "GROCERIES",
+      "occurred_on": "2025-02-10",
+      "ref": "<ref>",
+      "row_index": 0,
+      "status": "pending"
+    },
+    {
+      "account_ref": "<ref>",
+      "amount_minor": "-30000",
+      "description": "PHONE",
+      "occurred_on": "2025-03-11",
+      "ref": "<ref>",
+      "row_index": 1,
+      "status": "pending"
+    }
+  ],
+  "rows_total": 2,
+  "status": "draft"
+}

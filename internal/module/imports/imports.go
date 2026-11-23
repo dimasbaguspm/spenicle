@@ -32,11 +32,19 @@ type ArtifactStore interface {
 
 type Contract interface {
 	Create(ctx context.Context, in CreateInput) (entity.ImportBatch, bool, error)
+	AppendChunk(ctx context.Context, in ChunkInput) (ChunkResult, error)
 	List(ctx context.Context, filter entity.ImportFilter) ([]entity.ImportBatch, error)
 	Get(ctx context.Context, ref string) (entity.ImportBatch, error)
 	PatchRow(ctx context.Context, ref string, index int64, update RowUpdate) (entity.ImportBatch, error)
 	Review(ctx context.Context, ref string, review Review) (entity.ImportBatch, error)
 	ListEvents(ctx context.Context, ref string, filter entity.ImportEventFilter) ([]entity.ImportEvent, error)
+}
+
+type PartFiles interface {
+	Append(ctx context.Context, key string, chunk []byte) (int64, error)
+	Truncate(ctx context.Context, key string, size int64) error
+	Read(ctx context.Context, key string) ([]byte, error)
+	Remove(ctx context.Context, key string) error
 }
 
 type CreateInput struct {
@@ -45,6 +53,29 @@ type CreateInput struct {
 	Filename   string
 	FileHash   string
 	Statement  []byte
+}
+
+type ChunkInput struct {
+	ClientID   string
+	AccountRef string
+	Filename   string
+	ChunkIndex int
+	ChunkTotal int
+	Bytes      []byte
+}
+
+type ChunkResult struct {
+	Upload   entity.ImportUpload
+	Batch    entity.ImportBatch
+	Created  bool
+	Repeated bool
+}
+
+func (r ChunkResult) Complete() bool { return r.Batch.Ref != "" }
+
+type Options struct {
+	MaxRows     int
+	CommitChunk int
 }
 
 type RowUpdate struct {

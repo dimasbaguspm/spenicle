@@ -95,6 +95,9 @@ type world struct {
 
 	ledger        ledger.Contract
 	artifacts     *filestore.Store
+	parts         *filestore.Parts
+	location      *time.Location
+	commitChunk   int
 	exports       exports.Contract
 	exportDeps    export.Deps
 	limits        entity.AppConfig
@@ -111,15 +114,16 @@ func (w *world) runRecurring(ctx context.Context) error {
 		return errors.New(`no running API: add the step "a running API" first`)
 	}
 
-	clockSource := workerhandlers.TimeSource(fixedClock{at: w.asOf})
+	clockSource := workerhandlers.TimeSource(fixedClock{at: w.asOf.In(w.zone())})
 	if w.asOf.IsZero() {
-		clockSource = clock.System{}
+		clockSource = clock.Zoned{Loc: w.zone()}
 	}
 
 	runner := workerhandlers.New(
-		w.store, w.store, w.ledger, w.store, w.store, w.artifacts, w.limits.ArtifactRetention,
+		w.store, w.store, w.ledger, w.store, w.store, w.artifacts, w.parts,
+		w.limits.ArtifactRetention,
 		w.exports, w.exportDeps, w.limits.ExportStaleAfter,
-		clockSource, logging.From(slog.New(w.logs), telemetry.ComponentWorker),
+		clockSource, w.zone(), logging.From(slog.New(w.logs), telemetry.ComponentWorker),
 	)
 
 	summary, err := runner.Run(ctx)
@@ -419,21 +423,23 @@ func (w *world) boot(ctx context.Context) error {
 	clockSystem := clock.System{}
 	limits := config.Defaults()
 
-	artifacts, err := filestore.New(filepath.Join(w.dir, config.DefaultArtifactDirName), []byte(appSecret))
-	if err != nil {
+	if storeErr := w.openFiles(); storeErr != nil {
 		_ = store.Close(ctx)
 
-		return fmt.Errorf("filestore: %w", err)
+		return storeErr
 	}
 
-	w.artifacts = artifacts
+	artifacts := w.artifacts
+
+	w.location = time.UTC
 	w.limits = limits
 
 	settingsService := settings.New(store, sealer, clockSystem)
-	if _, _, settingsErr := settingsService.EnsureInitial(ctx, ""); settingsErr != nil {
+
+	if settingsErr := w.seedSettings(ctx, settingsService); settingsErr != nil {
 		_ = store.Close(ctx)
 
-		return fmt.Errorf("settings: %w", settingsErr)
+		return settingsErr
 	}
 
 	ledgerService := ledger.New(store, store, store, settingsService, clockSystem, clockSystem)
@@ -483,7 +489,9 @@ func (w *world) boot(ctx context.Context) error {
 		Ledger:   ledgerService,
 		Captures: queue,
 		Imports: imports.New(
-			store, store, store, store, ledgerService, artifacts, settingsService, clockSystem,
+			store, store, store, store, ledgerService, artifacts, w.parts, settingsService,
+			clockSystem,
+			imports.Options{MaxRows: limits.ImportMaxRows, CommitChunk: w.chunk()},
 		),
 		Accounts:          store,
 		Payees:            store,
@@ -498,10 +506,12 @@ func (w *world) boot(ctx context.Context) error {
 		Rates:             built.rates,
 		Sealer:            sealer,
 		BaseCurrency:      baseCurrency,
+		Timezone:          w.zone().String(),
 		Version:           "uat",
 		HealthTimeout:     limits.HealthTimeout,
 		MaxBodyBytes:      limits.MaxBodyBytes,
 		MaxArtifactBytes:  limits.ArtifactMaxBytes,
+		ImportMaxBytes:    limits.ImportMaxBytes,
 		ExtractionEnabled: w.rail != "",
 		Logger:            logging.From(slog.New(w.logs), telemetry.ComponentHTTP),
 	}))
@@ -944,4 +954,83 @@ func readManifest(file *zip.File) (manifestReport, error) {
 	}
 
 	return report, nil
+}
+
+func (w *world) zone() *time.Location {
+	if w.location == nil {
+		return time.UTC
+	}
+
+	return w.location
+}
+
+func (w *world) chunk() int {
+	if w.commitChunk < 1 {
+		return config.DefaultImportCommitChunk
+	}
+
+	return w.commitChunk
+}
+
+func (w *world) ageImportUploads(ctx context.Context) error {
+	if w.store == nil {
+		return errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	at := time.Now().UTC().Add(-25 * time.Hour)
+
+	if _, err := w.store.DB().ExecContext(ctx,
+		`UPDATE import_uploads SET updated_at = ?`, at.Format(constant.TimestampLayout)); err != nil {
+		return fmt.Errorf("age import uploads: %w", err)
+	}
+
+	return nil
+}
+
+func (w *world) restart(ctx context.Context) error {
+	if w.server == nil {
+		return errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	w.server.Close()
+	w.server = nil
+
+	if w.store != nil && !w.dbBroken {
+		_ = w.store.Close(ctx)
+	}
+
+	w.store = nil
+	w.accounts = map[string]string{}
+
+	return w.boot(ctx)
+}
+
+func (w *world) openFiles() error {
+	artifacts, err := filestore.New(
+		filepath.Join(w.dir, config.DefaultArtifactDirName), []byte(appSecret))
+	if err != nil {
+		return fmt.Errorf("filestore: %w", err)
+	}
+
+	parts, err := filestore.NewParts(filepath.Join(w.dir, config.DefaultImportDirName))
+	if err != nil {
+		return fmt.Errorf("import parts: %w", err)
+	}
+
+	w.artifacts = artifacts
+	w.parts = parts
+
+	return nil
+}
+
+func (w *world) seedSettings(ctx context.Context, service *settings.Service) error {
+	if _, _, err := service.EnsureInitial(ctx, ""); err != nil {
+		return fmt.Errorf("settings: %w", err)
+	}
+
+	if _, err := service.EnsureTimezone(ctx, ""); err != nil {
+		return fmt.Errorf("timezone: %w", err)
+	}
+
+	return nil
 }

@@ -34,6 +34,7 @@ type Process struct {
 	Ledger       *ledger.Service
 	Rates        *rates.Service
 	BaseCurrency string
+	Location     *time.Location
 
 	stopTelemetry func(context.Context) error
 }
@@ -93,11 +94,19 @@ func boot(ctx context.Context, cfg entity.AppConfig, logger *logging.Logger) (*P
 		return nil, fmt.Errorf("sealer: %w", err)
 	}
 
-	settingsService, baseCurrency, err := prepare(ctx, store, sealer, logger)
+	settingsService, appSettings, baseCurrency, err := prepare(ctx, cfg, store, sealer, logger)
 	if err != nil {
 		_ = store.Close(ctx)
 		return nil, err
 	}
+
+	location, err := time.LoadLocation(appSettings.Timezone)
+	if err != nil {
+		_ = store.Close(ctx)
+		return nil, fmt.Errorf("timezone %q: %w", appSettings.Timezone, err)
+	}
+
+	cfg.Timezone = appSettings.Timezone
 
 	artifacts, err := filestore.New(cfg.ArtifactDir, []byte(cfg.AppSecret))
 	if err != nil {
@@ -123,6 +132,7 @@ func boot(ctx context.Context, cfg entity.AppConfig, logger *logging.Logger) (*P
 		Ledger:       ledgerService,
 		Rates:        ratesService,
 		BaseCurrency: baseCurrency,
+		Location:     location,
 	}, nil
 }
 
@@ -146,20 +156,21 @@ func openStore(ctx context.Context, cfg entity.AppConfig) (*sqlite.Store, error)
 
 func prepare(
 	ctx context.Context,
+	cfg entity.AppConfig,
 	store *sqlite.Store,
 	sealer seal.Sealer,
 	logger *logging.Logger,
-) (*settings.Service, string, error) {
+) (*settings.Service, entity.Settings, string, error) {
 	service := settings.New(store, sealer, clock.System{})
 
 	freshPassword, err := generatePassword()
 	if err != nil {
-		return nil, "", err
+		return nil, entity.Settings{}, "", err
 	}
 
-	appSettings, created, err := service.EnsureInitial(ctx, freshPassword)
+	_, created, err := service.EnsureInitial(ctx, freshPassword)
 	if err != nil {
-		return nil, "", fmt.Errorf("settings: %w", err)
+		return nil, entity.Settings{}, "", fmt.Errorf("settings: %w", err)
 	}
 
 	if created && freshPassword != "" {
@@ -167,12 +178,17 @@ func prepare(
 			slog.String("password", freshPassword))
 	}
 
-	baseCurrency, err := store.EnsureBaseline(ctx, appSettings.BaseCurrency, sealer.Fingerprint())
+	appSettings, err := service.EnsureTimezone(ctx, cfg.Timezone)
 	if err != nil {
-		return nil, "", fmt.Errorf("baseline: %w", err)
+		return nil, entity.Settings{}, "", fmt.Errorf("config: %w", err)
 	}
 
-	return service, baseCurrency, nil
+	baseCurrency, err := store.EnsureBaseline(ctx, appSettings.BaseCurrency, sealer.Fingerprint())
+	if err != nil {
+		return nil, entity.Settings{}, "", fmt.Errorf("baseline: %w", err)
+	}
+
+	return service, appSettings, baseCurrency, nil
 }
 
 func ratesFor(

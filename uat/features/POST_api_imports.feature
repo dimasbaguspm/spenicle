@@ -75,3 +75,78 @@ Feature: POST /api/imports
     And the store holds:
       | table          | count |
       | import_batches | 0     |
+
+  Scenario: Two chunks assemble into one draft
+    Given a running API
+    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+      """csv
+      occurred_on,amount_m
+      """
+    Then the response status is 202
+    And the response JSON matches the snapshot "post_api_imports__the_first_chunk_is_accepted"
+    When I upload chunk 1 of 2 of the statement "march.csv" with the client id "chunked-1":
+      """csv
+      inor,description
+      2025-02-10,-20000,GROCERIES
+      2025-03-11,-30000,PHONE
+      """
+    Then the response status is 201
+    And the response JSON matches the snapshot "post_api_imports__the_last_chunk_assembles_the_draft"
+    And the store holds:
+      | table          | count |
+      | import_batches | 1     |
+      | import_rows    | 2     |
+
+  Scenario: Replaying a chunk changes nothing
+    Given a running API
+    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+      """csv
+      occurred_on,amount_minor,description
+      2025-02-10,-20000,GROCERIES
+      """
+    Then the response status is 202
+    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+      """csv
+      occurred_on,amount_minor,description
+      2025-02-10,-20000,GROCERIES
+      """
+    Then the response status is 200
+    And the response JSON matches the snapshot "post_api_imports__replaying_a_chunk_changes_nothing"
+    And the store holds:
+      | table          | count |
+      | import_batches | 0     |
+
+  Scenario: A chunked upload survives a restart
+    Given a running API
+    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+      """csv
+      occurred_on,amount_m
+      """
+    Then the response status is 202
+    When the API restarts
+    And I upload chunk 1 of 2 of the statement "march.csv" with the client id "chunked-1":
+      """csv
+      inor,description
+      2025-02-10,-20000,GROCERIES
+      2025-03-11,-30000,PHONE
+      """
+    Then the response status is 201
+    And the store holds:
+      | table          | count |
+      | import_batches | 1     |
+      | import_rows    | 2     |
+
+  Scenario: A chunk whose total disagrees with the open upload is refused
+    Given a running API
+    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+      """csv
+      occurred_on,amount_minor,description
+      2025-02-10,-20000,GROCERIES
+      """
+    Then the response status is 202
+    When I upload chunk 1 of 3 of the statement "march.csv" with the client id "chunked-1":
+      """csv
+      2025-03-11,-30000,PHONE
+      """
+    Then the response status is 409
+    And the response JSON matches the snapshot "post_api_imports__a_chunk_with_another_total_is_refused"

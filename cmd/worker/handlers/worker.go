@@ -35,6 +35,10 @@ type ArtifactFiles interface {
 	Put(ctx context.Context, artifact extraction.Artifact) (filestore.Record, error)
 }
 
+type PartFiles interface {
+	Remove(ctx context.Context, key string) error
+}
+
 type TimeSource interface{ Now() time.Time }
 
 type Summary struct {
@@ -50,11 +54,13 @@ type Runner struct {
 	artifacts  repository.Artifacts
 	imports    repository.Imports
 	files      ArtifactFiles
+	parts      PartFiles
 	retention  time.Duration
 	jobs       exports.Contract
 	documents  export.Deps
 	staleAfter time.Duration
 	clock      TimeSource
+	loc        *time.Location
 	logger     *logging.Logger
 }
 
@@ -65,22 +71,28 @@ func New(
 	artifacts repository.Artifacts,
 	imports repository.Imports,
 	files ArtifactFiles,
+	parts PartFiles,
 	retention time.Duration,
 	jobs exports.Contract,
 	documents export.Deps,
 	staleAfter time.Duration,
 	clock TimeSource,
+	loc *time.Location,
 	logger *logging.Logger,
 ) *Runner {
 	if logger == nil {
 		logger = logging.New(telemetry.ComponentWorker)
 	}
 
+	if loc == nil {
+		loc = time.UTC
+	}
+
 	return &Runner{
 		rules: rules, store: store, entries: entries, artifacts: artifacts,
-		imports: imports, files: files, retention: retention,
+		imports: imports, files: files, parts: parts, retention: retention,
 		jobs: jobs, documents: documents, staleAfter: staleAfter,
-		clock: clock, logger: logger,
+		clock: clock, loc: loc, logger: logger,
 	}
 }
 
@@ -93,4 +105,12 @@ func (r *Runner) record(ctx context.Context, at time.Time) {
 	if err := r.store.SetSetting(ctx, constant.SettingWorkerLastRunAt, value); err != nil {
 		r.logger.Warn(ctx, "worker heartbeat not stored", slog.Any("error", err))
 	}
+}
+
+func (r *Runner) zone() *time.Location {
+	if r.loc == nil {
+		return time.UTC
+	}
+
+	return r.loc
 }

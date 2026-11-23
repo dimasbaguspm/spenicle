@@ -139,3 +139,60 @@ Feature: PATCH /api/imports/{ref}
       | body                   |
       | {"action":"approve"}   |
       | {"action":""}          |
+
+  Scenario: A commit posts in chunks and records its progress
+    Given the import commit chunk size is "2"
+    And a running API
+    And the account "Cash" exists as "asset"
+    And the account "Unsorted" exists as "expense"
+    And I upload the statement "march.csv" with the client id "statement-1" on the account "Cash":
+      """csv
+      occurred_on,amount_minor,description
+      2025-02-10,-20000,GROCERIES
+      2025-02-11,-20001,COFFEE
+      2025-02-12,-20002,PHONE
+      """
+    And the response status is 201
+    And the last ref is remembered as "batch"
+    And I send a PATCH to "/api/imports/{{ref:batch}}/rows/0" with:
+      """json
+      {"status":"accepted"}
+      """
+    And the response status is 200
+    And I send a PATCH to "/api/imports/{{ref:batch}}/rows/1" with:
+      """json
+      {"status":"accepted"}
+      """
+    And the response status is 200
+    And I send a PATCH to "/api/imports/{{ref:batch}}/rows/2" with:
+      """json
+      {"status":"accepted"}
+      """
+    And the response status is 200
+    When I send a PATCH to "/api/imports/{{ref:batch}}" with:
+      """json
+      {"action":"commit"}
+      """
+    Then the response status is 200
+    And the import event log holds 2 events of kind "committing"
+    And the ledger holds an entry with client id prefix "import:" and source "statement"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 3     |
+
+  Scenario: A row cannot change while the batch commits
+    Given a running API
+    And I upload the statement "march.csv" with the client id "statement-1":
+      """csv
+      occurred_on,amount_minor,description
+      2025-02-10,-20000,GROCERIES
+      """
+    And the response status is 201
+    And the last ref is remembered as "batch"
+    When the import batch is mid-commit
+    And I send a PATCH to "/api/imports/{{ref:batch}}/rows/0" with:
+      """json
+      {"amount_minor":"-25000"}
+      """
+    Then the response status is 409
+    And the response JSON matches the snapshot "patch_api_imports_ref__a_row_cannot_change_mid_commit"

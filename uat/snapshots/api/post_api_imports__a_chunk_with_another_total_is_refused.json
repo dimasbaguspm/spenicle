@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "import_conflict",
+    "message": "upload already takes another chunk count: upload <ref> takes 2 chunks, got 3"
+  }
+}

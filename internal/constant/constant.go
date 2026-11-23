@@ -78,9 +78,14 @@ const (
 )
 
 const (
-	ImportStatusDraft     = "draft"
-	ImportStatusCommitted = "committed"
-	ImportStatusRejected  = "rejected"
+	ImportStatusDraft      = "draft"
+	ImportStatusCommitting = "committing"
+	ImportStatusCommitted  = "committed"
+	ImportStatusRejected   = "rejected"
+
+	ImportUploadStatusOpen      = "open"
+	ImportUploadStatusComplete  = "complete"
+	ImportUploadStatusAbandoned = "abandoned"
 
 	ImportRowStatusPending  = "pending"
 	ImportRowStatusAccepted = "accepted"
@@ -100,6 +105,7 @@ const (
 	ImportEventRowEdited       = "row_edited"
 	ImportEventRowAccepted     = "row_accepted"
 	ImportEventRowSkipped      = "row_skipped"
+	ImportEventCommitting      = "committing"
 	ImportEventCommitted       = "committed"
 	ImportEventRejected        = "rejected"
 	ImportEventExpired         = "expired"

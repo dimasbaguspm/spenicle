@@ -149,6 +149,7 @@ Un-prefixed, all optional except `APP_SECRET`:
 | `OPENAI_MODEL` | `gpt-4o-mini` | vision model for the OpenAI rail |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
 | `WEB_ORIGIN` | — | the one browser origin allowed to call the API with a cookie; unset = same-origin only |
+| `APP_TIMEZONE` | `UTC` | IANA name for every calendar decision (the worker's "today"); set once, at the first boot |
 
 `APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`
 fails when its fingerprint does not match `settings.secret_fingerprint`. There is no
@@ -207,10 +208,10 @@ same key with different bytes is `409 import_conflict`, replaying the same revie
 is `200` with the current batch, and the other action or a row edit on a terminal batch
 is `409 import_closed`.
 
-Only these nine are environment variables. **Every other knob — DB path, HTTP
+Only these ten are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, artifact dir,
-retention and size cap, export retention and stale window, pool sizes, service name
+retention and size cap, import body/row caps and commit chunk, export retention and stale window, pool sizes, service name
 (also the tracer name) — has its
 default in `internal/common/config/config.go`**, and the
 resulting value object is `entity.AppConfig`. No viper, on purpose: eight variables
@@ -240,9 +241,20 @@ wants without recomputing them. `export_events` mirrors `import_events`: `queued
 failed (`swept`), and a `ready` job past `ExportRetention` loses its blob and answers
 `410 gone` — 20 of each per run. Import is the other half and is not built.
 
-The worker does four things per run, in this order: post the due recurring rules, reclaim
-the artifacts of rejected captures, drop expired import drafts, then claim up to 5 export
-jobs and sweep the queue.
+The same route takes a **chunked** upload: send `chunk_index` + `chunk_total` and the
+handler appends to `<DATA_DIR>/imports/<client_id>.part`, records the chunk in
+`import_uploads`/`import_upload_chunks` idempotently, answers `202` with the progress and
+assembles the draft on the last chunk (`409 import_conflict` when the total disagrees,
+`409 import_closed` for a finished upload). A commit is chunked too: the batch is flipped
+`draft → committing` with a compare-and-swap, accepted rows post in chunks of
+`ImportCommitChunk`, one `committing` event per chunk records `rows_done`/`rows_total`, and
+a replayed commit resumes from the rows whose ledger `client_id` is still missing. A row
+edit while `committing` is `409 import_committing`.
+
+The worker does five things per run, in this order: post the due recurring rules, reclaim
+the artifacts of rejected captures, drop expired import drafts and `open` uploads older than
+24h, then claim up to 5 export jobs and sweep the queue. Every calendar decision it makes
+("today", the due comparison, the business-day shift) runs in `APP_TIMEZONE`, not UTC.
 
 ## Observability
 

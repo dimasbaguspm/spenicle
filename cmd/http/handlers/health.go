@@ -15,6 +15,7 @@ type healthResponse struct {
 	SchemaVersion   int    `json:"schema_version"`
 	AppSecret       string `json:"app_secret"`
 	BaseCurrency    string `json:"base_currency"`
+	Timezone        string `json:"timezone"`
 	WorkerLastRunAt string `json:"worker_last_run_at"`
 }
 
@@ -56,6 +57,7 @@ func (s *Server) health(ctx context.Context) (healthResponse, error) {
 		SchemaVersion:   schemaVersion,
 		AppSecret:       s.deps.Sealer.Fingerprint(),
 		BaseCurrency:    s.deps.BaseCurrency,
+		Timezone:        s.deps.Timezone,
 		WorkerLastRunAt: lastRun,
 	}, nil
 }

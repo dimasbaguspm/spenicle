@@ -200,3 +200,79 @@ func TestSettingsValidateRejectsUnknownCurrency(t *testing.T) {
 		t.Fatal("a non ISO 4217 currency must be refused")
 	}
 }
+
+func TestEnsureTimezoneIsSetOnce(t *testing.T) {
+	cases := []struct {
+		name    string
+		first   string
+		second  string
+		want    string
+		wantErr bool
+	}{
+		{name: "the first boot pins the env value", first: "Asia/Jakarta", second: "", want: "Asia/Jakarta"},
+		{name: "an empty env keeps the stored value", first: "", second: "", want: "UTC"},
+		{name: "a different env refuses the boot", first: "UTC", second: "Asia/Jakarta", wantErr: true},
+		{name: "the same env is not a change", first: "Asia/Jakarta", second: "Asia/Jakarta", want: "Asia/Jakarta"},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assertTimezonePinned(t, testCase.first, testCase.second, testCase.want, testCase.wantErr)
+		})
+	}
+}
+
+func assertTimezonePinned(t *testing.T, first, second, want string, wantErr bool) {
+	t.Helper()
+
+	service := newService(t)
+	ctx := t.Context()
+
+	if _, _, err := service.EnsureInitial(ctx, ""); err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+
+	if _, err := service.EnsureTimezone(ctx, first); err != nil {
+		t.Fatalf("first boot: %v", err)
+	}
+
+	pinned, err := service.EnsureTimezone(ctx, second)
+
+	if wantErr {
+		if !errors.Is(err, entity.ErrTimezoneSetOnce) {
+			t.Fatalf("second boot error = %v, want ErrTimezoneSetOnce", err)
+		}
+
+		if !strings.Contains(err.Error(), "Asia/Jakarta") {
+			t.Fatalf("error %q must name the env value", err)
+		}
+
+		return
+	}
+
+	if err != nil {
+		t.Fatalf("second boot: %v", err)
+	}
+
+	if pinned.Timezone != want {
+		t.Fatalf("timezone = %q, want %q", pinned.Timezone, want)
+	}
+
+	stored, err := service.Load(ctx)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+
+	if stored.Timezone != want {
+		t.Fatalf("stored timezone = %q, want %q", stored.Timezone, want)
+	}
+}
+
+func TestSettingsValidateRejectsUnknownTimezone(t *testing.T) {
+	appSettings := entity.DefaultSettings()
+	appSettings.Timezone = "Mars/Olympus"
+
+	if err := appSettings.Validate(); err == nil {
+		t.Fatal("an unknown IANA zone must be refused")
+	}
+}

@@ -42,6 +42,8 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^I upload the statement "([^"]*)" with the client id "([^"]*)":$`, uploadStatement)
 	sc.Step(`^I upload the statement "([^"]*)" with the client id "([^"]*)" on the account "([^"]*)":$`,
 		uploadStatementOnAccount)
+	sc.Step(`^I upload chunk (\d+) of (\d+) of the statement "([^"]*)" with the client id "([^"]*)":$`,
+		uploadStatementChunk)
 	sc.Step(`^the ledger holds an entry with client id prefix "([^"]*)" and source "([^"]*)"$`,
 		theLedgerHoldsEntry)
 
@@ -50,6 +52,10 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the response header "([^"]*)" is "([^"]*)"$`, responseHeaderIs)
 	sc.Step(`^the response header "([^"]*)" contains "([^"]*)"$`, responseHeaderContains)
 	sc.Step(`^the import draft is older than its expiry$`, theImportDraftIsExpired)
+	sc.Step(`^the import upload is older than its retention$`, theImportUploadIsStale)
+	sc.Step(`^the import batch is mid-commit$`, theImportBatchIsMidCommit)
+	sc.Step(`^the import commit chunk size is "(\d+)"$`, theImportCommitChunkIs)
+	sc.Step(`^the API restarts$`, theAPIRestarts)
 	sc.Step(`^the import event log holds (\d+) events? of kind "([a-z_]+)"$`, theImportEventLogHolds)
 	sc.Step(`^the response body hashes to "([^"]*)"$`, responseBodyHashesTo)
 	sc.Step(`^the capture artifact predates the retention$`, theCaptureArtifactPredatesTheRetention)
@@ -997,4 +1003,103 @@ func theExportWorkerClaimsAndDies(ctx context.Context) (context.Context, error) 
 	}
 
 	return ctx, nil
+}
+
+func uploadStatementChunk(
+	ctx context.Context,
+	index, total int,
+	filename, clientID string,
+	statement *godog.DocString,
+) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	var body bytes.Buffer
+
+	form := multipart.NewWriter(&body)
+
+	part, err := form.CreateFormFile("file", filename)
+	if err != nil {
+		return ctx, fmt.Errorf("file part: %w", err)
+	}
+
+	if _, err = part.Write([]byte(statement.Content)); err != nil {
+		return ctx, fmt.Errorf("statement chunk: %w", err)
+	}
+
+	for key, value := range map[string]string{
+		"client_id":   clientID,
+		"chunk_index": strconv.Itoa(index),
+		"chunk_total": strconv.Itoa(total),
+	} {
+		if err = form.WriteField(key, value); err != nil {
+			return ctx, fmt.Errorf("%s field: %w", key, err)
+		}
+	}
+
+	if err = form.Close(); err != nil {
+		return ctx, fmt.Errorf("close form: %w", err)
+	}
+
+	headers := http.Header{"Content-Type": []string{form.FormDataContentType()}}
+
+	return ctx, w.doWith(ctx, http.MethodPost, "/api/imports", body.Bytes(), headers, nil)
+}
+
+func theImportUploadIsStale(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.ageImportUploads(ctx)
+}
+
+func theImportBatchIsMidCommit(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.store == nil {
+		return ctx, errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	if _, err := w.store.DB().ExecContext(ctx,
+		`UPDATE import_batches SET status = 'committing'`); err != nil {
+		return ctx, fmt.Errorf("park the batch mid-commit: %w", err)
+	}
+
+	return ctx, nil
+}
+
+func theImportCommitChunkIs(ctx context.Context, size string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.server != nil {
+		return ctx, errors.New("set the commit chunk size before starting the API")
+	}
+
+	chunk, err := strconv.Atoi(size)
+	if err != nil || chunk < 1 {
+		return ctx, fmt.Errorf("chunk size %q is not a positive number", size)
+	}
+
+	w.commitChunk = chunk
+
+	return ctx, nil
+}
+
+func theAPIRestarts(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.restart(ctx)
 }

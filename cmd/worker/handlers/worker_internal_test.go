@@ -202,3 +202,89 @@ func TestRunRuleStopsAtEndsOn(t *testing.T) {
 		})
 	}
 }
+
+func TestLocalTimeClampsAcrossSpringForward(t *testing.T) {
+	cases := []struct {
+		name   string
+		zone   string
+		day    string
+		hour   int
+		minute int
+		want   string
+	}{
+		{
+			name: "an ordinary wall clock is kept", zone: "America/New_York", day: "2025-03-08",
+			hour: 2, minute: 30, want: "2025-03-08T02:30:00-05:00",
+		},
+		{
+			name: "02:30 on a spring-forward morning clamps to 03:00", zone: "America/New_York",
+			day: "2025-03-09", hour: 2, minute: 30, want: "2025-03-09T03:00:00-04:00",
+		},
+		{
+			name: "a zone without DST is untouched", zone: "Asia/Jakarta", day: "2025-03-09",
+			hour: 2, minute: 30, want: "2025-03-09T02:30:00+07:00",
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			location, err := time.LoadLocation(testCase.zone)
+			if err != nil {
+				t.Fatalf("zone %q: %v", testCase.zone, err)
+			}
+
+			got := localTime(parseDay(t, testCase.day), testCase.hour, testCase.minute, location)
+			if formatted := got.Format(time.RFC3339); formatted != testCase.want {
+				t.Fatalf("local time = %s, want %s", formatted, testCase.want)
+			}
+		})
+	}
+}
+
+func TestRunRuleUsesTheInstanceTimezone(t *testing.T) {
+	cases := []struct {
+		name       string
+		zone       string
+		wantPosted int
+	}{
+		{name: "23:30 UTC is already tomorrow in Jakarta", zone: "Asia/Jakarta", wantPosted: 1},
+		{name: "the same instant in UTC is still today", zone: "UTC", wantPosted: 0},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			location, err := time.LoadLocation(testCase.zone)
+			if err != nil {
+				t.Fatalf("zone %q: %v", testCase.zone, err)
+			}
+
+			at := time.Date(2025, 1, 1, 23, 30, 0, 0, time.UTC).In(location)
+
+			rule := entity.Recurring{
+				Ref:              "0123456789abcdef0123456789abcdef",
+				PayeeRef:         "0123456789abcdef0123456789abcdef",
+				AccountRef:       "0123456789abcdef0123456789abcdef",
+				CategoryRef:      "0123456789abcdef0123456789abcdef",
+				AmountMinor:      25_000,
+				Currency:         "IDR",
+				Cadence:          constant.RecurringCadenceDaily,
+				IntervalN:        1,
+				BusinessDayShift: constant.ShiftNone,
+				NextDueOn:        parseDay(t, "2025-01-02"),
+				State:            constant.RecurringStateActive,
+			}
+
+			entries := &stubLedger{}
+			rules := &Runner{store: &stubStore{}, entries: entries, loc: location}
+
+			var summary Summary
+			if runErr := rules.runRule(t.Context(), rule, at, &summary); runErr != nil {
+				t.Fatalf("run rule: %v", runErr)
+			}
+
+			if len(entries.posts) != testCase.wantPosted {
+				t.Fatalf("posted %d entries, want %d", len(entries.posts), testCase.wantPosted)
+			}
+		})
+	}
+}

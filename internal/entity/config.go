@@ -11,6 +11,10 @@ type AppConfig struct {
 	ArtifactRetention time.Duration
 	ArtifactMaxBytes  int64
 
+	ImportMaxBytes    int64
+	ImportMaxRows     int
+	ImportCommitChunk int
+
 	ExportRetention  time.Duration
 	ExportStaleAfter time.Duration
 
@@ -25,6 +29,8 @@ type AppConfig struct {
 	OTLPEndpoint       string
 
 	ServiceName string
+
+	Timezone string
 
 	WebOrigin string
 

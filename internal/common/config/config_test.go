@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
@@ -16,6 +17,7 @@ func clearEnv(t *testing.T) {
 		config.EnvAppSecret,
 		config.EnvSnapToJSONAPIKey,
 		config.EnvOTLPEndpoint,
+		config.EnvTimezone,
 	} {
 		t.Setenv(key, "")
 	}
@@ -130,5 +132,51 @@ func TestDefaultsAreUsable(t *testing.T) {
 
 	if want := filepath.Join(config.DefaultDataDir, config.DefaultDBFile); cfg.DBPath != want {
 		t.Fatalf("default db path = %q, want %q", cfg.DBPath, want)
+	}
+}
+
+func TestLoadTimezone(t *testing.T) {
+	cases := []struct {
+		name    string
+		value   string
+		want    string
+		wantErr string
+	}{
+		{name: "an IANA name is accepted", value: "Asia/Jakarta", want: "Asia/Jakarta"},
+		{name: "an alias is canonicalised", value: "UTC", want: "UTC"},
+		{name: "an unknown zone fails and names the value", value: "Mars/Olympus", wantErr: "Mars/Olympus"},
+		{name: "empty keeps the stored value", value: "", want: ""},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			clearEnv(t)
+			t.Setenv(config.EnvAppSecret, "0123456789abcdef")
+			t.Setenv(config.EnvTimezone, testCase.value)
+
+			cfg, err := config.Load(t.Context())
+
+			if testCase.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
+					t.Fatalf("load error = %v, want it to mention %q", err, testCase.wantErr)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("load: %v", err)
+			}
+
+			if cfg.Timezone != testCase.want {
+				t.Fatalf("timezone = %q, want %q", cfg.Timezone, testCase.want)
+			}
+		})
+	}
+}
+
+func TestDefaultsLeaveTimezoneToTheFirstBoot(t *testing.T) {
+	if cfg := config.Defaults(); cfg.Timezone != "" {
+		t.Fatalf("default timezone = %q, want the empty \"no opinion\" value", cfg.Timezone)
 	}
 }

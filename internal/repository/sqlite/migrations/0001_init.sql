@@ -164,7 +164,7 @@ CREATE TABLE import_batches (
   client_id    TEXT NOT NULL UNIQUE,
   file_hash    TEXT NOT NULL,
   filename     TEXT NOT NULL,
-  status       TEXT NOT NULL CHECK (status IN ('draft','committed','rejected')),
+  status       TEXT NOT NULL CHECK (status IN ('draft','committing','committed','rejected')),
   rows_total   INTEGER NOT NULL,
   currency     TEXT NOT NULL,
   created_at   TEXT NOT NULL,
@@ -208,6 +208,32 @@ CREATE TABLE import_events (
 );
 
 CREATE INDEX ix_import_events_batch ON import_events (batch_id, id);
+
+CREATE TABLE import_uploads (
+  id              INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  client_id       TEXT NOT NULL UNIQUE,
+  file_hash       TEXT,
+  filename        TEXT NOT NULL,
+  chunk_total     INTEGER NOT NULL,
+  received_chunks INTEGER NOT NULL DEFAULT 0,
+  received_bytes  INTEGER NOT NULL DEFAULT 0,
+  status          TEXT NOT NULL CHECK (status IN ('open','complete','abandoned')),
+  created_at      TEXT NOT NULL,
+  updated_at      TEXT NOT NULL,
+  completed_at    TEXT
+);
+
+CREATE INDEX ix_import_uploads_status ON import_uploads (status, updated_at);
+
+CREATE TABLE import_upload_chunks (
+  id          INTEGER PRIMARY KEY,
+  upload_id   INTEGER NOT NULL REFERENCES import_uploads(id),
+  chunk_index INTEGER NOT NULL,
+  bytes       INTEGER NOT NULL,
+  created_at  TEXT NOT NULL,
+  UNIQUE (upload_id, chunk_index)
+);
 
 CREATE TABLE exports (
   id             INTEGER PRIMARY KEY,

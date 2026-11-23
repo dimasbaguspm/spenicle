@@ -48,9 +48,34 @@ None.
 
 | field | required | notes |
 | --- | --- | --- |
-| `file` | yes | the CSV bytes, at most `ArtifactMaxBytes` |
+| `file` | yes | the CSV bytes, at most `ImportMaxBytes` (default 32 MiB) |
 | `client_id` | yes | ≤ 64 characters, the idempotency key |
 | `account_ref` | no | the account the rows move through; unknown is `404`, omitted resolves to `Unsorted` |
+| `chunk_index` | no | zero-based index; send it together with `chunk_total` |
+| `chunk_total` | no | how many chunks the statement was split into (≥ 1) |
+
+### Chunked, resumable upload
+
+Without the two chunk fields the request is the single-shot upload described
+above. With them the request appends **one chunk** to
+`<DATA_DIR>/imports/<client_id>.part` (directory created on demand, `0750`),
+records the chunk in `import_uploads` + `import_upload_chunks` idempotently
+(`UNIQUE (upload_id, chunk_index)`), and answers `202` with the progress:
+
+```json
+{"ref":"…","received_chunks":1,"chunk_total":2,"received_bytes":"34"}
+```
+
+The same `chunk_index` again is a no-op that answers `200` with the same
+progress — the bytes are truncated back, so a retry cannot corrupt the file.
+When `received_chunks == chunk_total` the handler assembles the file, hashes it
+(sha256), creates the draft exactly as the single-shot path does, marks the
+upload `complete`, deletes the `.part` file and answers `201` with the batch.
+A `client_id` that already names a batch resumes that batch (`200`).
+
+A statement above `ImportMaxRows` (default 50 000 rows) is refused with
+`422 invalid_request`. A worker run drops `open` uploads untouched for 24h
+(rows and `.part` file), 50 per run.
 
 ## Response
 
@@ -82,6 +107,10 @@ None.
 Idempotency is enforced by the unique index on `import_batches.client_id`: the lookup runs first, and a losing racer re-reads the winner's row.
 
 ## Errors
+
+- `409 import_conflict` — a chunk whose `chunk_total` disagrees with the open upload for that `client_id`.
+- `409 import_closed` — a chunk for a `complete` or `abandoned` upload.
+- `422 invalid_request` — `chunk_index`/`chunk_total` alone, out of range, not numbers, too many rows, or a body above `ImportMaxBytes`.
 
 - `409 import_conflict` — the `client_id` exists with different bytes; use a new client id for a new file.
 - `422 invalid_request` — the header is not the fixed three columns (the message names it), the file part is missing, `client_id` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `ArtifactMaxBytes`.

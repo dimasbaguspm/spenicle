@@ -96,6 +96,7 @@
   ],
   "settings": {
     "base_currency": "IDR",
-    "extraction_enabled": false
+    "extraction_enabled": false,
+    "timezone": "UTC"
   }
 }

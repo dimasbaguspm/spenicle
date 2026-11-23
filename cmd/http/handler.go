@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/dimasbaguspm/spenicle/cmd/http/handlers"
@@ -24,6 +25,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
+	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 )
 
 type server struct {
@@ -218,6 +220,11 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		return handlers.Deps{}, err
 	}
 
+	parts, err := filestore.NewParts(filepath.Join(process.Cfg.DataDir, config.DefaultImportDirName))
+	if err != nil {
+		return handlers.Deps{}, fmt.Errorf("import parts: %w", err)
+	}
+
 	store := process.Store
 
 	return handlers.Deps{
@@ -239,15 +246,22 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		),
 		Settings: process.Settings,
 		Imports: imports.New(
-			store, store, store, store, process.Ledger, process.Artifacts, process.Settings, clock.System{},
+			store, store, store, store, process.Ledger, process.Artifacts, parts, process.Settings,
+			clock.System{},
+			imports.Options{
+				MaxRows:     process.Cfg.ImportMaxRows,
+				CommitChunk: process.Cfg.ImportCommitChunk,
+			},
 		),
 		Health:            store,
 		Sealer:            process.Sealer,
 		BaseCurrency:      process.BaseCurrency,
+		Timezone:          process.Cfg.Timezone,
 		Version:           config.Version,
 		HealthTimeout:     process.Cfg.HealthTimeout,
 		MaxBodyBytes:      process.Cfg.MaxBodyBytes,
 		MaxArtifactBytes:  process.Cfg.ArtifactMaxBytes,
+		ImportMaxBytes:    process.Cfg.ImportMaxBytes,
 		WebOrigin:         process.Cfg.WebOrigin,
 		ExtractionEnabled: process.Cfg.SnapToJSONAPIKey != "",
 		Logger:            process.Logger,

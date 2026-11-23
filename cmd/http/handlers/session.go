@@ -34,6 +34,7 @@ type settingsPatchRequest struct {
 
 type settingsResponse struct {
 	BaseCurrency       string `json:"base_currency"`
+	Timezone           string `json:"timezone"`
 	PasswordMustChange bool   `json:"password_must_change"`
 	ExtractionEnabled  bool   `json:"extraction_enabled"`
 }
@@ -147,8 +148,14 @@ func (s *Server) GetSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func toSettingsResponse(settings entity.Settings) settingsResponse {
+	timezone := settings.Timezone
+	if timezone == "" {
+		timezone = entity.DefaultTimezone
+	}
+
 	return settingsResponse{
 		BaseCurrency:       settings.BaseCurrency,
+		Timezone:           timezone,
 		PasswordMustChange: settings.PasswordMustChange,
 		ExtractionEnabled:  settings.ExtractionEnabled,
 	}

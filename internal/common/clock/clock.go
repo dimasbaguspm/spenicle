@@ -30,6 +30,16 @@ type System struct{}
 
 func (System) Now() time.Time { return time.Now().UTC() }
 
+type Zoned struct{ Loc *time.Location }
+
+func (z Zoned) Now() time.Time {
+	if z.Loc == nil {
+		return time.Now().UTC()
+	}
+
+	return time.Now().In(z.Loc)
+}
+
 func (System) NewID() string {
 	var raw [16]byte
 

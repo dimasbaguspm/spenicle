@@ -592,3 +592,301 @@ func nullRowIndex(index *int) sql.NullInt64 {
 
 	return sql.NullInt64{Int64: int64(*index), Valid: true}
 }
+
+const importUploadColumns = `id, ref, client_id, COALESCE(file_hash, ''), filename, chunk_total,
+	received_chunks, received_bytes, status, created_at, updated_at, completed_at`
+
+func (s *Store) InsertImportUpload(
+	ctx context.Context,
+	upload entity.ImportUpload,
+) (entity.ImportUpload, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertImportUpload")
+	defer endSpan()
+
+	if upload.Ref == "" {
+		upload.Ref = uuid.New()
+	}
+
+	res, err := s.db.ExecContext(ctx, `
+		INSERT INTO import_uploads
+			(ref, client_id, file_hash, filename, chunk_total, received_chunks, received_bytes,
+			 status, created_at, updated_at, completed_at)
+		VALUES (?, ?, NULL, ?, ?, 0, 0, ?, ?, ?, NULL)`,
+		upload.Ref,
+		upload.ClientID,
+		upload.Filename,
+		upload.ChunkTotal,
+		upload.Status,
+		upload.CreatedAt.UTC().Format(constant.TimestampLayout),
+		upload.UpdatedAt.UTC().Format(constant.TimestampLayout),
+	)
+	if err != nil {
+		return entity.ImportUpload{}, fmt.Errorf("insert import upload: %w", err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return entity.ImportUpload{}, fmt.Errorf("import upload id: %w", err)
+	}
+
+	upload.ID = id
+	upload.ReceivedChunks = 0
+	upload.ReceivedBytes = 0
+
+	return upload, nil
+}
+
+func (s *Store) ImportUploadByClientID(
+	ctx context.Context,
+	clientID string,
+) (entity.ImportUpload, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ImportUploadByClientID")
+	defer endSpan()
+
+	return scanImportUpload(s.db.QueryRowContext(ctx,
+		`SELECT `+importUploadColumns+` FROM import_uploads WHERE client_id = ?`, clientID))
+}
+
+func (s *Store) ImportUploadByRef(
+	ctx context.Context,
+	ref string,
+) (entity.ImportUpload, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ImportUploadByRef")
+	defer endSpan()
+
+	return scanImportUpload(s.db.QueryRowContext(ctx,
+		`SELECT `+importUploadColumns+` FROM import_uploads WHERE ref = ?`, ref))
+}
+
+func (s *Store) AppendImportChunk(
+	ctx context.Context,
+	ref string,
+	index int,
+	bytes int64,
+	at time.Time,
+) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.AppendImportChunk")
+	defer endSpan()
+
+	var inserted bool
+
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		var id int64
+
+		if scanErr := tx.QueryRowContext(ctx,
+			`SELECT id FROM import_uploads WHERE ref = ?`, ref).Scan(&id); scanErr != nil {
+			return fmt.Errorf("%w: import upload %s", entity.ErrNotFound, ref)
+		}
+
+		res, execErr := tx.ExecContext(ctx, `
+			INSERT OR IGNORE INTO import_upload_chunks (upload_id, chunk_index, bytes, created_at)
+			VALUES (?, ?, ?, ?)`,
+			id, index, bytes, at.UTC().Format(constant.TimestampLayout),
+		)
+		if execErr != nil {
+			return fmt.Errorf("insert import chunk: %w", execErr)
+		}
+
+		affected, countErr := res.RowsAffected()
+		if countErr != nil {
+			return fmt.Errorf("import chunk rows: %w", countErr)
+		}
+
+		if affected == 0 {
+			return nil
+		}
+
+		if _, updateErr := tx.ExecContext(ctx, `
+			UPDATE import_uploads SET
+				received_chunks = received_chunks + 1,
+				received_bytes = received_bytes + ?,
+				updated_at = ?
+			WHERE id = ?`,
+			bytes, at.UTC().Format(constant.TimestampLayout), id); updateErr != nil {
+			return fmt.Errorf("advance import upload: %w", updateErr)
+		}
+
+		inserted = true
+
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return inserted, nil
+}
+
+func (s *Store) CompleteImportUpload(
+	ctx context.Context,
+	ref, fileHash string,
+	at time.Time,
+) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CompleteImportUpload")
+	defer endSpan()
+
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE import_uploads SET status = ?, file_hash = ?, completed_at = ?, updated_at = ?
+		WHERE ref = ? AND status = ?`,
+		constant.ImportUploadStatusComplete,
+		fileHash,
+		at.UTC().Format(constant.TimestampLayout),
+		at.UTC().Format(constant.TimestampLayout),
+		ref,
+		constant.ImportUploadStatusOpen,
+	)
+	if err != nil {
+		return false, fmt.Errorf("complete import upload: %w", err)
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("import upload rows: %w", err)
+	}
+
+	return affected > 0, nil
+}
+
+func (s *Store) ExpiredImportUploads(
+	ctx context.Context,
+	before time.Time,
+	limit int,
+) ([]entity.ImportUpload, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ExpiredImportUploads")
+	defer endSpan()
+
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT `+importUploadColumns+` FROM import_uploads
+		 WHERE status = ? AND updated_at < ?
+		 ORDER BY updated_at ASC, id ASC
+		 LIMIT ?`,
+		constant.ImportUploadStatusOpen,
+		before.UTC().Format(constant.TimestampLayout),
+		clampLimit(limit),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select expired import uploads: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	out := make([]entity.ImportUpload, 0)
+
+	for rows.Next() {
+		upload, scanErr := scanImportUploadRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+
+		out = append(out, upload)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate import uploads: %w", err)
+	}
+
+	return out, nil
+}
+
+func (s *Store) DropImportUpload(ctx context.Context, ref string) (int, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.DropImportUpload")
+	defer endSpan()
+
+	var dropped int
+
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx,
+			`DELETE FROM import_upload_chunks
+			 WHERE upload_id = (SELECT id FROM import_uploads WHERE ref = ?)`,
+			ref)
+		if execErr != nil {
+			return fmt.Errorf("delete import chunks: %w", execErr)
+		}
+
+		count, countErr := res.RowsAffected()
+		if countErr != nil {
+			return fmt.Errorf("import chunks dropped: %w", countErr)
+		}
+
+		dropped = int(count)
+
+		if _, execErr = tx.ExecContext(ctx,
+			`DELETE FROM import_uploads WHERE ref = ?`, ref); execErr != nil {
+			return fmt.Errorf("delete import upload: %w", execErr)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return dropped, nil
+}
+
+func scanImportUpload(row *sql.Row) (entity.ImportUpload, bool, error) {
+	upload, err := scanImportUploadRow(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.ImportUpload{}, false, nil
+	}
+
+	if err != nil {
+		return entity.ImportUpload{}, false, err
+	}
+
+	return upload, true, nil
+}
+
+func scanImportUploadRow(scanner interface{ Scan(dest ...any) error }) (entity.ImportUpload, error) {
+	var (
+		upload      entity.ImportUpload
+		createdRaw  string
+		updatedRaw  string
+		completedAt sql.NullString
+	)
+
+	err := scanner.Scan(
+		&upload.ID, &upload.Ref, &upload.ClientID, &upload.FileHash, &upload.Filename,
+		&upload.ChunkTotal, &upload.ReceivedChunks, &upload.ReceivedBytes, &upload.Status,
+		&createdRaw, &updatedRaw, &completedAt,
+	)
+	if err != nil {
+		return entity.ImportUpload{}, err
+	}
+
+	if upload.CreatedAt, err = parseTimestamp("created_at", createdRaw); err != nil {
+		return entity.ImportUpload{}, err
+	}
+
+	if upload.UpdatedAt, err = parseTimestamp("updated_at", updatedRaw); err != nil {
+		return entity.ImportUpload{}, err
+	}
+
+	if completedAt.Valid {
+		upload.CompletedAt, err = timestampOf("completed_at", completedAt.String)
+		if err != nil {
+			return entity.ImportUpload{}, err
+		}
+	}
+
+	return upload, nil
+}
+
+func (s *Store) BeginImportCommit(ctx context.Context, ref string) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.BeginImportCommit")
+	defer endSpan()
+
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE import_batches SET status = ? WHERE ref = ? AND status = ?`,
+		constant.ImportStatusCommitting, ref, constant.ImportStatusDraft)
+	if err != nil {
+		return false, fmt.Errorf("begin import commit: %w", err)
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("import batch rows: %w", err)
+	}
+
+	return affected > 0, nil
+}

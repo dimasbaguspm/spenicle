@@ -22,12 +22,25 @@ The review screen's "commit" and "discard" buttons; a script that retries after 
 `commit`:
 
 - a `committed` batch returns as-is, a `rejected` one is `409 import_closed`;
+- the batch is flipped `draft → committing` with a compare-and-swap
+  (`UPDATE … WHERE status = 'draft'`); the loser of that race re-reads and either
+  resumes or answers `409`;
+- accepted rows are posted in chunks of `ImportCommitChunk` (default 500). After
+  each chunk one `committing` event carries `{"rows_done":N,"rows_total":M}`, and
+  `ctx.Err()` is checked between chunks, so a cancelled request stops between two
+  chunks with the batch still `committing`;
 - for each row with `status = accepted`, `ledger.Post` with
   - `client_id = import:<file_hash>:<row_index>`,
   - `source = statement`, `occurred_on` from the row, note = the description, payee when one was patched,
   - currency = the batch currency (the locked base currency),
   - postings `[{account_ref, -amount_minor}, {category_ref or Unsorted, +amount_minor}]`;
 - `Repository.Sqlite.CloseImportBatch` stamps `status = committed` and `committed_at`, and one `committed` event is appended.
+
+A replay of `commit` on a batch left `committing` by a cancelled request or a
+restart **resumes**: the rows whose
+`client_id = import:<file_hash>:<row_index>` is already in the ledger are skipped
+(that probe is the resume filter) and only the rest are posted. The ledger
+`client_id` is the final guard, so no row can be posted twice.
 
 `reject`:
 
@@ -54,6 +67,7 @@ Rows that were `pending` or `skipped` are not posted and stay in the batch for a
 
 ## Errors
 
+- `409 import_committing` — `PATCH /api/imports/{ref}/rows/{index}` while the batch is `committing`; a commit is in flight and the row set is frozen until it finishes or is resumed.
 - `409 import_closed` — the other action on a terminal batch: `commit` on a `rejected` batch, `reject` on a `committed` one. The message names the state; the entries of a committed batch are undone with `PATCH /api/entries/{ref}` and `{"void": true}`, not here.
 - `404 not_found` — the ref names no batch.
 - `422 invalid_request` — `action` missing or not one of the two, `reason` too long.

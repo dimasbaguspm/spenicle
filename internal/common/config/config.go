@@ -33,6 +33,7 @@ const (
 	EnvSnapToJSONEndpoint = "SNAPTOJSON_ENDPOINT"
 	EnvOTLPEndpoint       = "OTEL_EXPORTER_OTLP_ENDPOINT"
 	EnvWebOrigin          = "WEB_ORIGIN"
+	EnvTimezone           = "APP_TIMEZONE"
 )
 
 const (
@@ -43,6 +44,11 @@ const (
 	DefaultArtifactDirName   = "artifacts"
 	DefaultArtifactRetention = 720 * time.Hour
 	DefaultArtifactMaxBytes  = 10 << 20
+
+	DefaultImportDirName     = "imports"
+	DefaultImportMaxBytes    = 32 << 20
+	DefaultImportMaxRows     = 50_000
+	DefaultImportCommitChunk = 500
 
 	DefaultExportRetention  = 24 * time.Hour
 	DefaultExportStaleAfter = 15 * time.Minute
@@ -80,6 +86,9 @@ func Defaults() entity.AppConfig {
 		ArtifactDir:              filepath.Join(DefaultDataDir, DefaultArtifactDirName),
 		ArtifactRetention:        DefaultArtifactRetention,
 		ArtifactMaxBytes:         DefaultArtifactMaxBytes,
+		ImportMaxBytes:           DefaultImportMaxBytes,
+		ImportMaxRows:            DefaultImportMaxRows,
+		ImportCommitChunk:        DefaultImportCommitChunk,
 		ExportRetention:          DefaultExportRetention,
 		ExportStaleAfter:         DefaultExportStaleAfter,
 		DBPath:                   filepath.Join(DefaultDataDir, DefaultDBFile),
@@ -120,6 +129,13 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
 	cfg.WebOrigin = env(EnvWebOrigin, cfg.WebOrigin)
 
+	timezone, err := loadTimezone(os.Getenv(EnvTimezone))
+	if err != nil {
+		return entity.AppConfig{}, err
+	}
+
+	cfg.Timezone = timezone
+
 	if err := validate.Struct(cfg); err != nil {
 		return entity.AppConfig{}, fmt.Errorf(
 			"APP_SECRET is required, at least 16 bytes (generate one with "+
@@ -135,4 +151,18 @@ func env(key, fallback string) string {
 	}
 
 	return fallback
+}
+
+func loadTimezone(value string) (string, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return "", nil
+	}
+
+	location, err := time.LoadLocation(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("APP_TIMEZONE %q is not an IANA timezone name: %w", trimmed, err)
+	}
+
+	return location.String(), nil
 }

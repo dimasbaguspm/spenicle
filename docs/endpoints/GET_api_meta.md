@@ -28,7 +28,7 @@ None.
 ## Response
 
 ```json
-{"settings":{"base_currency":"IDR","extraction_enabled":false},
+{"settings":{"base_currency":"IDR","timezone":"UTC","extraction_enabled":false},
  "accounts":[{"ref":1,"name":"Cash","kind":"asset","currency":"IDR",
               "base_amount_minor":"0","archived":false}],
  "currencies":[{"code":"AUD","minor_units":2,"symbol":"A$"}]}
@@ -41,7 +41,8 @@ None.
 ## Limitations
 
 No payees or recurring rules yet (both tables exist, no endpoints);
-balances are all-time, not per month.
+balances are all-time, not per month. `settings.timezone` is read-only: it is
+set once at the first boot from `APP_TIMEZONE` (default `UTC`).
 
 
 

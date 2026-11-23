@@ -43,6 +43,11 @@ func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	baseCurrency := appSettings.BaseCurrency
+	timezone := appSettings.Timezone
+
+	if timezone == "" {
+		timezone = entity.DefaultTimezone
+	}
 
 	accounts, err := s.deps.Accounts.ListAccounts(ctx, entity.AccountFilter{Limit: list.MaxLimit})
 	if err != nil {
@@ -61,6 +66,7 @@ func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 	out := metaResponse{
 		Settings: map[string]any{
 			"base_currency":      baseCurrency,
+			"timezone":           timezone,
 			"extraction_enabled": s.deps.ExtractionEnabled,
 		},
 		Accounts:   accountBodies,

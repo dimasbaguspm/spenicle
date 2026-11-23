@@ -213,6 +213,32 @@ func (s *Service) SetBaseCurrency(ctx context.Context, code string) (entity.Sett
 	return settings, nil
 }
 
+func (s *Service) EnsureTimezone(ctx context.Context, name string) (entity.Settings, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.EnsureTimezone")
+	defer endSpan()
+
+	settings, err := s.Load(ctx)
+	if err != nil {
+		return entity.Settings{}, err
+	}
+
+	stored := settings.Timezone
+
+	switch {
+	case name == "" && stored == "":
+		return s.pinTimezone(ctx, settings, entity.DefaultTimezone)
+	case name == "":
+		return settings, nil
+	case stored == "":
+		return s.pinTimezone(ctx, settings, name)
+	case stored != name:
+		return entity.Settings{}, fmt.Errorf("%w: stored %q, env %q",
+			entity.ErrTimezoneSetOnce, stored, name)
+	default:
+		return settings, nil
+	}
+}
+
 func (s *Service) SessionToken(ctx context.Context) (string, error) {
 	_, endSpan := telemetry.StartSpan(ctx, "Module.Settings.SessionToken")
 	defer endSpan()
@@ -351,4 +377,18 @@ func (s *Service) encode(ctx context.Context, settings entity.Settings) (string,
 
 func IsPasswordMismatch(err error) bool {
 	return errors.Is(err, entity.ErrPasswordMismatch)
+}
+
+func (s *Service) pinTimezone(
+	ctx context.Context,
+	settings entity.Settings,
+	name string,
+) (entity.Settings, error) {
+	settings.Timezone = name
+
+	if err := s.save(ctx, settings); err != nil {
+		return entity.Settings{}, err
+	}
+
+	return settings, nil
 }

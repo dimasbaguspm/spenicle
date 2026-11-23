@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -83,6 +84,18 @@ type importReviewRequest struct {
 	Reason string `json:"reason" validate:"max=1000"`
 }
 
+type importChunkFields struct {
+	Index int
+	Total int
+}
+
+type importChunkResponse struct {
+	Ref            string `json:"ref"`
+	ReceivedChunks int    `json:"received_chunks"`
+	ChunkTotal     int    `json:"chunk_total"`
+	ReceivedBytes  string `json:"received_bytes"`
+}
+
 type importEventResponse struct {
 	Ref      string          `json:"ref"`
 	Kind     string          `json:"kind"`
@@ -96,9 +109,9 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.Create")
 	defer endSpan()
 
-	r.Body = http.MaxBytesReader(w, r.Body, s.deps.MaxBodyBytes)
+	r.Body = http.MaxBytesReader(w, r.Body, s.deps.ImportMaxBytes)
 
-	request, err := readImportStatement(r)
+	request, chunk, chunked, err := readImportUpload(r)
 	if err != nil {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", err.Error())
 
@@ -111,9 +124,15 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if limit := s.deps.MaxArtifactBytes; limit > 0 && int64(len(request.Statement)) > limit {
+	if limit := s.deps.ImportMaxBytes; limit > 0 && int64(len(request.Statement)) > limit {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
 			fmt.Sprintf("statement is larger than %d bytes", limit))
+
+		return
+	}
+
+	if chunked {
+		s.writeChunk(ctx, w, request, chunk)
 
 		return
 	}
@@ -137,6 +156,50 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, status, toImportResponse(batch, true))
+}
+
+func (s *Server) writeChunk(
+	ctx context.Context,
+	w http.ResponseWriter,
+	request importUploadRequest,
+	chunk importChunkFields,
+) {
+	result, err := s.deps.Imports.AppendChunk(ctx, imports.ChunkInput{
+		ClientID:   request.ClientID,
+		AccountRef: request.AccountRef,
+		Filename:   request.Filename,
+		ChunkIndex: chunk.Index,
+		ChunkTotal: chunk.Total,
+		Bytes:      request.Statement,
+	})
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	if result.Complete() {
+		status := http.StatusOK
+		if result.Created {
+			status = http.StatusCreated
+		}
+
+		httpx.WriteJSON(w, status, toImportResponse(result.Batch, true))
+
+		return
+	}
+
+	status := http.StatusAccepted
+	if result.Repeated {
+		status = http.StatusOK
+	}
+
+	httpx.WriteJSON(w, status, importChunkResponse{
+		Ref:            result.Upload.Ref,
+		ReceivedChunks: result.Upload.ReceivedChunks,
+		ChunkTotal:     result.Upload.ChunkTotal,
+		ReceivedBytes:  strconv.FormatInt(result.Upload.ReceivedBytes, 10),
+	})
 }
 
 func (s *Server) ListImports(w http.ResponseWriter, r *http.Request) {
@@ -323,21 +386,27 @@ func toRowUpdate(request importRowPatchRequest) (imports.RowUpdate, error) {
 	return update, nil
 }
 
-func readImportStatement(r *http.Request) (importUploadRequest, error) {
+func readImportUpload(r *http.Request) (importUploadRequest, importChunkFields, bool, error) {
 	if err := r.ParseMultipartForm(maxFormBytes); err != nil {
-		return importUploadRequest{}, fmt.Errorf("multipart: %w", err)
+		return importUploadRequest{}, importChunkFields{}, false, fmt.Errorf("multipart: %w", err)
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		return importUploadRequest{}, errors.New("multipart body needs a file part named file")
+		return importUploadRequest{}, importChunkFields{}, false,
+			errors.New("multipart body needs a file part named file")
 	}
 
 	defer func() { _ = file.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(file, maxFormBytes))
 	if err != nil {
-		return importUploadRequest{}, fmt.Errorf("read statement: %w", err)
+		return importUploadRequest{}, importChunkFields{}, false, fmt.Errorf("read statement: %w", err)
+	}
+
+	chunk, chunked, err := readChunkFields(r)
+	if err != nil {
+		return importUploadRequest{}, importChunkFields{}, false, err
 	}
 
 	sum := sha256.Sum256(body)
@@ -348,7 +417,34 @@ func readImportStatement(r *http.Request) (importUploadRequest, error) {
 		Filename:   header.Filename,
 		FileHash:   hex.EncodeToString(sum[:]),
 		Statement:  body,
-	}, nil
+	}, chunk, chunked, nil
+}
+
+func readChunkFields(r *http.Request) (importChunkFields, bool, error) {
+	index := strings.TrimSpace(r.FormValue("chunk_index"))
+	total := strings.TrimSpace(r.FormValue("chunk_total"))
+
+	if index == "" && total == "" {
+		return importChunkFields{}, false, nil
+	}
+
+	if index == "" || total == "" {
+		return importChunkFields{}, false, errors.New("chunk_index and chunk_total go together")
+	}
+
+	parsedIndex, err := strconv.Atoi(index)
+	if err != nil || parsedIndex < 0 {
+		return importChunkFields{}, false,
+			fmt.Errorf("chunk_index %q is not a zero-based index", index)
+	}
+
+	parsedTotal, err := strconv.Atoi(total)
+	if err != nil || parsedTotal < 1 {
+		return importChunkFields{}, false,
+			fmt.Errorf("chunk_total %q is not a positive count", total)
+	}
+
+	return importChunkFields{Index: parsedIndex, Total: parsedTotal}, true, nil
 }
 
 func toImportResponse(batch entity.ImportBatch, withRows bool) importBatchResponse {

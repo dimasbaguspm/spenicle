@@ -3,7 +3,9 @@ package imports
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,8 +40,10 @@ type Service struct {
 	accounts repository.Accounts
 	postings ledger.Contract
 	blobs    ArtifactStore
+	parts    PartFiles
 	base     BaseCurrencySource
 	clock    TimeSource
+	options  Options
 }
 
 type (
@@ -56,12 +60,19 @@ func New(
 	accounts repository.Accounts,
 	postings ledger.Contract,
 	blobs ArtifactStore,
+	parts PartFiles,
 	base BaseCurrencySource,
 	clock TimeSource,
+	options Options,
 ) *Service {
+	if options.CommitChunk < 1 {
+		options.CommitChunk = 1
+	}
+
 	return &Service{
 		batches: batches, events: events, entries: entries, accounts: accounts,
-		postings: postings, blobs: blobs, base: base, clock: clock,
+		postings: postings, blobs: blobs, parts: parts, base: base, clock: clock,
+		options: options,
 	}
 }
 
@@ -80,6 +91,11 @@ type eventFields struct {
 
 type eventReason struct {
 	Reason string `json:"reason"`
+}
+
+type commitProgress struct {
+	RowsDone  int `json:"rows_done"`
+	RowsTotal int `json:"rows_total"`
 }
 
 func (s *Service) Create(ctx context.Context, in CreateInput) (entity.ImportBatch, bool, error) {
@@ -114,6 +130,51 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.ImportBatc
 	}
 
 	return saved, true, nil
+}
+
+func (s *Service) AppendChunk(ctx context.Context, in ChunkInput) (ChunkResult, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.AppendChunk")
+	defer endSpan()
+
+	existing, found, err := s.batches.ImportBatchByClientID(ctx, in.ClientID)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+
+	if found {
+		batch, _, resumeErr := s.resume(ctx, existing, "")
+
+		return ChunkResult{Batch: batch}, resumeErr
+	}
+
+	upload, err := s.upload(ctx, in)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+
+	if checkErr := checkChunk(upload, in); checkErr != nil {
+		return ChunkResult{}, checkErr
+	}
+
+	repeated, err := s.storeChunk(ctx, upload, in)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+
+	upload, found, err = s.batches.ImportUploadByRef(ctx, upload.Ref)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+
+	if !found {
+		return ChunkResult{}, fmt.Errorf("%w: import upload %s", entity.ErrNotFound, upload.Ref)
+	}
+
+	if upload.ReceivedChunks < upload.ChunkTotal {
+		return ChunkResult{Upload: upload, Repeated: repeated}, nil
+	}
+
+	return s.assemble(ctx, upload, in)
 }
 
 func (s *Service) List(
@@ -158,6 +219,10 @@ func (s *Service) PatchRow(
 
 	if !found {
 		return entity.ImportBatch{}, fmt.Errorf("%w: import batch %s", entity.ErrNotFound, ref)
+	}
+
+	if batch.IsCommitting() {
+		return entity.ImportBatch{}, fmt.Errorf("%w: %s is %s", entity.ErrImportCommitting, ref, batch.Status)
 	}
 
 	if batch.IsClosed() {
@@ -261,17 +326,82 @@ func (s *Service) commit(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Commit")
 	defer endSpan()
 
-	if batch.Status == constant.ImportStatusCommitted {
+	switch batch.Status {
+	case constant.ImportStatusCommitted:
 		return s.load(ctx, batch)
-	}
-
-	if batch.Status != constant.ImportStatusDraft {
+	case constant.ImportStatusCommitting:
+		return s.resumeCommit(ctx, batch)
+	case constant.ImportStatusDraft:
+	default:
 		return entity.ImportBatch{}, closedError(batch)
 	}
 
+	begun, err := s.batches.BeginImportCommit(ctx, batch.Ref)
+	if err != nil {
+		return entity.ImportBatch{}, err
+	}
+
+	if !begun {
+		return s.commitRace(ctx, batch)
+	}
+
+	batch.Status = constant.ImportStatusCommitting
+
+	return s.postChunks(ctx, batch, false)
+}
+
+func (s *Service) commitRace(
+	ctx context.Context,
+	batch entity.ImportBatch,
+) (entity.ImportBatch, error) {
+	fresh, found, err := s.batches.ImportBatchByRef(ctx, batch.Ref)
+	if err != nil {
+		return entity.ImportBatch{}, err
+	}
+
+	if !found {
+		return entity.ImportBatch{}, fmt.Errorf("%w: import batch %s", entity.ErrNotFound, batch.Ref)
+	}
+
+	switch fresh.Status {
+	case constant.ImportStatusCommitted:
+		return s.load(ctx, fresh)
+	case constant.ImportStatusCommitting:
+		return s.resumeCommit(ctx, fresh)
+	default:
+		return entity.ImportBatch{}, closedError(fresh)
+	}
+}
+
+func (s *Service) resumeCommit(
+	ctx context.Context,
+	batch entity.ImportBatch,
+) (entity.ImportBatch, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.ResumeCommit")
+	defer endSpan()
+
+	return s.postChunks(ctx, batch, true)
+}
+
+func (s *Service) postChunks(
+	ctx context.Context,
+	batch entity.ImportBatch,
+	resume bool,
+) (entity.ImportBatch, error) {
 	rows, err := s.batches.ImportRows(ctx, batch.ID)
 	if err != nil {
 		return entity.ImportBatch{}, err
+	}
+
+	accepted := acceptedOnly(rows)
+	total := len(accepted)
+
+	pending := accepted
+	if resume {
+		pending, err = s.pendingRows(ctx, batch, rows)
+		if err != nil {
+			return entity.ImportBatch{}, err
+		}
 	}
 
 	category, err := s.unsorted(ctx)
@@ -279,17 +409,14 @@ func (s *Service) commit(
 		return entity.ImportBatch{}, err
 	}
 
-	for _, row := range rows {
-		if row.Status != constant.ImportRowStatusAccepted {
-			continue
-		}
+	pendingTotal := total - len(pending)
 
-		if postErr := s.postRow(ctx, batch, row, category.Ref); postErr != nil {
-			return entity.ImportBatch{}, postErr
-		}
+	if postErr := s.postPending(ctx, batch, pending, category.Ref, pendingTotal, total); postErr != nil {
+		return entity.ImportBatch{}, postErr
 	}
 
-	closed, err := s.batches.CloseImportBatch(ctx, batch.Ref, constant.ImportStatusCommitted, s.clock.Now())
+	closed, err := s.batches.CloseImportBatch(
+		ctx, batch.Ref, constant.ImportStatusCommitted, s.clock.Now())
 	if err != nil {
 		return entity.ImportBatch{}, err
 	}
@@ -301,6 +428,64 @@ func (s *Service) commit(
 	closed.Rows = rows
 
 	return closed, nil
+}
+
+func (s *Service) postPending(
+	ctx context.Context,
+	batch entity.ImportBatch,
+	pending []entity.ImportRow,
+	categoryRef string,
+	done, total int,
+) error {
+	for start := 0; start < len(pending); start += s.options.CommitChunk {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("commit cancelled between chunks: %w", err)
+		}
+
+		end := min(start+s.options.CommitChunk, len(pending))
+
+		for _, row := range pending[start:end] {
+			if err := s.postRow(ctx, batch, row, categoryRef); err != nil {
+				return err
+			}
+		}
+
+		done += end - start
+
+		payload := jsonPayload(commitProgress{RowsDone: done, RowsTotal: total})
+		if err := s.record(ctx, batch, constant.ImportEventCommitting, nil, payload); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) pendingRows(
+	ctx context.Context,
+	batch entity.ImportBatch,
+	rows []entity.ImportRow,
+) ([]entity.ImportRow, error) {
+	pending := make([]entity.ImportRow, 0, len(rows))
+
+	for _, row := range rows {
+		if row.Status != constant.ImportRowStatusAccepted {
+			continue
+		}
+
+		_, posted, err := s.entries.EntryByClientID(ctx, rowClientID(batch.FileHash, row.RowIndex))
+		if err != nil {
+			return nil, fmt.Errorf("resume probe: %w", err)
+		}
+
+		if posted {
+			continue
+		}
+
+		pending = append(pending, row)
+	}
+
+	return pending, nil
 }
 
 func (s *Service) reject(
@@ -372,6 +557,11 @@ func (s *Service) draft(ctx context.Context, in CreateInput, now time.Time) (ent
 	parsed, err := parseStatement(in.Statement)
 	if err != nil {
 		return entity.ImportBatch{}, err
+	}
+
+	if s.options.MaxRows > 0 && len(parsed) > s.options.MaxRows {
+		return entity.ImportBatch{}, fmt.Errorf("%w: %d rows, the limit is %d",
+			entity.ErrInvalidImport, len(parsed), s.options.MaxRows)
 	}
 
 	telemetry.RecordImportRows(ctx, int64(len(parsed)))
@@ -519,7 +709,7 @@ func (s *Service) resume(
 	batch entity.ImportBatch,
 	fileHash string,
 ) (entity.ImportBatch, bool, error) {
-	if batch.FileHash != fileHash {
+	if fileHash != "" && batch.FileHash != fileHash {
 		if err := s.record(ctx, batch, constant.ImportEventConflictRefused, nil, ""); err != nil {
 			return entity.ImportBatch{}, false, err
 		}
@@ -768,4 +958,132 @@ func (s *Service) storeStatement(ctx context.Context, in CreateInput) error {
 	}
 
 	return nil
+}
+
+func checkChunk(upload entity.ImportUpload, in ChunkInput) error {
+	if !upload.IsOpen() {
+		return fmt.Errorf("%w: upload %s is %s",
+			entity.ErrImportClosed, upload.Ref, upload.Status)
+	}
+
+	if in.ChunkTotal != upload.ChunkTotal {
+		return fmt.Errorf("%w: upload %s takes %d chunks, got %d",
+			entity.ErrImportChunkConflict, upload.Ref, upload.ChunkTotal, in.ChunkTotal)
+	}
+
+	if in.ChunkIndex < 0 || in.ChunkIndex >= upload.ChunkTotal {
+		return fmt.Errorf("%w: chunk %d is outside 0..%d",
+			entity.ErrInvalidImport, in.ChunkIndex, upload.ChunkTotal-1)
+	}
+
+	return nil
+}
+
+func acceptedOnly(rows []entity.ImportRow) []entity.ImportRow {
+	accepted := make([]entity.ImportRow, 0, len(rows))
+
+	for _, row := range rows {
+		if row.Status == constant.ImportRowStatusAccepted {
+			accepted = append(accepted, row)
+		}
+	}
+
+	return accepted
+}
+
+func (s *Service) upload(ctx context.Context, in ChunkInput) (entity.ImportUpload, error) {
+	upload, found, err := s.batches.ImportUploadByClientID(ctx, in.ClientID)
+	if err != nil {
+		return entity.ImportUpload{}, err
+	}
+
+	if found {
+		return upload, nil
+	}
+
+	now := s.clock.Now()
+
+	created, err := s.batches.InsertImportUpload(ctx, entity.ImportUpload{
+		ClientID:   in.ClientID,
+		Filename:   in.Filename,
+		ChunkTotal: in.ChunkTotal,
+		Status:     constant.ImportUploadStatusOpen,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	})
+	if err != nil {
+		return entity.ImportUpload{}, fmt.Errorf("open upload: %w", err)
+	}
+
+	return created, nil
+}
+
+func (s *Service) storeChunk(
+	ctx context.Context,
+	upload entity.ImportUpload,
+	in ChunkInput,
+) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.StoreChunk")
+	defer endSpan()
+
+	size, err := s.parts.Append(ctx, in.ClientID, in.Bytes)
+	if err != nil {
+		return false, err
+	}
+
+	inserted, err := s.batches.AppendImportChunk(
+		ctx, upload.Ref, in.ChunkIndex, int64(len(in.Bytes)), s.clock.Now())
+	if err != nil {
+		return false, err
+	}
+
+	if inserted {
+		return false, nil
+	}
+
+	return true, s.parts.Truncate(ctx, in.ClientID, size-int64(len(in.Bytes)))
+}
+
+func (s *Service) assemble(
+	ctx context.Context,
+	upload entity.ImportUpload,
+	in ChunkInput,
+) (ChunkResult, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Assemble")
+	defer endSpan()
+
+	body, err := s.parts.Read(ctx, in.ClientID)
+	if err != nil {
+		return ChunkResult{}, err
+	}
+
+	sum := sha256.Sum256(body)
+	fileHash := hex.EncodeToString(sum[:])
+
+	batch, created, err := s.Create(ctx, CreateInput{
+		ClientID:   in.ClientID,
+		AccountRef: in.AccountRef,
+		Filename:   upload.Filename,
+		FileHash:   fileHash,
+		Statement:  body,
+	})
+	if err != nil {
+		return ChunkResult{}, err
+	}
+
+	now := s.clock.Now()
+
+	if _, err := s.batches.CompleteImportUpload(ctx, upload.Ref, fileHash, now); err != nil {
+		return ChunkResult{}, err
+	}
+
+	if err := s.parts.Remove(ctx, in.ClientID); err != nil {
+		return ChunkResult{}, err
+	}
+
+	upload.Status = constant.ImportUploadStatusComplete
+	upload.FileHash = fileHash
+	upload.CompletedAt = &now
+
+	return ChunkResult{Upload: upload, Batch: batch, Created: created}, nil
 }

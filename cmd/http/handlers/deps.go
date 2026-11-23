@@ -31,10 +31,12 @@ type Deps struct {
 	Exports           exports.Contract
 	Sealer            seal.Sealer
 	BaseCurrency      string
+	Timezone          string
 	Version           string
 	HealthTimeout     time.Duration
 	MaxBodyBytes      int64
 	MaxArtifactBytes  int64
+	ImportMaxBytes    int64
 	WebOrigin         string
 	ExtractionEnabled bool
 	Logger            *logging.Logger

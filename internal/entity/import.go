@@ -8,10 +8,29 @@ import (
 )
 
 var (
-	ErrImportConflict = errors.New("client id already names another statement")
-	ErrImportClosed   = errors.New("import batch is already committed or rejected")
-	ErrInvalidImport  = errors.New("invalid statement")
+	ErrImportConflict      = errors.New("client id already names another statement")
+	ErrImportChunkConflict = errors.New("upload already takes another chunk count")
+	ErrImportClosed        = errors.New("import batch is already committed or rejected")
+	ErrImportCommitting    = errors.New("import batch is being committed")
+	ErrInvalidImport       = errors.New("invalid statement")
 )
+
+type ImportUpload struct {
+	ID             int64
+	Ref            string
+	ClientID       string
+	FileHash       string
+	Filename       string
+	ChunkTotal     int
+	ReceivedChunks int
+	ReceivedBytes  int64
+	Status         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	CompletedAt    *time.Time
+}
+
+func (u ImportUpload) IsOpen() bool { return u.Status == constant.ImportUploadStatusOpen }
 
 type ImportBatch struct {
 	ID          int64
@@ -30,8 +49,12 @@ type ImportBatch struct {
 }
 
 func (b ImportBatch) IsClosed() bool {
-	return b.Status == constant.ImportStatusCommitted || b.Status == constant.ImportStatusRejected
+	return b.Status == constant.ImportStatusCommitted ||
+		b.Status == constant.ImportStatusRejected ||
+		b.Status == constant.ImportStatusCommitting
 }
+
+func (b ImportBatch) IsCommitting() bool { return b.Status == constant.ImportStatusCommitting }
 
 type ImportRow struct {
 	ID            int64

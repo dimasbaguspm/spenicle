@@ -93,6 +93,7 @@ type Recurring interface {
 	) (bool, error)
 }
 
+//nolint:interfacebloat // one SQLite adapter owns the import tables; splitting it renames the same dep
 type Imports interface {
 	InsertImportBatch(ctx context.Context, batch entity.ImportBatch) (entity.ImportBatch, error)
 	ImportBatchByRef(ctx context.Context, ref string) (entity.ImportBatch, bool, error)
@@ -104,6 +105,14 @@ type Imports interface {
 	UpdateImportRow(ctx context.Context, row entity.ImportRow) (entity.ImportRow, error)
 	ExpiredImportBatches(ctx context.Context, now time.Time, limit int) ([]entity.ImportBatch, error)
 	DropImportBatch(ctx context.Context, ref string, event entity.ImportEvent) (int, error)
+	BeginImportCommit(ctx context.Context, ref string) (bool, error)
+	InsertImportUpload(ctx context.Context, upload entity.ImportUpload) (entity.ImportUpload, error)
+	ImportUploadByClientID(ctx context.Context, clientID string) (entity.ImportUpload, bool, error)
+	ImportUploadByRef(ctx context.Context, ref string) (entity.ImportUpload, bool, error)
+	AppendImportChunk(ctx context.Context, ref string, index int, bytes int64, at time.Time) (bool, error)
+	CompleteImportUpload(ctx context.Context, ref, fileHash string, at time.Time) (bool, error)
+	ExpiredImportUploads(ctx context.Context, before time.Time, limit int) ([]entity.ImportUpload, error)
+	DropImportUpload(ctx context.Context, ref string) (int, error)
 }
 
 type ImportEvents interface {

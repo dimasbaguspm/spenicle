@@ -38,7 +38,11 @@ None.
 ## Limitations
 
 Only `base_currency` is patchable so far; no reset of the entry lock —
-voiding entries does not unlock it, by design (the decision was made).
+voiding entries does not unlock it, by design (the decision was made). `timezone`
+is not patchable at all: it is set once at the first boot from `APP_TIMEZONE`
+(default `UTC`) and stored in the sealed row. Sending `timezone` in the body is
+ignored, and a boot whose `APP_TIMEZONE` differs from the stored value fails
+(`config: timezone is set once: stored "UTC", env "Asia/Jakarta"`).
 
 
 

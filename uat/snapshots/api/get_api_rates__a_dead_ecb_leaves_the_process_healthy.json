@@ -3,6 +3,7 @@
   "base_currency": "IDR",
   "schema_version": 1,
   "status": "ok",
+  "timezone": "UTC",
   "version": "<version>",
   "worker_last_run_at": ""
 }

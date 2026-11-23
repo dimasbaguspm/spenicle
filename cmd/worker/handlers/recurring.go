@@ -16,6 +16,8 @@ const (
 	catchUpCap     = 60
 	dueLimit       = 100
 	daysPerWeek    = 7
+	minutesPerHour = 60
+	minutesPerDay  = 24 * minutesPerHour
 	clientIDPrefix = "recurring:"
 	fallbackNote   = "recurring rule"
 )
@@ -26,7 +28,7 @@ func (r *Runner) Run(ctx context.Context) (Summary, error) {
 
 	now := r.clock.Now()
 
-	due, err := r.rules.DueRecurring(ctx, now, dueLimit)
+	due, err := r.rules.DueRecurring(ctx, localTime(now, 0, 0, r.zone()), dueLimit)
 	if err != nil {
 		return Summary{}, fmt.Errorf("due recurring rules: %w", err)
 	}
@@ -46,6 +48,7 @@ func (r *Runner) Run(ctx context.Context) (Summary, error) {
 	r.record(ctx, now)
 	r.collect(ctx, now)
 	r.collectImports(ctx, now)
+	r.collectUploads(ctx, now)
 	r.runExports(ctx, now)
 
 	return summary, firstErr
@@ -78,9 +81,10 @@ func (r *Runner) runRule(
 
 	telemetry.Ref(ctx, rule.Ref)
 
-	due := rule.NextDueOn
+	due := localTime(rule.NextDueOn, 0, 0, r.zone())
+	today := localTime(now, 0, 0, r.zone())
 
-	for count := 0; count < catchUpCap && !due.After(now) && !pastEnd(rule, due); count++ {
+	for count := 0; count < catchUpCap && !due.After(today) && !pastEnd(rule, due); count++ {
 		created, err := r.post(ctx, rule, due)
 		if err != nil {
 			summary.Failed++
@@ -203,6 +207,31 @@ func (r *Runner) tick(ctx context.Context) {
 	r.logger.Info(ctx, "recurring run finished",
 		slog.Int("posted", summary.Posted),
 		slog.Int("skipped", summary.Skipped))
+}
+
+// localTime is the wall clock of day in loc, clamped forward when the offset
+// skips it: 02:30 on a spring-forward morning becomes the 03:00 that exists.
+func localTime(day time.Time, hour, minute int, loc *time.Location) time.Time {
+	year, month, date := day.Date()
+	want := time.Date(year, month, date, hour, minute, 0, 0, loc)
+
+	if want.Hour() == hour && want.Minute() == minute {
+		return want
+	}
+
+	target := hour*minutesPerHour + minute
+	midnight := time.Date(year, month, date, 0, 0, 0, 0, loc)
+
+	for elapsed := 0; elapsed <= minutesPerDay; elapsed++ {
+		candidate := midnight.Add(time.Duration(elapsed) * time.Minute)
+		local := candidate.In(loc)
+
+		if local.Day() == date && local.Hour()*minutesPerHour+local.Minute() >= target {
+			return candidate
+		}
+	}
+
+	return want
 }
 
 func pastEnd(rule entity.Recurring, due time.Time) bool {

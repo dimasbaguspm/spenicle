@@ -2,17 +2,23 @@ package entity
 
 import (
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 )
+
+const DefaultTimezone = "UTC"
 
 var (
 	ErrPasswordMismatch   = errors.New("password does not match")
 	ErrBaseCurrencyLocked = errors.New("base currency is locked once the ledger has entries")
 	ErrWeakPassword       = errors.New("password must be at least 12 characters")
+	ErrTimezoneSetOnce    = errors.New("timezone is set once")
 )
 
 type Settings struct {
 	BaseCurrency       string `json:"base_currency"`
+	Timezone           string `json:"timezone,omitempty"`
 	PasswordHash       string `json:"password_hash,omitempty"`
 	PasswordMustChange bool   `json:"password_must_change,omitempty"`
 	ExtractionEnabled  bool   `json:"extraction_enabled,omitempty"`
@@ -26,6 +32,14 @@ func (s Settings) Validate() error {
 	trimmed := strings.ToUpper(strings.TrimSpace(s.BaseCurrency))
 	if _, err := CurrencyByCode(trimmed); err != nil {
 		return err
+	}
+
+	if s.Timezone == "" {
+		return nil
+	}
+
+	if _, err := time.LoadLocation(s.Timezone); err != nil {
+		return fmt.Errorf("timezone %q: %w", s.Timezone, err)
 	}
 
 	return nil

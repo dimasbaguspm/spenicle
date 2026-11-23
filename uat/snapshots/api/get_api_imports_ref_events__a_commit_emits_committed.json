@@ -9,6 +9,16 @@
     {
       "actor": "user",
       "at": "<timestamp>",
+      "kind": "committing",
+      "payload": {
+        "rows_done": 1,
+        "rows_total": 1
+      },
+      "ref": "<ref>"
+    },
+    {
+      "actor": "user",
+      "at": "<timestamp>",
       "kind": "row_accepted",
       "ref": "<ref>",
       "row_index": 0
