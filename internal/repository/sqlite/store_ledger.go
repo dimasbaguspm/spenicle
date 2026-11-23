@@ -101,9 +101,9 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 	)
 
 	err := s.db.QueryRowContext(ctx, `
-		SELECT id, occurred_on, payee_id, note, currency, source, created_at
+		SELECT id, ref, occurred_on, payee_id, note, currency, source, created_at
 		FROM ledger_entries WHERE client_id = ?`, clientID).
-		Scan(&e.ID, &occurred, &payeeID, &note, &e.Currency, &e.Source, &createdRaw)
+		Scan(&e.ID, &e.Ref, &occurred, &payeeID, &note, &e.Currency, &e.Source, &createdRaw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Entry{}, false, nil
 	}
