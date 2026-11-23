@@ -68,7 +68,8 @@ func newValidator() *validator.Validate {
 				return false
 			}
 		},
-		"ref": validRef,
+		"ref":         validRef,
+		"accountkind": validAccountKind,
 		"capturestatus": func(field validator.FieldLevel) bool {
 			switch field.Field().String() {
 			case constant.CaptureStatusExtracting, constant.CaptureStatusPending,
@@ -204,4 +205,14 @@ func validRef(field validator.FieldLevel) bool {
 	}
 
 	return true
+}
+
+func validAccountKind(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.AccountKindAsset, constant.AccountKindLiability,
+		constant.AccountKindExpense, constant.AccountKindIncome:
+		return true
+	default:
+		return false
+	}
 }

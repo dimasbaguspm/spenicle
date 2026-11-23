@@ -22,6 +22,7 @@ type Deps struct {
 	Captures          captures.Contract
 	Rates             rates.Contract
 	Accounts          repository.Accounts
+	Payees            repository.Payees
 	Health            repository.System
 	Sealer            seal.Sealer
 	BaseCurrency      string
@@ -56,6 +57,11 @@ func New(deps Deps) http.Handler {
 	mux.HandleFunc("POST /api/password", instance.handlePasswordChange)
 
 	mux.HandleFunc("GET /api/meta", instance.handleMeta)
+
+	mux.HandleFunc("POST /api/accounts", instance.handleCreateAccount)
+	mux.HandleFunc("PATCH /api/accounts/{ref}", instance.handlePatchAccount)
+	mux.HandleFunc("POST /api/payees", instance.handleCreatePayee)
+	mux.HandleFunc("PATCH /api/payees/{ref}", instance.handlePatchPayee)
 
 	mux.HandleFunc("GET /api/entries", instance.handleListEntries)
 	mux.HandleFunc("POST /api/entries", instance.handlePostEntry)

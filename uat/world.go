@@ -158,6 +158,7 @@ func (w *world) boot(ctx context.Context) error {
 		Ledger:        ledgerService,
 		Captures:      captures.New(store, ledgerService, sealer, nil, clockSystem, clockSystem),
 		Accounts:      store,
+		Payees:        store,
 		Health:        store,
 		Settings:      settingsService,
 		Rates:         ratesService,

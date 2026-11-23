@@ -51,4 +51,5 @@ var (
 	_ repository.Captures = (*Store)(nil)
 	_ repository.Accounts = (*Store)(nil)
 	_ repository.System   = (*Store)(nil)
+	_ repository.Payees   = (*Store)(nil)
 )

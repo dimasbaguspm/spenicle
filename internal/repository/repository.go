@@ -32,6 +32,7 @@ type Accounts interface {
 	CreateAccount(ctx context.Context, name, kind, currency string) (entity.Account, error)
 	FindAccount(ctx context.Context, name, kind string) (entity.Account, bool, error)
 	AccountByRef(ctx context.Context, ref string) (entity.Account, bool, error)
+	UpdateAccount(ctx context.Context, account entity.Account) (entity.Account, error)
 	ListAccounts(ctx context.Context) ([]entity.Account, error)
 	BalancesByAccount(ctx context.Context) (map[int64]int64, error)
 }
@@ -42,6 +43,12 @@ type System interface {
 	Setting(ctx context.Context, key string) (string, bool, error)
 	SetSetting(ctx context.Context, key, value string) error
 	HasEntries(ctx context.Context) (bool, error)
+}
+
+type Payees interface {
+	CreatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error)
+	PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool, error)
+	UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error)
 }
 
 type RateSource interface {

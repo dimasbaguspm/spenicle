@@ -71,10 +71,9 @@ func newApp(
 		return nil, err
 	}
 
-	clockSystem := clock.System{}
-	ledgerService := ledger.New(store, store, settingsService, clockSystem, clockSystem)
+	ledgerService := ledger.New(store, store, settingsService, clock.System{}, clock.System{})
 
-	ratesService, err := ratesFor(ctx, cfg, store, clockSystem, logger)
+	ratesService, err := ratesFor(ctx, cfg, store, clock.System{}, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -86,10 +85,11 @@ func newApp(
 		Handler: handlers.New(handlers.Deps{
 			Ledger: ledgerService,
 			Captures: captures.New(
-				store, ledgerService, sealer, extractor, clockSystem, clockSystem,
+				store, ledgerService, sealer, extractor, clock.System{}, clock.System{},
 			),
 			Rates:             ratesService,
 			Accounts:          store,
+			Payees:            store,
 			Settings:          settingsService,
 			Health:            store,
 			Sealer:            sealer,

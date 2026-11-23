@@ -1,0 +1,155 @@
+package sqlite
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"time"
+
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
+)
+
+const payeeColumns = `p.id, p.ref, p.name,
+	COALESCE(da.ref, ''), COALESCE(dc.ref, ''), p.archived_at, p.created_at`
+
+const payeeFrom = `FROM payees p
+	LEFT JOIN accounts da ON da.id = p.default_account_id
+	LEFT JOIN accounts dc ON dc.id = p.default_category_id`
+
+func (s *Store) CreatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreatePayee")
+	defer endSpan()
+
+	accountID, err := s.accountID(ctx, payee.DefaultAccountRef)
+	if err != nil {
+		return entity.Payee{}, err
+	}
+
+	categoryID, err := s.accountID(ctx, payee.DefaultCategoryRef)
+	if err != nil {
+		return entity.Payee{}, err
+	}
+
+	payee.Ref = uuid.New()
+	payee.CreatedAt = time.Now().UTC()
+
+	res, err := s.db.ExecContext(ctx, `
+		INSERT INTO payees (ref, name, default_account_id, default_category_id, archived_at, created_at)
+		VALUES (?, ?, ?, ?, NULL, ?)`,
+		payee.Ref,
+		payee.Name,
+		accountID,
+		categoryID,
+		payee.CreatedAt.Format(constant.TimestampLayout),
+	)
+	if err != nil {
+		return entity.Payee{}, fmt.Errorf("create payee %q: %w", payee.Name, err)
+	}
+
+	if payee.ID, err = res.LastInsertId(); err != nil {
+		return entity.Payee{}, fmt.Errorf("payee id: %w", err)
+	}
+
+	return payee, nil
+}
+
+func (s *Store) PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.PayeeByRef")
+	defer endSpan()
+
+	row := s.db.QueryRowContext(ctx,
+		`SELECT `+payeeColumns+` `+payeeFrom+` WHERE p.ref = ?`, ref)
+
+	payee, err := scanPayeeRow(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.Payee{}, false, nil
+	}
+
+	if err != nil {
+		return entity.Payee{}, false, fmt.Errorf("payee %q: %w", ref, err)
+	}
+
+	return payee, true, nil
+}
+
+func (s *Store) UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdatePayee")
+	defer endSpan()
+
+	accountID, err := s.accountID(ctx, payee.DefaultAccountRef)
+	if err != nil {
+		return entity.Payee{}, err
+	}
+
+	categoryID, err := s.accountID(ctx, payee.DefaultCategoryRef)
+	if err != nil {
+		return entity.Payee{}, err
+	}
+
+	if _, err := s.db.ExecContext(ctx, `
+		UPDATE payees SET name = ?, default_account_id = ?, default_category_id = ?,
+			archived_at = ?
+		WHERE ref = ?`,
+		payee.Name,
+		accountID,
+		categoryID,
+		nullTime(payee.ArchivedAt),
+		payee.Ref,
+	); err != nil {
+		return entity.Payee{}, fmt.Errorf("update payee %q: %w", payee.Ref, err)
+	}
+
+	return payee, nil
+}
+
+func (s *Store) accountID(ctx context.Context, ref string) (sql.NullInt64, error) {
+	if ref == "" {
+		return sql.NullInt64{}, nil
+	}
+
+	account, found, err := s.AccountByRef(ctx, ref)
+	if err != nil {
+		return sql.NullInt64{}, err
+	}
+
+	if !found {
+		return sql.NullInt64{}, fmt.Errorf("%w: account %s", entity.ErrNotFound, ref)
+	}
+
+	return sql.NullInt64{Int64: account.ID, Valid: true}, nil
+}
+
+func scanPayeeRow(scanner interface{ Scan(dest ...any) error }) (entity.Payee, error) {
+	var (
+		payee      entity.Payee
+		archivedAt sql.NullString
+		createdRaw string
+	)
+
+	if err := scanner.Scan(&payee.ID, &payee.Ref, &payee.Name,
+		&payee.DefaultAccountRef, &payee.DefaultCategoryRef, &archivedAt, &createdRaw); err != nil {
+		return entity.Payee{}, err
+	}
+
+	if archivedAt.Valid {
+		at, err := time.Parse(constant.TimestampLayout, archivedAt.String)
+		if err != nil {
+			return entity.Payee{}, fmt.Errorf("archived_at %q: %w", archivedAt.String, err)
+		}
+
+		payee.ArchivedAt = &at
+	}
+
+	createdAt, err := time.Parse(constant.TimestampLayout, createdRaw)
+	if err != nil {
+		return entity.Payee{}, fmt.Errorf("created_at %q: %w", createdRaw, err)
+	}
+
+	payee.CreatedAt = createdAt
+
+	return payee, nil
+}

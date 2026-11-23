@@ -705,6 +705,25 @@ started with.
 
 ---
 
+## Accounts and payees
+
+Two routes, the same shape as the rest: refs in, refs out, `422` for a bad value and
+`404` for a ref nobody owns.
+
+| method | path | body | 201 / 200 |
+| --- | --- | --- | --- |
+| `POST` | `/api/accounts` | `name`, `kind` (`asset`, `liability`, `expense`, `income`), optional `currency` (defaults to the base) | the account: `ref`, `name`, `kind`, `currency`, `archived` |
+| `PATCH` | `/api/accounts/{ref}` | any of `name`, `icon`, `archived` | the account |
+| `POST` | `/api/payees` | `name`, optional `default_account_ref`, `default_category_ref` | the payee: `ref`, `name`, both refs, `archived` |
+| `PATCH` | `/api/payees/{ref}` | any of `name`, the two refs, `archived` | the payee |
+
+`kind` is the one fixed vocabulary (`422 invalid_request` otherwise). An unknown
+currency is `422 unknown_currency`; a default account ref nobody owns is `422
+unknown_reference`. Creating an account with a `name`+`kind` pair that already exists
+is refused by the unique index, not by a check in the handler.
+
+---
+
 ## Planned, not implemented
 
 Designed in [`v2-api.md`](./v2-api.md), no handler yet. Listed so nobody guesses:
@@ -712,9 +731,7 @@ Designed in [`v2-api.md`](./v2-api.md), no handler yet. Listed so nobody guesses
 | method | path | purpose | would touch |
 | --- | --- | --- | --- |
 | `POST` | `/api/setup` | wizard: currency, first account, opening balance | settings, accounts, ledger |
-| `POST` | `/api/accounts` | create account or category, optional opening balance | accounts, ledger, audit |
 | `PATCH` | `/api/accounts/{ref}` | rename, icon, reparent, archive | accounts, audit |
-| `POST` | `/api/payees` | create payee | payees, audit |
 | `PATCH` | `/api/payees/{ref}` | rename, defaults, archive | payees, audit |
 | `POST` | `/api/recurring` | create a rule, or promote an entry | recurring_rules, captures |
 | `PATCH` | `/api/recurring/{ref}` | accept, pause, end, edit | recurring_rules, audit |

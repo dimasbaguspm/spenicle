@@ -82,6 +82,34 @@ func (s *Store) FindAccount(ctx context.Context, name, kind string) (entity.Acco
 	return account, true, nil
 }
 
+func (s *Store) UpdateAccount(ctx context.Context, account entity.Account) (entity.Account, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateAccount")
+	defer endSpan()
+
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE accounts SET name = ?, icon = ?, archived_at = ?
+		WHERE ref = ?`,
+		account.Name,
+		nullString(account.Icon),
+		nullTime(account.ArchivedAt),
+		account.Ref,
+	)
+	if err != nil {
+		return entity.Account{}, fmt.Errorf("update account %q: %w", account.Ref, err)
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return entity.Account{}, fmt.Errorf("account rows: %w", err)
+	}
+
+	if affected == 0 {
+		return entity.Account{}, fmt.Errorf("%w: account %s", entity.ErrNotFound, account.Ref)
+	}
+
+	return account, nil
+}
+
 func (s *Store) AccountByRef(
 	ctx context.Context,
 	ref string,
