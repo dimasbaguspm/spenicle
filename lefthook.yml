@@ -26,7 +26,7 @@ pre-commit:
 
     - name: uat
       glob: "**/*.go"
-      run: go test ./uat/ -count=1 -run TestFeatures
+      run: go test ./uat/ -count=1
 
 # Pushing is the last cheap place to catch a broken tree; skip it with `git push
 # --no-verify` when you have already run the pre-commit hook.
@@ -39,4 +39,4 @@ pre-push:
 
     - name: uat
       glob: "**/*.go"
-      run: go test ./uat/ -count=1 -run TestFeatures
+      run: go test ./uat/ -count=1

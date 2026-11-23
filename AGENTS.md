@@ -77,9 +77,8 @@ make hooks      # install the git hook (build + lint + test + UAT before commit)
 make build      # bin/spenicle
 make run        # DATA_DIR=./data ADDR=:8080 go run ./cmd/http
 make test       # go test ./... (unit + UAT)
-make bdd        # godog suite only, verbose
+make uat        # the Gherkin suite plus the containerised mock services (needs Docker)
 make uat-snapshots   # rewrite snapshot files, then review the diff
-make uat-containers  # UAT against real containers (Docker; opt-in)
 make cover      # coverage over the whole module
 make fmt        # gofmt the tree
 make lint       # all four groups; every one must stay at 0 issues
@@ -168,9 +167,9 @@ the build you think it is.
   ```
 
 - Repetition goes in `Scenario Outline` + `Examples` (`uat/features/contract.feature`).
-- External services are the only things mocked, and only in the container suite:
-  `uat/containers_test.go` (build tag `uat_containers`) runs `testdata/fake_vendor.py`
-  in a container and points the real adapter at it.
+- External services are the only things mocked, and they are Go programs under
+  `uat/mock/`: `uat/mock_test.go` builds that binary, runs it in a container through
+  testcontainers and points the real adapter at it. No Docker means the test skips.
 - `uat` assembles the dependency graph by hand because `cmd/http` is `package main`
   and therefore not importable. Adding a dependency to `cmd/http/bootstrap.go` means
   adding it to `uat/world.go` too. Seeds, schema and first-boot settings live in the

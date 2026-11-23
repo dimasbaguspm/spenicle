@@ -1,13 +1,12 @@
-//go:build uat_containers
-
-// The tag is deliberate: this suite pulls container images and needs Docker, so it is
-// opt-in (`make uat-containers`) and never part of `make test` or the git hook.
 package uat_test
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -27,24 +26,44 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
-const vendorKey = "project-key"
+const (
+	mockImage  = "gcr.io/distroless/static-debian12:nonroot"
+	mockPort   = "8080/tcp"
+	mockKey    = "project-key"
+	mockBinary = "mock"
+)
 
-func startVendor(t *testing.T) string {
+func buildMock(t *testing.T) string {
+	t.Helper()
+
+	binary := filepath.Join(t.TempDir(), mockBinary)
+
+	build := exec.CommandContext(t.Context(), "go", "build", "-o", binary, "./"+mockBinary)
+	build.Env = append(os.Environ(), "CGO_ENABLED=0")
+
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build the mock service: %v\n%s", err, output)
+	}
+
+	return binary
+}
+
+func startMock(t *testing.T) string {
 	t.Helper()
 
 	ctx := t.Context()
 
 	request := testcontainers.ContainerRequest{
-		Image:        "python:3-alpine",
-		ExposedPorts: []string{"8080/tcp"},
+		Image:        mockImage,
+		ExposedPorts: []string{mockPort},
 		Files: []testcontainers.ContainerFile{{
-			HostFilePath:      filepath.Join("testdata", "fake_vendor.py"),
-			ContainerFilePath: "/vendor.py",
-			FileMode:          0o644,
+			HostFilePath:      buildMock(t),
+			ContainerFilePath: "/" + mockBinary,
+			FileMode:          0o755,
 		}},
-		Cmd: []string{"python3", "/vendor.py"},
+		Cmd: []string{"/" + mockBinary},
 		WaitingFor: tcwait.ForHTTP("/healthz").
-			WithPort("8080/tcp").
+			WithPort(mockPort).
 			WithStartupTimeout(90 * time.Second),
 	}
 
@@ -53,7 +72,7 @@ func startVendor(t *testing.T) string {
 		Started:          true,
 	})
 	if err != nil {
-		t.Skipf("Docker is not available, skipping the container suite: %v", err)
+		t.Skipf("Docker is not available, skipping the mock services: %v", err)
 	}
 
 	t.Cleanup(func() {
@@ -65,12 +84,12 @@ func startVendor(t *testing.T) string {
 		t.Fatalf("container host: %v", err)
 	}
 
-	mapped, err := container.MappedPort(ctx, "8080/tcp")
+	mapped, err := container.MappedPort(ctx, mockPort)
 	if err != nil {
 		t.Fatalf("container port: %v", err)
 	}
 
-	return fmt.Sprintf("http://%s:%s/partner/v1/snaps", host, mapped.Port())
+	return fmt.Sprintf("http://%s/partner/v1/snaps", net.JoinHostPort(host, mapped.Port()))
 }
 
 func newCaptures(t *testing.T, endpoint string) *captures.Service {
@@ -85,8 +104,8 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 
 	t.Cleanup(func() { _ = store.Close(context.WithoutCancel(ctx)) })
 
-	if err := sqlite.Migrate(ctx, store.DB()); err != nil {
-		t.Fatalf("migrate: %v", err)
+	if migrateErr := sqlite.Migrate(ctx, store.DB()); migrateErr != nil {
+		t.Fatalf("migrate: %v", migrateErr)
 	}
 
 	sealer, err := seal.New("0123456789abcdef")
@@ -94,7 +113,7 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 		t.Fatalf("sealer: %v", err)
 	}
 
-	extractor, err := snaptojson.New(endpoint, vendorKey, 10*time.Second)
+	extractor, err := snaptojson.New(endpoint, mockKey, 10*time.Second)
 	if err != nil {
 		t.Fatalf("extractor: %v", err)
 	}
@@ -109,8 +128,8 @@ type fixedCurrency struct{ code string }
 
 func (f fixedCurrency) BaseCurrency(context.Context) (string, error) { return f.code, nil }
 
-func TestContainerVendorSubmitAndReadBack(t *testing.T) {
-	endpoint := startVendor(t)
+func TestMockVendorSubmitAndReadBack(t *testing.T) {
+	endpoint := startMock(t)
 	service := newCaptures(t, endpoint)
 
 	ctx := t.Context()
@@ -157,8 +176,8 @@ func TestContainerVendorSubmitAndReadBack(t *testing.T) {
 	}
 }
 
-func TestContainerVendorRefusesAReadBackWithoutAJobRef(t *testing.T) {
-	endpoint := startVendor(t)
+func TestMockVendorRefusesAReadBackWithoutAJobRef(t *testing.T) {
+	endpoint := startMock(t)
 	service := newCaptures(t, endpoint)
 
 	ctx := t.Context()
