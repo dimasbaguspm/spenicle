@@ -1,6 +1,6 @@
 # Spenicle v2 — Design
 
-Status: decisions locked, not yet implemented. Operational docs: [`v2-readme.md`](./v2-readme.md).
+Status: decisions locked, not yet implemented. Operational docs: [`../README.md`](../README.md).
 Schema and API: [`v2-api.md`](./v2-api.md). v1 is frozen on branch `v1`, tag `v1.0.0-locked`.
 
 ## Goal

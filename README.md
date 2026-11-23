@@ -4,7 +4,7 @@ A self-hosted expense tracker for one person who does not want to keep a spreads
 One container, one file, one command. Built so that a missed week does not become a quit.
 
 Not yet built — this is the target the implementation is measured against.
-Design: [`v2-design.md`](./v2-design.md). Schema and API: [`v2-api.md`](./v2-api.md).
+Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and API: [`docs/v2-api.md`](./docs/v2-api.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md).
 
 ## Why v2
 
@@ -24,7 +24,7 @@ docker run -d --name spenicle \
   -v spenicle-data:/data \
   -e APP_SECRET="$(openssl rand -base64 32)" \
   -e PASSWORD="your-password" \
-  ghcr.io/dimasbaguspm/spenicle:edge
+  ghcr.io/dimasbaguspm/spenicle:latest
 ```
 
 Then open `http://localhost:8080`. Migrations run on boot; there is no migration step.
@@ -34,13 +34,24 @@ With compose:
 ```yaml
 services:
   spenicle:
-    image: ghcr.io/dimasbaguspm/spenicle:edge
+    image: ghcr.io/dimasbaguspm/spenicle:latest
     restart: unless-stopped
     ports: ["8080:8080"]
-    volumes: ["./data:/data"]
+    volumes: ["spenicle-data:/data"]
     environment:
       APP_SECRET: "paste-a-32-byte-secret"
       PASSWORD: "your-password"
+
+volumes:
+  spenicle-data:
+```
+
+The container runs as uid `10001`, not root. A **named volume** (above) inherits the
+right ownership automatically. If you prefer a bind mount for easier backups, give the
+host directory to that uid first:
+
+```bash
+sudo chown -R 10001:10001 ./data
 ```
 
 ## Environment

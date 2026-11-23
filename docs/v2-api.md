@@ -1,6 +1,6 @@
 # Spenicle v2 — Data model & API
 
-Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`v2-readme.md`](./v2-readme.md).
+Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`../README.md`](../README.md).
 
 **10 tables, 21 endpoints, one sequence diagram each.**
 
