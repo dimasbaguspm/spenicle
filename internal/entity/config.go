@@ -28,6 +28,7 @@ type AppConfig struct {
 	ShutdownTimeout          time.Duration
 	TelemetryShutdownTimeout time.Duration
 	HealthTimeout            time.Duration
+	WorkerInterval           time.Duration
 
 	MaxBodyBytes int64
 

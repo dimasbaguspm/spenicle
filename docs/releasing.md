@@ -69,8 +69,8 @@ If you want a binary outside Docker, build it from the tag:
 ```bash
 git checkout v0.2.0
 CGO_ENABLED=0 go build -trimpath \
-  -ldflags "-s -w -X main.version=$(git describe --tags --always)+$(git rev-parse --short=7 HEAD)" \
-  -o spenicle ./cmd/http
+  -ldflags "-s -w -X github.com/dimasbaguspm/spenicle/internal/app.Version=$(git describe --tags --always)+$(git rev-parse --short=7 HEAD)" \
+  -o spenicle ./cmd/spenicle
 ```
 
 Pin a deployment to the digest, not the tag, when reproducibility matters:

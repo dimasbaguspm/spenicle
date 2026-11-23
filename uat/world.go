@@ -33,6 +33,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
+	"github.com/dimasbaguspm/spenicle/internal/worker"
 )
 
 const (
@@ -80,6 +81,32 @@ type world struct {
 	rates       *rates.Service
 	dbBroken    bool
 	lastRef     string
+
+	ledger        ledger.Contract
+	asOf          time.Time
+	workerSummary worker.Summary
+}
+
+type fixedClock struct{ at time.Time }
+
+func (c fixedClock) Now() time.Time { return c.at }
+
+func (w *world) runRecurring(ctx context.Context) error {
+	if w.store == nil {
+		return errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	clockSource := worker.TimeSource(fixedClock{at: w.asOf})
+	if w.asOf.IsZero() {
+		clockSource = clock.System{}
+	}
+
+	runner := worker.New(w.store, w.store, w.ledger, clockSource, slog.New(w.logs))
+
+	summary, err := runner.Run(ctx)
+	w.workerSummary = summary
+
+	return err
 }
 
 type logSink struct {
@@ -259,11 +286,12 @@ func (w *world) boot(ctx context.Context) error {
 		return fmt.Errorf("accounts: %w", err)
 	}
 
+	w.store = store
+	w.ledger = ledgerService
+
 	for _, account := range accounts {
 		w.accounts[account.Name] = account.Ref
 	}
-
-	w.store = store
 
 	queue := captures.New(store, ledgerService, sealer, built.extractor, clockSystem, clockSystem)
 

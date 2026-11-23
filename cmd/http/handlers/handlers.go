@@ -30,6 +30,7 @@ type Deps struct {
 	Sealer            seal.Sealer
 	BaseCurrency      string
 	Version           string
+	WorkerLastRun     func() time.Time
 	HealthTimeout     time.Duration
 	MaxBodyBytes      int64
 	WebOrigin         string

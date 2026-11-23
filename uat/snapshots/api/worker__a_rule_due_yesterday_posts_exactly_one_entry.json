@@ -1,0 +1,41 @@
+{
+  "entries": [
+    {
+      "currency": "IDR",
+      "note": "Kopi Kenangan",
+      "occurred_on": "2026-04-14",
+      "postings": [
+        {
+          "account": {
+            "kind": "asset",
+            "name": "Cash",
+            "ref": "<ref>"
+          },
+          "account_ref": "<ref>",
+          "amount_minor": "-25000",
+          "base_amount_minor": "-25000",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        },
+        {
+          "account": {
+            "kind": "expense",
+            "name": "Unsorted",
+            "ref": "<ref>"
+          },
+          "account_ref": "<ref>",
+          "amount_minor": "25000",
+          "base_amount_minor": "25000",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        }
+      ],
+      "ref": "<ref>",
+      "source": "recurring"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

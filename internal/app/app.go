@@ -1,5 +1,9 @@
-// Command spenicle is the whole product: one binary, one file, one port.
-package main
+// Package app is the composition root: it reads the environment, wires the
+// adapters and decides which long-running loops this process serves.
+//
+// One image, three calls: "http" serves the API, "worker" only posts the due
+// recurring rules, and "all" (the default) does both in this one process.
+package app
 
 import (
 	"context"
@@ -8,8 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
+	"sync"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
@@ -17,19 +20,15 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-var version = "dev"
+const (
+	ModeHTTP   = "http"
+	ModeWorker = "worker"
+	ModeAll    = "all"
+)
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "spenicle: %v\n", err)
-		os.Exit(1)
-	}
-}
+var Version = "dev" //nolint:gochecknoglobals // the build stamp, set once with -ldflags -X
 
-func run() error {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+func Run(ctx context.Context, mode string) error {
 	cfg, err := config.Load(ctx)
 	if err != nil {
 		return err
@@ -40,15 +39,16 @@ func run() error {
 
 	shutdownTelemetry, err := telemetry.Setup(ctx, telemetry.Config{
 		ServiceName: cfg.ServiceName,
-		Version:     version,
+		Version:     Version,
 		Endpoint:    cfg.OTLPEndpoint,
 	})
 	if err != nil {
 		return fmt.Errorf("telemetry: %w", err)
 	}
+
 	defer flushTelemetry(ctx, logger, cfg.TelemetryShutdownTimeout, shutdownTelemetry)
 
-	application, err := newApp(ctx, cfg, version, logger)
+	application, err := newApp(ctx, cfg, Version, logger)
 	if err != nil {
 		return err
 	}
@@ -59,18 +59,58 @@ func run() error {
 		}
 	}()
 
-	return serve(ctx, cfg, application, logger)
+	return application.serve(ctx, mode, cfg, logger)
 }
 
-func serve(
+func (a *app) serve(
+	ctx context.Context,
+	mode string,
+	cfg entity.AppConfig,
+	logger *slog.Logger,
+) error {
+	switch mode {
+	case ModeHTTP:
+		return a.listen(ctx, cfg, logger)
+	case ModeWorker:
+		a.runWorker(ctx, cfg, logger)
+
+		return nil
+	case ModeAll:
+		var running sync.WaitGroup
+
+		running.Add(1)
+
+		go func() {
+			defer running.Done()
+
+			a.runWorker(ctx, cfg, logger)
+		}()
+
+		listenErr := a.listen(ctx, cfg, logger)
+
+		running.Wait()
+
+		return listenErr
+	default:
+		return fmt.Errorf("unknown mode %q: want %q, %q or %q", mode, ModeHTTP, ModeWorker, ModeAll)
+	}
+}
+
+func (a *app) runWorker(ctx context.Context, cfg entity.AppConfig, logger *slog.Logger) {
+	logger.InfoContext(ctx, "recurring worker started",
+		slog.Duration("every", cfg.WorkerInterval))
+
+	a.Worker.Serve(ctx, cfg.WorkerInterval)
+}
+
+func (a *app) listen(
 	ctx context.Context,
 	cfg entity.AppConfig,
-	application *app,
 	logger *slog.Logger,
 ) error {
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           application.Handler,
+		Handler:           a.Handler,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
@@ -82,9 +122,9 @@ func serve(
 	go func() {
 		logger.InfoContext(ctx, "listening",
 			slog.String("addr", cfg.Addr),
-			slog.String("base_currency", application.BaseCurrency),
+			slog.String("base_currency", a.BaseCurrency),
 			slog.Bool("sealed", cfg.Sealed()),
-			slog.String("version", version))
+			slog.String("version", Version))
 
 		if listenErr := srv.ListenAndServe(); listenErr != nil &&
 			!errors.Is(listenErr, http.ErrServerClosed) {

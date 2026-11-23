@@ -18,10 +18,10 @@ hooks: ## install the git hooks (lefthook: build, lint, test, UAT before commit)
 	lefthook install
 
 build: ## compile the single binary
-	$(GO) build -o $(BIN) ./cmd/http
+	$(GO) build -o $(BIN) ./cmd/spenicle
 
 run: ## run locally against ./data
-	DATA_DIR=./data ADDR=:8080 $(GO) run ./cmd/http
+	DATA_DIR=./data ADDR=:8080 $(GO) run ./cmd/spenicle
 
 test: ## unit and integration tests
 	$(GO) test ./... -count=1

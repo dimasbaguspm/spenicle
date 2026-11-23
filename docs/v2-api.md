@@ -950,7 +950,7 @@ sequenceDiagram
 
 ## 3.21 `GET /healthz`
 
-`200 {"status":"ok","schema_version":3,"app_secret":"sealed","rate_cache_age_s":3600}`
+`200 {"status":"ok","schema_version":3,"app_secret":"sealed","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}`
 
 ```mermaid
 sequenceDiagram
@@ -976,7 +976,7 @@ sequenceDiagram
 | worker | trigger | writes |
 | --- | --- | --- |
 | `ExtractionWorker` | queue, only when extraction enabled | `captures.draft_json`, `captures.status` |
-| `RecurringWorker` | hourly | `captures` with `kind='recurring'`, advances `next_due_on` |
+| `RecurringWorker` | hourly (`spenicle worker` or `all`) | `ledger_entries` with `source='recurring'`, advances `next_due_on` |
 | `DetectionWorker` | weekly | `recurring_rules` `origin='detected'` |
 | `RateWorker` | boot + 16:30 CET | `fx_rates`, memory cache |
 | `IntegrityWorker` | boot + after import | zero-sum verification, reports to `audit_log` |

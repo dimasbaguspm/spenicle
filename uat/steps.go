@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cucumber/godog"
 
@@ -48,6 +49,9 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the boot fails$`, theBootFails)
 	sc.Step(`^the boot failure mentions "([^"]*)"$`, theBootFailureMentions)
 	sc.Step(`^the failure is logged$`, theFailureIsLogged)
+	sc.Step(`^the recurring worker clock is "([^"]*)"$`, theRecurringWorkerClockIs)
+	sc.Step(`^the recurring worker reports "(\d+)" (posted|skipped|failed)$`, theRecurringWorkerReports)
+	sc.Step(`^the recurring worker runs$`, theRecurringWorkerRuns)
 	sc.Step(`^the store holds:$`, theStoreHolds)
 	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)
 	sc.Step(`^the database matches the snapshot "([^"]*)"$`, databaseMatchesSnapshot)
@@ -585,6 +589,57 @@ func theFailureIsLogged(ctx context.Context) (context.Context, error) {
 
 	if w.logs.failure() == "" {
 		return ctx, errors.New("nothing was logged at error level")
+	}
+
+	return ctx, nil
+}
+
+func theRecurringWorkerClockIs(ctx context.Context, day string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	at, err := time.Parse(constant.DateLayout, day)
+	if err != nil {
+		return ctx, err
+	}
+
+	w.asOf = at
+
+	return ctx, nil
+}
+
+func theRecurringWorkerRuns(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.runRecurring(ctx)
+}
+
+func theRecurringWorkerReports(ctx context.Context, want int, counter string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	var got int
+
+	switch counter {
+	case "posted":
+		got = w.workerSummary.Posted
+	case "skipped":
+		got = w.workerSummary.Skipped
+	case "failed":
+		got = w.workerSummary.Failed
+	default:
+		return ctx, fmt.Errorf("unknown worker counter %q", counter)
+	}
+
+	if got != want {
+		return ctx, fmt.Errorf("the worker reported %d %s, want %d", got, counter, want)
 	}
 
 	return ctx, nil

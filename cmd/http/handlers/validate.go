@@ -225,8 +225,8 @@ func validAccountKind(field validator.FieldLevel) bool {
 
 func validCadence(field validator.FieldLevel) bool {
 	switch field.Field().String() {
-	case constant.RecurringCadenceWeekly, constant.RecurringCadenceMonthly,
-		constant.RecurringCadenceYearly:
+	case constant.RecurringCadenceDaily, constant.RecurringCadenceWeekly,
+		constant.RecurringCadenceMonthly, constant.RecurringCadenceYearly:
 		return true
 	default:
 		return false

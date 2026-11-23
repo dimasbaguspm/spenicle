@@ -56,6 +56,7 @@ const (
 	DefaultShutdownTimeout          = 10 * time.Second
 	DefaultTelemetryShutdownTimeout = 5 * time.Second
 	DefaultHealthTimeout            = 2 * time.Second
+	DefaultWorkerInterval           = time.Hour
 
 	DefaultMaxBodyBytes   int64 = 1 << 20
 	DefaultDBMaxOpenConns       = 4
@@ -82,6 +83,7 @@ func Defaults() entity.AppConfig {
 		ShutdownTimeout:          DefaultShutdownTimeout,
 		TelemetryShutdownTimeout: DefaultTelemetryShutdownTimeout,
 		HealthTimeout:            DefaultHealthTimeout,
+		WorkerInterval:           DefaultWorkerInterval,
 		MaxBodyBytes:             DefaultMaxBodyBytes,
 		DBMaxOpenConns:           DefaultDBMaxOpenConns,
 		DBMaxIdleConns:           DefaultDBMaxIdleConns,

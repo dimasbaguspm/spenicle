@@ -102,6 +102,44 @@ func (s *Store) RecurringByRef(ctx context.Context, ref string) (entity.Recurrin
 	return rule, true, nil
 }
 
+func (s *Store) DueRecurring(
+	ctx context.Context,
+	asOf time.Time,
+	limit int,
+) ([]entity.Recurring, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.DueRecurring")
+	defer endSpan()
+
+	rows, err := s.db.QueryContext(ctx, `SELECT `+recurringColumns+` `+recurringFrom+
+		` WHERE r.state = ? AND r.next_due_on <= ? ORDER BY r.next_due_on, r.id LIMIT ?`,
+		constant.RecurringStateActive,
+		asOf.Format(constant.DateLayout),
+		limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select due recurring rules: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	out := make([]entity.Recurring, 0, limit)
+
+	for rows.Next() {
+		rule, scanErr := scanRecurringRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+
+		out = append(out, rule)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate due recurring rules: %w", err)
+	}
+
+	return out, nil
+}
+
 func (s *Store) ListRecurring(
 	ctx context.Context,
 	filter entity.RecurringFilter,
@@ -170,6 +208,34 @@ func (s *Store) UpdateRecurring(ctx context.Context, rule entity.Recurring) (ent
 	}
 
 	return rule, nil
+}
+
+func (s *Store) AdvanceRecurring(
+	ctx context.Context,
+	ref string,
+	from, to, postedAt time.Time,
+) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.AdvanceRecurring")
+	defer endSpan()
+
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE recurring_rules SET next_due_on = ?, last_posted_on = ?
+		WHERE ref = ? AND next_due_on = ?`,
+		to.Format(constant.DateLayout),
+		postedAt.Format(constant.DateLayout),
+		ref,
+		from.Format(constant.DateLayout),
+	)
+	if err != nil {
+		return false, fmt.Errorf("advance recurring %q: %w", ref, err)
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("recurring rows: %w", err)
+	}
+
+	return affected == 1, nil
 }
 
 func dayOfMonth(day int) *int64 {

@@ -12,8 +12,8 @@ COPY . .
 ARG VERSION=dev
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath \
-    -ldflags="-s -w -X main.version=${VERSION}" \
-    -o /out/spenicle ./cmd/http
+    -ldflags="-s -w -X github.com/dimasbaguspm/spenicle/internal/app.Version=${VERSION}" \
+    -o /out/spenicle ./cmd/spenicle
 
 FROM alpine:3.22
 
@@ -25,7 +25,7 @@ RUN apk add --no-cache ca-certificates tzdata \
     && mkdir -p /data \
     && chown spenicle:spenicle /data
 
-COPY --from=build /out/spenicle /usr/local/bin/spenicle
+COPY --from=build /out/spenicle /spenicle
 
 USER spenicle
 WORKDIR /data
@@ -35,4 +35,5 @@ EXPOSE 8080
 ENV DATA_DIR=/data \
     ADDR=:8080
 
-ENTRYPOINT ["/usr/local/bin/spenicle"]
+ENTRYPOINT ["/spenicle"]
+CMD ["all"]

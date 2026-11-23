@@ -68,7 +68,13 @@ type Recurring interface {
 	CreateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error)
 	RecurringByRef(ctx context.Context, ref string) (entity.Recurring, bool, error)
 	ListRecurring(ctx context.Context, filter entity.RecurringFilter) ([]entity.Recurring, error)
+	DueRecurring(ctx context.Context, asOf time.Time, limit int) ([]entity.Recurring, error)
 	UpdateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error)
+	AdvanceRecurring(
+		ctx context.Context,
+		ref string,
+		from, to, postedAt time.Time,
+	) (bool, error)
 }
 
 type RateSource interface {

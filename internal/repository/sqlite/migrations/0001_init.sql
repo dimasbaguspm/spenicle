@@ -63,7 +63,7 @@ CREATE TABLE recurring_rules (
   category_id        INTEGER REFERENCES accounts(id),
   amount_minor       INTEGER NOT NULL,
   currency           TEXT NOT NULL,
-  cadence            TEXT NOT NULL CHECK (cadence IN ('weekly','monthly','yearly')),
+  cadence            TEXT NOT NULL CHECK (cadence IN ('daily','weekly','monthly','yearly')),
   interval_n         INTEGER NOT NULL DEFAULT 1,
   day_of_month       INTEGER CHECK (day_of_month BETWEEN 1 AND 31),
   business_day_shift TEXT NOT NULL DEFAULT 'none'

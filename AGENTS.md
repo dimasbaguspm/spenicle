@@ -38,9 +38,9 @@ the document wins until you change the document too.
 ## Layout
 
 ```
-cmd/http/              main.go · bootstrap.go (composition root; owns the wiring)
+cmd/spenicle/          main.go: the mode argument and the signal wiring only
+internal/app/          composition root: reads config, owns the wiring, runs a mode
 cmd/http/handlers/     route table + one file per endpoint group
-cmd/http/middlewares/  recovery, span per request, structured request log
 uat/                   godog suite: uat.go, steps.go, world.go, features/
 internal/common/       no business logic: config, clock, seal, otel, httpx, uuid, binding
 internal/constant/     every fixed value shared by more than one package
@@ -48,6 +48,11 @@ internal/entity/       shared structs + invariants; imports stdlib + constant on
 internal/module/       business logic: ledger, captures, rates, settings
 internal/repository/   contracts, plus the adapters: sqlite, ecb, extraction/{snaptojson,openai}
 ```
+
+The binary takes one argument, `spenicle [http|worker|all]`, defaulting to `all`:
+`http` serves the API only, `worker` posts the due recurring rules only and opens no
+port, `all` runs both in this one process under the same context. Anything else is a
+usage error and exit code 2.
 
 Rules that keep it pluggable:
 
@@ -70,7 +75,7 @@ Rules that keep it pluggable:
 - Every method that crosses a boundary takes `ctx context.Context` first and opens one
   span named after the layer: `Repository.Sqlite.InsertEntry`, `Module.Ledger.Post`,
   `Handler.Entries.Post`, `Common.Seal.Seal`. There is exactly one
-  `context.Background()`, in `cmd/http/main.go`, wrapped in `signal.NotifyContext`;
+  `context.Background()`, in `cmd/spenicle/main.go`, wrapped in `signal.NotifyContext`;
   everything derives from it. Pure value code (`entity` validation, `clock`) takes no
   context and opens no span.
 
@@ -79,7 +84,7 @@ Rules that keep it pluggable:
 ```bash
 make hooks      # install the git hook (build + lint + test + UAT before commit)
 make build      # bin/spenicle
-make run        # DATA_DIR=./data ADDR=:8080 go run ./cmd/http
+make run        # DATA_DIR=./data ADDR=:8080 go run ./cmd/spenicle
 make test       # go test ./... (unit + UAT)
 make uat        # the Gherkin suite plus the containerised mock services (needs Docker)
 make uat-snapshots   # rewrite snapshot files, then review the diff
@@ -141,8 +146,9 @@ and one file beat a precedence chain nobody can predict. A new knob means a new
 constant and field in those two files, nothing else.
 
 `/healthz` returns `status`, `version` (`<tag>+<sha7>`), `schema_version`,
-`app_secret` fingerprint and `base_currency`. Use it to prove a running process is
-the build you think it is.
+`app_secret` fingerprint, `base_currency` and `worker_last_run_at` (RFC3339, empty
+until the worker finishes a run, and in `http` mode). Use it to prove a running
+process is the build you think it is.
 
 ## Testing
 
@@ -198,8 +204,8 @@ the build you think it is.
   carry the `@vendors` tag and skip when Docker is absent; `the extraction rail is
   "..."`, `the extraction|rates vendor is down` and `the extraction|rates vendor breaks
   its contract` pick the wiring before `a running API` boots.
-- `uat` assembles the dependency graph by hand because `cmd/http` is `package main`
-  and therefore not importable. Adding a dependency to `cmd/http/bootstrap.go` means
+- `uat` assembles the dependency graph by hand because `cmd/spenicle` is `package main`
+  and therefore not importable. Adding a dependency to `internal/app/bootstrap.go` means
   adding it to `uat/world.go` too. Seeds, schema and first-boot settings live in the
   adapter (`sqlite.EnsureBaseline`), not in a module.
 

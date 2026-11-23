@@ -66,6 +66,7 @@ const (
 	RecurringStatePaused    = "paused"
 	RecurringStateEnded     = "ended"
 
+	RecurringCadenceDaily   = "daily"
 	RecurringCadenceWeekly  = "weekly"
 	RecurringCadenceMonthly = "monthly"
 	RecurringCadenceYearly  = "yearly"

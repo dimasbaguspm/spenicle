@@ -37,7 +37,8 @@ place to defer a decision. v2 fixes all three.
 ## Layout
 
 ```
-cmd/http/             binary: main.go, bootstrap.go (composition root + wiring)
+cmd/spenicle/         binary: main.go, the mode argument, signal wiring
+internal/app/         composition root: reads config, wires adapters, runs the modes
 cmd/http/handlers/    one file per endpoint group; owns the route table
 internal/common/httpx/ recovery, tracing, request logging
 uat/                  Gherkin suite: uat.go (entry point), steps.go, world.go, features/
@@ -58,7 +59,7 @@ Two rules keep it pluggable:
    `entity` imports only the standard library and `constant`, so it can never
    create a cycle.
 
-`cmd/http` is `package main`, so `uat` assembles the same graph by hand from
+`cmd/spenicle` is `package main`, so `uat` assembles the same graph by hand from
 `repository/sqlite` (open, migrate, `EnsureBaseline`), `module/ledger` and
 `handlers.New`. First-boot state lives in the adapter with the migrations, not in a
 module: it is initial data, and its rules come from `entity`.
@@ -88,7 +89,7 @@ context plus the end function — the span interface never leaks into a caller.
 name, so a span can never be filtered by one name while the service is labelled with
 another. `OTEL_EXPORTER_OTLP_ENDPOINT` is OTLP/HTTP; a bare host means HTTPS on port
 4318, and `http://` must be written on purpose.
-The process has exactly one `context.Background()`: the root in `cmd/http/main.go`
+The process has exactly one `context.Background()`: the root in `cmd/spenicle/main.go`
 wrapped in `signal.NotifyContext`. Everything below derives from it, including
 the shutdown timeout (`context.WithoutCancel`) so the last batch of spans still
 flushes. Pure value code (`entity` validation, currency lookup, `clock`) takes no

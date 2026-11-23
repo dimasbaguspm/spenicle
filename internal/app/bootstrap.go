@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -22,12 +22,14 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
+	"github.com/dimasbaguspm/spenicle/internal/worker"
 )
 
 type app struct {
 	DB           *sql.DB
 	Store        *sqlite.Store
 	Handler      http.Handler
+	Worker       *worker.Runner
 	BaseCurrency string
 }
 
@@ -66,9 +68,12 @@ func newApp(
 		return nil, err
 	}
 
+	runner := worker.New(store, store, ledgerService, clock.System{}, logger)
+
 	return &app{
 		DB:           store.DB(),
 		Store:        store,
+		Worker:       runner,
 		BaseCurrency: baseCurrency,
 		Handler: handlers.New(handlers.Deps{
 			Ledger: ledgerService,
@@ -86,6 +91,7 @@ func newApp(
 			Sealer:            sealer,
 			BaseCurrency:      baseCurrency,
 			Version:           version,
+			WorkerLastRun:     runner.LastRun,
 			HealthTimeout:     cfg.HealthTimeout,
 			MaxBodyBytes:      cfg.MaxBodyBytes,
 			WebOrigin:         cfg.WebOrigin,
@@ -202,6 +208,7 @@ func prepare(
 	return service, baseCurrency, nil
 }
 
+//nolint:ireturn // the two rails share only the Extractor contract; the caller wants no vendor type
 func buildExtractor(
 	ctx context.Context,
 	cfg entity.AppConfig,
@@ -215,6 +222,7 @@ func buildExtractor(
 	return rail, nil
 }
 
+//nolint:ireturn // the two rails share only the Extractor contract; the caller wants no vendor type
 func selectRail(
 	ctx context.Context,
 	cfg entity.AppConfig,

@@ -27,7 +27,7 @@ None.
 ## Response
 
 ```json
-{"status":"ok","version":"v0.1.1+e0d15ce","schema_version":2,"app_secret":"41539bfba9c4a1ec","base_currency":"IDR"}
+{"status":"ok","version":"v0.1.1+e0d15ce","schema_version":2,"app_secret":"41539bfba9c4a1ec","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}
 ```
 
 ## Errors
@@ -38,6 +38,9 @@ None.
 
 No deep checks (no FX fetch, no vendor ping); `app_secret` is a
 fingerprint, never the secret. `base_currency` is the value captured at boot.
+`worker_last_run_at` is the heartbeat of the recurring worker: RFC3339 for the last
+run it finished, and empty when it never ran or when the process was started in
+`http` mode.
 
 
 
