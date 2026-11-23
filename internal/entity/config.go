@@ -29,9 +29,10 @@ type AppConfig struct {
 	// BaseCurrency is locked at first boot.
 	BaseCurrency string
 
-	// ServiceName and TracerName identify this process in traces and metrics.
+	// ServiceName is the single reference this process reports under: it becomes
+	// resource.service.name, the tracer name, and the log field. One name, not two
+	// that can drift apart.
 	ServiceName string
-	TracerName  string
 
 	// HTTP server timeouts.
 	ReadHeaderTimeout time.Duration

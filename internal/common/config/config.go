@@ -47,8 +47,9 @@ const (
 	DefaultDBFile       = "spenicle.db"
 	DefaultBaseCurrency = "IDR"
 
+	// DefaultServiceName is also the tracer name: one identity for spans, metrics
+	// and logs.
 	DefaultServiceName = "spenicle"
-	DefaultTracerName  = "spenicle"
 
 	DefaultReadHeaderTimeout = 5 * time.Second
 	DefaultReadTimeout       = 15 * time.Second
@@ -78,7 +79,6 @@ func Defaults() entity.AppConfig {
 		DBPath:                   filepath.Join(DefaultDataDir, DefaultDBFile),
 		BaseCurrency:             DefaultBaseCurrency,
 		ServiceName:              DefaultServiceName,
-		TracerName:               DefaultTracerName,
 		ReadHeaderTimeout:        DefaultReadHeaderTimeout,
 		ReadTimeout:              DefaultReadTimeout,
 		WriteTimeout:             DefaultWriteTimeout,

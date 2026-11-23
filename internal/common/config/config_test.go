@@ -50,8 +50,8 @@ func TestLoadAppliesDefaults(t *testing.T) {
 		t.Fatalf("base currency = %q, want %q", cfg.BaseCurrency, config.DefaultBaseCurrency)
 	}
 
-	if cfg.TracerName != config.DefaultTracerName {
-		t.Fatalf("tracer = %q, want %q", cfg.TracerName, config.DefaultTracerName)
+	if cfg.ServiceName != config.DefaultServiceName {
+		t.Fatalf("service name = %q, want %q", cfg.ServiceName, config.DefaultServiceName)
 	}
 
 	if cfg.ReadHeaderTimeout != config.DefaultReadHeaderTimeout {

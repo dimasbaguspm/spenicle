@@ -44,7 +44,6 @@ func run() error {
 
 	shutdownTelemetry, err := telemetry.Setup(ctx, telemetry.Config{
 		ServiceName: cfg.ServiceName,
-		TracerName:  cfg.TracerName,
 		Version:     version,
 		Endpoint:    cfg.OTLPEndpoint,
 	})

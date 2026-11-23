@@ -9,6 +9,7 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -26,18 +27,22 @@ const metricInterval = 15 * time.Second
 
 // Config describes where telemetry goes.
 type Config struct {
+	// ServiceName is the only identity this process reports under: resource
+	// service.name and the tracer name are the same string, so a span can never be
+	// filtered by one name while the service is labelled with another.
 	ServiceName string
-	// TracerName is how this process identifies itself in spans. Defaults to the
-	// service name when empty.
-	TracerName string
-	Version    string
-	// Endpoint is host:port, optionally with a scheme. Empty disables export.
+	Version     string
+	// Endpoint is the OTLP/HTTP collector, e.g. https://otel.example.com:4318.
+	// Empty disables export. A bare host is treated as HTTPS on port 4318.
 	Endpoint string
 }
 
-// tracerName is the one tracer every layer reports under. Setup sets it once at
-// boot from configuration; span names carry the layer instead
-// ("Repository.Sqlite.InsertEntry"), so a trace reads like the call stack.
+// defaultOTLPHTTPPort is the OTLP/HTTP port, used when the endpoint omits one.
+const defaultOTLPHTTPPort = "4318"
+
+// tracerName mirrors Config.ServiceName. Setup sets it once at boot; span names
+// carry the layer instead ("Repository.Sqlite.InsertEntry"), so a trace reads like
+// the call stack.
 var tracerName = "spenicle" //nolint:gochecknoglobals // one process-wide name, written once by Setup
 
 // StartSpan opens a named span. The name must be qualified with the layer that
@@ -52,8 +57,8 @@ func StartSpan(ctx context.Context, name string) (context.Context, func()) {
 // Setup installs global tracer and meter providers. The returned function
 // flushes and shuts them down.
 func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error) {
-	if cfg.TracerName != "" {
-		tracerName = cfg.TracerName
+	if name := strings.TrimSpace(cfg.ServiceName); name != "" {
+		tracerName = name
 	}
 
 	noop := func(context.Context) error { return nil }
@@ -61,7 +66,7 @@ func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error)
 		return noop, nil
 	}
 
-	endpoint, insecure := parseEndpoint(cfg.Endpoint)
+	endpoint, insecure := ParseEndpoint(cfg.Endpoint)
 
 	res, err := resource.New(ctx, resource.WithAttributes(
 		attribute.String("service.name", cfg.ServiceName),
@@ -114,16 +119,34 @@ func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error)
 	}, nil
 }
 
-func parseEndpoint(raw string) (string, bool) {
+// ParseEndpoint splits an OTLP/HTTP endpoint into the host:port the exporter wants
+// and whether plaintext is allowed. A bare host is treated as HTTPS on the default
+// port: the safe choice is the default, and http:// has to be written on purpose.
+// A path is dropped — OTLP/HTTP endpoints are scheme + host + port, and a path here
+// would otherwise be silently ignored by the exporter.
+func ParseEndpoint(raw string) (string, bool) {
 	raw = strings.TrimSpace(raw)
 
 	switch {
-	case strings.HasPrefix(raw, "http://"):
-		return strings.TrimPrefix(raw, "http://"), true
 	case strings.HasPrefix(raw, "https://"):
-		return strings.TrimPrefix(raw, "https://"), false
+		return hostPort(strings.TrimPrefix(raw, "https://")), false
+	case strings.HasPrefix(raw, "http://"):
+		return hostPort(strings.TrimPrefix(raw, "http://")), true
 	default:
-		// No scheme: assume a local collector, which is never TLS.
-		return raw, true
+		return hostPort(raw), false
 	}
+}
+
+// hostPort strips any path and appends the default OTLP/HTTP port when missing.
+func hostPort(raw string) string {
+	host := raw
+	if idx := strings.IndexByte(host, '/'); idx >= 0 {
+		host = host[:idx]
+	}
+
+	if _, _, err := net.SplitHostPort(host); err != nil {
+		return net.JoinHostPort(host, defaultOTLPHTTPPort)
+	}
+
+	return host
 }
