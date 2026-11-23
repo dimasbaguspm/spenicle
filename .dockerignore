@@ -1,0 +1,12 @@
+.git
+.github
+docs
+features
+data
+bin
+coverage.out
+*.db
+*.db-shm
+*.db-wal
+.gitignore
+Makefile
