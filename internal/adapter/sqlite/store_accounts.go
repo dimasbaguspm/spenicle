@@ -2,6 +2,8 @@ package sqlite
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -29,4 +31,19 @@ func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) 
 		return 0, fmt.Errorf("account id: %w", err)
 	}
 	return id, nil
+}
+
+// FindAccount resolves an account by name and kind. Callers use it to make a
+// create step idempotent without guessing ids.
+func (s *Store) FindAccount(ctx context.Context, name, kind string) (int64, bool, error) {
+	var id int64
+	err := s.db.QueryRowContext(ctx,
+		`SELECT id FROM accounts WHERE name = ? AND kind = ?`, name, kind).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, fmt.Errorf("find account %q: %w", name, err)
+	}
+	return id, true, nil
 }

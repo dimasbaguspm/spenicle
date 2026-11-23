@@ -56,4 +56,5 @@ type BaseCurrency interface {
 type Accounts interface {
 	CountAccounts(ctx context.Context) (int, error)
 	CreateAccount(ctx context.Context, name, kind, currency string) (int64, error)
+	FindAccount(ctx context.Context, name, kind string) (int64, bool, error)
 }
