@@ -66,7 +66,7 @@ module: it is initial data, and its rules come from `entity`.
 Configuration is one file: `internal/common/config/config.go` holds every environment
 variable, **every default** (DB path, HTTP timeouts, shutdown budgets, body cap, pool
 sizes, service and tracer names) and the validation; the resolved value is
-`entity.AppConfig`. No config file, no viper: eight variables do not need a
+`entity.AppConfig`. No config file, no viper: seven variables do not need a
 precedence chain, and one struct with defaults is testable without a framework.
 
 ### Contexts and spans
@@ -314,27 +314,21 @@ returning garbage. The error names both options.
 ### Recovery from a changed secret
 
 Sealed columns cannot be decrypted without the key that wrote them, so there is no
-re-encryption path that does not have the old secret. The recovery is explicit and lossy:
+re-encryption path and no in-place reset. The process refuses to boot on a
+fingerprint mismatch, and there are exactly two honest options:
 
-```bash
-APP_SECRET=<new secret> APP_SECRET_RESET=true docker run …
-```
+1. **Restore the original `APP_SECRET`.** Nothing is lost, the boot proceeds.
+2. **Start over.** Stop the container, delete `DATA_DIR/spenicle.db` (and `raw/` if it
+   exists), boot again: the next boot migrates and seeds a fresh database with the
+   current secret. The ledger you keep is the one you backed up.
 
-That one boot, in a single transaction:
+Neither path touches the design that matters: the ledger is plaintext, so `sqlite3`
+still answers "what did I spend" from a backup of the old file.
 
-1. blanks every sealed capture payload (`raw_text`, `draft_json`, `extraction_error`,
-   `resolution_note`),
-2. writes `secret_reset` to `audit_log`,
-3. records the new fingerprint.
-
-Consequences, stated plainly: captures that were waiting for review lose their text and
-draft and must be retyped or re-imported; artifact files under `DATA_DIR/raw/` are
-unreadable afterwards and should be deleted by the operator. Nothing in the ledger,
-accounts, postings or reports is touched. After the boot, unset `APP_SECRET_RESET`:
-leaving it on would silently accept any future mismatch.
-
-Whole-file encryption is out of scope: `modernc.org/sqlite` has no codec, and SQLCipher needs
-cgo, which kills the static binary. LUKS the volume instead.
+`entity.AppConfig` keeps no flag for this on purpose. A "reset the secret" switch is
+a foot-gun that silently accepts every future mismatch; deleting the file is
+explicit, visible in the operator's shell history, and cannot be mistaken for a
+routine boot.
 
 ## FX
 

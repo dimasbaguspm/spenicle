@@ -21,9 +21,6 @@ type AppConfig struct {
 	Password         string
 	AppSecret        string
 	SnapToJSONAPIKey string
-	// AllowSecretReset lets a mismatched APP_SECRET start the process anyway by
-	// discarding the sealed payloads. Off unless the operator asks for it.
-	AllowSecretReset bool
 	// OTLPEndpoint is host:port, optionally with a scheme. Empty disables export.
 	OTLPEndpoint string
 	// BaseCurrency is locked at first boot.

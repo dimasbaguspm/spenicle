@@ -91,20 +91,20 @@ Un-prefixed, all optional except `PASSWORD` in practice:
 | `BASE_CURRENCY` | `IDR` | locked at first boot |
 | `PASSWORD` | — | single user's password |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals sensitive columns, identifies the database |
-| `APP_SECRET_RESET` | `false` | recovery only: boot despite a fingerprint mismatch and blank sealed payloads |
 | `SNAPTOJSON_API_KEY` | — | enables the SnapToJSON extraction vendor; unset = manual entry |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
 
 `APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`
-fails when its fingerprint does not match `settings.secret_fingerprint`. The only
-recovery from a lost secret is `APP_SECRET_RESET=true`, which discards the sealed
-capture payloads, records `secret_reset` in `audit_log`, and re-records the
-fingerprint — the ledger is plaintext and survives by design.
+fails when its fingerprint does not match `settings.secret_fingerprint`. There is no
+in-place reset: a changed secret means restoring the original, or starting over with
+a fresh database (delete `spenicle.db`; the next boot migrates and seeds it). The
+sealed capture payloads are unrecoverable without the old key; the ledger is
+plaintext and survives either way.
 
-Only these eight are environment variables. **Every other knob — DB path, HTTP
+Only these seven are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 name (also the tracer name) — has its default in `internal/common/config/config.go`**, and the
-resulting value object is `entity.AppConfig`. No viper, on purpose: eight variables
+resulting value object is `entity.AppConfig`. No viper, on purpose: seven variables
 and one file beat a precedence chain nobody can predict. A new knob means a new
 constant and field in those two files, nothing else.
 

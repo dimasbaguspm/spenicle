@@ -70,7 +70,6 @@ sudo chown -R 10001:10001 ./data
 | `DATA_DIR` | `/data` | SQLite file and `raw/` artifacts |
 | `PASSWORD` | unset | enables the login screen; unset means open on your LAN |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals capture payloads, artifacts and cookies |
-| `APP_SECRET_RESET` | `false` | recovery: start despite a changed secret, discarding sealed payloads |
 | `SNAPTOJSON_API_KEY` | unset | enables receipt/statement extraction through SnapToJSON |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | OTLP/HTTP collector; HTTPS assumed, `http://` for plaintext |
 
@@ -160,7 +159,7 @@ That agent can add captures and read the dashboard. It cannot touch the ledger. 
 
 | symptom | cause |
 | --- | --- |
-| container exits with `app secret mismatch` | `APP_SECRET` differs from the one that sealed this database. Restore the original secret. If it is gone for good, set `APP_SECRET_RESET=true` once: the ledger survives, every sealed capture payload is discarded and the reset is written to `audit_log` |
+| container exits with `app secret mismatch` | `APP_SECRET` differs from the one that sealed this database. Restore the original secret. If it is gone for good, start over: stop the container, delete `spenicle.db`, boot again — the ledger you keep is the one you backed up |
 | `/healthz` returns 503 | database not writable, or secret fingerprint mismatch |
 | captures stay `pending` with no draft | extraction is disabled (no API key); typing the fields works fine |
 | no share target on iPhone | iOS Safari has none; use a Shortcut that POSTs to `/api/captures` |

@@ -18,11 +18,7 @@ import (
 // It lives in the adapter, not in a module, because it is initial state — the same
 // category as the embedded migrations. The rules it enforces (a real ISO code, an
 // unchanging base currency, a matching fingerprint) still come from entity.
-func (s *Store) EnsureBaseline(
-	ctx context.Context,
-	baseCurrency, fingerprint string,
-	allowReset bool,
-) (string, error) {
+func (s *Store) EnsureBaseline(ctx context.Context, baseCurrency, fingerprint string) (string, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EnsureBaseline")
 	defer endSpan()
 
@@ -35,7 +31,7 @@ func (s *Store) EnsureBaseline(
 		return "", err
 	}
 
-	if err := s.ensureFingerprint(ctx, fingerprint, allowReset); err != nil {
+	if err := s.ensureFingerprint(ctx, fingerprint); err != nil {
 		return "", err
 	}
 
@@ -68,9 +64,10 @@ func (s *Store) ensureBaseCurrency(ctx context.Context, baseCurrency string) (st
 	return existing, nil
 }
 
-// ensureFingerprint refuses to open data sealed with a different secret, unless the
-// operator explicitly asked to start over.
-func (s *Store) ensureFingerprint(ctx context.Context, fingerprint string, allowReset bool) error {
+// ensureFingerprint refuses to open data sealed with a different secret. There is no
+// in-place reset: the sealed payloads cannot be decrypted without the old key, so the
+// only honest options are the old secret or a fresh database.
+func (s *Store) ensureFingerprint(ctx context.Context, fingerprint string) error {
 	stored, found, err := s.Setting(ctx, constant.SettingSecretFingerprint)
 	if err != nil {
 		return err
@@ -84,46 +81,10 @@ func (s *Store) ensureFingerprint(ctx context.Context, fingerprint string, allow
 		return nil
 	}
 
-	if !allowReset {
-		return fmt.Errorf("%w: this database was sealed with %s, APP_SECRET gives %s. "+
-			"Put the original secret back, or set APP_SECRET_RESET=true to start over: "+
-			"every sealed capture payload is discarded, the ledger is plaintext and survives",
-			entity.ErrSecretMismatch, stored, fingerprint)
-	}
-
-	return s.resetSealed(ctx, fingerprint)
-}
-
-// resetSealed is the only recovery from a changed APP_SECRET: the sealed payloads
-// cannot be decrypted without the old key, so they are blanked, the reset is
-// audited, and the new fingerprint is recorded — all in one transaction.
-func (s *Store) resetSealed(ctx context.Context, fingerprint string) error {
-	return s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `
-			UPDATE captures
-			SET raw_text = NULL, draft_json = NULL,
-			    extraction_error = NULL, resolution_note = NULL
-			WHERE raw_text IS NOT NULL OR draft_json IS NOT NULL
-			   OR extraction_error IS NOT NULL OR resolution_note IS NOT NULL`); err != nil {
-			return fmt.Errorf("clear sealed captures: %w", err)
-		}
-
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO settings (k, v) VALUES (?, ?)
-			ON CONFLICT (k) DO UPDATE SET v = excluded.v`,
-			constant.SettingSecretFingerprint, fingerprint); err != nil {
-			return fmt.Errorf("record fingerprint: %w", err)
-		}
-
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO audit_log (entity_table, entity_id, action, from_json, to_json, actor, at)
-			VALUES ('settings', NULL, 'secret_reset', NULL, NULL, 'user', ?)`,
-			time.Now().UTC().Format(constant.TimestampLayout)); err != nil {
-			return fmt.Errorf("audit secret reset: %w", err)
-		}
-
-		return nil
-	})
+	return fmt.Errorf("%w: this database was sealed with %s, APP_SECRET gives %s. "+
+		"Restore the original secret, or start over with a fresh database: stop the "+
+		"container, delete %q, and let the next boot migrate and seed it",
+		entity.ErrSecretMismatch, stored, fingerprint, "spenicle.db")
 }
 
 // seedAccounts gives a brand new database something to post against. Both rows go

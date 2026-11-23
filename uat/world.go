@@ -104,7 +104,7 @@ func (w *world) boot(ctx context.Context) error {
 
 	w.fingerprint = sealer.Fingerprint()
 
-	baseCurrency, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint(), false)
+	baseCurrency, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint())
 	if err != nil {
 		_ = store.Close(ctx)
 

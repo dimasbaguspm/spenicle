@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -33,9 +32,6 @@ const (
 	EnvSnapToJSONAPIKey = "SNAPTOJSON_API_KEY"
 	EnvOTLPEndpoint     = "OTEL_EXPORTER_OTLP_ENDPOINT"
 	EnvBaseCurrency     = "BASE_CURRENCY"
-	// EnvAppSecretReset is the one escape hatch: start despite a fingerprint
-	// mismatch and discard the sealed payloads. See docs/v2-design.md.
-	EnvAppSecretReset = "APP_SECRET_RESET"
 )
 
 // Defaults for everything that is not environment-dependent. Timeouts and limits
@@ -109,13 +105,6 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
 	cfg.BaseCurrency = strings.ToUpper(env(EnvBaseCurrency, cfg.BaseCurrency))
 
-	reset, err := boolEnv(EnvAppSecretReset)
-	if err != nil {
-		return entity.AppConfig{}, err
-	}
-
-	cfg.AllowSecretReset = reset
-
 	if err := validate(cfg); err != nil {
 		return entity.AppConfig{}, err
 	}
@@ -139,21 +128,6 @@ func validate(cfg entity.AppConfig) error {
 	}
 
 	return nil
-}
-
-// boolEnv reads an optional boolean, treating empty as false.
-func boolEnv(key string) (bool, error) {
-	raw := strings.TrimSpace(os.Getenv(key))
-	if raw == "" {
-		return false, nil
-	}
-
-	value, err := strconv.ParseBool(raw)
-	if err != nil {
-		return false, fmt.Errorf("%s must be true or false, got %q", key, raw)
-	}
-
-	return value, nil
 }
 
 func env(key, fallback string) string {

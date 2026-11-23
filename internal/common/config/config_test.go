@@ -65,10 +65,6 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	if !cfg.Sealed() {
 		t.Fatal("APP_SECRET is set, Sealed must be true")
 	}
-
-	if cfg.AllowSecretReset {
-		t.Fatal("the reset flag is opt-in")
-	}
 }
 
 func TestLoadRequiresAppSecret(t *testing.T) {
@@ -76,30 +72,6 @@ func TestLoadRequiresAppSecret(t *testing.T) {
 
 	if _, err := config.Load(t.Context()); err == nil {
 		t.Fatal("APP_SECRET is mandatory, an empty value must fail")
-	}
-}
-
-func TestLoadParsesSecretReset(t *testing.T) {
-	clearEnv(t)
-	t.Setenv(config.EnvAppSecret, "0123456789abcdef")
-
-	for value, want := range map[string]bool{"true": true, "1": true, "false": false, "0": false} {
-		t.Setenv(config.EnvAppSecretReset, value)
-
-		cfg, err := config.Load(t.Context())
-		if err != nil {
-			t.Fatalf("reset=%q: %v", value, err)
-		}
-
-		if cfg.AllowSecretReset != want {
-			t.Fatalf("reset=%q: AllowSecretReset = %v, want %v", value, cfg.AllowSecretReset, want)
-		}
-	}
-
-	t.Setenv(config.EnvAppSecretReset, "yes-please")
-
-	if _, err := config.Load(t.Context()); err == nil {
-		t.Fatal("a non-boolean reset flag must fail")
 	}
 }
 

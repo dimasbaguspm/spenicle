@@ -55,9 +55,7 @@ func newApp(
 		return nil, fmt.Errorf("migrate: %w", migrateErr)
 	}
 
-	baseCurrency, err := store.EnsureBaseline(
-		ctx, cfg.BaseCurrency, sealer.Fingerprint(), cfg.AllowSecretReset,
-	)
+	baseCurrency, err := store.EnsureBaseline(ctx, cfg.BaseCurrency, sealer.Fingerprint())
 	if err != nil {
 		_ = store.Close(ctx)
 
