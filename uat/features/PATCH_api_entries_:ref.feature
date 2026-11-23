@@ -43,3 +43,65 @@ Feature: PATCH /api/entries/{{ref}}
       """
     Then the response status is 404
     And the response JSON matches the snapshot "patch_api_entries_:ref__voiding_something_that_is_not_there_answers_404"
+
+  Scenario: A payee can be set on an existing entry
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","note":"unassigned","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    And the last ref is remembered as "entry"
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"KOPI KENANGAN"}
+      """
+    When I send a PATCH to "/api/entries/{{ref:entry}}" with:
+      """json
+      {"payee_ref":"{{ref}}"}
+      """
+    Then the response status is 200
+    And the response JSON matches the snapshot "patch_api_entries_:ref__a_payee_can_be_set_on_an_existing_entry"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 1     |
+      | audit_log      | 2     |
+
+  Scenario: A payee can be cleared again
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","note":"unassigned","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    And the last ref is remembered as "entry"
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"KOPI KENANGAN"}
+      """
+    And I send a PATCH to "/api/entries/{{ref:entry}}" with:
+      """json
+      {"payee_ref":"{{ref}}"}
+      """
+    When I send a PATCH to "/api/entries/{{ref:entry}}" with:
+      """json
+      {"payee_ref":""}
+      """
+    Then the response status is 200
+    And the response JSON matches the snapshot "patch_api_entries_:ref__a_payee_can_be_cleared_again"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 1     |
+      | audit_log      | 3     |
+
+  Scenario: A patch that asks for nothing is refused
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    And the last ref is remembered as "entry"
+    When I send a PATCH to "/api/entries/{{ref:entry}}" with:
+      """json
+      {"reason":"nothing to do"}
+      """
+    Then the response status is 422
+    And the response JSON matches the snapshot "patch_api_entries_:ref__a_patch_that_asks_for_nothing_is_refused"

@@ -200,6 +200,10 @@ func promotedCode(fieldErr validator.FieldError, fallback string) string {
 
 func validRef(field validator.FieldLevel) bool {
 	raw := strings.TrimSpace(field.Field().String())
+	if raw == "" {
+		return true
+	}
+
 	if len(raw) != refLength {
 		return false
 	}

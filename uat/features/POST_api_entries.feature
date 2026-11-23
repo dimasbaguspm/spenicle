@@ -212,3 +212,44 @@ Feature: POST /api/entries
     Then the response status is 500
     And the response JSON matches the snapshot "post_api_entries__a_broken_database_connection_answers_500"
     And the failure is logged
+
+  Scenario: A posted entry carries its payee in the response
+    Given a running API
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"KOPI KENANGAN"}
+      """
+    When I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","payee_ref":"{{ref}}","note":"kopi","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    Then the response status is 201
+    And the response JSON matches the snapshot "post_api_entries__a_posted_entry_carries_its_payee_in_the_response"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 1     |
+      | audit_log      | 1     |
+
+  Scenario: An unknown payee is refused
+    Given a running API
+    When I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","payee_ref":"00000000000000000000000000000000","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    Then the response status is 404
+    And the response JSON matches the snapshot "post_api_entries__an_unknown_payee_is_refused"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 0     |
+
+  Scenario: A malformed payee ref is refused
+    Given a running API
+    When I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","payee_ref":"kopi","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    Then the response status is 422
+    And the response JSON matches the snapshot "post_api_entries__a_malformed_payee_ref_is_refused"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 0     |

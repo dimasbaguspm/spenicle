@@ -20,6 +20,7 @@ func entryFilter(params list.Params) (entity.EntryFilter, error) {
 
 	filter := entity.EntryFilter{
 		AccountRef: params.AccountRef,
+		PayeeRef:   params.PayeeRef,
 		Source:     params.Source,
 		Currency:   params.Currency,
 		Query:      params.Query,

@@ -14,11 +14,13 @@ type Contract interface {
 	Post(ctx context.Context, in PostInput) (entity.Entry, bool, error)
 	List(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
 	Void(ctx context.Context, ref, reason string) (entity.Entry, error)
+	UpdatePayee(ctx context.Context, ref, payeeRef string) (entity.Entry, error)
 }
 
 type Service struct {
 	entries  repository.Ledger
 	accounts repository.Accounts
+	payees   PayeeSource
 	base     BaseCurrencySource
 	clock    TimeSource
 	ids      IDSource
@@ -26,6 +28,10 @@ type Service struct {
 
 type BaseCurrencySource interface {
 	BaseCurrency(ctx context.Context) (string, error)
+}
+
+type PayeeSource interface {
+	PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool, error)
 }
 
 type (
@@ -36,11 +42,19 @@ type (
 func New(
 	entries repository.Ledger,
 	accounts repository.Accounts,
+	payees PayeeSource,
 	base BaseCurrencySource,
 	clock TimeSource,
 	ids IDSource,
 ) *Service {
-	return &Service{entries: entries, accounts: accounts, base: base, clock: clock, ids: ids}
+	return &Service{
+		entries:  entries,
+		accounts: accounts,
+		payees:   payees,
+		base:     base,
+		clock:    clock,
+		ids:      ids,
+	}
 }
 
 var _ Contract = (*Service)(nil)
@@ -48,6 +62,7 @@ var _ Contract = (*Service)(nil)
 type PostInput struct {
 	ClientID   string
 	OccurredOn time.Time
+	PayeeRef   string
 	Note       string
 	Currency   string
 	Source     string

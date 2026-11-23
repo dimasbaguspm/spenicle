@@ -53,6 +53,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the recurring worker reports "(\d+)" (posted|skipped|failed)$`, theRecurringWorkerReports)
 	sc.Step(`^the recurring worker runs$`, theRecurringWorkerRuns)
 	sc.Step(`^the store holds:$`, theStoreHolds)
+	sc.Step(`^the last ref is remembered as "([^"]*)"$`, theLastRefIsRemembered)
 	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)
 	sc.Step(`^the database matches the snapshot "([^"]*)"$`, databaseMatchesSnapshot)
 }
@@ -204,6 +205,21 @@ func responseHeaderContains(ctx context.Context, name, want string) (context.Con
 	if !strings.Contains(got, want) {
 		return ctx, fmt.Errorf("header %s is %q, want it to contain %q", name, got, want)
 	}
+
+	return ctx, nil
+}
+
+func theLastRefIsRemembered(ctx context.Context, name string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.lastRef == "" {
+		return ctx, errors.New("no ref to remember: send a POST first")
+	}
+
+	w.refs[name] = w.lastRef
 
 	return ctx, nil
 }

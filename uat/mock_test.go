@@ -169,7 +169,7 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 	}
 
 	clockSystem := clock.System{}
-	ledgerService := ledger.New(store, store, fixedCurrency{code: "IDR"}, clockSystem, clockSystem)
+	ledgerService := ledger.New(store, store, store, fixedCurrency{code: "IDR"}, clockSystem, clockSystem)
 
 	return captures.New(store, ledgerService, sealer, extractor, clockSystem, clockSystem)
 }

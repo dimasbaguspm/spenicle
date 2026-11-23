@@ -17,6 +17,7 @@ type Ledger interface {
 	EntryByRef(ctx context.Context, ref string) (entity.Entry, bool, error)
 	ListEntries(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
 	VoidEntry(ctx context.Context, ref, reason string, at time.Time) (entity.Entry, error)
+	UpdateEntryPayee(ctx context.Context, ref string, payeeID *int64) (entity.Entry, bool, error)
 }
 
 type Captures interface {

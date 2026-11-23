@@ -24,6 +24,17 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 		}
 	}
 
+	var payeeID *int64
+
+	if in.PayeeRef != "" {
+		id, err := s.resolvePayee(ctx, in.PayeeRef)
+		if err != nil {
+			return entity.Entry{}, false, err
+		}
+
+		payeeID = &id
+	}
+
 	baseCode, err := s.base.BaseCurrency(ctx)
 	if err != nil {
 		return entity.Entry{}, false, fmt.Errorf("base currency: %w", err)
@@ -47,6 +58,7 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 	newEntry, err := entity.NewEntry(entity.Entry{
 		ClientID:   in.ClientID,
 		OccurredOn: in.OccurredOn,
+		PayeeID:    payeeID,
 		Note:       in.Note,
 		Currency:   nativeCurrency.Code,
 		Source:     in.Source,
@@ -142,4 +154,44 @@ func (s *Service) Void(ctx context.Context, ref, reason string) (entity.Entry, e
 	}
 
 	return reversal, nil
+}
+
+func (s *Service) UpdatePayee(ctx context.Context, ref, payeeRef string) (entity.Entry, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.UpdatePayee")
+	defer endSpan()
+
+	var payeeID *int64
+
+	if payeeRef != "" {
+		id, err := s.resolvePayee(ctx, payeeRef)
+		if err != nil {
+			return entity.Entry{}, err
+		}
+
+		payeeID = &id
+	}
+
+	updated, found, err := s.entries.UpdateEntryPayee(ctx, ref, payeeID)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	if !found {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
+	}
+
+	return updated, nil
+}
+
+func (s *Service) resolvePayee(ctx context.Context, ref string) (int64, error) {
+	payee, found, err := s.payees.PayeeByRef(ctx, ref)
+	if err != nil {
+		return 0, fmt.Errorf("payee: %w", err)
+	}
+
+	if !found {
+		return 0, fmt.Errorf("%w: payee %s", entity.ErrNotFound, ref)
+	}
+
+	return payee.ID, nil
 }

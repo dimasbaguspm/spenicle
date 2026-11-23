@@ -19,6 +19,8 @@ const entryColumns = `id, ref, occurred_on, payee_id, note, currency, source, cl
 const entryAccountSubquery = `SELECT p.entry_id FROM ledger_postings p
 	JOIN accounts a ON a.id = p.account_id WHERE a.ref = ?`
 
+const payeeSubquery = `SELECT id FROM payees WHERE ref = ?`
+
 func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertEntry")
 	defer endSpan()
@@ -224,6 +226,55 @@ func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool,
 	return entry, true, nil
 }
 
+func (s *Store) UpdateEntryPayee(
+	ctx context.Context,
+	ref string,
+	payeeID *int64,
+) (entity.Entry, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateEntryPayee")
+	defer endSpan()
+
+	original, found, err := s.EntryByRef(ctx, ref)
+	if err != nil {
+		return entity.Entry{}, false, err
+	}
+
+	if !found {
+		return entity.Entry{}, false, nil
+	}
+
+	at := time.Now().UTC().Format(constant.TimestampLayout)
+
+	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		if _, execErr := tx.ExecContext(ctx,
+			`UPDATE ledger_entries SET payee_id = ? WHERE id = ?`,
+			nullInt(payeeID), original.ID,
+		); execErr != nil {
+			return fmt.Errorf("update payee: %w", execErr)
+		}
+
+		if _, auditErr := tx.ExecContext(ctx, `
+			INSERT INTO audit_log (ref, entity_table, entity_id, action, from_json, to_json, actor, at)
+			VALUES (?, 'ledger_entries', ?, 'update', NULL, NULL, 'user', ?)`,
+			uuid.New(), original.ID, at,
+		); auditErr != nil {
+			return fmt.Errorf("audit update: %w", auditErr)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return entity.Entry{}, false, err
+	}
+
+	updated, found, err := s.EntryByRef(ctx, ref)
+	if err != nil {
+		return entity.Entry{}, false, err
+	}
+
+	return updated, found, nil
+}
+
 func (s *Store) ListEntries(
 	ctx context.Context,
 	filter entity.EntryFilter,
@@ -343,6 +394,7 @@ func entryQuery(filter entity.EntryFilter) (string, []any) {
 	builder.eq("currency", filter.Currency)
 	builder.like("note", filter.Query)
 	builder.inRefs("ref", filter.Refs)
+	builder.inSubquery("payee_id", payeeSubquery, filter.PayeeRef)
 	builder.before("ledger_entries.id", "ledger_entries", filter.Cursor)
 	builder.orderBy("id DESC")
 

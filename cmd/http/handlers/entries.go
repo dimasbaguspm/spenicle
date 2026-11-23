@@ -26,6 +26,7 @@ type postingRequest struct {
 type postEntryRequest struct {
 	ClientID   string           `json:"client_id,omitempty" validate:"omitempty,max=64"`
 	OccurredOn string           `json:"occurred_on"         validate:"required,datestr"`
+	PayeeRef   string           `json:"payee_ref,omitempty" validate:"omitempty,ref"`
 	Note       string           `json:"note,omitempty"      validate:"max=2000"`
 	Currency   string           `json:"currency"            validate:"required,currency"`
 	Source     string           `json:"source,omitempty"    validate:"omitempty,source"`
@@ -64,8 +65,9 @@ type entryResponse struct {
 }
 
 type entryPatchRequest struct {
-	Void   bool   `json:"void"             validate:"required"`
-	Reason string `json:"reason,omitempty" validate:"max=2000"`
+	Void     *bool   `json:"void,omitempty"`
+	Reason   string  `json:"reason,omitempty"    validate:"max=2000"`
+	PayeeRef *string `json:"payee_ref,omitempty" validate:"omitempty,ref"`
 }
 
 func (s *server) handleListEntries(w http.ResponseWriter, r *http.Request) {
@@ -108,21 +110,12 @@ func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !request.Void {
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_patch",
-			"only {\"void\": true} is supported today")
-
+	entry, ok := s.entryPatch(ctx, w, path.Ref, request)
+	if !ok {
 		return
 	}
 
-	reversal, err := s.deps.Ledger.Void(ctx, path.Ref, request.Reason)
-	if err != nil {
-		s.writeClassified(ctx, w, err)
-
-		return
-	}
-
-	body, err := s.entryResponse(ctx, reversal)
+	body, err := s.entryResponse(ctx, entry)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 
@@ -130,6 +123,50 @@ func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, body)
+}
+
+func (s *server) entryPatch(
+	ctx context.Context,
+	w http.ResponseWriter,
+	ref string,
+	request entryPatchRequest,
+) (entity.Entry, bool) {
+	switch {
+	case request.Void == nil && request.PayeeRef == nil:
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+			`send {"void": true} or {"payee_ref": "..."}`)
+
+		return entity.Entry{}, false
+	case request.Void != nil && request.PayeeRef != nil:
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+			"void and payee_ref are separate actions")
+
+		return entity.Entry{}, false
+	case request.Void != nil && !*request.Void:
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_patch",
+			"only {\"void\": true} is supported today")
+
+		return entity.Entry{}, false
+	}
+
+	var (
+		entry entity.Entry
+		err   error
+	)
+
+	if request.Void != nil {
+		entry, err = s.deps.Ledger.Void(ctx, ref, request.Reason)
+	} else {
+		entry, err = s.deps.Ledger.UpdatePayee(ctx, ref, *request.PayeeRef)
+	}
+
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return entity.Entry{}, false
+	}
+
+	return entry, true
 }
 
 func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
@@ -195,6 +232,7 @@ func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
 	return ledger.PostInput{
 		ClientID:   request.ClientID,
 		OccurredOn: occurredOn,
+		PayeeRef:   request.PayeeRef,
 		Note:       request.Note,
 		Currency:   request.Currency,
 		Source:     request.Source,

@@ -81,3 +81,29 @@ Feature: GET /api/entries
     When I send a GET to "/api/entries?currency=USD"
     Then the response status is 200
     And the response JSON matches the snapshot "get_api_entries__the_currency_filter_narrows_the_listing"
+
+  Scenario: The payee filter narrows the listing
+    Given a running API
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"KOPI KENANGAN"}
+      """
+    And the last ref is remembered as "kopi"
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","payee_ref":"{{ref}}","note":"kopi","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"INDOMARET"}
+      """
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-02","currency":"IDR","payee_ref":"{{ref}}","note":"indomaret","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-22000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"22000"}]}
+      """
+    When I send a GET to "/api/entries?payee_ref={{ref:kopi}}"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__the_payee_filter_narrows_the_listing"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 2     |

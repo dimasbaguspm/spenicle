@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "send {\"void\": true} or {\"payee_ref\": \"...\"}"
+  }
+}

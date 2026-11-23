@@ -22,6 +22,7 @@ entries, one per entry for its postings).
 | `from` | date | — | `occurred_on >= from` |
 | `to` | date | — | `occurred_on <= to` |
 | `account_ref` | ref | — | entries touching that account |
+| `payee_ref` | ref | — | entries for that payee |
 | `source` | string | — | `manual`, `share`, `email`, `statement`, `recurring`, `adjustment` |
 | `currency` | string | — | ISO 4217, the entry's own currency |
 | `query` | string | — | substring of the entry note |
@@ -52,7 +53,8 @@ pure data adapter, the HTTP layer owns presentation.
 ## Errors
 
 `422 invalid_request` for a malformed date, an unknown `currency` or `source`, a `refs`
-entry or `cursor` that is not a 32-hex ref, or a `limit` over 200.
+entry, a `cursor`, `account_ref` or `payee_ref` that is not a 32-hex ref, or a `limit`
+over 200.
 
 ## Limitations
 
@@ -73,7 +75,7 @@ sequenceDiagram
     participant H as Entries handler
     participant L as Ledger module
     participant DB as SQLite
-    UI->>H: GET /api/entries?from&to&account_ref&source&currency&query&refs&cursor&limit
+    UI->>H: GET /api/entries?from&to&account_ref&payee_ref&source&currency&query&refs&cursor&limit
     H->>H: bind and validate the params, build the filter
     H->>L: List(filter)
     L->>DB: SELECT entries WHERE … ORDER BY id DESC LIMIT ? (limit + 1)

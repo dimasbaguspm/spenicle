@@ -40,6 +40,7 @@ type Params struct {
 	Status     string `query:"status"      validate:"omitempty,capturestatus"`
 	Source     string `query:"source"      validate:"omitempty,source"`
 	AccountRef string `query:"account_ref" validate:"omitempty,ref"`
+	PayeeRef   string `query:"payee_ref"   validate:"omitempty,ref"`
 	From       string `query:"from"        validate:"omitempty,datestr"`
 	To         string `query:"to"          validate:"omitempty,datestr"`
 }

@@ -42,6 +42,7 @@ type EntryFilter struct {
 	From       time.Time
 	To         time.Time
 	AccountRef string
+	PayeeRef   string
 	Source     string
 	Currency   string
 	Query      string

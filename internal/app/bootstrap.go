@@ -127,7 +127,7 @@ func services(
 	settingsService *settings.Service,
 	logger *slog.Logger,
 ) (*ledger.Service, *rates.Service, error) {
-	ledgerService := ledger.New(store, store, settingsService, clock.System{}, clock.System{})
+	ledgerService := ledger.New(store, store, store, settingsService, clock.System{}, clock.System{})
 
 	ratesService, err := ratesFor(ctx, cfg, store, clock.System{}, logger)
 	if err != nil {

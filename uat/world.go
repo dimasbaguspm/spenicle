@@ -81,6 +81,7 @@ type world struct {
 	rates       *rates.Service
 	dbBroken    bool
 	lastRef     string
+	refs        map[string]string
 
 	ledger        ledger.Contract
 	asOf          time.Time
@@ -160,6 +161,7 @@ func newWorld(options Options) *world {
 	return &world{
 		baseCurrency: "IDR",
 		accounts:     map[string]string{},
+		refs:         map[string]string{},
 		options:      options,
 		logs:         &logSink{},
 	}
@@ -268,7 +270,7 @@ func (w *world) boot(ctx context.Context) error {
 		return fmt.Errorf("settings: %w", settingsErr)
 	}
 
-	ledgerService := ledger.New(store, store, settingsService, clockSystem, clockSystem)
+	ledgerService := ledger.New(store, store, store, settingsService, clockSystem, clockSystem)
 
 	built, buildErr := w.dependencies(ctx, store, limits, clockSystem)
 	if buildErr != nil {
@@ -476,13 +478,26 @@ func (w *world) doWith(
 		return errors.New(`no running API: add the step "a running API" first`)
 	}
 
+	path, err := w.substituteRefs(path)
+	if err != nil {
+		return err
+	}
+
+	return w.call(ctx, method, path, body, headers, query)
+}
+
+func (w *world) call(
+	ctx context.Context,
+	method, path string,
+	body []byte,
+	headers http.Header,
+	query url.Values,
+) error {
 	var reader io.Reader
 
 	if body != nil {
 		reader = strings.NewReader(string(body))
 	}
-
-	path = strings.ReplaceAll(path, "{{ref}}", w.lastRef)
 
 	target := w.server.URL + path
 	if len(query) > 0 {
@@ -558,7 +573,10 @@ func refOf(body []byte) string {
 	return ""
 }
 
-var accountPlaceholder = regexp.MustCompile(`\{\{account:([^}]+)\}\}`)
+var (
+	accountPlaceholder = regexp.MustCompile(`\{\{account:([^}]+)\}\}`)
+	refPlaceholder     = regexp.MustCompile(`\{\{ref:([^}]+)\}\}`)
+)
 
 func (w *world) expand(body string) (string, error) {
 	var missing []string
@@ -576,7 +594,10 @@ func (w *world) expand(body string) (string, error) {
 		return ref
 	})
 
-	out = strings.ReplaceAll(out, "{{ref}}", w.lastRef)
+	out, err := w.substituteRefs(out)
+	if err != nil {
+		return "", err
+	}
 
 	if len(missing) > 0 {
 		return "", fmt.Errorf(`unknown account(s) %s: create them with "the account ... exists as ..."`,
@@ -584,6 +605,30 @@ func (w *world) expand(body string) (string, error) {
 	}
 
 	return out, nil
+}
+
+func (w *world) substituteRefs(text string) (string, error) {
+	var missing []string
+
+	out := refPlaceholder.ReplaceAllStringFunc(text, func(match string) string {
+		name := refPlaceholder.FindStringSubmatch(match)[1]
+
+		ref, ok := w.refs[name]
+		if !ok {
+			missing = append(missing, name)
+
+			return match
+		}
+
+		return ref
+	})
+
+	if len(missing) > 0 {
+		return "", fmt.Errorf(`unknown ref(s) %s: add "the last ref is remembered as ..."`,
+			strings.Join(missing, ", "))
+	}
+
+	return strings.ReplaceAll(out, "{{ref}}", w.lastRef), nil
 }
 
 func (w *world) countTable(ctx context.Context, table string) (int, error) {
