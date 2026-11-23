@@ -51,6 +51,10 @@ type Payees interface {
 	UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error)
 }
 
+type Analytics interface {
+	MonthlyTotals(ctx context.Context, from, to time.Time) ([]entity.MonthTotal, error)
+}
+
 type Recurring interface {
 	CreateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error)
 	RecurringByRef(ctx context.Context, ref string) (entity.Recurring, bool, error)

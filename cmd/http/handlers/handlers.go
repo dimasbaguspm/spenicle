@@ -24,6 +24,7 @@ type Deps struct {
 	Accounts          repository.Accounts
 	Payees            repository.Payees
 	Recurring         repository.Recurring
+	Analytics         repository.Analytics
 	Health            repository.System
 	Sealer            seal.Sealer
 	BaseCurrency      string
@@ -58,6 +59,7 @@ func New(deps Deps) http.Handler {
 	mux.HandleFunc("POST /api/password", instance.handlePasswordChange)
 
 	mux.HandleFunc("GET /api/meta", instance.handleMeta)
+	mux.HandleFunc("GET /api/analytics/months", instance.handleMonthlyAnalytics)
 
 	mux.HandleFunc("POST /api/accounts", instance.handleCreateAccount)
 	mux.HandleFunc("PATCH /api/accounts/{ref}", instance.handlePatchAccount)

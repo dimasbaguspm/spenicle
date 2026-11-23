@@ -160,6 +160,7 @@ func (w *world) boot(ctx context.Context) error {
 		Accounts:      store,
 		Payees:        store,
 		Recurring:     store,
+		Analytics:     store,
 		Health:        store,
 		Settings:      settingsService,
 		Rates:         ratesService,

@@ -89,6 +89,7 @@ func newApp(
 			Accounts:          store,
 			Payees:            store,
 			Recurring:         store,
+			Analytics:         store,
 			Settings:          settingsService,
 			Health:            store,
 			Sealer:            sealer,

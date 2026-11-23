@@ -53,4 +53,5 @@ var (
 	_ repository.System    = (*Store)(nil)
 	_ repository.Payees    = (*Store)(nil)
 	_ repository.Recurring = (*Store)(nil)
+	_ repository.Analytics = (*Store)(nil)
 )
