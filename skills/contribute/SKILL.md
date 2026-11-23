@@ -58,7 +58,15 @@ curl -s localhost:8080/healthz
 ```
 
 A new endpoint needs a scenario in `uat/features/`; the steps are generic
-(`I send a POST to "/api/entries" with:`), so usually no new step is needed.
+(`I send a POST to "/api/entries" with:`), so usually no new step is needed. Pin the
+contract with snapshots — `the response JSON matches the snapshot "x"` and
+`the database matches the snapshot "x"` — then regenerate once:
+
+```bash
+UAT_UPDATE_SNAPSHOTS=1 make test   # or: make uat-snapshots
+```
+
+Review the written files before committing; they are the contract now.
 
 ## 4. Merge request
 

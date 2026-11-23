@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -49,6 +50,9 @@ type world struct {
 	status int
 	body   []byte
 	header http.Header
+
+	// pendingBody is set by "the request body is:" and consumed by the next send.
+	pendingBody []byte
 }
 
 func newWorld() *world {
@@ -158,6 +162,18 @@ func (w *world) shutdown(ctx context.Context) {
 
 // do performs one HTTP request and records it for the Then steps.
 func (w *world) do(ctx context.Context, method, path string, body []byte) error {
+	return w.doWith(ctx, method, path, body, nil, nil)
+}
+
+// doWith is do plus request headers and query parameters, which is what the
+// header/query table step needs.
+func (w *world) doWith(
+	ctx context.Context,
+	method, path string,
+	body []byte,
+	headers http.Header,
+	query url.Values,
+) error {
 	if w.server == nil {
 		return errors.New(`no running API: add the step "a running API" first`)
 	}
@@ -168,13 +184,24 @@ func (w *world) do(ctx context.Context, method, path string, body []byte) error 
 		reader = strings.NewReader(string(body))
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, w.server.URL+path, reader)
+	target := w.server.URL + path
+	if len(query) > 0 {
+		target += "?" + query.Encode()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, target, reader)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
 
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+
+	for key, values := range headers {
+		for _, value := range values {
+			req.Header.Add(key, value)
+		}
 	}
 
 	resp, err := w.server.Client().Do(req)

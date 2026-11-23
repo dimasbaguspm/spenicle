@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -23,8 +25,10 @@ func RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^the account "([^"]*)" exists as "([^"]*)"$`, theAccountExists)
 
 	// When
+	sc.Step(`^the request body is:$`, theRequestBodyIs)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)"$`, sendWithoutBody)
 	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with:$`, sendWithBody)
+	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with headers/query:$`, sendWithRequestTable)
 
 	// Then
 	sc.Step(`^the response status is (\d+)$`, responseStatusIs)
@@ -32,6 +36,8 @@ func RegisterSteps(sc *godog.ScenarioContext) {
 	sc.Step(`^the response JSON at "([^"]*)" contains "([^"]*)"$`, responseJSONContains)
 	sc.Step(`^the response header "([^"]*)" is "([^"]*)"$`, responseHeaderIs)
 	sc.Step(`^the store holds:$`, theStoreHolds)
+	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)
+	sc.Step(`^the database matches the snapshot "([^"]*)"$`, databaseMatchesSnapshot)
 }
 
 func aFreshWorld(ctx context.Context, _ *godog.Scenario) (context.Context, error) {
@@ -232,4 +238,96 @@ func theStoreHolds(ctx context.Context, table *godog.Table) (context.Context, er
 	}
 
 	return ctx, nil
+}
+
+// theRequestBodyIs parks a body for the next "with headers/query" send. Gherkin
+// allows one argument per step, so the body and the header/query table are two
+// steps; this is that split.
+func theRequestBodyIs(ctx context.Context, body *godog.DocString) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	w.pendingBody = []byte(body.Content)
+
+	return ctx, nil
+}
+
+// sendWithRequestTable sends a request whose headers and query parameters come from
+// the table, and whose body (if any) was set by "the request body is:".
+//
+//	| type   | key   | value |
+//	| header | X-Trace | 123 |
+//	| query  | limit | 10    |
+func sendWithRequestTable(
+	ctx context.Context,
+	method, path string,
+	table *godog.Table,
+) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	headers, query, err := splitRequestTable(table)
+	if err != nil {
+		return ctx, err
+	}
+
+	body := w.pendingBody
+	w.pendingBody = nil
+
+	return ctx, w.doWith(ctx, method, path, body, headers, query)
+}
+
+// splitRequestTable validates the three columns and sorts rows by type.
+func splitRequestTable(table *godog.Table) (http.Header, url.Values, error) {
+	if len(table.Rows) < 2 {
+		return nil, nil, errors.New("the request table needs a header and at least one row")
+	}
+
+	headers := http.Header{}
+	query := url.Values{}
+
+	for _, row := range table.Rows[1:] {
+		if len(row.Cells) < 3 {
+			return nil, nil, errors.New("each request row needs type, key and value")
+		}
+
+		kind := strings.ToLower(strings.TrimSpace(row.Cells[0].Value))
+		key := strings.TrimSpace(row.Cells[1].Value)
+		value := row.Cells[2].Value
+
+		switch kind {
+		case "header":
+			headers.Add(key, value)
+		case "query":
+			query.Add(key, value)
+		default:
+			return nil, nil, fmt.Errorf("unknown request row type %q (header or query)", kind)
+		}
+	}
+
+	return headers, query, nil
+}
+
+// responseMatchesSnapshot compares the recorded response with a golden JSON file.
+func responseMatchesSnapshot(ctx context.Context, name string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.assertAPISnapshot(name)
+}
+
+// databaseMatchesSnapshot compares the whole allow-listed database with a golden file.
+func databaseMatchesSnapshot(ctx context.Context, name string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.assertDBSnapshot(ctx, name)
 }

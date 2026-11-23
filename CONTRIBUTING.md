@@ -86,7 +86,10 @@ Rules for review:
 - No drive-by formatting, no unrelated renames, no lint silencing without a reason
   string in a `//nolint`.
 - Every new endpoint gets a Gherkin scenario in `uat/features/`; the steps are
-  generic, so a new endpoint usually needs no new step.
+  generic, so a new endpoint usually needs no new step. Add a snapshot assertion for
+  the wire shape (`the response JSON matches the snapshot "…"`) and for the rows it
+  writes (`the database matches the snapshot "…"`), then run
+  `UAT_UPDATE_SNAPSHOTS=1 go test ./uat/` once and review the new files.
 - If you change a rule in `docs/v2-design.md`, change the doc in the same MR.
 
 ## Tickets

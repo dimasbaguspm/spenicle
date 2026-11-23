@@ -9,7 +9,7 @@ GOLANGCI := golangci-lint
 BIN     := bin/spenicle
 LINTDIR := tools/lint
 
-.PHONY: help hooks build run test bdd cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt
+.PHONY: help hooks build run test bdd uat-snapshots uat-containers cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt
 
 help: ## show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -28,6 +28,12 @@ test: ## unit and integration tests
 
 bdd: ## only the Gherkin suite, verbose
 	$(GO) test ./uat/ -count=1 -v
+
+uat-snapshots: ## rewrite the UAT golden files, then review the diff
+	UAT_UPDATE_SNAPSHOTS=1 $(GO) test ./uat/ -count=1
+
+uat-containers: ## UAT against containerised external services (needs Docker)
+	$(GO) test ./uat/ -tags uat_containers -count=1 -v -run TestContainer
 
 cover: ## coverage report over the whole module
 	$(GO) test ./... -count=1 -coverprofile=coverage.out

@@ -66,6 +66,8 @@ make build      # bin/spenicle
 make run        # DATA_DIR=./data ADDR=:8080 go run ./cmd/http
 make test       # go test ./... (unit + UAT)
 make bdd        # godog suite only, verbose
+make uat-snapshots   # rewrite snapshot files, then review the diff
+make uat-containers  # UAT against real containers (Docker; opt-in)
 make cover      # coverage over the whole module
 make fmt        # gofmt the tree
 make lint       # all four groups; every one must stay at 0 issues
@@ -132,6 +134,29 @@ the build you think it is.
   `the response JSON at $.postings[0].amount_minor is "-15000"`), so a new endpoint
   usually needs no new step. `{{account:Cash}}` placeholders expand to the id created
   earlier in the scenario.
+- Snapshots: `the response JSON matches the snapshot "x"` compares
+  `uat/snapshots/api/x.json`; `the database matches the snapshot "x"` dumps the
+  allow-listed tables to `uat/snapshots/db/x.json`. Timestamps, sealed envelopes, the
+  build version and the secret fingerprint are normalised. A missing snapshot is
+  written and fails the step; `UAT_UPDATE_SNAPSHOTS=1` (`make uat-snapshots`) rewrites
+  them on purpose.
+- Requests with headers or query parameters use a table, the body stays a docstring:
+
+  ```gherkin
+  And the request body is:
+    """json
+    {"kind":"share"}
+    """
+  When I send a POST to "/api/captures" with headers/query:
+    | type   | key          | value            |
+    | header | Content-Type | application/json |
+    | query  | limit        | 10               |
+  ```
+
+- Repetition goes in `Scenario Outline` + `Examples` (`uat/features/contract.feature`).
+- External services are the only things mocked, and only in the container suite:
+  `uat/containers_test.go` (build tag `uat_containers`) runs `testdata/fake_vendor.py`
+  in a container and points the real adapter at it.
 - `uat` assembles the dependency graph by hand because `cmd/http` is `package main`
   and therefore not importable. Adding a dependency to `cmd/http/bootstrap.go` means
   adding it to `uat/world.go` too. Seeds, schema and first-boot settings live in the

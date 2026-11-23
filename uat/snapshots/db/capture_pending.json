@@ -1,0 +1,56 @@
+{
+  "accounts": [
+    {
+      "archived_at": null,
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "icon": null,
+      "id": 1,
+      "kind": "asset",
+      "name": "Cash",
+      "parent_id": null
+    },
+    {
+      "archived_at": null,
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "icon": null,
+      "id": 2,
+      "kind": "expense",
+      "name": "Unsorted",
+      "parent_id": null
+    }
+  ],
+  "audit_log": [],
+  "captures": [
+    {
+      "artifact_hash": null,
+      "batch_id": null,
+      "client_id": null,
+      "dedupe_key": "75763d11383a141939d2115e2965c5a2804e4e84094a86e1ffc5d7f0c4174fdd",
+      "draft_json": null,
+      "extraction_error": null,
+      "extraction_job_ref": null,
+      "id": 1,
+      "kind": "share",
+      "raw_text": "<sealed>",
+      "received_at": "<timestamp>",
+      "resolution_note": null,
+      "resolved_at": null,
+      "resolved_entry_id": null,
+      "status": "pending"
+    }
+  ],
+  "ledger_entries": [],
+  "ledger_postings": [],
+  "settings": [
+    {
+      "k": "secret_fingerprint",
+      "v": "47ed2e331b50a9ee"
+    },
+    {
+      "k": "app_settings",
+      "v": "<sealed>"
+    }
+  ]
+}
