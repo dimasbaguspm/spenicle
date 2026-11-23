@@ -24,7 +24,6 @@ import (
 const (
 	EnvAddr      = "ADDR"
 	EnvDataDir   = "DATA_DIR"
-	EnvPassword  = "PASSWORD"
 	EnvAppSecret = "APP_SECRET"
 	//nolint:gosec // G101: this is the environment variable name, not a credential
 	EnvSnapToJSONAPIKey = "SNAPTOJSON_API_KEY"
@@ -32,7 +31,6 @@ const (
 	// account. Unset means the documented production endpoint.
 	EnvSnapToJSONEndpoint = "SNAPTOJSON_ENDPOINT"
 	EnvOTLPEndpoint       = "OTEL_EXPORTER_OTLP_ENDPOINT"
-	EnvBaseCurrency       = "BASE_CURRENCY"
 )
 
 // Defaults for everything that is not environment-dependent. Timeouts and limits

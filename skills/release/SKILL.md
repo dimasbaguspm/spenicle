@@ -56,7 +56,7 @@ generate notes → `gh release create`.
 gh release view v0.1.1                       # notes: image, digest, commit links
 docker pull ghcr.io/dimasbaguspm/spenicle:v0.1.1
 docker run --rm -e APP_SECRET=0123456789abcdef \
-  -e BASE_CURRENCY=IDR -p 8080:8080 ghcr.io/dimasbaguspm/spenicle:v0.1.1 &
+  -p 8080:8080 ghcr.io/dimasbaguspm/spenicle:v0.1.1 &
 curl -s localhost:8080/healthz               # version must be v0.1.1+<sha7>
 docker run --rm --entrypoint /usr/local/bin/spenicle \
   ghcr.io/dimasbaguspm/spenicle:v0.1.1 --help 2>/dev/null || true
