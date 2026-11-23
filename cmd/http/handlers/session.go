@@ -160,7 +160,8 @@ func toSettingsResponse(settings entity.Settings) settingsResponse {
 
 func (s *server) requireSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodOptions || r.URL.Path == "/api/session" {
+		if r.Method == http.MethodOptions || r.URL.Path == "/api/session" ||
+			r.URL.Path == "/healthz" {
 			next.ServeHTTP(w, r)
 
 			return
