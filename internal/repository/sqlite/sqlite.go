@@ -13,6 +13,7 @@ import (
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
+	"github.com/dimasbaguspm/spenicle/internal/repository/schema"
 )
 
 type Store struct {
@@ -51,4 +52,5 @@ var (
 	_ repository.Captures = (*Store)(nil)
 	_ repository.Accounts = (*Store)(nil)
 	_ repository.System   = (*Store)(nil)
+	_ schema.Introspector = (*Store)(nil)
 )

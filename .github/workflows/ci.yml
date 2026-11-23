@@ -32,6 +32,9 @@ jobs:
       - name: Test
         run: go test ./... -count=1
 
+      - name: Entity relationship diagram is current
+        run: make erd && git diff --exit-code -- docs/erd.md
+
   lint:
     name: lint (${{ matrix.group }})
     runs-on: ubuntu-latest
