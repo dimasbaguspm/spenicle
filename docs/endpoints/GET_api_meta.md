@@ -28,11 +28,16 @@ None.
 ## Response
 
 ```json
-{"settings":{"base_currency":"IDR","timezone":"UTC","extraction_enabled":false},
+{"settings":{"base_currency":"IDR","timezone":"UTC","extraction_enabled":false,"ai_assistance":false},
  "accounts":[{"ref":1,"name":"Cash","kind":"asset","currency":"IDR",
               "base_amount_minor":"0","archived":false}],
  "currencies":[{"code":"AUD","minor_units":2,"symbol":"A$"}]}
 ```
+
+`settings.extraction_enabled` is true when the SnapToJSON rail is configured
+(`SNAPTOJSON_API_KEY` set). `settings.ai_assistance` is true only when `OPENAI_HOST`,
+`OPENAI_API_KEY` and `OPENAI_MODEL` are all set. The two flags are independent: one
+rail can be configured without the other, and both can be false.
 
 ## Errors
 

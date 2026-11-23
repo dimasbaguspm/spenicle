@@ -58,6 +58,15 @@ func theExportEventLogHolds(ctx context.Context, want int, kind string) (context
 	return ctx, nil
 }
 
+func theExportBlobIsGone(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.exportBlobIsGone(ctx)
+}
+
 func theExportEventsAre(ctx context.Context, expected string) (context.Context, error) {
 	w, err := worldFrom(ctx)
 	if err != nil {

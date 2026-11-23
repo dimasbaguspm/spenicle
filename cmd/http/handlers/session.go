@@ -23,6 +23,13 @@ type sessionResponse struct {
 	MustChange bool   `json:"must_change"`
 }
 
+type signInResponse struct {
+	Status            string `json:"status"`
+	MustChange        bool   `json:"must_change"`
+	ExtractionEnabled bool   `json:"extraction_enabled"`
+	AIAssistance      bool   `json:"ai_assistance"`
+}
+
 type passwordChangeRequest struct {
 	CurrentPassword string `json:"current_password" validate:"required"`
 	NewPassword     string `json:"new_password"     validate:"required,min=12,max=200"`
@@ -37,6 +44,7 @@ type settingsResponse struct {
 	Timezone           string `json:"timezone"`
 	PasswordMustChange bool   `json:"password_must_change"`
 	ExtractionEnabled  bool   `json:"extraction_enabled"`
+	AIAssistance       bool   `json:"ai_assistance"`
 }
 
 func (s *Server) Session(w http.ResponseWriter, r *http.Request) {
@@ -68,9 +76,11 @@ func (s *Server) Session(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, sessionResponse{
-		Status:     "signed_in",
-		MustChange: settings.PasswordMustChange,
+	httpx.WriteJSON(w, http.StatusOK, signInResponse{
+		Status:            "signed_in",
+		MustChange:        settings.PasswordMustChange,
+		ExtractionEnabled: s.deps.ExtractionEnabled,
+		AIAssistance:      s.deps.AIAssistance,
 	})
 }
 
@@ -105,7 +115,7 @@ func (s *Server) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, toSettingsResponse(settings))
+	s.writeSettings(w, settings)
 }
 
 func (s *Server) PatchSettings(w http.ResponseWriter, r *http.Request) {
@@ -125,7 +135,7 @@ func (s *Server) PatchSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		httpx.WriteJSON(w, http.StatusOK, toSettingsResponse(settings))
+		s.writeSettings(w, settings)
 
 		return
 	}
@@ -144,20 +154,21 @@ func (s *Server) GetSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, toSettingsResponse(settings))
+	s.writeSettings(w, settings)
 }
 
-func toSettingsResponse(settings entity.Settings) settingsResponse {
-	timezone := settings.Timezone
-	if timezone == "" {
-		timezone = entity.DefaultTimezone
-	}
+func (s *Server) writeSettings(w http.ResponseWriter, settings entity.Settings) {
+	httpx.WriteJSON(w, http.StatusOK,
+		toSettingsResponse(settings, s.deps.ExtractionEnabled, s.deps.AIAssistance))
+}
 
+func toSettingsResponse(settings entity.Settings, extraction, ai bool) settingsResponse {
 	return settingsResponse{
 		BaseCurrency:       settings.BaseCurrency,
-		Timezone:           timezone,
+		Timezone:           settings.Timezone,
 		PasswordMustChange: settings.PasswordMustChange,
-		ExtractionEnabled:  settings.ExtractionEnabled,
+		ExtractionEnabled:  extraction,
+		AIAssistance:       ai,
 	}
 }
 

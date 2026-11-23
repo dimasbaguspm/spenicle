@@ -46,7 +46,8 @@ Feature: GET /api/exports/{ref}/download
     And the export worker runs
     When the export job predates the retention
     And the export worker runs
-    Then I send a GET to "/api/exports/{{ref}}/download"
+    Then the export blob is gone from the exports directory
+    When I send a GET to "/api/exports/{{ref}}/download"
     And the response status is 410
     And the response JSON matches the snapshot "get_api_exports_ref_download__a_job_past_its_retention_is_gone"
     When I send a GET to "/api/exports/{{ref}}/events"

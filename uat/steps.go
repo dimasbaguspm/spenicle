@@ -68,6 +68,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the export job predates the retention$`, theExportJobPredatesTheRetention)
 	sc.Step(`^the export event log holds (\d+) events? of kind "([a-z_]+)"$`, theExportEventLogHolds)
 	sc.Step(`^the export events are "([^"]*)"$`, theExportEventsAre)
+	sc.Step(`^the export blob is gone from the exports directory$`, theExportBlobIsGone)
 }
 
 // Options is what the harness injects: a healthy endpoint per vendor plus the two ways a

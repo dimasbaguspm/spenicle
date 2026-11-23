@@ -51,7 +51,7 @@ func newServer(t *testing.T) http.Handler {
 	}
 
 	settingsService := settings.New(store, sealer, clock.System{})
-	if _, _, settingsErr := settingsService.EnsureInitial(ctx, ""); settingsErr != nil {
+	if _, _, settingsErr := settingsService.EnsureInitial(ctx, "", ""); settingsErr != nil {
 		t.Fatalf("settings: %v", settingsErr)
 	}
 

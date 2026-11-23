@@ -296,10 +296,8 @@ func (s *Service) expire(ctx context.Context, job entity.Export) error {
 		return nil
 	}
 
-	if job.FileHash != "" && s.blobs != nil {
-		if removeErr := s.blobs.Remove(ctx, job.FileHash); removeErr != nil {
-			return fmt.Errorf("remove export blob: %w", removeErr)
-		}
+	if err := s.discard(ctx, job); err != nil {
+		return err
 	}
 
 	return s.record(ctx, job, constant.ExportEventExpired, constant.ExportActorWorker)
@@ -314,11 +312,27 @@ func (s *Service) fail(
 		return entity.Export{}, err
 	}
 
+	if err := s.discard(ctx, failed); err != nil {
+		return entity.Export{}, err
+	}
+
 	if err := s.record(ctx, failed, kind, constant.ExportActorWorker); err != nil {
 		return entity.Export{}, err
 	}
 
 	return failed, nil
+}
+
+func (s *Service) discard(ctx context.Context, job entity.Export) error {
+	if job.FileHash == "" || s.blobs == nil {
+		return nil
+	}
+
+	if err := s.blobs.Remove(ctx, job.FileHash); err != nil {
+		return fmt.Errorf("remove export blob: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Service) resume(

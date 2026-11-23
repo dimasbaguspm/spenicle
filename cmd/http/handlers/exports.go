@@ -178,7 +178,7 @@ func (s *Server) DownloadExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := s.deps.ArtifactFiles.Open(ctx, job.FileHash)
+	body, err := s.deps.ExportFiles.Open(ctx, job.FileHash)
 	if err != nil {
 		s.InternalError(ctx, w, err)
 

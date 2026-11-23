@@ -38,7 +38,7 @@ func newService(t *testing.T) *settings.Service {
 func TestEnsureInitialDefaultsToIDRAndHashesThePassword(t *testing.T) {
 	service := newService(t)
 
-	seeded, created, err := service.EnsureInitial(t.Context(), "initial-password-123")
+	seeded, created, err := service.EnsureInitial(t.Context(), "initial-password-123", "")
 	if err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
@@ -67,12 +67,12 @@ func TestEnsureInitialDefaultsToIDRAndHashesThePassword(t *testing.T) {
 func TestEnsureInitialIsIdempotent(t *testing.T) {
 	service := newService(t)
 
-	first, _, err := service.EnsureInitial(t.Context(), "first-password-123")
+	first, _, err := service.EnsureInitial(t.Context(), "first-password-123", "")
 	if err != nil {
 		t.Fatalf("first: %v", err)
 	}
 
-	second, created, err := service.EnsureInitial(t.Context(), "second-password-123")
+	second, created, err := service.EnsureInitial(t.Context(), "second-password-123", "")
 	if err != nil {
 		t.Fatalf("second: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestEnsureInitialIsIdempotent(t *testing.T) {
 func TestAuthenticateVerifiesTheHash(t *testing.T) {
 	service := newService(t)
 
-	if _, _, err := service.EnsureInitial(t.Context(), "initial-password-123"); err != nil {
+	if _, _, err := service.EnsureInitial(t.Context(), "initial-password-123", ""); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
@@ -106,7 +106,7 @@ func TestChangePasswordRotatesTheSession(t *testing.T) {
 	service := newService(t)
 	ctx := t.Context()
 
-	if _, _, err := service.EnsureInitial(ctx, "initial-password-123"); err != nil {
+	if _, _, err := service.EnsureInitial(ctx, "initial-password-123", ""); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
@@ -146,7 +146,7 @@ func TestSessionTokenIsStableForOnePassword(t *testing.T) {
 	service := newService(t)
 	ctx := t.Context()
 
-	if _, _, err := service.EnsureInitial(ctx, "initial-password-123"); err != nil {
+	if _, _, err := service.EnsureInitial(ctx, "initial-password-123", ""); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
@@ -168,7 +168,7 @@ func TestSessionTokenIsStableForOnePassword(t *testing.T) {
 func TestChangePasswordRejectsShortPassword(t *testing.T) {
 	service := newService(t)
 
-	if _, _, err := service.EnsureInitial(t.Context(), "initial-password-123"); err != nil {
+	if _, _, err := service.EnsureInitial(t.Context(), "initial-password-123", ""); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
@@ -181,7 +181,7 @@ func TestChangePasswordRejectsShortPassword(t *testing.T) {
 func TestOpenModeHasNoPassword(t *testing.T) {
 	service := newService(t)
 
-	if _, _, err := service.EnsureInitial(t.Context(), ""); err != nil {
+	if _, _, err := service.EnsureInitial(t.Context(), "", ""); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
@@ -228,7 +228,7 @@ func assertTimezonePinned(t *testing.T, first, second, want string, wantErr bool
 	service := newService(t)
 	ctx := t.Context()
 
-	if _, _, err := service.EnsureInitial(ctx, ""); err != nil {
+	if _, _, err := service.EnsureInitial(ctx, "", first); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
 
@@ -268,11 +268,51 @@ func assertTimezonePinned(t *testing.T, first, second, want string, wantErr bool
 	}
 }
 
-func TestSettingsValidateRejectsUnknownTimezone(t *testing.T) {
-	appSettings := entity.DefaultSettings()
-	appSettings.Timezone = "Mars/Olympus"
+func TestSettingsAlwaysCarryATimezone(t *testing.T) {
+	cases := []struct {
+		name    string
+		changed func(*entity.Settings)
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "the default row is UTC",
+			changed: func(*entity.Settings) {},
+			want:    "UTC",
+		},
+		{
+			name:    "an empty timezone is refused",
+			changed: func(settings *entity.Settings) { settings.Timezone = "" },
+			wantErr: true,
+		},
+		{
+			name:    "an unknown IANA zone is refused",
+			changed: func(settings *entity.Settings) { settings.Timezone = "Mars/Olympus" },
+			wantErr: true,
+		},
+	}
 
-	if err := appSettings.Validate(); err == nil {
-		t.Fatal("an unknown IANA zone must be refused")
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			appSettings := entity.DefaultSettings()
+			testCase.changed(&appSettings)
+
+			err := appSettings.Validate()
+			if testCase.wantErr {
+				if err == nil {
+					t.Fatal("expected an error, got nil")
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("validate: %v", err)
+			}
+
+			if appSettings.Timezone != testCase.want {
+				t.Fatalf("timezone = %q, want %q", appSettings.Timezone, testCase.want)
+			}
+		})
 	}
 }

@@ -15,6 +15,7 @@ type AppConfig struct {
 	ImportMaxRows     int
 	ImportCommitChunk int
 
+	ExportDir        string
 	ExportRetention  time.Duration
 	ExportStaleAfter time.Duration
 
@@ -25,6 +26,7 @@ type AppConfig struct {
 	ECBEndpoint        string
 	ECBTimeout         time.Duration
 	OpenAIAPIKey       string
+	OpenAIHost         string
 	OpenAIModel        string
 	OTLPEndpoint       string
 
@@ -50,3 +52,7 @@ type AppConfig struct {
 }
 
 func (c AppConfig) Sealed() bool { return c.AppSecret != "" }
+
+func (c AppConfig) AIAssistance() bool {
+	return c.OpenAIHost != "" && c.OpenAIAPIKey != "" && c.OpenAIModel != ""
+}

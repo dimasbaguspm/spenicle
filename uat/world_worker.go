@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"time"
 
 	workerhandlers "github.com/dimasbaguspm/spenicle/cmd/worker/handlers"
@@ -28,7 +30,7 @@ func (w *world) runRecurring(ctx context.Context) error {
 	}
 
 	runner := workerhandlers.New(
-		w.store, w.store, w.ledger, w.store, w.store, w.artifacts, w.parts,
+		w.store, w.store, w.ledger, w.store, w.store, w.artifacts, w.exportFiles, w.parts,
 		w.limits.ArtifactRetention,
 		w.exports, w.exportDeps, w.limits.ExportStaleAfter,
 		clockSource, w.zone(), logging.From(slog.New(w.logs), telemetry.ComponentWorker),
@@ -90,7 +92,7 @@ func (w *world) ageExport(ctx context.Context) error {
 		return errors.New(`no running API: add the step "a running API" first`)
 	}
 
-	at := time.Now().UTC().Add(-time.Hour)
+	at := time.Now().UTC().Add(-w.limits.ExportRetention - time.Hour)
 
 	if _, err := w.store.DB().ExecContext(ctx,
 		`UPDATE exports SET expires_at = ?`, at.Format(constant.TimestampLayout)); err != nil {
@@ -173,6 +175,37 @@ func (w *world) artifactIsGone(ctx context.Context) error {
 
 	if !errors.Is(openErr, filestore.ErrNotFound) {
 		return fmt.Errorf("open artifact %s: %w", sha, openErr)
+	}
+
+	return nil
+}
+
+func (w *world) exportBlobIsGone(ctx context.Context) error {
+	if w.store == nil {
+		return errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	var sha string
+
+	err := w.store.DB().QueryRowContext(ctx,
+		`SELECT file_hash FROM exports ORDER BY id DESC LIMIT 1`).Scan(&sha)
+	if err != nil {
+		return fmt.Errorf("read export hash: %w", err)
+	}
+
+	if len(sha) != shaHexLen {
+		return fmt.Errorf("export file hash %q is not a sha256", sha)
+	}
+
+	path := filepath.Join(w.dir, config.DefaultExportDirName, sha[0:2], sha[2:4], sha)
+
+	_, statErr := os.Stat(path)
+	if statErr == nil {
+		return fmt.Errorf("export blob %s is still on disk at %s", sha, path)
+	}
+
+	if !errors.Is(statErr, os.ErrNotExist) {
+		return fmt.Errorf("stat export blob %s: %w", path, statErr)
 	}
 
 	return nil

@@ -30,6 +30,7 @@ const (
 	//nolint:gosec // G101: an environment variable name, not a credential
 	EnvOpenAIAPIKey       = "OPENAI_API_KEY"
 	EnvOpenAIModel        = "OPENAI_MODEL"
+	EnvOpenAIHost         = "OPENAI_HOST"
 	EnvSnapToJSONEndpoint = "SNAPTOJSON_ENDPOINT"
 	EnvOTLPEndpoint       = "OTEL_EXPORTER_OTLP_ENDPOINT"
 	EnvWebOrigin          = "WEB_ORIGIN"
@@ -50,7 +51,8 @@ const (
 	DefaultImportMaxRows     = 50_000
 	DefaultImportCommitChunk = 500
 
-	DefaultExportRetention  = 24 * time.Hour
+	DefaultExportDirName    = "exports"
+	DefaultExportRetention  = 30 * 24 * time.Hour
 	DefaultExportStaleAfter = 15 * time.Minute
 
 	DefaultSnapToJSONEndpoint = "https://api.snaptojson.com/partner/v1/snaps"
@@ -86,6 +88,7 @@ func Defaults() entity.AppConfig {
 		ArtifactDir:              filepath.Join(DefaultDataDir, DefaultArtifactDirName),
 		ArtifactRetention:        DefaultArtifactRetention,
 		ArtifactMaxBytes:         DefaultArtifactMaxBytes,
+		ExportDir:                filepath.Join(DefaultDataDir, DefaultExportDirName),
 		ImportMaxBytes:           DefaultImportMaxBytes,
 		ImportMaxRows:            DefaultImportMaxRows,
 		ImportCommitChunk:        DefaultImportCommitChunk,
@@ -120,11 +123,13 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.DataDir = env(EnvDataDir, cfg.DataDir)
 	cfg.DBPath = filepath.Join(cfg.DataDir, DefaultDBFile)
 	cfg.ArtifactDir = filepath.Join(cfg.DataDir, DefaultArtifactDirName)
+	cfg.ExportDir = filepath.Join(cfg.DataDir, DefaultExportDirName)
 
 	cfg.AppSecret = os.Getenv(EnvAppSecret)
 	cfg.SnapToJSONAPIKey = os.Getenv(EnvSnapToJSONAPIKey)
 	cfg.SnapToJSONEndpoint = env(EnvSnapToJSONEndpoint, cfg.SnapToJSONEndpoint)
 	cfg.OpenAIAPIKey = os.Getenv(EnvOpenAIAPIKey)
+	cfg.OpenAIHost = os.Getenv(EnvOpenAIHost)
 	cfg.OpenAIModel = env(EnvOpenAIModel, DefaultOpenAIModel)
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
 	cfg.WebOrigin = env(EnvWebOrigin, cfg.WebOrigin)

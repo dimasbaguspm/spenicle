@@ -147,6 +147,7 @@ Un-prefixed, all optional except `APP_SECRET`:
 | `SNAPTOJSON_ENDPOINT` | vendor route | override for a proxy or a staging account |
 | `OPENAI_API_KEY` | — | second extraction rail; used when SnapToJSON is unset |
 | `OPENAI_MODEL` | `gpt-4o-mini` | vision model for the OpenAI rail |
+| `OPENAI_HOST` | — | base URL for the OpenAI client; empty keeps the SDK default |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
 | `WEB_ORIGIN` | — | the one browser origin allowed to call the API with a cookie; unset = same-origin only |
 | `APP_TIMEZONE` | `UTC` | IANA name for every calendar decision (the worker's "today"); set once, at the first boot |
@@ -208,13 +209,13 @@ same key with different bytes is `409 import_conflict`, replaying the same revie
 is `200` with the current batch, and the other action or a row edit on a terminal batch
 is `409 import_closed`.
 
-Only these ten are environment variables. **Every other knob — DB path, HTTP
+Only these eleven are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, artifact dir,
-retention and size cap, import body/row caps and commit chunk, export retention and stale window, pool sizes, service name
-(also the tracer name) — has its
+retention and size cap, export dir, retention and stale window, import body/row caps and
+commit chunk, service name (also the tracer name) — has its
 default in `internal/common/config/config.go`**, and the
-resulting value object is `entity.AppConfig`. No viper, on purpose: eight variables
+resulting value object is `entity.AppConfig`. No viper, on purpose: eleven variables
 and one file beat a precedence chain nobody can predict. A new knob means a new
 constant and field in those two files, nothing else.
 
@@ -228,7 +229,8 @@ is, and that both services are alive.
 The way out is a job, not a request. `POST /api/exports` writes a `queued` row and
 answers `201`; the worker claims it, renders the ledger through `internal/module/export`
 (one JSON document, or a zip of CSV sheets plus `summary.json` and `manifest.json`),
-stores the bytes in the same artifact store and marks it `ready`. `GET
+stores the bytes in the **export store** (`ExportDir`, `DATA_DIR/exports`, a second
+`filestore.Store` next to the artifact one) and marks it `ready`. `GET
 /api/exports/{ref}/download` streams that blob and records a `downloaded` event;
 `GET /api/exports/{ref}` and `GET /api/exports` are how a client watches the queue.
 The document is refs only, no sealed value, and byte-identical for the same data, and
@@ -238,8 +240,9 @@ wants without recomputing them. `export_events` mirrors `import_events`: `queued
 `actor = user` for the API paths and `actor = worker` for the claim, the sweep and the resume: a job left `running` by a restart is put back to `queued` before the worker claims, with a `resumed` event, so the document is produced instead of being failed. A
 `client_id` replay returns the same job (`200`); the same `client_id` with another
 `format` is `409 export_conflict`. A `running` job older than `ExportStaleAfter` is
-failed (`swept`), and a `ready` job past `ExportRetention` loses its blob and answers
-`410 gone` — 20 of each per run. Import is the other half and is not built.
+failed (`swept`), and a `ready` job past `ExportRetention` (default `720h`, a month)
+loses its blob **from the export store** and answers `410 gone` — 20 of each per run, and
+a blob that is already gone is not an error. Import is the other half and is not built.
 
 The same route takes a **chunked** upload: send `chunk_index` + `chunk_total` and the
 handler appends to `<DATA_DIR>/imports/<client_id>.part`, records the chunk in

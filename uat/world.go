@@ -67,6 +67,7 @@ const (
 	vendorTimeout = 10 * time.Second
 
 	worldListLimit = 200
+	shaHexLen      = 64
 )
 
 type worldKey struct{}
@@ -98,6 +99,7 @@ type world struct {
 
 	ledger        ledger.Contract
 	artifacts     *filestore.Store
+	exportFiles   *filestore.Store
 	parts         *filestore.Parts
 	location      *time.Location
 	commitChunk   int

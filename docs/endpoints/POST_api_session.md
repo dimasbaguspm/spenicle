@@ -28,7 +28,8 @@ None.
 
 ## Response
 
-`{"status":"signed_in","must_change":true}` + `Set-Cookie: spenicle_session=…`
+`{"status":"signed_in","must_change":true,"extraction_enabled":false,"ai_assistance":false}`
++ `Set-Cookie: spenicle_session=…`
 (`HttpOnly`, `SameSite=Lax`, `Secure` when served over TLS or when `X-Forwarded-Proto`
 says so, 30 days, `Cache-Control: no-store`).
 

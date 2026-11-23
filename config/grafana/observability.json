@@ -6,451 +6,813 @@
   "graphTooltip": 1,
   "panels": [
     {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 1,
-      "type": "timeseries",
-      "title": "HTTP request rate",
-      "description": "Requests per second as the router matched them.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 0,
-        "w": 12,
-        "h": 8
-      },
+      "panels": [],
+      "title": "RED — availability",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Successful answers over all answers in the window. Green at 99 %, amber at 95 %.",
       "fieldConfig": {
         "defaults": {
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 95 },
+              { "color": "green", "value": 99 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "100 * sum(rate(spenicle_http_server_requests_total{http_response_status_code!~\"5..\"}[5m]))\n/ sum(rate(spenicle_http_server_requests_total[5m]))",
+          "instant": false,
+          "legendFormat": "availability",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Availability now",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "The same ratio over time: a dip is a window the user felt.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisLabel": "",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "max": 100,
+          "min": 90,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 95 },
+              { "color": "green", "value": 99 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 18, "x": 6, "y": 1 },
+      "id": 3,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["min", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "100 * sum(rate(spenicle_http_server_requests_total{http_response_status_code!~\"5..\"}[5m]))\n/ sum(rate(spenicle_http_server_requests_total[5m]))",
+          "legendFormat": "success ratio",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Success ratio",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Requests per second as the router matched them. http_route is the template, never the raw path.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "stacking": { "mode": "none" } },
           "unit": "reqps"
         },
         "overrides": []
       },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 4,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "sum by (http_route) (rate(spenicle_http_server_requests_total[$__rate_interval]))",
+          "expr": "sum by (http_route) (rate(spenicle_http_server_requests_total[5m]))",
           "legendFormat": "{{http_route}}",
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Request rate by route",
+      "type": "timeseries"
     },
     {
-      "id": 2,
-      "type": "timeseries",
-      "title": "HTTP 5xx rate",
-      "description": "Answers that say the server failed.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 0,
-        "w": 12,
-        "h": 8
-      },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Share of 5xx per route: an answer that says the server failed.",
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 5,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "sum(rate(spenicle_http_server_requests_total{http_response_status_code=~\"5..\"}[$__rate_interval]))\n/ sum(rate(spenicle_http_server_requests_total[$__rate_interval]))",
-          "legendFormat": "5xx",
+          "expr": "100 * sum by (http_route) (rate(spenicle_http_server_requests_total{http_response_status_code=~\"5..\"}[5m]))\n/ sum by (http_route) (rate(spenicle_http_server_requests_total[5m]))",
+          "legendFormat": "{{http_route}}",
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Error rate (5xx) by route",
+      "type": "timeseries"
     },
     {
-      "id": 3,
-      "type": "timeseries",
-      "title": "HTTP latency p95",
-      "description": "The tail the user feels, by route template.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 8,
-        "w": 12,
-        "h": 8
-      },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Share of 4xx per route: a client that is wrong is not the server failing.",
       "fieldConfig": {
         "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "id": 6,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "100 * sum by (http_route) (rate(spenicle_http_server_requests_total{http_response_status_code=~\"4..\"}[5m]))\n/ sum by (http_route) (rate(spenicle_http_server_requests_total[5m]))",
+          "legendFormat": "{{http_route}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Client error rate (4xx) by route",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "p50, p90, p95 and p99 of the wall clock time to answer, by route template.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 0, "lineWidth": 2, "showPoints": "never" },
           "unit": "s"
         },
         "overrides": []
       },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "id": 7,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(spenicle_http_server_duration_seconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.50, sum by (le, http_route) (rate(spenicle_http_server_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50 {{http_route}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.90, sum by (le, http_route) (rate(spenicle_http_server_duration_seconds_bucket[5m])))",
+          "legendFormat": "p90 {{http_route}}",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(spenicle_http_server_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95 {{http_route}}",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le, http_route) (rate(spenicle_http_server_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99 {{http_route}}",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Latency quantiles by route",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "The mean the histogram carries: _sum over _count.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 24 },
+      "id": 8,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["mean"], "displayMode": "table", "placement": "right", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "sum by (http_route) (rate(spenicle_http_server_duration_seconds_sum[5m]))\n/ sum by (http_route) (rate(spenicle_http_server_duration_seconds_count[5m]))",
           "legendFormat": "{{http_route}}",
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Average latency by route",
+      "type": "timeseries"
     },
     {
-      "id": 4,
-      "type": "timeseries",
-      "title": "Worker runs by job",
-      "description": "One tick of the worker, per step and outcome.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 8,
-        "w": 12,
-        "h": 8
-      },
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
+      "id": 9,
+      "panels": [],
+      "title": "Every route in one glance",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "One row per http.route: request rate, error rate, average and p95 over the last five minutes. Sorted by error rate.",
       "fieldConfig": {
         "defaults": {
-          "unit": "opm"
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false },
+          "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "req/s" },
+            "properties": [{ "id": "unit", "value": "reqps" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "error %" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              {
+                "id": "custom.cellOptions",
+                "value": { "mode": "gradient", "type": "color-background" }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "orange", "value": 1 },
+                    { "color": "red", "value": 5 }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "avg s" },
+            "properties": [{ "id": "unit", "value": "s" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "p95 s" },
+            "properties": [{ "id": "unit", "value": "s" }]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 32 },
+      "id": 10,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "error %" }]
       },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "sum by (spenicle_job, spenicle_outcome) (rate(spenicle_worker_runs_total[$__rate_interval]))",
+          "expr": "sum by (http_route) (rate(spenicle_http_server_requests_total[5m]))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "req/s",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "100 * sum by (http_route) (rate(spenicle_http_server_requests_total{http_response_status_code=~\"5..\"}[5m]))\n/ sum by (http_route) (rate(spenicle_http_server_requests_total[5m]))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "error %",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "sum by (http_route) (rate(spenicle_http_server_duration_seconds_sum[5m]))\n/ sum by (http_route) (rate(spenicle_http_server_duration_seconds_count[5m]))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "avg s",
+          "range": false,
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(spenicle_http_server_duration_seconds_bucket[5m])))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "p95 s",
+          "range": false,
+          "refId": "D"
+        }
+      ],
+      "title": "Routes: rate, errors, latency",
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "indexByName": {},
+            "renameByName": {
+              "Value #A": "req/s",
+              "Value #B": "error %",
+              "Value #C": "avg s",
+              "Value #D": "p95 s",
+              "http_route": "route"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [{ "desc": true, "field": "error %" }]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 },
+      "id": 11,
+      "panels": [],
+      "title": "Saturation",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Requests being served right now, by route.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 43 },
+      "id": 12,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "sum by (http_route) (spenicle_http_server_in_flight)",
+          "legendFormat": "{{http_route}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "In-flight requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Open attempts that lost the SQLite write lock and retried. A steady rate means two processes are contending for the one writer.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 43 },
+      "id": 13,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "sum(rate(spenicle_sqlite_locked_total[5m]))",
+          "legendFormat": "lock retries",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "SQLite lock retries",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 50 },
+      "id": 14,
+      "panels": [],
+      "title": "Worker",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "One tick of the worker, per step and outcome. spenicle_job is recurring|artifacts|imports|exports|sweep.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 51 },
+      "id": 15,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "sum by (spenicle_job, spenicle_outcome) (rate(spenicle_worker_runs_total[5m]))",
           "legendFormat": "{{spenicle_job}} {{spenicle_outcome}}",
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Worker runs by job and outcome",
+      "type": "timeseries"
     },
     {
-      "id": 5,
-      "type": "stat",
-      "title": "Worker heartbeat age",
-      "description": "Seconds since worker_last_run_at, the row /healthz reports.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 16,
-        "w": 6,
-        "h": 8
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Items a step handled: rules posted, artifacts reclaimed, rows parsed, jobs rendered.",
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 3600
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "time() - max(spenicle_worker_last_run_timestamp_seconds)",
-          "legendFormat": "",
-          "range": true,
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 6,
-      "type": "timeseries",
-      "title": "Ledger entries by source",
-      "description": "Capture is not ledger: this is what approval wrote.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 6,
-        "y": 16,
-        "w": 9,
-        "h": 8
-      },
-      "fieldConfig": {
-        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
         "overrides": []
       },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 51 },
+      "id": 16,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "sum by (spenicle_entry_source) (rate(spenicle_ledger_entries_total[$__rate_interval]))",
+          "expr": "sum by (spenicle_job) (rate(spenicle_worker_items_total[5m]))",
+          "legendFormat": "{{spenicle_job}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Worker items by job",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "p95 wall clock time of one worker step.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 59 },
+      "id": 17,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, spenicle_job) (rate(spenicle_worker_run_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95 {{spenicle_job}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Worker run duration p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Seconds since worker_last_run_at, the row /healthz reports. Nothing exports spenicle_worker_last_run_timestamp_seconds today: publish it with a textfile exporter or a probe of GET /healthz, otherwise this panel stays empty.",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 3900 },
+              { "color": "red", "value": 7200 }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 59 },
+      "id": 18,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "time() - max(spenicle_worker_last_run_timestamp_seconds)",
+          "legendFormat": "heartbeat age",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Worker heartbeat age",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 66 },
+      "id": 19,
+      "panels": [],
+      "title": "Domain",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Capture is not ledger: this is what approval wrote, by entry source.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 67 },
+      "id": 20,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "sum by (spenicle_entry_source) (rate(spenicle_ledger_entries_total[5m]))",
           "legendFormat": "{{spenicle_entry_source}}",
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Ledger entries by source",
+      "type": "timeseries"
     },
     {
-      "id": 7,
-      "type": "timeseries",
-      "title": "Captures by outcome",
-      "description": "Review-queue transitions, by capture kind.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 15,
-        "y": 16,
-        "w": 9,
-        "h": 8
-      },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Review-queue transitions, by capture kind and resulting status.",
       "fieldConfig": {
         "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
         "overrides": []
       },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 67 },
+      "id": 21,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "sum by (spenicle_capture_kind, spenicle_outcome) (rate(spenicle_captures_transitions_total[$__rate_interval]))",
+          "expr": "sum by (spenicle_capture_kind, spenicle_outcome) (rate(spenicle_captures_transitions_total[5m]))",
           "legendFormat": "{{spenicle_capture_kind}} {{spenicle_outcome}}",
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Captures by outcome",
+      "type": "timeseries"
     },
     {
-      "id": 8,
-      "type": "timeseries",
-      "title": "Import clashes",
-      "description": "Rows the upload flagged, by clash kind.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 24,
-        "w": 8,
-        "h": 8
-      },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Statement rows parsed into a draft, and the rows the upload flagged as a clash, by kind.",
       "fieldConfig": {
         "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
         "overrides": []
       },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 75 },
+      "id": 22,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "sum by (spenicle_clash_kind) (rate(spenicle_imports_clashes_total[$__rate_interval]))",
-          "legendFormat": "{{spenicle_clash_kind}}",
+          "expr": "sum(rate(spenicle_imports_rows_total[5m]))",
+          "legendFormat": "rows parsed",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "sum by (spenicle_clash_kind) (rate(spenicle_imports_clashes_total[5m]))",
+          "legendFormat": "clash {{spenicle_clash_kind}}",
+          "range": true,
+          "refId": "B"
         }
-      ]
+      ],
+      "title": "Import rows and clashes",
+      "type": "timeseries"
     },
     {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Export document size p95",
-      "description": "How big the rendered documents are.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 8,
-        "y": 24,
-        "w": 8,
-        "h": 8
-      },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Size of a rendered export document: p95 of spenicle.exports.bytes (unit By).",
       "fieldConfig": {
         "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "bytes"
         },
         "overrides": []
       },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 75 },
+      "id": 23,
+      "interval": "1m",
+      "options": {
+        "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(spenicle_exports_bytes_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(spenicle_exports_bytes_bucket[5m])))",
           "legendFormat": "p95",
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Export document size p95",
+      "type": "timeseries"
     },
     {
-      "id": 10,
-      "type": "timeseries",
-      "title": "SQLite lock retries",
-      "description": "Open attempts that lost the write lock and retried.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 16,
-        "y": 24,
-        "w": 8,
-        "h": 8
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(spenicle_sqlite_locked_total[$__rate_interval]))",
-          "legendFormat": "retries",
-          "range": true,
-          "refId": "A"
-        }
-      ]
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 83 },
+      "id": 24,
+      "panels": [],
+      "title": "Traces",
+      "type": "row"
     },
     {
-      "id": 11,
-      "type": "table",
-      "title": "Top spans by duration",
+      "datasource": { "type": "tempo", "uid": "${traces}" },
       "description": "The slowest traces in the window; a span name names the layer that was slow.",
-      "datasource": {
-        "type": "tempo",
-        "uid": "${traces}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 32,
-        "w": 24,
-        "h": 9
-      },
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true
-      },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 84 },
+      "id": 25,
+      "options": { "showHeader": true },
       "targets": [
         {
-          "datasource": {
-            "type": "tempo",
-            "uid": "${traces}"
-          },
+          "datasource": { "type": "tempo", "uid": "${traces}" },
+          "limit": 20,
           "query": "{ }",
           "queryType": "traceql",
-          "refId": "A",
-          "limit": 20
+          "refId": "A"
         }
-      ]
+      ],
+      "title": "Top spans by duration",
+      "type": "table"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": [
-    "spenicle",
-    "observability"
-  ],
+  "tags": ["spenicle", "observability"],
   "templating": {
     "list": [
       {
-        "name": "datasource",
-        "label": "Prometheus",
-        "type": "datasource",
-        "query": "prometheus",
         "current": {},
         "hide": 0,
         "includeAll": false,
+        "label": "Prometheus",
         "multi": false,
-        "refresh": 1
+        "name": "datasource",
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource"
       },
       {
-        "name": "traces",
-        "label": "Tempo",
-        "type": "datasource",
-        "query": "tempo",
         "current": {},
         "hide": 0,
         "includeAll": false,
+        "label": "Tempo",
         "multi": false,
-        "refresh": 1
+        "name": "traces",
+        "query": "tempo",
+        "refresh": 1,
+        "type": "datasource"
       }
     ]
   },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
+  "time": { "from": "now-6h", "to": "now" },
   "timezone": "browser",
   "title": "Spenicle observability",
   "uid": "spenicle-observability",
-  "version": 1
+  "version": 2
 }

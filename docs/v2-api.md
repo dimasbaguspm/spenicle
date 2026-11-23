@@ -123,8 +123,13 @@ touch the ledger.
 | `k` | TEXT PK | |
 | `v` | TEXT | raw; JSON when structured |
 
-Keys: `base_currency`, `setup_completed_at`, `secret_fingerprint`, `extraction_enabled`,
-`extraction_api_url`, `ecb_last_fetch_at`, `last_used_account_id`, `last_used_payee_id`.
+Keys: `base_currency`, `setup_completed_at`, `secret_fingerprint`, `timezone`,
+`extraction_enabled`, `ai_assistance`, `extraction_api_url`, `ecb_last_fetch_at`,
+`last_used_account_id`, `last_used_payee_id`. `timezone` is always present (UTC when
+`APP_TIMEZONE` is unset) and is pinned at the first boot; `extraction_enabled` means the
+SnapToJSON rail is configured (`SNAPTOJSON_API_KEY`) and `ai_assistance` means
+`OPENAI_HOST` + `OPENAI_API_KEY` + `OPENAI_MODEL` are all set — the two flags are
+independent.
 
 ## 1.2 `api_tokens`
 
@@ -517,7 +522,7 @@ sequenceDiagram
 ## 3.3 `GET /api/meta`
 
 ```json
-{ "settings": { "base_currency":"IDR", "extraction_enabled":false },
+{ "settings": { "base_currency":"IDR", "timezone":"UTC", "extraction_enabled":false, "ai_assistance":false },
   "accounts": [{ "id":3, "name":"BCA Tahapan", "kind":"asset", "balance_minor":"9540000" }],
   "payees": [{ "id":12, "name":"Kopi Kenangan", "last_used_at":"2026-02-14" }],
   "recurring": [{ "id":4, "payee":"Netflix", "cadence":"monthly", "next_due_on":"2026-03-02" }],

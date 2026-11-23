@@ -28,6 +28,7 @@ type Deps struct {
 	Artifacts         repository.Artifacts
 	Health            repository.System
 	ArtifactFiles     repository.ArtifactFiles
+	ExportFiles       repository.ArtifactFiles
 	Exports           exports.Contract
 	Sealer            seal.Sealer
 	BaseCurrency      string
@@ -39,5 +40,6 @@ type Deps struct {
 	ImportMaxBytes    int64
 	WebOrigin         string
 	ExtractionEnabled bool
+	AIAssistance      bool
 	Logger            *logging.Logger
 }

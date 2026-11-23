@@ -23,7 +23,7 @@ func (r *Runner) runExports(ctx context.Context, now time.Time) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Worker.Exports.Run")
 	defer endSpan()
 
-	if r.jobs == nil || r.files == nil {
+	if r.jobs == nil || r.exportFiles == nil {
 		telemetry.RecordWorkerRun(ctx, telemetry.JobExports, telemetry.OutcomeSkipped, 0, time.Since(start))
 
 		return
@@ -105,7 +105,7 @@ func (r *Runner) renderExport(ctx context.Context, job entity.Export) error {
 		return fmt.Errorf("render %s export: %w", job.Format, err)
 	}
 
-	record, err := r.files.Put(ctx, extraction.Artifact{
+	record, err := r.exportFiles.Put(ctx, extraction.Artifact{
 		Filename:    "spenicle." + document.Extension,
 		ContentType: document.ContentType,
 		Bytes:       document.Bytes,

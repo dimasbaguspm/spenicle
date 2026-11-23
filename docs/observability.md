@@ -99,10 +99,9 @@ consistent.
 ## The dashboard
 
 [`config/grafana/observability.json`](../config/grafana/observability.json) is the provisioned
-dashboard: request rate and 5xx ratio, latency p95 by route, worker runs by job, the heartbeat
-age, ledger entries by source, captures by outcome, import clashes, export document size,
-SQLite lock retries and the slowest traces. It expects two datasources, selected with the
-`datasource` (Prometheus) and `traces` (Tempo) variables.
+dashboard, built to the RED standard: every panel answers **R**ate, **E**rrors or **D**uration
+for one dimension, with the saturation and domain panels beside them. It expects two
+datasources, selected with the `datasource` (Prometheus) and `traces` (Tempo) variables.
 
 ```bash
 # a collector that fans OTLP out to Prometheus and Tempo, then a dashboard import:
@@ -111,9 +110,41 @@ curl -s http://localhost:3000/api/dashboards/db \
   -d "{\"dashboard\": $(cat config/grafana/observability.json), \"overwrite\": true}"
 ```
 
-The panels query Prometheus names the OTLP exporter derives: dots become underscores and a
-counter gains `_total`, so `spenicle.http.server.requests` is
-`spenicle_http_server_requests_total` and `spenicle.job` is `spenicle_job`.
+### Panels and their PromQL
+
+| row | panel | PromQL |
+| --- | --- | --- |
+| RED — availability | Availability now (stat, `percent`, green ≥ 99, amber ≥ 95) | `100 * sum(rate(spenicle_http_server_requests_total{http_response_status_code!~"5.."}[5m])) / sum(rate(spenicle_http_server_requests_total[5m]))` |
+| | Success ratio (timeseries) | same expression, range |
+| | Request rate by route (`reqps`) | `sum by (http_route) (rate(spenicle_http_server_requests_total[5m]))` |
+| | Error rate (5xx) by route (`percent`) | `100 * sum by (http_route) (rate(spenicle_http_server_requests_total{http_response_status_code=~"5.."}[5m])) / sum by (http_route) (rate(spenicle_http_server_requests_total[5m]))` |
+| | Client error rate (4xx) by route (`percent`) | the same with `4..` |
+| | Latency quantiles by route (`s`, p50/p90/p95/p99) | `histogram_quantile(0.95, sum by (le, http_route) (rate(spenicle_http_server_duration_seconds_bucket[5m])))` (and `0.50`, `0.90`, `0.99`) |
+| | Average latency by route (`s`) | `sum by (http_route) (rate(spenicle_http_server_duration_seconds_sum[5m])) / sum by (http_route) (rate(spenicle_http_server_duration_seconds_count[5m]))` |
+| Every route in one glance | Routes: rate, errors, latency (table) | four instant queries: the rate, the 5xx ratio, the average and the p95 above, then `merge` → `organize` (rename `Value #A…D`, `http_route` → `route`) → `sortBy` `error %` descending |
+| Saturation | In-flight requests | `sum by (http_route) (spenicle_http_server_in_flight)` |
+| | SQLite lock retries | `sum(rate(spenicle_sqlite_locked_total[5m]))` |
+| Worker | Runs by job and outcome | `sum by (spenicle_job, spenicle_outcome) (rate(spenicle_worker_runs_total[5m]))` |
+| | Items by job | `sum by (spenicle_job) (rate(spenicle_worker_items_total[5m]))` |
+| | Run duration p95 (`s`) | `histogram_quantile(0.95, sum by (le, spenicle_job) (rate(spenicle_worker_run_duration_seconds_bucket[5m])))` |
+| | Heartbeat age (stat, `s`) | `time() - max(spenicle_worker_last_run_timestamp_seconds)` |
+| Domain | Ledger entries by source | `sum by (spenicle_entry_source) (rate(spenicle_ledger_entries_total[5m]))` |
+| | Captures by outcome | `sum by (spenicle_capture_kind, spenicle_outcome) (rate(spenicle_captures_transitions_total[5m]))` |
+| | Import rows and clashes | `sum(rate(spenicle_imports_rows_total[5m]))` and `sum by (spenicle_clash_kind) (rate(spenicle_imports_clashes_total[5m]))` |
+| | Export document size p95 (`bytes`) | `histogram_quantile(0.95, sum by (le) (rate(spenicle_exports_bytes_bucket[5m])))` |
+| Traces | Top spans by duration (Tempo table) | TraceQL `{ }`, limit 20 |
+
+The route dimension is the **`http_route`** label — the router's pattern
+(`GET /api/entries/{ref}`), never the raw path — and it is the only per-route dimension any
+panel groups by. The status dimension is `http_response_status_code`, the worker's are
+`spenicle_job` and `spenicle_outcome`.
+
+The panels query Prometheus names the OTLP exporter derives: dots become underscores, a
+counter gains `_total`, a histogram gains `_bucket`/`_sum`/`_count`, and the unit suffix is
+appended once — `spenicle.http.server.duration` with unit `s` is
+`spenicle_http_server_duration_seconds_bucket`, and `spenicle.exports.bytes` with unit `By`
+is `spenicle_exports_bytes_bucket` (the `_bytes` suffix is not doubled). Labels follow the
+same rule: `spenicle.job` is `spenicle_job`.
 
 The heartbeat panel reads `spenicle_worker_last_run_timestamp_seconds`, which nothing exports
 today: `worker_last_run_at` lives in the `settings` row that `/healthz` reports, so publish it

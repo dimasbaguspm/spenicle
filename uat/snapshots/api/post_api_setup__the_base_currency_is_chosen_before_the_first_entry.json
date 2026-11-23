@@ -1,4 +1,5 @@
 {
+  "ai_assistance": false,
   "base_currency": "USD",
   "extraction_enabled": false,
   "password_must_change": false,

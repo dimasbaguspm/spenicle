@@ -14,6 +14,7 @@ var (
 	ErrBaseCurrencyLocked = errors.New("base currency is locked once the ledger has entries")
 	ErrWeakPassword       = errors.New("password must be at least 12 characters")
 	ErrTimezoneSetOnce    = errors.New("timezone is set once")
+	ErrTimezoneRequired   = errors.New("timezone is required")
 )
 
 type Settings struct {
@@ -25,7 +26,7 @@ type Settings struct {
 }
 
 func DefaultSettings() Settings {
-	return Settings{BaseCurrency: "IDR"}
+	return Settings{BaseCurrency: "IDR", Timezone: DefaultTimezone}
 }
 
 func (s Settings) Validate() error {
@@ -34,8 +35,8 @@ func (s Settings) Validate() error {
 		return err
 	}
 
-	if s.Timezone == "" {
-		return nil
+	if strings.TrimSpace(s.Timezone) == "" {
+		return ErrTimezoneRequired
 	}
 
 	if _, err := time.LoadLocation(s.Timezone); err != nil {

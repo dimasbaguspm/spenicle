@@ -24,9 +24,9 @@ func Serve(ctx context.Context, process *config.Process) {
 	}
 
 	runner := handlers.New(
-		store, store, process.Ledger, store, store, process.Artifacts, parts,
+		store, store, process.Ledger, store, store, process.Artifacts, process.Exports, parts,
 		process.Cfg.ArtifactRetention,
-		exports.New(store, store, store, process.Artifacts, process.Cfg.ExportRetention, clock.System{}),
+		exports.New(store, store, store, process.Exports, process.Cfg.ExportRetention, clock.System{}),
 		export.Deps{
 			Ledger:        store,
 			Exporter:      store,

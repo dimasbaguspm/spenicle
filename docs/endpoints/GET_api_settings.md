@@ -24,7 +24,7 @@ None.
 
 ## Response
 
-`{"base_currency":"IDR","timezone":"UTC","password_must_change":false,"extraction_enabled":false}`
+`{"base_currency":"IDR","timezone":"UTC","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
 
 ## Errors
 
@@ -33,7 +33,10 @@ None.
 ## Limitations
 
 `extraction_enabled` reflects whether `SNAPTOJSON_API_KEY` is set at
-boot; it is not editable through the API yet. `timezone` is **read-only**: it is
+boot; `ai_assistance` reflects whether `OPENAI_HOST`, `OPENAI_API_KEY` and
+`OPENAI_MODEL` are all set. Neither is editable through the API yet, and the two are
+independent: a SnapToJSON deployment reports `extraction_enabled: true` with
+`ai_assistance: false`. `timezone` is **read-only**: it is
 set once, at the first boot, from `APP_TIMEZONE` (default `UTC`), stored in the
 sealed `settings` row, and no request can change it. A later boot whose
 `APP_TIMEZONE` disagrees with the stored value refuses to start, so the calendar
@@ -54,5 +57,5 @@ sequenceDiagram
     UI->>H: GET /api/settings
     H->>S: Load()
     S-->>H: settings
-    H-->>UI: 200 base_currency, timezone, password_must_change, extraction_enabled
+    H-->>UI: 200 base_currency, timezone, password_must_change, extraction_enabled, ai_assistance
 ```

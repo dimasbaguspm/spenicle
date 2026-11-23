@@ -48,20 +48,21 @@ type Summary struct {
 }
 
 type Runner struct {
-	rules      repository.Recurring
-	store      Store
-	entries    ledger.Contract
-	artifacts  repository.Artifacts
-	imports    repository.Imports
-	files      ArtifactFiles
-	parts      PartFiles
-	retention  time.Duration
-	jobs       exports.Contract
-	documents  export.Deps
-	staleAfter time.Duration
-	clock      TimeSource
-	loc        *time.Location
-	logger     *logging.Logger
+	rules       repository.Recurring
+	store       Store
+	entries     ledger.Contract
+	artifacts   repository.Artifacts
+	imports     repository.Imports
+	files       ArtifactFiles
+	exportFiles ArtifactFiles
+	parts       PartFiles
+	retention   time.Duration
+	jobs        exports.Contract
+	documents   export.Deps
+	staleAfter  time.Duration
+	clock       TimeSource
+	loc         *time.Location
+	logger      *logging.Logger
 }
 
 func New(
@@ -71,6 +72,7 @@ func New(
 	artifacts repository.Artifacts,
 	imports repository.Imports,
 	files ArtifactFiles,
+	exportFiles ArtifactFiles,
 	parts PartFiles,
 	retention time.Duration,
 	jobs exports.Contract,
@@ -90,8 +92,9 @@ func New(
 
 	return &Runner{
 		rules: rules, store: store, entries: entries, artifacts: artifacts,
-		imports: imports, files: files, parts: parts, retention: retention,
-		jobs: jobs, documents: documents, staleAfter: staleAfter,
+		imports: imports, files: files, exportFiles: exportFiles, parts: parts,
+		retention: retention,
+		jobs:      jobs, documents: documents, staleAfter: staleAfter,
 		clock: clock, loc: loc, logger: logger,
 	}
 }

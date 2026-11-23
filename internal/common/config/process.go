@@ -30,6 +30,7 @@ type Process struct {
 	Store        *sqlite.Store
 	Sealer       seal.Sealer
 	Artifacts    *filestore.Store
+	Exports      *filestore.Store
 	Settings     *settings.Service
 	Ledger       *ledger.Service
 	Rates        *rates.Service
@@ -114,6 +115,12 @@ func boot(ctx context.Context, cfg entity.AppConfig, logger *logging.Logger) (*P
 		return nil, fmt.Errorf("filestore: %w", err)
 	}
 
+	exportFiles, err := filestore.New(cfg.ExportDir, []byte(cfg.AppSecret))
+	if err != nil {
+		_ = store.Close(ctx)
+		return nil, fmt.Errorf("export filestore: %w", err)
+	}
+
 	ledgerService := ledger.New(store, store, store, settingsService, clock.System{}, clock.System{})
 
 	ratesService, err := ratesFor(ctx, cfg, store, logger)
@@ -128,6 +135,7 @@ func boot(ctx context.Context, cfg entity.AppConfig, logger *logging.Logger) (*P
 		Store:        store,
 		Sealer:       sealer,
 		Artifacts:    artifacts,
+		Exports:      exportFiles,
 		Settings:     settingsService,
 		Ledger:       ledgerService,
 		Rates:        ratesService,
@@ -168,7 +176,7 @@ func prepare(
 		return nil, entity.Settings{}, "", err
 	}
 
-	_, created, err := service.EnsureInitial(ctx, freshPassword)
+	_, created, err := service.EnsureInitial(ctx, freshPassword, cfg.Timezone)
 	if err != nil {
 		return nil, entity.Settings{}, "", fmt.Errorf("settings: %w", err)
 	}

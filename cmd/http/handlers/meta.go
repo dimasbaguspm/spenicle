@@ -42,13 +42,6 @@ func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseCurrency := appSettings.BaseCurrency
-	timezone := appSettings.Timezone
-
-	if timezone == "" {
-		timezone = entity.DefaultTimezone
-	}
-
 	accounts, err := s.deps.Accounts.ListAccounts(ctx, entity.AccountFilter{Limit: list.MaxLimit})
 	if err != nil {
 		s.writeClassified(ctx, w, err)
@@ -64,11 +57,7 @@ func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := metaResponse{
-		Settings: map[string]any{
-			"base_currency":      baseCurrency,
-			"timezone":           timezone,
-			"extraction_enabled": s.deps.ExtractionEnabled,
-		},
+		Settings:   metaSettings(appSettings, s.deps.ExtractionEnabled, s.deps.AIAssistance),
 		Accounts:   accountBodies,
 		Currencies: make([]currencyResponse, 0, len(entity.Currencies())),
 	}
@@ -82,4 +71,13 @@ func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+func metaSettings(settings entity.Settings, extraction, ai bool) map[string]any {
+	return map[string]any{
+		"base_currency":      settings.BaseCurrency,
+		"timezone":           settings.Timezone,
+		"extraction_enabled": extraction,
+		"ai_assistance":      ai,
+	}
 }

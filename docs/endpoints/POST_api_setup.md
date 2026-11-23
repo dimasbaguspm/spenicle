@@ -27,7 +27,7 @@ None.
 
 ## Response
 
-**200** `{"base_currency":"USD","password_must_change":false,"extraction_enabled":false}`
+**200** `{"base_currency":"USD","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
 
 ## Errors
 

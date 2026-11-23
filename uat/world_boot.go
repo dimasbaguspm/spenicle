@@ -129,7 +129,7 @@ func (w *world) boot(ctx context.Context) error {
 	}
 
 	w.exports = exports.New(
-		store, store, store, artifacts, limits.ExportRetention, clockSystem,
+		store, store, store, w.exportFiles, limits.ExportRetention, clockSystem,
 	)
 
 	w.server = httptest.NewServer(httpcmd.New(handlers.Deps{
@@ -148,6 +148,7 @@ func (w *world) boot(ctx context.Context) error {
 		Exports:           w.exports,
 		Artifacts:         store,
 		ArtifactFiles:     artifacts,
+		ExportFiles:       w.exportFiles,
 		Health:            store,
 		Settings:          settingsService,
 		Rates:             built.rates,
@@ -160,6 +161,7 @@ func (w *world) boot(ctx context.Context) error {
 		MaxArtifactBytes:  limits.ArtifactMaxBytes,
 		ImportMaxBytes:    limits.ImportMaxBytes,
 		ExtractionEnabled: w.rail != "",
+		AIAssistance:      false,
 		Logger:            logging.From(slog.New(w.logs), telemetry.ComponentHTTP),
 	}))
 

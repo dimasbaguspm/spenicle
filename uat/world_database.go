@@ -107,19 +107,26 @@ func (w *world) openFiles() error {
 		return fmt.Errorf("filestore: %w", err)
 	}
 
+	exportFiles, err := filestore.New(
+		filepath.Join(w.dir, config.DefaultExportDirName), []byte(appSecret))
+	if err != nil {
+		return fmt.Errorf("export filestore: %w", err)
+	}
+
 	parts, err := filestore.NewParts(filepath.Join(w.dir, config.DefaultImportDirName))
 	if err != nil {
 		return fmt.Errorf("import parts: %w", err)
 	}
 
 	w.artifacts = artifacts
+	w.exportFiles = exportFiles
 	w.parts = parts
 
 	return nil
 }
 
 func (w *world) seedSettings(ctx context.Context, service *settings.Service) error {
-	if _, _, err := service.EnsureInitial(ctx, ""); err != nil {
+	if _, _, err := service.EnsureInitial(ctx, "", ""); err != nil {
 		return fmt.Errorf("settings: %w", err)
 	}
 

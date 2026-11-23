@@ -241,8 +241,9 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		CustomQueries: store,
 		Artifacts:     store,
 		ArtifactFiles: process.Artifacts,
+		ExportFiles:   process.Exports,
 		Exports: exports.New(
-			store, store, store, process.Artifacts, process.Cfg.ExportRetention, clock.System{},
+			store, store, store, process.Exports, process.Cfg.ExportRetention, clock.System{},
 		),
 		Settings: process.Settings,
 		Imports: imports.New(
@@ -264,6 +265,7 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		ImportMaxBytes:    process.Cfg.ImportMaxBytes,
 		WebOrigin:         process.Cfg.WebOrigin,
 		ExtractionEnabled: process.Cfg.SnapToJSONAPIKey != "",
+		AIAssistance:      process.Cfg.AIAssistance(),
 		Logger:            process.Logger,
 	}, nil
 }
@@ -294,7 +296,7 @@ func selectRail(
 	}
 
 	if cfg.OpenAIAPIKey != "" {
-		rail, err := openai.New(cfg.OpenAIAPIKey, cfg.OpenAIModel, "", cfg.SnapToJSONTimeout)
+		rail, err := openai.New(cfg.OpenAIAPIKey, cfg.OpenAIModel, cfg.OpenAIHost, cfg.SnapToJSONTimeout)
 		if err != nil {
 			return nil, fmt.Errorf("openai rail: %w", err)
 		}

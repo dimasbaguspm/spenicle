@@ -34,5 +34,5 @@ func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, toSettingsResponse(settings))
+	s.writeSettings(w, settings)
 }
