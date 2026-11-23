@@ -61,6 +61,7 @@ Rules that keep it pluggable:
 ## Commands
 
 ```bash
+make hooks      # install the git hook (build + lint + test + UAT before commit)
 make build      # bin/spenicle
 make run        # DATA_DIR=./data ADDR=:8080 go run ./cmd/http
 make test       # go test ./... (unit + UAT)
@@ -70,6 +71,10 @@ make fmt        # gofmt the tree
 make lint       # all four groups; every one must stay at 0 issues
 make lint-fix   # safe automatic fixes (style, then correctness)
 ```
+
+`lefthook.yml` wires the same four checks into `pre-commit` and `pre-push`; install it
+with `make hooks`. Agents that commit must run the checks themselves anyway — CI is
+the judge, the hook is the convenience.
 
 Run `make lint` and `make test` before you call anything done. All four lint groups
 report `0 issues` today; a new finding is yours to fix, not to silence — unless it is

@@ -40,10 +40,14 @@ file path or a ticket number in the subject.
 ## 3. Gates (run before pushing)
 
 ```bash
+make hooks     # once per clone: lefthook runs build + lint + test + UAT on commit
 make fmt
 make test      # unit + UAT over the real handler and a real SQLite file
 make lint      # correctness, style, security, performance — 0 issues each
 ```
+
+The hook is a convenience, not the gate: CI runs the same commands on a runner. If you
+skip it with `--no-verify`, run them by hand before pushing.
 
 Also, when the change touches wiring or behaviour:
 
