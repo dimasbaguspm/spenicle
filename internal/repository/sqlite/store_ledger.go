@@ -28,55 +28,54 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 		createdAt = time.Now().UTC()
 	}
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	var entryID int64
+
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx, `
+			INSERT INTO ledger_entries
+				(occurred_on, payee_id, note, currency, source, recurring_rule_id,
+				 client_id, reverses_entry_id, voided_at, created_at)
+			VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?)`,
+			e.OccurredOn.Format(constant.DateLayout),
+			nullInt(e.PayeeID),
+			nullString(e.Note),
+			e.Currency,
+			e.Source,
+			nullString(e.ClientID),
+			nullInt(e.ReversesID),
+			createdAt.Format(constant.TimestampLayout),
+		)
+		if execErr != nil {
+			return fmt.Errorf("insert entry: %w", execErr)
+		}
+
+		id, idErr := res.LastInsertId()
+		if idErr != nil {
+			return fmt.Errorf("entry id: %w", idErr)
+		}
+
+		entryID = id
+
+		if postErr := insertPostings(ctx, tx, entryID, e.Postings); postErr != nil {
+			return postErr
+		}
+
+		if _, auditErr := tx.ExecContext(ctx, `
+			INSERT INTO audit_log (entity_table, entity_id, action, from_json, to_json, actor, at)
+			VALUES ('ledger_entries', ?, 'create', NULL, NULL, 'user', ?)`,
+			entryID,
+			createdAt.Format(constant.TimestampLayout),
+		); auditErr != nil {
+			return fmt.Errorf("audit: %w", auditErr)
+		}
+
+		return nil
+	})
 	if err != nil {
-		return entity.Entry{}, fmt.Errorf("begin: %w", err)
-	}
-
-	defer func() { _ = tx.Rollback() }()
-
-	res, err := tx.ExecContext(ctx, `
-		INSERT INTO ledger_entries
-			(occurred_on, payee_id, note, currency, source, recurring_rule_id,
-			 client_id, reverses_entry_id, voided_at, created_at)
-		VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?)`,
-		e.OccurredOn.Format(constant.DateLayout),
-		nullInt(e.PayeeID),
-		nullString(e.Note),
-		e.Currency,
-		e.Source,
-		nullString(e.ClientID),
-		nullInt(e.ReversesID),
-		createdAt.Format(time.RFC3339),
-	)
-	if err != nil {
-		return entity.Entry{}, fmt.Errorf("insert entry: %w", err)
-	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		return entity.Entry{}, fmt.Errorf("entry id: %w", err)
-	}
-
-	if err := insertPostings(ctx, tx, id, e.Postings); err != nil {
 		return entity.Entry{}, err
 	}
 
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO audit_log (entity_table, entity_id, action, from_json, to_json, actor, at)
-		 VALUES ('ledger_entries', ?, 'create', NULL, NULL, 'user', ?)`,
-		id,
-		createdAt.Format(time.RFC3339),
-	); err != nil {
-		return entity.Entry{}, fmt.Errorf("audit: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return entity.Entry{}, fmt.Errorf("commit: %w", err)
-	}
-
-	e.ID = id
+	e.ID = entryID
 	e.CreatedAt = createdAt
 
 	return e, nil
