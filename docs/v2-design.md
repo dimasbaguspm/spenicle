@@ -31,18 +31,20 @@ place to defer a decision. v2 fixes all three.
 | month close | none: no lock, no snapshot; the month report is derived from the ledger |
 | history | fresh start; statement import can backfill via extraction when enabled |
 | deletions | none, ever. Void and reject instead; `audit_log` records everything |
+| configuration | env vars only, every default in `common/config`, no viper, no config file |
+| first boot | adapter seeds the chart of accounts and locks the base currency; no bootstrap module |
 
 ## Layout
 
 ```
-cmd/http/             binary: main.go, bootstrap.go (composition root), routes.go
+cmd/http/             binary: main.go, bootstrap.go (composition root + wiring)
 cmd/http/handlers/    one file per endpoint group; owns the route table
 cmd/http/middlewares/ recovery, tracing, request logging
 uat/                  Gherkin suite: uat.go (entry point), steps.go, world.go, features/
 internal/common/      utilities with no business logic: config, clock, seal, otel, httpx
 internal/constant/    every fixed value shared by more than one package
 internal/entity/      shared structs and the invariants that must hold forever
-internal/module/      business logic: ledger, bootstrap
+internal/module/      business logic: ledger
 internal/repository/  third-party comms: the contracts, plus sqlite and snaptojson
 ```
 
@@ -57,7 +59,15 @@ Two rules keep it pluggable:
    create a cycle.
 
 `cmd/http` is `package main`, so `uat` assembles the same graph by hand from
-`repository/sqlite`, `module/bootstrap`, `module/ledger` and `handlers.New`.
+`repository/sqlite` (open, migrate, `EnsureBaseline`), `module/ledger` and
+`handlers.New`. First-boot state lives in the adapter with the migrations, not in a
+module: it is initial data, and its rules come from `entity`.
+
+Configuration is one file: `internal/common/config/config.go` holds every environment
+variable, **every default** (DB path, HTTP timeouts, shutdown budgets, body cap, pool
+sizes, service and tracer names) and the validation; the resolved value is
+`entity.AppConfig`. No config file, no viper: seven variables do not need a
+precedence chain, and one struct with defaults is testable without a framework.
 
 ### Contexts and spans
 

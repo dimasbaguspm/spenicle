@@ -34,14 +34,14 @@ the document wins until you change the document too.
 ## Layout
 
 ```
-cmd/http/              main.go · bootstrap.go (composition root) · routes.go
+cmd/http/              main.go · bootstrap.go (composition root; owns the wiring)
 cmd/http/handlers/     route table + one file per endpoint group
 cmd/http/middlewares/  recovery, span per request, structured request log
 uat/                   godog suite: uat.go, steps.go, world.go, features/
 internal/common/       no business logic: config, clock, seal, otel, httpx
 internal/constant/     every fixed value shared by more than one package
 internal/entity/       shared structs + invariants; imports stdlib + constant only
-internal/module/       business logic: ledger, bootstrap
+internal/module/       business logic: ledger
 internal/repository/   contracts, plus the adapters: sqlite, snaptojson
 ```
 
@@ -94,6 +94,13 @@ Un-prefixed, all optional except `PASSWORD` in practice:
 | `EXTRACTION_API_KEY` | — | enables the extraction vendor; unset = manual entry |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | empty = tracing/metrics are no-ops |
 
+Only these seven are environment variables. **Every other knob — DB path, HTTP
+timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
+and tracer names — has its default in `internal/common/config/config.go`**, and the
+resulting value object is `entity.AppConfig`. No viper, on purpose: seven variables
+and one file beat a precedence chain nobody can predict. A new knob means a new
+constant and field in those two files, nothing else.
+
 `/healthz` returns `status`, `version` (`<tag>+<sha7>`), `schema_version`,
 `app_secret` fingerprint and `base_currency`. Use it to prove a running process is
 the build you think it is.
@@ -110,7 +117,8 @@ the build you think it is.
   earlier in the scenario.
 - `uat` assembles the dependency graph by hand because `cmd/http` is `package main`
   and therefore not importable. Adding a dependency to `cmd/http/bootstrap.go` means
-  adding it to `uat/world.go` too.
+  adding it to `uat/world.go` too. Seeds, schema and first-boot settings live in the
+  adapter (`sqlite.EnsureBaseline`), not in a module.
 
 ## Committing
 
