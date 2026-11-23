@@ -16,9 +16,10 @@ import (
 const payeeColumns = `p.id, p.ref, p.name,
 	COALESCE(da.ref, ''), COALESCE(dc.ref, ''), p.archived_at, p.created_at`
 
-const payeeFrom = `FROM payees p
-	LEFT JOIN accounts da ON da.id = p.default_account_id
+const payeeJoins = `LEFT JOIN accounts da ON da.id = p.default_account_id
 	LEFT JOIN accounts dc ON dc.id = p.default_category_id`
+
+const payeeFrom = `FROM payees p ` + payeeJoins
 
 func (s *Store) CreatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreatePayee")
@@ -74,6 +75,47 @@ func (s *Store) PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool,
 	}
 
 	return payee, true, nil
+}
+
+func (s *Store) ListPayees(ctx context.Context, filter entity.PayeeFilter) ([]entity.Payee, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListPayees")
+	defer endSpan()
+
+	limit := clampLimit(filter.Limit)
+
+	builder := newList("payees p", payeeColumns)
+	builder.join(payeeJoins)
+	builder.like("p.name", filter.Query)
+	builder.inRefs("p.ref", filter.Refs)
+	builder.archived("p.archived_at", filter.Archived)
+	builder.before("p.id", "payees", filter.Cursor)
+	builder.orderBy("p.name, p.id")
+
+	query, args := builder.page(limit)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select payees: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	out := make([]entity.Payee, 0, limit+1)
+
+	for rows.Next() {
+		payee, scanErr := scanPayeeRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+
+		out = append(out, payee)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate payees: %w", err)
+	}
+
+	return out, nil
 }
 
 func (s *Store) UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error) {

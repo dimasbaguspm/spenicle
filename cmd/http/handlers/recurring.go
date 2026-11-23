@@ -107,6 +107,23 @@ func (s *server) handleCreateRecurring(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, toRecurringResponse(created))
 }
 
+func (s *server) handleListRecurring(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Recurring.List")
+	defer endSpan()
+
+	filter, ok := bindListParams(w, r, recurringFilter)
+	if !ok {
+		return
+	}
+
+	writeList(
+		ctx, w, s, "recurring", filter.Limit,
+		func() ([]entity.Recurring, error) { return s.deps.Recurring.ListRecurring(ctx, filter) },
+		func(rule entity.Recurring) string { return rule.Ref },
+		toRecurringResponse,
+	)
+}
+
 func (s *server) handlePatchRecurring(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Recurring.Patch")
 	defer endSpan()

@@ -1,0 +1,130 @@
+package sqlite
+
+import (
+	"strconv"
+	"strings"
+)
+
+type listQuery struct {
+	table   string
+	columns string
+	joins   string
+	where   []string
+	args    []any
+	order   string
+}
+
+func newList(table, columns string) *listQuery {
+	return &listQuery{table: table, columns: columns}
+}
+
+func (q *listQuery) join(clause string) {
+	q.joins = clause
+}
+
+func (q *listQuery) eq(column, value string) {
+	if value == "" {
+		return
+	}
+
+	q.and(column+` = ?`, value)
+}
+
+func (q *listQuery) gte(column, value string) {
+	q.and(column+` >= ?`, value)
+}
+
+func (q *listQuery) lte(column, value string) {
+	q.and(column+` <= ?`, value)
+}
+
+func (q *listQuery) like(column, value string) {
+	if value == "" {
+		return
+	}
+
+	q.and(column+` LIKE ? ESCAPE '\'`, "%"+escapeLike(value)+"%")
+}
+
+func (q *listQuery) inRefs(column string, refs []string) {
+	if len(refs) == 0 {
+		return
+	}
+
+	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
+	q.where = append(q.where, column+` IN (`+placeholders(len(refs))+`)`)
+
+	for _, ref := range refs {
+		q.args = append(q.args, ref)
+	}
+}
+
+func (q *listQuery) inSubquery(column, subquery, value string) {
+	if value == "" {
+		return
+	}
+
+	q.and(column+` IN (`+subquery+`)`, value)
+}
+
+func (q *listQuery) parentRef(column, table, ref string) {
+	if ref == "" {
+		return
+	}
+
+	q.and(column+` = (SELECT id FROM `+table+` WHERE ref = ?)`, ref)
+}
+
+func (q *listQuery) archived(column, want string) {
+	switch want {
+	case "true":
+		q.where = append(q.where, column+` IS NOT NULL`)
+	case "false":
+		q.where = append(q.where, column+` IS NULL`)
+	}
+}
+
+func (q *listQuery) before(column, table, ref string) {
+	if ref == "" {
+		return
+	}
+
+	q.and(column+` < (SELECT id FROM `+table+` WHERE ref = ?)`, ref)
+}
+
+func (q *listQuery) orderBy(clause string) {
+	q.order = clause
+}
+
+func (q *listQuery) page(limit int) (string, []any) {
+	var statement strings.Builder
+
+	statement.WriteString(`SELECT ` + q.columns + ` FROM ` + q.table)
+
+	if q.joins != "" {
+		statement.WriteString(` ` + q.joins)
+	}
+
+	statement.WriteString(` WHERE 1 = 1`)
+
+	for _, clause := range q.where {
+		statement.WriteString(` AND ` + clause)
+	}
+
+	if q.order != "" {
+		statement.WriteString(` ORDER BY ` + q.order)
+	}
+
+	statement.WriteString(` LIMIT ` + strconv.Itoa(limit+1))
+
+	return statement.String(), q.args
+}
+
+func (q *listQuery) and(clause string, values ...any) {
+	q.where = append(q.where, clause)
+	q.args = append(q.args, values...)
+}
+
+func escapeLike(value string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(value)
+}

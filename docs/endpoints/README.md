@@ -16,10 +16,13 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/settings` | the in-app settings the shell reads | [`GET_api_settings.md`](./GET_api_settings.md) |
 | `PATCH` | `/api/settings` | change the base currency while the ledger is empty | [`PATCH_api_settings.md`](./PATCH_api_settings.md) |
 | `GET` | `/api/meta` | bootstrap payload: settings, accounts, currencies | [`GET_api_meta.md`](./GET_api_meta.md) |
+| `GET` | `/api/accounts` | every account with the balance the ledger implies | [`GET_api_accounts.md`](./GET_api_accounts.md) |
 | `POST` | `/api/accounts` | create an account or a category | [`POST_api_accounts.md`](./POST_api_accounts.md) |
 | `PATCH` | `/api/accounts/{ref}` | rename, re-icon, archive an account | [`PATCH_api_accounts_ref.md`](./PATCH_api_accounts_ref.md) |
 | `POST` | `/api/payees` | create a payee with optional defaults | [`POST_api_payees.md`](./POST_api_payees.md) |
 | `PATCH` | `/api/payees/{ref}` | rename, re-default, archive a payee | [`PATCH_api_payees_ref.md`](./PATCH_api_payees_ref.md) |
+| `GET` | `/api/payees` | every payee with its default accounts | [`GET_api_payees.md`](./GET_api_payees.md) |
+| `GET` | `/api/recurring` | every recurring rule, soonest due first | [`GET_api_recurring.md`](./GET_api_recurring.md) |
 | `POST` | `/api/recurring` | create a recurring rule | [`POST_api_recurring.md`](./POST_api_recurring.md) |
 | `PATCH` | `/api/recurring/{ref}` | steer a recurring rule | [`PATCH_api_recurring_ref.md`](./PATCH_api_recurring_ref.md) |
 | `GET` | `/api/entries` | list the ledger, newest first | [`GET_api_entries.md`](./GET_api_entries.md) |

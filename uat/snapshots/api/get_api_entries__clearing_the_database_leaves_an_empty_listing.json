@@ -1,3 +1,7 @@
 {
-  "entries": []
+  "entries": [],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
 }

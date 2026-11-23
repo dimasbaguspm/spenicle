@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
@@ -130,4 +132,58 @@ func archivedAt(archived bool) *time.Time {
 	now := time.Now().UTC()
 
 	return &now
+}
+
+func (s *server) handleListAccounts(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Accounts.List")
+	defer endSpan()
+
+	filter, ok := bindListParams(w, r, accountFilter)
+	if !ok {
+		return
+	}
+
+	balances, err := s.deps.Accounts.BalancesByAccount(ctx)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	writeList(
+		ctx, w, s, "accounts", filter.Limit,
+		func() ([]entity.Account, error) { return s.deps.Accounts.ListAccounts(ctx, filter) },
+		func(account entity.Account) string { return account.Ref },
+		func(account entity.Account) accountResponse { return accountRow(account, balances) },
+	)
+}
+
+func (s *server) accountResponses(
+	ctx context.Context,
+	accounts []entity.Account,
+) ([]accountResponse, error) {
+	balances, err := s.deps.Accounts.BalancesByAccount(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]accountResponse, 0, len(accounts))
+
+	for _, account := range accounts {
+		out = append(out, accountRow(account, balances))
+	}
+
+	return out, nil
+}
+
+func accountRow(account entity.Account, balances map[int64]int64) accountResponse {
+	return accountResponse{
+		Ref:             account.Ref,
+		Name:            account.Name,
+		Kind:            account.Kind,
+		Currency:        account.Currency,
+		BaseAmountMinor: strconv.FormatInt(balances[account.ID], 10),
+		Icon:            account.Icon,
+		Archived:        account.ArchivedAt != nil,
+	}
 }

@@ -43,6 +43,8 @@ const (
 	stubKey       = "project-key"
 	stubModel     = "gpt-4o-mini"
 	vendorTimeout = 10 * time.Second
+
+	worldListLimit = 200
 )
 
 type faultType string
@@ -250,7 +252,7 @@ func (w *world) boot(ctx context.Context) error {
 
 	w.rates = built.cache
 
-	accounts, err := store.ListAccounts(ctx)
+	accounts, err := store.ListAccounts(ctx, entity.AccountFilter{Limit: worldListLimit})
 	if err != nil {
 		_ = store.Close(ctx)
 

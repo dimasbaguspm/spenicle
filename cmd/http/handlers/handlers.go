@@ -68,10 +68,13 @@ func New(deps Deps) http.Handler {
 	mux.HandleFunc("GET /api/dashboard", instance.handleDashboard)
 	mux.HandleFunc("POST /api/setup", instance.handleSetup)
 
+	mux.HandleFunc("GET /api/accounts", instance.handleListAccounts)
 	mux.HandleFunc("POST /api/accounts", instance.handleCreateAccount)
 	mux.HandleFunc("PATCH /api/accounts/{ref}", instance.handlePatchAccount)
+	mux.HandleFunc("GET /api/payees", instance.handleListPayees)
 	mux.HandleFunc("POST /api/payees", instance.handleCreatePayee)
 	mux.HandleFunc("PATCH /api/payees/{ref}", instance.handlePatchPayee)
+	mux.HandleFunc("GET /api/recurring", instance.handleListRecurring)
 	mux.HandleFunc("POST /api/recurring", instance.handleCreateRecurring)
 	mux.HandleFunc("PATCH /api/recurring/{ref}", instance.handlePatchRecurring)
 

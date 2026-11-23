@@ -3,6 +3,11 @@
   "occurred_on": "2025-09-14",
   "postings": [
     {
+      "account": {
+        "kind": "expense",
+        "name": "Coffee",
+        "ref": "<ref>"
+      },
       "account_ref": "<ref>",
       "amount_minor": "800",
       "base_amount_minor": "130003",
@@ -10,6 +15,11 @@
       "fx_source": "manual"
     },
     {
+      "account": {
+        "kind": "asset",
+        "name": "Cash",
+        "ref": "<ref>"
+      },
       "account_ref": "<ref>",
       "amount_minor": "-800",
       "base_amount_minor": "-130003",

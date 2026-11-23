@@ -21,3 +21,20 @@ type Recurring struct {
 	LastPostedOn     *time.Time
 	CreatedAt        time.Time
 }
+
+type PayeeFilter struct {
+	Query    string
+	Refs     []string
+	Archived string
+	Cursor   string
+	Limit    int
+}
+
+type RecurringFilter struct {
+	Query   string
+	Refs    []string
+	State   string
+	Cadence string
+	Cursor  string
+	Limit   int
+}

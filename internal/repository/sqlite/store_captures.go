@@ -84,24 +84,19 @@ func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) (
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListCaptures")
 	defer endSpan()
 
-	query := `SELECT ` + captureColumns + ` FROM captures WHERE (? = '' OR status = ?)`
-	args := []any{filter.Status, filter.Status}
+	limit := clampLimit(filter.Limit)
 
-	if filter.Cursor > 0 {
-		query += ` AND id < ?`
-
-		args = append(args, filter.Cursor)
-	}
-
-	query += `
-		ORDER BY CASE status
+	builder := newList("captures", captureColumns)
+	builder.eq("status", filter.Status)
+	builder.inRefs("ref", filter.Refs)
+	builder.before("captures.id", "captures", filter.Cursor)
+	builder.orderBy(`CASE status
 			WHEN 'extracting' THEN 0
 			WHEN 'pending' THEN 1
 			ELSE 2
-		END, received_at ASC, id ASC
-		LIMIT ?`
+		END, received_at ASC, id ASC`)
 
-	args = append(args, clampLimit(filter.Limit))
+	query, args := builder.page(limit)
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -110,7 +105,7 @@ func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) (
 
 	defer func() { _ = rows.Close() }()
 
-	out := make([]entity.Capture, 0, clampLimit(filter.Limit))
+	out := make([]entity.Capture, 0, limit+1)
 
 	for rows.Next() {
 		capture, scanErr := scanCaptureRow(rows)

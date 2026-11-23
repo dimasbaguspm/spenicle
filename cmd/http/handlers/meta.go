@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -44,14 +44,14 @@ func (s *server) handleMeta(w http.ResponseWriter, r *http.Request) {
 
 	baseCurrency := appSettings.BaseCurrency
 
-	accounts, err := s.deps.Accounts.ListAccounts(ctx)
+	accounts, err := s.deps.Accounts.ListAccounts(ctx, entity.AccountFilter{Limit: list.MaxLimit})
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 
 		return
 	}
 
-	balances, err := s.deps.Accounts.BalancesByAccount(ctx)
+	accountBodies, err := s.accountResponses(ctx, accounts)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 
@@ -63,20 +63,8 @@ func (s *server) handleMeta(w http.ResponseWriter, r *http.Request) {
 			"base_currency":      baseCurrency,
 			"extraction_enabled": s.deps.ExtractionEnabled,
 		},
-		Accounts:   make([]accountResponse, 0, len(accounts)),
+		Accounts:   accountBodies,
 		Currencies: make([]currencyResponse, 0, len(entity.Currencies())),
-	}
-
-	for _, account := range accounts {
-		out.Accounts = append(out.Accounts, accountResponse{
-			Ref:             account.Ref,
-			Name:            account.Name,
-			Kind:            account.Kind,
-			Currency:        account.Currency,
-			BaseAmountMinor: strconv.FormatInt(balances[account.ID], 10),
-			Icon:            account.Icon,
-			Archived:        account.ArchivedAt != nil,
-		})
 	}
 
 	for _, currency := range entity.Currencies() {

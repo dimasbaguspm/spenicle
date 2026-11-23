@@ -12,6 +12,17 @@ Feature: GET /api/captures
     When I send a GET to "/api/captures"
     Then the response status is 200
     And the store holds:
-      | table    | count |
-      | captures | 1     |
-      | ledger_entries | 0 |
+      | table          | count |
+      | captures       | 1     |
+      | ledger_entries | 0     |
+
+  Scenario: The status filter narrows the queue
+    Given a running API
+    And I send a POST to "/api/captures" with:
+      """json
+      {"kind":"share","raw_text":"BCA: Transaksi Rp25.000 di KOPI KENANGAN"}
+      """
+    And the response status is 202
+    When I send a GET to "/api/captures?status=approved"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_captures__the_status_filter_narrows_the_queue"

@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  },
+  "payees": [
+    {
+      "archived": false,
+      "created_at": "<timestamp>",
+      "default_account_ref": "<ref>",
+      "name": "KOPI KENANGAN",
+      "ref": "<ref>"
+    }
+  ]
+}

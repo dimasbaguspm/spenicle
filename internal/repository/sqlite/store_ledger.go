@@ -13,6 +13,12 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
+const entryColumns = `id, ref, occurred_on, payee_id, note, currency, source, client_id,
+	reverses_entry_id, voided_at, created_at`
+
+const entryAccountSubquery = `SELECT p.entry_id FROM ledger_postings p
+	JOIN accounts a ON a.id = p.account_id WHERE a.ref = ?`
+
 func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertEntry")
 	defer endSpan()
@@ -236,70 +242,111 @@ func (s *Store) ListEntries(
 
 	var out []entity.Entry
 
+	ids := make([]int64, 0, clampLimit(filter.Limit))
+
 	for rows.Next() {
 		entry, scanErr := scanEntryRow(rows)
 		if scanErr != nil {
 			return nil, scanErr
 		}
 
-		if entry.Postings, scanErr = s.postingsByEntryID(ctx, entry.ID); scanErr != nil {
-			return nil, scanErr
-		}
-
 		out = append(out, entry)
+		ids = append(ids, entry.ID)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate entries: %w", err)
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, fmt.Errorf("iterate entries: %w", rowsErr)
+	}
+
+	postings, err := s.postingsByEntryIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range out {
+		out[i].Postings = postings[out[i].ID]
 	}
 
 	return out, nil
 }
 
-func entryQuery(filter entity.EntryFilter) (string, []any) {
+func (s *Store) postingsByEntryIDs(
+	ctx context.Context,
+	ids []int64,
+) (map[int64][]entity.Posting, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.postingsByEntryIDs")
+	defer endSpan()
+
+	byEntry := make(map[int64][]entity.Posting, len(ids))
+
+	if len(ids) == 0 {
+		return byEntry, nil
+	}
+
+	args := make([]any, 0, len(ids))
+	for _, id := range ids {
+		args = append(args, id)
+	}
+
+	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
 	query := `
-		SELECT id, ref, occurred_on, payee_id, note, currency, source, client_id,
-		       reverses_entry_id, voided_at, created_at
-		FROM ledger_entries
-		WHERE 1 = 1`
-	args := []any{}
+		SELECT p.entry_id, p.account_id, a.ref, p.amount_minor, p.base_amount_minor,
+		       p.fx_rate, p.fx_rate_date, p.fx_source
+		FROM ledger_postings p
+		JOIN accounts a ON a.id = p.account_id
+		WHERE p.entry_id IN (` + placeholders(len(ids)) + `)
+		ORDER BY p.entry_id, p.id`
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select postings: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var (
+			entryID int64
+			p       entity.Posting
+			rateDay sql.NullString
+		)
+
+		if err := rows.Scan(&entryID, &p.AccountID, &p.AccountRef, &p.AmountMinor,
+			&p.BaseAmountMinor, &p.FXRate, &rateDay, &p.FXSource); err != nil {
+			return nil, fmt.Errorf("scan posting: %w", err)
+		}
+
+		p.FXRateDate = rateDay.String
+		byEntry[entryID] = append(byEntry[entryID], p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate postings: %w", err)
+	}
+
+	return byEntry, nil
+}
+
+func entryQuery(filter entity.EntryFilter) (string, []any) {
+	builder := newList("ledger_entries", entryColumns)
 
 	if !filter.From.IsZero() {
-		query += ` AND occurred_on >= ?`
-
-		args = append(args, filter.From.Format(constant.DateLayout))
+		builder.gte("occurred_on", filter.From.Format(constant.DateLayout))
 	}
 
 	if !filter.To.IsZero() {
-		query += ` AND occurred_on <= ?`
-
-		args = append(args, filter.To.Format(constant.DateLayout))
+		builder.lte("occurred_on", filter.To.Format(constant.DateLayout))
 	}
 
-	if filter.AccountRef != "" {
-		query += ` AND id IN (SELECT p.entry_id FROM ledger_postings p
-			JOIN accounts a ON a.id = p.account_id WHERE a.ref = ?)`
+	builder.inSubquery("id", entryAccountSubquery, filter.AccountRef)
+	builder.eq("source", filter.Source)
+	builder.eq("currency", filter.Currency)
+	builder.like("note", filter.Query)
+	builder.inRefs("ref", filter.Refs)
+	builder.before("ledger_entries.id", "ledger_entries", filter.Cursor)
+	builder.orderBy("id DESC")
 
-		args = append(args, filter.AccountRef)
-	}
-
-	if filter.Source != "" {
-		query += ` AND source = ?`
-
-		args = append(args, filter.Source)
-	}
-
-	if filter.Cursor > 0 {
-		query += ` AND id < ?`
-
-		args = append(args, filter.Cursor)
-	}
-
-	query += ` ORDER BY id DESC LIMIT ?`
-
-	args = append(args, clampLimit(filter.Limit))
-
-	return query, args
+	return builder.page(clampLimit(filter.Limit))
 }
 
 func (s *Store) VoidEntry(

@@ -70,3 +70,14 @@ Feature: GET /api/entries
     And the store holds:
       | table          | count |
       | ledger_entries | 0     |
+
+  Scenario: The currency filter narrows the listing
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"kopi","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
+      """
+    And the response status is 201
+    When I send a GET to "/api/entries?currency=USD"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__the_currency_filter_narrows_the_listing"

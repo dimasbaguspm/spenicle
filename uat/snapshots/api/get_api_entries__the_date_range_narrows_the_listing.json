@@ -6,6 +6,11 @@
       "occurred_on": "2026-02-15",
       "postings": [
         {
+          "account": {
+            "kind": "asset",
+            "name": "Cash",
+            "ref": "<ref>"
+          },
           "account_ref": "<ref>",
           "amount_minor": "-200",
           "base_amount_minor": "-200",
@@ -13,6 +18,11 @@
           "fx_source": "identity"
         },
         {
+          "account": {
+            "kind": "expense",
+            "name": "Unsorted",
+            "ref": "<ref>"
+          },
           "account_ref": "<ref>",
           "amount_minor": "200",
           "base_amount_minor": "200",
@@ -23,5 +33,9 @@
       "ref": "<ref>",
       "source": "manual"
     }
-  ]
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
 }

@@ -131,20 +131,32 @@ func (s *Store) AccountByRef(
 	return account, true, nil
 }
 
-func (s *Store) ListAccounts(ctx context.Context) ([]entity.Account, error) {
+func (s *Store) ListAccounts(ctx context.Context, filter entity.AccountFilter) ([]entity.Account, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListAccounts")
 	defer endSpan()
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+accountColumns+`
-		FROM accounts ORDER BY kind, name`)
+	limit := clampLimit(filter.Limit)
+
+	builder := newList("accounts", accountColumns)
+	builder.eq("kind", filter.Kind)
+	builder.eq("currency", filter.Currency)
+	builder.like("name", filter.Query)
+	builder.parentRef("parent_id", "accounts", filter.ParentRef)
+	builder.inRefs("ref", filter.Refs)
+	builder.archived("archived_at", filter.Archived)
+	builder.before("accounts.id", "accounts", filter.Cursor)
+	builder.orderBy("kind, name, id")
+
+	query, args := builder.page(limit)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("select accounts: %w", err)
 	}
 
 	defer func() { _ = rows.Close() }()
 
-	var out []entity.Account
+	out := make([]entity.Account, 0, limit+1)
 
 	for rows.Next() {
 		account, scanErr := scanAccountRow(rows)

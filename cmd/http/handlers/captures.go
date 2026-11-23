@@ -30,12 +30,6 @@ type captureRequest struct {
 	Artifact     *extraction.Artifact `json:"-"`
 }
 
-type captureListQuery struct {
-	Status string `query:"status" validate:"omitempty,capturestatus"`
-	Cursor int64  `query:"cursor" validate:"omitempty,gte=0"`
-	Limit  int64  `query:"limit"  validate:"omitempty,gte=0,lte=200"`
-}
-
 type captureApprove struct {
 	OccurredOn string           `validate:"required,datestr"`
 	Currency   string           `validate:"required,currency"`
@@ -57,11 +51,6 @@ type captureResponse struct {
 	ResolvedAt      string `json:"resolved_at,omitempty"`
 }
 
-type captureListResponse struct {
-	Captures   []captureResponse `json:"captures"`
-	NextCursor int64             `json:"next_cursor,omitempty"`
-}
-
 type capturePatchRequest struct {
 	Action     string           `json:"action"                validate:"required,oneof=approve reject retry"`
 	Reason     string           `json:"reason,omitempty"      validate:"max=2000"`
@@ -81,30 +70,17 @@ func (s *server) handleListCaptures(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.List")
 	defer endSpan()
 
-	var query captureListQuery
-	if err := bindQuery(r, &query); err != nil {
-		writeInvalid(w, err)
-
+	filter, ok := bindListParams(w, r, captureFilter)
+	if !ok {
 		return
 	}
 
-	found, err := s.deps.Captures.List(ctx, entity.CaptureFilter{
-		Status: query.Status,
-		Cursor: query.Cursor,
-		Limit:  int(query.Limit),
-	})
-	if err != nil {
-		s.writeClassified(ctx, w, err)
-
-		return
-	}
-
-	out := captureListResponse{Captures: make([]captureResponse, 0, len(found))}
-	for _, capture := range found {
-		out.Captures = append(out.Captures, toCaptureResponse(capture))
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, out)
+	writeList(
+		ctx, w, s, "captures", filter.Limit,
+		func() ([]entity.Capture, error) { return s.deps.Captures.List(ctx, filter) },
+		func(capture entity.Capture) string { return capture.Ref },
+		toCaptureResponse,
+	)
 }
 
 func (s *server) handleCreateCapture(w http.ResponseWriter, r *http.Request) {
@@ -220,8 +196,15 @@ func (s *server) approveCapture(
 		return
 	}
 
+	entryBody, err := s.entryResponse(ctx, entry)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
 	httpx.WriteJSON(w, http.StatusCreated, captureApprovedResponse{
-		Entry:   toEntryResponse(entry),
+		Entry:   entryBody,
 		Capture: toCaptureResponse(capture),
 	})
 }

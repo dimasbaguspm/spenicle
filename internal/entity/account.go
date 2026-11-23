@@ -20,9 +20,21 @@ type AccountBalance struct {
 	BaseAmountMinor int64
 }
 
+type AccountFilter struct {
+	Query     string
+	Refs      []string
+	Currency  string
+	Kind      string
+	ParentRef string
+	Archived  string
+	Cursor    string
+	Limit     int
+}
+
 type CaptureFilter struct {
 	Status string
-	Cursor int64
+	Refs   []string
+	Cursor string
 	Limit  int
 }
 
@@ -31,6 +43,9 @@ type EntryFilter struct {
 	To         time.Time
 	AccountRef string
 	Source     string
-	Cursor     int64
+	Currency   string
+	Query      string
+	Refs       []string
+	Cursor     string
 	Limit      int
 }

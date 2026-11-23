@@ -21,10 +21,12 @@ entries, one per entry for its postings).
 | --- | --- | --- | --- |
 | `from` | date | — | `occurred_on >= from` |
 | `to` | date | — | `occurred_on <= to` |
-| `account_ref` | int | — | entries touching that account |
-| `payee_id` | int | — | entries for that payee |
+| `account_ref` | ref | — | entries touching that account |
 | `source` | string | — | `manual`, `share`, `email`, `statement`, `recurring`, `adjustment` |
-| `cursor` | int | — | return entries with `id < cursor` |
+| `currency` | string | — | ISO 4217, the entry's own currency |
+| `query` | string | — | substring of the entry note |
+| `refs` | string | — | comma-separated entry refs |
+| `cursor` | ref | — | return entries older than the entry with that ref |
 | `limit` | int | 50 | clamped to 200 |
 
 ## Body
@@ -33,17 +35,30 @@ None.
 
 ## Response
 
-`{"entries":[{"ref":1,"occurred_on":"2026-02-14","currency":"IDR","source":"manual","postings":[…]}],"next_cursor":0}`
+`{"entries":[{"ref":"<32 hex>","occurred_on":"2026-02-14","currency":"IDR","source":"manual","note":"coffee","payee":{"ref":"<32 hex>","name":"KOPI KENANGAN"},"postings":[{"account":{"ref":"<32 hex>","name":"Unsorted","kind":"expense"},"account_ref":"<32 hex>","amount_minor":"1500","base_amount_minor":"1500","fx_rate":"1","fx_source":"identity"}]}],"meta":{"limit":50,"has_more":false,"next_cursor":"<32 hex>"}}`
+
+`meta.limit` is the clamped page size the store was asked for, `meta.has_more` is exact
+(the store fetches `limit + 1` rows and the handler trims the extra one) and
+`meta.next_cursor` is the `ref` of the last returned entry, omitted when the page is
+empty. Send it back as `cursor` for the next page: the cursor is always a ref, never an
+integer id.
+
+Each posting carries the account's `name` and `kind` next to its `ref`, and an entry with a
+payee carries its `name` too, so a screen renders a row without a second call. `voided_at`
+appears on a voided entry or its reversal. The handler joins these from
+`Repository.Sqlite.ListAccounts` + `ListPayees` once per request — the store stays a
+pure data adapter, the HTTP layer owns presentation.
 
 ## Errors
 
-`400 invalid_filter` for a malformed date or cursor.
+`422 invalid_request` for a malformed date, an unknown `currency` or `source`, a `refs`
+entry or `cursor` that is not a 32-hex ref, or a `limit` over 200.
 
 ## Limitations
 
-Offset-free cursor paging only; no running balance (`running_balance`
-from the design is not implemented); postings are loaded per entry (N+1), acceptable at
-one user's volume.
+Keyset paging by entry ref only; no running balance (`running_balance` from the design is
+not implemented); postings are loaded per entry (N+1), acceptable at one user's volume.
+`query` matches the note only, not the payee name.
 
 
 
@@ -58,13 +73,14 @@ sequenceDiagram
     participant H as Entries handler
     participant L as Ledger module
     participant DB as SQLite
-    UI->>H: GET /api/entries?from&to&account_ref&source&cursor&limit
-    H->>H: parse filter (dates, ids, limit)
+    UI->>H: GET /api/entries?from&to&account_ref&source&currency&query&refs&cursor&limit
+    H->>H: bind and validate the params, build the filter
     H->>L: List(filter)
-    L->>DB: SELECT entries WHERE … ORDER BY id DESC LIMIT ?
+    L->>DB: SELECT entries WHERE … ORDER BY id DESC LIMIT ? (limit + 1)
     loop each entry
         L->>DB: SELECT postings WHERE entry_id = ?
     end
     L-->>H: entries
-    H-->>UI: 200 entries, next_cursor
+    H->>H: trim to limit, meta{limit, has_more, next_cursor}
+    H-->>UI: 200 entries, meta
 ```

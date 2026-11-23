@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
@@ -30,21 +32,24 @@ type postEntryRequest struct {
 	Postings   []postingRequest `json:"postings"            validate:"required,min=2,dive"`
 }
 
-type entryListQuery struct {
-	From       string `query:"from"        validate:"omitempty,datestr"`
-	To         string `query:"to"          validate:"omitempty,datestr"`
-	AccountRef string `query:"account_ref" validate:"omitempty,ref"`
-	Source     string `query:"source"      validate:"omitempty,source"`
-	Cursor     int64  `query:"cursor"      validate:"omitempty,gte=0"`
-	Limit      int64  `query:"limit"       validate:"omitempty,gte=0,lte=200"`
+type accountSummary struct {
+	Ref  string `json:"ref"`
+	Name string `json:"name"`
+	Kind string `json:"kind"`
+}
+
+type payeeSummary struct {
+	Ref  string `json:"ref"`
+	Name string `json:"name"`
 }
 
 type postingResponse struct {
-	AccountRef      string `json:"account_ref"`
-	AmountMinor     string `json:"amount_minor"`
-	BaseAmountMinor string `json:"base_amount_minor"`
-	FXRate          string `json:"fx_rate"`
-	FXSource        string `json:"fx_source"`
+	Account         accountSummary `json:"account"`
+	AccountRef      string         `json:"account_ref"`
+	AmountMinor     string         `json:"amount_minor"`
+	BaseAmountMinor string         `json:"base_amount_minor"`
+	FXRate          string         `json:"fx_rate"`
+	FXSource        string         `json:"fx_source"`
 }
 
 type entryResponse struct {
@@ -53,12 +58,9 @@ type entryResponse struct {
 	Currency   string            `json:"currency"`
 	Source     string            `json:"source"`
 	Note       string            `json:"note,omitempty"`
+	Payee      *payeeSummary     `json:"payee,omitempty"`
+	VoidedAt   string            `json:"voided_at,omitempty"`
 	Postings   []postingResponse `json:"postings"`
-}
-
-type entryListResponse struct {
-	Entries    []entryResponse `json:"entries"`
-	NextCursor int64           `json:"next_cursor,omitempty"`
 }
 
 type entryPatchRequest struct {
@@ -66,62 +68,28 @@ type entryPatchRequest struct {
 	Reason string `json:"reason,omitempty" validate:"max=2000"`
 }
 
-func entryFilterFromRequest(r *http.Request) (entity.EntryFilter, error) {
-	var query entryListQuery
-
-	if err := bindQuery(r, &query); err != nil {
-		return entity.EntryFilter{}, err
-	}
-
-	filter := entity.EntryFilter{Source: query.Source, Cursor: query.Cursor, Limit: int(query.Limit)}
-
-	for raw, target := range map[string]*time.Time{"from": &filter.From, "to": &filter.To} {
-		value := query.From
-		if raw == "to" {
-			value = query.To
-		}
-
-		if value == "" {
-			continue
-		}
-
-		parsed, err := time.Parse(constant.DateLayout, value)
-		if err != nil {
-			return entity.EntryFilter{}, fmt.Errorf("parse %s: %w", raw, err)
-		}
-
-		*target = parsed
-	}
-
-	filter.AccountRef = query.AccountRef
-
-	return filter, nil
-}
-
 func (s *server) handleListEntries(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.List")
 	defer endSpan()
 
-	filter, err := entryFilterFromRequest(r)
-	if err != nil {
-		writeInvalid(w, err)
-
+	filter, ok := bindListParams(w, r, entryFilter)
+	if !ok {
 		return
 	}
 
-	entries, err := s.deps.Ledger.List(ctx, filter)
+	names, err := s.displayNames(ctx)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 
 		return
 	}
 
-	out := entryListResponse{Entries: make([]entryResponse, 0, len(entries))}
-	for _, entry := range entries {
-		out.Entries = append(out.Entries, toEntryResponse(entry))
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, out)
+	writeList(
+		ctx, w, s, "entries", filter.Limit,
+		func() ([]entity.Entry, error) { return s.deps.Ledger.List(ctx, filter) },
+		func(entry entity.Entry) string { return entry.Ref },
+		func(entry entity.Entry) entryResponse { return toEntryResponse(entry, names) },
+	)
 }
 
 func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +122,14 @@ func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, toEntryResponse(reversal))
+	body, err := s.entryResponse(ctx, reversal)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, body)
 }
 
 func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +160,14 @@ func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusCreated
 	}
 
-	httpx.WriteJSON(w, status, toEntryResponse(entry))
+	body, err := s.entryResponse(ctx, entry)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	httpx.WriteJSON(w, status, body)
 }
 
 func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
@@ -220,7 +202,48 @@ func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
 	}, nil
 }
 
-func toEntryResponse(entry entity.Entry) entryResponse {
+type displayNames struct {
+	accounts map[string]entity.Account
+	payees   map[int64]entity.Payee
+}
+
+func (s *server) displayNames(ctx context.Context) (displayNames, error) {
+	accounts, err := s.deps.Accounts.ListAccounts(ctx, entity.AccountFilter{Limit: list.MaxLimit})
+	if err != nil {
+		return displayNames{}, err
+	}
+
+	payees, err := s.deps.Payees.ListPayees(ctx, entity.PayeeFilter{Limit: list.MaxLimit})
+	if err != nil {
+		return displayNames{}, err
+	}
+
+	names := displayNames{
+		accounts: make(map[string]entity.Account, len(accounts)),
+		payees:   make(map[int64]entity.Payee, len(payees)),
+	}
+
+	for _, account := range accounts {
+		names.accounts[account.Ref] = account
+	}
+
+	for _, payee := range payees {
+		names.payees[payee.ID] = payee
+	}
+
+	return names, nil
+}
+
+func (s *server) entryResponse(ctx context.Context, entry entity.Entry) (entryResponse, error) {
+	names, err := s.displayNames(ctx)
+	if err != nil {
+		return entryResponse{}, err
+	}
+
+	return toEntryResponse(entry, names), nil
+}
+
+func toEntryResponse(entry entity.Entry, names displayNames) entryResponse {
 	out := entryResponse{
 		Ref:        entry.Ref,
 		OccurredOn: entry.OccurredOn.Format(constant.DateLayout),
@@ -229,8 +252,25 @@ func toEntryResponse(entry entity.Entry) entryResponse {
 		Note:       entry.Note,
 	}
 
+	if entry.VoidedAt != nil {
+		out.VoidedAt = entry.VoidedAt.Format(constant.TimestampLayout)
+	}
+
+	if entry.PayeeID != nil {
+		if payee, ok := names.payees[*entry.PayeeID]; ok {
+			out.Payee = &payeeSummary{Ref: payee.Ref, Name: payee.Name}
+		}
+	}
+
 	for _, posting := range entry.Postings {
+		account := accountSummary{Ref: posting.AccountRef}
+		if known, ok := names.accounts[posting.AccountRef]; ok {
+			account.Name = known.Name
+			account.Kind = known.Kind
+		}
+
 		out.Postings = append(out.Postings, postingResponse{
+			Account:         account,
 			AccountRef:      posting.AccountRef,
 			AmountMinor:     strconv.FormatInt(posting.AmountMinor, 10),
 			BaseAmountMinor: strconv.FormatInt(posting.BaseAmountMinor, 10),

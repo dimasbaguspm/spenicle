@@ -157,3 +157,20 @@ func toPayeeResponse(payee entity.Payee) payeeResponse {
 		CreatedAt:          payee.CreatedAt.Format(time.RFC3339),
 	}
 }
+
+func (s *server) handleListPayees(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Payees.List")
+	defer endSpan()
+
+	filter, ok := bindListParams(w, r, payeeFilter)
+	if !ok {
+		return
+	}
+
+	writeList(
+		ctx, w, s, "payees", filter.Limit,
+		func() ([]entity.Payee, error) { return s.deps.Payees.ListPayees(ctx, filter) },
+		func(payee entity.Payee) string { return payee.Ref },
+		toPayeeResponse,
+	)
+}

@@ -33,7 +33,7 @@ type Accounts interface {
 	FindAccount(ctx context.Context, name, kind string) (entity.Account, bool, error)
 	AccountByRef(ctx context.Context, ref string) (entity.Account, bool, error)
 	UpdateAccount(ctx context.Context, account entity.Account) (entity.Account, error)
-	ListAccounts(ctx context.Context) ([]entity.Account, error)
+	ListAccounts(ctx context.Context, filter entity.AccountFilter) ([]entity.Account, error)
 	BalancesByAccount(ctx context.Context) (map[int64]int64, error)
 }
 
@@ -48,6 +48,7 @@ type System interface {
 type Payees interface {
 	CreatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error)
 	PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool, error)
+	ListPayees(ctx context.Context, filter entity.PayeeFilter) ([]entity.Payee, error)
 	UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error)
 }
 
@@ -66,6 +67,7 @@ type CustomQueries interface {
 type Recurring interface {
 	CreateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error)
 	RecurringByRef(ctx context.Context, ref string) (entity.Recurring, bool, error)
+	ListRecurring(ctx context.Context, filter entity.RecurringFilter) ([]entity.Recurring, error)
 	UpdateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error)
 }
 

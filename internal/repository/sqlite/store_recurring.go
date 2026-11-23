@@ -17,10 +17,11 @@ const recurringColumns = `r.id, r.ref, p.ref, a.ref, COALESCE(c.ref, ''), r.amou
 	r.currency, r.cadence, r.interval_n, COALESCE(r.day_of_month, 0), r.business_day_shift,
 	r.next_due_on, r.ends_on, r.origin, r.state, r.last_posted_on, r.created_at`
 
-const recurringFrom = `FROM recurring_rules r
-	JOIN payees p ON p.id = r.payee_id
+const recurringJoins = `JOIN payees p ON p.id = r.payee_id
 	JOIN accounts a ON a.id = r.account_id
 	LEFT JOIN accounts c ON c.id = r.category_id`
+
+const recurringFrom = `FROM recurring_rules r ` + recurringJoins
 
 func (s *Store) CreateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreateRecurring")
@@ -99,6 +100,51 @@ func (s *Store) RecurringByRef(ctx context.Context, ref string) (entity.Recurrin
 	}
 
 	return rule, true, nil
+}
+
+func (s *Store) ListRecurring(
+	ctx context.Context,
+	filter entity.RecurringFilter,
+) ([]entity.Recurring, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListRecurring")
+	defer endSpan()
+
+	limit := clampLimit(filter.Limit)
+
+	builder := newList("recurring_rules r", recurringColumns)
+	builder.join(recurringJoins)
+	builder.eq("r.state", filter.State)
+	builder.eq("r.cadence", filter.Cadence)
+	builder.like("p.name", filter.Query)
+	builder.inRefs("r.ref", filter.Refs)
+	builder.before("r.id", "recurring_rules", filter.Cursor)
+	builder.orderBy("r.next_due_on, r.id")
+
+	query, args := builder.page(limit)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select recurring rules: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	out := make([]entity.Recurring, 0, limit+1)
+
+	for rows.Next() {
+		rule, scanErr := scanRecurringRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+
+		out = append(out, rule)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate recurring rules: %w", err)
+	}
+
+	return out, nil
 }
 
 func (s *Store) UpdateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error) {
