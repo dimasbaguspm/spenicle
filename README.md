@@ -4,7 +4,10 @@ A self-hosted expense tracker for one person who does not want to keep a spreads
 One container, one file, one command. Built so that a missed week does not become a quit.
 
 Not yet built — this is the target the implementation is measured against.
-Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and API: [`docs/v2-api.md`](./docs/v2-api.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md). Working on the code: [`AGENTS.md`](./AGENTS.md).
+Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and API: [`docs/v2-api.md`](./docs/v2-api.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md). Working on the code: [`AGENTS.md`](./AGENTS.md) and [`skills/`](./skills/README.md). Sending a change: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+Licence: source-available, not open source — personal use of an unmodified copy,
+no redistribution, no commercial use. See [`LICENSE`](./LICENSE).
 
 ## Why v2
 
@@ -66,6 +69,7 @@ sudo chown -R 10001:10001 ./data
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals capture payloads, artifacts and cookies |
 | `APP_SECRET_RESET` | `false` | recovery: start despite a changed secret, discarding sealed payloads |
 | `SNAPTOJSON_API_KEY` | unset | enables receipt/statement extraction through SnapToJSON |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | OTLP/HTTP collector; HTTPS assumed, `http://` for plaintext |
 
 `APP_SECRET` is required: the process refuses to boot without it, and refuses to
 boot when it does not match the database it is opening. Generate one once and keep
@@ -74,6 +78,9 @@ it with your backups:
 ```bash
 openssl rand -base64 32
 ```
+
+Every variable is listed with defaults in [`.env.example`](./.env.example); copy it
+to `.env` and fill in `APP_SECRET`.
 
 Set `PASSWORD` if the instance is reachable from anywhere except your own bed.
 

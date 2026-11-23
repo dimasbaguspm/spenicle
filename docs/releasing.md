@@ -109,12 +109,16 @@ Docker tags cannot contain `+`, which is why the image uses `v0.2.0` and
 ## Before you tag
 
 ```bash
+cp .env.example .env   # APP_SECRET is required to boot
 make lint    # four groups, all must be clean
 make test    # unit + UAT
 docker build -t spenicle:local .
 docker run --rm -p 8080:8080 -v spenicle-data:/data -e APP_SECRET="local-test-secret-16" spenicle:local
 curl -s localhost:8080/healthz
 ```
+
+Step-by-step with the patch/minor/major decision table:
+[`skills/release`](../skills/release/SKILL.md).
 
 CI runs the same build and test commands on `main`; a green run on the commit you
 are about to tag is the real precondition. Tagging a red commit publishes a red

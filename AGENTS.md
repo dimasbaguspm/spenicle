@@ -93,7 +93,7 @@ Un-prefixed, all optional except `PASSWORD` in practice:
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals sensitive columns, identifies the database |
 | `APP_SECRET_RESET` | `false` | recovery only: boot despite a fingerprint mismatch and blank sealed payloads |
 | `SNAPTOJSON_API_KEY` | — | enables the SnapToJSON extraction vendor; unset = manual entry |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | empty = tracing/metrics are no-ops |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
 
 `APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`
 fails when its fingerprint does not match `settings.secret_fingerprint`. The only
@@ -103,7 +103,7 @@ fingerprint — the ledger is plaintext and survives by design.
 
 Only these eight are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
-and tracer names — has its default in `internal/common/config/config.go`**, and the
+name (also the tracer name) — has its default in `internal/common/config/config.go`**, and the
 resulting value object is `entity.AppConfig`. No viper, on purpose: eight variables
 and one file beat a precedence chain nobody can predict. A new knob means a new
 constant and field in those two files, nothing else.
@@ -126,6 +126,15 @@ the build you think it is.
   and therefore not importable. Adding a dependency to `cmd/http/bootstrap.go` means
   adding it to `uat/world.go` too. Seeds, schema and first-boot settings live in the
   adapter (`sqlite.EnsureBaseline`), not in a module.
+
+## Where the rest lives
+
+| file | for |
+| --- | --- |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | branches, commits, MR body, ticket shape, review gates |
+| [`skills/`](./skills/README.md) | task recipes: release, observability, updates, contribute, ai-integration |
+| [`.env.example`](./.env.example) | every variable with its default, copy to `.env` |
+| [`LICENSE`](./LICENSE) | source-available: personal unmodified use only, no commercial use |
 
 ## Committing
 
@@ -159,6 +168,16 @@ git push origin v0.2.0
 - Release notes are generated: a table (image, digest, platforms, commit, version) plus
   every commit since the previous tag as a **clickable link**, then a compare link.
 - Never move or reuse a tag. Broken release → tag the next patch.
+- Step by step, including how to choose patch/minor/major: [`skills/release`](./skills/release/SKILL.md).
+
+## Working with telemetry
+
+`OTEL_EXPORTER_OTLP_ENDPOINT` is OTLP/HTTP (port 4318). A bare host is treated as
+**HTTPS**; `http://` must be written on purpose. `ServiceName` is the only identity:
+it becomes `resource.service.name` and the tracer name. Span names are
+layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
+`telemetry.StartSpan` — never through a local wrapper. Details and failure modes:
+[`skills/observability`](./skills/observability/SKILL.md).
 
 ## Known traps
 

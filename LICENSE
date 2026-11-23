@@ -1,0 +1,54 @@
+# Spenicle Source-Available License
+
+Copyright (c) 2026 dimasbaguspm. All rights reserved.
+
+This software and its source code are **source-available, not open source**. The
+OSI definition grants the right to modify and to use commercially; this licence
+deliberately does not.
+
+## What you may do
+
+1. **Read** the source, for study, review or curiosity.
+2. **Run** an unmodified copy for your own personal, non-commercial use — a single
+   self-hosted instance for yourself and your household.
+3. **Back up** the copy you run, including the source, so you can restore it later.
+4. **Quote** short excerpts in a review, an issue, or a pull request about this
+   project, with attribution and a link to this licence.
+
+## What you may not do
+
+1. **Modify** the software, or create derivative works from it, and run or share
+   those derivatives.
+2. **Distribute** copies, forks, binaries, container images of your own build, or
+   bundled versions, whether for free or for a fee.
+3. **Use commercially** — no internal business use, no resale, no hosting it for
+   others, no including it in a paid product or service.
+4. **Sublicense, sell, rent, lease or lend** the software, or remove or alter this
+   licence, the copyright notice, or any attribution.
+
+## Contributions
+
+By submitting a pull request, patch, issue text or any other contribution, you
+grant the copyright holder a perpetual, worldwide, royalty-free, irrevocable
+licence to use, reproduce, modify, distribute and relicense your contribution as
+part of this project, and you confirm you have the right to grant it.
+
+The copyright holder keeps the right to relicense the project, including under a
+different licence, at any time.
+
+## No warranty
+
+The software is provided **"as is"**, without warranty of any kind, express or
+implied, including merchantability, fitness for a particular purpose and
+non-infringement. In no event shall the copyright holder be liable for any claim,
+damages or other liability, whether in an action of contract, tort or otherwise,
+arising from, out of or in connection with the software or its use.
+
+## Termination
+
+Any breach of this licence ends your rights immediately. On termination you must
+stop running the software and delete every copy you hold, except copies kept only
+to comply with a legal obligation.
+
+If you need a right this licence does not grant — commercial use, a modified fork,
+or redistribution — ask the copyright holder in writing first.

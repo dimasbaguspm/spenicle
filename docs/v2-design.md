@@ -83,6 +83,11 @@ argument and opens one span named after the layer that owns the work:
 
 Spans start from `internal/common/otel.StartSpan`, which returns the derived
 context plus the end function — the span interface never leaks into a caller.
+
+`ServiceName` is the single identity: it is `resource.service.name` *and* the tracer
+name, so a span can never be filtered by one name while the service is labelled with
+another. `OTEL_EXPORTER_OTLP_ENDPOINT` is OTLP/HTTP; a bare host means HTTPS on port
+4318, and `http://` must be written on purpose.
 The process has exactly one `context.Background()`: the root in `cmd/http/main.go`
 wrapped in `signal.NotifyContext`. Everything below derives from it, including
 the shutdown timeout (`context.WithoutCancel`) so the last batch of spans still
