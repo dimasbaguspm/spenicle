@@ -4,7 +4,7 @@ A self-hosted expense tracker for one person who does not want to keep a spreads
 One container, one file, one command. Built so that a missed week does not become a quit.
 
 Not yet built — this is the target the implementation is measured against.
-Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and API: [`docs/v2-api.md`](./docs/v2-api.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md).
+Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and API: [`docs/v2-api.md`](./docs/v2-api.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md). Working on the code: [`AGENTS.md`](./AGENTS.md).
 
 ## Why v2
 
@@ -28,6 +28,9 @@ docker run -d --name spenicle \
 ```
 
 Then open `http://localhost:8080`. Migrations run on boot; there is no migration step.
+
+Releases are container images only — there are no binary downloads. Pin a specific
+release by tag (`:v0.2.0`) or by digest (`@sha256:…`) from its release notes.
 
 With compose:
 
