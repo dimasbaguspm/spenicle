@@ -45,6 +45,9 @@ const (
 	DefaultSnapToJSONTimeout  = 30 * time.Second
 	DefaultOpenAIModel        = "gpt-4o-mini"
 
+	DefaultECBEndpoint = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
+	DefaultECBTimeout  = 10 * time.Second
+
 	DefaultReadHeaderTimeout        = 5 * time.Second
 	DefaultReadTimeout              = 15 * time.Second
 	DefaultWriteTimeout             = 30 * time.Second
@@ -67,6 +70,8 @@ func Defaults() entity.AppConfig {
 		DBPath:                   filepath.Join(DefaultDataDir, DefaultDBFile),
 		SnapToJSONEndpoint:       DefaultSnapToJSONEndpoint,
 		SnapToJSONTimeout:        DefaultSnapToJSONTimeout,
+		ECBEndpoint:              DefaultECBEndpoint,
+		ECBTimeout:               DefaultECBTimeout,
 		OpenAIModel:              DefaultOpenAIModel,
 		ServiceName:              DefaultServiceName,
 		ReadHeaderTimeout:        DefaultReadHeaderTimeout,

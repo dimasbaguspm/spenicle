@@ -15,7 +15,9 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
+	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
+	"github.com/dimasbaguspm/spenicle/internal/repository/ecb"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
@@ -72,6 +74,11 @@ func newApp(
 	clockSystem := clock.System{}
 	ledgerService := ledger.New(store, settingsService, clockSystem, clockSystem)
 
+	ratesService, err := ratesFor(ctx, cfg, store, clockSystem)
+	if err != nil {
+		return nil, err
+	}
+
 	return &app{
 		DB:           store.DB(),
 		Store:        store,
@@ -81,6 +88,7 @@ func newApp(
 			Captures: captures.New(
 				store, ledgerService, sealer, extractor, clockSystem, clockSystem,
 			),
+			Rates:             ratesService,
 			Accounts:          store,
 			Settings:          settingsService,
 			Health:            store,
@@ -93,6 +101,22 @@ func newApp(
 			Logger:            logger,
 		}),
 	}, nil
+}
+
+func ratesFor(
+	ctx context.Context,
+	cfg entity.AppConfig,
+	store *sqlite.Store,
+	clockSystem clock.System,
+) (*rates.Service, error) {
+	source, err := ecb.New(cfg.ECBEndpoint, cfg.ECBTimeout, clockSystem)
+	if err != nil {
+		_ = store.Close(ctx)
+
+		return nil, fmt.Errorf("ecb rates: %w", err)
+	}
+
+	return rates.New(source, store, clockSystem), nil
 }
 
 func (a *app) Close(ctx context.Context) error {

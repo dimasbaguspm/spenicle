@@ -42,3 +42,12 @@ type System interface {
 	SetSetting(ctx context.Context, key, value string) error
 	HasEntries(ctx context.Context) (bool, error)
 }
+
+type RateSource interface {
+	Daily(ctx context.Context) ([]entity.Rate, error)
+}
+
+type RateStore interface {
+	SaveRates(ctx context.Context, rates []entity.Rate) error
+	RateOn(ctx context.Context, base, quote string, on time.Time) (entity.Rate, bool, error)
+}

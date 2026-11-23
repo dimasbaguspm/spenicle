@@ -384,8 +384,9 @@ postings + `audit_log`). Zero-sum is checked again inside the transaction.
 **Errors.** `422 postings_not_balanced`, `422 invalid_postings`, `422 unknown_currency`,
 `422 invalid_rate`, `422 invalid_request` (bad date or amount), `400 invalid_json`.
 
-**Limitations.** No ECB rate resolution yet: a foreign entry must send `fx_rate`.
-No field edits after posting (void and re-post). No payee validation.
+**Limitations.** No automatic rate resolution yet: the ledger does not read `fx_rates`,
+so a foreign entry must send `fx_rate` (`POST /api/rates/refresh` fills the table for the
+next slice). No field edits after posting (void and re-post). No payee validation.
 
 ```mermaid
 sequenceDiagram
@@ -650,6 +651,50 @@ sequenceDiagram
         H-->>UI: 200 capture
     end
 ```
+
+---
+
+## `GET /api/rates`
+
+**Purpose.** The reference rate for one pair on one day, exactly as the last refresh
+stored it.
+
+**Upstream.** `rates.Contract.Rate` → `Store.RateOn` (`fx_rates`). Nothing downstream.
+
+**Query params.**
+
+| name | type | required | notes |
+| --- | --- | --- | --- |
+| `base` | string | yes | ISO 4217; the stored base is always `EUR` |
+| `quote` | string | yes | ISO 4217 |
+| `on` | string | no | `YYYY-MM-DD`; empty means today, which usually misses |
+
+**200** `{"base":"EUR","quote":"USD","on_date":"2026-11-20","rate":"1.0990","source":"ecb","fetched_at":"…"}`
+
+**Errors.** `404 not_found` when that day was never fetched; `422 invalid_request` for a
+malformed date or an unknown currency code.
+
+**Limitations.** Exact day only — no nearest-earlier-business-day fallback, and no cross
+rates: an `IDR` → `USD` conversion is not derived from two EUR legs yet.
+
+---
+
+## `POST /api/rates/refresh`
+
+**Purpose.** Scrape the ECB daily reference file and store every rate it carries. The
+vendor's XML is the adapter's business; the module only sees `entity.Rate` values.
+
+**Upstream.** `rates.Contract.Refresh` → `ecb.Client.Daily` (`GET
+eurofxref-daily.xml`) → `Store.SaveRates` (one transaction, upsert on
+`base, quote, on_date`).
+
+**200** `{"stored":29,"on_date":"2026-11-20","source":"ecb"}`
+
+**Errors.** No body. A failed fetch or a shape the parser rejects answers `500
+internal_error` — the row is only written when the whole sheet parsed.
+
+**Limitations.** One sheet, one currency (EUR) as base; no history backfill, no retry
+policy, no scheduler — a refresh happens when a client asks for it.
 
 ---
 

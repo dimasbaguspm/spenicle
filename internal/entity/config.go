@@ -11,6 +11,8 @@ type AppConfig struct {
 	SnapToJSONAPIKey   string
 	SnapToJSONEndpoint string
 	SnapToJSONTimeout  time.Duration
+	ECBEndpoint        string
+	ECBTimeout         time.Duration
 	OpenAIAPIKey       string
 	OpenAIModel        string
 	OTLPEndpoint       string

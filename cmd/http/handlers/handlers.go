@@ -12,6 +12,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
+	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
@@ -20,6 +21,7 @@ type Deps struct {
 	Ledger            ledger.Contract
 	Settings          settings.Contract
 	Captures          captures.Contract
+	Rates             rates.Contract
 	Accounts          repository.Accounts
 	Health            repository.System
 	Sealer            seal.Sealer
@@ -61,6 +63,9 @@ func New(deps Deps) http.Handler {
 	mux.HandleFunc("GET /api/captures", instance.handleListCaptures)
 	mux.HandleFunc("POST /api/captures", instance.handleCreateCapture)
 	mux.HandleFunc("PATCH /api/captures/{id}", instance.handlePatchCapture)
+
+	mux.HandleFunc("GET /api/rates", instance.handleGetRate)
+	mux.HandleFunc("POST /api/rates/refresh", instance.handleRefreshRates)
 
 	mux.HandleFunc("/", instance.handleNotFound)
 

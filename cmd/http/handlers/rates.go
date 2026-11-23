@@ -1,0 +1,93 @@
+package handlers
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
+)
+
+type rateQuery struct {
+	Base  string `query:"base"  validate:"required,currency"`
+	Quote string `query:"quote" validate:"required,currency"`
+	On    string `query:"on"    validate:"omitempty,datestr"`
+}
+
+type rateResponse struct {
+	Base      string `json:"base"`
+	Quote     string `json:"quote"`
+	OnDate    string `json:"on_date"`
+	Rate      string `json:"rate"`
+	Source    string `json:"source"`
+	FetchedAt string `json:"fetched_at"`
+}
+
+type ratesRefreshResponse struct {
+	Stored int    `json:"stored"`
+	OnDate string `json:"on_date"`
+	Source string `json:"source"`
+}
+
+func (s *server) handleRefreshRates(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Rates.Refresh")
+	defer endSpan()
+
+	report, err := s.deps.Rates.Refresh(ctx)
+	if err != nil {
+		status, code := classify(err)
+		httpx.WriteError(w, status, code, err.Error())
+
+		return
+	}
+
+	out := ratesRefreshResponse{Stored: report.Stored, Source: report.Source}
+	if !report.OnDate.IsZero() {
+		out.OnDate = report.OnDate.Format(constant.DateLayout)
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+func (s *server) handleGetRate(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Rates.Get")
+	defer endSpan()
+
+	var query rateQuery
+	if err := bindQuery(r, &query); err != nil {
+		writeInvalid(w, err)
+
+		return
+	}
+
+	var on time.Time
+
+	if query.On != "" {
+		parsed, err := time.Parse(constant.DateLayout, query.On)
+		if err != nil {
+			writeInvalid(w, err)
+
+			return
+		}
+
+		on = parsed
+	}
+
+	rate, err := s.deps.Rates.Rate(ctx, query.Base, query.Quote, on)
+	if err != nil {
+		status, code := classify(err)
+		httpx.WriteError(w, status, code, err.Error())
+
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, rateResponse{
+		Base:      rate.Base,
+		Quote:     rate.Quote,
+		OnDate:    rate.OnDate.Format(constant.DateLayout),
+		Rate:      rate.Rate,
+		Source:    rate.Source,
+		FetchedAt: rate.FetchedAt.Format(constant.TimestampLayout),
+	})
+}
