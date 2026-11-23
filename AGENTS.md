@@ -53,7 +53,8 @@ internal/common/       no business logic: config (also the process graph), clock
 internal/constant/     every fixed value shared by more than one package
 internal/entity/       shared structs + invariants; imports stdlib + constant only
 internal/module/       business logic: ledger, captures, rates, settings
-internal/repository/   contracts, plus the adapters: sqlite, ecb, extraction/{snaptojson,openai}
+internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore,
+                       extraction/{snaptojson,openai}
 ```
 
 The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` posts the
@@ -164,9 +165,24 @@ row, and the session cookie is a digest of `APP_SECRET`'s fingerprint plus that 
 changing the password invalidates every cookie at once. The base currency is editable
 while the ledger is empty and locked after the first entry.
 
+Uploaded capture artifacts live **outside** the database, under
+`DATA_DIR/artifacts/<sha[0:2]>/<sha[2:4]>/<sha256>`: the bytes are gzipped when the
+content type is compressible (`text/*`, `application/json`, `application/xml`,
+`application/pdf`), encrypted with AES-256-GCM under a key derived from `APP_SECRET`
+(HKDF-SHA256, info `spenicle/artifact/v1`), and the plaintext sha is the additional
+authenticated data. The `artifacts` row keeps only the metadata, so a deleted file is a
+missing document, never a broken capture. The worker reclaims the artifact of a
+`rejected` capture once it is older than `ArtifactRetention` (default `720h`, 200 rows
+per run) and stamps `deleted_at`, which is what makes the download route answer `410`.
+`ArtifactMaxBytes` (default `10 << 20`) is the upload ceiling the API refuses above;
+`ArtifactDir` is derived from `DATA_DIR`, so none of the three is an environment
+variable.
+
 Only these nine are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
-name (also the tracer name) — has its default in `internal/common/config/config.go`**, and the
+timeouts, shutdown budgets, `/healthz` timeout, request body cap, artifact dir,
+retention and size cap, pool sizes, service name (also the tracer name) — has its
+default in `internal/common/config/config.go`**, and the
 resulting value object is `entity.AppConfig`. No viper, on purpose: eight variables
 and one file beat a precedence chain nobody can predict. A new knob means a new
 constant and field in those two files, nothing else.
@@ -317,6 +333,14 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   removed from the lint configs; do not re-add them.
 - `internal/common/otel` is package `telemetry` (import alias) so it does not shadow
   `go.opentelemetry.io/otel`.
+- The artifact files are encrypted with `APP_SECRET`, exactly like the sealed columns:
+  a changed secret does not make them readable again, it makes them garbage. Restore the
+  old secret or start over, and remember that the ledger survives either way. Rename the
+  artifact directory in (`DATA_DIR/artifacts`) and the next boot silently records every
+  capture as having a document that no longer opens — the row is metadata, the file is
+  the document, and nothing cross-checks the two.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
-  One file today (`0001_init.sql`): nothing has shipped, so the schema is squashed. Once
-  a release exists, forwards only — never edit an applied migration, add the next number.
+  Two files today (`0001_init.sql`, `0002_artifacts.sql`) and nothing has shipped, so the
+  schema is still squashed into a base plus forwards. Once a release exists, forwards
+  only — never edit an applied migration, add the next number. The splitter is naive:
+  no `;` inside a migration comment.

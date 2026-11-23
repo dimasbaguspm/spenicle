@@ -40,6 +40,10 @@ const (
 	DefaultDataDir = "./data"
 	DefaultDBFile  = "spenicle.db"
 
+	DefaultArtifactDirName   = "artifacts"
+	DefaultArtifactRetention = 720 * time.Hour
+	DefaultArtifactMaxBytes  = 10 << 20
+
 	DefaultSnapToJSONEndpoint = "https://api.snaptojson.com/partner/v1/snaps"
 	DefaultSnapToJSONTimeout  = 30 * time.Second
 	DefaultOpenAIModel        = "gpt-4o-mini"
@@ -70,6 +74,9 @@ func Defaults() entity.AppConfig {
 	return entity.AppConfig{
 		Addr:                     DefaultAddr,
 		DataDir:                  DefaultDataDir,
+		ArtifactDir:              filepath.Join(DefaultDataDir, DefaultArtifactDirName),
+		ArtifactRetention:        DefaultArtifactRetention,
+		ArtifactMaxBytes:         DefaultArtifactMaxBytes,
 		DBPath:                   filepath.Join(DefaultDataDir, DefaultDBFile),
 		SnapToJSONEndpoint:       DefaultSnapToJSONEndpoint,
 		SnapToJSONTimeout:        DefaultSnapToJSONTimeout,
@@ -95,6 +102,7 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	defer endSpan()
 
 	cfg := Defaults()
+	cfg.ArtifactDir = filepath.Join(cfg.DataDir, DefaultArtifactDirName)
 
 	cfg.Addr = env(EnvAddr, cfg.Addr)
 	cfg.DataDir = env(EnvDataDir, cfg.DataDir)

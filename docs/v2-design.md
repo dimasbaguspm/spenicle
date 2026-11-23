@@ -240,9 +240,14 @@ A vendor outage never loses the receipt: the capture row is written before the c
 and every failure is recorded on it. With `SNAPTOJSON_API_KEY` unset nothing leaves
 the box — the capture lands as `pending` and the fields are typed by hand.
 
-The artifact bytes are handed to the vendor once and not stored; the row keeps
-`artifact_hash` (sha256) so a re-share of the same image is the same capture. Sealed
-artifact files under `raw/` land with the upload milestone.
+The artifact bytes are stored once, before the vendor is called: content addressed under
+`DATA_DIR/artifacts/<sha[0:2]>/<sha[2:4]>/<sha256>`, gzipped when the content type is
+compressible, encrypted with AES-256-GCM under an HKDF key derived from `APP_SECRET` and
+the sha as the additional authenticated data. The row keeps `artifact_hash` (sha256) so a
+re-share of the same image is the same capture, and the same bytes uploaded twice are one
+file. `GET /api/captures/{ref}/artifact` streams the plaintext back; the worker reclaims
+the file of a `rejected` capture once it outlives the retention (`720h`), which is what
+turns that route into `410 gone`.
 
 ### Completeness gate
 

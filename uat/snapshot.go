@@ -24,6 +24,7 @@ const snapshotDirPerm = 0o750
 
 var allowedTables = []string{
 	"accounts",
+	"artifacts",
 	"audit_log",
 	"captures",
 	"fx_rates",

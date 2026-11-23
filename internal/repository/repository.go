@@ -38,6 +38,13 @@ type Accounts interface {
 	BalancesByAccount(ctx context.Context) (map[int64]int64, error)
 }
 
+type Artifacts interface {
+	InsertArtifact(ctx context.Context, artifact entity.Artifact) (entity.Artifact, error)
+	ArtifactByCaptureRef(ctx context.Context, captureRef string) (entity.Artifact, bool, error)
+	ExpiredArtifacts(ctx context.Context, rejectedBefore time.Time, limit int) ([]entity.Artifact, error)
+	MarkArtifactDeleted(ctx context.Context, ref string, at time.Time) (bool, error)
+}
+
 type System interface {
 	SchemaVersion(ctx context.Context) (int, error)
 	Ping(ctx context.Context) error

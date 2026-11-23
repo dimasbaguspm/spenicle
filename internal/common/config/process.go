@@ -19,6 +19,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/ecb"
+	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -27,6 +28,7 @@ type Process struct {
 	Logger       *slog.Logger
 	Store        *sqlite.Store
 	Sealer       seal.Sealer
+	Artifacts    *filestore.Store
 	Settings     *settings.Service
 	Ledger       *ledger.Service
 	Rates        *rates.Service
@@ -96,6 +98,12 @@ func boot(ctx context.Context, cfg entity.AppConfig, logger *slog.Logger) (*Proc
 		return nil, err
 	}
 
+	artifacts, err := filestore.New(cfg.ArtifactDir, []byte(cfg.AppSecret))
+	if err != nil {
+		_ = store.Close(ctx)
+		return nil, fmt.Errorf("filestore: %w", err)
+	}
+
 	ledgerService := ledger.New(store, store, store, settingsService, clock.System{}, clock.System{})
 
 	ratesService, err := ratesFor(ctx, cfg, store, logger)
@@ -109,6 +117,7 @@ func boot(ctx context.Context, cfg entity.AppConfig, logger *slog.Logger) (*Proc
 		Logger:       logger,
 		Store:        store,
 		Sealer:       sealer,
+		Artifacts:    artifacts,
 		Settings:     settingsService,
 		Ledger:       ledgerService,
 		Rates:        ratesService,

@@ -1,7 +1,7 @@
 {
   "app_secret": "<fingerprint>",
   "base_currency": "IDR",
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "ok",
   "version": "<version>",
   "worker_last_run_at": ""

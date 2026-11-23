@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"io"
 	"log/slog"
 	"time"
 
@@ -12,6 +14,10 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
 
+type ArtifactFiles interface {
+	Open(ctx context.Context, sha string) (io.ReadCloser, error)
+}
+
 type Deps struct {
 	Ledger            ledger.Contract
 	Settings          settings.Contract
@@ -22,12 +28,15 @@ type Deps struct {
 	Recurring         repository.Recurring
 	Analytics         repository.Analytics
 	CustomQueries     repository.CustomQueries
+	Artifacts         repository.Artifacts
 	Health            repository.System
+	ArtifactFiles     ArtifactFiles
 	Sealer            seal.Sealer
 	BaseCurrency      string
 	Version           string
 	HealthTimeout     time.Duration
 	MaxBodyBytes      int64
+	MaxArtifactBytes  int64
 	WebOrigin         string
 	ExtractionEnabled bool
 	Logger            *slog.Logger

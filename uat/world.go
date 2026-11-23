@@ -25,6 +25,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
@@ -34,6 +35,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
+	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -85,6 +87,8 @@ type world struct {
 	refs        map[string]string
 
 	ledger        ledger.Contract
+	artifacts     *filestore.Store
+	limits        entity.AppConfig
 	asOf          time.Time
 	workerSummary workerhandlers.Summary
 }
@@ -103,12 +107,57 @@ func (w *world) runRecurring(ctx context.Context) error {
 		clockSource = clock.System{}
 	}
 
-	runner := workerhandlers.New(w.store, w.store, w.ledger, clockSource, slog.New(w.logs))
+	runner := workerhandlers.New(
+		w.store, w.store, w.ledger, w.store, w.artifacts, w.limits.ArtifactRetention,
+		clockSource, slog.New(w.logs),
+	)
 
 	summary, err := runner.Run(ctx)
 	w.workerSummary = summary
 
 	return err
+}
+
+func (w *world) ageArtifact(ctx context.Context) error {
+	if w.store == nil {
+		return errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	at := time.Now().UTC().Add(-w.limits.ArtifactRetention - time.Hour)
+
+	if _, err := w.store.DB().ExecContext(ctx,
+		`UPDATE artifacts SET created_at = ?`, at.Format(constant.TimestampLayout)); err != nil {
+		return fmt.Errorf("age artifact: %w", err)
+	}
+
+	return nil
+}
+
+func (w *world) artifactIsGone(ctx context.Context) error {
+	if w.store == nil || w.artifacts == nil {
+		return errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	var sha string
+
+	err := w.store.DB().QueryRowContext(ctx,
+		`SELECT sha256 FROM artifacts ORDER BY id DESC LIMIT 1`).Scan(&sha)
+	if err != nil {
+		return fmt.Errorf("read artifact sha: %w", err)
+	}
+
+	body, openErr := w.artifacts.Open(ctx, sha)
+	if openErr == nil {
+		_ = body.Close()
+
+		return fmt.Errorf("artifact %s is still on disk", sha)
+	}
+
+	if !errors.Is(openErr, filestore.ErrNotFound) {
+		return fmt.Errorf("open artifact %s: %w", sha, openErr)
+	}
+
+	return nil
 }
 
 type logSink struct {
@@ -264,6 +313,16 @@ func (w *world) boot(ctx context.Context) error {
 	clockSystem := clock.System{}
 	limits := config.Defaults()
 
+	artifacts, err := filestore.New(filepath.Join(w.dir, config.DefaultArtifactDirName), []byte(appSecret))
+	if err != nil {
+		_ = store.Close(ctx)
+
+		return fmt.Errorf("filestore: %w", err)
+	}
+
+	w.artifacts = artifacts
+	w.limits = limits
+
 	settingsService := settings.New(store, sealer, clockSystem)
 	if _, _, settingsErr := settingsService.EnsureInitial(ctx, ""); settingsErr != nil {
 		_ = store.Close(ctx)
@@ -296,7 +355,9 @@ func (w *world) boot(ctx context.Context) error {
 		w.accounts[account.Name] = account.Ref
 	}
 
-	queue := captures.New(store, ledgerService, sealer, built.extractor, clockSystem, clockSystem)
+	queue := captures.New(
+		store, ledgerService, sealer, artifacts, store, built.extractor, clockSystem, clockSystem,
+	)
 
 	w.server = httptest.NewServer(httpcmd.New(handlers.Deps{
 		Ledger:            ledgerService,
@@ -306,6 +367,8 @@ func (w *world) boot(ctx context.Context) error {
 		Recurring:         store,
 		Analytics:         store,
 		CustomQueries:     store,
+		Artifacts:         store,
+		ArtifactFiles:     artifacts,
 		Health:            store,
 		Settings:          settingsService,
 		Rates:             built.rates,
@@ -314,6 +377,7 @@ func (w *world) boot(ctx context.Context) error {
 		Version:           "uat",
 		HealthTimeout:     limits.HealthTimeout,
 		MaxBodyBytes:      limits.MaxBodyBytes,
+		MaxArtifactBytes:  limits.ArtifactMaxBytes,
 		ExtractionEnabled: w.rail != "",
 		Logger:            slog.New(w.logs),
 	}))
@@ -428,6 +492,7 @@ func (w *world) clearDatabase(ctx context.Context) error {
 	}
 
 	clearOrder := []string{
+		"artifacts",
 		"ledger_postings",
 		"captures",
 		"ledger_entries",

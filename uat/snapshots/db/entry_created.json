@@ -23,6 +23,7 @@
       "ref": "<ref>"
     }
   ],
+  "artifacts": [],
   "audit_log": [
     {
       "action": "create",

@@ -3,6 +3,8 @@ package uat
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -40,6 +42,10 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the response status is (\d+)$`, responseStatusIs)
 	sc.Step(`^the response header "([^"]*)" is "([^"]*)"$`, responseHeaderIs)
 	sc.Step(`^the response header "([^"]*)" contains "([^"]*)"$`, responseHeaderContains)
+	sc.Step(`^the response body hashes to "([^"]*)"$`, responseBodyHashesTo)
+	sc.Step(`^the capture artifact predates the retention$`, theCaptureArtifactPredatesTheRetention)
+	sc.Step(`^the capture artifact is gone$`, theCaptureArtifactIsGone)
+	sc.Step(`^the artifact garbage collector runs$`, theArtifactGarbageCollectorRuns)
 	sc.Step(`^the database is cleared$`, theDatabaseIsCleared)
 	sc.Step(`^the local cache is cleared$`, theLocalCacheIsCleared)
 	sc.Step(`^the connection is broken$`, theConnectionIsBroken)
@@ -207,6 +213,50 @@ func responseHeaderContains(ctx context.Context, name, want string) (context.Con
 	}
 
 	return ctx, nil
+}
+
+func responseBodyHashesTo(ctx context.Context, want string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	sum := sha256.Sum256(w.body)
+	got := hex.EncodeToString(sum[:])
+
+	if got != strings.ToLower(strings.TrimSpace(want)) {
+		return ctx, fmt.Errorf("the body hashes to %s, want %s (body %s)",
+			got, want, preview(string(w.body)))
+	}
+
+	return ctx, nil
+}
+
+func theCaptureArtifactPredatesTheRetention(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.ageArtifact(ctx)
+}
+
+func theCaptureArtifactIsGone(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.artifactIsGone(ctx)
+}
+
+func theArtifactGarbageCollectorRuns(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.runRecurring(ctx)
 }
 
 func theLastRefIsRemembered(ctx context.Context, name string) (context.Context, error) {

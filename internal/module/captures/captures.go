@@ -9,7 +9,16 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
+	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 )
+
+type ArtifactStore interface {
+	Put(ctx context.Context, artifact extraction.Artifact) (filestore.Record, error)
+}
+
+type ArtifactRows interface {
+	InsertArtifact(ctx context.Context, artifact entity.Artifact) (entity.Artifact, error)
+}
 
 type Contract interface {
 	Create(ctx context.Context, in CreateInput) (entity.Capture, bool, error)

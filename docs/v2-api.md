@@ -55,7 +55,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 
 | env | default | effect |
 | --- | --- | --- |
-| `DATA_DIR` | `/data` | SQLite file and `raw/` artifacts |
+| `DATA_DIR` | `/data` | SQLite file and `artifacts/` documents |
 | `APP_SECRET` | **required** | seals cookies, artifacts, capture payloads, token hashes |
 | `SNAPTOJSON_API_KEY` | unset | enables the SnapToJSON extraction worker |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override the partner URL (proxy, staging) |
@@ -68,7 +68,7 @@ them yourself — `spenicle.env` is the cheapest separator.
 | --- | --- |
 | session cookie | HMAC-SHA256; rotating the secret invalidates every session |
 | `captures.raw_text`, `draft_json`, `resolution_note` | AES-256-GCM per row, `v1:` + base64 envelope |
-| `raw/<sha256>` artifacts | AES-256-GCM, key = HKDF-SHA256(secret, salt = file hash) |
+| `artifacts/<sha256>` files | AES-256-GCM, key = HKDF-SHA256(secret, info `spenicle/artifact/v1`), sha256 as AAD |
 | `api_tokens.token_hash` | HMAC-SHA256(secret, token), not bare sha256 |
 
 Deliberately **not** sealed: `ledger_entries`, `ledger_postings`, `accounts`, `amounts`. Your
@@ -149,7 +149,8 @@ Keys: `base_currency`, `setup_completed_at`, `secret_fingerprint`, `extraction_e
 
 No retention needed: ~30 pairs × ~250 business days ≈ 7,500 rows/year, under 1 MB/year. An
 optional prune keeps only month-ends older than 5 years. Artifacts are the real disk cost, so
-prune `raw/` instead.
+the worker prunes `artifacts/` instead: a rejected capture loses its document after
+`ArtifactRetention` (`720h`), 200 rows per run, and the ledger is untouched.
 
 ## 1.4 `accounts`
 
@@ -242,7 +243,7 @@ The single review queue. One row per thing captured, from any channel.
 | `client_id` | TEXT NULL | UUIDv7, `UNIQUE` when set |
 | `dedupe_key` | TEXT UNIQUE | cross-channel duplicate guard |
 | `batch_id` | TEXT NULL | artifact hash shared by all rows of one statement |
-| `artifact_hash` | TEXT NULL | `sha256`, file sealed at `raw/<hash>` |
+| `artifact_hash` | TEXT NULL | `sha256`, the document lives at `artifacts/<hash[0:2]>/<hash[2:4]>/<hash>` |
 | `raw_text` | TEXT NULL | sealed |
 | `draft_json` | TEXT NULL | sealed, per-field value + confidence |
 | `extraction_error` | TEXT NULL | |
@@ -980,4 +981,4 @@ sequenceDiagram
 | `DetectionWorker` | weekly | `recurring_rules` `origin='detected'` |
 | `RateWorker` | boot + 16:30 CET | `fx_rates`, memory cache |
 | `IntegrityWorker` | boot + after import | zero-sum verification, reports to `audit_log` |
-| `ArtifactPruner` | weekly | deletes `raw/<hash>` older than N days, ledger untouched |
+| `ArtifactPruner` | hourly with the recurring run | deletes the file of a `rejected` capture older than `ArtifactRetention`, stamps `artifacts.deleted_at`, ledger untouched |

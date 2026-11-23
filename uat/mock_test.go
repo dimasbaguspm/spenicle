@@ -23,6 +23,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
+	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -147,7 +148,9 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 
 	ctx := t.Context()
 
-	store, err := sqlite.New(ctx, sqlite.Config{Path: filepath.Join(t.TempDir(), "uat.db")})
+	dir := t.TempDir()
+
+	store, err := sqlite.New(ctx, sqlite.Config{Path: filepath.Join(dir, "uat.db")})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -171,7 +174,12 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 	clockSystem := clock.System{}
 	ledgerService := ledger.New(store, store, store, fixedCurrency{code: "IDR"}, clockSystem, clockSystem)
 
-	return captures.New(store, ledgerService, sealer, extractor, clockSystem, clockSystem)
+	artifacts, err := filestore.New(filepath.Join(dir, "artifacts"), []byte("0123456789abcdef"))
+	if err != nil {
+		t.Fatalf("filestore: %v", err)
+	}
+
+	return captures.New(store, ledgerService, sealer, artifacts, store, extractor, clockSystem, clockSystem)
 }
 
 type fixedCurrency struct{ code string }

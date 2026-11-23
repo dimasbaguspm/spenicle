@@ -23,6 +23,8 @@ type Service struct {
 	captures  repository.Captures
 	entries   ledger.Contract
 	sealer    seal.Sealer
+	blobs     ArtifactStore
+	artifacts ArtifactRows
 	clock     TimeSource
 	ids       IDSource
 	extractor extraction.Extractor
@@ -37,12 +39,14 @@ func New(
 	captures repository.Captures,
 	entries ledger.Contract,
 	sealer seal.Sealer,
+	blobs ArtifactStore,
+	artifacts ArtifactRows,
 	extractor extraction.Extractor,
 	clock TimeSource,
 	ids IDSource,
 ) *Service {
 	return &Service{
-		captures: captures, entries: entries, sealer: sealer,
+		captures: captures, entries: entries, sealer: sealer, blobs: blobs, artifacts: artifacts,
 		extractor: extractor, clock: clock, ids: ids,
 	}
 }
@@ -90,6 +94,11 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Capture, b
 		RawText:      rawText,
 		ReceivedAt:   receivedAt,
 	})
+	if err != nil {
+		return entity.Capture{}, false, err
+	}
+
+	stored, err = s.storeArtifact(ctx, stored, in.Artifact)
 	if err != nil {
 		return entity.Capture{}, false, err
 	}
@@ -228,6 +237,35 @@ func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error)
 	}
 
 	return s.open(ctx, updated)
+}
+
+func (s *Service) storeArtifact(
+	ctx context.Context,
+	capture entity.Capture,
+	artifact *extraction.Artifact,
+) (entity.Capture, error) {
+	if s.blobs == nil || artifact == nil || len(artifact.Bytes) == 0 {
+		return capture, nil
+	}
+
+	record, err := s.blobs.Put(ctx, *artifact)
+	if err != nil {
+		return entity.Capture{}, fmt.Errorf("store artifact: %w", err)
+	}
+
+	if _, err := s.artifacts.InsertArtifact(ctx, entity.Artifact{
+		CaptureRef:  capture.Ref,
+		SHA256:      record.SHA256,
+		ContentType: record.ContentType,
+		Filename:    record.Filename,
+		PlainBytes:  record.PlainBytes,
+		StoredBytes: record.StoredBytes,
+		CreatedAt:   s.clock.Now(),
+	}); err != nil {
+		return entity.Capture{}, fmt.Errorf("record artifact: %w", err)
+	}
+
+	return capture, nil
 }
 
 func (s *Service) extract(

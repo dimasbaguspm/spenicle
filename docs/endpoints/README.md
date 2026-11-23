@@ -31,6 +31,7 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/captures` | the review queue | [`GET_api_captures.md`](./GET_api_captures.md) |
 | `POST` | `/api/captures` | park something unconfirmed | [`POST_api_captures.md`](./POST_api_captures.md) |
 | `PATCH` | `/api/captures/{ref}` | approve, reject or retry a capture | [`PATCH_api_captures_ref.md`](./PATCH_api_captures_ref.md) |
+| `GET` | `/api/captures/{ref}/artifact` | download the document behind a capture | [`GET_api_captures_ref_artifact.md`](./GET_api_captures_ref_artifact.md) |
 | `GET` | `/api/analytics/months` | spend and income per calendar month | [`GET_api_analytics_months.md`](./GET_api_analytics_months.md) |
 | `GET` | `/api/analytics/categories` | spend per category for a range | [`GET_api_analytics_categories.md`](./GET_api_analytics_categories.md) |
 | `POST` | `/api/analytics/custom` | save a named analytics view | [`POST_api_analytics_custom.md`](./POST_api_analytics_custom.md) |

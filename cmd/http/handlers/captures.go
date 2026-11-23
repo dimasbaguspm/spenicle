@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
+	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 )
 
 const maxFormBytes = 11 << 20
@@ -101,6 +103,10 @@ func (s *Server) CreateCapture(w http.ResponseWriter, r *http.Request) {
 	if err = validate.Struct(request); err != nil {
 		writeInvalid(w, err)
 
+		return
+	}
+
+	if !s.artifactFits(w, request) {
 		return
 	}
 
@@ -225,6 +231,99 @@ func (s *Server) rejectCapture(
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
+}
+
+func (s *Server) GetCaptureArtifact(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Artifact")
+	defer endSpan()
+
+	var path pathRefRequest
+	if err := bindPath(r, &path); err != nil {
+		writeInvalid(w, err)
+
+		return
+	}
+
+	artifact, found, err := s.deps.Artifacts.ArtifactByCaptureRef(ctx, path.Ref)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	if !found {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", "capture "+path.Ref+" has no artifact")
+
+		return
+	}
+
+	if artifact.DeletedAt != nil {
+		httpx.WriteError(w, http.StatusGone, "gone", "artifact "+artifact.Ref+" was reclaimed")
+
+		return
+	}
+
+	body, err := s.deps.ArtifactFiles.Open(ctx, artifact.SHA256)
+	if err != nil {
+		if errors.Is(err, filestore.ErrNotFound) {
+			httpx.WriteError(w, http.StatusNotFound, "not_found", "artifact file is not there")
+
+			return
+		}
+
+		s.InternalError(ctx, w, err)
+
+		return
+	}
+
+	defer func() { _ = body.Close() }()
+
+	w.Header().Set("Content-Type", contentOf(artifact.ContentType))
+	w.Header().Set("Content-Disposition", `attachment; filename="`+attachmentFilename(artifact.Filename)+`"`)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "private, no-store")
+
+	w.WriteHeader(http.StatusOK)
+
+	if _, err := io.Copy(w, body); err != nil {
+		s.deps.Logger.ErrorContext(ctx, "stream artifact", slog.String("error", err.Error()))
+	}
+}
+
+func (s *Server) artifactFits(w http.ResponseWriter, request captureRequest) bool {
+	limit := s.deps.MaxArtifactBytes
+	if limit <= 0 || request.Artifact == nil || int64(len(request.Artifact.Bytes)) <= limit {
+		return true
+	}
+
+	httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+		fmt.Sprintf("artifact is larger than %d bytes", limit))
+
+	return false
+}
+
+func contentOf(contentType string) string {
+	if strings.TrimSpace(contentType) == "" {
+		return "application/octet-stream"
+	}
+
+	return contentType
+}
+
+func attachmentFilename(name string) string {
+	cleaned := strings.Map(func(char rune) rune {
+		if char == '"' || char == '\\' || char < ' ' || char == 0x7f {
+			return -1
+		}
+
+		return char
+	}, name)
+
+	if cleaned == "" {
+		return "artifact"
+	}
+
+	return cleaned
 }
 
 func readCapture(r *http.Request) (captureRequest, error) {

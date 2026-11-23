@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "not_found",
+    "message": "capture <ref> has no artifact"
+  }
+}

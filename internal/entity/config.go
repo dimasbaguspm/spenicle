@@ -7,6 +7,10 @@ type AppConfig struct {
 	DataDir string
 	DBPath  string
 
+	ArtifactDir       string
+	ArtifactRetention time.Duration
+	ArtifactMaxBytes  int64
+
 	AppSecret          string `validate:"required,min=16"`
 	SnapToJSONAPIKey   string
 	SnapToJSONEndpoint string

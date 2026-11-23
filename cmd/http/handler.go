@@ -95,6 +95,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /api/captures", s.api.ListCaptures)
 	mux.HandleFunc("POST /api/captures", s.api.CreateCapture)
 	mux.HandleFunc("PATCH /api/captures/{ref}", s.api.PatchCapture)
+	mux.HandleFunc("GET /api/captures/{ref}/artifact", s.api.GetCaptureArtifact)
 
 	mux.HandleFunc("GET /api/rates", s.api.GetRate)
 
@@ -196,7 +197,8 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 	return handlers.Deps{
 		Ledger: process.Ledger,
 		Captures: captures.New(
-			store, process.Ledger, process.Sealer, extractor, clock.System{}, clock.System{},
+			store, process.Ledger, process.Sealer, process.Artifacts, store, extractor,
+			clock.System{}, clock.System{},
 		),
 		Rates:             process.Rates,
 		Accounts:          store,
@@ -204,6 +206,8 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		Recurring:         store,
 		Analytics:         store,
 		CustomQueries:     store,
+		Artifacts:         store,
+		ArtifactFiles:     process.Artifacts,
 		Settings:          process.Settings,
 		Health:            store,
 		Sealer:            process.Sealer,
@@ -211,6 +215,7 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		Version:           config.Version,
 		HealthTimeout:     process.Cfg.HealthTimeout,
 		MaxBodyBytes:      process.Cfg.MaxBodyBytes,
+		MaxArtifactBytes:  process.Cfg.ArtifactMaxBytes,
 		WebOrigin:         process.Cfg.WebOrigin,
 		ExtractionEnabled: process.Cfg.SnapToJSONAPIKey != "",
 		Logger:            process.Logger,

@@ -24,6 +24,10 @@ type Store interface {
 	SetSetting(ctx context.Context, key, value string) error
 }
 
+type ArtifactFiles interface {
+	Remove(ctx context.Context, sha string) error
+}
+
 type TimeSource interface{ Now() time.Time }
 
 type Summary struct {
@@ -33,17 +37,23 @@ type Summary struct {
 }
 
 type Runner struct {
-	rules   repository.Recurring
-	store   Store
-	entries ledger.Contract
-	clock   TimeSource
-	logger  *slog.Logger
+	rules     repository.Recurring
+	store     Store
+	entries   ledger.Contract
+	artifacts repository.Artifacts
+	files     ArtifactFiles
+	retention time.Duration
+	clock     TimeSource
+	logger    *slog.Logger
 }
 
 func New(
 	rules repository.Recurring,
 	store Store,
 	entries ledger.Contract,
+	artifacts repository.Artifacts,
+	files ArtifactFiles,
+	retention time.Duration,
 	clock TimeSource,
 	logger *slog.Logger,
 ) *Runner {
@@ -51,7 +61,10 @@ func New(
 		logger = slog.Default()
 	}
 
-	return &Runner{rules: rules, store: store, entries: entries, clock: clock, logger: logger}
+	return &Runner{
+		rules: rules, store: store, entries: entries, artifacts: artifacts,
+		files: files, retention: retention, clock: clock, logger: logger,
+	}
 }
 
 func (r *Runner) record(ctx context.Context, at time.Time) {
