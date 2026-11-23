@@ -9,24 +9,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
-)
-
-const (
-	serviceName = "spenicle"
-
-	telemetryShutdownTimeout = 5 * time.Second
-	httpShutdownTimeout      = 10 * time.Second
-
-	readHeaderTimeout = 5 * time.Second
-	readTimeout       = 15 * time.Second
-	writeTimeout      = 30 * time.Second
-	idleTimeout       = 60 * time.Second
+	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
 // version is stamped at build time.
@@ -55,22 +43,17 @@ func run() error {
 	slog.SetDefault(logger)
 
 	shutdownTelemetry, err := telemetry.Setup(ctx, telemetry.Config{
-		ServiceName: serviceName,
+		ServiceName: cfg.ServiceName,
+		TracerName:  cfg.TracerName,
 		Version:     version,
 		Endpoint:    cfg.OTLPEndpoint,
 	})
 	if err != nil {
 		return fmt.Errorf("telemetry: %w", err)
 	}
-	defer flushTelemetry(ctx, logger, shutdownTelemetry)
+	defer flushTelemetry(ctx, logger, cfg.TelemetryShutdownTimeout, shutdownTelemetry)
 
-	application, err := newApp(ctx, appConfig{
-		DBPath:       filepath.Join(cfg.DataDir, "spenicle.db"),
-		BaseCurrency: cfg.BaseCurrency,
-		AppSecret:    cfg.AppSecret,
-		Version:      version,
-		Logger:       logger,
-	})
+	application, err := newApp(ctx, cfg, version, logger)
 	if err != nil {
 		return err
 	}
@@ -87,17 +70,17 @@ func run() error {
 // serve blocks until the context is cancelled or the listener fails.
 func serve(
 	ctx context.Context,
-	cfg config.Config,
+	cfg entity.AppConfig,
 	application *app,
 	logger *slog.Logger,
 ) error {
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           application.Handler,
-		ReadHeaderTimeout: readHeaderTimeout,
-		ReadTimeout:       readTimeout,
-		WriteTimeout:      writeTimeout,
-		IdleTimeout:       idleTimeout,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		ReadTimeout:       cfg.ReadTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
 	}
 
 	errCh := make(chan error, 1)
@@ -122,7 +105,7 @@ func serve(
 		logger.InfoContext(ctx, "shutting down")
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), httpShutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cfg.ShutdownTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -132,10 +115,15 @@ func serve(
 	return nil
 }
 
-func flushTelemetry(ctx context.Context, logger *slog.Logger, shutdown func(context.Context) error) {
+func flushTelemetry(
+	ctx context.Context,
+	logger *slog.Logger,
+	timeout time.Duration,
+	shutdown func(context.Context) error,
+) {
 	// The signal that stopped the process also cancelled ctx; the flush needs a
 	// live deadline or the last batch of spans is lost.
-	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), telemetryShutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
 	defer cancel()
 
 	if err := shutdown(shutdownCtx); err != nil {

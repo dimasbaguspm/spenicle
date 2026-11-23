@@ -18,8 +18,8 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/cmd/http/handlers"
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
+	"github.com/dimasbaguspm/spenicle/internal/common/config"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
-	"github.com/dimasbaguspm/spenicle/internal/module/bootstrap"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
@@ -91,8 +91,7 @@ func (w *world) boot(ctx context.Context) error {
 
 	sealer := seal.Passthrough{}
 
-	baseCurrency, err := bootstrap.New(store, store).
-		EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint())
+	baseCurrency, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint())
 	if err != nil {
 		_ = store.Close(ctx)
 
@@ -100,15 +99,18 @@ func (w *world) boot(ctx context.Context) error {
 	}
 
 	clockSystem := clock.System{}
+	limits := config.Defaults()
 
 	w.store = store
 	w.server = httptest.NewServer(handlers.New(handlers.Deps{
-		Ledger:       ledger.New(store, store, clockSystem, clockSystem),
-		Health:       store,
-		Sealer:       sealer,
-		BaseCurrency: baseCurrency,
-		Version:      "uat",
-		Logger:       slog.New(slog.DiscardHandler),
+		Ledger:        ledger.New(store, store, clockSystem, clockSystem),
+		Health:        store,
+		Sealer:        sealer,
+		BaseCurrency:  baseCurrency,
+		Version:       "uat",
+		HealthTimeout: limits.HealthTimeout,
+		MaxBodyBytes:  limits.MaxBodyBytes,
+		Logger:        slog.New(slog.DiscardHandler),
 	}))
 
 	return nil

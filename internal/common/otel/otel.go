@@ -27,15 +27,18 @@ const metricInterval = 15 * time.Second
 // Config describes where telemetry goes.
 type Config struct {
 	ServiceName string
-	Version     string
+	// TracerName is how this process identifies itself in spans. Defaults to the
+	// service name when empty.
+	TracerName string
+	Version    string
 	// Endpoint is host:port, optionally with a scheme. Empty disables export.
 	Endpoint string
 }
 
-// tracerName is the one tracer every layer reports under. Span names carry the
-// layer instead ("Repository.Sqlite.InsertEntry"), so a trace reads like the
-// call stack.
-const tracerName = "spenicle"
+// tracerName is the one tracer every layer reports under. Setup sets it once at
+// boot from configuration; span names carry the layer instead
+// ("Repository.Sqlite.InsertEntry"), so a trace reads like the call stack.
+var tracerName = "spenicle" //nolint:gochecknoglobals // one process-wide name, written once by Setup
 
 // StartSpan opens a named span. The name must be qualified with the layer that
 // owns the work, e.g. "Module.Ledger.Post". Callers defer the returned end
@@ -49,6 +52,10 @@ func StartSpan(ctx context.Context, name string) (context.Context, func()) {
 // Setup installs global tracer and meter providers. The returned function
 // flushes and shuts them down.
 func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error) {
+	if cfg.TracerName != "" {
+		tracerName = cfg.TracerName
+	}
+
 	noop := func(context.Context) error { return nil }
 	if strings.TrimSpace(cfg.Endpoint) == "" {
 		return noop, nil

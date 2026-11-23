@@ -15,8 +15,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 )
 
-const maxBodyBytes = 1 << 20
-
 type postingRequest struct {
 	AccountID   int64  `json:"account_id"`
 	AmountMinor string `json:"amount_minor"`
@@ -55,7 +53,7 @@ func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Post")
 	defer endSpan()
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+	r.Body = http.MaxBytesReader(w, r.Body, s.deps.MaxBodyBytes)
 
 	var request postEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {

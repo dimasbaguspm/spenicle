@@ -5,6 +5,7 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/dimasbaguspm/spenicle/cmd/http/middlewares"
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
@@ -13,14 +14,17 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
 
-// Deps is everything the transport needs, injected.
+// Deps is everything the transport needs, injected. The limits are configuration,
+// not constants of this package: they arrive from entity.AppConfig.
 type Deps struct {
-	Ledger       ledger.Contract
-	Health       repository.System
-	Sealer       seal.Sealer
-	BaseCurrency string
-	Version      string
-	Logger       *slog.Logger
+	Ledger        ledger.Contract
+	Health        repository.System
+	Sealer        seal.Sealer
+	BaseCurrency  string
+	Version       string
+	HealthTimeout time.Duration
+	MaxBodyBytes  int64
+	Logger        *slog.Logger
 }
 
 // server holds the dependencies the handlers share.

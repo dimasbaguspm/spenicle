@@ -11,9 +11,12 @@ import (
 	_ "modernc.org/sqlite" // pure Go driver, keeps the binary static
 )
 
-// Config is everything the adapter needs to open a database.
+// Config is everything the adapter needs to open a database. Zero pool sizes fall
+// back to the small defaults below, so a test can pass only a path.
 type Config struct {
-	Path string
+	Path         string
+	MaxOpenConns int
+	MaxIdleConns int
 }
 
 const (
@@ -23,6 +26,15 @@ const (
 	maxOpenConns = 4
 	maxIdleConns = 2
 )
+
+// pickMax keeps the pool bounded even when the caller passes nothing.
+func pickMax(want, fallback int) int {
+	if want > 0 {
+		return want
+	}
+
+	return fallback
+}
 
 // Open creates the data directory if needed and returns a WAL-mode handle.
 func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
@@ -46,8 +58,8 @@ func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
 
 	// WAL allows concurrent readers, but this deployment is one process with a
 	// single writer. Fewer connections keeps BUSY retries predictable.
-	db.SetMaxOpenConns(maxOpenConns)
-	db.SetMaxIdleConns(maxIdleConns)
+	db.SetMaxOpenConns(pickMax(cfg.MaxOpenConns, maxOpenConns))
+	db.SetMaxIdleConns(pickMax(cfg.MaxIdleConns, maxIdleConns))
 
 	if err := db.PingContext(ctx); err != nil {
 		_ = db.Close()
