@@ -1,0 +1,115 @@
+# Correctness: does the code do what it says?
+#
+# Run with: golangci-lint run -c tools/lint/correctness.yml ./...
+# This group must stay free of taste. If a finding here is arguable, it belongs
+# in style.yml instead.
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # errors that are checked, or clearly reported as ignored
+    - errcheck
+    - errorlint
+    - errchkjson
+    - errname
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - wrapcheck
+    # control flow and values
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - ineffassign
+    - wastedassign
+    - copyloopvar
+    - durationcheck
+    - makezero
+    - reassign
+    - forcetypeassert
+    - asasalint
+    - dogsled
+    - predeclared
+    - unconvert
+    - usestdlibvars
+    - mirror
+    # context and cancellation
+    - containedctx
+    - contextcheck
+    - fatcontext
+    - noctx
+    # database and http resources
+    - bodyclose
+    - rowserrcheck
+    - sqlclosecheck
+    - unqueryvet
+    # telemetry
+    - spancheck
+    - sloglint
+    - loggercheck
+    # contracts
+    - exhaustive
+    - musttag
+    - recvcheck
+    - gocheckcompilerdirectives
+    - goprintffuncname
+    # tests
+    - thelper
+    - usetesting
+    - testableexamples
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      # `_ = tx.Rollback()` and `_ = w.Write()` are deliberate. check-blank would
+      # flag every one of them and buy nothing.
+      check-blank: false
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # a size counter, not a bug: style.yml territory
+    sloglint:
+      no-mixed-args: true
+      kv-only: false
+      attr-only: true
+      no-global: "all"
+      context: "all"
+      static-msg: true
+      # Keys are plain strings on purpose: a constants table for log keys costs
+      # more than the typo it would catch.
+      no-raw-keys: false
+      key-naming-case: snake
+    wrapcheck:
+      ignore-package-globs:
+        - github.com/dimasbaguspm/spenicle/internal/*
+    exhaustive:
+      default-signifies-exhaustive: true
+
+  exclusions:
+    generated: strict
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Tests assert, they do not defend: an unchecked error there is noise.
+      - path: _test\.go
+        linters:
+          - errcheck
+          - wrapcheck
+          - noctx
+          - bodyclose
+          - exhaustruct
+      # godog callbacks must match its signature.
+      - path: internal/bdd/
+        linters:
+          - wrapcheck
+          - contextcheck
+          - unparam
+
+run:
+  timeout: 5m
+  tests: true

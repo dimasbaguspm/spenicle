@@ -1,0 +1,194 @@
+# Style: is the code readable by the next person?
+#
+# Run with: golangci-lint run -c tools/lint/style.yml ./...
+# Formatters are checked here too, so a style failure never needs a second tool.
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # naming and shape
+    - revive
+    - gocritic
+    - godoclint
+    - godot
+    - interfacebloat
+    - inamedparam
+    - iface
+    - ireturn
+    - varnamelen
+    - tagliatelle
+    - tagalign
+    - canonicalheader
+    # layout and hygiene
+    - whitespace
+    - wsl_v5
+    - nlreturn
+    - godox
+    - misspell
+    - lll
+    - nolintlint
+    - decorder
+    - funcorder
+    - grouper
+    - embeddedstructfieldcheck
+    - iotamixing
+    - nonamedreturns
+    - nakedret
+    # complexity budgets
+    - funlen
+    - cyclop
+    - gocognit
+    - maintidx
+    - nestif
+    - dupl
+    - goconst
+    - mnd
+    # tests
+    - paralleltest
+    - tparallel
+    - testpackage
+
+  settings:
+    revive:
+      confidence: 0.8
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: early-return
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: if-return
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: var-declaration
+        - name: var-naming
+    gocritic:
+      enabled-tags:
+        - style
+        - diagnostic
+        - opinionated
+      disabled-checks:
+        - whyNoLint # nolintlint owns this
+        # nonamedreturns already forbids named results; asking for them here
+        # would be a contradiction.
+        - unnamedResult
+    lll:
+      line-length: 110
+      tab-width: 4
+    funlen:
+      lines: 70
+      statements: 50
+    cyclop:
+      max-complexity: 12
+    gocognit:
+      min-complexity: 20
+    maintidx:
+      under: 20
+    nestif:
+      min-complexity: 5
+    dupl:
+      threshold: 120
+    goconst:
+      min-len: 4
+      min-occurrences: 4
+    mnd:
+      ignored-numbers:
+        - "0"
+        - "1"
+        - "2"
+        - "1000"
+        - "0o600"
+        - "3"
+      ignored-files:
+        - _test\.go
+    varnamelen:
+      max-distance: 12
+      min-name-length: 2
+      ignore-decls:
+        - i int
+        - ok bool
+        - err error
+        - w http.ResponseWriter
+        - r *http.Request
+        - ctx context.Context
+        - db *sql.DB
+        - tx *sql.Tx
+        - s *Store
+        - t *testing.T
+        - e domain.Entry
+        - e Entry
+    nlreturn:
+      block-size: 2
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+
+  exclusions:
+    generated: strict
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Tests are allowed to be long, repetitive and magic-numbered.
+      - path: _test\.go
+        linters:
+          - funlen
+          - dupl
+          - goconst
+          - lll
+          - paralleltest
+          - tparallel
+          - varnamelen
+          - nlreturn
+          - wsl_v5
+          - mnd
+      - path: internal/bdd/
+        linters:
+          - paralleltest
+          - tparallel
+          - varnamelen
+          - funlen
+      # main wires interfaces by design; returning them is the composition root's job.
+      - path: cmd/
+        linters:
+          - ireturn
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+    - gci
+  settings:
+    gofumpt:
+      extra-rules: true
+    goimports:
+      local-prefixes:
+        - github.com/dimasbaguspm/spenicle
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/dimasbaguspm/spenicle)
+      custom-order: true
+  exclusions:
+    generated: strict
+
+run:
+  timeout: 5m
+  tests: true

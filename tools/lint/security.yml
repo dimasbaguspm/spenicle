@@ -1,0 +1,85 @@
+# Security: what can be abused if it is wrong?
+#
+# Run with: golangci-lint run -c tools/lint/security.yml ./...
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - gosec
+    - bidichk
+    - forbidigo
+    - gomoddirectives
+    - nosprintfhostport
+    - asciicheck
+    - gochecknoinits
+    - importas
+
+  settings:
+    gosec:
+      excludes:
+        # G104: duplicated by errcheck in correctness.yml, with better messages.
+        - G104
+      config:
+        global:
+          nosec: false
+          audit: true
+        G101:
+          # secrets live in env vars; the pattern only has to catch literals in
+          # source, not the env lookups that read them
+          ignore-entropy: true
+        G304:
+          # file paths come from DATA_DIR and hashed artifact names
+          pattern: "^$"
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: ^fmt\.Print.*$
+          msg: use log/slog, never stdout printing in a server
+        - pattern: ^log\.Print.*$
+          msg: use log/slog
+        - pattern: ^os\.Getenv$
+          msg: read configuration in internal/config only
+        - pattern: ^http\.DefaultClient$
+          msg: set explicit timeouts, never the default client
+        - pattern: ^http\.Get$
+          msg: build a request with a context instead
+        - pattern: ^os\.(Create|WriteFile)$
+          msg: go through the storage adapter so permissions are reviewed
+    gomoddirectives:
+      replace-local: false
+      replace-allow-list: []
+      retract-allow-no-explanation: false
+    importas:
+      # Package names already match the import path, so forcing an identical
+      # alias would be noise. The list below matters when a name differs.
+      no-unaliased: false
+      alias:
+        - pkg: github.com/dimasbaguspm/spenicle/internal/domain
+          alias: domain
+        - pkg: github.com/dimasbaguspm/spenicle/internal/port
+          alias: port
+
+  exclusions:
+    generated: strict
+    presets:
+      - common-false-positives
+      - std-error-handling
+    rules:
+      # Fixtures legitimately contain tokens, weak passwords and fixed noise.
+      - path: _test\.go
+        linters:
+          - gosec
+          - forbidigo
+      # The config package is the one place allowed to read the environment.
+      - path: internal/config/
+        linters:
+          - forbidigo
+      # main wires stdout logging and process exit on purpose.
+      - path: cmd/
+        linters:
+          - forbidigo
+
+run:
+  timeout: 5m
+  tests: true

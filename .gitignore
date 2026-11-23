@@ -9,3 +9,4 @@
 # build output
 /bin/
 /spenicle
+coverage.out

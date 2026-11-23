@@ -1,0 +1,55 @@
+# Performance: will this hold up at 10x the data?
+#
+# Run with: golangci-lint run -c tools/lint/performance.yml ./...
+# This repo is single-user and SQLite-backed, so the bar is "no obvious waste",
+# not micro-optimisation.
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - prealloc
+    - perfsprint
+    - unparam
+    - unconvert
+    - mirror
+    - intrange
+    - usestdlibvars
+    - wastedassign
+    - copyloopvar
+    - makezero
+    - exhaustive
+    - gocritic
+    - dupl
+
+  settings:
+    gocritic:
+      # Only the performance checks: style and diagnostics live in style.yml.
+      enabled-tags:
+        - performance
+      disabled-checks:
+        - hugeParam # enabled below with an explicit threshold
+        - rangeValCopy
+    perfsprint:
+      strconcat: false
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: true
+    unparam:
+      check-exported: false
+
+  exclusions:
+    generated: strict
+    presets:
+      - common-false-positives
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - unparam
+          - prealloc
+
+run:
+  timeout: 5m
+  tests: true
