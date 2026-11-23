@@ -39,6 +39,9 @@ cover: ## coverage report over the whole module
 fmt: ## gofmt the tree
 	$(GO) fmt ./...
 
+mocks:
+	go generate ./...
+
 lint: lint-correctness lint-style lint-security lint-performance ## run all four groups
 
 lint-correctness: ## does the code do what it says

@@ -244,6 +244,52 @@ The worker does four things per run, in this order: post the due recurring rules
 the artifacts of rejected captures, drop expired import drafts, then claim up to 5 export
 jobs and sweep the queue.
 
+## Observability
+
+Three signals, one vocabulary, no per-request guesswork.
+
+Status: spans (`telemetry.StartSpan`), per-command `service.name` and the OTLP wiring exist
+today. The context logger helpers, the `otelhttp` transports, the metric instruments, the
+trace propagation column and `config/grafana/` land next; the rules below bind them from the
+moment they exist, and bind the code that is already here.
+
+Rules that bind every change:
+
+- **Logging goes through a context-aware logger.** `telemetry.Info/Warn/Error/Debug(ctx, msg, attrs…)`
+  (this file is `internal/common/otel`, package `telemetry`); each record carries `trace_id`,
+  `span_id`, `service.name` and `component` (`http|worker`) taken from the context, so a log
+  line is always joinable to its span. Attributes are the typed `telemetry.Attr` list, never
+  `...any`, so keys stay consistent. The level is not configurable: `Debug` for hot-loop
+  detail, `Info` for branch outcomes and lifecycle (`no categories found`, `recurring run
+  finished`), `Warn` for degraded-but-recovered (vendor down, sweep, retry), `Error` only when
+  a request returns `5xx` or work is dropped.
+- **One span per boundary method, none in pure code.** Every exported *and* private method that
+  crosses a layer or does I/O opens exactly one span named `<Package>.<Receiver>.<Method>`
+  (`Handler.Entries.List`, `Module.Ledger.Post`, `Repository.Sqlite.ListEntries`,
+  `Worker.Recurring.Run`); validation, formatting and other pure functions open none. Outgoing
+  HTTP clients (ECB, SnapToJSON, OpenAI) go through `otelhttp.NewTransport`, so a vendor call is
+  a child span with its real status.
+- **Attributes come from one constant set** (`spenicle.version`, `spenicle.component`,
+  `spenicle.entry.source`, `spenicle.capture.kind`, `spenicle.job`, `spenicle.ref`,
+  `spenicle.rows`, `spenicle.outcome`) plus the semantic conventions where they exist
+  (`http.request.method`, `http.route` as the *template*, `http.response.status_code`,
+  `db.system=sqlite`, `db.operation`). Kinds belong in attributes, never in the span name.
+- **`http` and `worker` are separate processes**, so they cannot share a trace by accident:
+  they share the attribute vocabulary, the same panels, and each opens its own root span
+  (`Worker.Run` per tick). A job that crosses the boundary (`exports`, `imports`) carries the
+  caller's W3C `traceparent` on its row, and the worker resumes the trace as a remote parent —
+  that is the only honest end-to-end story across processes.
+- **Metrics are prefixed `spenicle.`**, dotted lowercase, units in the instrument option and
+  never in the name (`_seconds`, `By`, `1`): `spenicle.http.server.requests|duration|in_flight`,
+  `spenicle.worker.runs|items|run.duration`, `spenicle.ledger.entries|postings`,
+  `spenicle.captures.transitions`, `spenicle.imports.rows|clashes`, `spenicle.exports.bytes`,
+  `spenicle.sqlite.locked`, plus `otelruntime`. Attributes are bounded enums only (`job`,
+  `outcome`, `source`, `clash.kind`, `http.route`); a ref, a name or an amount in an attribute
+  is a defect.
+- **The dashboard is code**: `config/grafana/` holds the provisioned JSON and
+  `docs/observability.md` explains the OTLP wiring, so a panel change is reviewed like any
+  other diff.
+
 ## Dependencies
 
 Five direct ones, each earning its place: `spf13/cobra` for the CLI (a root command,
@@ -258,6 +304,15 @@ reason in the MR, not a `go get`.
 - Unit tests sit next to the code they test (`internal/entity/money_test.go`,
   `internal/repository/sqlite/store_test.go`). Use `t.Context()`, never
   `context.Background()`.
+- **Table-driven tests are mandatory** for anything with more than one case: one `tests :=
+  []struct{ name string; ... }` slice, `t.Run(tc.name, ...)`, no repeated arrange blocks. A
+  single happy-path assertion does not need a table; a second case does.
+- **Interfaces are mocked with `go.uber.org/mock`** (`gomock`), never by hand. Generate with
+  `//go:generate go run go.uber.org/mock/mockgen -source=<file>.go -destination=mocks/<file>.go
+  -package=mocks` next to the contract, run it with `make mocks`, and commit the generated
+  file. `tools/tools.go` pins the generator version (build tag `tools`), which is also what
+  keeps it in `go.mod`. Hand-written stubs already in a test may stay until that test is
+  touched; new ones are not accepted.
 - UAT is Gherkin via godog, over the **real** handler and a **real** SQLite file in a
   temp dir — no mocks. Steps are generic (`I send a POST to "/api/entries" with:`,
   `the response JSON matches the snapshot "..."`), so a new endpoint usually needs no
