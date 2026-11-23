@@ -27,6 +27,7 @@ var validSources = map[string]bool{
 
 type Posting struct {
 	AccountID       int64
+	AccountRef      string
 	AmountMinor     int64
 	BaseAmountMinor int64
 	FXRate          string
@@ -36,6 +37,7 @@ type Posting struct {
 
 type Entry struct {
 	ID         int64
+	Ref        string
 	ClientID   string
 	OccurredOn time.Time
 	PayeeID    *int64

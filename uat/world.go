@@ -44,7 +44,7 @@ type world struct {
 	dbPath        string
 	store         *sqlite.Store
 	server        *httptest.Server
-	accounts      map[string]int64
+	accounts      map[string]string
 	ratesEndpoint string
 
 	status int
@@ -52,6 +52,7 @@ type world struct {
 	header http.Header
 
 	pendingBody []byte
+	lastRef     string
 }
 
 // Options is what the harness injects: the endpoints of the mocked services.
@@ -62,7 +63,7 @@ type Options struct {
 func newWorld(options Options) *world {
 	return &world{
 		baseCurrency:  "IDR",
-		accounts:      map[string]int64{},
+		accounts:      map[string]string{},
 		ratesEndpoint: options.RatesEndpoint,
 	}
 }
@@ -125,7 +126,7 @@ func (w *world) boot(ctx context.Context) error {
 		return fmt.Errorf("settings: %w", settingsErr)
 	}
 
-	ledgerService := ledger.New(store, settingsService, clockSystem, clockSystem)
+	ledgerService := ledger.New(store, store, settingsService, clockSystem, clockSystem)
 
 	var ratesService rates.Contract
 
@@ -138,6 +139,17 @@ func (w *world) boot(ctx context.Context) error {
 		}
 
 		ratesService = rates.New(source, store, clockSystem)
+	}
+
+	accounts, err := store.ListAccounts(ctx)
+	if err != nil {
+		_ = store.Close(ctx)
+
+		return fmt.Errorf("accounts: %w", err)
+	}
+
+	for _, account := range accounts {
+		w.accounts[account.Name] = account.Ref
 	}
 
 	w.store = store
@@ -194,6 +206,8 @@ func (w *world) doWith(
 		reader = strings.NewReader(string(body))
 	}
 
+	path = strings.ReplaceAll(path, "{{ref}}", w.lastRef)
+
 	target := w.server.URL + path
 	if len(query) > 0 {
 		target += "?" + query.Encode()
@@ -228,15 +242,60 @@ func (w *world) doWith(
 
 	w.status = resp.StatusCode
 	w.body = raw
+
 	w.header = resp.Header
+	if method == http.MethodPost {
+		w.lastRef = refOf(raw)
+	}
 
 	return nil
+}
+
+func refOf(body []byte) string {
+	var document map[string]any
+
+	if err := json.Unmarshal(body, &document); err != nil {
+		return ""
+	}
+
+	for _, key := range []string{"ref", "capture", "entry", "captures", "entries"} {
+		switch typed := document[key].(type) {
+		case string:
+			return typed
+		case map[string]any:
+			if ref, ok := typed["ref"].(string); ok {
+				return ref
+			}
+		case []any:
+			if len(typed) == 0 {
+				continue
+			}
+
+			if row, ok := typed[0].(map[string]any); ok {
+				if ref, ok := row["ref"].(string); ok {
+					return ref
+				}
+			}
+		}
+	}
+
+	return ""
 }
 
 var accountPlaceholder = regexp.MustCompile(`\{\{account:([^}]+)\}\}`)
 
 func (w *world) expandFingerprint(want string) string {
-	return strings.ReplaceAll(want, "{{fingerprint}}", w.fingerprint)
+	want = strings.ReplaceAll(want, "{{fingerprint}}", w.fingerprint)
+	want = strings.ReplaceAll(want, "{{ref}}", w.lastRef)
+
+	return accountPlaceholder.ReplaceAllStringFunc(want, func(match string) string {
+		ref, ok := w.accounts[accountPlaceholder.FindStringSubmatch(match)[1]]
+		if !ok {
+			return match
+		}
+
+		return ref
+	})
 }
 
 func (w *world) expand(body string) (string, error) {
@@ -245,14 +304,14 @@ func (w *world) expand(body string) (string, error) {
 	out := accountPlaceholder.ReplaceAllStringFunc(body, func(match string) string {
 		name := accountPlaceholder.FindStringSubmatch(match)[1]
 
-		id, ok := w.accounts[name]
+		ref, ok := w.accounts[name]
 		if !ok {
 			missing = append(missing, name)
 
 			return match
 		}
 
-		return strconv.FormatInt(id, 10)
+		return ref
 	})
 
 	if len(missing) > 0 {

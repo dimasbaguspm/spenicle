@@ -43,7 +43,7 @@ type captureApprove struct {
 }
 
 type captureResponse struct {
-	ID              int64  `json:"id"`
+	Ref             string `json:"ref"`
 	Kind            string `json:"kind"`
 	Status          string `json:"status"`
 	RawText         string `json:"raw_text,omitempty"`
@@ -149,7 +149,7 @@ func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Patch")
 	defer endSpan()
 
-	var path pathIDRequest
+	var path pathRefRequest
 	if err := bindPath(r, &path); err != nil {
 		writeInvalid(w, err)
 
@@ -163,11 +163,11 @@ func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
 
 	switch request.Action {
 	case "approve":
-		s.approveCapture(ctx, w, path.ID, request)
+		s.approveCapture(ctx, w, path.Ref, request)
 	case "reject":
-		s.rejectCapture(ctx, w, path.ID, request)
+		s.rejectCapture(ctx, w, path.Ref, request)
 	case "retry":
-		capture, err := s.deps.Captures.Retry(ctx, path.ID)
+		capture, err := s.deps.Captures.Retry(ctx, path.Ref)
 		if err != nil {
 			status, code := classify(err)
 			httpx.WriteError(w, status, code, err.Error())
@@ -182,7 +182,7 @@ func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
 func (s *server) approveCapture(
 	ctx context.Context,
 	w http.ResponseWriter,
-	id int64,
+	ref string,
 	request capturePatchRequest,
 ) {
 	approval := captureApprove{
@@ -211,9 +211,8 @@ func (s *server) approveCapture(
 		return
 	}
 
-	entry, capture, err := s.deps.Captures.Approve(ctx, id, captures.ApproveInput{
+	entry, capture, err := s.deps.Captures.Approve(ctx, ref, captures.ApproveInput{
 		OccurredOn: occurredOn,
-		PayeeID:    request.PayeeID,
 		Note:       request.Note,
 		Currency:   approval.Currency,
 		Postings:   postings,
@@ -234,10 +233,10 @@ func (s *server) approveCapture(
 func (s *server) rejectCapture(
 	ctx context.Context,
 	w http.ResponseWriter,
-	id int64,
+	ref string,
 	request capturePatchRequest,
 ) {
-	capture, err := s.deps.Captures.Reject(ctx, id, request.Reason)
+	capture, err := s.deps.Captures.Reject(ctx, ref, request.Reason)
 	if err != nil {
 		status, code := classify(err)
 		httpx.WriteError(w, status, code, err.Error())
@@ -315,7 +314,7 @@ func readCaptureForm(r *http.Request) (captureRequest, error) {
 
 func toCaptureResponse(capture entity.Capture) captureResponse {
 	out := captureResponse{
-		ID:              capture.ID,
+		Ref:             capture.Ref,
 		Kind:            capture.Kind,
 		Status:          capture.Status,
 		RawText:         capture.RawText,
@@ -324,7 +323,6 @@ func toCaptureResponse(capture entity.Capture) captureResponse {
 		JobRef:          capture.JobRef,
 		ExtractionRail:  capture.ExtractionRail,
 		ExtractionModel: capture.ExtractionModel,
-		EntryID:         capture.ResolvedEntryID,
 		ReceivedAt:      capture.ReceivedAt.Format(constant.TimestampLayout),
 	}
 
@@ -345,7 +343,7 @@ func toCapturePostingInputs(request []postingRequest) ([]captures.PostingInput, 
 		}
 
 		postings = append(postings, captures.PostingInput{
-			AccountID:   posting.AccountID,
+			AccountRef:  posting.AccountRef,
 			AmountMinor: amount,
 			FXRate:      posting.FXRate,
 			FXRateDate:  posting.FXRateDate,

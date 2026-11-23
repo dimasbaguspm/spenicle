@@ -9,7 +9,7 @@ Feature: Health
     When I send a GET to "/healthz"
     Then the response status is 200
     And the response JSON at "$.status" is "ok"
-    And the response JSON at "$.schema_version" is "4"
+    And the response JSON at "$.schema_version" is "1"
     And the response JSON at "$.base_currency" is "IDR"
     And the response JSON at "$.app_secret" is "{{fingerprint}}"
     And the response header "Content-Type" is "application/json; charset=utf-8"

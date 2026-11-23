@@ -6,7 +6,7 @@ Feature: Contract
     Given a running API
     And the request body is:
       """json
-      {"occurred_on":"2026-02-14","currency":"IDR","note":"snapshotted","postings":[{"account_id":2,"amount_minor":"25000"},{"account_id":1,"amount_minor":"-25000"}]}
+      {"occurred_on":"2026-02-14","currency":"IDR","note":"snapshotted","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     When I send a POST to "/api/entries" with headers/query:
       | type   | key          | value            |
@@ -66,12 +66,12 @@ Feature: Contract
 
     Examples:
       | body                                                                                                                                                        | status | code                  |
-      | {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_id":1,"amount_minor":"-1"},{"account_id":2,"amount_minor":"2"}]}                            | 422    | postings_not_balanced |
-      | {"occurred_on":"2026-02-14","currency":"XXX","postings":[{"account_id":1,"amount_minor":"-1"},{"account_id":2,"amount_minor":"1"}]}                            | 422    | unknown_currency      |
-      | {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_id":1,"amount_minor":"0"}]}                                                                | 422    | invalid_postings      |
-      | {"currency":"IDR","postings":[{"account_id":1,"amount_minor":"-1"},{"account_id":2,"amount_minor":"1"}]}                                                       | 422    | invalid_request       |
-      | {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_id":1,"amount_minor":"nope"},{"account_id":2,"amount_minor":"1"}]}                          | 422    | invalid_request       |
-      | {"occurred_on":"14-02-2026","currency":"IDR","postings":[{"account_id":1,"amount_minor":"-1"},{"account_id":2,"amount_minor":"1"}]}                            | 422    | invalid_request       |
+      | {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2"}]}                            | 422    | postings_not_balanced |
+      | {"occurred_on":"2026-02-14","currency":"XXX","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}                            | 422    | unknown_currency      |
+      | {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"0"}]}                                                                | 422    | invalid_postings      |
+      | {"currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}                                                       | 422    | invalid_request       |
+      | {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"nope"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}                          | 422    | invalid_request       |
+      | {"occurred_on":"14-02-2026","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}                            | 422    | invalid_request       |
       | {"occurred_on":                                                                                                                                              | 400    | invalid_json          |
 
   Scenario Outline: An unusable capture answers with a stable error code
@@ -95,11 +95,11 @@ Feature: Contract
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-01-31","currency":"IDR","note":"january","postings":[{"account_id":1,"amount_minor":"-100"},{"account_id":2,"amount_minor":"100"}]}
+      {"occurred_on":"2026-01-31","currency":"IDR","note":"january","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-100"},{"account_ref":"{{account:Unsorted}}","amount_minor":"100"}]}
       """
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-15","currency":"IDR","note":"february","postings":[{"account_id":1,"amount_minor":"-200"},{"account_id":2,"amount_minor":"200"}]}
+      {"occurred_on":"2026-02-15","currency":"IDR","note":"february","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-200"},{"account_ref":"{{account:Unsorted}}","amount_minor":"200"}]}
       """
     When I send a GET to "/api/entries" with headers/query:
       | type  | key  | value      |

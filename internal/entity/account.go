@@ -4,6 +4,7 @@ import "time"
 
 type Account struct {
 	ID         int64
+	Ref        string
 	Name       string
 	Kind       string
 	ParentID   *int64
@@ -26,11 +27,10 @@ type CaptureFilter struct {
 }
 
 type EntryFilter struct {
-	From      time.Time
-	To        time.Time
-	AccountID *int64
-	PayeeID   *int64
-	Source    string
-	Cursor    int64
-	Limit     int
+	From       time.Time
+	To         time.Time
+	AccountRef string
+	Source     string
+	Cursor     int64
+	Limit      int
 }

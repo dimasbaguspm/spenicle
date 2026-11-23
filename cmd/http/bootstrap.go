@@ -72,7 +72,7 @@ func newApp(
 	}
 
 	clockSystem := clock.System{}
-	ledgerService := ledger.New(store, settingsService, clockSystem, clockSystem)
+	ledgerService := ledger.New(store, store, settingsService, clockSystem, clockSystem)
 
 	ratesService, err := ratesFor(ctx, cfg, store, clockSystem)
 	if err != nil {

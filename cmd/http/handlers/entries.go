@@ -15,7 +15,7 @@ import (
 )
 
 type postingRequest struct {
-	AccountID   int64  `json:"account_id"             validate:"required,gt=0"`
+	AccountRef  string `json:"account_ref"            validate:"required,ref"`
 	AmountMinor string `json:"amount_minor"           validate:"required,money"`
 	FXRate      string `json:"fx_rate,omitempty"      validate:"omitempty,rate"`
 	FXRateDate  string `json:"fx_rate_date,omitempty" validate:"omitempty,datestr"`
@@ -24,7 +24,6 @@ type postingRequest struct {
 type postEntryRequest struct {
 	ClientID   string           `json:"client_id,omitempty" validate:"omitempty,max=64"`
 	OccurredOn string           `json:"occurred_on"         validate:"required,datestr"`
-	PayeeID    *int64           `json:"payee_id,omitempty"  validate:"omitempty,gt=0"`
 	Note       string           `json:"note,omitempty"      validate:"max=2000"`
 	Currency   string           `json:"currency"            validate:"required,currency"`
 	Source     string           `json:"source,omitempty"    validate:"omitempty,source"`
@@ -32,17 +31,16 @@ type postEntryRequest struct {
 }
 
 type entryListQuery struct {
-	From      string `query:"from"       validate:"omitempty,datestr"`
-	To        string `query:"to"         validate:"omitempty,datestr"`
-	AccountID int64  `query:"account_id" validate:"omitempty,gt=0"`
-	PayeeID   int64  `query:"payee_id"   validate:"omitempty,gt=0"`
-	Source    string `query:"source"     validate:"omitempty,source"`
-	Cursor    int64  `query:"cursor"     validate:"omitempty,gte=0"`
-	Limit     int64  `query:"limit"      validate:"omitempty,gte=0,lte=200"`
+	From       string `query:"from"        validate:"omitempty,datestr"`
+	To         string `query:"to"          validate:"omitempty,datestr"`
+	AccountRef string `query:"account_ref" validate:"omitempty,ref"`
+	Source     string `query:"source"      validate:"omitempty,source"`
+	Cursor     int64  `query:"cursor"      validate:"omitempty,gte=0"`
+	Limit      int64  `query:"limit"       validate:"omitempty,gte=0,lte=200"`
 }
 
 type postingResponse struct {
-	AccountID       int64  `json:"account_id"`
+	AccountRef      string `json:"account_ref"`
 	AmountMinor     string `json:"amount_minor"`
 	BaseAmountMinor string `json:"base_amount_minor"`
 	FXRate          string `json:"fx_rate"`
@@ -50,7 +48,7 @@ type postingResponse struct {
 }
 
 type entryResponse struct {
-	ID         int64             `json:"id"`
+	Ref        string            `json:"ref"`
 	OccurredOn string            `json:"occurred_on"`
 	Currency   string            `json:"currency"`
 	Source     string            `json:"source"`
@@ -95,13 +93,7 @@ func entryFilterFromRequest(r *http.Request) (entity.EntryFilter, error) {
 		*target = parsed
 	}
 
-	if query.AccountID > 0 {
-		filter.AccountID = &query.AccountID
-	}
-
-	if query.PayeeID > 0 {
-		filter.PayeeID = &query.PayeeID
-	}
+	filter.AccountRef = query.AccountRef
 
 	return filter, nil
 }
@@ -137,7 +129,7 @@ func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Patch")
 	defer endSpan()
 
-	var path pathIDRequest
+	var path pathRefRequest
 	if err := bindPath(r, &path); err != nil {
 		writeInvalid(w, err)
 
@@ -156,7 +148,7 @@ func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reversal, err := s.deps.Ledger.Void(ctx, path.ID, request.Reason)
+	reversal, err := s.deps.Ledger.Void(ctx, path.Ref, request.Reason)
 	if err != nil {
 		status, code := classify(err)
 		httpx.WriteError(w, status, code, err.Error())
@@ -214,7 +206,7 @@ func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
 		}
 
 		postings = append(postings, ledger.PostingInput{
-			AccountID:   posting.AccountID,
+			AccountRef:  posting.AccountRef,
 			AmountMinor: amount,
 			FXRate:      posting.FXRate,
 			FXRateDate:  posting.FXRateDate,
@@ -224,7 +216,6 @@ func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
 	return ledger.PostInput{
 		ClientID:   request.ClientID,
 		OccurredOn: occurredOn,
-		PayeeID:    request.PayeeID,
 		Note:       request.Note,
 		Currency:   request.Currency,
 		Source:     request.Source,
@@ -234,7 +225,7 @@ func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
 
 func toEntryResponse(entry entity.Entry) entryResponse {
 	out := entryResponse{
-		ID:         entry.ID,
+		Ref:        entry.Ref,
 		OccurredOn: entry.OccurredOn.Format(constant.DateLayout),
 		Currency:   entry.Currency,
 		Source:     entry.Source,
@@ -243,7 +234,7 @@ func toEntryResponse(entry entity.Entry) entryResponse {
 
 	for _, posting := range entry.Postings {
 		out.Postings = append(out.Postings, postingResponse{
-			AccountID:       posting.AccountID,
+			AccountRef:      posting.AccountRef,
 			AmountMinor:     strconv.FormatInt(posting.AmountMinor, 10),
 			BaseAmountMinor: strconv.FormatInt(posting.BaseAmountMinor, 10),
 			FXRate:          posting.FXRate,

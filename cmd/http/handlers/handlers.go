@@ -60,11 +60,11 @@ func New(deps Deps) http.Handler {
 
 	mux.HandleFunc("GET /api/entries", instance.handleListEntries)
 	mux.HandleFunc("POST /api/entries", instance.handlePostEntry)
-	mux.HandleFunc("PATCH /api/entries/{id}", instance.handlePatchEntry)
+	mux.HandleFunc("PATCH /api/entries/{ref}", instance.handlePatchEntry)
 
 	mux.HandleFunc("GET /api/captures", instance.handleListCaptures)
 	mux.HandleFunc("POST /api/captures", instance.handleCreateCapture)
-	mux.HandleFunc("PATCH /api/captures/{id}", instance.handlePatchCapture)
+	mux.HandleFunc("PATCH /api/captures/{ref}", instance.handlePatchCapture)
 
 	mux.HandleFunc("GET /api/rates", instance.handleGetRate)
 	mux.HandleFunc("POST /api/rates/refresh", instance.handleRefreshRates)

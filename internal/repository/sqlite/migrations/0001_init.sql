@@ -1,13 +1,17 @@
--- 0001_init: the ten tables from docs/v2-api.md
+-- 0001_init: the whole schema, one migration, no history to migrate.
+-- Every table carries a bigint id for the graph and a dashless UUID ref for the wire.
 -- Keep comments free of semicolons: the splitter is naive on purpose.
 
 CREATE TABLE settings (
-  k TEXT PRIMARY KEY,
-  v TEXT NOT NULL
+  id  INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  k   TEXT NOT NULL UNIQUE,
+  v   TEXT NOT NULL
 );
 
 CREATE TABLE api_tokens (
   id           INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
   name         TEXT NOT NULL,
   token_hash   TEXT NOT NULL UNIQUE,
   scopes       TEXT NOT NULL,
@@ -17,17 +21,20 @@ CREATE TABLE api_tokens (
 );
 
 CREATE TABLE fx_rates (
+  id         INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
   base       TEXT NOT NULL DEFAULT 'EUR',
   quote      TEXT NOT NULL,
   on_date    TEXT NOT NULL,
   rate       TEXT NOT NULL,
   source     TEXT NOT NULL CHECK (source IN ('ecb','manual')),
   fetched_at TEXT NOT NULL,
-  PRIMARY KEY (base, quote, on_date)
+  UNIQUE (base, quote, on_date)
 );
 
 CREATE TABLE accounts (
   id          INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
   name        TEXT NOT NULL,
   kind        TEXT NOT NULL CHECK (kind IN ('asset','liability','expense','income')),
   parent_id   INTEGER REFERENCES accounts(id),
@@ -40,6 +47,7 @@ CREATE TABLE accounts (
 
 CREATE TABLE payees (
   id                  INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
   name                TEXT NOT NULL UNIQUE,
   default_account_id  INTEGER REFERENCES accounts(id),
   default_category_id INTEGER REFERENCES accounts(id),
@@ -49,6 +57,7 @@ CREATE TABLE payees (
 
 CREATE TABLE recurring_rules (
   id                 INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
   payee_id           INTEGER NOT NULL REFERENCES payees(id),
   account_id         INTEGER NOT NULL REFERENCES accounts(id),
   category_id        INTEGER REFERENCES accounts(id),
@@ -69,6 +78,7 @@ CREATE TABLE recurring_rules (
 
 CREATE TABLE ledger_entries (
   id                INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
   occurred_on       TEXT NOT NULL,
   payee_id          INTEGER REFERENCES payees(id),
   note              TEXT,
@@ -92,6 +102,7 @@ CREATE INDEX ix_entries_occurred ON ledger_entries (occurred_on);
 
 CREATE TABLE ledger_postings (
   id                INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
   entry_id          INTEGER NOT NULL REFERENCES ledger_entries(id) ON DELETE RESTRICT,
   account_id        INTEGER NOT NULL REFERENCES accounts(id),
   amount_minor      INTEGER NOT NULL,
@@ -106,6 +117,7 @@ CREATE INDEX ix_postings_entry ON ledger_postings (entry_id);
 
 CREATE TABLE captures (
   id                INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
   kind              TEXT NOT NULL CHECK (kind IN
                     ('share','image','email','statement','recurring','manual')),
   status            TEXT NOT NULL CHECK (status IN
@@ -117,6 +129,9 @@ CREATE TABLE captures (
   raw_text          TEXT,
   draft_json        TEXT,
   extraction_error  TEXT,
+  extraction_job_ref TEXT,
+  extraction_rail   TEXT,
+  extraction_model  TEXT,
   resolved_entry_id INTEGER REFERENCES ledger_entries(id),
   resolution_note   TEXT,
   received_at       TEXT NOT NULL,
@@ -129,6 +144,7 @@ CREATE INDEX ix_captures_batch ON captures (batch_id);
 
 CREATE TABLE audit_log (
   id           INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
   entity_table TEXT NOT NULL,
   entity_id    INTEGER,
   action       TEXT NOT NULL,

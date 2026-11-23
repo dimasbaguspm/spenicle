@@ -22,13 +22,19 @@ func (s *Store) SaveRates(ctx context.Context, rates []entity.Rate) error {
 
 	return s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		for _, rate := range rates {
+			ref := rate.Ref
+			if ref == "" {
+				ref = entity.NewRef()
+			}
+
 			if _, err := tx.ExecContext(ctx, `
-				INSERT INTO fx_rates (base, quote, on_date, rate, source, fetched_at)
-				VALUES (?, ?, ?, ?, ?, ?)
+				INSERT INTO fx_rates (ref, base, quote, on_date, rate, source, fetched_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?)
 				ON CONFLICT (base, quote, on_date) DO UPDATE SET
 					rate = excluded.rate,
 					source = excluded.source,
 					fetched_at = excluded.fetched_at`,
+				ref,
 				rate.Base,
 				rate.Quote,
 				rate.OnDate.Format(constant.DateLayout),
@@ -59,11 +65,11 @@ func (s *Store) RateOn(
 	)
 
 	err := s.db.QueryRowContext(ctx, `
-		SELECT base, quote, on_date, rate, source, fetched_at
+		SELECT ref, base, quote, on_date, rate, source, fetched_at
 		FROM fx_rates
 		WHERE base = ? AND quote = ? AND on_date = ?`,
 		base, quote, on.Format(constant.DateLayout),
-	).Scan(&rate.Base, &rate.Quote, &onDate, &rate.Rate, &rate.Source, &fetchedAt)
+	).Scan(&rate.Ref, &rate.Base, &rate.Quote, &onDate, &rate.Rate, &rate.Source, &fetchedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Rate{}, false, nil
 	}

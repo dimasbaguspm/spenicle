@@ -1,23 +1,23 @@
 {
   "currency": "IDR",
-  "id": 1,
   "note": "snapshotted",
   "occurred_on": "2026-02-14",
   "postings": [
     {
-      "account_id": 2,
+      "account_ref": "<ref>",
       "amount_minor": "25000",
       "base_amount_minor": "25000",
       "fx_rate": "1",
       "fx_source": "identity"
     },
     {
-      "account_id": 1,
+      "account_ref": "<ref>",
       "amount_minor": "-25000",
       "base_amount_minor": "-25000",
       "fx_rate": "1",
       "fx_source": "identity"
     }
   ],
+  "ref": "<ref>",
   "source": "manual"
 }

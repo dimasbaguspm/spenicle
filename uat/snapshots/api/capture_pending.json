@@ -1,7 +1,7 @@
 {
-  "id": 1,
   "kind": "share",
   "raw_text": "BCA: Transaksi Rp25.000 di KOPI KENANGAN",
   "received_at": "<timestamp>",
+  "ref": "<ref>",
   "status": "pending"
 }

@@ -27,7 +27,7 @@ func newStore(t *testing.T) *sqlite.Store {
 	return sqlite.NewStore(db)
 }
 
-func baseline(t *testing.T, store *sqlite.Store) (int64, int64) {
+func baseline(t *testing.T, store *sqlite.Store) (entity.Account, entity.Account) {
 	t.Helper()
 	ctx := t.Context()
 
@@ -53,8 +53,8 @@ func TestMigrateIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("schema version: %v", err)
 	}
-	if v != 4 {
-		t.Fatalf("schema version = %d, want 4", v)
+	if v != 1 {
+		t.Fatalf("schema version = %d, want 1", v)
 	}
 }
 
@@ -69,8 +69,8 @@ func TestInsertEntryRoundTrip(t *testing.T) {
 		Currency:   "IDR",
 		Source:     constant.EntrySourceShare,
 		Postings: []entity.Posting{
-			{AccountID: expense, AmountMinor: 25_000, BaseAmountMinor: 25_000},
-			{AccountID: asset, AmountMinor: -25_000, BaseAmountMinor: -25_000},
+			{AccountID: expense.ID, AmountMinor: 25_000, BaseAmountMinor: 25_000},
+			{AccountID: asset.ID, AmountMinor: -25_000, BaseAmountMinor: -25_000},
 		},
 	})
 	if err != nil {
@@ -113,8 +113,8 @@ func TestInsertEntryRejectsUnbalanced(t *testing.T) {
 		Currency:   "IDR",
 		Source:     constant.EntrySourceManual,
 		Postings: []entity.Posting{
-			{AccountID: expense, AmountMinor: 25_000, BaseAmountMinor: 25_000},
-			{AccountID: asset, AmountMinor: -24_000, BaseAmountMinor: -24_000},
+			{AccountID: expense.ID, AmountMinor: 25_000, BaseAmountMinor: 25_000},
+			{AccountID: asset.ID, AmountMinor: -24_000, BaseAmountMinor: -24_000},
 		},
 	})
 	if !errors.Is(err, entity.ErrZeroSum) {

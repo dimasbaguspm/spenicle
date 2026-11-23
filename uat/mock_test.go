@@ -162,7 +162,7 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 	}
 
 	clockSystem := clock.System{}
-	ledgerService := ledger.New(store, fixedCurrency{code: "IDR"}, clockSystem, clockSystem)
+	ledgerService := ledger.New(store, store, fixedCurrency{code: "IDR"}, clockSystem, clockSystem)
 
 	return captures.New(store, ledgerService, sealer, extractor, clockSystem, clockSystem)
 }
@@ -200,7 +200,7 @@ func TestMockVendorSubmitAndReadBack(t *testing.T) {
 		t.Fatal("a 202 must store the vendor's job_ref")
 	}
 
-	resolved, err := service.Retry(ctx, capture.ID)
+	resolved, err := service.Retry(ctx, capture.Ref)
 	if err != nil {
 		t.Fatalf("retry: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestMockVendorRefusesAReadBackWithoutAJobRef(t *testing.T) {
 		t.Fatalf("a manual capture must not get a job_ref, got %q", capture.JobRef)
 	}
 
-	if _, err := service.Retry(ctx, capture.ID); !errors.Is(err, entity.ErrInvalidState) {
+	if _, err := service.Retry(ctx, capture.Ref); !errors.Is(err, entity.ErrInvalidState) {
 		t.Fatalf("err = %v, want invalid state", err)
 	}
 }

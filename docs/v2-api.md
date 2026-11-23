@@ -158,6 +158,9 @@ prune `raw/` instead.
 | `kind` | TEXT | `asset` \| `liability` \| `expense` \| `income` |
 | `parent_id` | INTEGER NULL | self-FK, category hierarchy |
 | `currency` | TEXT | ISO code, validated in code against the embedded list |
+
+Every table also has `id INTEGER PRIMARY KEY` (the graph) and `ref TEXT NOT NULL UNIQUE`
+(a dashless UUID). The API speaks `ref` only: `account_ref`, `ref`, and never a number.
 | `icon` | TEXT NULL | |
 | `archived_at` | TEXT NULL | |
 | `created_at` | TEXT | |

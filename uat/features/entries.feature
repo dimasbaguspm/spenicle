@@ -6,11 +6,11 @@ Feature: Ledger listing and voiding
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-01","currency":"IDR","note":"first","postings":[{"account_id":1,"amount_minor":"-1000"},{"account_id":2,"amount_minor":"1000"}]}
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"first","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1000"}]}
       """
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-02","currency":"IDR","note":"second","postings":[{"account_id":1,"amount_minor":"-2000"},{"account_id":2,"amount_minor":"2000"}]}
+      {"occurred_on":"2026-02-02","currency":"IDR","note":"second","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2000"}]}
       """
     When I send a GET to "/api/entries"
     Then the response status is 200
@@ -21,11 +21,11 @@ Feature: Ledger listing and voiding
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-01-31","currency":"IDR","note":"january","postings":[{"account_id":1,"amount_minor":"-100"},{"account_id":2,"amount_minor":"100"}]}
+      {"occurred_on":"2026-01-31","currency":"IDR","note":"january","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-100"},{"account_ref":"{{account:Unsorted}}","amount_minor":"100"}]}
       """
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-15","currency":"IDR","note":"february","postings":[{"account_id":1,"amount_minor":"-200"},{"account_id":2,"amount_minor":"200"}]}
+      {"occurred_on":"2026-02-15","currency":"IDR","note":"february","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-200"},{"account_ref":"{{account:Unsorted}}","amount_minor":"200"}]}
       """
     When I send a GET to "/api/entries?from=2026-02-01&to=2026-02-28"
     Then the response status is 200
@@ -38,9 +38,9 @@ Feature: Ledger listing and voiding
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-14","currency":"IDR","note":"duplicate","postings":[{"account_id":1,"amount_minor":"-15000"},{"account_id":2,"amount_minor":"15000"}]}
+      {"occurred_on":"2026-02-14","currency":"IDR","note":"duplicate","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-15000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"15000"}]}
       """
-    When I send a PATCH to "/api/entries/1" with:
+    When I send a PATCH to "/api/entries/{{ref}}" with:
       """json
       {"void":true,"reason":"duplicate of 811"}
       """
@@ -57,13 +57,13 @@ Feature: Ledger listing and voiding
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_id":1,"amount_minor":"-15000"},{"account_id":2,"amount_minor":"15000"}]}
+      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-15000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"15000"}]}
       """
-    And I send a PATCH to "/api/entries/1" with:
+    And I send a PATCH to "/api/entries/{{ref}}" with:
       """json
       {"void":true,"reason":"first"}
       """
-    When I send a PATCH to "/api/entries/1" with:
+    When I send a PATCH to "/api/entries/{{ref}}" with:
       """json
       {"void":true,"reason":"again"}
       """
@@ -72,7 +72,7 @@ Feature: Ledger listing and voiding
 
   Scenario: Voiding something that is not there answers 404
     Given a running API
-    When I send a PATCH to "/api/entries/999" with:
+    When I send a PATCH to "/api/entries/00000000000000000000000000000000" with:
       """json
       {"void":true,"reason":"nothing"}
       """

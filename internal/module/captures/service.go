@@ -132,13 +132,13 @@ func (s *Service) List(
 
 func (s *Service) Approve(
 	ctx context.Context,
-	id int64,
+	ref string,
 	in ApproveInput,
 ) (entity.Entry, entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Approve")
 	defer endSpan()
 
-	capture, err := s.pending(ctx, id)
+	capture, err := s.pending(ctx, ref)
 	if err != nil {
 		return entity.Entry{}, entity.Capture{}, err
 	}
@@ -146,7 +146,7 @@ func (s *Service) Approve(
 	postings := make([]ledger.PostingInput, 0, len(in.Postings))
 	for _, posting := range in.Postings {
 		postings = append(postings, ledger.PostingInput{
-			AccountID:   posting.AccountID,
+			AccountRef:  posting.AccountRef,
 			AmountMinor: posting.AmountMinor,
 			FXRate:      posting.FXRate,
 			FXRateDate:  posting.FXRateDate,
@@ -155,7 +155,6 @@ func (s *Service) Approve(
 
 	entry, _, err := s.entries.Post(ctx, ledger.PostInput{
 		OccurredOn: in.OccurredOn,
-		PayeeID:    in.PayeeID,
 		Note:       in.Note,
 		Currency:   in.Currency,
 		Source:     sourceOf(capture.Kind),
@@ -173,11 +172,11 @@ func (s *Service) Approve(
 	return entry, resolved, nil
 }
 
-func (s *Service) Reject(ctx context.Context, id int64, reason string) (entity.Capture, error) {
+func (s *Service) Reject(ctx context.Context, ref, reason string) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Reject")
 	defer endSpan()
 
-	capture, err := s.pending(ctx, id)
+	capture, err := s.pending(ctx, ref)
 	if err != nil {
 		return entity.Capture{}, err
 	}
@@ -190,17 +189,17 @@ func (s *Service) Reject(ctx context.Context, id int64, reason string) (entity.C
 	return s.resolve(ctx, capture, constant.CaptureStatusRejected, sealedNote, nil)
 }
 
-func (s *Service) Retry(ctx context.Context, id int64) (entity.Capture, error) {
+func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Retry")
 	defer endSpan()
 
-	capture, found, err := s.captures.CaptureByID(ctx, id)
+	capture, found, err := s.captures.CaptureByRef(ctx, ref)
 	if err != nil {
 		return entity.Capture{}, err
 	}
 
 	if !found {
-		return entity.Capture{}, fmt.Errorf("%w: capture %d", entity.ErrNotFound, id)
+		return entity.Capture{}, fmt.Errorf("%w: capture %s", entity.ErrNotFound, ref)
 	}
 
 	if s.extractor == nil {
@@ -208,7 +207,7 @@ func (s *Service) Retry(ctx context.Context, id int64) (entity.Capture, error) {
 	}
 
 	if capture.JobRef == "" {
-		return entity.Capture{}, fmt.Errorf("%w: capture %d was never submitted", entity.ErrInvalidState, id)
+		return entity.Capture{}, fmt.Errorf("%w: capture %s was never submitted", entity.ErrInvalidState, ref)
 	}
 
 	report, err := s.extractor.Poll(ctx, capture.JobRef)
@@ -294,14 +293,14 @@ func (s *Service) applyReport(
 	return s.captures.UpdateCapture(ctx, capture)
 }
 
-func (s *Service) pending(ctx context.Context, id int64) (entity.Capture, error) {
-	capture, found, err := s.captures.CaptureByID(ctx, id)
+func (s *Service) pending(ctx context.Context, ref string) (entity.Capture, error) {
+	capture, found, err := s.captures.CaptureByRef(ctx, ref)
 	if err != nil {
 		return entity.Capture{}, err
 	}
 
 	if !found {
-		return entity.Capture{}, fmt.Errorf("%w: capture %d", entity.ErrNotFound, id)
+		return entity.Capture{}, fmt.Errorf("%w: capture %s", entity.ErrNotFound, ref)
 	}
 
 	if capture.IsResolved() {

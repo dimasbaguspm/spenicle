@@ -24,7 +24,7 @@ Feature: Session
     Given a running API
     And the request body is:
       """json
-      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_id":1,"amount_minor":"-1"},{"account_id":2,"amount_minor":"1"}]}
+      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}
       """
     When I send a POST to "/api/entries" with headers/query:
       | type   | key          | value                |
@@ -37,7 +37,7 @@ Feature: Session
     Given a running API
     And the request body is:
       """json
-      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_id":1,"amount_minor":"-1"},{"account_id":2,"amount_minor":"1"}]}
+      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}
       """
     When I send a POST to "/api/entries" with headers/query:
       | type   | key          | value            |

@@ -12,7 +12,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const captureColumns = `id, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
+const captureColumns = `id, ref, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
 	raw_text, draft_json, extraction_error, extraction_job_ref, extraction_rail,
 	extraction_model, resolved_entry_id, resolution_note, received_at, resolved_at`
 
@@ -20,13 +20,18 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertCapture")
 	defer endSpan()
 
+	if capture.Ref == "" {
+		capture.Ref = entity.NewRef()
+	}
+
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO captures
-			(kind, status, client_id, dedupe_key, batch_id, artifact_hash,
+			(ref, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
 			 raw_text, draft_json, extraction_error, extraction_job_ref,
 			 extraction_rail, extraction_model, resolved_entry_id, resolution_note,
 			 received_at, resolved_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		capture.Ref,
 		capture.Kind,
 		capture.Status,
 		nullString(capture.ClientID),
@@ -64,6 +69,14 @@ func (s *Store) CaptureByDedupeKey(ctx context.Context, key string) (entity.Capt
 
 	return s.scanCapture(ctx, s.db.QueryRowContext(ctx,
 		`SELECT `+captureColumns+` FROM captures WHERE dedupe_key = ?`, key))
+}
+
+func (s *Store) CaptureByRef(ctx context.Context, ref string) (entity.Capture, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CaptureByRef")
+	defer endSpan()
+
+	return s.scanCapture(ctx, s.db.QueryRowContext(ctx,
+		`SELECT `+captureColumns+` FROM captures WHERE ref = ?`, ref))
 }
 
 func (s *Store) CaptureByID(ctx context.Context, id int64) (entity.Capture, bool, error) {
@@ -193,7 +206,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 	)
 
 	err := scanner.Scan(
-		&capture.ID, &capture.Kind, &capture.Status, &clientID, &capture.DedupeKey,
+		&capture.ID, &capture.Ref, &capture.Kind, &capture.Status, &clientID, &capture.DedupeKey,
 		&batchID, &artifact, &rawText, &draft, &extractErr, &jobRef, &rail, &model, &resolvedID,
 		&resolvedNt, &receivedRaw, &resolvedRaw,
 	)

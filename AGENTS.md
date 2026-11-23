@@ -18,17 +18,21 @@ the document wins until you change the document too.
 
 ## Invariants you must not break
 
-1. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
+1. **Identity.** Every table carries a bigint `id` for the foreign keys and a `ref`:
+   a dashless UUID (32 lowercase hex) that is the only identifier the API speaks.
+   Requests send `account_ref`, responses carry `ref` — an integer id never leaves the
+   database.
+2. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
    zero. `entity.CheckZeroSum` runs before the insert and again inside the write
    transaction.
-2. **No deletes.** Void (`voided_at`) or reject. Every mutation appends to `audit_log`.
-3. **Money is integers.** Minor units + ISO 4217 code. No `float64` anywhere, ever.
+3. **No deletes.** Void (`voided_at`) or reject. Every mutation appends to `audit_log`.
+4. **Money is integers.** Minor units + ISO 4217 code. No `float64` anywhere, ever.
    Rates are exact decimals stored as `TEXT` and handled with `math/big.Rat`; rounding
    happens exactly once, half away from zero.
-4. **Base currency is locked** at first boot (`settings.base_currency`). A foreign
+5. **Base currency is locked** at first boot (`settings.base_currency`). A foreign
    currency is a property of one transaction, never of an account.
-5. **Capture ≠ ledger.** A capture never writes a ledger entry on its own. Approval does.
-6. **Single process, single file.** No Postgres, no Redis, no queue, no sidecar.
+6. **Capture ≠ ledger.** A capture never writes a ledger entry on its own. Approval does.
+7. **Single process, single file.** No Postgres, no Redis, no queue, no sidecar.
    Adding infrastructure needs a design-doc change first.
 
 ## Layout
@@ -245,4 +249,5 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
 - `internal/common/otel` is package `telemetry` (import alias) so it does not shadow
   `go.opentelemetry.io/otel`.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
-  Forwards only. Never edit an applied migration; add the next number.
+  One file today (`0001_init.sql`): nothing has shipped, so the schema is squashed. Once
+  a release exists, forwards only — never edit an applied migration, add the next number.

@@ -17,7 +17,7 @@ Feature: Meta
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_id":2,"amount_minor":"25000"},{"account_id":1,"amount_minor":"-25000"}]}
+      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     When I send a GET to "/api/meta"
     Then the response status is 200

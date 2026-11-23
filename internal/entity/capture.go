@@ -35,6 +35,7 @@ var captureTransitions = map[string]map[string]bool{
 
 type Capture struct {
 	ID              int64
+	Ref             string
 	Kind            string
 	Status          string
 	ClientID        string

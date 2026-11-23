@@ -11,7 +11,6 @@ Feature: Captures
     Then the response status is 202
     And the response JSON at "$.status" is "pending"
     And the response JSON at "$.raw_text" is "BCA: Transaksi Rp25.000 di KOPI KENANGAN"
-    And the response JSON at "$.id" is "1"
     When I send a GET to "/api/captures"
     Then the response status is 200
     And the response JSON at "$.captures[0].status" is "pending"
@@ -33,7 +32,6 @@ Feature: Captures
       {"kind":"share","raw_text":"same receipt"}
       """
     Then the response status is 200
-    And the response JSON at "$.id" is "1"
     And the store holds:
       | table    | count |
       | captures | 1     |
@@ -42,22 +40,21 @@ Feature: Captures
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-13","currency":"IDR","postings":[{"account_id":1,"amount_minor":"-100"},{"account_id":2,"amount_minor":"100"}]}
+      {"occurred_on":"2026-02-13","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-100"},{"account_ref":"{{account:Unsorted}}","amount_minor":"100"}]}
       """
     When I send a POST to "/api/captures" with:
       """json
       {"kind":"email","raw_text":"KOPI KENANGAN Rp25.000"}
       """
     Then the response status is 202
-    When I send a PATCH to "/api/captures/1" with:
+    When I send a PATCH to "/api/captures/{{ref}}" with:
       """json
-      {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_id":2,"amount_minor":"25000"},{"account_id":1,"amount_minor":"-25000"}]}
+      {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     Then the response status is 201
     And the response JSON at "$.entry.source" is "email"
     And the response JSON at "$.entry.postings[0].base_amount_minor" is "25000"
     And the response JSON at "$.capture.status" is "approved"
-    And the response JSON at "$.capture.resolved_entry_id" is "2"
     And the store holds:
       | table           | count |
       | ledger_entries  | 2     |
@@ -69,14 +66,14 @@ Feature: Captures
       """json
       {"kind":"manual","raw_text":"typed by hand"}
       """
-    And I send a PATCH to "/api/captures/1" with:
+    And I send a PATCH to "/api/captures/{{ref}}" with:
       """json
-      {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_id":2,"amount_minor":"100"},{"account_id":1,"amount_minor":"-100"}]}
+      {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"100"},{"account_ref":"{{account:Cash}}","amount_minor":"-100"}]}
       """
     Then the response status is 201
-    When I send a PATCH to "/api/captures/1" with:
+    When I send a PATCH to "/api/captures/{{ref}}" with:
       """json
-      {"action":"approve","occurred_on":"2026-02-15","currency":"IDR","postings":[{"account_id":2,"amount_minor":"100"},{"account_id":1,"amount_minor":"-100"}]}
+      {"action":"approve","occurred_on":"2026-02-15","currency":"IDR","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"100"},{"account_ref":"{{account:Cash}}","amount_minor":"-100"}]}
       """
     Then the response status is 409
     And the response JSON at "$.error.code" is "capture_resolved"
@@ -90,7 +87,7 @@ Feature: Captures
       """json
       {"kind":"share","raw_text":"not my card"}
       """
-    When I send a PATCH to "/api/captures/1" with:
+    When I send a PATCH to "/api/captures/{{ref}}" with:
       """json
       {"action":"reject","reason":"wrong card"}
       """

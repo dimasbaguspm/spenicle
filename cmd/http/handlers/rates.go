@@ -16,6 +16,7 @@ type rateQuery struct {
 }
 
 type rateResponse struct {
+	Ref       string `json:"ref"`
 	Base      string `json:"base"`
 	Quote     string `json:"quote"`
 	OnDate    string `json:"on_date"`
@@ -83,6 +84,7 @@ func (s *server) handleGetRate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, rateResponse{
+		Ref:       rate.Ref,
 		Base:      rate.Base,
 		Quote:     rate.Quote,
 		OnDate:    rate.OnDate.Format(constant.DateLayout),

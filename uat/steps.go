@@ -91,19 +91,19 @@ func theAccountExists(ctx context.Context, name, kind string) (context.Context, 
 		return ctx, errors.New(`no running API: add the step "a running API" first`)
 	}
 
-	id, found, err := w.store.FindAccount(ctx, name, kind)
+	account, found, err := w.store.FindAccount(ctx, name, kind)
 	if err != nil {
 		return ctx, err
 	}
 
 	if !found {
-		id, err = w.store.CreateAccount(ctx, name, kind, w.baseCurrency)
+		account, err = w.store.CreateAccount(ctx, name, kind, w.baseCurrency)
 		if err != nil {
 			return ctx, err
 		}
 	}
 
-	w.accounts[name] = id
+	w.accounts[name] = account.Ref
 
 	return ctx, nil
 }
@@ -277,6 +277,15 @@ func sendWithRequestTable(
 
 	body := w.pendingBody
 	w.pendingBody = nil
+
+	if len(body) > 0 {
+		expanded, expandErr := w.expand(string(body))
+		if expandErr != nil {
+			return ctx, expandErr
+		}
+
+		body = []byte(expanded)
+	}
 
 	return ctx, w.doWith(ctx, method, path, body, headers, query)
 }

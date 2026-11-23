@@ -13,14 +13,15 @@ import (
 type Contract interface {
 	Post(ctx context.Context, in PostInput) (entity.Entry, bool, error)
 	List(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
-	Void(ctx context.Context, id int64, reason string) (entity.Entry, error)
+	Void(ctx context.Context, ref, reason string) (entity.Entry, error)
 }
 
 type Service struct {
-	entries repository.Ledger
-	base    BaseCurrencySource
-	clock   TimeSource
-	ids     IDSource
+	entries  repository.Ledger
+	accounts repository.Accounts
+	base     BaseCurrencySource
+	clock    TimeSource
+	ids      IDSource
 }
 
 type BaseCurrencySource interface {
@@ -34,11 +35,12 @@ type (
 
 func New(
 	entries repository.Ledger,
+	accounts repository.Accounts,
 	base BaseCurrencySource,
 	clock TimeSource,
 	ids IDSource,
 ) *Service {
-	return &Service{entries: entries, base: base, clock: clock, ids: ids}
+	return &Service{entries: entries, accounts: accounts, base: base, clock: clock, ids: ids}
 }
 
 var _ Contract = (*Service)(nil)
@@ -46,7 +48,6 @@ var _ Contract = (*Service)(nil)
 type PostInput struct {
 	ClientID   string
 	OccurredOn time.Time
-	PayeeID    *int64
 	Note       string
 	Currency   string
 	Source     string
@@ -54,7 +55,7 @@ type PostInput struct {
 }
 
 type PostingInput struct {
-	AccountID   int64
+	AccountRef  string
 	AmountMinor int64
 	FXRate      string
 	FXRateDate  string

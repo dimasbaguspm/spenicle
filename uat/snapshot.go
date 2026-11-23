@@ -32,6 +32,8 @@ var allowedTables = []string{
 
 var timestampPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$`)
 
+var refPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
+
 func (w *world) assertAPISnapshot(name string) error {
 	var document any
 	if err := json.Unmarshal(w.body, &document); err != nil {
@@ -215,16 +217,24 @@ func normalise(value any) any {
 
 		return out
 	case string:
-		if timestampPattern.MatchString(typed) {
-			return "<timestamp>"
-		}
-
-		if strings.HasPrefix(typed, "v1:") {
-			return "<sealed>"
-		}
-
-		return typed
+		return normaliseString(typed)
 	default:
 		return value
 	}
+}
+
+func normaliseString(value string) string {
+	if timestampPattern.MatchString(value) {
+		return "<timestamp>"
+	}
+
+	if strings.HasPrefix(value, "v1:") {
+		return "<sealed>"
+	}
+
+	if refPattern.MatchString(value) {
+		return "<ref>"
+	}
+
+	return value
 }

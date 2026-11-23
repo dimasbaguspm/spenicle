@@ -16,7 +16,7 @@ type currencyResponse struct {
 }
 
 type accountResponse struct {
-	ID              int64  `json:"id"`
+	Ref             string `json:"ref"`
 	Name            string `json:"name"`
 	Kind            string `json:"kind"`
 	Currency        string `json:"currency"`
@@ -72,7 +72,7 @@ func (s *server) handleMeta(w http.ResponseWriter, r *http.Request) {
 
 	for _, account := range accounts {
 		out.Accounts = append(out.Accounts, accountResponse{
-			ID:              account.ID,
+			Ref:             account.Ref,
 			Name:            account.Name,
 			Kind:            account.Kind,
 			Currency:        account.Currency,

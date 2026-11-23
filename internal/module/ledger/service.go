@@ -39,7 +39,7 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 		return entity.Entry{}, false, err
 	}
 
-	postings, err := s.buildPostings(in, nativeCurrency, baseCurrency)
+	postings, err := s.buildPostings(ctx, in, nativeCurrency, baseCurrency)
 	if err != nil {
 		return entity.Entry{}, false, err
 	}
@@ -47,7 +47,6 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 	newEntry, err := entity.NewEntry(entity.Entry{
 		ClientID:   in.ClientID,
 		OccurredOn: in.OccurredOn,
-		PayeeID:    in.PayeeID,
 		Note:       in.Note,
 		Currency:   nativeCurrency.Code,
 		Source:     in.Source,
@@ -67,14 +66,26 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 }
 
 func (s *Service) buildPostings(
+	ctx context.Context,
 	in PostInput,
 	nativeCurrency, baseCurrency entity.Currency,
 ) ([]entity.Posting, error) {
 	postings := make([]entity.Posting, 0, len(in.Postings))
 
 	for index, input := range in.Postings {
+		account, found, err := s.accounts.AccountByRef(ctx, input.AccountRef)
+		if err != nil {
+			return nil, err
+		}
+
+		if !found {
+			return nil, fmt.Errorf("posting %d: %w: account %s",
+				index, entity.ErrInvalidPostings, input.AccountRef)
+		}
+
 		posting := entity.Posting{
-			AccountID:   input.AccountID,
+			AccountID:   account.ID,
+			AccountRef:  account.Ref,
 			AmountMinor: input.AmountMinor,
 			FXRateDate:  input.FXRateDate,
 		}
@@ -121,11 +132,20 @@ func (s *Service) List(
 	return s.entries.ListEntries(ctx, filter)
 }
 
-func (s *Service) Void(ctx context.Context, id int64, reason string) (entity.Entry, error) {
+func (s *Service) Void(ctx context.Context, ref, reason string) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Void")
 	defer endSpan()
 
-	reversal, err := s.entries.VoidEntry(ctx, id, reason, s.clock.Now())
+	original, found, err := s.entries.EntryByRef(ctx, ref)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	if !found {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
+	}
+
+	reversal, err := s.entries.VoidEntry(ctx, original.ID, reason, s.clock.Now())
 	if err != nil {
 		return entity.Entry{}, err
 	}

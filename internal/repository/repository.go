@@ -15,6 +15,7 @@ type Ledger interface {
 	InsertEntry(ctx context.Context, entry entity.Entry) (entity.Entry, error)
 	EntryByClientID(ctx context.Context, clientID string) (entity.Entry, bool, error)
 	EntryByID(ctx context.Context, id int64) (entity.Entry, bool, error)
+	EntryByRef(ctx context.Context, ref string) (entity.Entry, bool, error)
 	ListEntries(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
 	VoidEntry(ctx context.Context, id int64, reason string, at time.Time) (entity.Entry, error)
 }
@@ -23,14 +24,16 @@ type Captures interface {
 	InsertCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error)
 	CaptureByDedupeKey(ctx context.Context, key string) (entity.Capture, bool, error)
 	CaptureByID(ctx context.Context, id int64) (entity.Capture, bool, error)
+	CaptureByRef(ctx context.Context, ref string) (entity.Capture, bool, error)
 	ListCaptures(ctx context.Context, filter entity.CaptureFilter) ([]entity.Capture, error)
 	UpdateCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error)
 }
 
 type Accounts interface {
 	CountAccounts(ctx context.Context) (int, error)
-	CreateAccount(ctx context.Context, name, kind, currency string) (int64, error)
-	FindAccount(ctx context.Context, name, kind string) (int64, bool, error)
+	CreateAccount(ctx context.Context, name, kind, currency string) (entity.Account, error)
+	FindAccount(ctx context.Context, name, kind string) (entity.Account, bool, error)
+	AccountByRef(ctx context.Context, ref string) (entity.Account, bool, error)
 	ListAccounts(ctx context.Context) ([]entity.Account, error)
 	BalancesByAccount(ctx context.Context) (map[int64]int64, error)
 }

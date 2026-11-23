@@ -67,6 +67,7 @@ func newValidator() *validator.Validate {
 				return false
 			}
 		},
+		"ref": validRef,
 		"capturestatus": func(field validator.FieldLevel) bool {
 			switch field.Field().String() {
 			case constant.CaptureStatusExtracting, constant.CaptureStatusPending,
@@ -99,8 +100,10 @@ var validationCodes = []validationFailure{ //nolint:gochecknoglobals // read-onl
 	{field: "FXRate", tag: "rate", code: "invalid_rate"},
 }
 
-type pathIDRequest struct {
-	ID int64 `path:"id" validate:"required,gt=0"`
+const refLength = 32
+
+type pathRefRequest struct {
+	Ref string `path:"ref" validate:"required,ref"`
 }
 
 func bindBody(w http.ResponseWriter, r *http.Request, limit int64, target any) bool {
@@ -212,4 +215,19 @@ func promotedCode(fieldErr validator.FieldError, fallback string) string {
 	}
 
 	return fallback
+}
+
+func validRef(field validator.FieldLevel) bool {
+	raw := strings.TrimSpace(field.Field().String())
+	if len(raw) != refLength {
+		return false
+	}
+
+	for _, char := range raw {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
+			return false
+		}
+	}
+
+	return true
 }

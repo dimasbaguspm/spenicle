@@ -25,10 +25,10 @@ and `v2-api.md` describes the target.
 | 6 | `GET` | `/api/meta` | session | bootstrap payload for the shell |
 | 7 | `GET` | `/api/entries` | session | list the ledger, newest first |
 | 8 | `POST` | `/api/entries` | session | post a balanced entry |
-| 9 | `PATCH` | `/api/entries/{id}` | session | void an entry (reversal, never delete) |
+| 9 | `PATCH` | `/api/entries/{ref}` | session | void an entry (reversal, never delete) |
 | 10 | `GET` | `/api/captures` | session | the review queue |
 | 11 | `POST` | `/api/captures` | session | queue a capture (text or file) |
-| 12 | `PATCH` | `/api/captures/{id}` | session | approve, reject, retry |
+| 12 | `PATCH` | `/api/captures/{ref}` | session | approve, reject, retry |
 | — | any | anything else | — | `404 not_found` |
 
 **Auth model.** One password, stored sealed in the `settings` row. While no password
@@ -301,7 +301,7 @@ balance, and the embedded currency list.
 
 ```json
 {"settings":{"base_currency":"IDR","extraction_enabled":false},
- "accounts":[{"id":1,"name":"Cash","kind":"asset","currency":"IDR",
+ "accounts":[{"ref":1,"name":"Cash","kind":"asset","currency":"IDR",
               "base_amount_minor":"0","archived":false}],
  "currencies":[{"code":"AUD","minor_units":2,"symbol":"A$"}]}
 ```
@@ -319,7 +319,7 @@ sequenceDiagram
     UI->>H: GET /api/meta
     H->>S: Load()
     H->>DB: SELECT accounts ORDER BY kind, name
-    H->>DB: SELECT account_id, SUM(base_amount_minor) GROUP BY account_id
+    H->>DB: SELECT account_ref, SUM(base_amount_minor) GROUP BY account_ref
     H->>H: attach embedded currency list
     H-->>UI: 200 settings, accounts, currencies
 ```
@@ -340,13 +340,13 @@ entries, one per entry for its postings).
 | --- | --- | --- | --- |
 | `from` | date | — | `occurred_on >= from` |
 | `to` | date | — | `occurred_on <= to` |
-| `account_id` | int | — | entries touching that account |
+| `account_ref` | int | — | entries touching that account |
 | `payee_id` | int | — | entries for that payee |
 | `source` | string | — | `manual`, `share`, `email`, `statement`, `recurring`, `adjustment` |
 | `cursor` | int | — | return entries with `id < cursor` |
 | `limit` | int | 50 | clamped to 200 |
 
-**200** `{"entries":[{"id":1,"occurred_on":"2026-02-14","currency":"IDR","source":"manual","postings":[…]}],"next_cursor":0}`
+**200** `{"entries":[{"ref":1,"occurred_on":"2026-02-14","currency":"IDR","source":"manual","postings":[…]}],"next_cursor":0}`
 
 **Errors.** `400 invalid_filter` for a malformed date or cursor.
 
@@ -361,7 +361,7 @@ sequenceDiagram
     participant H as Entries handler
     participant L as Ledger module
     participant DB as SQLite
-    UI->>H: GET /api/entries?from&to&account_id&source&cursor&limit
+    UI->>H: GET /api/entries?from&to&account_ref&source&cursor&limit
     H->>H: parse filter (dates, ids, limit)
     H->>L: List(filter)
     L->>DB: SELECT entries WHERE … ORDER BY id DESC LIMIT ?
@@ -395,7 +395,7 @@ postings + `audit_log`). Zero-sum is checked again inside the transaction.
 | `currency` | string | yes | ISO 4217 of the postings |
 | `source` | string | no | defaults to `manual` |
 | `postings` | array | yes | ≥ 2, sums to zero |
-| `postings[].account_id` | int | yes | |
+| `postings[].account_ref` | int | yes | |
 | `postings[].amount_minor` | string | yes | signed integer string |
 | `postings[].fx_rate` | string | no | required when `currency` ≠ base |
 | `postings[].fx_rate_date` | string | no | |
@@ -437,7 +437,7 @@ sequenceDiagram
 
 ---
 
-## 9. `PATCH /api/entries/{id}`
+## 9. `PATCH /api/entries/{ref}`
 
 **Purpose.** Void an entry. The ledger never deletes: it writes the compensating entry
 and stamps `voided_at` on the original, in one transaction.
@@ -459,7 +459,7 @@ WHERE voided_at IS NULL`, insert `audit_log` action `void`.
 **200** the **reversal** entry (`source":"adjustment"`, negated amounts).
 
 **Errors.** `404 not_found`; `409 invalid_state` (already voided); `422
-unsupported_patch` for any other field edit; `422 invalid_request` when `{id}` is not a
+unsupported_patch` for any other field edit; `422 invalid_request` when `{ref}` is not a
 positive integer; `400 invalid_json`.
 
 **Limitations.** Field edits (note, payee) are not implemented — they answer 422
@@ -516,7 +516,7 @@ which model) and `job_ref` (the vendor's handle on that run).
 
 Ordering: `extracting` first, then `pending` oldest-first, then the resolved tail.
 
-**200** `{"captures":[{"id":1,"kind":"share","status":"pending","raw_text":"…","received_at":"…"}],"next_cursor":0}`
+**200** `{"captures":[{"ref":1,"kind":"share","status":"pending","raw_text":"…","received_at":"…"}],"next_cursor":0}`
 
 **Errors.** `422 invalid_request` for an unknown `status`, a negative `cursor` or a
 `limit` over 200.
@@ -614,7 +614,7 @@ sequenceDiagram
 
 ---
 
-## 12. `PATCH /api/captures/{id}`
+## 12. `PATCH /api/captures/{ref}`
 
 **Purpose.** Resolve a queue item: **approve** (post to the ledger), **reject** (out of
 the queue, ledger untouched), or **retry** (read the vendor's answer back).
@@ -663,7 +663,7 @@ sequenceDiagram
     alt action approve
         Q->>L: Post(entry from body, source from kind)
         L->>DB: INSERT entry + postings + audit
-        Q->>DB: UPDATE capture approved, resolved_entry_id
+        Q->>DB: UPDATE capture approved, resolved_entry_ref
         H-->>UI: 201 entry + capture
     else action reject
         Q->>Q: seal reason
@@ -731,15 +731,15 @@ Designed in [`v2-api.md`](./v2-api.md), no handler yet. Listed so nobody guesses
 | --- | --- | --- | --- |
 | `POST` | `/api/setup` | wizard: currency, first account, opening balance | settings, accounts, ledger |
 | `POST` | `/api/accounts` | create account or category, optional opening balance | accounts, ledger, audit |
-| `PATCH` | `/api/accounts/{id}` | rename, icon, reparent, archive | accounts, audit |
+| `PATCH` | `/api/accounts/{ref}` | rename, icon, reparent, archive | accounts, audit |
 | `POST` | `/api/payees` | create payee | payees, audit |
-| `PATCH` | `/api/payees/{id}` | rename, defaults, archive | payees, audit |
+| `PATCH` | `/api/payees/{ref}` | rename, defaults, archive | payees, audit |
 | `POST` | `/api/recurring` | create a rule, or promote an entry | recurring_rules, captures |
-| `PATCH` | `/api/recurring/{id}` | accept, pause, end, edit | recurring_rules, audit |
+| `PATCH` | `/api/recurring/{ref}` | accept, pause, end, edit | recurring_rules, audit |
 | `GET` | `/api/months/{year_month}` | derived month report and adjustment body | ledger, captures, FX |
 | `GET` | `/api/dashboard` | five tiles in one response | ledger, recurring, captures |
 | `POST` | `/api/tokens` | mint a scoped API token, secret shown once | api_tokens, settings |
-| `PATCH` | `/api/tokens/{id}` | revoke | api_tokens, audit |
+| `PATCH` | `/api/tokens/{ref}` | revoke | api_tokens, audit |
 
 Until they land, an agent should treat them as "not yet" — never as "read the database
 directly".

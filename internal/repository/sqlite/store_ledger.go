@@ -27,12 +27,15 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 
 	var entryID int64
 
+	entryRef := entity.NewRef()
+
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
 			INSERT INTO ledger_entries
-				(occurred_on, payee_id, note, currency, source, recurring_rule_id,
+				(ref, occurred_on, payee_id, note, currency, source, recurring_rule_id,
 				 client_id, reverses_entry_id, voided_at, created_at)
-			VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?)`,
+			VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?)`,
+			entryRef,
 			e.OccurredOn.Format(constant.DateLayout),
 			nullInt(e.PayeeID),
 			nullString(e.Note),
@@ -58,8 +61,9 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 		}
 
 		if _, auditErr := tx.ExecContext(ctx, `
-			INSERT INTO audit_log (entity_table, entity_id, action, from_json, to_json, actor, at)
-			VALUES ('ledger_entries', ?, 'create', NULL, NULL, 'user', ?)`,
+			INSERT INTO audit_log (ref, entity_table, entity_id, action, from_json, to_json, actor, at)
+			VALUES (?, 'ledger_entries', ?, 'create', NULL, NULL, 'user', ?)`,
+			entity.NewRef(),
 			entryID,
 			createdAt.Format(constant.TimestampLayout),
 		); auditErr != nil {
@@ -73,6 +77,7 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 	}
 
 	e.ID = entryID
+	e.Ref = entryRef
 	e.CreatedAt = createdAt
 
 	return e, nil
@@ -137,8 +142,11 @@ func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.
 	defer endSpan()
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT account_id, amount_minor, base_amount_minor, fx_rate, fx_rate_date, fx_source
-		FROM ledger_postings WHERE entry_id = ? ORDER BY id`, entryID)
+		SELECT p.account_id, a.ref, p.amount_minor, p.base_amount_minor,
+		       p.fx_rate, p.fx_rate_date, p.fx_source
+		FROM ledger_postings p
+		JOIN accounts a ON a.id = p.account_id
+		WHERE p.entry_id = ? ORDER BY p.id`, entryID)
 	if err != nil {
 		return nil, fmt.Errorf("select postings: %w", err)
 	}
@@ -152,7 +160,7 @@ func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.
 			p       entity.Posting
 			rateDay sql.NullString
 		)
-		if err := rows.Scan(&p.AccountID, &p.AmountMinor, &p.BaseAmountMinor,
+		if err := rows.Scan(&p.AccountID, &p.AccountRef, &p.AmountMinor, &p.BaseAmountMinor,
 			&p.FXRate, &rateDay, &p.FXSource); err != nil {
 			return nil, fmt.Errorf("scan posting: %w", err)
 		}
@@ -172,10 +180,10 @@ func insertPostings(ctx context.Context, tx *sql.Tx, entryID int64, postings []e
 	for _, p := range postings {
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO ledger_postings
-				(entry_id, account_id, amount_minor, base_amount_minor,
+				(ref, entry_id, account_id, amount_minor, base_amount_minor,
 				 fx_rate, fx_rate_date, fx_source)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			entryID, p.AccountID, p.AmountMinor, p.BaseAmountMinor,
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			entity.NewRef(), entryID, p.AccountID, p.AmountMinor, p.BaseAmountMinor,
 			orDefault(p.FXRate, "1"), nullString(p.FXRateDate),
 			orDefault(p.FXSource, constant.FXSourceIdentity),
 		); err != nil {
@@ -191,9 +199,32 @@ func (s *Store) EntryByID(ctx context.Context, id int64) (entity.Entry, bool, er
 	defer endSpan()
 
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
-		SELECT id, occurred_on, payee_id, note, currency, source, client_id,
+		SELECT id, ref, occurred_on, payee_id, note, currency, source, client_id,
 		       reverses_entry_id, voided_at, created_at
 		FROM ledger_entries WHERE id = ?`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.Entry{}, false, nil
+	}
+
+	if err != nil {
+		return entity.Entry{}, false, err
+	}
+
+	if entry.Postings, err = s.postingsByEntryID(ctx, entry.ID); err != nil {
+		return entity.Entry{}, false, err
+	}
+
+	return entry, true, nil
+}
+
+func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EntryByRef")
+	defer endSpan()
+
+	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
+		SELECT id, ref, occurred_on, payee_id, note, currency, source, client_id,
+		       reverses_entry_id, voided_at, created_at
+		FROM ledger_entries WHERE ref = ?`, ref))
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Entry{}, false, nil
 	}
@@ -249,7 +280,7 @@ func (s *Store) ListEntries(
 
 func entryQuery(filter entity.EntryFilter) (string, []any) {
 	query := `
-		SELECT id, occurred_on, payee_id, note, currency, source, client_id,
+		SELECT id, ref, occurred_on, payee_id, note, currency, source, client_id,
 		       reverses_entry_id, voided_at, created_at
 		FROM ledger_entries
 		WHERE 1 = 1`
@@ -267,16 +298,11 @@ func entryQuery(filter entity.EntryFilter) (string, []any) {
 		args = append(args, filter.To.Format(constant.DateLayout))
 	}
 
-	if filter.AccountID != nil {
-		query += ` AND id IN (SELECT entry_id FROM ledger_postings WHERE account_id = ?)`
+	if filter.AccountRef != "" {
+		query += ` AND id IN (SELECT p.entry_id FROM ledger_postings p
+			JOIN accounts a ON a.id = p.account_id WHERE a.ref = ?)`
 
-		args = append(args, *filter.AccountID)
-	}
-
-	if filter.PayeeID != nil {
-		query += ` AND payee_id = ?`
-
-		args = append(args, *filter.PayeeID)
+		args = append(args, filter.AccountRef)
 	}
 
 	if filter.Source != "" {
@@ -366,9 +392,10 @@ func (s *Store) VoidEntry(
 func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal entity.Entry) error {
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO ledger_entries
-			(occurred_on, payee_id, note, currency, source, recurring_rule_id,
+			(ref, occurred_on, payee_id, note, currency, source, recurring_rule_id,
 			 client_id, reverses_entry_id, voided_at, created_at)
-		VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, NULL, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL, ?)`,
+		entity.NewRef(),
 		reversal.OccurredOn.Format(constant.DateLayout),
 		nullInt(reversal.PayeeID),
 		nullString(reversal.Note),
@@ -391,9 +418,9 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 	}
 
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO audit_log (entity_table, entity_id, action, from_json, to_json, actor, at)
-		VALUES ('ledger_entries', ?, 'void', NULL, NULL, 'user', ?)`,
-		reversalID, reversal.CreatedAt.Format(constant.TimestampLayout)); err != nil {
+		INSERT INTO audit_log (ref, entity_table, entity_id, action, from_json, to_json, actor, at)
+		VALUES (?, 'ledger_entries', ?, 'void', NULL, NULL, 'user', ?)`,
+		entity.NewRef(), reversalID, reversal.CreatedAt.Format(constant.TimestampLayout)); err != nil {
 		return fmt.Errorf("audit void: %w", err)
 	}
 
@@ -402,7 +429,7 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 
 func (s *Store) reversalByReversesID(ctx context.Context, originalID int64) (entity.Entry, error) {
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
-		SELECT id, occurred_on, payee_id, note, currency, source, client_id,
+		SELECT id, ref, occurred_on, payee_id, note, currency, source, client_id,
 		       reverses_entry_id, voided_at, created_at
 		FROM ledger_entries WHERE reverses_entry_id = ?`, originalID))
 	if err != nil {
@@ -434,7 +461,7 @@ func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, e
 		createdRaw  string
 	)
 
-	err := scanner.Scan(&entry.ID, &occurredRaw, &payeeID, &note, &entry.Currency,
+	err := scanner.Scan(&entry.ID, &entry.Ref, &occurredRaw, &payeeID, &note, &entry.Currency,
 		&entry.Source, &clientID, &reversesID, &voidedRaw, &createdRaw)
 	if err != nil {
 		return entity.Entry{}, err

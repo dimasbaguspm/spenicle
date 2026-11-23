@@ -11,10 +11,9 @@ Feature: Ledger
   Scenario: A balanced expense is accepted and stored once
     When I send a POST to "/api/entries" with:
       """json
-      {"client_id":"bdd-balanced","occurred_on":"2025-09-14","currency":"IDR","source":"share","note":"flat white","postings":[{"account_id":{{account:Coffee}},"amount_minor":"25000"},{"account_id":{{account:Cash}},"amount_minor":"-25000"}]}
+      {"client_id":"bdd-balanced","occurred_on":"2025-09-14","currency":"IDR","source":"share","note":"flat white","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     Then the response status is 201
-    And the response JSON at "$.id" is "1"
     And the response JSON at "$.currency" is "IDR"
     And the response JSON at "$.source" is "share"
     And the response JSON at "$.postings[0].base_amount_minor" is "25000"
@@ -28,11 +27,11 @@ Feature: Ledger
   Scenario: Replaying a client id returns the stored entry instead of a duplicate
     When I send a POST to "/api/entries" with:
       """json
-      {"client_id":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_id":{{account:Coffee}},"amount_minor":"25000"},{"account_id":{{account:Cash}},"amount_minor":"-25000"}]}
+      {"client_id":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     And I send a POST to "/api/entries" with:
       """json
-      {"client_id":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_id":{{account:Coffee}},"amount_minor":"25000"},{"account_id":{{account:Cash}},"amount_minor":"-25000"}]}
+      {"client_id":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     Then the response status is 200
     And the store holds:
@@ -43,7 +42,7 @@ Feature: Ledger
   Scenario: Postings that do not balance are refused
     When I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_id":{{account:Coffee}},"amount_minor":"25000"},{"account_id":{{account:Cash}},"amount_minor":"-24000"}]}
+      {"occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-24000"}]}
       """
     Then the response status is 422
     And the response JSON at "$.error.code" is "postings_not_balanced"
@@ -55,7 +54,7 @@ Feature: Ledger
   Scenario: A single posting is refused
     When I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_id":{{account:Coffee}},"amount_minor":"0"}]}
+      {"occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"0"}]}
       """
     Then the response status is 422
     And the response JSON at "$.error.code" is "invalid_postings"
@@ -63,7 +62,7 @@ Feature: Ledger
   Scenario: A foreign amount without a rate is refused rather than guessed
     When I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2025-09-14","currency":"USD","postings":[{"account_id":{{account:Coffee}},"amount_minor":"800"},{"account_id":{{account:Cash}},"amount_minor":"-800"}]}
+      {"occurred_on":"2025-09-14","currency":"USD","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"800"},{"account_ref":"{{account:Cash}}","amount_minor":"-800"}]}
       """
     Then the response status is 422
     And the response JSON at "$.error.code" is "invalid_rate"
@@ -72,7 +71,7 @@ Feature: Ledger
   Scenario: A foreign amount with a rate is converted once
     When I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2025-09-14","currency":"USD","postings":[{"account_id":{{account:Coffee}},"amount_minor":"800","fx_rate":"16250.42"},{"account_id":{{account:Cash}},"amount_minor":"-800","fx_rate":"16250.42"}]}
+      {"occurred_on":"2025-09-14","currency":"USD","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"800","fx_rate":"16250.42"},{"account_ref":"{{account:Cash}}","amount_minor":"-800","fx_rate":"16250.42"}]}
       """
     Then the response status is 201
     And the response JSON at "$.currency" is "USD"
@@ -84,7 +83,7 @@ Feature: Ledger
   Scenario: An unknown currency is refused
     When I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2025-09-14","currency":"XXX","postings":[{"account_id":{{account:Coffee}},"amount_minor":"100"},{"account_id":{{account:Cash}},"amount_minor":"-100"}]}
+      {"occurred_on":"2025-09-14","currency":"XXX","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"100"},{"account_ref":"{{account:Cash}}","amount_minor":"-100"}]}
       """
     Then the response status is 422
     And the response JSON at "$.error.code" is "unknown_currency"
@@ -92,7 +91,7 @@ Feature: Ledger
   Scenario: A late entry in a past month is accepted
     When I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2024-01-31","currency":"IDR","postings":[{"account_id":{{account:Coffee}},"amount_minor":"15000"},{"account_id":{{account:Cash}},"amount_minor":"-15000"}]}
+      {"occurred_on":"2024-01-31","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"15000"},{"account_ref":"{{account:Cash}}","amount_minor":"-15000"}]}
       """
     Then the response status is 201
     And the response JSON at "$.occurred_on" is "2024-01-31"
@@ -103,7 +102,7 @@ Feature: Ledger
   Scenario: A malformed amount is refused before it reaches the ledger
     When I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_id":{{account:Coffee}},"amount_minor":"25.000"},{"account_id":{{account:Cash}},"amount_minor":"-25.000"}]}
+      {"occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25.000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25.000"}]}
       """
     Then the response status is 422
     And the response JSON at "$.error.code" is "invalid_request"
