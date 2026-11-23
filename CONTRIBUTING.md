@@ -118,6 +118,7 @@ One paragraph of why this exists.
 | [`AGENTS.md`](./AGENTS.md) | the operating manual: invariants, layout, commands, traps |
 | [`skills/`](./skills/README.md) | task recipes: release, observability, updates, agent integration |
 | [`docs/v2-design.md`](./docs/v2-design.md) | locked decisions and the schema |
-| [`docs/v2-api.md`](./docs/v2-api.md) | endpoints, DDL, error codes |
+| [`docs/endpoints.md`](./docs/endpoints.md) | every implemented route: purpose, params, body, limits, sequence |
+| [`docs/v2-api.md`](./docs/v2-api.md) | target endpoints, DDL, error codes |
 | [`docs/linting.md`](./docs/linting.md) | why lint is four configs |
 | [`docs/releasing.md`](./docs/releasing.md) | the tag-only release path |

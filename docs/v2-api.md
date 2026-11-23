@@ -9,6 +9,9 @@ change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, tim
 8601 UTC. Money crosses the wire as **minor-unit strings** (`"25000"`) plus a currency code,
 never floats. Errors: `{"error":{"code":"...","message":"...","details":{}}}`.
 
+Implemented contract, one entry per live route with upstream/downstream, params, body,
+limitations and a sequence diagram: [`endpoints.md`](./endpoints.md).
+
 ## Implementation status
 
 Legend: **live** = shipped and covered by UAT, **partial** = some actions only,

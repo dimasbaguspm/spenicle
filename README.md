@@ -7,7 +7,7 @@ Partly built: the ledger (post, list, void), the capture queue (create, list,
 approve, reject), bootstrap meta and health are live and covered by UAT. Auth, settings,
 accounts/payees CRUD, recurring, reports, dashboard and tokens are designed but not yet
 written — see the status table in [`docs/v2-api.md`](./docs/v2-api.md).
-Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and API: [`docs/v2-api.md`](./docs/v2-api.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md). Working on the code: [`AGENTS.md`](./AGENTS.md) and [`skills/`](./skills/README.md). Sending a change: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and target API: [`docs/v2-api.md`](./docs/v2-api.md). Implemented endpoints: [`docs/endpoints.md`](./docs/endpoints.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md). Working on the code: [`AGENTS.md`](./AGENTS.md) and [`skills/`](./skills/README.md). Sending a change: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 Licence: source-available, not open source — personal use of an unmodified copy,
 no redistribution, no commercial use. See [`LICENSE`](./LICENSE).
