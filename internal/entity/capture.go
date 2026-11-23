@@ -48,6 +48,9 @@ type Capture struct {
 	RawText         string
 	DraftJSON       string
 	ExtractionError string
+	// JobRef is the vendor's id for this snap, used to read the result back when
+	// the submit answered 202 instead of 200.
+	JobRef          string
 	ResolvedEntryID *int64
 	ResolutionNote  string
 	ReceivedAt      time.Time

@@ -53,8 +53,8 @@ func TestMigrateIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("schema version: %v", err)
 	}
-	if v != 1 {
-		t.Fatalf("schema version = %d, want 1", v)
+	if v != 2 {
+		t.Fatalf("schema version = %d, want 2", v)
 	}
 	if _, err := store.BaseCurrencyCode(ctx); err == nil {
 		t.Fatal("base currency should not exist before it is set")

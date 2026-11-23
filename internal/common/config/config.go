@@ -30,8 +30,11 @@ const (
 	EnvAppSecret = "APP_SECRET"
 	//nolint:gosec // G101: this is the environment variable name, not a credential
 	EnvSnapToJSONAPIKey = "SNAPTOJSON_API_KEY"
-	EnvOTLPEndpoint     = "OTEL_EXPORTER_OTLP_ENDPOINT"
-	EnvBaseCurrency     = "BASE_CURRENCY"
+	// EnvSnapToJSONEndpoint overrides the vendor route, for a proxy or a staging
+	// account. Unset means the documented production endpoint.
+	EnvSnapToJSONEndpoint = "SNAPTOJSON_ENDPOINT"
+	EnvOTLPEndpoint       = "OTEL_EXPORTER_OTLP_ENDPOINT"
+	EnvBaseCurrency       = "BASE_CURRENCY"
 )
 
 // Defaults for everything that is not environment-dependent. Timeouts and limits
@@ -46,6 +49,13 @@ const (
 	// DefaultServiceName is also the tracer name: one identity for spans, metrics
 	// and logs.
 	DefaultServiceName = "spenicle"
+
+	// DefaultSnapToJSONEndpoint is the vendor's single partner route, from
+	// https://snaptojson.com/docs/api.
+	DefaultSnapToJSONEndpoint = "https://api.snaptojson.com/partner/v1/snaps"
+	// DefaultSnapToJSONTimeout is long on purpose: the vendor holds a submit for up
+	// to ten seconds before answering 202, and we must outlast that.
+	DefaultSnapToJSONTimeout = 30 * time.Second
 
 	DefaultReadHeaderTimeout = 5 * time.Second
 	DefaultReadTimeout       = 15 * time.Second
@@ -74,6 +84,8 @@ func Defaults() entity.AppConfig {
 		DataDir:                  DefaultDataDir,
 		DBPath:                   filepath.Join(DefaultDataDir, DefaultDBFile),
 		BaseCurrency:             DefaultBaseCurrency,
+		SnapToJSONEndpoint:       DefaultSnapToJSONEndpoint,
+		SnapToJSONTimeout:        DefaultSnapToJSONTimeout,
 		ServiceName:              DefaultServiceName,
 		ReadHeaderTimeout:        DefaultReadHeaderTimeout,
 		ReadTimeout:              DefaultReadTimeout,
@@ -102,6 +114,7 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.Password = os.Getenv(EnvPassword)
 	cfg.AppSecret = os.Getenv(EnvAppSecret)
 	cfg.SnapToJSONAPIKey = os.Getenv(EnvSnapToJSONAPIKey)
+	cfg.SnapToJSONEndpoint = env(EnvSnapToJSONEndpoint, cfg.SnapToJSONEndpoint)
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
 	cfg.BaseCurrency = strings.ToUpper(env(EnvBaseCurrency, cfg.BaseCurrency))
 

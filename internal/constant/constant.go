@@ -71,3 +71,12 @@ const (
 	SeedAssetAccount   = "Cash"
 	SeedExpenseAccount = "Unsorted"
 )
+
+// SnapToJSON snap states. The vendor owns these words; mapping them to capture
+// statuses happens in one place, the captures module.
+const (
+	SnapStatusRegistered = "REGISTERED"
+	SnapStatusExecuting  = "EXECUTING"
+	SnapStatusCompleted  = "COMPLETED"
+	SnapStatusFailed     = "FAILED"
+)

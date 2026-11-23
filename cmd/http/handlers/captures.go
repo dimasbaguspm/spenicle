@@ -2,8 +2,12 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,6 +17,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
 )
 
 type captureRequest struct {
@@ -27,7 +32,9 @@ type captureResponse struct {
 	Kind           string `json:"kind"`
 	Status         string `json:"status"`
 	RawText        string `json:"raw_text,omitempty"`
+	DraftJSON      string `json:"draft_json,omitempty"`
 	ResolutionNote string `json:"resolution_note,omitempty"`
+	JobRef         string `json:"job_ref,omitempty"`
 	EntryID        *int64 `json:"resolved_entry_id,omitempty"`
 	ReceivedAt     string `json:"received_at"`
 	ResolvedAt     string `json:"resolved_at,omitempty"`
@@ -101,19 +108,14 @@ func (s *server) handleCreateCapture(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, s.deps.MaxBodyBytes)
 
-	var request captureRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", err.Error())
+	input, err := readCapture(r)
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
 
 		return
 	}
 
-	capture, created, err := s.deps.Captures.Create(ctx, captures.CreateInput{
-		ClientID: request.ClientID,
-		Kind:     request.Kind,
-		RawText:  request.RawText,
-		BatchID:  request.BatchID,
-	})
+	capture, created, err := s.deps.Captures.Create(ctx, input)
 	if err != nil {
 		status, code := classify(err)
 		httpx.WriteError(w, status, code, err.Error())
@@ -155,9 +157,19 @@ func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
 		s.approveCapture(ctx, w, id, request)
 	case "reject":
 		s.rejectCapture(ctx, w, id, request)
+	case "retry":
+		capture, err := s.deps.Captures.Retry(ctx, id)
+		if err != nil {
+			status, code := classify(err)
+			httpx.WriteError(w, status, code, err.Error())
+
+			return
+		}
+
+		httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
 	default:
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "unknown_action",
-			"action must be approve or reject")
+			"action must be approve, reject or retry")
 	}
 }
 
@@ -218,13 +230,76 @@ func (s *server) rejectCapture(
 	httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
 }
 
+// readCapture accepts both shapes the API documents: a JSON body for text, a
+// multipart body with a `file` part for images and statements.
+func readCapture(r *http.Request) (captures.CreateInput, error) {
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		return readCaptureForm(r)
+	}
+
+	var request captureRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		return captures.CreateInput{}, fmt.Errorf("decode capture: %w", err)
+	}
+
+	return captures.CreateInput{
+		ClientID: request.ClientID,
+		Kind:     request.Kind,
+		RawText:  request.RawText,
+		BatchID:  request.BatchID,
+	}, nil
+}
+
+// readCaptureForm reads the file part once, keeps its hash and hands the bytes to
+// the extractor. The document itself is not stored yet: raw/ lands with the artifact
+// milestone.
+func readCaptureForm(r *http.Request) (captures.CreateInput, error) {
+	if err := r.ParseMultipartForm(maxFormBytes); err != nil {
+		return captures.CreateInput{}, fmt.Errorf("multipart: %w", err)
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		return captures.CreateInput{}, errors.New("multipart body needs a file part")
+	}
+
+	defer func() { _ = file.Close() }()
+
+	body, err := io.ReadAll(io.LimitReader(file, maxFormBytes))
+	if err != nil {
+		return captures.CreateInput{}, fmt.Errorf("read artifact: %w", err)
+	}
+
+	sum := sha256.Sum256(body)
+
+	kind := strings.TrimSpace(r.FormValue("kind"))
+	if kind == "" {
+		kind = constant.CaptureKindImage
+	}
+
+	return captures.CreateInput{
+		ClientID:     r.FormValue("client_id"),
+		Kind:         kind,
+		RawText:      r.FormValue("raw_text"),
+		BatchID:      r.FormValue("batch_id"),
+		ArtifactHash: hex.EncodeToString(sum[:]),
+		Artifact: &snaptojson.Artifact{
+			Filename:    header.Filename,
+			ContentType: header.Header.Get("Content-Type"),
+			Bytes:       body,
+		},
+	}, nil
+}
+
 func toCaptureResponse(capture entity.Capture) captureResponse {
 	out := captureResponse{
 		ID:             capture.ID,
 		Kind:           capture.Kind,
 		Status:         capture.Status,
 		RawText:        capture.RawText,
+		DraftJSON:      capture.DraftJSON,
 		ResolutionNote: capture.ResolutionNote,
+		JobRef:         capture.JobRef,
 		EntryID:        capture.ResolvedEntryID,
 		ReceivedAt:     capture.ReceivedAt.Format(constant.TimestampLayout),
 	}

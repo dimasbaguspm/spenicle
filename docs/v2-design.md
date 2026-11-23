@@ -184,48 +184,43 @@ Nothing leaves the table. Rejected items keep their reason and can be reopened.
 
 ## Extraction contract
 
-One schema, one validator, one ingest path. The extractor never writes to the ledger.
+The vendor owns the schema and the route. Contract source:
+[`snaptojson.com/docs/api`](https://snaptojson.com/docs/api). One route, one verb:
 
-`kind: "single"` for an email or a photo, `kind: "statement"` for a file that yields
-many rows. A statement produces N `captures` rows sharing `batch_id`, the artifact hash.
-
-```json
-{
-  "schema_version": "v1",
-  "kind": "statement",
-  "statement_meta": {
-    "account_hint": "BCA Tahapan",
-    "period_start": "2026-01-01",
-    "period_end": "2026-01-31",
-    "opening_balance": "12000000.00",
-    "closing_balance": "9540000.00",
-    "row_count": 31
-  },
-  "transactions": [
-    {
-      "occurred_on": "2026-01-03",
-      "amount": "-25000.00",
-      "currency": "IDR",
-      "merchant_raw": "KOPI KENANGAN",
-      "reference_id": "TRX9921",
-      "channel": "card",
-      "card_last4": "4431",
-      "confidence": { "amount": 0.99, "occurred_on": 0.95, "merchant": 0.8 }
-    }
-  ]
-}
+```
+POST https://api.snaptojson.com/partner/v1/snaps
+Authorization: Bearer <project key>
+multipart/form-data: file=<bytes>            submit (≤ 10 MiB, images today)
+                     snap_id=<job_ref>       read a snap back
 ```
 
-Rules:
+| answer | meaning | what we do |
+| --- | --- | --- |
+| `200` SnapReport | terminal | store the draft, status `pending` (or `failed` on `FAILED`) |
+| `202` SnapReport | still running | keep `job_ref`, status `extracting`, read back with `retry` |
+| `401/402/404/413/415/422/500/503` ErrorEnvelope | vendor refused | keep the capture, record `code: message` in `extraction_error` |
 
-- amounts are signed decimal **strings**, never floats
-- unknown `schema_version` fails closed, it does not degrade to a partial parse
-- `dedupe_key` per row: `sha256(account|occurred_on|amount|reference_id)` so a payment
-  arriving by email *and* by statement becomes one item
-- artifact paid for once: `sha256(file)` guards re-extraction charges
-- long PDFs are chunked by page range; `chunk_index` / `chunk_of` record it
-- privacy: with extraction disabled no artifact ever leaves the box; it lands as a
-  `pending` capture and you type the fields
+`SnapReport` is `{job_ref, status: REGISTERED|EXECUTING|COMPLETED|FAILED, result:
+{data, valid, violations[]}, error_message}`. `valid: false` is an answer with
+violations, not a failure: the review screen shows the fields the reader was unsure
+about instead of hiding the capture.
+
+Mapping, in one place (`module/captures`):
+
+| vendor | capture status | stored |
+| --- | --- | --- |
+| `COMPLETED` | `pending` | sealed `draft_json` = whole `result`, `job_ref` |
+| `FAILED` | `failed` | `error_message`, `job_ref` |
+| `REGISTERED`, `EXECUTING` | `extracting` | `job_ref` |
+| API error | `pending` | `extraction_error` = `code: message` |
+
+A vendor outage never loses the receipt: the capture row is written before the call,
+and every failure is recorded on it. With `SNAPTOJSON_API_KEY` unset nothing leaves
+the box — the capture lands as `pending` and the fields are typed by hand.
+
+The artifact bytes are handed to the vendor once and not stored; the row keeps
+`artifact_hash` (sha256) so a re-share of the same image is the same capture. Sealed
+artifact files under `raw/` land with the upload milestone.
 
 ### Completeness gate
 

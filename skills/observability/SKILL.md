@@ -41,7 +41,7 @@ docker run --rm -p 4318:4318 otel/opentelemetry-collector:latest \
 | trace | `Module.Ledger.Post` | business call |
 | trace | `Repository.Sqlite.*` | one per database method, including `WithTx` |
 | trace | `Common.Config.Load`, `Common.Seal.Seal`, `Common.Seal.Open` | utilities that cross a boundary |
-| trace | `Repository.Snaptojson.Extract` | extraction vendor |
+| trace | `Repository.Snaptojson.Submit`, `Repository.Snaptojson.Fetch` | extraction vendor (submit, read-back) |
 | metric | OTel SDK defaults | runtime metrics once a meter provider exists |
 
 The service name is one string: `entity.AppConfig.ServiceName`

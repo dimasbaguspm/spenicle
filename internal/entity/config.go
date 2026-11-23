@@ -21,6 +21,11 @@ type AppConfig struct {
 	Password         string
 	AppSecret        string
 	SnapToJSONAPIKey string
+	// SnapToJSONEndpoint is the vendor's partner route. Fixed for now: one API,
+	// one shape, no reason to let a deployment point it somewhere else.
+	SnapToJSONEndpoint string
+	// SnapToJSONTimeout bounds one submit or read-back call.
+	SnapToJSONTimeout time.Duration
 	// OTLPEndpoint is host:port, optionally with a scheme. Empty disables export.
 	OTLPEndpoint string
 	// BaseCurrency is locked at first boot.

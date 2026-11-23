@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
+	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
 )
 
 // Service owns the review queue.
@@ -24,6 +26,9 @@ type Service struct {
 	sealer   seal.Sealer
 	clock    TimeSource
 	ids      IDSource
+	// extractor is nil when SNAPTOJSON_API_KEY is unset. Nil is a supported mode:
+	// captures stay raw and the user types the fields.
+	extractor snaptojson.Extractor
 }
 
 // TimeSource and IDSource are the module's ambient dependencies; clock.System
@@ -38,10 +43,14 @@ func New(
 	captures repository.Captures,
 	entries ledger.Contract,
 	sealer seal.Sealer,
+	extractor snaptojson.Extractor,
 	clock TimeSource,
 	ids IDSource,
 ) *Service {
-	return &Service{captures: captures, entries: entries, sealer: sealer, clock: clock, ids: ids}
+	return &Service{
+		captures: captures, entries: entries, sealer: sealer,
+		extractor: extractor, clock: clock, ids: ids,
+	}
 }
 
 var _ Contract = (*Service)(nil)
@@ -89,6 +98,11 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Capture, b
 		RawText:      rawText,
 		ReceivedAt:   receivedAt,
 	})
+	if err != nil {
+		return entity.Capture{}, false, err
+	}
+
+	stored, err = s.extract(ctx, stored, in.Artifact)
 	if err != nil {
 		return entity.Capture{}, false, err
 	}
@@ -189,6 +203,109 @@ func (s *Service) Reject(ctx context.Context, id int64, reason string) (entity.C
 	return s.resolve(ctx, capture, constant.CaptureStatusRejected, sealedNote, nil)
 }
 
+// Retry reads a snap back. A capture that never reached the vendor has nothing to
+// retry, and says so instead of silently doing nothing.
+func (s *Service) Retry(ctx context.Context, id int64) (entity.Capture, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Retry")
+	defer endSpan()
+
+	capture, found, err := s.captures.CaptureByID(ctx, id)
+	if err != nil {
+		return entity.Capture{}, err
+	}
+
+	if !found {
+		return entity.Capture{}, fmt.Errorf("%w: capture %d", entity.ErrNotFound, id)
+	}
+
+	if s.extractor == nil {
+		return entity.Capture{}, snaptojson.ErrNotConfigured
+	}
+
+	if capture.JobRef == "" {
+		return entity.Capture{}, fmt.Errorf("%w: capture %d was never submitted", entity.ErrInvalidState, id)
+	}
+
+	report, err := s.extractor.Fetch(ctx, capture.JobRef)
+	if err != nil {
+		return entity.Capture{}, err
+	}
+
+	updated, err := s.applyReport(ctx, capture, report)
+	if err != nil {
+		return entity.Capture{}, err
+	}
+
+	return s.open(ctx, updated)
+}
+
+// extract submits an artifact when both the vendor and the document exist. Every
+// failure is recorded on the capture, never raised: a vendor outage must not lose
+// the receipt the user just shared.
+func (s *Service) extract(
+	ctx context.Context,
+	capture entity.Capture,
+	artifact *snaptojson.Artifact,
+) (entity.Capture, error) {
+	if s.extractor == nil || artifact == nil {
+		return capture, nil
+	}
+
+	report, err := s.extractor.Submit(ctx, *artifact)
+	if err != nil {
+		var apiErr *snaptojson.APIError
+		if errors.As(err, &apiErr) {
+			capture.ExtractionError = apiErr.Code + ": " + apiErr.Message
+
+			return s.captures.UpdateCapture(ctx, capture)
+		}
+
+		return entity.Capture{}, err
+	}
+
+	return s.applyReport(ctx, capture, report)
+}
+
+// applyReport maps the vendor's four states onto the queue's statuses, sealing the
+// draft so the fields the vendor read never sit in plaintext.
+func (s *Service) applyReport(
+	ctx context.Context,
+	capture entity.Capture,
+	report snaptojson.Report,
+) (entity.Capture, error) {
+	capture.JobRef = report.JobRef
+
+	switch report.Status {
+	case constant.SnapStatusCompleted:
+		capture.Status = constant.CaptureStatusPending
+		capture.ExtractionError = ""
+
+		if report.Result != nil {
+			raw, err := json.Marshal(report.Result)
+			if err != nil {
+				return entity.Capture{}, fmt.Errorf("encode draft: %w", err)
+			}
+
+			if capture.DraftJSON, err = s.sealText(ctx, string(raw)); err != nil {
+				return entity.Capture{}, err
+			}
+		}
+
+	case constant.SnapStatusFailed:
+		capture.Status = constant.CaptureStatusFailed
+		capture.ExtractionError = report.ErrorMessage
+
+	case constant.SnapStatusRegistered, constant.SnapStatusExecuting:
+		capture.Status = constant.CaptureStatusExtracting
+
+	default:
+		capture.Status = constant.CaptureStatusFailed
+		capture.ExtractionError = "unknown snap status " + report.Status
+	}
+
+	return s.captures.UpdateCapture(ctx, capture)
+}
+
 // pending loads a capture that is still allowed to move.
 func (s *Service) pending(ctx context.Context, id int64) (entity.Capture, error) {
 	capture, found, err := s.captures.CaptureByID(ctx, id)
@@ -244,6 +361,10 @@ func (s *Service) open(ctx context.Context, capture entity.Capture) (entity.Capt
 	}
 
 	if capture.ResolutionNote, err = s.openText(ctx, capture.ResolutionNote); err != nil {
+		return entity.Capture{}, err
+	}
+
+	if capture.DraftJSON, err = s.openText(ctx, capture.DraftJSON); err != nil {
 		return entity.Capture{}, err
 	}
 

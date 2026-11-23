@@ -31,6 +31,9 @@ type Deps struct {
 	Logger            *slog.Logger
 }
 
+// maxFormBytes is the vendor's upload limit plus multipart overhead.
+const maxFormBytes = 11 << 20
+
 // server holds the dependencies the handlers share.
 type server struct {
 	deps Deps

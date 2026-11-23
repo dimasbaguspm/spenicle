@@ -92,6 +92,7 @@ Un-prefixed, all optional except `PASSWORD` in practice:
 | `PASSWORD` | — | single user's password |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals sensitive columns, identifies the database |
 | `SNAPTOJSON_API_KEY` | — | enables the SnapToJSON extraction vendor; unset = manual entry |
+| `SNAPTOJSON_ENDPOINT` | vendor route | override for a proxy or a staging account |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
 
 `APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`
@@ -101,7 +102,7 @@ a fresh database (delete `spenicle.db`; the next boot migrates and seeds it). Th
 sealed capture payloads are unrecoverable without the old key; the ledger is
 plaintext and survives either way.
 
-Only these seven are environment variables. **Every other knob — DB path, HTTP
+Only these eight are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
 name (also the tracer name) — has its default in `internal/common/config/config.go`**, and the
 resulting value object is `entity.AppConfig`. No viper, on purpose: seven variables

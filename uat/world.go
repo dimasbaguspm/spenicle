@@ -119,7 +119,7 @@ func (w *world) boot(ctx context.Context) error {
 	w.store = store
 	w.server = httptest.NewServer(handlers.New(handlers.Deps{
 		Ledger:        ledgerService,
-		Captures:      captures.New(store, ledgerService, sealer, clockSystem, clockSystem),
+		Captures:      captures.New(store, ledgerService, sealer, nil, clockSystem, clockSystem),
 		Accounts:      store,
 		Health:        store,
 		Sealer:        sealer,

@@ -13,6 +13,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
+	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -62,6 +63,13 @@ func newApp(
 		return nil, fmt.Errorf("baseline: %w", err)
 	}
 
+	extractor, err := buildExtractor(ctx, cfg, logger)
+	if err != nil {
+		_ = store.Close(ctx)
+
+		return nil, err
+	}
+
 	// clock.System satisfies both the time and the id contract.
 	clockSystem := clock.System{}
 	ledgerService := ledger.New(store, store, clockSystem, clockSystem)
@@ -71,8 +79,10 @@ func newApp(
 		Store:        store,
 		BaseCurrency: baseCurrency,
 		Handler: handlers.New(handlers.Deps{
-			Ledger:            ledgerService,
-			Captures:          captures.New(store, ledgerService, sealer, clockSystem, clockSystem),
+			Ledger: ledgerService,
+			Captures: captures.New(
+				store, ledgerService, sealer, extractor, clockSystem, clockSystem,
+			),
 			Accounts:          store,
 			Health:            store,
 			Sealer:            sealer,
@@ -93,4 +103,25 @@ func (a *app) Close(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// buildExtractor returns nil when SNAPTOJSON_API_KEY is unset: no key, no vendor,
+// captures stay raw. A key means one client for the process.
+func buildExtractor(
+	ctx context.Context,
+	cfg entity.AppConfig,
+	logger *slog.Logger,
+) (snaptojson.Extractor, error) {
+	if cfg.SnapToJSONAPIKey == "" {
+		logger.InfoContext(ctx, "SNAPTOJSON_API_KEY is unset: extraction disabled, captures stay manual")
+
+		return nil, nil //nolint:nilnil // nil extractor is the documented "disabled" mode
+	}
+
+	extractor, err := snaptojson.New(cfg.SnapToJSONEndpoint, cfg.SnapToJSONAPIKey, cfg.SnapToJSONTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("extractor: %w", err)
+	}
+
+	return extractor, nil
 }

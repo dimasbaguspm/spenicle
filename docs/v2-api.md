@@ -21,8 +21,8 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 10 | `POST /api/entries` | live |
 | 11 | `PATCH /api/entries/{id}` | partial: `void` only; field edits next |
 | 12 | `GET /api/captures` | live (status filter, cursor, limit) |
-| 13 | `POST /api/captures` | partial: JSON body; multipart upload next |
-| 14 | `PATCH /api/captures/{id}` | partial: `approve`, `reject`; `retry`/`match`/`extracted` next |
+| 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
+| 14 | `PATCH /api/captures/{id}` | partial: `approve`, `reject`, `retry`; `match`/`extracted` next |
 | 21 | `GET /healthz` | live |
 | 1, 2 | `POST /api/setup`, `POST /api/session` | next (auth slice) |
 | 4 | `PATCH /api/settings` | next |
@@ -53,6 +53,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | `PASSWORD` | unset | enables `POST /api/session`; unset means open on your network |
 | `APP_SECRET` | **required** | seals cookies, artifacts, capture payloads, token hashes |
 | `SNAPTOJSON_API_KEY` | unset | enables the SnapToJSON extraction worker |
+| `SNAPTOJSON_ENDPOINT` | vendor route | override the partner URL (proxy, staging) |
 
 Names carry no prefix on purpose. If several self-hosted services share one `env_file`, qualify
 them yourself — `spenicle.env` is the cheapest separator.
