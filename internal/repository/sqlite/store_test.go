@@ -1,7 +1,6 @@
 package sqlite_test
 
 import (
-	"context"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -15,13 +14,13 @@ import (
 func newStore(t *testing.T) *sqlite.Store {
 	t.Helper()
 
-	db, err := sqlite.Open(context.Background(), sqlite.Config{Path: filepath.Join(t.TempDir(), "test.db")})
+	db, err := sqlite.Open(t.Context(), sqlite.Config{Path: filepath.Join(t.TempDir(), "test.db")})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	ctx := context.Background()
+	ctx := t.Context()
 	if err := sqlite.Migrate(ctx, db); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
@@ -30,7 +29,7 @@ func newStore(t *testing.T) *sqlite.Store {
 
 func baseline(t *testing.T, store *sqlite.Store) (int64, int64) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	if err := store.SetSetting(ctx, "base_currency", "IDR"); err != nil {
 		t.Fatalf("set base currency: %v", err)
@@ -48,7 +47,7 @@ func baseline(t *testing.T, store *sqlite.Store) (int64, int64) {
 
 func TestMigrateIsIdempotent(t *testing.T) {
 	store := newStore(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	v, err := store.SchemaVersion(ctx)
 	if err != nil {
@@ -65,7 +64,7 @@ func TestMigrateIsIdempotent(t *testing.T) {
 func TestInsertEntryRoundTrip(t *testing.T) {
 	store := newStore(t)
 	asset, expense := baseline(t, store)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	entry, err := entity.NewEntry(entity.Entry{
 		ClientID:   "01924f7c-0000-7000-8000-000000000001",
@@ -110,7 +109,7 @@ func TestInsertEntryRoundTrip(t *testing.T) {
 func TestInsertEntryRejectsUnbalanced(t *testing.T) {
 	store := newStore(t)
 	asset, expense := baseline(t, store)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := store.InsertEntry(ctx, entity.Entry{
 		OccurredOn: time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
@@ -129,7 +128,7 @@ func TestInsertEntryRejectsUnbalanced(t *testing.T) {
 func TestInsertEntryRequiresExistingAccount(t *testing.T) {
 	store := newStore(t)
 	baseline(t, store)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, err := store.InsertEntry(ctx, entity.Entry{
 		OccurredOn: time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),

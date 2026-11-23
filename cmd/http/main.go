@@ -41,16 +41,18 @@ func main() {
 }
 
 func run() error {
-	cfg, err := config.Load()
+	// The only context.Background in the process: the root every other context
+	// derives from. It carries the signal handler, so SIGTERM cancels the tree.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	cfg, err := config.Load(ctx)
 	if err != nil {
 		return err
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	shutdownTelemetry, err := telemetry.Setup(ctx, telemetry.Config{
 		ServiceName: serviceName,
@@ -74,7 +76,7 @@ func run() error {
 	}
 
 	defer func() {
-		if closeErr := application.Close(); closeErr != nil {
+		if closeErr := application.Close(ctx); closeErr != nil {
 			logger.ErrorContext(ctx, "close application", slog.Any("error", closeErr))
 		}
 	}()
@@ -131,7 +133,9 @@ func serve(
 }
 
 func flushTelemetry(ctx context.Context, logger *slog.Logger, shutdown func(context.Context) error) {
-	shutdownCtx, cancel := context.WithTimeout(ctx, telemetryShutdownTimeout)
+	// The signal that stopped the process also cancelled ctx; the flush needs a
+	// live deadline or the last batch of spans is lost.
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), telemetryShutdownTimeout)
 	defer cancel()
 
 	if err := shutdown(shutdownCtx); err != nil {

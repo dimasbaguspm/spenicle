@@ -14,6 +14,9 @@ import (
 // InsertEntry writes the entry and its postings in one transaction. It writes
 // no balances: balances are always derived from postings.
 func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, error) {
+	ctx, endSpan := startSpan(ctx, "InsertEntry")
+	defer endSpan()
+
 	// Defense in depth: the domain already validated this, and we check again
 	// inside the transaction that will commit.
 	if err := entity.CheckZeroSum(e.Postings); err != nil {
@@ -81,6 +84,9 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 
 // EntryByClientID answers a replay without rewriting anything.
 func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.Entry, bool, error) {
+	ctx, endSpan := startSpan(ctx, "EntryByClientID")
+	defer endSpan()
+
 	if clientID == "" {
 		return entity.Entry{}, false, nil
 	}
@@ -121,14 +127,31 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 
 	e.Note = note.String
 
+	postings, err := s.postingsByEntryID(ctx, e.ID)
+	if err != nil {
+		return entity.Entry{}, false, err
+	}
+
+	e.Postings = postings
+
+	return e, true, nil
+}
+
+// postingsByEntryID loads every leg of one entry in insertion order.
+func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.Posting, error) {
+	ctx, endSpan := startSpan(ctx, "postingsByEntryID")
+	defer endSpan()
+
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT account_id, amount_minor, base_amount_minor, fx_rate, fx_rate_date, fx_source
-		FROM ledger_postings WHERE entry_id = ? ORDER BY id`, e.ID)
+		FROM ledger_postings WHERE entry_id = ? ORDER BY id`, entryID)
 	if err != nil {
-		return entity.Entry{}, false, fmt.Errorf("select postings: %w", err)
+		return nil, fmt.Errorf("select postings: %w", err)
 	}
 
 	defer func() { _ = rows.Close() }()
+
+	var postings []entity.Posting
 
 	for rows.Next() {
 		var (
@@ -137,18 +160,18 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 		)
 		if err := rows.Scan(&p.AccountID, &p.AmountMinor, &p.BaseAmountMinor,
 			&p.FXRate, &rateDay, &p.FXSource); err != nil {
-			return entity.Entry{}, false, fmt.Errorf("scan posting: %w", err)
+			return nil, fmt.Errorf("scan posting: %w", err)
 		}
 
 		p.FXRateDate = rateDay.String
-		e.Postings = append(e.Postings, p)
+		postings = append(postings, p)
 	}
 
 	if err := rows.Err(); err != nil {
-		return entity.Entry{}, false, fmt.Errorf("iterate postings: %w", err)
+		return nil, fmt.Errorf("iterate postings: %w", err)
 	}
 
-	return e, true, nil
+	return postings, nil
 }
 
 // insertPostings writes every leg of one entry inside the caller's transaction.

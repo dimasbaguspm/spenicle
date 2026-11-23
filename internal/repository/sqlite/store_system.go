@@ -10,6 +10,9 @@ import (
 )
 
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
+	ctx, endSpan := startSpan(ctx, "SchemaVersion")
+	defer endSpan()
+
 	var v sql.NullInt64
 
 	err := s.db.QueryRowContext(ctx, `SELECT MAX(version) FROM schema_migrations`).Scan(&v)
@@ -22,6 +25,9 @@ func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
 
 // Ping proves the file is writable, not merely readable.
 func (s *Store) Ping(ctx context.Context) error {
+	ctx, endSpan := startSpan(ctx, "Ping")
+	defer endSpan()
+
 	var one int
 	if err := s.db.QueryRowContext(ctx, `SELECT 1`).Scan(&one); err != nil {
 		return fmt.Errorf("ping: %w", err)
@@ -32,6 +38,9 @@ func (s *Store) Ping(ctx context.Context) error {
 
 // Setting reads one configuration row.
 func (s *Store) Setting(ctx context.Context, key string) (string, bool, error) {
+	ctx, endSpan := startSpan(ctx, "Setting")
+	defer endSpan()
+
 	var v string
 
 	err := s.db.QueryRowContext(ctx, `SELECT v FROM settings WHERE k = ?`, key).Scan(&v)
@@ -48,6 +57,9 @@ func (s *Store) Setting(ctx context.Context, key string) (string, bool, error) {
 
 // SetSetting upserts one configuration row.
 func (s *Store) SetSetting(ctx context.Context, key, value string) error {
+	ctx, endSpan := startSpan(ctx, "SetSetting")
+	defer endSpan()
+
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO settings (k, v) VALUES (?, ?)
 		ON CONFLICT (k) DO UPDATE SET v = excluded.v`, key, value)
@@ -60,6 +72,9 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 
 // BaseCurrencyCode returns the locked reporting currency.
 func (s *Store) BaseCurrencyCode(ctx context.Context) (string, error) {
+	ctx, endSpan := startSpan(ctx, "BaseCurrencyCode")
+	defer endSpan()
+
 	v, ok, err := s.Setting(ctx, constant.SettingBaseCurrency)
 	if err != nil {
 		return "", err

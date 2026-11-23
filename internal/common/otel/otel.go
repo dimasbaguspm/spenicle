@@ -32,6 +32,20 @@ type Config struct {
 	Endpoint string
 }
 
+// tracerName is the one tracer every layer reports under. Span names carry the
+// layer instead ("Repository.Sqlite.InsertEntry"), so a trace reads like the
+// call stack.
+const tracerName = "spenicle"
+
+// StartSpan opens a named span. The name must be qualified with the layer that
+// owns the work, e.g. "Module.Ledger.Post". Callers defer the returned end
+// function; it never returns the span itself, so no interface leaks into a caller.
+func StartSpan(ctx context.Context, name string) (context.Context, func()) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, name)
+
+	return ctx, func() { span.End() }
+}
+
 // Setup installs global tracer and meter providers. The returned function
 // flushes and shuts them down.
 func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error) {

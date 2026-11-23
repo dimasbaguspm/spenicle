@@ -4,6 +4,7 @@
 package seal
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
@@ -14,6 +15,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
 const (
@@ -27,10 +30,13 @@ const (
 var ErrNotSealed = errors.New("value is not sealed")
 
 // Sealer is the contract the rest of the code depends on. Swapping AES-GCM for a
-// KMS call later means one new implementation, no call-site changes.
+// KMS call later means one new implementation, no call-site changes; the context
+// is there because a remote key service is a network call.
 type Sealer interface {
-	Seal(plain []byte) (string, error)
-	Open(sealed string) ([]byte, error)
+	Seal(ctx context.Context, plain []byte) (string, error)
+	Open(ctx context.Context, sealed string) ([]byte, error)
+	// Fingerprint is an accessor, not a unit of work: it never blocks, so it
+	// takes no context and opens no span.
 	Fingerprint() string
 }
 
@@ -76,7 +82,10 @@ func New(secret string) (*AES, error) {
 }
 
 // Seal returns "v1:" plus base64(nonce|ciphertext).
-func (s *AES) Seal(plain []byte) (string, error) {
+func (s *AES) Seal(ctx context.Context, plain []byte) (string, error) {
+	_, endSpan := telemetry.StartSpan(ctx, "Common.Seal.Seal")
+	defer endSpan()
+
 	nonce := make([]byte, s.aead.NonceSize())
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("nonce: %w", err)
@@ -88,7 +97,10 @@ func (s *AES) Seal(plain []byte) (string, error) {
 }
 
 // Open reverses Seal.
-func (s *AES) Open(sealed string) ([]byte, error) {
+func (s *AES) Open(ctx context.Context, sealed string) ([]byte, error) {
+	_, endSpan := telemetry.StartSpan(ctx, "Common.Seal.Open")
+	defer endSpan()
+
 	if !strings.HasPrefix(sealed, envelopePrefix) {
 		return nil, ErrNotSealed
 	}
@@ -120,10 +132,14 @@ func (s *AES) Fingerprint() string { return s.fingerprint }
 type Passthrough struct{}
 
 // Seal returns the value unchanged.
-func (Passthrough) Seal(plain []byte) (string, error) { return string(plain), nil }
+func (Passthrough) Seal(_ context.Context, plain []byte) (string, error) {
+	return string(plain), nil
+}
 
 // Open returns the value unchanged.
-func (Passthrough) Open(sealed string) ([]byte, error) { return []byte(sealed), nil }
+func (Passthrough) Open(_ context.Context, sealed string) ([]byte, error) {
+	return []byte(sealed), nil
+}
 
 // Fingerprint is the literal marker stored in settings.
 func (Passthrough) Fingerprint() string { return "unsealed" }

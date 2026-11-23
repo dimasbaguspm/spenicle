@@ -23,6 +23,9 @@ const (
 // Migrate applies every embedded migration that has not been applied yet.
 // It is idempotent and safe to call on every boot.
 func Migrate(ctx context.Context, db *sql.DB) error {
+	ctx, endSpan := startSpan(ctx, "Migrate")
+	defer endSpan()
+
 	if _, err := db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version    INTEGER PRIMARY KEY,

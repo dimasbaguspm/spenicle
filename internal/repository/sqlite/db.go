@@ -26,6 +26,9 @@ const (
 
 // Open creates the data directory if needed and returns a WAL-mode handle.
 func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
+	ctx, endSpan := startSpan(ctx, "Open")
+	defer endSpan()
+
 	if err := os.MkdirAll(filepath.Dir(cfg.Path), dataDirPerm); err != nil {
 		return nil, fmt.Errorf("create data dir: %w", err)
 	}

@@ -51,7 +51,7 @@ func newApp(ctx context.Context, cfg appConfig) (*app, error) {
 	}
 
 	if migrateErr := sqlite.Migrate(ctx, store.DB()); migrateErr != nil {
-		_ = store.Close()
+		_ = store.Close(ctx)
 
 		return nil, fmt.Errorf("migrate: %w", migrateErr)
 	}
@@ -59,7 +59,7 @@ func newApp(ctx context.Context, cfg appConfig) (*app, error) {
 	baseCurrency, err := bootstrap.New(store, store).
 		EnsureBaseline(ctx, cfg.BaseCurrency, sealer.Fingerprint())
 	if err != nil {
-		_ = store.Close()
+		_ = store.Close(ctx)
 
 		return nil, fmt.Errorf("bootstrap: %w", err)
 	}
@@ -73,8 +73,8 @@ func newApp(ctx context.Context, cfg appConfig) (*app, error) {
 }
 
 // Close releases the database handle.
-func (a *app) Close() error {
-	if err := a.Store.Close(); err != nil {
+func (a *app) Close(ctx context.Context) error {
+	if err := a.Store.Close(ctx); err != nil {
 		return fmt.Errorf("close database: %w", err)
 	}
 

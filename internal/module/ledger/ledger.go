@@ -10,6 +10,9 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
 
+// spanPrefix names every ledger call Module.Ledger.<method>.
+const spanPrefix = "Module.Ledger."
+
 // Contract is what the transport layer is allowed to call.
 type Contract interface {
 	Post(ctx context.Context, in PostInput) (entity.Entry, bool, error)

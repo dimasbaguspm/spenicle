@@ -59,6 +59,26 @@ Two rules keep it pluggable:
 `cmd/http` is `package main`, so `uat` assembles the same graph by hand from
 `repository/sqlite`, `module/bootstrap`, `module/ledger` and `handlers.New`.
 
+### Contexts and spans
+
+Every method that crosses a boundary takes `ctx context.Context` as its first
+argument and opens one span named after the layer that owns the work:
+
+| Layer | Span name |
+|---|---|
+| handlers | `Handler.Entries.Post`, `Handler.Health.Check` |
+| modules | `Module.Ledger.Post`, `Module.Bootstrap.EnsureBaseline` |
+| repositories | `Repository.Sqlite.InsertEntry`, `Repository.Snaptojson.Extract` |
+| common | `Common.Config.Load`, `Common.Seal.Seal` |
+
+Spans start from `internal/common/otel.StartSpan`, which returns the derived
+context plus the end function — the span interface never leaks into a caller.
+The process has exactly one `context.Background()`: the root in `cmd/http/main.go`
+wrapped in `signal.NotifyContext`. Everything below derives from it, including
+the shutdown timeout (`context.WithoutCancel`) so the last batch of spans still
+flushes. Pure value code (`entity` validation, currency lookup, `clock`) takes no
+context and opens no span: there is no boundary to trace.
+
 ## Non-goals for v2.0
 
 Multi-user, tags, geo/map, TUI, envelope budgets, cross-currency account transfers,

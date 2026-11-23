@@ -66,7 +66,7 @@ func worldFrom(ctx context.Context) (*world, error) {
 // The wiring mirrors cmd/http/bootstrap.go, which is package main and therefore
 // not importable. Adding a dependency to the composition root means adding it
 // here too.
-func (w *world) boot() error {
+func (w *world) boot(ctx context.Context) error {
 	if w.server != nil {
 		return nil
 	}
@@ -78,15 +78,13 @@ func (w *world) boot() error {
 
 	w.dbPath = filepath.Join(dir, "spenicle.db")
 
-	ctx := context.Background()
-
 	store, err := sqlite.New(ctx, sqlite.Config{Path: w.dbPath})
 	if err != nil {
 		return fmt.Errorf("open: %w", err)
 	}
 
 	if migrateErr := sqlite.Migrate(ctx, store.DB()); migrateErr != nil {
-		_ = store.Close()
+		_ = store.Close(ctx)
 
 		return fmt.Errorf("migrate: %w", migrateErr)
 	}
@@ -96,7 +94,7 @@ func (w *world) boot() error {
 	baseCurrency, err := bootstrap.New(store, store).
 		EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint())
 	if err != nil {
-		_ = store.Close()
+		_ = store.Close(ctx)
 
 		return fmt.Errorf("bootstrap: %w", err)
 	}
@@ -116,13 +114,13 @@ func (w *world) boot() error {
 	return nil
 }
 
-func (w *world) shutdown() {
+func (w *world) shutdown(ctx context.Context) {
 	if w.server != nil {
 		w.server.Close()
 	}
 
 	if w.store != nil {
-		_ = w.store.Close()
+		_ = w.store.Close(ctx)
 	}
 
 	if w.dbPath != "" {
@@ -131,7 +129,7 @@ func (w *world) shutdown() {
 }
 
 // do performs one HTTP request and records it for the Then steps.
-func (w *world) do(method, path string, body []byte) error {
+func (w *world) do(ctx context.Context, method, path string, body []byte) error {
 	if w.server == nil {
 		return errors.New(`no running API: add the step "a running API" first`)
 	}
@@ -142,7 +140,7 @@ func (w *world) do(method, path string, body []byte) error {
 		reader = strings.NewReader(string(body))
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), method, w.server.URL+path, reader)
+	req, err := http.NewRequestWithContext(ctx, method, w.server.URL+path, reader)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
@@ -199,7 +197,7 @@ func (w *world) expand(body string) (string, error) {
 }
 
 // countTable answers "how many rows in this table", used by the store steps.
-func (w *world) countTable(table string) (int, error) {
+func (w *world) countTable(ctx context.Context, table string) (int, error) {
 	if w.store == nil {
 		return 0, errors.New(`no running API: add the step "a running API" first`)
 	}
@@ -222,7 +220,7 @@ func (w *world) countTable(table string) (int, error) {
 	//nolint:gosec // G201: the table name is allow-listed immediately above
 	query := "SELECT COUNT(*) FROM " + table
 
-	err := w.store.DB().QueryRowContext(context.Background(), query).Scan(&count)
+	err := w.store.DB().QueryRowContext(ctx, query).Scan(&count)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return 0, fmt.Errorf("count %s: %w", table, err)
 	}

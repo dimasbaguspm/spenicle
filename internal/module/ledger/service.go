@@ -4,14 +4,23 @@ import (
 	"context"
 	"fmt"
 
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
+
+// startSpan names every call in this module Module.Ledger.<method>.
+func startSpan(ctx context.Context, method string) (context.Context, func()) {
+	return telemetry.StartSpan(ctx, spanPrefix+method)
+}
 
 // Post validates and writes one entry. created is false when the client id had
 // already been posted, in which case the stored entry is returned untouched and
 // the transport answers 200 instead of 201.
 func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, error) {
+	ctx, endSpan := startSpan(ctx, "Post")
+	defer endSpan()
+
 	if in.ClientID != "" {
 		existing, found, err := s.entries.EntryByClientID(ctx, in.ClientID)
 		if err != nil {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
@@ -51,6 +52,9 @@ type entryResponse struct {
 }
 
 func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Post")
+	defer endSpan()
+
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 
 	var request postEntryRequest
@@ -67,7 +71,7 @@ func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entry, created, err := s.deps.Ledger.Post(r.Context(), input)
+	entry, created, err := s.deps.Ledger.Post(ctx, input)
 	if err != nil {
 		status, code := classify(err)
 		httpx.WriteError(w, status, code, err.Error())

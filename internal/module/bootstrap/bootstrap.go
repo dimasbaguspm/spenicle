@@ -7,10 +7,19 @@ import (
 	"errors"
 	"fmt"
 
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
+
+// spanPrefix names every bootstrap call Module.Bootstrap.<method>.
+const spanPrefix = "Module.Bootstrap."
+
+// startSpan is the single place this package spells its span names.
+func startSpan(ctx context.Context, method string) (context.Context, func()) {
+	return telemetry.StartSpan(ctx, spanPrefix+method)
+}
 
 // Contract is what the process startup needs. It exists so a caller can see one
 // method instead of the four repositories it touches.
@@ -34,6 +43,9 @@ var _ Contract = (*Service)(nil)
 // EnsureBaseline locks the base currency, verifies the secret fingerprint and
 // seeds a minimal chart of accounts on an empty database.
 func (s *Service) EnsureBaseline(ctx context.Context, baseCurrency, fingerprint string) (string, error) {
+	ctx, endSpan := startSpan(ctx, "EnsureBaseline")
+	defer endSpan()
+
 	if _, err := entity.CurrencyByCode(baseCurrency); err != nil {
 		return "", err
 	}

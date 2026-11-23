@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
 const healthTimeout = 2 * time.Second
@@ -19,7 +20,10 @@ type healthResponse struct {
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), healthTimeout)
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Health.Check")
+	defer endSpan()
+
+	ctx, cancel := context.WithTimeout(ctx, healthTimeout)
 	defer cancel()
 
 	schemaVersion, err := s.deps.Health.SchemaVersion(ctx)

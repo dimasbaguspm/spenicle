@@ -3,11 +3,13 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
@@ -42,7 +44,10 @@ type Config struct {
 }
 
 // Load reads the environment and fails fast on values that cannot work.
-func Load() (Config, error) {
+func Load(ctx context.Context) (Config, error) {
+	_, endSpan := telemetry.StartSpan(ctx, "Common.Config.Load")
+	defer endSpan()
+
 	cfg := Config{
 		Addr:             env(EnvAddr, defaultAddr),
 		DataDir:          env(EnvDataDir, defaultDataDir),

@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
 
@@ -20,9 +21,21 @@ type Store struct {
 	db *sql.DB
 }
 
-// New opens (or creates) the database and returns a store satisfying all four
-// contracts.
+// spanPrefix names every database call Repository.Sqlite.<method>, so a trace
+// reads like the call stack and a slow query is one filter away.
+const spanPrefix = "Repository.Sqlite."
+
+// startSpan is the single place this package spells its span names.
+func startSpan(ctx context.Context, method string) (context.Context, func()) {
+	return telemetry.StartSpan(ctx, spanPrefix+method)
+}
+
+// New opens (or creates) the database and returns a store satisfying every
+// repository contract.
 func New(ctx context.Context, cfg Config) (*Store, error) {
+	ctx, endSpan := startSpan(ctx, "New")
+	defer endSpan()
+
 	db, err := Open(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -34,11 +47,15 @@ func New(ctx context.Context, cfg Config) (*Store, error) {
 // NewStore wraps an existing handle. Migrating is the caller's step.
 func NewStore(db *sql.DB) *Store { return &Store{db: db} }
 
-// DB exposes the handle for migration and for tests that assert on rows.
+// DB exposes the handle for migration and for tests that assert on rows. It is
+// an accessor, not a unit of work, so it opens no span.
 func (s *Store) DB() *sql.DB { return s.db }
 
 // Close releases the file. WAL checkpoints on the way out.
-func (s *Store) Close() error {
+func (s *Store) Close(ctx context.Context) error {
+	_, endSpan := startSpan(ctx, "Close")
+	defer endSpan()
+
 	if err := s.db.Close(); err != nil {
 		return fmt.Errorf("close sqlite: %w", err)
 	}

@@ -40,7 +40,7 @@ func aFreshWorld(ctx context.Context, _ *godog.Scenario) (context.Context, error
 
 func tearDownWorld(ctx context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
 	if w, ok := ctx.Value(worldKey{}).(*world); ok {
-		w.shutdown()
+		w.shutdown(ctx)
 	}
 
 	return ctx, nil
@@ -67,7 +67,7 @@ func aRunningAPI(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if err := w.boot(); err != nil {
+	if err := w.boot(ctx); err != nil {
 		return ctx, err
 	}
 
@@ -108,7 +108,7 @@ func sendWithoutBody(ctx context.Context, method, path string) (context.Context,
 		return ctx, err
 	}
 
-	return ctx, w.do(method, path, nil)
+	return ctx, w.do(ctx, method, path, nil)
 }
 
 func sendWithBody(ctx context.Context, method, path string, doc *godog.DocString) (context.Context, error) {
@@ -122,7 +122,7 @@ func sendWithBody(ctx context.Context, method, path string, doc *godog.DocString
 		return ctx, err
 	}
 
-	return ctx, w.do(method, path, []byte(body))
+	return ctx, w.do(ctx, method, path, []byte(body))
 }
 
 func responseStatusIs(ctx context.Context, want int) (context.Context, error) {
@@ -219,7 +219,7 @@ func theStoreHolds(ctx context.Context, table *godog.Table) (context.Context, er
 			return ctx, fmt.Errorf("row %d count %q is not a number", i, row.Cells[1].Value)
 		}
 
-		got, err := w.countTable(name)
+		got, err := w.countTable(ctx, name)
 		if err != nil {
 			return ctx, err
 		}
