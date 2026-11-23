@@ -47,6 +47,8 @@ type ImportRow struct {
 	Status        string
 	ClashKind     string
 	ClashEntryRef string
+	EditedAt      *time.Time
+	EditedFields  string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -55,6 +57,23 @@ type ImportFilter struct {
 	Status string
 	Cursor string
 	Limit  int
+}
+
+type ImportEvent struct {
+	ID       int64
+	Ref      string
+	BatchID  int64
+	Kind     string
+	RowIndex *int
+	Payload  string
+	Actor    string
+	At       time.Time
+}
+
+type ImportEventFilter struct {
+	BatchID int64
+	Cursor  string
+	Limit   int
 }
 
 type EntryProbe struct {

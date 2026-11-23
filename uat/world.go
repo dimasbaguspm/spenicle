@@ -152,6 +152,21 @@ func (w *world) ageImportBatch(ctx context.Context) error {
 	return nil
 }
 
+func (w *world) countImportEvents(ctx context.Context, kind string) (int, error) {
+	if w.store == nil {
+		return 0, errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	var count int
+
+	if err := w.store.DB().QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM import_events WHERE kind = ?`, kind).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count %s events: %w", kind, err)
+	}
+
+	return count, nil
+}
+
 func (w *world) artifactIsGone(ctx context.Context) error {
 	if w.store == nil || w.artifacts == nil {
 		return errors.New(`no running API: add the step "a running API" first`)
@@ -382,7 +397,7 @@ func (w *world) boot(ctx context.Context) error {
 		Ledger:   ledgerService,
 		Captures: queue,
 		Imports: imports.New(
-			store, store, store, ledgerService, artifacts, settingsService, clockSystem,
+			store, store, store, store, ledgerService, artifacts, settingsService, clockSystem,
 		),
 		Accounts:      store,
 		Payees:        store,
@@ -523,6 +538,7 @@ func (w *world) clearDatabase(ctx context.Context) error {
 	}
 
 	clearOrder := []string{
+		"import_events",
 		"import_rows",
 		"import_batches",
 		"artifacts",

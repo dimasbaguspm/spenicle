@@ -98,7 +98,12 @@ type Imports interface {
 	ImportRows(ctx context.Context, batchID int64) ([]entity.ImportRow, error)
 	UpdateImportRow(ctx context.Context, row entity.ImportRow) (entity.ImportRow, error)
 	ExpiredImportBatches(ctx context.Context, now time.Time, limit int) ([]entity.ImportBatch, error)
-	DropImportBatch(ctx context.Context, ref string) (int, error)
+	DropImportBatch(ctx context.Context, ref string, event entity.ImportEvent) (int, error)
+}
+
+type ImportEvents interface {
+	InsertImportEvent(ctx context.Context, event entity.ImportEvent) (entity.ImportEvent, error)
+	ListImportEvents(ctx context.Context, filter entity.ImportEventFilter) ([]entity.ImportEvent, error)
 }
 
 // Exporter reads whole tables for the export document: no filter, no cursor and

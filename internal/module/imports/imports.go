@@ -15,6 +15,17 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 )
 
+const (
+	rowFieldOccurredOn  = "occurred_on"
+	rowFieldAmountMinor = "amount_minor"
+	rowFieldDescription = "description"
+	rowFieldCategoryRef = "category_ref"
+	rowFieldPayeeRef    = "payee_ref"
+	rowFieldStatus      = "status"
+
+	rowFieldCount = 6
+)
+
 type ArtifactStore interface {
 	Put(ctx context.Context, artifact extraction.Artifact) (filestore.Record, error)
 }
@@ -24,8 +35,8 @@ type Contract interface {
 	List(ctx context.Context, filter entity.ImportFilter) ([]entity.ImportBatch, error)
 	Get(ctx context.Context, ref string) (entity.ImportBatch, error)
 	PatchRow(ctx context.Context, ref string, index int64, update RowUpdate) (entity.ImportBatch, error)
-	Commit(ctx context.Context, ref string) (entity.ImportBatch, error)
-	Reject(ctx context.Context, ref string) (entity.ImportBatch, error)
+	Review(ctx context.Context, ref string, review Review) (entity.ImportBatch, error)
+	ListEvents(ctx context.Context, ref string, filter entity.ImportEventFilter) ([]entity.ImportEvent, error)
 }
 
 type CreateInput struct {
@@ -45,7 +56,41 @@ type RowUpdate struct {
 	Status      *string
 }
 
+type Review struct {
+	Action string
+	Reason string
+}
+
 func (u RowUpdate) DescribesNothing() bool {
-	return u.OccurredOn == nil && u.AmountMinor == nil && u.Description == nil &&
-		u.CategoryRef == nil && u.PayeeRef == nil && u.Status == nil
+	return len(u.Fields()) == 0
+}
+
+func (u RowUpdate) Fields() []string {
+	fields := make([]string, 0, rowFieldCount)
+
+	if u.OccurredOn != nil {
+		fields = append(fields, rowFieldOccurredOn)
+	}
+
+	if u.AmountMinor != nil {
+		fields = append(fields, rowFieldAmountMinor)
+	}
+
+	if u.Description != nil {
+		fields = append(fields, rowFieldDescription)
+	}
+
+	if u.CategoryRef != nil {
+		fields = append(fields, rowFieldCategoryRef)
+	}
+
+	if u.PayeeRef != nil {
+		fields = append(fields, rowFieldPayeeRef)
+	}
+
+	if u.Status != nil {
+		fields = append(fields, rowFieldStatus)
+	}
+
+	return fields
 }

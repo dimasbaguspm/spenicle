@@ -3,6 +3,7 @@ package handlers
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -74,6 +75,25 @@ type importBatchResponse struct {
 	ExpiresAt   string              `json:"expires_at"`
 	CommittedAt string              `json:"committed_at,omitempty"`
 	RejectedAt  string              `json:"rejected_at,omitempty"`
+}
+
+type importReviewRequest struct {
+	Action string `json:"action" validate:"required,oneof=commit reject"`
+	Reason string `json:"reason" validate:"max=1000"`
+}
+
+type importEventListRequest struct {
+	Cursor string `query:"cursor" validate:"omitempty,ref"`
+	Limit  int64  `query:"limit"  validate:"omitempty,gte=0,lte=200"`
+}
+
+type importEventResponse struct {
+	Ref      string          `json:"ref"`
+	Kind     string          `json:"kind"`
+	RowIndex *int            `json:"row_index,omitempty"`
+	Payload  json.RawMessage `json:"payload,omitempty"`
+	Actor    string          `json:"actor"`
+	At       string          `json:"at"`
 }
 
 func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
@@ -200,8 +220,8 @@ func (s *Server) PatchImportRow(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toImportResponse(batch, true))
 }
 
-func (s *Server) CommitImport(w http.ResponseWriter, r *http.Request) {
-	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.Commit")
+func (s *Server) PatchImport(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.Patch")
 	defer endSpan()
 
 	ref, ok := bindImportRef(w, r)
@@ -209,7 +229,15 @@ func (s *Server) CommitImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	batch, err := s.deps.Imports.Commit(ctx, ref)
+	var request importReviewRequest
+	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
+		return
+	}
+
+	batch, err := s.deps.Imports.Review(ctx, ref, imports.Review{
+		Action: request.Action,
+		Reason: strings.TrimSpace(request.Reason),
+	})
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 
@@ -219,8 +247,8 @@ func (s *Server) CommitImport(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toImportResponse(batch, true))
 }
 
-func (s *Server) RejectImport(w http.ResponseWriter, r *http.Request) {
-	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.Reject")
+func (s *Server) ListImportEvents(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.Events")
 	defer endSpan()
 
 	ref, ok := bindImportRef(w, r)
@@ -228,14 +256,40 @@ func (s *Server) RejectImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	batch, err := s.deps.Imports.Reject(ctx, ref)
-	if err != nil {
-		s.writeClassified(ctx, w, err)
+	var request importEventListRequest
+	if err := bindQuery(r, &request); err != nil {
+		writeInvalid(w, err)
 
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, toImportResponse(batch, true))
+	filter := entity.ImportEventFilter{
+		Cursor: request.Cursor,
+		Limit:  list.ClampLimit(request.Limit),
+	}
+
+	writeList(
+		ctx, w, s, "events", filter.Limit,
+		func() ([]entity.ImportEvent, error) { return s.deps.Imports.ListEvents(ctx, ref, filter) },
+		func(event entity.ImportEvent) string { return event.Ref },
+		toImportEventResponse,
+	)
+}
+
+func toImportEventResponse(event entity.ImportEvent) importEventResponse {
+	out := importEventResponse{
+		Ref:      event.Ref,
+		Kind:     event.Kind,
+		RowIndex: event.RowIndex,
+		Actor:    event.Actor,
+		At:       event.At.Format(constant.TimestampLayout),
+	}
+
+	if event.Payload != "" {
+		out.Payload = json.RawMessage(event.Payload)
+	}
+
+	return out
 }
 
 func bindImportRef(w http.ResponseWriter, r *http.Request) (string, bool) {

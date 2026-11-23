@@ -1,6 +1,9 @@
 package sqlite
 
 import (
+	"context"
+	"database/sql"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -127,4 +130,39 @@ func (q *listQuery) and(clause string, values ...any) {
 
 func escapeLike(value string) string {
 	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(value)
+}
+
+func pageScan[T any](
+	ctx context.Context,
+	db *sql.DB,
+	what string,
+	builder *listQuery,
+	limit int,
+	scan func(interface{ Scan(dest ...any) error }) (T, error),
+) ([]T, error) {
+	query, args := builder.page(limit)
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select %s: %w", what, err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	out := make([]T, 0, limit+1)
+
+	for rows.Next() {
+		item, scanErr := scan(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+
+		out = append(out, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate %s: %w", what, err)
+	}
+
+	return out, nil
 }

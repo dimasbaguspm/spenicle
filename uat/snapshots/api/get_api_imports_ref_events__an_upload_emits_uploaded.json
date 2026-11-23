@@ -1,0 +1,14 @@
+{
+  "events": [
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "uploaded",
+      "ref": "<ref>"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

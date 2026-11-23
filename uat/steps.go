@@ -49,6 +49,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the response header "([^"]*)" is "([^"]*)"$`, responseHeaderIs)
 	sc.Step(`^the response header "([^"]*)" contains "([^"]*)"$`, responseHeaderContains)
 	sc.Step(`^the import draft is older than its expiry$`, theImportDraftIsExpired)
+	sc.Step(`^the import event log holds (\d+) events? of kind "([a-z_]+)"$`, theImportEventLogHolds)
 	sc.Step(`^the response body hashes to "([^"]*)"$`, responseBodyHashesTo)
 	sc.Step(`^the capture artifact predates the retention$`, theCaptureArtifactPredatesTheRetention)
 	sc.Step(`^the capture artifact is gone$`, theCaptureArtifactIsGone)
@@ -882,4 +883,22 @@ func theImportDraftIsExpired(ctx context.Context) (context.Context, error) {
 	}
 
 	return ctx, w.ageImportBatch(ctx)
+}
+
+func theImportEventLogHolds(ctx context.Context, want int, kind string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	got, err := w.countImportEvents(ctx, kind)
+	if err != nil {
+		return ctx, err
+	}
+
+	if got != want {
+		return ctx, fmt.Errorf("the import event log holds %d %q events, want %d", got, kind, want)
+	}
+
+	return ctx, nil
 }

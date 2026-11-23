@@ -30,7 +30,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 14 | `PATCH /api/captures/{id}` | partial: `approve`, `reject`, `retry`; `match`/`extracted` next |
 | 21 | `GET /healthz` | live |
 | 22 | `GET /api/export` | live: one JSON document, or a zip of CSV sheets and `manifest.json` |
-| 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `POST /api/imports/{ref}/commit`, `POST /api/imports/{ref}/reject` | live: a CSV statement drafts rows, commit posts the accepted ones, idempotent by `client_id` |
+| 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `client_id` |
 | 1 | `POST /api/setup` | next (wizard) |
 | 2 | `POST /api/session`, `POST /api/password` | live: cookie session, password rotation |
 | 4 | `GET/PATCH /api/settings` | partial: `base_currency` while the ledger is empty |

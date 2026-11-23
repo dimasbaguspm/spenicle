@@ -4,7 +4,9 @@
 
 ## Purpose
 
-Turn one uploaded CSV statement into a durable **draft**: rows the user reviews and edits one by one, and one `commit` that posts the accepted ones. Nothing reaches the ledger here.
+Turn one uploaded CSV statement into a durable **draft**: rows the user reviews and edits one by one, then one review action on [`PATCH /api/imports/{ref}`](./PATCH_api_imports_ref.md) — `commit` posts the accepted ones, `reject` discards the draft. Nothing reaches the ledger here.
+
+The upload is also the first row of the batch's event log (`uploaded`, or `resumed` when the same `client_id` and bytes come back); the whole trail is read at [`GET /api/imports/{ref}/events`](./GET_api_imports_ref_events.md).
 
 The statement contract is fixed and small:
 
@@ -34,7 +36,7 @@ Clash detection, deterministic and computed at upload:
 | `invalid_row` | the row does not parse | `skipped` |
 | *(none)* | | `pending` |
 
-A skipped row is a suggestion, not a veto: `PATCH` can set it to `accepted` and the next commit posts it.
+A skipped row is a suggestion, not a veto: `PATCH /api/imports/{ref}/rows/{index}` can set it to `accepted` and the next commit posts it.
 
 ## Path / query params
 
@@ -88,7 +90,7 @@ Idempotency is enforced by the unique index on `import_batches.client_id`: the l
 
 ## Limitations
 
-One currency per batch (the locked base currency) and no FX rate column in the CSV, so a statement in another currency needs the ledger's own routes. No column mapping, no delimiter or encoding detection. The draft expires 24 hours after the last edit unless it is committed; the worker reclaims it.
+One currency per batch (the locked base currency) and no FX rate column in the CSV, so a statement in another currency needs the ledger's own routes. No column mapping, no delimiter or encoding detection. The draft expires 24 hours after the last edit unless it is committed; the worker drops it — rows, blob and an `expired` event — while a committed or rejected batch is kept forever.
 
 ## Sequence
 

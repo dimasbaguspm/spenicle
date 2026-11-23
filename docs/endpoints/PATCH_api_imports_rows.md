@@ -12,7 +12,7 @@ The review screen's row editor; a script that accepts every row it recognises.
 
 ## Downstream
 
-`Module.Imports.PatchRow`: load the batch, refuse a closed one, load the row by `(batch_id, row_index)`, apply the fields that are present, `Repository.Sqlite.UpdateImportRow`, then `ExtendImportBatch` pushes `expires_at` another 24 hours. The response is the whole batch, so the client never merges two documents.
+`Module.Imports.PatchRow`: load the batch, refuse a closed one (`409 import_closed`), load the row by `(batch_id, row_index)`, apply the fields that are present, then `Repository.Sqlite.UpdateImportRow`. The row's `edited_at` is stamped on the first edit and `edited_fields` accumulates the union of the fields touched so far. `ExtendImportBatch` pushes `expires_at` another 24 hours. One `row_edited` event records the field list in request order, and a status change adds a `row_accepted` or `row_skipped` event. The response is the whole batch, so the client never merges two documents.
 
 ## Path / query params
 
@@ -40,7 +40,7 @@ At least one field must be present. The `account_ref` of a row is fixed at uploa
 
 ## Errors
 
-- `409 import_committed` — the batch is `committed` or `rejected`; a closed batch is immutable.
+- `409 import_closed` — the batch is `committed` or `rejected` and the message names which; a closed batch is immutable.
 - `404 not_found` — the batch ref or the row index does not exist.
 - `422 invalid_request` — no field was sent, `status` is not `accepted`/`skipped`, `occurred_on` or `amount_minor` does not parse, a `_ref` is not 32 hex, or the description is too long.
 
@@ -63,7 +63,7 @@ sequenceDiagram
     M->>DB: SELECT import_batches WHERE ref = ?
     alt committed or rejected
         M-->>H: ErrImportClosed
-        H-->>C: 409 import_committed
+        H-->>C: 409 import_closed
     else draft
         M->>DB: SELECT import_rows WHERE batch_id = ? AND row_index = ?
         M->>DB: UPDATE import_rows SET the fields sent, updated_at

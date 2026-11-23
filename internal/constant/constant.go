@@ -90,6 +90,22 @@ const (
 	ImportClashDuplicate       = "duplicate"
 	ImportClashPossible        = "possible_duplicate"
 	ImportClashInvalidRow      = "invalid_row"
+
+	ImportActionCommit = "commit"
+	ImportActionReject = "reject"
+
+	ImportEventUploaded        = "uploaded"
+	ImportEventResumed         = "resumed"
+	ImportEventConflictRefused = "conflict_refused"
+	ImportEventRowEdited       = "row_edited"
+	ImportEventRowAccepted     = "row_accepted"
+	ImportEventRowSkipped      = "row_skipped"
+	ImportEventCommitted       = "committed"
+	ImportEventRejected        = "rejected"
+	ImportEventExpired         = "expired"
+
+	ImportActorUser   = "user"
+	ImportActorWorker = "worker"
 )
 
 const SessionCookie = "spenicle_session"

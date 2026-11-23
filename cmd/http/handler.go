@@ -101,9 +101,9 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /api/imports", s.api.ListImports)
 	mux.HandleFunc("POST /api/imports", s.api.CreateImport)
 	mux.HandleFunc("GET /api/imports/{ref}", s.api.GetImport)
+	mux.HandleFunc("PATCH /api/imports/{ref}", s.api.PatchImport)
+	mux.HandleFunc("GET /api/imports/{ref}/events", s.api.ListImportEvents)
 	mux.HandleFunc("PATCH /api/imports/{ref}/rows/{index}", s.api.PatchImportRow)
-	mux.HandleFunc("POST /api/imports/{ref}/commit", s.api.CommitImport)
-	mux.HandleFunc("POST /api/imports/{ref}/reject", s.api.RejectImport)
 
 	mux.HandleFunc("GET /api/rates", s.api.GetRate)
 	mux.HandleFunc("GET /api/export", s.api.Export)
@@ -228,7 +228,7 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		},
 		Settings: process.Settings,
 		Imports: imports.New(
-			store, store, store, process.Ledger, process.Artifacts, process.Settings, clock.System{},
+			store, store, store, store, process.Ledger, process.Artifacts, process.Settings, clock.System{},
 		),
 		Health:            store,
 		Sealer:            process.Sealer,

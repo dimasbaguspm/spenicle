@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +33,7 @@ const (
 
 type Service struct {
 	batches  repository.Imports
+	events   repository.ImportEvents
 	entries  repository.Ledger
 	accounts repository.Accounts
 	postings ledger.Contract
@@ -48,6 +51,7 @@ type (
 
 func New(
 	batches repository.Imports,
+	events repository.ImportEvents,
 	entries repository.Ledger,
 	accounts repository.Accounts,
 	postings ledger.Contract,
@@ -56,7 +60,7 @@ func New(
 	clock TimeSource,
 ) *Service {
 	return &Service{
-		batches: batches, entries: entries, accounts: accounts,
+		batches: batches, events: events, entries: entries, accounts: accounts,
 		postings: postings, blobs: blobs, base: base, clock: clock,
 	}
 }
@@ -68,6 +72,14 @@ type statementRow struct {
 	AmountMinor int64
 	Description string
 	Valid       bool
+}
+
+type eventFields struct {
+	Fields []string `json:"fields"`
+}
+
+type eventReason struct {
+	Reason string `json:"reason"`
 }
 
 func (s *Service) Create(ctx context.Context, in CreateInput) (entity.ImportBatch, bool, error) {
@@ -95,6 +107,10 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.ImportBatc
 	saved, err := s.batches.InsertImportBatch(ctx, draft)
 	if err != nil {
 		return s.raced(ctx, in, err)
+	}
+
+	if err := s.record(ctx, saved, constant.ImportEventUploaded, nil, ""); err != nil {
+		return entity.ImportBatch{}, false, err
 	}
 
 	return saved, true, nil
@@ -159,10 +175,16 @@ func (s *Service) PatchRow(
 	}
 
 	now := s.clock.Now()
+	previous := row.Status
+	fields := update.Fields()
+	rowIndex := row.RowIndex
 
 	applyUpdate(&row, update)
 
 	row.UpdatedAt = now
+	row.EditedAt = firstEdit(row.EditedAt, now)
+	row.EditedFields = mergeFields(row.EditedFields, fields)
+
 	if _, err := s.batches.UpdateImportRow(ctx, row); err != nil {
 		return entity.ImportBatch{}, err
 	}
@@ -172,11 +194,22 @@ func (s *Service) PatchRow(
 		return entity.ImportBatch{}, err
 	}
 
+	payload := jsonPayload(eventFields{Fields: fields})
+	if err := s.record(ctx, batch, constant.ImportEventRowEdited, &rowIndex, payload); err != nil {
+		return entity.ImportBatch{}, err
+	}
+
+	if kind := statusEvent(previous, row.Status); kind != "" {
+		if err := s.record(ctx, batch, kind, &rowIndex, ""); err != nil {
+			return entity.ImportBatch{}, err
+		}
+	}
+
 	return s.load(ctx, batch)
 }
 
-func (s *Service) Commit(ctx context.Context, ref string) (entity.ImportBatch, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Commit")
+func (s *Service) Review(ctx context.Context, ref string, review Review) (entity.ImportBatch, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Review")
 	defer endSpan()
 
 	batch, found, err := s.batches.ImportBatchByRef(ctx, ref)
@@ -188,12 +221,49 @@ func (s *Service) Commit(ctx context.Context, ref string) (entity.ImportBatch, e
 		return entity.ImportBatch{}, fmt.Errorf("%w: import batch %s", entity.ErrNotFound, ref)
 	}
 
+	switch review.Action {
+	case constant.ImportActionCommit:
+		return s.commit(ctx, batch)
+	case constant.ImportActionReject:
+		return s.reject(ctx, batch, review)
+	default:
+		return entity.ImportBatch{}, fmt.Errorf("%w: action %q",
+			entity.ErrInvalidImport, review.Action)
+	}
+}
+
+func (s *Service) ListEvents(
+	ctx context.Context,
+	ref string,
+	filter entity.ImportEventFilter,
+) ([]entity.ImportEvent, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.ListEvents")
+	defer endSpan()
+
+	batch, found, err := s.batches.ImportBatchByRef(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+
+	if !found {
+		return nil, fmt.Errorf("%w: import batch %s", entity.ErrNotFound, ref)
+	}
+
+	filter.BatchID = batch.ID
+
+	return s.events.ListImportEvents(ctx, filter)
+}
+
+func (s *Service) commit(
+	ctx context.Context,
+	batch entity.ImportBatch,
+) (entity.ImportBatch, error) {
 	if batch.Status == constant.ImportStatusCommitted {
 		return s.load(ctx, batch)
 	}
 
 	if batch.Status != constant.ImportStatusDraft {
-		return entity.ImportBatch{}, fmt.Errorf("%w: %s is %s", entity.ErrImportClosed, ref, batch.Status)
+		return entity.ImportBatch{}, closedError(batch)
 	}
 
 	rows, err := s.batches.ImportRows(ctx, batch.ID)
@@ -216,8 +286,12 @@ func (s *Service) Commit(ctx context.Context, ref string) (entity.ImportBatch, e
 		}
 	}
 
-	closed, err := s.batches.CloseImportBatch(ctx, ref, constant.ImportStatusCommitted, s.clock.Now())
+	closed, err := s.batches.CloseImportBatch(ctx, batch.Ref, constant.ImportStatusCommitted, s.clock.Now())
 	if err != nil {
+		return entity.ImportBatch{}, err
+	}
+
+	if err := s.record(ctx, closed, constant.ImportEventCommitted, nil, ""); err != nil {
 		return entity.ImportBatch{}, err
 	}
 
@@ -226,29 +300,30 @@ func (s *Service) Commit(ctx context.Context, ref string) (entity.ImportBatch, e
 	return closed, nil
 }
 
-func (s *Service) Reject(ctx context.Context, ref string) (entity.ImportBatch, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Reject")
-	defer endSpan()
-
-	batch, found, err := s.batches.ImportBatchByRef(ctx, ref)
-	if err != nil {
-		return entity.ImportBatch{}, err
-	}
-
-	if !found {
-		return entity.ImportBatch{}, fmt.Errorf("%w: import batch %s", entity.ErrNotFound, ref)
-	}
-
+func (s *Service) reject(
+	ctx context.Context,
+	batch entity.ImportBatch,
+	review Review,
+) (entity.ImportBatch, error) {
 	if batch.Status == constant.ImportStatusRejected {
 		return s.load(ctx, batch)
 	}
 
 	if batch.Status != constant.ImportStatusDraft {
-		return entity.ImportBatch{}, fmt.Errorf("%w: %s is %s", entity.ErrImportClosed, ref, batch.Status)
+		return entity.ImportBatch{}, closedError(batch)
 	}
 
-	closed, err := s.batches.CloseImportBatch(ctx, ref, constant.ImportStatusRejected, s.clock.Now())
+	closed, err := s.batches.CloseImportBatch(ctx, batch.Ref, constant.ImportStatusRejected, s.clock.Now())
 	if err != nil {
+		return entity.ImportBatch{}, err
+	}
+
+	payload := ""
+	if review.Reason != "" {
+		payload = jsonPayload(eventReason{review.Reason})
+	}
+
+	if err := s.record(ctx, closed, constant.ImportEventRejected, nil, payload); err != nil {
 		return entity.ImportBatch{}, err
 	}
 
@@ -427,7 +502,15 @@ func (s *Service) resume(
 	fileHash string,
 ) (entity.ImportBatch, bool, error) {
 	if batch.FileHash != fileHash {
+		if err := s.record(ctx, batch, constant.ImportEventConflictRefused, nil, ""); err != nil {
+			return entity.ImportBatch{}, false, err
+		}
+
 		return entity.ImportBatch{}, false, fmt.Errorf("%w: %s", entity.ErrImportConflict, batch.ClientID)
+	}
+
+	if err := s.record(ctx, batch, constant.ImportEventResumed, nil, ""); err != nil {
+		return entity.ImportBatch{}, false, err
 	}
 
 	loaded, err := s.load(ctx, batch)
@@ -486,6 +569,87 @@ func applyUpdate(row *entity.ImportRow, update RowUpdate) {
 	if update.Status != nil {
 		row.Status = *update.Status
 	}
+}
+
+func (s *Service) record(
+	ctx context.Context,
+	batch entity.ImportBatch,
+	kind string,
+	rowIndex *int,
+	payload string,
+) error {
+	_, err := s.events.InsertImportEvent(ctx, entity.ImportEvent{
+		BatchID:  batch.ID,
+		Kind:     kind,
+		RowIndex: rowIndex,
+		Payload:  payload,
+		Actor:    constant.ImportActorUser,
+		At:       s.clock.Now(),
+	})
+	if err != nil {
+		return fmt.Errorf("record %s event: %w", kind, err)
+	}
+
+	return nil
+}
+
+func closedError(batch entity.ImportBatch) error {
+	return fmt.Errorf("%w: %s is %s", entity.ErrImportClosed, batch.Ref, batch.Status)
+}
+
+func firstEdit(edited *time.Time, now time.Time) *time.Time {
+	if edited != nil {
+		return edited
+	}
+
+	return &now
+}
+
+func mergeFields(existing string, added []string) string {
+	seen := make(map[string]struct{}, len(added)+1)
+	fields := make([]string, 0, len(added)+1)
+
+	for _, field := range append(strings.Split(existing, ","), added...) {
+		trimmed := strings.TrimSpace(field)
+		if trimmed == "" {
+			continue
+		}
+
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+
+		seen[trimmed] = struct{}{}
+		fields = append(fields, trimmed)
+	}
+
+	sort.Strings(fields)
+
+	return strings.Join(fields, ",")
+}
+
+func statusEvent(previous, current string) string {
+	if previous == current {
+		return ""
+	}
+
+	switch current {
+	case constant.ImportRowStatusAccepted:
+		return constant.ImportEventRowAccepted
+	case constant.ImportRowStatusSkipped:
+		return constant.ImportEventRowSkipped
+	default:
+		return ""
+	}
+}
+
+func jsonPayload(value any) string {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return ""
+	}
+
+	return string(encoded)
 }
 
 func parseStatement(body []byte) ([]statementRow, error) {

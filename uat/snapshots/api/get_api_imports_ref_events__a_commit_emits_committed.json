@@ -1,0 +1,39 @@
+{
+  "events": [
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "committed",
+      "ref": "<ref>"
+    },
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "row_accepted",
+      "ref": "<ref>",
+      "row_index": 0
+    },
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "row_edited",
+      "payload": {
+        "fields": [
+          "status"
+        ]
+      },
+      "ref": "<ref>",
+      "row_index": 0
+    },
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "uploaded",
+      "ref": "<ref>"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

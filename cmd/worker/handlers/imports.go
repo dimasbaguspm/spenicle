@@ -7,6 +7,7 @@ import (
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
@@ -28,19 +29,23 @@ func (r *Runner) collectImports(ctx context.Context, now time.Time) {
 	}
 
 	for _, batch := range expired {
-		if dropErr := r.dropDraft(ctx, batch); dropErr != nil {
+		if dropErr := r.dropDraft(ctx, batch, now); dropErr != nil {
 			r.logger.WarnContext(ctx, "import gc could not drop a draft",
 				slog.String("ref", batch.Ref), slog.Any("error", dropErr))
 		}
 	}
 }
 
-func (r *Runner) dropDraft(ctx context.Context, batch entity.ImportBatch) error {
+func (r *Runner) dropDraft(ctx context.Context, batch entity.ImportBatch, now time.Time) error {
 	if err := r.files.Remove(ctx, batch.FileHash); err != nil {
 		return fmt.Errorf("remove statement blob: %w", err)
 	}
 
-	dropped, err := r.imports.DropImportBatch(ctx, batch.Ref)
+	dropped, err := r.imports.DropImportBatch(ctx, batch.Ref, entity.ImportEvent{
+		Kind:  constant.ImportEventExpired,
+		Actor: constant.ImportActorWorker,
+		At:    now,
+	})
 	if err != nil {
 		return err
 	}

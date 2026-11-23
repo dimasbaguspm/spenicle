@@ -183,19 +183,29 @@ takes a multipart `file`, a `client_id` (≤ 64) and an optional `account_ref`, 
 CSV whose header is exactly `occurred_on,amount_minor,description`, and writes a
 **draft**: `import_batches` plus one `import_rows` row per line, in one transaction, with
 the bytes put through `internal/repository/filestore` and only `file_hash` kept on the
-batch. Nothing reaches the ledger until `POST /api/imports/{ref}/commit` posts the rows
-the user marked `accepted`, each with `client_id = import:<file_hash>:<row_index>` and
-`source = statement`, which is what makes a replayed commit a no-op. Clash detection runs
-once, at upload, and is deterministic: `already_imported` (that row's `client_id` is
-already in the ledger), `duplicate` (same day, currency and absolute amount, with a
-posting on the batch account), `possible_duplicate` (same amount and currency within 3
-days), `invalid_row` (the line does not parse). A row with any clash defaults to
-`skipped`; `PATCH /api/imports/{ref}/rows/{index}` takes absolute values only, so a retry
-changes nothing, and it bumps `expires_at`. A `draft` lives `24h` past its last edit and
-the worker reclaims an expired one (blob and rows, 50 per run) — a `committed` or
-`rejected` batch keeps its rows for audit. `client_id` is the idempotency key: the same
-key with the same bytes resumes the draft (`200`), the same key with different bytes is
-`409 import_conflict`, and any request against a closed batch is `409 import_committed`.
+Nothing reaches the ledger until `PATCH /api/imports/{ref}` takes one body action — the
+review endpoint is a single route with two actions, not two routes. `commit` posts the
+rows the user marked `accepted`, each with `client_id = import:<file_hash>:<row_index>`
+and `source = statement`, which is what makes a replayed commit a no-op; `reject` closes
+the draft and keeps the evidence, and its optional `reason` (≤ 1000) is stored on the
+event, never on the batch row. `import_events` is the append-only log of every
+transition — `uploaded`, `resumed`, `conflict_refused`, `row_edited`, `row_accepted`,
+`row_skipped`, `committed`, `rejected`, `expired` — written inside the service paths
+(`actor = user`) and by the worker GC (`actor = worker`), and read back through
+`GET /api/imports/{ref}/events` with the shared envelope. Clash detection runs once, at
+upload, and is deterministic: `already_imported` (that row's `client_id` is already in
+the ledger), `duplicate` (same day, currency and absolute amount, with a posting on the
+batch account), `possible_duplicate` (same amount and currency within 3 days),
+`invalid_row` (the line does not parse). A row with any clash defaults to `skipped`;
+`PATCH /api/imports/{ref}/rows/{index}` takes absolute values only, so a retry changes
+nothing, it bumps `expires_at`, and it stamps `edited_at` once with the accumulated
+`edited_fields`. Retention: a `draft` lives `24h` past its last edit and the worker
+drops exactly those — rows, blob and one `expired` event, 50 per run — while a
+`committed` or `rejected` batch keeps its rows, blob and events forever. `client_id` is
+the idempotency key: the same key with the same bytes resumes the draft (`200`), the
+same key with different bytes is `409 import_conflict`, replaying the same review action
+is `200` with the current batch, and the other action or a row edit on a terminal batch
+is `409 import_closed`.
 
 Only these nine are environment variables. **Every other knob — DB path, HTTP
 timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
@@ -364,8 +374,8 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
-  Three files today (`0001_init.sql`, `0002_artifacts.sql`, `0003_imports.sql`) and nothing
-  has shipped, so the
-  schema is still squashed into a base plus forwards. Once a release exists, forwards
+  Four files today (`0001_init.sql`, `0002_artifacts.sql`, `0003_imports.sql`,
+  `0004_import_events.sql`) and nothing has shipped, so the schema is still squashed into
+  a base plus forwards. Once a release exists, forwards
   only — never edit an applied migration, add the next number. The splitter is naive:
   no `;` inside a migration comment.

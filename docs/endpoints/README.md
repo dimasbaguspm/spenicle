@@ -36,8 +36,8 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/imports` | every statement batch, newest first | [`GET_api_imports.md`](./GET_api_imports.md) |
 | `GET` | `/api/imports/{ref}` | one batch with its rows | [`GET_api_imports_ref.md`](./GET_api_imports_ref.md) |
 | `PATCH` | `/api/imports/{ref}/rows/{index}` | edit, accept or skip one drafted row | [`PATCH_api_imports_rows.md`](./PATCH_api_imports_rows.md) |
-| `POST` | `/api/imports/{ref}/commit` | post the accepted rows to the ledger | [`POST_api_imports_commit.md`](./POST_api_imports_commit.md) |
-| `POST` | `/api/imports/{ref}/reject` | discard the draft and keep its rows for audit | [`POST_api_imports_reject.md`](./POST_api_imports_reject.md) |
+| `PATCH` | `/api/imports/{ref}` | commit the draft or reject it, one body action | [`PATCH_api_imports_ref.md`](./PATCH_api_imports_ref.md) |
+| `GET` | `/api/imports/{ref}/events` | the append-only log of one batch | [`GET_api_imports_ref_events.md`](./GET_api_imports_ref_events.md) |
 | `GET` | `/api/analytics/months` | spend and income per calendar month | [`GET_api_analytics_months.md`](./GET_api_analytics_months.md) |
 | `GET` | `/api/analytics/categories` | spend per category for a range | [`GET_api_analytics_categories.md`](./GET_api_analytics_categories.md) |
 | `POST` | `/api/analytics/custom` | save a named analytics view | [`POST_api_analytics_custom.md`](./POST_api_analytics_custom.md) |

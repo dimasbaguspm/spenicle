@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Every statement batch, newest first, so the shell can show what is drafted, what was committed and what was rejected.
+Every statement batch, newest first, so the shell can show what is drafted, what was committed and what was rejected. Terminal batches stay in the list forever: a `committed` or `rejected` one keeps its rows, its blob and its events, and never expires.
 
 ## Upstream
 
@@ -12,7 +12,7 @@ The shell's import list; a script checking whether a draft survived a restart.
 
 ## Downstream
 
-`Module.Imports.List`: `Repository.Sqlite.ListImportBatches`, ordered by `id DESC`, one `status` filter and the shared ref cursor. Rows are **not** loaded here — the list carries `rows_total`, and `GET /api/imports/{ref}` loads the rows.
+`Module.Imports.List`: `Repository.Sqlite.ListImportBatches`, ordered by `id DESC`, one `status` filter and the shared ref cursor. The filter matches any of the three states, so `status=committed` and `status=rejected` return the closed batches the worker leaves alone. Rows are **not** loaded here — the list carries `rows_total`, and `GET /api/imports/{ref}` loads the rows.
 
 ## Path / query params
 
@@ -38,7 +38,7 @@ None.
 
 ## Limitations
 
-No date or `client_id` filter; the ledger-sized list is small enough that `status` plus the cursor covers the shell. Rows are never inlined, so a hundred-row draft costs one extra request.
+No date or `client_id` filter; the ledger-sized list is small enough that `status` plus the cursor covers the shell. Rows are never inlined, so a hundred-row draft costs one extra request — `GET /api/imports/{ref}` loads them and `GET /api/imports/{ref}/events` loads the log.
 
 ## Sequence
 

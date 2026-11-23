@@ -1,0 +1,28 @@
+{
+  "events": [
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "row_skipped",
+      "ref": "<ref>",
+      "row_index": 1
+    },
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "row_edited",
+      "payload": {
+        "fields": [
+          "status"
+        ]
+      },
+      "ref": "<ref>",
+      "row_index": 1
+    }
+  ],
+  "meta": {
+    "has_more": true,
+    "limit": 2,
+    "next_cursor": "<ref>"
+  }
+}

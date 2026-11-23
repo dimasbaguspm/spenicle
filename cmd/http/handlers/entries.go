@@ -351,6 +351,6 @@ var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{entity.ErrWeakPassword, http.StatusUnprocessableEntity, "weak_password"},
 	{entity.ErrBaseCurrencyLocked, http.StatusConflict, "base_currency_locked"},
 	{entity.ErrImportConflict, http.StatusConflict, "import_conflict"},
-	{entity.ErrImportClosed, http.StatusConflict, "import_committed"},
+	{entity.ErrImportClosed, http.StatusConflict, "import_closed"},
 	{entity.ErrInvalidImport, http.StatusUnprocessableEntity, "invalid_request"},
 }

@@ -19,7 +19,10 @@ const importBatchColumns = `import_batches.id, import_batches.ref, import_batche
 	import_batches.expires_at, import_batches.committed_at, import_batches.rejected_at`
 
 const importRowColumns = `id, ref, batch_id, row_index, occurred_on, amount_minor, description,
-	account_ref, category_ref, payee_ref, status, clash_kind, clash_entry_ref, created_at, updated_at`
+	account_ref, category_ref, payee_ref, status, clash_kind, clash_entry_ref, edited_at,
+	edited_fields, created_at, updated_at`
+
+const importEventColumns = `id, ref, batch_id, kind, row_index, payload_json, actor, at`
 
 func (s *Store) InsertImportBatch(ctx context.Context, batch entity.ImportBatch) (entity.ImportBatch, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertImportBatch")
@@ -99,38 +102,12 @@ func (s *Store) ListImportBatches(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListImportBatches")
 	defer endSpan()
 
-	limit := clampLimit(filter.Limit)
-
 	builder := newList("import_batches", importBatchColumns)
 	builder.eq("import_batches.status", filter.Status)
 	builder.before("import_batches.id", "import_batches", filter.Cursor)
 	builder.orderBy("import_batches.id DESC")
 
-	query, args := builder.page(limit)
-
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("select import batches: %w", err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	out := make([]entity.ImportBatch, 0, limit+1)
-
-	for rows.Next() {
-		batch, scanErr := scanImportBatchRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-
-		out = append(out, batch)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate import batches: %w", err)
-	}
-
-	return out, nil
+	return pageScan(ctx, s.db, "import batches", builder, clampLimit(filter.Limit), scanImportBatchRow)
 }
 
 func (s *Store) CloseImportBatch(
@@ -227,7 +204,7 @@ func (s *Store) UpdateImportRow(
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE import_rows SET
 			occurred_on = ?, amount_minor = ?, description = ?, category_ref = ?,
-			payee_ref = ?, status = ?, updated_at = ?
+			payee_ref = ?, status = ?, edited_at = ?, edited_fields = ?, updated_at = ?
 		WHERE id = ?`,
 		row.OccurredOn.Format(constant.DateLayout),
 		row.AmountMinor,
@@ -235,6 +212,8 @@ func (s *Store) UpdateImportRow(
 		nullString(row.CategoryRef),
 		nullString(row.PayeeRef),
 		row.Status,
+		nullTime(row.EditedAt),
+		nullString(row.EditedFields),
 		row.UpdatedAt.UTC().Format(constant.TimestampLayout),
 		row.ID,
 	)
@@ -296,7 +275,7 @@ func (s *Store) ExpiredImportBatches(
 	return expired, nil
 }
 
-func (s *Store) DropImportBatch(ctx context.Context, ref string) (int, error) {
+func (s *Store) DropImportBatch(ctx context.Context, ref string, event entity.ImportEvent) (int, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.DropImportBatch")
 	defer endSpan()
 
@@ -317,6 +296,10 @@ func (s *Store) DropImportBatch(ctx context.Context, ref string) (int, error) {
 
 		dropped = int(count)
 
+		if insertErr := insertImportEvent(ctx, tx, event, ref); insertErr != nil {
+			return insertErr
+		}
+
 		if _, execErr = tx.ExecContext(ctx,
 			`DELETE FROM import_batches WHERE ref = ?`, ref); execErr != nil {
 			return fmt.Errorf("delete import batch: %w", execErr)
@@ -331,6 +314,53 @@ func (s *Store) DropImportBatch(ctx context.Context, ref string) (int, error) {
 	return dropped, nil
 }
 
+func (s *Store) InsertImportEvent(
+	ctx context.Context,
+	event entity.ImportEvent,
+) (entity.ImportEvent, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertImportEvent")
+	defer endSpan()
+
+	res, err := s.db.ExecContext(ctx, `
+		INSERT INTO import_events (ref, batch_id, kind, row_index, payload_json, actor, at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		refOf(event),
+		event.BatchID,
+		event.Kind,
+		nullRowIndex(event.RowIndex),
+		nullString(event.Payload),
+		event.Actor,
+		event.At.UTC().Format(constant.TimestampLayout),
+	)
+	if err != nil {
+		return entity.ImportEvent{}, fmt.Errorf("insert import event: %w", err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return entity.ImportEvent{}, fmt.Errorf("import event id: %w", err)
+	}
+
+	event.ID = id
+
+	return event, nil
+}
+
+func (s *Store) ListImportEvents(
+	ctx context.Context,
+	filter entity.ImportEventFilter,
+) ([]entity.ImportEvent, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListImportEvents")
+	defer endSpan()
+
+	builder := newList("import_events", importEventColumns)
+	builder.and("import_events.batch_id = ?", filter.BatchID)
+	builder.before("import_events.id", "import_events", filter.Cursor)
+	builder.orderBy("import_events.id DESC")
+
+	return pageScan(ctx, s.db, "import events", builder, clampLimit(filter.Limit), scanImportEventRow)
+}
+
 func insertImportRow(ctx context.Context, tx *sql.Tx, row *entity.ImportRow) error {
 	if row.Ref == "" {
 		row.Ref = uuid.New()
@@ -339,8 +369,9 @@ func insertImportRow(ctx context.Context, tx *sql.Tx, row *entity.ImportRow) err
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO import_rows
 			(ref, batch_id, row_index, occurred_on, amount_minor, description, account_ref,
-			 category_ref, payee_ref, status, clash_kind, clash_entry_ref, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 category_ref, payee_ref, status, clash_kind, clash_entry_ref, edited_at, edited_fields,
+			 created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		row.Ref,
 		row.BatchID,
 		row.RowIndex,
@@ -353,6 +384,8 @@ func insertImportRow(ctx context.Context, tx *sql.Tx, row *entity.ImportRow) err
 		row.Status,
 		nullString(row.ClashKind),
 		nullString(row.ClashEntryRef),
+		nullTime(row.EditedAt),
+		nullString(row.EditedFields),
 		row.CreatedAt.UTC().Format(constant.TimestampLayout),
 		row.UpdatedAt.UTC().Format(constant.TimestampLayout),
 	)
@@ -428,24 +461,35 @@ func scanImportBatchRow(scanner interface{ Scan(dest ...any) error }) (entity.Im
 
 func scanImportRowRow(scanner interface{ Scan(dest ...any) error }) (entity.ImportRow, error) {
 	var (
-		row         entity.ImportRow
-		occurredRaw string
-		category    sql.NullString
-		payee       sql.NullString
-		clashKind   sql.NullString
-		clashEntry  sql.NullString
-		createdRaw  string
-		updatedRaw  string
+		row          entity.ImportRow
+		occurredRaw  string
+		category     sql.NullString
+		payee        sql.NullString
+		clashKind    sql.NullString
+		clashEntry   sql.NullString
+		editedAt     sql.NullString
+		editedFields sql.NullString
+		createdRaw   string
+		updatedRaw   string
 	)
 
 	err := scanner.Scan(
 		&row.ID, &row.Ref, &row.BatchID, &row.RowIndex, &occurredRaw, &row.AmountMinor,
 		&row.Description, &row.AccountRef, &category, &payee, &row.Status, &clashKind,
-		&clashEntry, &createdRaw, &updatedRaw,
+		&clashEntry, &editedAt, &editedFields, &createdRaw, &updatedRaw,
 	)
 	if err != nil {
 		return entity.ImportRow{}, err
 	}
+
+	if editedAt.Valid {
+		row.EditedAt, err = timestampOf("edited_at", editedAt.String)
+		if err != nil {
+			return entity.ImportRow{}, err
+		}
+	}
+
+	row.EditedFields = editedFields.String
 
 	if row.OccurredOn, err = time.Parse(constant.DateLayout, occurredRaw); err != nil {
 		return entity.ImportRow{}, fmt.Errorf("occurred_on %q: %w", occurredRaw, err)
@@ -483,4 +527,68 @@ func timestampOf(field, raw string) (*time.Time, error) {
 	}
 
 	return &parsed, nil
+}
+
+func insertImportEvent(ctx context.Context, tx *sql.Tx, event entity.ImportEvent, batchRef string) error {
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO import_events (ref, batch_id, kind, row_index, payload_json, actor, at)
+		VALUES (?, (SELECT id FROM import_batches WHERE ref = ?), ?, ?, ?, ?, ?)`,
+		refOf(event),
+		batchRef,
+		event.Kind,
+		nullRowIndex(event.RowIndex),
+		nullString(event.Payload),
+		event.Actor,
+		event.At.UTC().Format(constant.TimestampLayout),
+	); err != nil {
+		return fmt.Errorf("insert import event: %w", err)
+	}
+
+	return nil
+}
+
+func scanImportEventRow(scanner interface{ Scan(dest ...any) error }) (entity.ImportEvent, error) {
+	var (
+		event    entity.ImportEvent
+		rowIndex sql.NullInt64
+		payload  sql.NullString
+		atRaw    string
+	)
+
+	err := scanner.Scan(
+		&event.ID, &event.Ref, &event.BatchID, &event.Kind, &rowIndex, &payload,
+		&event.Actor, &atRaw,
+	)
+	if err != nil {
+		return entity.ImportEvent{}, err
+	}
+
+	if rowIndex.Valid {
+		index := int(rowIndex.Int64)
+		event.RowIndex = &index
+	}
+
+	event.Payload = payload.String
+
+	if event.At, err = parseTimestamp("at", atRaw); err != nil {
+		return entity.ImportEvent{}, err
+	}
+
+	return event, nil
+}
+
+func refOf(event entity.ImportEvent) string {
+	if event.Ref == "" {
+		return uuid.New()
+	}
+
+	return event.Ref
+}
+
+func nullRowIndex(index *int) sql.NullInt64 {
+	if index == nil {
+		return sql.NullInt64{}
+	}
+
+	return sql.NullInt64{Int64: int64(*index), Valid: true}
 }
