@@ -526,7 +526,7 @@ approved. Accepts JSON text or a multipart upload.
 **Upstream.** PWA share target, Shortcut, agent dumping a receipt, email poller (later).
 **Downstream.** `Module.Captures.Create`: dedupe key `sha256(kind|client_id|artifact_hash|raw_text)`,
 seal the payload, insert the row, then — when `SNAPTOJSON_API_KEY` is set — submit the
-file to `Repository.Snaptojson.Submit` and store the vendor's answer.
+file to `Repository.Snaptojson.Posting` and store the vendor's answer.
 
 **Body (JSON)**
 
@@ -592,7 +592,7 @@ the queue, ledger untouched), or **retry** (read the vendor's answer back).
 
 **Upstream.** Review screen; the vendor reading a snap back.
 **Downstream.** `approve` → `Module.Ledger.Post` then `UpdateCapture`;
-`reject` → sealed reason + `UpdateCapture`; `retry` → `Repository.Snaptojson.Fetch`
+`reject` → sealed reason + `UpdateCapture`; `retry` → `Repository.Snaptojson.Polling`
 then map the report onto the row.
 
 **Path params.** `id` (int, required).

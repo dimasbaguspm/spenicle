@@ -122,7 +122,10 @@ func New(endpoint, apiKey string, timeout time.Duration) (Extractor, error) {
 // Submit posts one file. A 202 report is returned as a report, not an error: the
 // caller stores JobRef and reads it back later.
 func (c *Client) Submit(ctx context.Context, artifact Artifact) (Report, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Snaptojson.Submit")
+	// Posting and Polling are separate spans on purpose: an expensive, billed submit
+	// and a free read-back are different events, and a trace should say which one it
+	// was without reading the arguments.
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Snaptojson.Posting")
 	defer endSpan()
 
 	if len(artifact.Bytes) == 0 {
@@ -163,7 +166,7 @@ func (c *Client) Submit(ctx context.Context, artifact Artifact) (Report, error) 
 // Fetch reads a snap back by id. This is how a 202 is polled and how a retry works:
 // the vendor is charged once, the read-back is free.
 func (c *Client) Fetch(ctx context.Context, jobRef string) (Report, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Snaptojson.Fetch")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Snaptojson.Polling")
 	defer endSpan()
 
 	if strings.TrimSpace(jobRef) == "" {

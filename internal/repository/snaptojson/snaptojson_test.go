@@ -11,6 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+
 	"github.com/dimasbaguspm/spenicle/internal/repository/snaptojson"
 )
 
@@ -193,5 +197,43 @@ func TestErrorsCarryTheEnvelope(t *testing.T) {
 func TestNewRefusesAnEmptyKey(t *testing.T) {
 	if _, err := snaptojson.New("https://example.test", "", time.Second); err == nil {
 		t.Fatal("an empty key must fail: the vendor has no anonymous mode")
+	}
+}
+
+// TestSubmitAndFetchUseDistinctSpans keeps the o11y contract: a billed submit and a
+// free read-back must be tellable apart in a trace without reading the span payload.
+func TestSubmitAndFetchUseDistinctSpans(t *testing.T) {
+	server, _ := newServer(t, http.StatusOK, `{"job_ref":"snap_1","status":"COMPLETED"}`)
+
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+
+	previous := otel.GetTracerProvider()
+
+	otel.SetTracerProvider(provider)
+	t.Cleanup(func() { otel.SetTracerProvider(previous) })
+
+	extractor, err := snaptojson.New(server.URL, "k", 5*time.Second)
+	if err != nil {
+		t.Fatalf("new: %v", err)
+	}
+
+	if _, err := extractor.Submit(t.Context(), snaptojson.Artifact{Bytes: []byte("x")}); err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+
+	if _, err := extractor.Fetch(t.Context(), "snap_1"); err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+
+	seen := map[string]bool{}
+	for _, ended := range recorder.Ended() {
+		seen[ended.Name()] = true
+	}
+
+	for _, want := range []string{"Repository.Snaptojson.Posting", "Repository.Snaptojson.Polling"} {
+		if !seen[want] {
+			t.Fatalf("span %q missing; got %v", want, seen)
+		}
 	}
 }

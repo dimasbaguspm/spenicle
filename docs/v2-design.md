@@ -78,7 +78,7 @@ argument and opens one span named after the layer that owns the work:
 |---|---|
 | handlers | `Handler.Entries.Post`, `Handler.Health.Check` |
 | modules | `Module.Ledger.Post`, `Module.Bootstrap.EnsureBaseline` |
-| repositories | `Repository.Sqlite.InsertEntry`, `Repository.Snaptojson.Extract` |
+| repositories | `Repository.Sqlite.InsertEntry`, `Repository.Snaptojson.Posting`/`.Polling` |
 | common | `Common.Config.Load`, `Common.Seal.Seal` |
 
 Spans start from `internal/common/otel.StartSpan`, which returns the derived
