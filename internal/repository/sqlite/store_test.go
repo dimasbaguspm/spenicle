@@ -31,8 +31,8 @@ func baseline(t *testing.T, store *sqlite.Store) (int64, int64) {
 	t.Helper()
 	ctx := t.Context()
 
-	if err := store.SetSetting(ctx, "base_currency", "IDR"); err != nil {
-		t.Fatalf("set base currency: %v", err)
+	if err := store.SetSetting(ctx, constant.SettingSecretFingerprint, "fingerprint"); err != nil {
+		t.Fatalf("set setting: %v", err)
 	}
 	asset, err := store.CreateAccount(ctx, "Cash", "asset", "IDR")
 	if err != nil {

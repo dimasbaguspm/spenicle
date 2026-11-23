@@ -53,9 +53,8 @@ const (
 )
 
 const (
-	SettingAppSettings        = "app_settings"
-	SettingSecretFingerprint  = "secret_fingerprint"
-	SettingLegacyBaseCurrency = "base_currency"
+	SettingAppSettings       = "app_settings"
+	SettingSecretFingerprint = "secret_fingerprint"
 )
 
 const SessionCookie = "spenicle_session"

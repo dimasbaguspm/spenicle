@@ -187,7 +187,7 @@ func (s *Service) load(ctx context.Context) (entity.Settings, bool, error) {
 	}
 
 	if !found {
-		return s.migrateLegacy(ctx)
+		return entity.DefaultSettings(), false, nil
 	}
 
 	plain, err := s.sealer.Open(ctx, raw)
@@ -201,21 +201,6 @@ func (s *Service) load(ctx context.Context) (entity.Settings, bool, error) {
 	}
 
 	return settings, true, nil
-}
-
-func (s *Service) migrateLegacy(ctx context.Context) (entity.Settings, bool, error) {
-	settings := entity.DefaultSettings()
-
-	legacy, found, err := s.store.Setting(ctx, constant.SettingLegacyBaseCurrency)
-	if err != nil {
-		return entity.Settings{}, false, err
-	}
-
-	if found && legacy != "" {
-		settings.BaseCurrency = legacy
-	}
-
-	return settings, false, nil
 }
 
 func (s *Service) save(ctx context.Context, settings entity.Settings) error {

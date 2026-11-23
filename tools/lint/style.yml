@@ -170,9 +170,6 @@ linters:
       - path: internal/common/seal/
         linters:
           - ireturn
-      - path: internal/repository/snaptojson/
-        linters:
-          - ireturn
       # main wires interfaces by design; returning them is the composition root's job.
       - path: cmd/
         linters:
