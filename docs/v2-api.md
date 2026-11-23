@@ -31,9 +31,9 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 21 | `GET /healthz` | live |
 | 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `client_id` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `client_id` |
-| 1 | `POST /api/setup` | next (wizard) |
+| 1 | `POST /api/setup` | live: chooses the base currency once, before the first entry |
 | 2 | `POST /api/session`, `POST /api/password` | live: cookie session, password rotation |
-| 4 | `GET/PATCH /api/settings` | partial: `base_currency` while the ledger is empty |
+| 4 | `GET/PATCH /api/settings` | `GET` is live; `PATCH` accepts no field yet — `base_currency` is not patchable |
 | 5, 6 | accounts create/patch | next |
 | 7, 8 | payees | next |
 | 15, 16 | recurring | next |
@@ -57,10 +57,14 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 
 | env | default | effect |
 | --- | --- | --- |
-| `DATA_DIR` | `/data` | SQLite file and `artifacts/` documents |
 | `APP_SECRET` | **required** | seals cookies, artifacts, capture payloads, token hashes |
+| `APP_TIMEZONE` | `UTC` | the calendar every date decision uses; set once, at the first boot |
 | `SNAPTOJSON_API_KEY` | unset | enables the SnapToJSON extraction worker |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override the partner URL (proxy, staging) |
+
+The listen address (`:8080`) and the data directory (`./data`) are **not** environment
+variables: they are constants in `internal/common/config/config.go`, and the container
+works in `/data`, which is the volume.
 
 Names carry no prefix on purpose. If several self-hosted services share one `env_file`, qualify
 them yourself — `spenicle.env` is the cheapest separator.
@@ -547,27 +551,20 @@ sequenceDiagram
 
 ## 3.4 `PATCH /api/settings`
 
-`{ "extraction_enabled": true, "extraction_api_url": "...", "last_used_account_id": 3 }`.
-`base_currency` → `409 base_currency_locked`.
+No field is accepted yet. The base currency is chosen once by `POST /api/setup` while the
+ledger is empty (`409 base_currency_locked` afterwards), and the timezone is pinned at boot
+from `APP_TIMEZONE`. Because the decoder refuses unknown fields, sending
+`{"base_currency": "USD"}` here answers `400 invalid_json`; `{}` answers `422 empty_patch`.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant UI as Settings
     participant API as Settings handler
-    participant DB as SQLite
-    UI->>API: PATCH settings with partial map
-    API->>API: require scope admin
-    API->>DB: SELECT base_currency
-    alt body contains base_currency
-        API-->>UI: 409 base_currency_locked
-    else allowed keys
-        API->>DB: BEGIN IMMEDIATE
-        API->>DB: UPSERT settings rows
-        API->>DB: INSERT audit_log action update
-        API->>DB: COMMIT
-        API-->>UI: 200 settings
-    end
+    UI->>API: PATCH settings {"base_currency":"USD"}
+    API-->>UI: 400 invalid_json (unknown field)
+    UI->>API: PATCH settings {}
+    API-->>UI: 422 empty_patch
 ```
 
 ## 3.5 `POST /api/accounts`

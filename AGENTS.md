@@ -58,7 +58,7 @@ internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore,
 ```
 
 The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` posts the
-due recurring rules and opens no port (it ignores `ADDR`), and the hidden
+due recurring rules and opens no port, and the hidden
 `spenicle all` runs both in one process for local development. Each command owns its
 composition root: `cmd/http/http.go` and `cmd/worker/worker.go` mount the command,
 `handler.go` next to each one builds `handlers.Deps` / `handlers.Runner` from the
@@ -111,7 +111,7 @@ Rules that keep it pluggable:
 ```bash
 make hooks      # install the git hook (build + lint + test + UAT before commit)
 make build      # bin/spenicle
-make run        # DATA_DIR=./data ADDR=:8080 go run . all
+make run        # go run . all (listens on :8080, writes to ./data)
 make test       # go test ./... (unit + UAT)
 make uat        # the Gherkin suite plus the containerised mock services (needs Docker)
 make uat-snapshots   # rewrite snapshot files, then review the diff
@@ -136,21 +136,20 @@ in its own job, so a style failure cannot hide a security failure.
 
 ## Environment
 
-Un-prefixed, all optional except `APP_SECRET`:
+Un-prefixed, all optional except `APP_SECRET`. Eight variables, and no ninth: the listen
+address (`:8080`), the data directory (`./data`), the DB path, the artifact and export
+stores and every timeout are constants in `internal/common/config/config.go`.
 
 | var | default | meaning |
 |---|---|---|
-| `DATA_DIR` | `./data` | SQLite file and artifacts live here |
-| `ADDR` | `:8080` | listen address |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals sensitive columns, identifies the database |
+| `APP_TIMEZONE` | `UTC` | IANA name for every calendar decision (the worker's "today"); set once, at the first boot |
 | `SNAPTOJSON_API_KEY` | — | enables the SnapToJSON extraction vendor; unset = manual entry |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override for a proxy or a staging account |
 | `OPENAI_API_KEY` | — | second extraction rail; used when SnapToJSON is unset |
-| `OPENAI_MODEL` | `gpt-4o-mini` | vision model for the OpenAI rail |
-| `OPENAI_HOST` | — | base URL for the OpenAI client; empty keeps the SDK default |
+| `OPENAI_MODEL` | `gpt-4o-mini` (`DefaultOpenAIModel`) | vision model for the OpenAI rail |
+| `OPENAI_HOST` | — | base URL for the OpenAI client; empty keeps the SDK default (`DefaultOpenAIHost` documents it) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
-| `WEB_ORIGIN` | — | the one browser origin allowed to call the API with a cookie; unset = same-origin only |
-| `APP_TIMEZONE` | `UTC` | IANA name for every calendar decision (the worker's "today"); set once, at the first boot |
 
 `APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`
 fails when its fingerprint does not match `settings.secret_fingerprint`. There is no
@@ -168,7 +167,7 @@ changing the password invalidates every cookie at once. The base currency is edi
 while the ledger is empty and locked after the first entry.
 
 Uploaded capture artifacts live **outside** the database, under
-`DATA_DIR/artifacts/<sha[0:2]>/<sha[2:4]>/<sha256>`: the bytes are gzipped when the
+`./data/artifacts/<sha[0:2]>/<sha[2:4]>/<sha256>`: the bytes are gzipped when the
 content type is compressible (`text/*`, `application/json`, `application/xml`,
 `application/pdf`), encrypted with AES-256-GCM under a key derived from `APP_SECRET`
 (HKDF-SHA256, info `spenicle/artifact/v1`), and the plaintext sha is the additional
@@ -177,7 +176,7 @@ missing document, never a broken capture. The worker reclaims the artifact of a
 `rejected` capture once it is older than `ArtifactRetention` (default `720h`, 200 rows
 per run) and stamps `deleted_at`, which is what makes the download route answer `410`.
 `ArtifactMaxBytes` (default `10 << 20`) is the upload ceiling the API refuses above;
-`ArtifactDir` is derived from `DATA_DIR`, so none of the three is an environment
+`ArtifactDir` is `DataDir/artifacts`, so none of the three is an environment
 variable.
 
 **Statement import is two-phase, and the file is the client's.** `POST /api/imports`
@@ -209,15 +208,14 @@ same key with different bytes is `409 import_conflict`, replaying the same revie
 is `200` with the current batch, and the other action or a row edit on a terminal batch
 is `409 import_closed`.
 
-Only these eleven are environment variables. **Every other knob — DB path, HTTP
-timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool sizes, service
-timeouts, shutdown budgets, `/healthz` timeout, request body cap, artifact dir,
-retention and size cap, export dir, retention and stale window, import body/row caps and
-commit chunk, service name (also the tracer name) — has its
-default in `internal/common/config/config.go`**, and the
-resulting value object is `entity.AppConfig`. No viper, on purpose: eleven variables
-and one file beat a precedence chain nobody can predict. A new knob means a new
-constant and field in those two files, nothing else.
+Only those eight are environment variables. **Every other knob — listen address, data
+dir, DB path, HTTP timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool
+sizes, service timeouts, artifact dir, retention and size cap, export dir, retention and
+stale window, import body/row caps and commit chunk, service name (also the tracer name) —
+has its default in `internal/common/config/config.go`**, and the resulting value object is
+`entity.AppConfig`. No viper, on purpose: eight variables and one file beat a precedence
+chain nobody can predict. A new knob means a new constant and field in those two files,
+nothing else; removing one means deleting the constant, the read and the field.
 
 `/healthz` returns `status`, `version` (`<tag>+<sha7>`), `schema_version`,
 `app_secret` fingerprint, `base_currency` and `worker_last_run_at` (RFC3339, empty
@@ -229,7 +227,7 @@ is, and that both services are alive.
 The way out is a job, not a request. `POST /api/exports` writes a `queued` row and
 answers `201`; the worker claims it, renders the ledger through `internal/module/export`
 (one JSON document, or a zip of CSV sheets plus `summary.json` and `manifest.json`),
-stores the bytes in the **export store** (`ExportDir`, `DATA_DIR/exports`, a second
+stores the bytes in the **export store** (`ExportDir`, `./data/exports`, a second
 `filestore.Store` next to the artifact one) and marks it `ready`. `GET
 /api/exports/{ref}/download` streams that blob and records a `downloaded` event;
 `GET /api/exports/{ref}` and `GET /api/exports` are how a client watches the queue.
@@ -245,7 +243,7 @@ loses its blob **from the export store** and answers `410 gone` — 20 of each p
 a blob that is already gone is not an error. Import is the other half and is not built.
 
 The same route takes a **chunked** upload: send `chunk_index` + `chunk_total` and the
-handler appends to `<DATA_DIR>/imports/<client_id>.part`, records the chunk in
+handler appends to `./data/imports/<client_id>.part`, records the chunk in
 `import_uploads`/`import_upload_chunks` idempotently, answers `202` with the progress and
 assembles the draft on the last chunk (`409 import_conflict` when the total disagrees,
 `409 import_closed` for a finished upload). A commit is chunked too: the batch is flipped
@@ -462,7 +460,7 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   /etc/service/spenicle-http /etc/service/spenicle-worker` answers `run:` or `down:`,
   `sv restart spenicle-worker` restarts one process while the other keeps serving, and a
   `down` file in the service dir keeps it stopped across a restart. The worker opens no
-  port, so it ignores `ADDR`; a `docker stop` is a clean exit because runit forwards the
+  port; a `docker stop` is a clean exit because runit forwards the
   signal and waits for both processes.
 - The telemetry flush uses `context.WithoutCancel`; the signal that stops the process
   already cancelled the root context, and without this the last span batch is lost.
@@ -474,7 +472,7 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
 - The artifact files are encrypted with `APP_SECRET`, exactly like the sealed columns:
   a changed secret does not make them readable again, it makes them garbage. Restore the
   old secret or start over, and remember that the ledger survives either way. Rename the
-  artifact directory in (`DATA_DIR/artifacts`) and the next boot silently records every
+  artifact directory in (`./data/artifacts`) and the next boot silently records every
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).

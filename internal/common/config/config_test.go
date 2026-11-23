@@ -14,8 +14,6 @@ func clearEnv(t *testing.T) {
 	t.Helper()
 
 	for _, key := range []string{
-		config.EnvAddr,
-		config.EnvDataDir,
 		config.EnvAppSecret,
 		config.EnvSnapToJSONAPIKey,
 		config.EnvSnapToJSONEndpoint,
@@ -23,7 +21,6 @@ func clearEnv(t *testing.T) {
 		config.EnvOpenAIModel,
 		config.EnvOpenAIHost,
 		config.EnvOTLPEndpoint,
-		config.EnvWebOrigin,
 		config.EnvTimezone,
 	} {
 		t.Setenv(key, "")
@@ -39,15 +36,15 @@ func TestLoadAppliesDefaults(t *testing.T) {
 		t.Fatalf("load: %v", err)
 	}
 
-	if cfg.Addr != config.DefaultAddr {
-		t.Fatalf("addr = %q, want %q", cfg.Addr, config.DefaultAddr)
+	if cfg.Addr != config.ListenAddr {
+		t.Fatalf("addr = %q, want %q", cfg.Addr, config.ListenAddr)
 	}
 
-	if cfg.DataDir != config.DefaultDataDir {
-		t.Fatalf("data dir = %q, want %q", cfg.DataDir, config.DefaultDataDir)
+	if cfg.DataDir != config.DataDir {
+		t.Fatalf("data dir = %q, want %q", cfg.DataDir, config.DataDir)
 	}
 
-	wantPath := filepath.Join(config.DefaultDataDir, config.DefaultDBFile)
+	wantPath := filepath.Join(config.DataDir, config.DefaultDBFile)
 	if cfg.DBPath != wantPath {
 		t.Fatalf("db path = %q, want %q", cfg.DBPath, wantPath)
 	}
@@ -77,13 +74,11 @@ func TestLoadRequiresAppSecret(t *testing.T) {
 	}
 }
 
-func TestLoadReadsEnvironment(t *testing.T) {
+func TestLoadIgnoresTheRemovedStorageAndNetworkVariables(t *testing.T) {
 	clearEnv(t)
 
-	dataDir := "/var/lib/spenicle"
-
-	t.Setenv(config.EnvAddr, "127.0.0.1:9999")
-	t.Setenv(config.EnvDataDir, dataDir)
+	t.Setenv("ADDR", "127.0.0.1:9999")
+	t.Setenv("DATA_DIR", "/var/lib/spenicle")
 	t.Setenv(config.EnvAppSecret, "0123456789abcdef")
 
 	cfg, err := config.Load(t.Context())
@@ -91,19 +86,23 @@ func TestLoadReadsEnvironment(t *testing.T) {
 		t.Fatalf("load: %v", err)
 	}
 
-	if cfg.Addr != "127.0.0.1:9999" {
-		t.Fatalf("addr = %q", cfg.Addr)
+	if cfg.Addr != config.ListenAddr {
+		t.Fatalf("addr = %q, want the fixed %q", cfg.Addr, config.ListenAddr)
 	}
 
-	if want := filepath.Join(dataDir, config.DefaultDBFile); cfg.DBPath != want {
+	if cfg.DataDir != config.DataDir {
+		t.Fatalf("data dir = %q, want the fixed %q", cfg.DataDir, config.DataDir)
+	}
+
+	if want := filepath.Join(config.DataDir, config.DefaultDBFile); cfg.DBPath != want {
 		t.Fatalf("db path = %q, want %q", cfg.DBPath, want)
 	}
 
-	if want := filepath.Join(dataDir, config.DefaultArtifactDirName); cfg.ArtifactDir != want {
+	if want := filepath.Join(config.DataDir, config.DefaultArtifactDirName); cfg.ArtifactDir != want {
 		t.Fatalf("artifact dir = %q, want %q", cfg.ArtifactDir, want)
 	}
 
-	if want := filepath.Join(dataDir, config.DefaultExportDirName); cfg.ExportDir != want {
+	if want := filepath.Join(config.DataDir, config.DefaultExportDirName); cfg.ExportDir != want {
 		t.Fatalf("export dir = %q, want %q", cfg.ExportDir, want)
 	}
 
@@ -145,7 +144,7 @@ func TestDefaultsAreUsable(t *testing.T) {
 		t.Fatalf("open %d < idle %d", cfg.DBMaxOpenConns, cfg.DBMaxIdleConns)
 	}
 
-	if want := filepath.Join(config.DefaultDataDir, config.DefaultDBFile); cfg.DBPath != want {
+	if want := filepath.Join(config.DataDir, config.DefaultDBFile); cfg.DBPath != want {
 		t.Fatalf("default db path = %q, want %q", cfg.DBPath, want)
 	}
 }
@@ -278,35 +277,15 @@ func TestLoadReadsTheOpenAIVariables(t *testing.T) {
 	}
 }
 
-func TestExportDirFollowsDataDir(t *testing.T) {
-	cases := []struct {
-		name    string
-		dataDir string
-	}{
-		{name: "the default data dir", dataDir: config.DefaultDataDir},
-		{name: "an absolute data dir", dataDir: "/srv/spenicle"},
+func TestExportDirIsItsOwnDirectoryUnderTheDataDir(t *testing.T) {
+	cfg := config.Defaults()
+
+	if want := filepath.Join(config.DataDir, config.DefaultExportDirName); cfg.ExportDir != want {
+		t.Fatalf("export dir = %q, want %q", cfg.ExportDir, want)
 	}
 
-	for _, testCase := range cases {
-		t.Run(testCase.name, func(t *testing.T) {
-			clearEnv(t)
-			t.Setenv(config.EnvAppSecret, "0123456789abcdef")
-			t.Setenv(config.EnvDataDir, testCase.dataDir)
-
-			cfg, err := config.Load(t.Context())
-			if err != nil {
-				t.Fatalf("load: %v", err)
-			}
-
-			want := filepath.Join(testCase.dataDir, config.DefaultExportDirName)
-			if cfg.ExportDir != want {
-				t.Fatalf("export dir = %q, want %q", cfg.ExportDir, want)
-			}
-
-			if cfg.ExportDir == cfg.ArtifactDir {
-				t.Fatalf("the exports must not share the artifact dir %q", cfg.ArtifactDir)
-			}
-		})
+	if cfg.ExportDir == cfg.ArtifactDir {
+		t.Fatalf("the exports must not share the artifact dir %q", cfg.ArtifactDir)
 	}
 }
 

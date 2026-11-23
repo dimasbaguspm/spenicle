@@ -241,7 +241,7 @@ and every failure is recorded on it. With `SNAPTOJSON_API_KEY` unset nothing lea
 the box — the capture lands as `pending` and the fields are typed by hand.
 
 The artifact bytes are stored once, before the vendor is called: content addressed under
-`DATA_DIR/artifacts/<sha[0:2]>/<sha[2:4]>/<sha256>`, gzipped when the content type is
+`./data/artifacts/<sha[0:2]>/<sha[2:4]>/<sha256>`, gzipped when the content type is
 compressible, encrypted with AES-256-GCM under an HKDF key derived from `APP_SECRET` and
 the sha as the additional authenticated data. The row keeps `artifact_hash` (sha256) so a
 re-share of the same image is the same capture, and the same bytes uploaded twice are one
@@ -340,7 +340,7 @@ re-encryption path and no in-place reset. The process refuses to boot on a
 fingerprint mismatch, and there are exactly two honest options:
 
 1. **Restore the original `APP_SECRET`.** Nothing is lost, the boot proceeds.
-2. **Start over.** Stop the container, delete `DATA_DIR/spenicle.db` (and `raw/` if it
+2. **Start over.** Stop the container, delete `./data/spenicle.db` (and `raw/` if it
    exists), boot again: the next boot migrates and seeds a fresh database with the
    current secret. The ledger you keep is the one you backed up.
 

@@ -36,8 +36,9 @@ Then open `http://localhost:8080`. Migrations run on boot, and the container log
 the generated first password once — sign in with it and pick your own.
 
 The image runs two supervised processes from the same environment: `spenicle http`
-(the API, the only listener, on `ADDR`) and `spenicle worker` (the due recurring
-rules, no port, so it ignores `ADDR`). Inside the container `sv status
+(the API, the only listener, on `:8080`) and `spenicle worker` (the due recurring
+rules, no port). Neither the listen address nor the data directory is configurable — the
+container works in `/data`, which is the volume. Inside the container `sv status
 /etc/service/spenicle-worker` reports either one, `sv restart spenicle-worker` restarts
 it alone and a `down` file next to its `run` script keeps it stopped. A
 one-shot debug run skips supervision: `docker run --rm --entrypoint /spenicle -e
@@ -75,7 +76,7 @@ sudo chown -R 10001:10001 ./data
 
 | var | default | meaning |
 | --- | --- | --- |
-| `DATA_DIR` | `/data` | SQLite file and `raw/` artifacts |
+| `APP_TIMEZONE` | `UTC` | IANA timezone for every calendar decision; set once, at the first boot |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals capture payloads, artifacts and cookies |
 | `SNAPTOJSON_API_KEY` | unset | enables receipt/statement extraction through SnapToJSON |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | OTLP/HTTP collector; HTTPS assumed, `http://` for plaintext |
@@ -94,8 +95,8 @@ to `.env` and fill in `APP_SECRET`.
 The base currency and the login password are **not** environment variables. They live
 in the app's settings table: a fresh boot generates the first password and prints it
 once, the login screen accepts it, and you are asked to change it. The base currency
-is editable until the first entry exists — after that it is locked, because the
-numbers would stop meaning the same thing.
+is chosen once by `POST /api/setup` before the first entry — after that it is locked,
+because the numbers would stop meaning the same thing. `PATCH /api/settings` refuses it.
 
 ## First run
 

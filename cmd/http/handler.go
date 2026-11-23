@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -29,10 +28,9 @@ import (
 )
 
 type server struct {
-	api       *handlers.Server
-	settings  settings.Contract
-	logger    *logging.Logger
-	webOrigin string
+	api      *handlers.Server
+	settings settings.Contract
+	logger   *logging.Logger
 }
 
 func Handler(ctx context.Context, process *config.Process) (http.Handler, error) {
@@ -50,16 +48,14 @@ func New(deps handlers.Deps) http.Handler {
 	}
 
 	instance := &server{
-		api:       handlers.New(deps),
-		settings:  deps.Settings,
-		logger:    deps.Logger,
-		webOrigin: deps.WebOrigin,
+		api:      handlers.New(deps),
+		settings: deps.Settings,
+		logger:   deps.Logger,
 	}
 
 	routes := instance.routes()
 
 	return httpx.Chain(instance.requireSession(routes),
-		httpx.CORS(deps.WebOrigin),
 		httpx.Recover(deps.Logger),
 		httpx.Observe(routeOf(routes)),
 		httpx.Log(deps.Logger),
@@ -134,16 +130,8 @@ func (s *server) routes() *http.ServeMux {
 
 func (s *server) requireSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodOptions || r.URL.Path == "/api/session" ||
-			r.URL.Path == "/healthz" {
+		if r.URL.Path == "/api/session" || r.URL.Path == "/healthz" {
 			next.ServeHTTP(w, r)
-
-			return
-		}
-
-		if !s.crossOriginAllowed(r) {
-			httpx.WriteError(w, http.StatusForbidden, "cross_origin_denied",
-				"this request came from another origin and was refused")
 
 			return
 		}
@@ -184,29 +172,6 @@ func (s *server) requireSession(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-func (s *server) crossOriginAllowed(r *http.Request) bool {
-	switch r.Method {
-	case http.MethodGet, http.MethodHead, http.MethodOptions:
-		return true
-	}
-
-	origin := strings.TrimSpace(r.Header.Get("Origin"))
-	if origin == "" {
-		return true
-	}
-
-	parsed, err := url.Parse(origin)
-	if err != nil {
-		return false
-	}
-
-	if strings.EqualFold(parsed.Host, r.Host) {
-		return true
-	}
-
-	return s.webOrigin != "" && strings.EqualFold(origin, s.webOrigin)
 }
 
 func (s *server) writeInternal(ctx context.Context, w http.ResponseWriter, err error) {
@@ -263,7 +228,6 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		MaxBodyBytes:      process.Cfg.MaxBodyBytes,
 		MaxArtifactBytes:  process.Cfg.ArtifactMaxBytes,
 		ImportMaxBytes:    process.Cfg.ImportMaxBytes,
-		WebOrigin:         process.Cfg.WebOrigin,
 		ExtractionEnabled: process.Cfg.SnapToJSONAPIKey != "",
 		AIAssistance:      process.Cfg.AIAssistance(),
 		Logger:            process.Logger,

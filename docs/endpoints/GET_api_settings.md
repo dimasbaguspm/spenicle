@@ -36,11 +36,18 @@ None.
 boot; `ai_assistance` reflects whether `OPENAI_HOST`, `OPENAI_API_KEY` and
 `OPENAI_MODEL` are all set. Neither is editable through the API yet, and the two are
 independent: a SnapToJSON deployment reports `extraction_enabled: true` with
-`ai_assistance: false`. `timezone` is **read-only**: it is
-set once, at the first boot, from `APP_TIMEZONE` (default `UTC`), stored in the
-sealed `settings` row, and no request can change it. A later boot whose
+`ai_assistance: false`. `base_currency` is chosen once by
+[`POST /api/setup`](./POST_api_setup.md) and locked after the first entry;
+[`PATCH /api/settings`](./PATCH_api_settings.md) refuses it as an unknown field. `timezone`
+is **read-only**: it is set once, at the first boot, from `APP_TIMEZONE` (default `UTC`),
+stored in the sealed `settings` row, and no request can change it. A later boot whose
 `APP_TIMEZONE` disagrees with the stored value refuses to start, so the calendar
 of the worker and the calendar the client reads can never drift apart.
+
+`base_currency` and `timezone` are always in the body — no `omitempty` — in this route and
+in every other payload that carries them (`GET /api/meta`, `POST /api/session`,
+`POST /api/setup`, `POST /api/password`, `GET /healthz`), so a client never has to guess a
+missing default.
 
 
 

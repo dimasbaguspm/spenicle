@@ -38,7 +38,6 @@ type Deps struct {
 	MaxBodyBytes      int64
 	MaxArtifactBytes  int64
 	ImportMaxBytes    int64
-	WebOrigin         string
 	ExtractionEnabled bool
 	AIAssistance      bool
 	Logger            *logging.Logger

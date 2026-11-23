@@ -34,12 +34,11 @@ COPY config/runit/spenicle-worker /etc/service/spenicle-worker
 
 RUN chmod 755 /etc/service/*/run /etc/service/*/finish
 
-WORKDIR /data
+# The data dir is fixed (./data) and relative, so the working directory decides where
+# it lands: /data here, which is the volume. No DATA_DIR and no ADDR to configure.
+WORKDIR /
 VOLUME ["/data"]
 EXPOSE 8080
-
-ENV DATA_DIR=/data \
-    ADDR=:8080
 
 # runsvdir stays PID 1 as root and starts one runsv per service directory; each
 # run script drops to uid 10001 through chpst.

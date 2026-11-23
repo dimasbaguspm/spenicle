@@ -27,7 +27,7 @@ None.
 
 ## Response
 
-**200** `{"base_currency":"USD","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
+**200** `{"base_currency":"USD","timezone":"UTC","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
 
 ## Errors
 
@@ -37,7 +37,10 @@ entry exists; `422 unknown_currency` for a code this build does not know.
 ## Limitations
 
 Only the currency: first account and opening balance are not part of this route yet, and
-the base currency cannot be changed afterwards (voiding entries does not unlock it).
+the base currency cannot be changed afterwards (voiding entries does not unlock it). It is
+set exactly once here; `PATCH /api/settings` refuses it, and `timezone` is never settable
+through the API. Both fields stay in every settings payload, with no `omitempty`, so a
+client never has to guess a missing default.
 
 ## Sequence
 

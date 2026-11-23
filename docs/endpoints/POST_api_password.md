@@ -28,7 +28,7 @@ None.
 
 ## Response
 
-`{"base_currency":"IDR","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
+`{"base_currency":"IDR","timezone":"UTC","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
 
 ## Errors
 

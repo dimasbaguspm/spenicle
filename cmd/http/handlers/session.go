@@ -26,6 +26,8 @@ type sessionResponse struct {
 type signInResponse struct {
 	Status            string `json:"status"`
 	MustChange        bool   `json:"must_change"`
+	BaseCurrency      string `json:"base_currency"`
+	Timezone          string `json:"timezone"`
 	ExtractionEnabled bool   `json:"extraction_enabled"`
 	AIAssistance      bool   `json:"ai_assistance"`
 }
@@ -35,9 +37,7 @@ type passwordChangeRequest struct {
 	NewPassword     string `json:"new_password"     validate:"required,min=12,max=200"`
 }
 
-type settingsPatchRequest struct {
-	BaseCurrency *string `json:"base_currency,omitempty" validate:"omitempty,currency"`
-}
+type settingsPatchRequest struct{}
 
 type settingsResponse struct {
 	BaseCurrency       string `json:"base_currency"`
@@ -79,6 +79,8 @@ func (s *Server) Session(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, signInResponse{
 		Status:            "signed_in",
 		MustChange:        settings.PasswordMustChange,
+		BaseCurrency:      settings.BaseCurrency,
+		Timezone:          settings.Timezone,
 		ExtractionEnabled: s.deps.ExtractionEnabled,
 		AIAssistance:      s.deps.AIAssistance,
 	})
@@ -119,24 +121,11 @@ func (s *Server) ChangePassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) PatchSettings(w http.ResponseWriter, r *http.Request) {
-	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Settings.Patch")
+	_, endSpan := telemetry.StartSpan(r.Context(), "Handler.Settings.Patch")
 	defer endSpan()
 
 	var request settingsPatchRequest
 	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
-		return
-	}
-
-	if request.BaseCurrency != nil {
-		settings, err := s.deps.Settings.SetBaseCurrency(ctx, *request.BaseCurrency)
-		if err != nil {
-			s.writeClassified(ctx, w, err)
-
-			return
-		}
-
-		s.writeSettings(w, settings)
-
 		return
 	}
 

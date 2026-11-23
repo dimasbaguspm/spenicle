@@ -11,7 +11,7 @@ func TestStartRefusesAChangedTimezone(t *testing.T) {
 	clearEnv(t)
 
 	t.Setenv(config.EnvAppSecret, "0123456789abcdef")
-	t.Setenv(config.EnvDataDir, t.TempDir())
+	t.Chdir(t.TempDir())
 
 	t.Setenv(config.EnvTimezone, "Asia/Jakarta")
 

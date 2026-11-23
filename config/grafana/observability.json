@@ -18,6 +18,7 @@
       "description": "Successful answers over all answers in the window. Green at 99 %, amber at 95 %.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "decimals": 2,
           "thresholds": {
             "mode": "absolute",
@@ -58,6 +59,7 @@
       "description": "The same ratio over time: a dip is a window the user felt.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No requests",
           "custom": {
             "axisLabel": "",
             "fillOpacity": 10,
@@ -103,6 +105,7 @@
       "description": "Requests per second as the router matched them. http_route is the template, never the raw path.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No requests",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "stacking": { "mode": "none" } },
           "unit": "reqps"
         },
@@ -133,6 +136,7 @@
       "description": "Share of 5xx per route: an answer that says the server failed.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No requests",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "max": 100,
           "min": 0,
@@ -173,6 +177,7 @@
       "description": "Share of 4xx per route: a client that is wrong is not the server failing.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No requests",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "max": 100,
           "min": 0,
@@ -205,6 +210,7 @@
       "description": "p50, p90, p95 and p99 of the wall clock time to answer, by route template.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No requests",
           "custom": { "fillOpacity": 0, "lineWidth": 2, "showPoints": "never" },
           "unit": "s"
         },
@@ -259,6 +265,7 @@
       "description": "The mean the histogram carries: _sum over _count.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No requests",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "s"
         },
@@ -297,6 +304,7 @@
       "description": "One row per http.route: request rate, error rate, average and p95 over the last five minutes. Sorted by error rate.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false },
           "unit": "short"
         },
@@ -426,6 +434,7 @@
       "description": "Requests being served right now, by route.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No requests",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
@@ -456,6 +465,7 @@
       "description": "Open attempts that lost the SQLite write lock and retried. A steady rate means two processes are contending for the one writer.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
@@ -494,6 +504,7 @@
       "description": "One tick of the worker, per step and outcome. spenicle_job is recurring|artifacts|imports|exports|sweep.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
@@ -524,6 +535,7 @@
       "description": "Items a step handled: rules posted, artifacts reclaimed, rows parsed, jobs rendered.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
@@ -554,6 +566,7 @@
       "description": "p95 wall clock time of one worker step.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "s"
         },
@@ -584,6 +597,7 @@
       "description": "Seconds since worker_last_run_at, the row /healthz reports. Nothing exports spenicle_worker_last_run_timestamp_seconds today: publish it with a textfile exporter or a probe of GET /healthz, otherwise this panel stays empty.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -630,6 +644,7 @@
       "description": "Capture is not ledger: this is what approval wrote, by entry source.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
@@ -660,6 +675,7 @@
       "description": "Review-queue transitions, by capture kind and resulting status.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
@@ -690,6 +706,7 @@
       "description": "Statement rows parsed into a draft, and the rows the upload flagged as a clash, by kind.",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "short"
         },
@@ -728,6 +745,7 @@
       "description": "Size of a rendered export document: p95 of spenicle.exports.bytes (unit By).",
       "fieldConfig": {
         "defaults": {
+          "noValue": "No data",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
           "unit": "bytes"
         },
@@ -764,7 +782,7 @@
     {
       "datasource": { "type": "tempo", "uid": "${traces}" },
       "description": "The slowest traces in the window; a span name names the layer that was slow.",
-      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "fieldConfig": { "defaults": { "noValue": "No data" }, "overrides": [] },
       "gridPos": { "h": 9, "w": 24, "x": 0, "y": 84 },
       "id": 25,
       "options": { "showHeader": true },

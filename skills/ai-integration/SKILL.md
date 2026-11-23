@@ -63,13 +63,14 @@ directly".
 ## C. Local instance for an agent to drive
 
 ```bash
-cp .env.example .env                 # set APP_SECRET
-DATA_DIR=./data ADDR=:8080 make run  # migrations and seeds run on boot
+cp .env.example .env  # set APP_SECRET
+make run              # listens on :8080, migrations and seeds run on boot
 curl -s localhost:8080/healthz
 ```
 
-A scratch database is the safe way to experiment: `DATA_DIR=$(mktemp -d)` gets a
-fresh file, seeded with `Cash` and `Unsorted` accounts.
+A scratch database is the safe way to experiment: run the binary from an empty directory
+(`cd "$(mktemp -d)" && /path/to/spenicle all`) so its `./data` lands there — a fresh file,
+seeded with `Cash` and `Unsorted` accounts.
 
 ## Done means
 

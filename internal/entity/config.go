@@ -34,8 +34,6 @@ type AppConfig struct {
 
 	Timezone string
 
-	WebOrigin string
-
 	ReadHeaderTimeout        time.Duration
 	ReadTimeout              time.Duration
 	WriteTimeout             time.Duration

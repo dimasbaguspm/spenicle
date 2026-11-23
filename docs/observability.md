@@ -102,6 +102,10 @@ consistent.
 dashboard, built to the RED standard: every panel answers **R**ate, **E**rrors or **D**uration
 for one dimension, with the saturation and domain panels beside them. It expects two
 datasources, selected with the `datasource` (Prometheus) and `traces` (Tempo) variables.
+Every panel carries an explicit no-data fallback in `fieldConfig.defaults.noValue` —
+`No requests` on the HTTP rate, error and latency panels, `No data` on the stat, table,
+worker and domain panels — so an idle window reads as a stated empty state instead of a
+blank box, and a RED panel that is dark is never mistaken for a broken query.
 
 ```bash
 # a collector that fans OTLP out to Prometheus and Tempo, then a dashboard import:
@@ -149,7 +153,7 @@ same rule: `spenicle.job` is `spenicle_job`.
 The heartbeat panel reads `spenicle_worker_last_run_timestamp_seconds`, which nothing exports
 today: `worker_last_run_at` lives in the `settings` row that `/healthz` reports, so publish it
 with a textfile exporter or a probe of `GET /healthz` if you want the panel lit. Until then the
-panel is empty, not wrong.
+panel reads `No data`, not wrong.
 
 ## Joining a log line to its span
 

@@ -21,7 +21,7 @@ build: ## compile the single binary
 	$(GO) build -o $(BIN) .
 
 run: ## run the API and the worker in one process against ./data
-	DATA_DIR=./data ADDR=:8080 $(GO) run . all
+	$(GO) run . all
 
 test: ## unit and integration tests
 	$(GO) test ./... -count=1

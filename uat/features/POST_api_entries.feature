@@ -168,31 +168,6 @@ Feature: POST /api/entries
       | table          | count |
       | ledger_entries | 0     |
 
-  Scenario: A mutating request from another origin is refused
-    Given a running API
-    And the request body is:
-      """json
-      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}
-      """
-    When I send a POST to "/api/entries" with headers/query:
-      | type   | key          | value                |
-      | header | Origin       | https://evil.example |
-      | header | Content-Type | application/json     |
-    Then the response status is 403
-    And the response JSON matches the snapshot "post_api_entries__a_mutating_request_from_another_origin_is_refused"
-
-  Scenario: A request without an Origin header is allowed
-    Given a running API
-    And the request body is:
-      """json
-      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}
-      """
-    When I send a POST to "/api/entries" with headers/query:
-      | type   | key          | value            |
-      | header | Content-Type | application/json |
-    Then the response status is 201
-    And the response JSON matches the snapshot "post_api_entries__a_request_without_an_origin_header_is_allowed"
-
   Scenario: An unknown field is refused instead of ignored
     Given a running API
     When I send a POST to "/api/entries" with:

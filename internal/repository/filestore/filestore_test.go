@@ -228,3 +228,69 @@ func TestRemoveIsIdempotent(t *testing.T) {
 		t.Fatalf("opening a removed artifact answered %v, want ErrNotFound", err)
 	}
 }
+
+// Both data-dir stores — artifacts and exports — are the same filestore, and the
+// point of the test is that neither writes the document as it arrived.
+func TestBothFileStoresSealTheBlobOnDisk(t *testing.T) {
+	cases := []struct {
+		name string
+		dir  string
+	}{
+		{name: "the artifact store", dir: "artifacts"},
+		{name: "the export store", dir: "exports"},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			proveTheStoreEncrypts(t, filepath.Join(t.TempDir(), testCase.dir))
+		})
+	}
+}
+
+func proveTheStoreEncrypts(t *testing.T, dir string) {
+	t.Helper()
+
+	const marker = "plaintext-marker-that-must-never-reach-the-disk"
+
+	payload := extraction.Artifact{
+		Filename:    "spenicle.json",
+		ContentType: "application/json",
+		Bytes:       []byte(`{"marker":"` + marker + `"}`),
+	}
+
+	store, err := filestore.New(dir, []byte(testSecret))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+
+	record, err := store.Put(t.Context(), payload)
+	if err != nil {
+		t.Fatalf("put: %v", err)
+	}
+
+	sealed, err := os.ReadFile(artifactPath(dir, record.SHA256))
+	if err != nil {
+		t.Fatalf("read sealed file: %v", err)
+	}
+
+	if !bytes.HasPrefix(sealed, []byte("SPN1")) {
+		t.Fatalf("%s is not an SPN1 envelope: %.8q", record.SHA256, sealed)
+	}
+
+	if bytes.Contains(sealed, []byte(marker)) {
+		t.Fatal("the plaintext marker is on disk: the store did not encrypt the blob")
+	}
+
+	if got := readAll(t, store, record.SHA256); !bytes.Equal(got, payload.Bytes) {
+		t.Fatalf("roundtrip changed the payload: %q", got)
+	}
+
+	other, err := filestore.New(dir, []byte("a-different-secret-0123456789"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+
+	if _, err := other.Open(t.Context(), record.SHA256); !errors.Is(err, filestore.ErrCorrupt) {
+		t.Fatalf("another secret answered %v, want ErrCorrupt", err)
+	}
+}

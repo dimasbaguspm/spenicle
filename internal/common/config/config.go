@@ -22,8 +22,6 @@ import (
 )
 
 const (
-	EnvAddr      = "ADDR"
-	EnvDataDir   = "DATA_DIR"
 	EnvAppSecret = "APP_SECRET"
 	//nolint:gosec // G101: this is the environment variable name, not a credential
 	EnvSnapToJSONAPIKey = "SNAPTOJSON_API_KEY"
@@ -33,14 +31,13 @@ const (
 	EnvOpenAIHost         = "OPENAI_HOST"
 	EnvSnapToJSONEndpoint = "SNAPTOJSON_ENDPOINT"
 	EnvOTLPEndpoint       = "OTEL_EXPORTER_OTLP_ENDPOINT"
-	EnvWebOrigin          = "WEB_ORIGIN"
 	EnvTimezone           = "APP_TIMEZONE"
 )
 
 const (
-	DefaultAddr    = ":8080"
-	DefaultDataDir = "./data"
-	DefaultDBFile  = "spenicle.db"
+	ListenAddr    = ":8080"
+	DataDir       = "./data"
+	DefaultDBFile = "spenicle.db"
 
 	DefaultArtifactDirName   = "artifacts"
 	DefaultArtifactRetention = 720 * time.Hour
@@ -58,6 +55,7 @@ const (
 	DefaultSnapToJSONEndpoint = "https://api.snaptojson.com/partner/v1/snaps"
 	DefaultSnapToJSONTimeout  = 30 * time.Second
 	DefaultOpenAIModel        = "gpt-4o-mini"
+	DefaultOpenAIHost         = "https://api.openai.com/v1"
 
 	DefaultECBEndpoint = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
 	DefaultECBTimeout  = 10 * time.Second
@@ -83,18 +81,18 @@ var (
 
 func Defaults() entity.AppConfig {
 	return entity.AppConfig{
-		Addr:                     DefaultAddr,
-		DataDir:                  DefaultDataDir,
-		ArtifactDir:              filepath.Join(DefaultDataDir, DefaultArtifactDirName),
+		Addr:                     ListenAddr,
+		DataDir:                  DataDir,
+		ArtifactDir:              filepath.Join(DataDir, DefaultArtifactDirName),
 		ArtifactRetention:        DefaultArtifactRetention,
 		ArtifactMaxBytes:         DefaultArtifactMaxBytes,
-		ExportDir:                filepath.Join(DefaultDataDir, DefaultExportDirName),
+		ExportDir:                filepath.Join(DataDir, DefaultExportDirName),
 		ImportMaxBytes:           DefaultImportMaxBytes,
 		ImportMaxRows:            DefaultImportMaxRows,
 		ImportCommitChunk:        DefaultImportCommitChunk,
 		ExportRetention:          DefaultExportRetention,
 		ExportStaleAfter:         DefaultExportStaleAfter,
-		DBPath:                   filepath.Join(DefaultDataDir, DefaultDBFile),
+		DBPath:                   filepath.Join(DataDir, DefaultDBFile),
 		SnapToJSONEndpoint:       DefaultSnapToJSONEndpoint,
 		SnapToJSONTimeout:        DefaultSnapToJSONTimeout,
 		ECBEndpoint:              DefaultECBEndpoint,
@@ -119,11 +117,6 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	defer endSpan()
 
 	cfg := Defaults()
-	cfg.Addr = env(EnvAddr, cfg.Addr)
-	cfg.DataDir = env(EnvDataDir, cfg.DataDir)
-	cfg.DBPath = filepath.Join(cfg.DataDir, DefaultDBFile)
-	cfg.ArtifactDir = filepath.Join(cfg.DataDir, DefaultArtifactDirName)
-	cfg.ExportDir = filepath.Join(cfg.DataDir, DefaultExportDirName)
 
 	cfg.AppSecret = os.Getenv(EnvAppSecret)
 	cfg.SnapToJSONAPIKey = os.Getenv(EnvSnapToJSONAPIKey)
@@ -132,7 +125,6 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	cfg.OpenAIHost = os.Getenv(EnvOpenAIHost)
 	cfg.OpenAIModel = env(EnvOpenAIModel, DefaultOpenAIModel)
 	cfg.OTLPEndpoint = os.Getenv(EnvOTLPEndpoint)
-	cfg.WebOrigin = env(EnvWebOrigin, cfg.WebOrigin)
 
 	timezone, err := loadTimezone(os.Getenv(EnvTimezone))
 	if err != nil {

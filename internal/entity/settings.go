@@ -19,7 +19,7 @@ var (
 
 type Settings struct {
 	BaseCurrency       string `json:"base_currency"`
-	Timezone           string `json:"timezone,omitempty"`
+	Timezone           string `json:"timezone"`
 	PasswordHash       string `json:"password_hash,omitempty"`
 	PasswordMustChange bool   `json:"password_must_change,omitempty"`
 	ExtractionEnabled  bool   `json:"extraction_enabled,omitempty"`

@@ -17,7 +17,7 @@ const serviceName = "spenicle-http"
 func Command() *cobra.Command {
 	return &cobra.Command{
 		Use:   "http",
-		Short: "Serve the API on ADDR",
+		Short: "Serve the API on :8080",
 		Args:  cobra.NoArgs,
 		RunE:  run,
 	}

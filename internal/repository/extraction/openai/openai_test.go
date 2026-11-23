@@ -139,3 +139,46 @@ func TestNewRefusesAnEmptyKey(t *testing.T) {
 		t.Fatal("the rail has no anonymous mode")
 	}
 }
+
+func TestNewRequiresAModelAndAcceptsAnEmptyHost(t *testing.T) {
+	cases := []struct {
+		name    string
+		apiKey  string
+		model   string
+		baseURL string
+		wantErr bool
+	}{
+		{name: "an empty model is refused", apiKey: "sk-test", wantErr: true},
+		{name: "a blank model is refused", apiKey: "sk-test", model: "   ", wantErr: true},
+		{name: "an empty key is refused", model: "gpt-4o-mini", wantErr: true},
+		{name: "an empty host keeps the SDK default", apiKey: "sk-test", model: "gpt-4o-mini"},
+		{
+			name:    "a host and a model are both accepted",
+			apiKey:  "sk-test",
+			model:   "gpt-4o",
+			baseURL: "http://127.0.0.1:9999/v1",
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			rail, err := openai.New(testCase.apiKey, testCase.model, testCase.baseURL, time.Second)
+
+			if testCase.wantErr {
+				if err == nil {
+					t.Fatal("expected an error, got a client")
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("new: %v", err)
+			}
+
+			if rail.Model() != testCase.model {
+				t.Fatalf("model = %q, want the caller's %q", rail.Model(), testCase.model)
+			}
+		})
+	}
+}

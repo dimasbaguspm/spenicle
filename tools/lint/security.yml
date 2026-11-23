@@ -29,7 +29,7 @@ linters:
           # source, not the env lookups that read them
           ignore-entropy: true
         G304:
-          # file paths come from DATA_DIR and hashed artifact names
+          # file paths come from the data dir and hashed artifact names
           pattern: "^$"
     forbidigo:
       analyze-types: true

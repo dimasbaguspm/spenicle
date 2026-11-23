@@ -17,7 +17,7 @@ const serviceName = "spenicle-worker"
 func Command() *cobra.Command {
 	return &cobra.Command{
 		Use:   "worker",
-		Short: "Post the due recurring rules; ignores ADDR",
+		Short: "Post the due recurring rules; opens no port",
 		Args:  cobra.NoArgs,
 		RunE:  run,
 	}

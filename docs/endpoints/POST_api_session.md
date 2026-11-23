@@ -28,16 +28,19 @@ None.
 
 ## Response
 
-`{"status":"signed_in","must_change":true,"extraction_enabled":false,"ai_assistance":false}`
+`{"status":"signed_in","must_change":true,"base_currency":"IDR","timezone":"UTC","extraction_enabled":false,"ai_assistance":false}`
 + `Set-Cookie: spenicle_session=…`
 (`HttpOnly`, `SameSite=Lax`, `Secure` when served over TLS or when `X-Forwarded-Proto`
 says so, 30 days, `Cache-Control: no-store`).
 
+`base_currency` and `timezone` are always present, never omitted: the shell reads them
+from the sign-in answer instead of a second round trip. Both are the stored values, so
+the session never disagrees with `GET /api/settings`.
+
 ## Errors
 
 `401 invalid_password`; `409 no_password_set` when the instance is in open
-mode; `400 invalid_json`; `403 cross_origin_denied` for a mutating request from another
-origin.
+mode; `400 invalid_json`.
 
 ## Limitations
 
