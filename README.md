@@ -83,8 +83,6 @@ openssl rand -base64 32
 Every variable is listed with defaults in [`.env.example`](./.env.example); copy it
 to `.env` and fill in `APP_SECRET`.
 
-Set `PASSWORD` if the instance is reachable from anywhere except your own bed.
-
 The base currency and the login password are **not** environment variables. They live
 in the app's settings table: a fresh boot generates the first password and prints it
 once, the login screen accepts it, and you are asked to change it. The base currency
