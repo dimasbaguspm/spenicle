@@ -252,3 +252,44 @@ func normaliseString(value string) string {
 
 	return refInText.ReplaceAllString(value, "${1}<ref>${3}")
 }
+
+func (w *world) assertExportSnapshot(name string) error {
+	var document any
+	if err := json.Unmarshal(w.body, &document); err != nil {
+		return fmt.Errorf("the export is not JSON (%q): %w", preview(string(w.body)), err)
+	}
+
+	if err := walkContract("$", document); err != nil {
+		return err
+	}
+
+	return compareSnapshot(filepath.Join(snapshotRoot, "api", name+".json"),
+		sortedArrays(normalise(document)))
+}
+
+func sortedArrays(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(typed))
+
+		for key, inner := range typed {
+			out[key] = sortedArrays(inner)
+		}
+
+		return out
+	case []any:
+		out := make([]any, len(typed))
+
+		for index, inner := range typed {
+			out[index] = sortedArrays(inner)
+		}
+
+		sort.SliceStable(out, func(left, right int) bool {
+			return fmt.Sprintf("%v", out[left]) < fmt.Sprintf("%v", out[right])
+		})
+
+		return out
+	default:
+		return value
+	}
+}

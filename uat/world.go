@@ -1,6 +1,8 @@
 package uat
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -28,6 +30,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
@@ -360,13 +363,25 @@ func (w *world) boot(ctx context.Context) error {
 	)
 
 	w.server = httptest.NewServer(httpcmd.New(handlers.Deps{
-		Ledger:            ledgerService,
-		Captures:          queue,
-		Accounts:          store,
-		Payees:            store,
-		Recurring:         store,
-		Analytics:         store,
-		CustomQueries:     store,
+		Ledger:        ledgerService,
+		Captures:      queue,
+		Accounts:      store,
+		Payees:        store,
+		Recurring:     store,
+		Analytics:     store,
+		CustomQueries: store,
+		Export: export.Deps{
+			Ledger:        store,
+			Captures:      store,
+			Accounts:      store,
+			Payees:        store,
+			Recurring:     store,
+			CustomQueries: store,
+			Rates:         store,
+			System:        store,
+			Clock:         clockSystem,
+			BaseCurrency:  baseCurrency,
+		},
 		Artifacts:         store,
 		ArtifactFiles:     artifacts,
 		Health:            store,
@@ -725,4 +740,94 @@ func preview(body string) string {
 	}
 
 	return body
+}
+
+type manifestEntry struct {
+	Name string `json:"name"`
+	Rows int    `json:"rows"`
+}
+
+type manifestReport struct {
+	Files []manifestEntry `json:"files"`
+}
+
+func (w *world) exportArchive() (*zip.Reader, error) {
+	reader, err := zip.NewReader(bytes.NewReader(w.body), int64(len(w.body)))
+	if err != nil {
+		return nil, fmt.Errorf("the export is not a zip archive (%q): %w", preview(string(w.body)), err)
+	}
+
+	return reader, nil
+}
+
+func (w *world) exportArchiveHolds(want string) error {
+	reader, err := w.exportArchive()
+	if err != nil {
+		return err
+	}
+
+	names := make([]string, 0, len(reader.File))
+
+	for _, file := range reader.File {
+		names = append(names, file.Name)
+	}
+
+	expected := make([]string, 0)
+
+	for _, name := range strings.Split(want, ",") {
+		if trimmed := strings.TrimSpace(name); trimmed != "" {
+			expected = append(expected, trimmed)
+		}
+	}
+
+	if !slices.Equal(names, expected) {
+		return fmt.Errorf("the archive holds %v, want %v", names, expected)
+	}
+
+	return nil
+}
+
+func (w *world) exportManifestRows(name string) (int, error) {
+	reader, err := w.exportArchive()
+	if err != nil {
+		return 0, err
+	}
+
+	for _, file := range reader.File {
+		if file.Name != "manifest.json" {
+			continue
+		}
+
+		manifest, readErr := readManifest(file)
+		if readErr != nil {
+			return 0, readErr
+		}
+
+		for _, entry := range manifest.Files {
+			if entry.Name == name {
+				return entry.Rows, nil
+			}
+		}
+
+		return 0, fmt.Errorf("the manifest does not report %q", name)
+	}
+
+	return 0, errors.New("the archive holds no manifest.json")
+}
+
+func readManifest(file *zip.File) (manifestReport, error) {
+	body, err := file.Open()
+	if err != nil {
+		return manifestReport{}, fmt.Errorf("open manifest: %w", err)
+	}
+
+	defer func() { _ = body.Close() }()
+
+	var report manifestReport
+
+	if err := json.NewDecoder(body).Decode(&report); err != nil {
+		return manifestReport{}, fmt.Errorf("decode manifest: %w", err)
+	}
+
+	return report, nil
 }

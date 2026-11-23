@@ -194,6 +194,11 @@ worker writes into `settings`, so the `http` process reports it even though it n
 runs the worker itself. Use it to prove a running container is the build you think it
 is, and that both services are alive.
 
+The way out is `GET /api/export`: one JSON document, or a zip of CSV sheets plus
+`manifest.json` — refs only, no sealed value, and byte-identical for the same data.
+Import is the other half and is not built; the contract is in
+[`docs/endpoints/GET_api_export.md`](./docs/endpoints/GET_api_export.md).
+
 ## Dependencies
 
 Five direct ones, each earning its place: `spf13/cobra` for the CLI (a root command,

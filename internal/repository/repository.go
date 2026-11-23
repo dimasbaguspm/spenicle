@@ -71,6 +71,7 @@ type CustomQueries interface {
 	CreateCustomQuery(ctx context.Context, query entity.CustomQuery) (entity.CustomQuery, error)
 	CustomQueryByRef(ctx context.Context, ref string) (entity.CustomQuery, bool, error)
 	UpdateCustomQuery(ctx context.Context, query entity.CustomQuery) (entity.CustomQuery, error)
+	ListCustomQueries(ctx context.Context) ([]entity.CustomQuery, error)
 }
 
 type Recurring interface {
@@ -93,4 +94,5 @@ type RateSource interface {
 type RateStore interface {
 	SaveRates(ctx context.Context, rates []entity.Rate) error
 	RateOn(ctx context.Context, base, quote string, on time.Time) (entity.Rate, bool, error)
+	ListRates(ctx context.Context) ([]entity.Rate, error)
 }

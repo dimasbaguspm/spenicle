@@ -116,3 +116,33 @@ func scanCustomQueryRow(scanner interface{ Scan(dest ...any) error }) (entity.Cu
 
 	return query, nil
 }
+
+func (s *Store) ListCustomQueries(ctx context.Context) ([]entity.CustomQuery, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListCustomQueries")
+	defer endSpan()
+
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT `+customQueryColumns+` FROM custom_queries ORDER BY ref`)
+	if err != nil {
+		return nil, fmt.Errorf("select custom queries: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	var out []entity.CustomQuery
+
+	for rows.Next() {
+		query, scanErr := scanCustomQueryRow(rows)
+		if scanErr != nil {
+			return nil, fmt.Errorf("scan custom query: %w", scanErr)
+		}
+
+		out = append(out, query)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate custom queries: %w", err)
+	}
+
+	return out, nil
+}

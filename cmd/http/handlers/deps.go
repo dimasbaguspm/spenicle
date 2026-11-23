@@ -8,6 +8,7 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
@@ -31,6 +32,7 @@ type Deps struct {
 	Artifacts         repository.Artifacts
 	Health            repository.System
 	ArtifactFiles     ArtifactFiles
+	Export            export.Deps
 	Sealer            seal.Sealer
 	BaseCurrency      string
 	Version           string

@@ -1,0 +1,120 @@
+{
+  "accounts": [
+    {
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "kind": "asset",
+      "name": "Cash",
+      "ref": "<ref>"
+    },
+    {
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "kind": "expense",
+      "name": "Unsorted",
+      "ref": "<ref>"
+    }
+  ],
+  "base_currency": "IDR",
+  "captures": [
+    {
+      "kind": "share",
+      "received_at": "<timestamp>",
+      "ref": "<ref>",
+      "status": "pending"
+    }
+  ],
+  "custom_queries": [
+    {
+      "chart": "bar",
+      "created_at": "<timestamp>",
+      "name": "Spend per month",
+      "namespace": "months",
+      "ref": "<ref>",
+      "updated_at": "<timestamp>"
+    }
+  ],
+  "entries": [
+    {
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "note": "flat white",
+      "occurred_on": "2026-02-14",
+      "postings": [
+        {
+          "account_ref": "<ref>",
+          "amount_minor": "-25000",
+          "base_amount_minor": "-25000",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        },
+        {
+          "account_ref": "<ref>",
+          "amount_minor": "25000",
+          "base_amount_minor": "25000",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        }
+      ],
+      "ref": "<ref>",
+      "source": "manual"
+    }
+  ],
+  "exported_at": "<timestamp>",
+  "payees": [
+    {
+      "created_at": "<timestamp>",
+      "default_account_ref": "<ref>",
+      "name": "Kopi Kenangan",
+      "ref": "<ref>"
+    }
+  ],
+  "rates": [
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "on_date": "2026-11-20",
+      "quote": "IDR",
+      "rate": "16000.50",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "on_date": "2026-11-20",
+      "quote": "JPY",
+      "rate": "174.35",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "on_date": "2026-11-20",
+      "quote": "USD",
+      "rate": "1.0990",
+      "ref": "<ref>",
+      "source": "ecb"
+    }
+  ],
+  "recurring": [
+    {
+      "account_ref": "<ref>",
+      "amount_minor": "25000",
+      "business_day_shift": "none",
+      "cadence": "monthly",
+      "category_ref": "<ref>",
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "day_of_month": 20,
+      "interval_n": 1,
+      "next_due_on": "2026-12-20",
+      "origin": "user",
+      "payee_ref": "<ref>",
+      "ref": "<ref>",
+      "state": "active"
+    }
+  ],
+  "schema_version": 2
+}

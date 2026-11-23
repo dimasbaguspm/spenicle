@@ -16,6 +16,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
@@ -98,6 +99,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /api/captures/{ref}/artifact", s.api.GetCaptureArtifact)
 
 	mux.HandleFunc("GET /api/rates", s.api.GetRate)
+	mux.HandleFunc("GET /api/export", s.api.Export)
 
 	mux.HandleFunc("/", s.api.NotFound)
 
@@ -200,14 +202,26 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 			store, process.Ledger, process.Sealer, process.Artifacts, store, extractor,
 			clock.System{}, clock.System{},
 		),
-		Rates:             process.Rates,
-		Accounts:          store,
-		Payees:            store,
-		Recurring:         store,
-		Analytics:         store,
-		CustomQueries:     store,
-		Artifacts:         store,
-		ArtifactFiles:     process.Artifacts,
+		Rates:         process.Rates,
+		Accounts:      store,
+		Payees:        store,
+		Recurring:     store,
+		Analytics:     store,
+		CustomQueries: store,
+		Artifacts:     store,
+		ArtifactFiles: process.Artifacts,
+		Export: export.Deps{
+			Ledger:        store,
+			Captures:      store,
+			Accounts:      store,
+			Payees:        store,
+			Recurring:     store,
+			CustomQueries: store,
+			Rates:         store,
+			System:        store,
+			Clock:         clock.System{},
+			BaseCurrency:  process.BaseCurrency,
+		},
 		Settings:          process.Settings,
 		Health:            store,
 		Sealer:            process.Sealer,

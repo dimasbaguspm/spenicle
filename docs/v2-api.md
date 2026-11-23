@@ -2,7 +2,7 @@
 
 Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`../README.md`](../README.md).
 
-**10 tables, 21 endpoints, one sequence diagram each.**
+**10 tables, 22 endpoints, one sequence diagram each.**
 
 Base path `/api`. No version prefix: we are the only consumer, and an agent can adapt to a
 change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, timestamps ISO
@@ -29,6 +29,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
 | 14 | `PATCH /api/captures/{id}` | partial: `approve`, `reject`, `retry`; `match`/`extracted` next |
 | 21 | `GET /healthz` | live |
+| 22 | `GET /api/export` | live: one JSON document, or a zip of CSV sheets and `manifest.json` |
 | 1 | `POST /api/setup` | next (wizard) |
 | 2 | `POST /api/session`, `POST /api/password` | live: cookie session, password rotation |
 | 4 | `GET/PATCH /api/settings` | partial: `base_currency` while the ledger is empty |

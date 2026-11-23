@@ -94,3 +94,48 @@ func (s *Store) RateOn(
 
 	return rate, true, nil
 }
+
+func (s *Store) ListRates(ctx context.Context) ([]entity.Rate, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListRates")
+	defer endSpan()
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT ref, base, quote, on_date, rate, source, fetched_at
+		FROM fx_rates ORDER BY on_date, base, quote`)
+	if err != nil {
+		return nil, fmt.Errorf("select rates: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	var out []entity.Rate
+
+	for rows.Next() {
+		var (
+			rate      entity.Rate
+			onDate    string
+			fetchedAt string
+		)
+
+		if scanErr := rows.Scan(&rate.Ref, &rate.Base, &rate.Quote, &onDate,
+			&rate.Rate, &rate.Source, &fetchedAt); scanErr != nil {
+			return nil, fmt.Errorf("scan rate: %w", scanErr)
+		}
+
+		if rate.OnDate, err = time.Parse(constant.DateLayout, onDate); err != nil {
+			return nil, fmt.Errorf("rate date %q: %w", onDate, err)
+		}
+
+		if rate.FetchedAt, err = time.Parse(constant.TimestampLayout, fetchedAt); err != nil {
+			return nil, fmt.Errorf("rate timestamp %q: %w", fetchedAt, err)
+		}
+
+		out = append(out, rate)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rates: %w", err)
+	}
+
+	return out, nil
+}

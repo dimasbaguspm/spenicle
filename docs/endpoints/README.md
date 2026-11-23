@@ -40,4 +40,5 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/dashboard` | the landing tiles in one response | [`GET_api_dashboard.md`](./GET_api_dashboard.md) |
 | `POST` | `/api/setup` | open the ledger with a base currency | [`POST_api_setup.md`](./POST_api_setup.md) |
 | `GET` | `/api/rates` | the cached ECB reference rate for one day | [`GET_api_rates.md`](./GET_api_rates.md) |
+| `GET` | `/api/export` | the whole ledger as one JSON document or a zip of CSV sheets | [`GET_api_export.md`](./GET_api_export.md) |
 
