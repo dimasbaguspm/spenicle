@@ -1,4 +1,4 @@
-package worker
+package handlers
 
 import (
 	"context"
@@ -92,7 +92,7 @@ func (r *Runner) runRule(
 		if err != nil {
 			summary.Failed++
 
-			return err
+			return fmt.Errorf("advance recurring rule %s: %w", rule.Ref, err)
 		}
 
 		if !advanced {
@@ -152,7 +152,7 @@ func (r *Runner) categoryRef(ctx context.Context, ref string) (string, error) {
 	account, found, err := r.store.FindAccount(
 		ctx, constant.SeedExpenseAccount, constant.AccountKindExpense)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("find account %s: %w", constant.SeedExpenseAccount, err)
 	}
 
 	if !found {

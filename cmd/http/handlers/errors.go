@@ -10,11 +10,11 @@ import (
 
 const codeInternal = "internal_error"
 
-func (s *server) writeClassified(ctx context.Context, w http.ResponseWriter, err error) {
+func (s *Server) writeClassified(ctx context.Context, w http.ResponseWriter, err error) {
 	status, code := classify(err)
 
 	if status == http.StatusInternalServerError {
-		s.writeInternal(ctx, w, err)
+		s.InternalError(ctx, w, err)
 
 		return
 	}
@@ -22,7 +22,7 @@ func (s *server) writeClassified(ctx context.Context, w http.ResponseWriter, err
 	httpx.WriteError(w, status, code, err.Error())
 }
 
-func (s *server) writeInternal(ctx context.Context, w http.ResponseWriter, err error) {
+func (s *Server) InternalError(ctx context.Context, w http.ResponseWriter, err error) {
 	s.deps.Logger.ErrorContext(ctx, "request failed", slog.String("error", err.Error()))
 	httpx.WriteError(w, http.StatusInternalServerError, codeInternal, "internal error")
 }

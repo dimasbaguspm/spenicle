@@ -69,7 +69,7 @@ Handler.Entries.Post
 | spans stop at shutdown | flush must use `context.WithoutCancel`; the signal already cancelled the root ctx |
 | export fails silently | endpoint is HTTPS but the collector is plaintext — add `http://` explicitly |
 | span named `Repository.Sqlite.` (empty) | a call site built the name by concatenation; call `telemetry.StartSpan(ctx, "Repository.Sqlite.Thing")` with the full string |
-| no handler span | the request failed before `handlers.New`; check middleware order |
+| no handler span | the request failed before the `Server` method ran; check the middleware order in `cmd/http/handler.go` |
 
 Rules the code enforces:
 

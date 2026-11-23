@@ -32,7 +32,7 @@ type payeeResponse struct {
 	CreatedAt          string `json:"created_at"`
 }
 
-func (s *server) handleCreatePayee(w http.ResponseWriter, r *http.Request) {
+func (s *Server) CreatePayee(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Payees.Post")
 	defer endSpan()
 
@@ -57,7 +57,7 @@ func (s *server) handleCreatePayee(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, toPayeeResponse(created))
 }
 
-func (s *server) handlePatchPayee(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PatchPayee(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Payees.Patch")
 	defer endSpan()
 
@@ -116,7 +116,7 @@ func (s *server) handlePatchPayee(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toPayeeResponse(updated))
 }
 
-func (s *server) fillPayeeRefs(
+func (s *Server) fillPayeeRefs(
 	ctx context.Context,
 	w http.ResponseWriter,
 	payee *entity.Payee,
@@ -158,7 +158,7 @@ func toPayeeResponse(payee entity.Payee) payeeResponse {
 	}
 }
 
-func (s *server) handleListPayees(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ListPayees(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Payees.List")
 	defer endSpan()
 

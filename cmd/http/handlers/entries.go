@@ -70,7 +70,7 @@ type entryPatchRequest struct {
 	PayeeRef *string `json:"payee_ref,omitempty" validate:"omitempty,ref"`
 }
 
-func (s *server) handleListEntries(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ListEntries(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.List")
 	defer endSpan()
 
@@ -94,7 +94,7 @@ func (s *server) handleListEntries(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PatchEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Patch")
 	defer endSpan()
 
@@ -125,7 +125,7 @@ func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, body)
 }
 
-func (s *server) entryPatch(
+func (s *Server) entryPatch(
 	ctx context.Context,
 	w http.ResponseWriter,
 	ref string,
@@ -169,7 +169,7 @@ func (s *server) entryPatch(
 	return entry, true
 }
 
-func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PostEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Post")
 	defer endSpan()
 
@@ -245,7 +245,7 @@ type displayNames struct {
 	payees   map[int64]entity.Payee
 }
 
-func (s *server) displayNames(ctx context.Context) (displayNames, error) {
+func (s *Server) displayNames(ctx context.Context) (displayNames, error) {
 	accounts, err := s.deps.Accounts.ListAccounts(ctx, entity.AccountFilter{Limit: list.MaxLimit})
 	if err != nil {
 		return displayNames{}, err
@@ -272,7 +272,7 @@ func (s *server) displayNames(ctx context.Context) (displayNames, error) {
 	return names, nil
 }
 
-func (s *server) entryResponse(ctx context.Context, entry entity.Entry) (entryResponse, error) {
+func (s *Server) entryResponse(ctx context.Context, entry entity.Entry) (entryResponse, error) {
 	names, err := s.displayNames(ctx)
 	if err != nil {
 		return entryResponse{}, err

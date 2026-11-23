@@ -21,6 +21,8 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 )
 
+const maxFormBytes = 11 << 20
+
 type captureRequest struct {
 	ClientID     string               `json:"client_id,omitempty" validate:"omitempty,max=64"`
 	Kind         string               `json:"kind"                validate:"capturekind"`
@@ -66,7 +68,7 @@ type captureApprovedResponse struct {
 	Capture captureResponse `json:"capture"`
 }
 
-func (s *server) handleListCaptures(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ListCaptures(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.List")
 	defer endSpan()
 
@@ -83,7 +85,7 @@ func (s *server) handleListCaptures(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func (s *server) handleCreateCapture(w http.ResponseWriter, r *http.Request) {
+func (s *Server) CreateCapture(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Create")
 	defer endSpan()
 
@@ -119,7 +121,7 @@ func (s *server) handleCreateCapture(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, status, toCaptureResponse(capture))
 }
 
-func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PatchCapture(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Patch")
 	defer endSpan()
 
@@ -152,7 +154,7 @@ func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) approveCapture(
+func (s *Server) approveCapture(
 	ctx context.Context,
 	w http.ResponseWriter,
 	ref string,
@@ -209,7 +211,7 @@ func (s *server) approveCapture(
 	})
 }
 
-func (s *server) rejectCapture(
+func (s *Server) rejectCapture(
 	ctx context.Context,
 	w http.ResponseWriter,
 	ref string,

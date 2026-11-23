@@ -32,7 +32,7 @@ type accountDetailResponse struct {
 	Archived bool   `json:"archived"`
 }
 
-func (s *server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
+func (s *Server) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Accounts.Post")
 	defer endSpan()
 
@@ -62,7 +62,7 @@ func (s *server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, toAccountResponse(account))
 }
 
-func (s *server) handlePatchAccount(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PatchAccount(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Accounts.Patch")
 	defer endSpan()
 
@@ -134,7 +134,7 @@ func archivedAt(archived bool) *time.Time {
 	return &now
 }
 
-func (s *server) handleListAccounts(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ListAccounts(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Accounts.List")
 	defer endSpan()
 
@@ -158,7 +158,7 @@ func (s *server) handleListAccounts(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func (s *server) accountResponses(
+func (s *Server) accountResponses(
 	ctx context.Context,
 	accounts []entity.Account,
 ) ([]accountResponse, error) {

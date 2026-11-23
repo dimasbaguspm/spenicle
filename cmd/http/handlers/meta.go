@@ -31,7 +31,7 @@ type metaResponse struct {
 	Currencies []currencyResponse `json:"currencies"`
 }
 
-func (s *server) handleMeta(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Meta.Get")
 	defer endSpan()
 

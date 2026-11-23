@@ -143,7 +143,7 @@ func bindListParams[T any](
 func writeList[T, R any](
 	ctx context.Context,
 	w http.ResponseWriter,
-	s *server,
+	s *Server,
 	key string,
 	limit int,
 	fetch func() ([]T, error),

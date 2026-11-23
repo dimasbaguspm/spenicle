@@ -1,8 +1,8 @@
 // Package httpcmd is the API process: it composes the handler graph and serves it
 // until the context is cancelled.
 //
-// This file is the command the root binary mounts; the wiring lives in handler.go
-// and the server loop in serve.go.
+// This file is the command the root binary mounts; the handler graph, the route
+// table and the server loop live in handler.go.
 package httpcmd
 
 import (

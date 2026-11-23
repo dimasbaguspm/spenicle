@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -39,7 +38,7 @@ type settingsResponse struct {
 	ExtractionEnabled  bool   `json:"extraction_enabled"`
 }
 
-func (s *server) handleSession(w http.ResponseWriter, r *http.Request) {
+func (s *Server) Session(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Session.Create")
 	defer endSpan()
 
@@ -63,7 +62,7 @@ func (s *server) handleSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.issueSession(ctx, w, r); err != nil {
-		s.writeInternal(ctx, w, err)
+		s.InternalError(ctx, w, err)
 
 		return
 	}
@@ -74,7 +73,7 @@ func (s *server) handleSession(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *server) handleDestroySession(w http.ResponseWriter, r *http.Request) {
+func (s *Server) DestroySession(w http.ResponseWriter, r *http.Request) {
 	_, endSpan := telemetry.StartSpan(r.Context(), "Handler.Session.Destroy")
 	defer endSpan()
 
@@ -83,7 +82,7 @@ func (s *server) handleDestroySession(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, sessionResponse{Status: "signed_out"})
 }
 
-func (s *server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Session.ChangePassword")
 	defer endSpan()
 
@@ -100,7 +99,7 @@ func (s *server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.issueSession(ctx, w, r); err != nil {
-		s.writeInternal(ctx, w, err)
+		s.InternalError(ctx, w, err)
 
 		return
 	}
@@ -108,7 +107,7 @@ func (s *server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toSettingsResponse(settings))
 }
 
-func (s *server) handlePatchSettings(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PatchSettings(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Settings.Patch")
 	defer endSpan()
 
@@ -133,7 +132,7 @@ func (s *server) handlePatchSettings(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteError(w, http.StatusUnprocessableEntity, "empty_patch", "nothing to change")
 }
 
-func (s *server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetSettings(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Settings.Get")
 	defer endSpan()
 
@@ -155,61 +154,7 @@ func toSettingsResponse(settings entity.Settings) settingsResponse {
 	}
 }
 
-func (s *server) requireSession(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodOptions || r.URL.Path == "/api/session" ||
-			r.URL.Path == "/healthz" {
-			next.ServeHTTP(w, r)
-
-			return
-		}
-
-		if !s.crossOriginAllowed(r) {
-			httpx.WriteError(w, http.StatusForbidden, "cross_origin_denied",
-				"this request came from another origin and was refused")
-
-			return
-		}
-
-		settings, err := s.deps.Settings.Load(r.Context())
-		if err != nil {
-			s.writeInternal(r.Context(), w, err)
-
-			return
-		}
-
-		if !settings.HasPassword() {
-			next.ServeHTTP(w, r)
-
-			return
-		}
-
-		if settings.PasswordMustChange && r.URL.Path != "/api/password" {
-			httpx.WriteError(w, http.StatusConflict, "password_change_required",
-				"sign in with the generated password, then set your own at /api/password")
-
-			return
-		}
-
-		token, err := s.deps.Settings.SessionToken(r.Context())
-		if err != nil {
-			s.writeInternal(r.Context(), w, err)
-
-			return
-		}
-
-		cookie, err := r.Cookie(constant.SessionCookie)
-		if err != nil || strings.TrimSpace(cookie.Value) != token {
-			httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", "sign in first")
-
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (s *server) issueSession(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (s *Server) issueSession(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	token, err := s.deps.Settings.SessionToken(ctx)
 	if err != nil {
 		return err
@@ -220,11 +165,11 @@ func (s *server) issueSession(ctx context.Context, w http.ResponseWriter, r *htt
 	return nil
 }
 
-func (s *server) clearSession(w http.ResponseWriter, r *http.Request) {
+func (s *Server) clearSession(w http.ResponseWriter, r *http.Request) {
 	s.writeSession(w, r, "", -1)
 }
 
-func (s *server) writeSession(w http.ResponseWriter, r *http.Request, value string, maxAge int) {
+func (s *Server) writeSession(w http.ResponseWriter, r *http.Request, value string, maxAge int) {
 	w.Header().Add("Cache-Control", "no-store")
 
 	http.SetCookie(w, &http.Cookie{
@@ -244,27 +189,4 @@ func requestIsSecure(r *http.Request) bool {
 	}
 
 	return strings.EqualFold(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")), "https")
-}
-
-func (s *server) crossOriginAllowed(r *http.Request) bool {
-	switch r.Method {
-	case http.MethodGet, http.MethodHead, http.MethodOptions:
-		return true
-	}
-
-	origin := strings.TrimSpace(r.Header.Get("Origin"))
-	if origin == "" {
-		return true
-	}
-
-	parsed, err := url.Parse(origin)
-	if err != nil {
-		return false
-	}
-
-	if strings.EqualFold(parsed.Host, r.Host) {
-		return true
-	}
-
-	return s.deps.WebOrigin != "" && strings.EqualFold(origin, s.deps.WebOrigin)
 }

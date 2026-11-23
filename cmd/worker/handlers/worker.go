@@ -1,9 +1,9 @@
-// Package worker runs the scheduled half of the product: the recurring rules
+// Package handlers runs the scheduled half of the product: the recurring rules
 // that must post their own ledger entry with no browser open.
 //
-// This file is the package's public surface: what a runner needs, what one run
+// worker.go is the package's public surface: what a runner needs, what one run
 // reports and the heartbeat /healthz reads. recurring.go implements the run.
-package worker
+package handlers
 
 import (
 	"context"

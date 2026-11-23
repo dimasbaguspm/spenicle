@@ -31,7 +31,7 @@ type monthlyAnalyticsResponse struct {
 	Months []monthTotalResponse `json:"months"`
 }
 
-func (s *server) handleMonthlyAnalytics(w http.ResponseWriter, r *http.Request) {
+func (s *Server) MonthlyAnalytics(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Analytics.Months")
 	defer endSpan()
 
@@ -121,7 +121,7 @@ type categoryAnalyticsResponse struct {
 	Categories []categoryTotalResponse `json:"categories"`
 }
 
-func (s *server) handleCategoryAnalytics(w http.ResponseWriter, r *http.Request) {
+func (s *Server) CategoryAnalytics(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Analytics.Categories")
 	defer endSpan()
 

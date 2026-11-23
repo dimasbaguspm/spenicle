@@ -41,10 +41,12 @@ the document wins until you change the document too.
 
 ```
 main.go                the cobra root: signal wiring and the hidden `all` command
-cmd/http/              package httpcmd: `spenicle http`, the handler graph and serve loop
-cmd/http/handlers/     route table + one file per endpoint group
+cmd/http/              package httpcmd: `spenicle http`, the handler graph, the route
+                       table, the middleware chain and the serve loop
+cmd/http/handlers/     `Server`: one file per endpoint group, no route, no middleware
 cmd/worker/            package workercmd: `spenicle worker`, the recurring loop
-deploy/s6/s6-rc.d/     the two longrun services s6-overlay starts in the image
+cmd/worker/handlers/   `Runner`: the recurring rules, the catch-up cap and the heartbeat
+config/s6/s6-rc.d/     the two longrun services s6-overlay starts in the image
 uat/                   godog suite: uat.go, steps.go, world.go, features/
 internal/common/       no business logic: config (also the process graph), clock, seal,
                        otel, httpx, uuid, binding, list
@@ -57,9 +59,11 @@ internal/repository/   contracts, plus the adapters: sqlite, ecb, extraction/{sn
 The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` posts the
 due recurring rules and opens no port (it ignores `ADDR`), and the hidden
 `spenicle all` runs both in one process for local development. Each command owns its
-composition root — `cmd/http/http.go` and `cmd/worker/worker.go` — and the graph they
-share (config, logger, telemetry identity, store + migrate, sealer, settings, ledger,
-rates) is `config.Start`/`config.Process` in `internal/common/config/process.go`. An
+composition root: `cmd/http/http.go` and `cmd/worker/worker.go` mount the command,
+`handler.go` next to each one builds `handlers.Deps` / `handlers.Runner` from the
+graph, and the graph they share (config, logger, telemetry identity, store + migrate,
+sealer, settings, ledger, rates) is `config.Start`/`config.Process` in
+`internal/common/config/process.go`. An
 unknown subcommand is cobra's usage error and exit code 1.
 
 ### Two processes, one SQLite file
@@ -237,10 +241,12 @@ reason in the MR, not a `go get`.
   carry the `@vendors` tag and skip when Docker is absent; `the extraction rail is
   "..."`, `the extraction|rates vendor is down` and `the extraction|rates vendor breaks
   its contract` pick the wiring before `a running API` boots.
-- `uat` assembles the dependency graph by hand instead of importing a command: the
-  commands own their wiring and are not importable as a composition root. Adding a
-  dependency to `config.Start` means adding it to `uat/world.go` too. Seeds, schema and
-  first-boot settings live in the adapter (`sqlite.EnsureBaseline`), not in a module.
+- `uat` assembles the dependency graph by hand instead of calling `config.Start`: the
+  commands own their wiring and are not importable as a composition root. It imports
+  only the HTTP surface (`httpcmd.New` — route table plus middleware) and the worker's
+  `cmd/worker/handlers.New`. Adding a dependency to `config.Start` means adding it to
+  `uat/world.go` too. Seeds, schema and first-boot settings live in the adapter
+  (`sqlite.EnsureBaseline`), not in a module.
 
 ## Where the rest lives
 

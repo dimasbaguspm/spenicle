@@ -19,7 +19,9 @@ import (
 	"sync"
 	"time"
 
+	httpcmd "github.com/dimasbaguspm/spenicle/cmd/http"
 	"github.com/dimasbaguspm/spenicle/cmd/http/handlers"
+	workerhandlers "github.com/dimasbaguspm/spenicle/cmd/worker/handlers"
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
@@ -33,7 +35,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
-	"github.com/dimasbaguspm/spenicle/internal/worker"
 )
 
 const (
@@ -85,7 +86,7 @@ type world struct {
 
 	ledger        ledger.Contract
 	asOf          time.Time
-	workerSummary worker.Summary
+	workerSummary workerhandlers.Summary
 }
 
 type fixedClock struct{ at time.Time }
@@ -97,12 +98,12 @@ func (w *world) runRecurring(ctx context.Context) error {
 		return errors.New(`no running API: add the step "a running API" first`)
 	}
 
-	clockSource := worker.TimeSource(fixedClock{at: w.asOf})
+	clockSource := workerhandlers.TimeSource(fixedClock{at: w.asOf})
 	if w.asOf.IsZero() {
 		clockSource = clock.System{}
 	}
 
-	runner := worker.New(w.store, w.store, w.ledger, clockSource, slog.New(w.logs))
+	runner := workerhandlers.New(w.store, w.store, w.ledger, clockSource, slog.New(w.logs))
 
 	summary, err := runner.Run(ctx)
 	w.workerSummary = summary
@@ -297,7 +298,7 @@ func (w *world) boot(ctx context.Context) error {
 
 	queue := captures.New(store, ledgerService, sealer, built.extractor, clockSystem, clockSystem)
 
-	w.server = httptest.NewServer(handlers.New(handlers.Deps{
+	w.server = httptest.NewServer(httpcmd.New(handlers.Deps{
 		Ledger:            ledgerService,
 		Captures:          queue,
 		Accounts:          store,

@@ -25,7 +25,7 @@ type rateResponse struct {
 	FetchedAt string `json:"fetched_at"`
 }
 
-func (s *server) handleGetRate(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetRate(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Rates.Get")
 	defer endSpan()
 

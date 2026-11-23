@@ -31,7 +31,7 @@ type customQueryResponse struct {
 	CreatedAt string `json:"created_at"`
 }
 
-func (s *server) handleCreateCustomQuery(w http.ResponseWriter, r *http.Request) {
+func (s *Server) CreateCustomQuery(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Analytics.CreateCustom")
 	defer endSpan()
 
@@ -54,7 +54,7 @@ func (s *server) handleCreateCustomQuery(w http.ResponseWriter, r *http.Request)
 	httpx.WriteJSON(w, http.StatusCreated, toCustomQueryResponse(created))
 }
 
-func (s *server) handlePatchCustomQuery(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PatchCustomQuery(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Analytics.PatchCustom")
 	defer endSpan()
 
@@ -109,7 +109,7 @@ type customQueryRunResponse struct {
 	Categories []categoryTotalResponse `json:"categories,omitempty"`
 }
 
-func (s *server) handleRunCustomQuery(w http.ResponseWriter, r *http.Request) {
+func (s *Server) RunCustomQuery(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Analytics.RunCustom")
 	defer endSpan()
 
@@ -176,7 +176,7 @@ func toCustomQueryResponse(query entity.CustomQuery) customQueryResponse {
 	}
 }
 
-func (s *server) runNamespace(
+func (s *Server) runNamespace(
 	ctx context.Context,
 	namespace string,
 	from, to time.Time,

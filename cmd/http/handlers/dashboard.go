@@ -25,7 +25,7 @@ type dashboardResponse struct {
 	TopCategory     *topCategoryResponse `json:"top_category,omitempty"`
 }
 
-func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Dashboard.Get")
 	defer endSpan()
 

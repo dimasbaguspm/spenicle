@@ -38,10 +38,11 @@ place to defer a decision. v2 fixes all three.
 
 ```
 main.go               cobra root: signal wiring, mounts http, worker and the hidden all
-cmd/http/             httpcmd: the API composition root and the serve loop
+cmd/http/             httpcmd: the API composition root, the route table and the serve loop
+cmd/http/handlers/    one file per endpoint group; no route table, no middleware
 cmd/worker/           workercmd: the worker composition root and the recurring loop
-deploy/s6/s6-rc.d/    the two longrun services s6-overlay supervises in the image
-cmd/http/handlers/    one file per endpoint group; owns the route table
+cmd/worker/handlers/  the recurring rules the worker posts
+config/s6/s6-rc.d/    the two longrun services s6-overlay supervises in the image
 internal/common/httpx/ recovery, tracing, request logging
 uat/                  Gherkin suite: uat.go (entry point), steps.go, world.go, features/
 internal/common/      utilities with no business logic: config, clock, seal, otel, httpx
@@ -62,9 +63,10 @@ Two rules keep it pluggable:
    create a cycle.
 
 The commands own their wiring, and `uat` assembles the same graph by hand from
-`repository/sqlite` (open, migrate, `EnsureBaseline`), `module/ledger` and
-`handlers.New`. First-boot state lives in the adapter with the migrations, not in a
-module: it is initial data, and its rules come from `entity`.
+`repository/sqlite` (open, migrate, `EnsureBaseline`), `module/ledger`, `httpcmd.New`
+(the route table and the middleware chain) and `handlers.New` (the endpoints).
+First-boot state lives in the adapter with the migrations, not in a module: it is
+initial data, and its rules come from `entity`.
 
 Configuration is one file: `internal/common/config/config.go` holds every environment
 variable, **every default** (DB path, HTTP timeouts, shutdown budgets, body cap, pool

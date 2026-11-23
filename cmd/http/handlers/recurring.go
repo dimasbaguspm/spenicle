@@ -54,7 +54,7 @@ type recurringResponse struct {
 	CreatedAt        string `json:"created_at"`
 }
 
-func (s *server) handleCreateRecurring(w http.ResponseWriter, r *http.Request) {
+func (s *Server) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Recurring.Post")
 	defer endSpan()
 
@@ -107,7 +107,7 @@ func (s *server) handleCreateRecurring(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, toRecurringResponse(created))
 }
 
-func (s *server) handleListRecurring(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ListRecurring(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Recurring.List")
 	defer endSpan()
 
@@ -124,7 +124,7 @@ func (s *server) handleListRecurring(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func (s *server) handlePatchRecurring(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PatchRecurring(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Recurring.Patch")
 	defer endSpan()
 

@@ -11,7 +11,7 @@ type setupRequest struct {
 	BaseCurrency string `json:"base_currency" validate:"omitempty,currency"`
 }
 
-func (s *server) handleSetup(w http.ResponseWriter, r *http.Request) {
+func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Setup.Post")
 	defer endSpan()
 

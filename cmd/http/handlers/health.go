@@ -18,7 +18,7 @@ type healthResponse struct {
 	WorkerLastRunAt string `json:"worker_last_run_at"`
 }
 
-func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
+func (s *Server) Health(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Health.Check")
 	defer endSpan()
 
@@ -35,7 +35,7 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, response)
 }
 
-func (s *server) health(ctx context.Context) (healthResponse, error) {
+func (s *Server) health(ctx context.Context) (healthResponse, error) {
 	schemaVersion, err := s.deps.Health.SchemaVersion(ctx)
 	if err != nil {
 		return healthResponse{}, err
