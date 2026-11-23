@@ -60,7 +60,7 @@ func (s *Service) Refresh(ctx context.Context) (Report, error) {
 		return Report{}, err
 	}
 
-	s.remember(rates)
+	s.remember(s.stored(ctx, rates))
 
 	report := Report{Source: constant.FXSourceECB, Stored: len(rates)}
 	if len(rates) > 0 {
@@ -99,6 +99,23 @@ func (s *Service) Rate(
 	s.remember([]entity.Rate{rate})
 
 	return rate, nil
+}
+
+func (s *Service) stored(ctx context.Context, rates []entity.Rate) []entity.Rate {
+	saved := make([]entity.Rate, 0, len(rates))
+
+	for _, rate := range rates {
+		row, found, err := s.store.RateOn(ctx, rate.Base, rate.Quote, rate.OnDate)
+		if err != nil || !found {
+			saved = append(saved, rate)
+
+			continue
+		}
+
+		saved = append(saved, row)
+	}
+
+	return saved
 }
 
 func (s *Service) remember(rates []entity.Rate) {
