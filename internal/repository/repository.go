@@ -51,6 +51,12 @@ type Payees interface {
 	UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error)
 }
 
+type Recurring interface {
+	CreateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error)
+	RecurringByRef(ctx context.Context, ref string) (entity.Recurring, bool, error)
+	UpdateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error)
+}
+
 type RateSource interface {
 	Daily(ctx context.Context) ([]entity.Rate, error)
 }

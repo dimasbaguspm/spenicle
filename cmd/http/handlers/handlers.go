@@ -23,6 +23,7 @@ type Deps struct {
 	Rates             rates.Contract
 	Accounts          repository.Accounts
 	Payees            repository.Payees
+	Recurring         repository.Recurring
 	Health            repository.System
 	Sealer            seal.Sealer
 	BaseCurrency      string
@@ -62,6 +63,8 @@ func New(deps Deps) http.Handler {
 	mux.HandleFunc("PATCH /api/accounts/{ref}", instance.handlePatchAccount)
 	mux.HandleFunc("POST /api/payees", instance.handleCreatePayee)
 	mux.HandleFunc("PATCH /api/payees/{ref}", instance.handlePatchPayee)
+	mux.HandleFunc("POST /api/recurring", instance.handleCreateRecurring)
+	mux.HandleFunc("PATCH /api/recurring/{ref}", instance.handlePatchRecurring)
 
 	mux.HandleFunc("GET /api/entries", instance.handleListEntries)
 	mux.HandleFunc("POST /api/entries", instance.handlePostEntry)

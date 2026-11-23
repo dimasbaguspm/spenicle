@@ -159,6 +159,7 @@ func (w *world) boot(ctx context.Context) error {
 		Captures:      captures.New(store, ledgerService, sealer, nil, clockSystem, clockSystem),
 		Accounts:      store,
 		Payees:        store,
+		Recurring:     store,
 		Health:        store,
 		Settings:      settingsService,
 		Rates:         ratesService,
@@ -336,6 +337,8 @@ func (w *world) expand(body string) (string, error) {
 
 		return ref
 	})
+
+	out = strings.ReplaceAll(out, "{{ref}}", w.lastRef)
 
 	if len(missing) > 0 {
 		return "", fmt.Errorf(`unknown account(s) %s: create them with "the account ... exists as ..."`,

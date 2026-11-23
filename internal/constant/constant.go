@@ -57,6 +57,24 @@ const (
 	SettingSecretFingerprint = "secret_fingerprint"
 )
 
+const (
+	RecurringOriginUser     = "user"
+	RecurringOriginDetected = "detected"
+
+	RecurringStateSuggested = "suggested"
+	RecurringStateActive    = "active"
+	RecurringStatePaused    = "paused"
+	RecurringStateEnded     = "ended"
+
+	RecurringCadenceWeekly  = "weekly"
+	RecurringCadenceMonthly = "monthly"
+	RecurringCadenceYearly  = "yearly"
+
+	ShiftNone = "none"
+	ShiftNext = "next"
+	ShiftPrev = "prev"
+)
+
 const SessionCookie = "spenicle_session"
 
 const (

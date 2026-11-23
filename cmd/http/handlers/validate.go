@@ -68,8 +68,11 @@ func newValidator() *validator.Validate {
 				return false
 			}
 		},
-		"ref":         validRef,
-		"accountkind": validAccountKind,
+		"ref":            validRef,
+		"accountkind":    validAccountKind,
+		"cadence":        validCadence,
+		"recurringstate": validRecurringState,
+		"shift":          validShift,
 		"capturestatus": func(field validator.FieldLevel) bool {
 			switch field.Field().String() {
 			case constant.CaptureStatusExtracting, constant.CaptureStatusPending,
@@ -211,6 +214,35 @@ func validAccountKind(field validator.FieldLevel) bool {
 	switch field.Field().String() {
 	case constant.AccountKindAsset, constant.AccountKindLiability,
 		constant.AccountKindExpense, constant.AccountKindIncome:
+		return true
+	default:
+		return false
+	}
+}
+
+func validCadence(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.RecurringCadenceWeekly, constant.RecurringCadenceMonthly,
+		constant.RecurringCadenceYearly:
+		return true
+	default:
+		return false
+	}
+}
+
+func validRecurringState(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.RecurringStateSuggested, constant.RecurringStateActive,
+		constant.RecurringStatePaused, constant.RecurringStateEnded:
+		return true
+	default:
+		return false
+	}
+}
+
+func validShift(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.ShiftNone, constant.ShiftNext, constant.ShiftPrev:
 		return true
 	default:
 		return false

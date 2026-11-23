@@ -71,9 +71,7 @@ func newApp(
 		return nil, err
 	}
 
-	ledgerService := ledger.New(store, store, settingsService, clock.System{}, clock.System{})
-
-	ratesService, err := ratesFor(ctx, cfg, store, clock.System{}, logger)
+	ledgerService, ratesService, err := services(ctx, cfg, store, settingsService, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +88,7 @@ func newApp(
 			Rates:             ratesService,
 			Accounts:          store,
 			Payees:            store,
+			Recurring:         store,
 			Settings:          settingsService,
 			Health:            store,
 			Sealer:            sealer,
@@ -102,6 +101,23 @@ func newApp(
 			Logger:            logger,
 		}),
 	}, nil
+}
+
+func services(
+	ctx context.Context,
+	cfg entity.AppConfig,
+	store *sqlite.Store,
+	settingsService *settings.Service,
+	logger *slog.Logger,
+) (*ledger.Service, *rates.Service, error) {
+	ledgerService := ledger.New(store, store, settingsService, clock.System{}, clock.System{})
+
+	ratesService, err := ratesFor(ctx, cfg, store, clock.System{}, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ledgerService, ratesService, nil
 }
 
 func warmRates(ctx context.Context, service *rates.Service, logger *slog.Logger) {

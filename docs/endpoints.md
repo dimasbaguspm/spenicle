@@ -724,6 +724,19 @@ is refused by the unique index, not by a check in the handler.
 
 ---
 
+## Recurring rules
+
+| method | path | body | answer |
+| --- | --- | --- | --- |
+| `POST` | `/api/recurring` | `payee_ref`, `account_ref`, optional `category_ref`, `amount_minor`, `currency`, `cadence` (`weekly`, `monthly`, `yearly`), optional `interval_n`, `day_of_month`, `business_day_shift`, `next_due_on`, `ends_on` | `201` with the rule: `origin` is `user`, `state` is `active` |
+| `PATCH` | `/api/recurring/{ref}` | any of `amount_minor`, `cadence`, `interval_n`, `day_of_month`, `next_due_on`, `ends_on`, `state` (`suggested`, `active`, `paused`, `ended`) | `200` with the rule |
+
+A category is not a table: it is an `accounts` row whose `kind` is `expense` or
+`income`, created through `POST /api/accounts` and referenced as `category_ref`.
+Unknown refs are `422 unknown_reference` on create and `404 not_found` on patch.
+
+---
+
 ## Planned, not implemented
 
 Designed in [`v2-api.md`](./v2-api.md), no handler yet. Listed so nobody guesses:
@@ -733,7 +746,6 @@ Designed in [`v2-api.md`](./v2-api.md), no handler yet. Listed so nobody guesses
 | `POST` | `/api/setup` | wizard: currency, first account, opening balance | settings, accounts, ledger |
 | `PATCH` | `/api/accounts/{ref}` | rename, icon, reparent, archive | accounts, audit |
 | `PATCH` | `/api/payees/{ref}` | rename, defaults, archive | payees, audit |
-| `POST` | `/api/recurring` | create a rule, or promote an entry | recurring_rules, captures |
 | `PATCH` | `/api/recurring/{ref}` | accept, pause, end, edit | recurring_rules, audit |
 | `GET` | `/api/months/{year_month}` | derived month report and adjustment body | ledger, captures, FX |
 | `GET` | `/api/dashboard` | five tiles in one response | ledger, recurring, captures |
