@@ -31,7 +31,7 @@ func Serve(ctx context.Context, process *config.Process) {
 		clock.System{}, process.Logger,
 	)
 
-	process.Logger.InfoContext(ctx, "recurring worker started",
+	process.Logger.Info(ctx, "recurring worker started",
 		slog.Duration("every", process.Cfg.WorkerInterval),
 		slog.Duration("artifact_retention", process.Cfg.ArtifactRetention),
 		slog.Duration("export_retention", process.Cfg.ExportRetention))

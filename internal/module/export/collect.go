@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
@@ -27,6 +28,9 @@ type snapshot struct {
 }
 
 func collect(ctx context.Context, deps Deps) (*snapshot, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Export.Collect")
+	defer endSpan()
+
 	schemaVersion, err := deps.System.SchemaVersion(ctx)
 	if err != nil {
 		return nil, err

@@ -26,6 +26,8 @@ import (
 	workerhandlers "github.com/dimasbaguspm/spenicle/cmd/worker/handlers"
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
+	"github.com/dimasbaguspm/spenicle/internal/common/logging"
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
@@ -117,7 +119,7 @@ func (w *world) runRecurring(ctx context.Context) error {
 	runner := workerhandlers.New(
 		w.store, w.store, w.ledger, w.store, w.store, w.artifacts, w.limits.ArtifactRetention,
 		w.exports, w.exportDeps, w.limits.ExportStaleAfter,
-		clockSource, slog.New(w.logs),
+		clockSource, logging.From(slog.New(w.logs), telemetry.ComponentWorker),
 	)
 
 	summary, err := runner.Run(ctx)
@@ -501,7 +503,7 @@ func (w *world) boot(ctx context.Context) error {
 		MaxBodyBytes:      limits.MaxBodyBytes,
 		MaxArtifactBytes:  limits.ArtifactMaxBytes,
 		ExtractionEnabled: w.rail != "",
-		Logger:            slog.New(w.logs),
+		Logger:            logging.From(slog.New(w.logs), telemetry.ComponentHTTP),
 	}))
 
 	return nil

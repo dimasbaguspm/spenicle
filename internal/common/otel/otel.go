@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -20,9 +21,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-const metricInterval = 15 * time.Second
+const (
+	metricInterval    = 15 * time.Second
+	defaultTracerName = "spenicle"
+)
 
 type Config struct {
 	ServiceName string
@@ -32,19 +37,52 @@ type Config struct {
 
 const defaultOTLPHTTPPort = "4318"
 
-var tracerName = "spenicle" //nolint:gochecknoglobals // one process-wide name, written once by Setup
+//nolint:gochecknoglobals // one process-wide identity, written once by the command before Setup
+var identity = struct {
+	tracerName string
+	version    string
+	component  string
+}{tracerName: defaultTracerName}
+
+func SetIdentity(serviceName, version, component string) {
+	if name := strings.TrimSpace(serviceName); name != "" {
+		identity.tracerName = name
+	}
+
+	identity.version = version
+	identity.component = component
+}
+
+func CurrentComponent() string { return identity.component }
 
 func StartSpan(ctx context.Context, name string) (context.Context, func()) {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, name)
+	ctx, span := otel.Tracer(identity.tracerName).Start(ctx, name,
+		oteltrace.WithAttributes(identityAttributes()...))
 
 	return ctx, func() { span.End() }
 }
 
-func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error) {
-	if name := strings.TrimSpace(cfg.ServiceName); name != "" {
-		tracerName = name
+// Ref tags the current span with the ref the work is about. Spans may carry a
+// ref; metrics never may.
+func Ref(ctx context.Context, ref string) {
+	oteltrace.SpanFromContext(ctx).SetAttributes(attribute.String(AttrRef, ref))
+}
+
+func identityAttributes() []attribute.KeyValue {
+	attrs := make([]attribute.KeyValue, 0, 2)
+
+	if identity.version != "" {
+		attrs = append(attrs, attribute.String(AttrVersion, identity.version))
 	}
 
+	if identity.component != "" {
+		attrs = append(attrs, attribute.String(AttrComponent, identity.component))
+	}
+
+	return attrs
+}
+
+func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error) {
 	noop := func(context.Context) error { return nil }
 	if strings.TrimSpace(cfg.Endpoint) == "" {
 		return noop, nil
@@ -86,6 +124,10 @@ func Setup(ctx context.Context, cfg Config) (func(context.Context) error, error)
 
 	otel.SetTracerProvider(tp)
 	otel.SetMeterProvider(mp)
+
+	if runtimeErr := runtime.Start(); runtimeErr != nil {
+		return nil, fmt.Errorf("otel runtime instrumentation: %w", runtimeErr)
+	}
 
 	return func(shutdownCtx context.Context) error {
 		tpErr := tp.Shutdown(shutdownCtx)

@@ -258,6 +258,9 @@ func (s *Service) commit(
 	ctx context.Context,
 	batch entity.ImportBatch,
 ) (entity.ImportBatch, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Commit")
+	defer endSpan()
+
 	if batch.Status == constant.ImportStatusCommitted {
 		return s.load(ctx, batch)
 	}
@@ -336,6 +339,9 @@ func (s *Service) postRow(
 	row entity.ImportRow,
 	categoryRef string,
 ) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.PostRow")
+	defer endSpan()
+
 	if row.CategoryRef != "" {
 		categoryRef = row.CategoryRef
 	}
@@ -360,10 +366,15 @@ func (s *Service) postRow(
 }
 
 func (s *Service) draft(ctx context.Context, in CreateInput, now time.Time) (entity.ImportBatch, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Draft")
+	defer endSpan()
+
 	parsed, err := parseStatement(in.Statement)
 	if err != nil {
 		return entity.ImportBatch{}, err
 	}
+
+	telemetry.RecordImportRows(ctx, int64(len(parsed)))
 
 	account, err := s.defaultAccount(ctx, in.AccountRef)
 	if err != nil {
@@ -422,6 +433,9 @@ func (s *Service) detect(
 	fileHash, currency string,
 	row *entity.ImportRow,
 ) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Detect")
+	defer endSpan()
+
 	existing, found, err := s.entries.EntryByClientID(ctx, rowClientID(fileHash, row.RowIndex))
 	if err != nil {
 		return fmt.Errorf("already imported probe: %w", err)
@@ -431,6 +445,8 @@ func (s *Service) detect(
 		row.Status = constant.ImportRowStatusSkipped
 		row.ClashKind = constant.ImportClashAlreadyImported
 		row.ClashEntryRef = existing.Ref
+
+		telemetry.RecordImportClash(ctx, constant.ImportClashAlreadyImported)
 
 		return nil
 	}
@@ -456,6 +472,8 @@ func (s *Service) detect(
 			row.Status = constant.ImportRowStatusSkipped
 			row.ClashKind = clash
 			row.ClashEntryRef = ref
+
+			telemetry.RecordImportClash(ctx, clash)
 
 			return nil
 		}
@@ -578,6 +596,9 @@ func (s *Service) record(
 	rowIndex *int,
 	payload string,
 ) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Record")
+	defer endSpan()
+
 	_, err := s.events.InsertImportEvent(ctx, entity.ImportEvent{
 		BatchID:  batch.ID,
 		Kind:     kind,

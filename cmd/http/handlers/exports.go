@@ -196,7 +196,7 @@ func (s *Server) DownloadExport(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if _, copyErr := io.Copy(w, body); copyErr != nil {
-		s.deps.Logger.ErrorContext(ctx, "export stream failed", slog.String("error", copyErr.Error()))
+		s.deps.Logger.Error(ctx, "export stream failed", slog.String("error", copyErr.Error()))
 	}
 }
 

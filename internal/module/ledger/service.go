@@ -74,6 +74,8 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 		return entity.Entry{}, false, err
 	}
 
+	telemetry.RecordLedgerPost(ctx, saved.Source, int64(len(saved.Postings)))
+
 	return saved, true, nil
 }
 
@@ -82,6 +84,9 @@ func (s *Service) buildPostings(
 	in PostInput,
 	nativeCurrency, baseCurrency entity.Currency,
 ) ([]entity.Posting, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.BuildPostings")
+	defer endSpan()
+
 	postings := make([]entity.Posting, 0, len(in.Postings))
 
 	for index, input := range in.Postings {
@@ -184,6 +189,9 @@ func (s *Service) UpdatePayee(ctx context.Context, ref, payeeRef string) (entity
 }
 
 func (s *Service) resolvePayee(ctx context.Context, ref string) (int64, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.ResolvePayee")
+	defer endSpan()
+
 	payee, found, err := s.payees.PayeeByRef(ctx, ref)
 	if err != nil {
 		return 0, fmt.Errorf("payee: %w", err)

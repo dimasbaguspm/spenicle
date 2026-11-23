@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"log/slog"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
@@ -37,5 +37,5 @@ type Deps struct {
 	MaxArtifactBytes  int64
 	WebOrigin         string
 	ExtractionEnabled bool
-	Logger            *slog.Logger
+	Logger            *logging.Logger
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 	"github.com/openai/openai-go/shared"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
@@ -47,9 +48,11 @@ func New(apiKey, model, baseURL string, timeout time.Duration) (*Client, error) 
 		return nil, errors.New("openai model is required")
 	}
 
+	httpClient := &http.Client{Timeout: timeout, Transport: otelhttp.NewTransport(http.DefaultTransport)}
+
 	options := []option.RequestOption{
 		option.WithAPIKey(apiKey),
-		option.WithHTTPClient(&http.Client{Timeout: timeout}),
+		option.WithHTTPClient(httpClient),
 	}
 
 	if strings.TrimSpace(baseURL) != "" {

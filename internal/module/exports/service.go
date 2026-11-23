@@ -284,6 +284,9 @@ func (s *Service) Sweep(ctx context.Context, staleBefore time.Time) (Summary, er
 }
 
 func (s *Service) expire(ctx context.Context, job entity.Export) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Exports.Expire")
+	defer endSpan()
+
 	gone, err := s.jobs.ExpireExport(ctx, job.Ref, s.clock.Now())
 	if err != nil {
 		return err
@@ -348,6 +351,9 @@ func (s *Service) raced(
 }
 
 func (s *Service) load(ctx context.Context, ref string) (entity.Export, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Exports.Load")
+	defer endSpan()
+
 	job, found, err := s.jobs.ExportByRef(ctx, ref)
 	if err != nil {
 		return entity.Export{}, err
@@ -365,6 +371,9 @@ func (s *Service) record(
 	job entity.Export,
 	kind, actor string,
 ) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Exports.Record")
+	defer endSpan()
+
 	_, err := s.events.InsertExportEvent(ctx, entity.ExportEvent{
 		ExportID: job.ID,
 		Kind:     kind,

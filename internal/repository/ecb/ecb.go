@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
@@ -37,7 +39,7 @@ func New(endpoint string, timeout time.Duration, clock TimeSource) (*Client, err
 
 	return &Client{
 		endpoint: trimmed,
-		http:     &http.Client{Timeout: timeout},
+		http:     &http.Client{Timeout: timeout, Transport: otelhttp.NewTransport(http.DefaultTransport)},
 		clock:    clock,
 	}, nil
 }

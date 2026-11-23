@@ -13,6 +13,8 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	"github.com/dimasbaguspm/spenicle/internal/common/logging"
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
@@ -27,7 +29,7 @@ import (
 type server struct {
 	api       *handlers.Server
 	settings  settings.Contract
-	logger    *slog.Logger
+	logger    *logging.Logger
 	webOrigin string
 }
 
@@ -42,7 +44,7 @@ func Handler(ctx context.Context, process *config.Process) (http.Handler, error)
 
 func New(deps handlers.Deps) http.Handler {
 	if deps.Logger == nil {
-		deps.Logger = slog.Default()
+		deps.Logger = logging.New(telemetry.ComponentHTTP)
 	}
 
 	instance := &server{
@@ -52,15 +54,25 @@ func New(deps handlers.Deps) http.Handler {
 		webOrigin: deps.WebOrigin,
 	}
 
-	return httpx.Chain(instance.requireSession(instance.routes()),
+	routes := instance.routes()
+
+	return httpx.Chain(instance.requireSession(routes),
 		httpx.CORS(deps.WebOrigin),
 		httpx.Recover(deps.Logger),
-		httpx.Observe(),
+		httpx.Observe(routeOf(routes)),
 		httpx.Log(deps.Logger),
 	)
 }
 
-func (s *server) routes() http.Handler {
+func routeOf(mux *http.ServeMux) func(*http.Request) string {
+	return func(r *http.Request) string {
+		_, pattern := mux.Handler(r)
+
+		return pattern
+	}
+}
+
+func (s *server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", s.api.Health)
@@ -196,7 +208,7 @@ func (s *server) crossOriginAllowed(r *http.Request) bool {
 }
 
 func (s *server) writeInternal(ctx context.Context, w http.ResponseWriter, err error) {
-	s.logger.ErrorContext(ctx, "request failed", slog.String("error", err.Error()))
+	s.logger.Error(ctx, "request failed", slog.String("error", err.Error()))
 	httpx.WriteError(w, http.StatusInternalServerError, "internal_error", "internal error")
 }
 
@@ -254,7 +266,7 @@ func buildExtractor(ctx context.Context, process *config.Process) (extraction.Ex
 func selectRail(
 	ctx context.Context,
 	cfg entity.AppConfig,
-	logger *slog.Logger,
+	logger *logging.Logger,
 ) (extraction.Extractor, error) {
 	if cfg.SnapToJSONAPIKey != "" {
 		rail, err := snaptojson.New(cfg.SnapToJSONEndpoint, cfg.SnapToJSONAPIKey, cfg.SnapToJSONTimeout)
@@ -262,7 +274,7 @@ func selectRail(
 			return nil, fmt.Errorf("snaptojson rail: %w", err)
 		}
 
-		logger.InfoContext(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))
+		logger.Info(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))
 
 		return rail, nil
 	}
@@ -273,12 +285,12 @@ func selectRail(
 			return nil, fmt.Errorf("openai rail: %w", err)
 		}
 
-		logger.InfoContext(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))
+		logger.Info(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))
 
 		return rail, nil
 	}
 
-	logger.InfoContext(ctx, "no extraction rail configured: captures stay manual")
+	logger.Info(ctx, "no extraction rail configured: captures stay manual")
 
 	return nil, nil //nolint:nilnil // nil extractor is the documented "disabled" mode
 }
@@ -297,7 +309,7 @@ func Serve(ctx context.Context, process *config.Process, handler http.Handler) e
 	errCh := make(chan error, 1)
 
 	go func() {
-		process.Logger.InfoContext(ctx, "listening",
+		process.Logger.Info(ctx, "listening",
 			slog.String("addr", cfg.Addr),
 			slog.String("base_currency", process.BaseCurrency),
 			slog.Bool("sealed", cfg.Sealed()),
@@ -313,7 +325,7 @@ func Serve(ctx context.Context, process *config.Process, handler http.Handler) e
 	case listenErr := <-errCh:
 		return fmt.Errorf("serve: %w", listenErr)
 	case <-ctx.Done():
-		process.Logger.InfoContext(ctx, "shutting down")
+		process.Logger.Info(ctx, "shutting down")
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cfg.ShutdownTimeout)

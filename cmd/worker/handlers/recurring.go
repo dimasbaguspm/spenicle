@@ -73,6 +73,11 @@ func (r *Runner) runRule(
 	now time.Time,
 	summary *Summary,
 ) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Worker.Recurring.RunRule")
+	defer endSpan()
+
+	telemetry.Ref(ctx, rule.Ref)
+
 	due := rule.NextDueOn
 
 	for count := 0; count < catchUpCap && !due.After(now) && !pastEnd(rule, due); count++ {
@@ -111,6 +116,9 @@ func (r *Runner) runRule(
 }
 
 func (r *Runner) post(ctx context.Context, rule entity.Recurring, due time.Time) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Worker.Recurring.Post")
+	defer endSpan()
+
 	input, err := r.postInput(ctx, rule, due)
 	if err != nil {
 		return false, err
@@ -175,14 +183,24 @@ func (r *Runner) payeeName(ctx context.Context, ref string) string {
 }
 
 func (r *Runner) tick(ctx context.Context) {
+	start := time.Now()
+
 	summary, err := r.Run(ctx)
+
+	outcome := telemetry.OutcomeOK
 	if err != nil {
-		r.logger.ErrorContext(ctx, "recurring run failed", slog.Any("error", err))
+		outcome = telemetry.OutcomeFailed
+	}
+
+	telemetry.RecordWorkerRun(ctx, telemetry.JobRecurring, outcome, int64(summary.Posted), time.Since(start))
+
+	if err != nil {
+		r.logger.Error(ctx, "recurring run failed", slog.Any("error", err))
 
 		return
 	}
 
-	r.logger.InfoContext(ctx, "recurring run finished",
+	r.logger.Info(ctx, "recurring run finished",
 		slog.Int("posted", summary.Posted),
 		slog.Int("skipped", summary.Skipped))
 }

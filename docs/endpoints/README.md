@@ -52,3 +52,6 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/exports/{ref}/events` | the append-only log of one job | [`GET_api_exports_ref_events.md`](./GET_api_exports_ref_events.md) |
 | `GET` | `/api/exports/{ref}/download` | the rendered document or zip | [`GET_api_exports_ref_download.md`](./GET_api_exports_ref_download.md) |
 
+Every route answers as a span named `Handler.<Group>.<Action>` under the request's
+`<method> <route pattern>` span; [`../observability.md`](../observability.md) is what that span,
+the matching metric and the `trace_id` on its log lines mean.

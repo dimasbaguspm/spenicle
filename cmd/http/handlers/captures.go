@@ -287,7 +287,7 @@ func (s *Server) GetCaptureArtifact(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := io.Copy(w, body); err != nil {
-		s.deps.Logger.ErrorContext(ctx, "stream artifact", slog.String("error", err.Error()))
+		s.deps.Logger.Error(ctx, "stream artifact", slog.String("error", err.Error()))
 	}
 }
 

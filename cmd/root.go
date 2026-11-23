@@ -15,6 +15,7 @@ import (
 	httpcmd "github.com/dimasbaguspm/spenicle/cmd/http"
 	workercmd "github.com/dimasbaguspm/spenicle/cmd/worker"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
 const allServiceName = "spenicle"
@@ -53,6 +54,8 @@ func allCommand() *cobra.Command {
 
 func runAll(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+
+	telemetry.SetIdentity(allServiceName, config.Version, telemetry.ComponentHTTP)
 
 	process, err := config.Start(ctx, allServiceName)
 	if err != nil {

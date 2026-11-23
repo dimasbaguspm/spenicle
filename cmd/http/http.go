@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
 const serviceName = "spenicle-http"
@@ -24,6 +25,8 @@ func Command() *cobra.Command {
 
 func run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+
+	telemetry.SetIdentity(serviceName, config.Version, telemetry.ComponentHTTP)
 
 	process, err := config.Start(ctx, serviceName)
 	if err != nil {

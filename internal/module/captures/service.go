@@ -244,6 +244,9 @@ func (s *Service) storeArtifact(
 	capture entity.Capture,
 	artifact *extraction.Artifact,
 ) (entity.Capture, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.StoreArtifact")
+	defer endSpan()
+
 	if s.blobs == nil || artifact == nil || len(artifact.Bytes) == 0 {
 		return capture, nil
 	}
@@ -273,6 +276,9 @@ func (s *Service) extract(
 	capture entity.Capture,
 	artifact *extraction.Artifact,
 ) (entity.Capture, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Extract")
+	defer endSpan()
+
 	if s.extractor == nil || artifact == nil {
 		return capture, nil
 	}
@@ -294,6 +300,9 @@ func (s *Service) applyReport(
 	capture entity.Capture,
 	report extraction.Report,
 ) (entity.Capture, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.ApplyReport")
+	defer endSpan()
+
 	capture.JobRef = report.JobRef
 	capture.ExtractionRail = report.Rail
 	capture.ExtractionModel = report.Model
@@ -354,6 +363,9 @@ func (s *Service) resolve(
 	status, note string,
 	entryID *int64,
 ) (entity.Capture, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Resolve")
+	defer endSpan()
+
 	if err := capture.Transition(status); err != nil {
 		return entity.Capture{}, err
 	}
@@ -369,6 +381,8 @@ func (s *Service) resolve(
 	if err != nil {
 		return entity.Capture{}, err
 	}
+
+	telemetry.RecordCaptureTransition(ctx, updated.Kind, status)
 
 	return s.open(ctx, updated)
 }

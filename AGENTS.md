@@ -248,35 +248,38 @@ jobs and sweep the queue.
 
 Three signals, one vocabulary, no per-request guesswork.
 
-Status: spans (`telemetry.StartSpan`), per-command `service.name` and the OTLP wiring exist
-today. The context logger helpers, the `otelhttp` transports, the metric instruments, the
-trace propagation column and `config/grafana/` land next; the rules below bind them from the
-moment they exist, and bind the code that is already here.
+Status: all three signals are wired. Spans (`telemetry.StartSpan`, one per boundary method), the
+`otelhttp` transports on every vendor client, the metric instruments, the context logger
+(`internal/common/logging`) and the provisioned dashboard in [`config/grafana/`](./config/grafana/observability.json)
+exist today. What is still open is the trace propagation column: an export or import job does not
+yet carry the caller's `traceparent`. [`docs/observability.md`](./docs/observability.md) is the how.
 
 Rules that bind every change:
 
-- **Logging goes through a context-aware logger.** `telemetry.Info/Warn/Error/Debug(ctx, msg, attrs…)`
-  (this file is `internal/common/otel`, package `telemetry`); each record carries `trace_id`,
-  `span_id`, `service.name` and `component` (`http|worker`) taken from the context, so a log
-  line is always joinable to its span. Attributes are the typed `telemetry.Attr` list, never
-  `...any`, so keys stay consistent. The level is not configurable: `Debug` for hot-loop
-  detail, `Info` for branch outcomes and lifecycle (`no categories found`, `recurring run
-  finished`), `Warn` for degraded-but-recovered (vendor down, sweep, retry), `Error` only when
-  a request returns `5xx` or work is dropped.
+- **Logging goes through one context-aware logger.** `internal/common/logging`, package
+  `logging`: `logger.Info/Warn/Error/Debug(ctx, msg, attrs…)` on a `*logging.Logger` built with
+  `logging.New(component)`. Each record carries `component` (`http|worker`) and, when the context
+  holds a valid span, `trace_id` + `span_id`, so a log line is always joinable to its span.
+  Attributes are typed `slog.Attr`, never `...any`, so keys stay consistent. The level is not
+  configurable: `Debug` for hot-loop detail, `Info` for branch outcomes and lifecycle (`no
+  categories found`, `recurring run finished`), `Warn` for degraded-but-recovered (vendor down,
+  sweep, retry), `Error` only when a request returns `5xx` or work is dropped.
 - **One span per boundary method, none in pure code.** Every exported *and* private method that
   crosses a layer or does I/O opens exactly one span named `<Package>.<Receiver>.<Method>`
   (`Handler.Entries.List`, `Module.Ledger.Post`, `Repository.Sqlite.ListEntries`,
   `Worker.Recurring.Run`); validation, formatting and other pure functions open none. Outgoing
   HTTP clients (ECB, SnapToJSON, OpenAI) go through `otelhttp.NewTransport`, so a vendor call is
   a child span with its real status.
-- **Attributes come from one constant set** (`spenicle.version`, `spenicle.component`,
-  `spenicle.entry.source`, `spenicle.capture.kind`, `spenicle.job`, `spenicle.ref`,
-  `spenicle.rows`, `spenicle.outcome`) plus the semantic conventions where they exist
-  (`http.request.method`, `http.route` as the *template*, `http.response.status_code`,
-  `db.system=sqlite`, `db.operation`). Kinds belong in attributes, never in the span name.
+- **Attributes come from one constant set** in `internal/common/otel` (`telemetry.AttrVersion`,
+  `AttrComponent`, `AttrRef`, `AttrJob`, `AttrRows`, `AttrOutcome`, `AttrSource`, `AttrKind`,
+  `AttrClashKind`) plus the semantic conventions where they exist (`http.request.method`,
+  `http.route` as the *template*, `http.response.status_code`, `db.system=sqlite`,
+  `db.operation`). `telemetry.StartSpan` stamps `spenicle.version` + `spenicle.component` on
+  every span, so no call site repeats them; `telemetry.Ref` tags the current span. Kinds belong
+  in attributes, never in the span name.
 - **`http` and `worker` are separate processes**, so they cannot share a trace by accident:
   they share the attribute vocabulary, the same panels, and each opens its own root span
-  (`Worker.Run` per tick). A job that crosses the boundary (`exports`, `imports`) carries the
+  (`Worker.Recurring.Run` per tick). A job that crosses the boundary (`exports`, `imports`) carries the
   caller's W3C `traceparent` on its row, and the worker resumes the trace as a remote parent —
   that is the only honest end-to-end story across processes.
 - **Metrics are prefixed `spenicle.`**, dotted lowercase, units in the instrument option and
@@ -286,17 +289,19 @@ Rules that bind every change:
   `spenicle.sqlite.locked`, plus `otelruntime`. Attributes are bounded enums only (`job`,
   `outcome`, `source`, `clash.kind`, `http.route`); a ref, a name or an amount in an attribute
   is a defect.
-- **The dashboard is code**: `config/grafana/` holds the provisioned JSON and
-  `docs/observability.md` explains the OTLP wiring, so a panel change is reviewed like any
-  other diff.
+- **The dashboard is code**: [`config/grafana/observability.json`](./config/grafana/observability.json)
+  holds the provisioned JSON and [`docs/observability.md`](./docs/observability.md) explains the
+  OTLP wiring, the metric table and how a `trace_id` joins a log line to its span, so a panel
+  change is reviewed like any other diff.
 
 ## Dependencies
 
 Five direct ones, each earning its place: `spf13/cobra` for the CLI (a root command,
 `http`, `worker` and the hidden `all`), `go-playground/validator` for the declarative
 `validate` tags, `modernc.org/sqlite` as the cgo-free driver, `openai/openai-go` for
-the second extraction rail and the `opentelemetry-go` modules for traces and metrics.
-`cucumber/godog` and `testcontainers-go` are test-only. A new dependency needs a
+the second extraction rail and the `opentelemetry-go` modules for traces, metrics and
+their instrumentation (`otelhttp` on every vendor client, `runtime` for the Go
+collector). `cucumber/godog` and `testcontainers-go` are test-only. A new dependency needs a
 reason in the MR, not a `go get`.
 
 ## Testing

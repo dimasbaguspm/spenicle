@@ -67,6 +67,9 @@ func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
 }
 
 func openWithRetry(ctx context.Context, dsn string, cfg Config) (*sql.DB, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.OpenWithRetry")
+	defer endSpan()
+
 	var locked error
 
 	for attempt := range openAttempts {
@@ -91,6 +94,8 @@ func openWithRetry(ctx context.Context, dsn string, cfg Config) (*sql.DB, error)
 			return nil, err
 		}
 
+		telemetry.RecordSQLiteLocked(ctx)
+
 		locked = err
 	}
 
@@ -98,6 +103,9 @@ func openWithRetry(ctx context.Context, dsn string, cfg Config) (*sql.DB, error)
 }
 
 func connect(ctx context.Context, dsn string, cfg Config) (*sql.DB, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Connect")
+	defer endSpan()
+
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)

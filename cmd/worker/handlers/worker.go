@@ -10,6 +10,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle/internal/common/logging"
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
@@ -53,7 +55,7 @@ type Runner struct {
 	documents  export.Deps
 	staleAfter time.Duration
 	clock      TimeSource
-	logger     *slog.Logger
+	logger     *logging.Logger
 }
 
 func New(
@@ -68,10 +70,10 @@ func New(
 	documents export.Deps,
 	staleAfter time.Duration,
 	clock TimeSource,
-	logger *slog.Logger,
+	logger *logging.Logger,
 ) *Runner {
 	if logger == nil {
-		logger = slog.Default()
+		logger = logging.New(telemetry.ComponentWorker)
 	}
 
 	return &Runner{
@@ -83,9 +85,12 @@ func New(
 }
 
 func (r *Runner) record(ctx context.Context, at time.Time) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Worker.Handler.Record")
+	defer endSpan()
+
 	value := at.UTC().Format(constant.TimestampLayout)
 
 	if err := r.store.SetSetting(ctx, constant.SettingWorkerLastRunAt, value); err != nil {
-		r.logger.WarnContext(ctx, "worker heartbeat not stored", slog.Any("error", err))
+		r.logger.Warn(ctx, "worker heartbeat not stored", slog.Any("error", err))
 	}
 }

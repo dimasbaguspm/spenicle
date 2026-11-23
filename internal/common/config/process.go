@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
+	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
@@ -25,7 +26,7 @@ import (
 
 type Process struct {
 	Cfg          entity.AppConfig
-	Logger       *slog.Logger
+	Logger       *logging.Logger
 	Store        *sqlite.Store
 	Sealer       seal.Sealer
 	Artifacts    *filestore.Store
@@ -49,8 +50,8 @@ func Start(ctx context.Context, serviceName string) (*Process, error) {
 
 	cfg.ServiceName = serviceName
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	slog.SetDefault(logger)
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	logger := logging.New(telemetry.CurrentComponent())
 
 	stopTelemetry, err := telemetry.Setup(ctx, telemetry.Config{
 		ServiceName: cfg.ServiceName,
@@ -74,13 +75,13 @@ func Start(ctx context.Context, serviceName string) (*Process, error) {
 
 func (p *Process) Close(ctx context.Context) {
 	if err := p.Store.Close(ctx); err != nil {
-		p.Logger.ErrorContext(ctx, "close database", slog.Any("error", err))
+		p.Logger.Error(ctx, "close database", slog.Any("error", err))
 	}
 
 	flushTelemetry(ctx, p.Logger, p.Cfg.TelemetryShutdownTimeout, p.stopTelemetry)
 }
 
-func boot(ctx context.Context, cfg entity.AppConfig, logger *slog.Logger) (*Process, error) {
+func boot(ctx context.Context, cfg entity.AppConfig, logger *logging.Logger) (*Process, error) {
 	store, err := openStore(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -147,7 +148,7 @@ func prepare(
 	ctx context.Context,
 	store *sqlite.Store,
 	sealer seal.Sealer,
-	logger *slog.Logger,
+	logger *logging.Logger,
 ) (*settings.Service, string, error) {
 	service := settings.New(store, sealer, clock.System{})
 
@@ -162,7 +163,7 @@ func prepare(
 	}
 
 	if created && freshPassword != "" {
-		logger.WarnContext(ctx, "generated the initial password; change it after the first sign-in",
+		logger.Warn(ctx, "generated the initial password; change it after the first sign-in",
 			slog.String("password", freshPassword))
 	}
 
@@ -178,7 +179,7 @@ func ratesFor(
 	ctx context.Context,
 	cfg entity.AppConfig,
 	store *sqlite.Store,
-	logger *slog.Logger,
+	logger *logging.Logger,
 ) (*rates.Service, error) {
 	source, err := ecb.New(cfg.ECBEndpoint, cfg.ECBTimeout, clock.System{})
 	if err != nil {
@@ -191,21 +192,21 @@ func ratesFor(
 	return service, nil
 }
 
-func warmRates(ctx context.Context, service *rates.Service, logger *slog.Logger) {
+func warmRates(ctx context.Context, service *rates.Service, logger *logging.Logger) {
 	report, err := service.Refresh(ctx)
 	if err != nil {
-		logger.WarnContext(ctx, "reference rates refresh failed; serving stored rates",
+		logger.Warn(ctx, "reference rates refresh failed; serving stored rates",
 			slog.Any("error", err))
 
 		return
 	}
 
-	logger.InfoContext(ctx, "reference rates cached", slog.Int("stored", report.Stored))
+	logger.Info(ctx, "reference rates cached", slog.Int("stored", report.Stored))
 }
 
 func flushTelemetry(
 	ctx context.Context,
-	logger *slog.Logger,
+	logger *logging.Logger,
 	timeout time.Duration,
 	shutdown func(context.Context) error,
 ) {
@@ -217,7 +218,7 @@ func flushTelemetry(
 	defer cancel()
 
 	if err := shutdown(shutdownCtx); err != nil {
-		logger.ErrorContext(shutdownCtx, "telemetry shutdown", slog.Any("error", err))
+		logger.Error(shutdownCtx, "telemetry shutdown", slog.Any("error", err))
 	}
 }
 
