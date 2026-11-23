@@ -82,7 +82,7 @@ in its own job, so a style failure cannot hide a security failure.
 
 ## Environment
 
-Un-prefixed, all optional except `PASSWORD` in practice:
+Un-prefixed, all optional except `APP_SECRET`:
 
 | var | default | meaning |
 |---|---|---|

@@ -29,11 +29,11 @@ docker run -d --name spenicle \
   -p 8080:8080 \
   -v spenicle-data:/data \
   -e APP_SECRET="$(openssl rand -base64 32)" \
-  -e PASSWORD="your-password" \
   ghcr.io/dimasbaguspm/spenicle:latest
 ```
 
-Then open `http://localhost:8080`. Migrations run on boot; there is no migration step.
+Then open `http://localhost:8080`. Migrations run on boot, and the container log carries
+the generated first password once — sign in with it and pick your own.
 
 Releases are container images only — there are no binary downloads. Pin a specific
 release by tag (`:v0.2.0`) or by digest (`@sha256:…`) from its release notes.
@@ -49,7 +49,6 @@ services:
     volumes: ["spenicle-data:/data"]
     environment:
       APP_SECRET: "paste-a-32-byte-secret"
-      PASSWORD: "your-password"
 
 volumes:
   spenicle-data:

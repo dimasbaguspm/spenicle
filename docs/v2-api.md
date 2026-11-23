@@ -83,7 +83,7 @@ Consequences, stated plainly:
 
 | credential | used by | transport |
 | --- | --- | --- |
-| session cookie | the PWA | `POST /api/session`; only when `PASSWORD` is set |
+| session cookie | the PWA | `POST /api/session`; skipped while no password is set (open mode) |
 | API token | agents, scripts, cron | `Authorization: Bearer <token>` |
 
 Scopes: `entries:read|write`, `captures:read|write`, `accounts:read|write`, `payees:read|write`,
@@ -482,7 +482,7 @@ sequenceDiagram
 ## 3.2 `POST /api/session`
 
 `{ "password": "..." }` → `Set-Cookie: spenicle=...; HttpOnly; SameSite=Lax`.
-`501` when `PASSWORD` is unset, so the UI skips the login screen.
+`409 no_password_set` while the instance runs in open mode, so the UI skips the login screen.
 
 ```mermaid
 sequenceDiagram
@@ -491,7 +491,7 @@ sequenceDiagram
     participant API as Session handler
     participant DB as SQLite
     UI->>API: POST session with password
-    API->>API: compare against PASSWORD in constant time
+    API->>API: compare against the sealed settings password in constant time
     alt password not configured
         API-->>UI: 501 auth_not_configured
     else mismatch
