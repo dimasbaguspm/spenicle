@@ -1,6 +1,5 @@
-Feature: Meta
-  One round trip fills the shell: settings, accounts with derived balances, and the
-  embedded currency list.
+Feature: GET /api/meta
+  One file per route: every scenario here calls GET /api/meta.
 
   Scenario: A fresh database bootstraps with the seeded accounts
     Given a running API

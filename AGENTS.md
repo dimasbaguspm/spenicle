@@ -173,7 +173,9 @@ the build you think it is.
     | query  | limit        | 10               |
   ```
 
-- Repetition goes in `Scenario Outline` + `Examples` (`uat/features/contract.feature`).
+- One feature file per route (`POST_api_entries.feature`, `PATCH_api_captures_:ref.feature`),
+  never per behaviour: a failing file names the endpoint. Repetition goes in
+  `Scenario Outline` + `Examples` inside that file.
 - External services are the only things mocked, and they are Go programs under
   `uat/mock/`: one container serves the SnapToJSON partner route and the ECB daily
   sheet. `uat/mock_test.go` starts it through testcontainers in `TestMain` and hands
