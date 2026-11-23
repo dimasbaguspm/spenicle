@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
-	ctx, endSpan := startSpan(ctx, "SchemaVersion")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.SchemaVersion")
 	defer endSpan()
 
 	var v sql.NullInt64
@@ -25,7 +26,7 @@ func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
 
 // Ping proves the file is writable, not merely readable.
 func (s *Store) Ping(ctx context.Context) error {
-	ctx, endSpan := startSpan(ctx, "Ping")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Ping")
 	defer endSpan()
 
 	var one int
@@ -38,7 +39,7 @@ func (s *Store) Ping(ctx context.Context) error {
 
 // Setting reads one configuration row.
 func (s *Store) Setting(ctx context.Context, key string) (string, bool, error) {
-	ctx, endSpan := startSpan(ctx, "Setting")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Setting")
 	defer endSpan()
 
 	var v string
@@ -57,7 +58,7 @@ func (s *Store) Setting(ctx context.Context, key string) (string, bool, error) {
 
 // SetSetting upserts one configuration row.
 func (s *Store) SetSetting(ctx context.Context, key, value string) error {
-	ctx, endSpan := startSpan(ctx, "SetSetting")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.SetSetting")
 	defer endSpan()
 
 	_, err := s.db.ExecContext(ctx, `
@@ -72,7 +73,7 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 
 // BaseCurrencyCode returns the locked reporting currency.
 func (s *Store) BaseCurrencyCode(ctx context.Context) (string, error) {
-	ctx, endSpan := startSpan(ctx, "BaseCurrencyCode")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.BaseCurrencyCode")
 	defer endSpan()
 
 	v, ok, err := s.Setting(ctx, constant.SettingBaseCurrency)

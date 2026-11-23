@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -22,7 +23,7 @@ func (s *Store) EnsureBaseline(
 	baseCurrency, fingerprint string,
 	allowReset bool,
 ) (string, error) {
-	ctx, endSpan := startSpan(ctx, "EnsureBaseline")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EnsureBaseline")
 	defer endSpan()
 
 	if _, err := entity.CurrencyByCode(baseCurrency); err != nil {

@@ -21,19 +21,10 @@ type Store struct {
 	db *sql.DB
 }
 
-// spanPrefix names every database call Repository.Sqlite.<method>, so a trace
-// reads like the call stack and a slow query is one filter away.
-const spanPrefix = "Repository.Sqlite."
-
-// startSpan is the single place this package spells its span names.
-func startSpan(ctx context.Context, method string) (context.Context, func()) {
-	return telemetry.StartSpan(ctx, spanPrefix+method)
-}
-
 // New opens (or creates) the database and returns a store satisfying every
 // repository contract.
 func New(ctx context.Context, cfg Config) (*Store, error) {
-	ctx, endSpan := startSpan(ctx, "New")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.New")
 	defer endSpan()
 
 	db, err := Open(ctx, cfg)
@@ -53,7 +44,7 @@ func (s *Store) DB() *sql.DB { return s.db }
 
 // Close releases the file. WAL checkpoints on the way out.
 func (s *Store) Close(ctx context.Context) error {
-	_, endSpan := startSpan(ctx, "Close")
+	_, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Close")
 	defer endSpan()
 
 	if err := s.db.Close(); err != nil {

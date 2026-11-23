@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
 // WithTx is the one way this package writes more than one row: the callback gets a
@@ -15,7 +17,7 @@ import (
 // write path, and because "how does this project do transactions" should have one
 // answer that can be pointed at.
 func (s *Store) WithTx(ctx context.Context, fn func(context.Context, *sql.Tx) error) error {
-	ctx, endSpan := startSpan(ctx, "WithTx")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.WithTx")
 	defer endSpan()
 
 	tx, err := s.db.BeginTx(ctx, nil)

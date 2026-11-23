@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 
 	_ "modernc.org/sqlite" // pure Go driver, keeps the binary static
+
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
 // Config is everything the adapter needs to open a database. Zero pool sizes fall
@@ -38,7 +40,7 @@ func pickMax(want, fallback int) int {
 
 // Open creates the data directory if needed and returns a WAL-mode handle.
 func Open(ctx context.Context, cfg Config) (*sql.DB, error) {
-	ctx, endSpan := startSpan(ctx, "Open")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Open")
 	defer endSpan()
 
 	if err := os.MkdirAll(filepath.Dir(cfg.Path), dataDirPerm); err != nil {

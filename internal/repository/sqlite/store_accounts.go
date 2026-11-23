@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
 // CountAccounts reports how many accounts exist, archived or not.
 func (s *Store) CountAccounts(ctx context.Context) (int, error) {
-	ctx, endSpan := startSpan(ctx, "CountAccounts")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CountAccounts")
 	defer endSpan()
 
 	var n int
@@ -23,7 +25,7 @@ func (s *Store) CountAccounts(ctx context.Context) (int, error) {
 
 // CreateAccount inserts one account and returns its id.
 func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) (int64, error) {
-	ctx, endSpan := startSpan(ctx, "CreateAccount")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreateAccount")
 	defer endSpan()
 
 	res, err := s.db.ExecContext(
@@ -50,7 +52,7 @@ func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) 
 // FindAccount resolves an account by name and kind. Callers use it to make a
 // create step idempotent without guessing ids.
 func (s *Store) FindAccount(ctx context.Context, name, kind string) (int64, bool, error) {
-	ctx, endSpan := startSpan(ctx, "FindAccount")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.FindAccount")
 	defer endSpan()
 
 	var id int64

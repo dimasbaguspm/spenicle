@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
 //go:embed migrations/*.sql
@@ -23,7 +25,7 @@ const (
 // Migrate applies every embedded migration that has not been applied yet.
 // It is idempotent and safe to call on every boot.
 func Migrate(ctx context.Context, db *sql.DB) error {
-	ctx, endSpan := startSpan(ctx, "Migrate")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Migrate")
 	defer endSpan()
 
 	if _, err := db.ExecContext(ctx, `

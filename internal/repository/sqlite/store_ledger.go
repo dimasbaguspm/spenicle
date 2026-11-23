@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -14,7 +15,7 @@ import (
 // InsertEntry writes the entry and its postings in one transaction. It writes
 // no balances: balances are always derived from postings.
 func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, error) {
-	ctx, endSpan := startSpan(ctx, "InsertEntry")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertEntry")
 	defer endSpan()
 
 	// Defense in depth: the domain already validated this, and we check again
@@ -83,7 +84,7 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 
 // EntryByClientID answers a replay without rewriting anything.
 func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.Entry, bool, error) {
-	ctx, endSpan := startSpan(ctx, "EntryByClientID")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EntryByClientID")
 	defer endSpan()
 
 	if clientID == "" {
@@ -138,7 +139,7 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 
 // postingsByEntryID loads every leg of one entry in insertion order.
 func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.Posting, error) {
-	ctx, endSpan := startSpan(ctx, "postingsByEntryID")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.postingsByEntryID")
 	defer endSpan()
 
 	rows, err := s.db.QueryContext(ctx, `

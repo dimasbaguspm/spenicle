@@ -15,14 +15,6 @@ import (
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
-// spanPrefix names every extraction call Repository.Snaptojson.<method>.
-const spanPrefix = "Repository.Snaptojson."
-
-// startSpan is the single place this package spells its span names.
-func startSpan(ctx context.Context, method string) (context.Context, func()) {
-	return telemetry.StartSpan(ctx, spanPrefix+method)
-}
-
 // ErrNotConfigured reports that no API key was supplied.
 var ErrNotConfigured = errors.New("extraction provider is not configured")
 
@@ -54,7 +46,7 @@ func New(endpoint, apiKey string) (Extractor, error) {
 // Extract posts the artifact and returns the provider's JSON verbatim. Mapping
 // that JSON into capture fields is the capture module's job, not the adapter's.
 func (c *Client) Extract(ctx context.Context, artifact []byte, contentType string) (string, error) {
-	ctx, endSpan := startSpan(ctx, "Extract")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Snaptojson.Extract")
 	defer endSpan()
 
 	if c == nil || c.apiKey == "" {
