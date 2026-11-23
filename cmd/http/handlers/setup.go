@@ -29,8 +29,7 @@ func (s *server) handleSetup(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := s.deps.Settings.SetBaseCurrency(ctx, request.BaseCurrency)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

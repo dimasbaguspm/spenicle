@@ -37,8 +37,7 @@ func (s *server) handleMeta(w http.ResponseWriter, r *http.Request) {
 
 	appSettings, err := s.deps.Settings.Load(ctx)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -47,16 +46,14 @@ func (s *server) handleMeta(w http.ResponseWriter, r *http.Request) {
 
 	accounts, err := s.deps.Accounts.ListAccounts(ctx)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
 
 	balances, err := s.deps.Accounts.BalancesByAccount(ctx)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

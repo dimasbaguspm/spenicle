@@ -99,8 +99,7 @@ func (s *server) handleCreateRecurring(w http.ResponseWriter, r *http.Request) {
 
 	created, err := s.deps.Recurring.CreateRecurring(ctx, rule)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -126,8 +125,7 @@ func (s *server) handlePatchRecurring(w http.ResponseWriter, r *http.Request) {
 
 	rule, found, err := s.deps.Recurring.RecurringByRef(ctx, path.Ref)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -146,8 +144,7 @@ func (s *server) handlePatchRecurring(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := s.deps.Recurring.UpdateRecurring(ctx, rule)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

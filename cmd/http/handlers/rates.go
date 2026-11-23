@@ -51,8 +51,7 @@ func (s *server) handleGetRate(w http.ResponseWriter, r *http.Request) {
 
 	rate, err := s.deps.Rates.Rate(ctx, query.Base, query.Quote, on)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

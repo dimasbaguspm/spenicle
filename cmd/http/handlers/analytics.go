@@ -51,8 +51,7 @@ func (s *server) handleMonthlyAnalytics(w http.ResponseWriter, r *http.Request) 
 
 	totals, err := s.deps.Analytics.MonthlyTotals(ctx, from, to)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -147,8 +146,7 @@ func (s *server) handleCategoryAnalytics(w http.ResponseWriter, r *http.Request)
 
 	totals, err := s.deps.Analytics.CategoryTotals(ctx, from, to, kind)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

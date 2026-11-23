@@ -31,8 +31,7 @@ func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := s.deps.Settings.Load(ctx)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -46,8 +45,7 @@ func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	months, err := s.deps.Analytics.MonthlyTotals(ctx, from, to)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -71,8 +69,7 @@ func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	pending, err := s.deps.Analytics.CaptureCount(ctx, constant.CaptureStatusPending)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -81,8 +78,7 @@ func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	categories, err := s.deps.Analytics.CategoryTotals(ctx, from, to, constant.AccountKindExpense)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

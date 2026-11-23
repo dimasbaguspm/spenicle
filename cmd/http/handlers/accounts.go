@@ -45,16 +45,14 @@ func (s *server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := entity.CurrencyByCode(currency); err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
 
 	account, err := s.deps.Accounts.CreateAccount(ctx, request.Name, request.Kind, currency)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -80,8 +78,7 @@ func (s *server) handlePatchAccount(w http.ResponseWriter, r *http.Request) {
 
 	account, found, err := s.deps.Accounts.AccountByRef(ctx, path.Ref)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -106,8 +103,7 @@ func (s *server) handlePatchAccount(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := s.deps.Accounts.UpdateAccount(ctx, account)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

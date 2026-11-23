@@ -63,7 +63,7 @@ func (s *server) handleSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.issueSession(ctx, w, r); err != nil {
-		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		s.writeInternal(ctx, w, err)
 
 		return
 	}
@@ -94,14 +94,13 @@ func (s *server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := s.deps.Settings.ChangePassword(ctx, request.CurrentPassword, request.NewPassword)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
 
 	if err := s.issueSession(ctx, w, r); err != nil {
-		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		s.writeInternal(ctx, w, err)
 
 		return
 	}
@@ -121,8 +120,7 @@ func (s *server) handlePatchSettings(w http.ResponseWriter, r *http.Request) {
 	if request.BaseCurrency != nil {
 		settings, err := s.deps.Settings.SetBaseCurrency(ctx, *request.BaseCurrency)
 		if err != nil {
-			status, code := classify(err)
-			httpx.WriteError(w, status, code, err.Error())
+			s.writeClassified(ctx, w, err)
 
 			return
 		}
@@ -141,8 +139,7 @@ func (s *server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := s.deps.Settings.Load(ctx)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -176,7 +173,7 @@ func (s *server) requireSession(next http.Handler) http.Handler {
 
 		settings, err := s.deps.Settings.Load(r.Context())
 		if err != nil {
-			httpx.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+			s.writeInternal(r.Context(), w, err)
 
 			return
 		}
@@ -196,7 +193,7 @@ func (s *server) requireSession(next http.Handler) http.Handler {
 
 		token, err := s.deps.Settings.SessionToken(r.Context())
 		if err != nil {
-			httpx.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
+			s.writeInternal(r.Context(), w, err)
 
 			return
 		}

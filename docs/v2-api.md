@@ -7,7 +7,9 @@ Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`../README.md`
 Base path `/api`. No version prefix: we are the only consumer, and an agent can adapt to a
 change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, timestamps ISO
 8601 UTC. Money crosses the wire as **minor-unit strings** (`"25000"`) plus a currency code,
-never floats. Errors: `{"error":{"code":"...","message":"...","details":{}}}`.
+never floats. Errors: `{"error":{"code":"...","message":"...","details":{}}}`. A `500` always
+carries the generic message `internal error`: the cause is written to the structured log,
+never to the client.
 
 Implemented contract, one entry per live route with upstream/downstream, params, body,
 limitations and a sequence diagram: [`endpoints.md`](./endpoints.md).

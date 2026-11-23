@@ -46,8 +46,7 @@ func (s *server) handleCreateCustomQuery(w http.ResponseWriter, r *http.Request)
 		Chart:     request.Chart,
 	})
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -73,8 +72,7 @@ func (s *server) handlePatchCustomQuery(w http.ResponseWriter, r *http.Request) 
 
 	query, found, err := s.deps.CustomQueries.CustomQueryByRef(ctx, path.Ref)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -95,8 +93,7 @@ func (s *server) handlePatchCustomQuery(w http.ResponseWriter, r *http.Request) 
 
 	updated, err := s.deps.CustomQueries.UpdateCustomQuery(ctx, query)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -132,8 +129,7 @@ func (s *server) handleRunCustomQuery(w http.ResponseWriter, r *http.Request) {
 
 	saved, found, err := s.deps.CustomQueries.CustomQueryByRef(ctx, path.Ref)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -159,8 +155,7 @@ func (s *server) handleRunCustomQuery(w http.ResponseWriter, r *http.Request) {
 
 	months, categories, err := s.runNamespace(ctx, saved.Namespace, from, to)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

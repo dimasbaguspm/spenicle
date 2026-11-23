@@ -94,8 +94,7 @@ func (s *server) handleListCaptures(w http.ResponseWriter, r *http.Request) {
 		Limit:  int(query.Limit),
 	})
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -131,8 +130,7 @@ func (s *server) handleCreateCapture(w http.ResponseWriter, r *http.Request) {
 
 	capture, created, err := s.deps.Captures.Create(ctx, input)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -169,8 +167,7 @@ func (s *server) handlePatchCapture(w http.ResponseWriter, r *http.Request) {
 	case "retry":
 		capture, err := s.deps.Captures.Retry(ctx, path.Ref)
 		if err != nil {
-			status, code := classify(err)
-			httpx.WriteError(w, status, code, err.Error())
+			s.writeClassified(ctx, w, err)
 
 			return
 		}
@@ -218,8 +215,7 @@ func (s *server) approveCapture(
 		Postings:   postings,
 	})
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -238,8 +234,7 @@ func (s *server) rejectCapture(
 ) {
 	capture, err := s.deps.Captures.Reject(ctx, ref, request.Reason)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

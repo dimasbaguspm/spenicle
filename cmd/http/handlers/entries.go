@@ -111,8 +111,7 @@ func (s *server) handleListEntries(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := s.deps.Ledger.List(ctx, filter)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -150,8 +149,7 @@ func (s *server) handlePatchEntry(w http.ResponseWriter, r *http.Request) {
 
 	reversal, err := s.deps.Ledger.Void(ctx, path.Ref, request.Reason)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -177,8 +175,7 @@ func (s *server) handlePostEntry(w http.ResponseWriter, r *http.Request) {
 
 	entry, created, err := s.deps.Ledger.Post(ctx, input)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}

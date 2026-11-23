@@ -49,8 +49,7 @@ func (s *server) handleCreatePayee(w http.ResponseWriter, r *http.Request) {
 
 	created, err := s.deps.Payees.CreatePayee(ctx, payee)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -76,8 +75,7 @@ func (s *server) handlePatchPayee(w http.ResponseWriter, r *http.Request) {
 
 	payee, found, err := s.deps.Payees.PayeeByRef(ctx, path.Ref)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -110,8 +108,7 @@ func (s *server) handlePatchPayee(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := s.deps.Payees.UpdatePayee(ctx, payee)
 	if err != nil {
-		status, code := classify(err)
-		httpx.WriteError(w, status, code, err.Error())
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
