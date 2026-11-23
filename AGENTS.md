@@ -297,8 +297,9 @@ git push origin v0.2.0
 `OTEL_EXPORTER_OTLP_ENDPOINT` is OTLP/HTTP (port 4318). A bare host is treated as
 **HTTPS**; `http://` must be written on purpose. `ServiceName` is the only identity:
 it becomes `resource.service.name` and the tracer name, and each command sets its own
-before telemetry starts: `spenicle-http` (`config.ServiceNameHTTP`), `spenicle-worker`
-(`config.ServiceNameWorker`) and `spenicle` for the hidden `all`. Span names are
+before telemetry starts: `spenicle-http` in `cmd/http`, `spenicle-worker` in `cmd/worker` and
+`spenicle` for the hidden `all`. Each command owns its literal and passes it to
+`config.Start`; `internal/common/config` knows no caller name. Span names are
 layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
 `telemetry.StartSpan` — never through a local wrapper. Details and failure modes:
 [`skills/observability`](./skills/observability/SKILL.md).

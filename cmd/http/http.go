@@ -11,6 +11,8 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 )
 
+const serviceName = "spenicle-http"
+
 func Command() *cobra.Command {
 	return &cobra.Command{
 		Use:   "http",
@@ -23,7 +25,7 @@ func Command() *cobra.Command {
 func run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
-	process, err := config.Start(ctx, config.ServiceNameHTTP)
+	process, err := config.Start(ctx, serviceName)
 	if err != nil {
 		return err
 	}

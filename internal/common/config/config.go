@@ -40,10 +40,6 @@ const (
 	DefaultDataDir = "./data"
 	DefaultDBFile  = "spenicle.db"
 
-	DefaultServiceName = "spenicle"
-	ServiceNameHTTP    = "spenicle-http"
-	ServiceNameWorker  = "spenicle-worker"
-
 	DefaultSnapToJSONEndpoint = "https://api.snaptojson.com/partner/v1/snaps"
 	DefaultSnapToJSONTimeout  = 30 * time.Second
 	DefaultOpenAIModel        = "gpt-4o-mini"
@@ -80,7 +76,6 @@ func Defaults() entity.AppConfig {
 		ECBEndpoint:              DefaultECBEndpoint,
 		ECBTimeout:               DefaultECBTimeout,
 		OpenAIModel:              DefaultOpenAIModel,
-		ServiceName:              DefaultServiceName,
 		ReadHeaderTimeout:        DefaultReadHeaderTimeout,
 		ReadTimeout:              DefaultReadTimeout,
 		WriteTimeout:             DefaultWriteTimeout,

@@ -11,6 +11,8 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 )
 
+const serviceName = "spenicle-worker"
+
 func Command() *cobra.Command {
 	return &cobra.Command{
 		Use:   "worker",
@@ -23,7 +25,7 @@ func Command() *cobra.Command {
 func run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
-	process, err := config.Start(ctx, config.ServiceNameWorker)
+	process, err := config.Start(ctx, serviceName)
 	if err != nil {
 		return err
 	}

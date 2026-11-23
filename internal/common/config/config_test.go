@@ -43,8 +43,8 @@ func TestLoadAppliesDefaults(t *testing.T) {
 		t.Fatalf("db path = %q, want %q", cfg.DBPath, wantPath)
 	}
 
-	if cfg.ServiceName != config.DefaultServiceName {
-		t.Fatalf("service name = %q, want %q", cfg.ServiceName, config.DefaultServiceName)
+	if cfg.ServiceName != "" {
+		t.Fatalf("service name = %q, want the caller to supply it", cfg.ServiceName)
 	}
 
 	if cfg.ReadHeaderTimeout != config.DefaultReadHeaderTimeout {

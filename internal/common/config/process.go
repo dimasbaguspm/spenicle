@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
@@ -34,6 +36,10 @@ type Process struct {
 }
 
 func Start(ctx context.Context, serviceName string) (*Process, error) {
+	if strings.TrimSpace(serviceName) == "" {
+		return nil, errors.New("service name is required")
+	}
+
 	cfg, err := Load(ctx)
 	if err != nil {
 		return nil, err

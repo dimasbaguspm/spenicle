@@ -47,7 +47,7 @@ docker run --rm -p 4318:4318 otel/opentelemetry-collector:latest \
 | metric | OTel SDK defaults | runtime metrics once a meter provider exists |
 
 The service name is one string: `entity.AppConfig.ServiceName`
-(`DefaultServiceName = "spenicle"`). It becomes `resource.service.name` **and** the
+(passed by the command: `spenicle-http`, `spenicle-worker`, `spenicle`). It becomes `resource.service.name` **and** the
 tracer name — a span can never be labelled with a different service than the
 resource.
 
