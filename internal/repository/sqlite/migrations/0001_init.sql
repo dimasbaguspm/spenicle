@@ -142,6 +142,16 @@ CREATE UNIQUE INDEX ux_captures_client ON captures (client_id) WHERE client_id I
 CREATE INDEX ix_captures_queue ON captures (status, received_at);
 CREATE INDEX ix_captures_batch ON captures (batch_id);
 
+CREATE TABLE custom_queries (
+  id         INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  name       TEXT NOT NULL UNIQUE,
+  namespace  TEXT NOT NULL CHECK (namespace IN ('months','categories')),
+  chart      TEXT NOT NULL CHECK (chart IN ('bar','line','pie')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE audit_log (
   id           INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,

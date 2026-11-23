@@ -1,15 +1,12 @@
 # Planned, not implemented
 
-Designed in [`../v2-api.md`](../v2-api.md), no handler yet. Listed so nobody guesses.
+Nothing on the roadmap is unbuilt at the moment. The two decisions that closed the list:
 
-| method | path | purpose | would touch |
-| --- | --- | --- | --- |
-| `POST` | `/api/setup` | wizard: currency, first account, opening balance | settings, accounts, ledger |
-| `GET` | `/api/analytics/categories` | spend per category for a range, the pie namespace | ledger, accounts |
-| `GET` | `/api/analytics/custom/{ref}` | a saved, configurable query plus its chart spec | ledger, custom_queries |
-| `GET` | `/api/dashboard` | the five tiles in one response | ledger, recurring, captures |
-| `POST` | `/api/tokens` | mint a scoped API token, secret shown once | api_tokens, settings |
-| `PATCH` | `/api/tokens/{ref}` | revoke | api_tokens, audit |
+- **API tokens are not ours to build.** The web client is the only supported client, and
+  better-auth ships an API-key plugin (hashed at rest, scoped, revocable) for the first
+  machine client. A second credential store here would only be migration cost.
+- **`/api/months/{yyyy-mm}` became `/api/analytics/<namespace>`.** One concrete shape per
+  question (`months`, `categories`, saved views) beats one polymorphic analytics route.
 
-Until they land, an agent should treat them as "not yet" — never as "read the database
-directly".
+Open questions kept deliberately out of the API: opening balance on `POST /api/setup`,
+parent roll-up in `categories`, and `custom` namespaces beyond the two implemented.

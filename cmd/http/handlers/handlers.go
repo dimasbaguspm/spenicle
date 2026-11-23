@@ -25,6 +25,7 @@ type Deps struct {
 	Payees            repository.Payees
 	Recurring         repository.Recurring
 	Analytics         repository.Analytics
+	CustomQueries     repository.CustomQueries
 	Health            repository.System
 	Sealer            seal.Sealer
 	BaseCurrency      string
@@ -60,6 +61,12 @@ func New(deps Deps) http.Handler {
 
 	mux.HandleFunc("GET /api/meta", instance.handleMeta)
 	mux.HandleFunc("GET /api/analytics/months", instance.handleMonthlyAnalytics)
+	mux.HandleFunc("GET /api/analytics/categories", instance.handleCategoryAnalytics)
+	mux.HandleFunc("POST /api/analytics/custom", instance.handleCreateCustomQuery)
+	mux.HandleFunc("PATCH /api/analytics/custom/{ref}", instance.handlePatchCustomQuery)
+	mux.HandleFunc("GET /api/analytics/custom/{ref}", instance.handleRunCustomQuery)
+	mux.HandleFunc("GET /api/dashboard", instance.handleDashboard)
+	mux.HandleFunc("POST /api/setup", instance.handleSetup)
 
 	mux.HandleFunc("POST /api/accounts", instance.handleCreateAccount)
 	mux.HandleFunc("PATCH /api/accounts/{ref}", instance.handlePatchAccount)

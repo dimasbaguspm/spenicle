@@ -42,19 +42,9 @@ func newApp(
 		return nil, fmt.Errorf("sealer: %w", err)
 	}
 
-	store, err := sqlite.New(ctx, sqlite.Config{
-		Path:         cfg.DBPath,
-		MaxOpenConns: cfg.DBMaxOpenConns,
-		MaxIdleConns: cfg.DBMaxIdleConns,
-	})
+	store, err := openStore(ctx, cfg)
 	if err != nil {
 		return nil, err
-	}
-
-	if migrateErr := sqlite.Migrate(ctx, store.DB()); migrateErr != nil {
-		_ = store.Close(ctx)
-
-		return nil, fmt.Errorf("migrate: %w", migrateErr)
 	}
 
 	extractor, err := buildExtractor(ctx, cfg, logger)
@@ -90,6 +80,7 @@ func newApp(
 			Payees:            store,
 			Recurring:         store,
 			Analytics:         store,
+			CustomQueries:     store,
 			Settings:          settingsService,
 			Health:            store,
 			Sealer:            sealer,
@@ -102,6 +93,25 @@ func newApp(
 			Logger:            logger,
 		}),
 	}, nil
+}
+
+func openStore(ctx context.Context, cfg entity.AppConfig) (*sqlite.Store, error) {
+	store, err := sqlite.New(ctx, sqlite.Config{
+		Path:         cfg.DBPath,
+		MaxOpenConns: cfg.DBMaxOpenConns,
+		MaxIdleConns: cfg.DBMaxIdleConns,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if migrateErr := sqlite.Migrate(ctx, store.DB()); migrateErr != nil {
+		_ = store.Close(ctx)
+
+		return nil, fmt.Errorf("migrate: %w", migrateErr)
+	}
+
+	return store, nil
 }
 
 func services(

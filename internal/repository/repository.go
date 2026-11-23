@@ -53,6 +53,14 @@ type Payees interface {
 
 type Analytics interface {
 	MonthlyTotals(ctx context.Context, from, to time.Time) ([]entity.MonthTotal, error)
+	CategoryTotals(ctx context.Context, from, to time.Time, kind string) ([]entity.CategoryTotal, error)
+	CaptureCount(ctx context.Context, status string) (int, error)
+}
+
+type CustomQueries interface {
+	CreateCustomQuery(ctx context.Context, query entity.CustomQuery) (entity.CustomQuery, error)
+	CustomQueryByRef(ctx context.Context, ref string) (entity.CustomQuery, bool, error)
+	UpdateCustomQuery(ctx context.Context, query entity.CustomQuery) (entity.CustomQuery, error)
 }
 
 type Recurring interface {

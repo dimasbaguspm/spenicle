@@ -5,7 +5,7 @@ One file per route. Every file answers the same questions in the same order:
 `Auth` · `Purpose` · `Upstream` · `Downstream` · `Path / query params` · `Body` ·
 `Response` · `Errors` · `Limitations` · `Sequence` (mermaid).
 
-A route that is designed but not built lives in [`planned.md`](./planned.md).
+Nothing is planned-but-unbuilt right now; the decisions that shaped the routes are in [`planned.md`](./planned.md).
 
 | method | path | purpose | file |
 | --- | --- | --- | --- |
@@ -29,5 +29,11 @@ A route that is designed but not built lives in [`planned.md`](./planned.md).
 | `POST` | `/api/captures` | park something unconfirmed | [`POST_api_captures.md`](./POST_api_captures.md) |
 | `PATCH` | `/api/captures/{ref}` | approve, reject or retry a capture | [`PATCH_api_captures_ref.md`](./PATCH_api_captures_ref.md) |
 | `GET` | `/api/analytics/months` | spend and income per calendar month | [`GET_api_analytics_months.md`](./GET_api_analytics_months.md) |
+| `GET` | `/api/analytics/categories` | spend per category for a range | [`GET_api_analytics_categories.md`](./GET_api_analytics_categories.md) |
+| `POST` | `/api/analytics/custom` | save a named analytics view | [`POST_api_analytics_custom.md`](./POST_api_analytics_custom.md) |
+| `PATCH` | `/api/analytics/custom/{ref}` | rename or re-chart a saved view | [`PATCH_api_analytics_custom_ref.md`](./PATCH_api_analytics_custom_ref.md) |
+| `GET` | `/api/analytics/custom/{ref}` | run a saved view over a window | [`GET_api_analytics_custom_ref.md`](./GET_api_analytics_custom_ref.md) |
+| `GET` | `/api/dashboard` | the landing tiles in one response | [`GET_api_dashboard.md`](./GET_api_dashboard.md) |
+| `POST` | `/api/setup` | open the ledger with a base currency | [`POST_api_setup.md`](./POST_api_setup.md) |
 | `GET` | `/api/rates` | the cached ECB reference rate for one day | [`GET_api_rates.md`](./GET_api_rates.md) |
 
