@@ -42,6 +42,12 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the database is cleared$`, theDatabaseIsCleared)
 	sc.Step(`^the local cache is cleared$`, theLocalCacheIsCleared)
 	sc.Step(`^the connection is broken$`, theConnectionIsBroken)
+	sc.Step(`^the database path is a directory$`, theDatabasePathIsADirectory)
+	sc.Step(`^the database file holds a foreign schema_migrations table$`, theDatabaseHoldsForeignSchema)
+	sc.Step(`^I boot the API$`, iBootTheAPI)
+	sc.Step(`^the boot fails$`, theBootFails)
+	sc.Step(`^the boot failure mentions "([^"]*)"$`, theBootFailureMentions)
+	sc.Step(`^the failure is logged$`, theFailureIsLogged)
 	sc.Step(`^the store holds:$`, theStoreHolds)
 	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)
 	sc.Step(`^the database matches the snapshot "([^"]*)"$`, databaseMatchesSnapshot)
@@ -510,4 +516,76 @@ func sendWithArtifact(ctx context.Context, method, path, filename string) (conte
 	headers := http.Header{"Content-Type": []string{form.FormDataContentType()}}
 
 	return ctx, w.doWith(ctx, method, path, body.Bytes(), headers, nil)
+}
+
+func theDatabasePathIsADirectory(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.useDirectoryAsDatabase()
+}
+
+func theDatabaseHoldsForeignSchema(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	return ctx, w.seedForeignSchema(ctx)
+}
+
+func iBootTheAPI(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	w.bootErr = w.boot(ctx)
+
+	return ctx, nil
+}
+
+func theBootFails(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.bootErr == nil {
+		return ctx, errors.New("the API booted, want a refusal")
+	}
+
+	return ctx, nil
+}
+
+func theBootFailureMentions(ctx context.Context, want string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.bootErr == nil {
+		return ctx, errors.New("the API booted, want a refusal to read")
+	}
+
+	if !strings.Contains(w.bootErr.Error(), want) {
+		return ctx, fmt.Errorf("boot failure is %q, want it to mention %q", w.bootErr.Error(), want)
+	}
+
+	return ctx, nil
+}
+
+func theFailureIsLogged(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.logs.failure() == "" {
+		return ctx, errors.New("nothing was logged at error level")
+	}
+
+	return ctx, nil
 }

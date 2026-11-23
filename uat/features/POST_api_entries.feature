@@ -211,3 +211,4 @@ Feature: POST /api/entries
       """
     Then the response status is 500
     And the response JSON matches the snapshot "post_api_entries__a_broken_database_connection_answers_500"
+    And the failure is logged

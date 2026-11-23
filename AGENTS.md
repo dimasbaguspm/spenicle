@@ -167,8 +167,12 @@ the build you think it is.
 - Fixtures reach states no request can: `the database is cleared` (children first, see
   `clearOrder` in `uat/world.go`), `the local cache is cleared` (the rates cache, so
   the next read proves the database fallback), `the connection is broken` (the store
-  is closed, so the next call must answer `500 internal_error`), plus `the store
-  holds:` for row counts and `the account "Cash" exists as "asset"` for seeds.
+  is closed, so the next call must answer `500 internal_error` with the generic message
+  `internal error`, plus `the failure is logged`, `the store holds:` for row counts and
+  `the account "Cash" exists as "asset"` for seeds.
+- `boot.feature` covers the process, not a route: an unusable database path and a
+  database whose migration cannot run must stop the boot (`I boot the API`, `the boot
+  fails`, `the boot failure mentions "..."`) instead of serving a half-ready API.
 - Requests with headers or query parameters use a table, the body stays a docstring:
 
   ```gherkin

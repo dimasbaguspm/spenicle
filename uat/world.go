@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/cmd/http/handlers"
@@ -56,15 +57,18 @@ type worldKey struct{}
 
 type world struct {
 	baseCurrency string
+	dir          string
 	dbPath       string
 	store        *sqlite.Store
 	server       *httptest.Server
 	accounts     map[string]string
 	options      Options
+	logs         *logSink
 
 	rail            string
 	extractionFault faultType
 	ratesFault      faultType
+	bootErr         error
 
 	status int
 	body   []byte
@@ -74,6 +78,39 @@ type world struct {
 	rates       *rates.Service
 	dbBroken    bool
 	lastRef     string
+}
+
+type logSink struct {
+	mu      sync.Mutex
+	records []slog.Record
+}
+
+func (l *logSink) Enabled(context.Context, slog.Level) bool { return true }
+
+func (l *logSink) Handle(_ context.Context, record slog.Record) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.records = append(l.records, record.Clone())
+
+	return nil
+}
+
+func (l *logSink) WithAttrs([]slog.Attr) slog.Handler { return l }
+
+func (l *logSink) WithGroup(string) slog.Handler { return l }
+
+func (l *logSink) failure() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	for _, record := range l.records {
+		if record.Level >= slog.LevelError {
+			return record.Level.String() + " " + record.Message
+		}
+	}
+
+	return ""
 }
 
 // Options is what the harness injects: a healthy endpoint per vendor plus the two ways a
@@ -95,6 +132,7 @@ func newWorld(options Options) *world {
 		baseCurrency: "IDR",
 		accounts:     map[string]string{},
 		options:      options,
+		logs:         &logSink{},
 	}
 }
 
@@ -111,8 +149,8 @@ func worldFrom(ctx context.Context) (*world, error) {
 	return world, nil
 }
 
-func (w *world) boot(ctx context.Context) error {
-	if w.server != nil {
+func (w *world) prepare() error {
+	if w.dir != "" {
 		return nil
 	}
 
@@ -121,7 +159,50 @@ func (w *world) boot(ctx context.Context) error {
 		return fmt.Errorf("temp dir: %w", err)
 	}
 
+	w.dir = dir
 	w.dbPath = filepath.Join(dir, "spenicle.db")
+
+	return nil
+}
+
+func (w *world) useDirectoryAsDatabase() error {
+	if err := w.prepare(); err != nil {
+		return err
+	}
+
+	w.dbPath = w.dir
+
+	return nil
+}
+
+func (w *world) seedForeignSchema(ctx context.Context) error {
+	if err := w.prepare(); err != nil {
+		return err
+	}
+
+	db, err := sqlite.Open(ctx, sqlite.Config{Path: w.dbPath})
+	if err != nil {
+		return fmt.Errorf("open: %w", err)
+	}
+
+	defer func() { _ = db.Close() }()
+
+	if _, execErr := db.ExecContext(ctx,
+		`CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY)`); execErr != nil {
+		return fmt.Errorf("foreign table: %w", execErr)
+	}
+
+	return nil
+}
+
+func (w *world) boot(ctx context.Context) error {
+	if w.server != nil {
+		return nil
+	}
+
+	if err := w.prepare(); err != nil {
+		return err
+	}
 
 	store, err := sqlite.New(ctx, sqlite.Config{Path: w.dbPath})
 	if err != nil {
@@ -201,7 +282,7 @@ func (w *world) boot(ctx context.Context) error {
 		HealthTimeout:     limits.HealthTimeout,
 		MaxBodyBytes:      limits.MaxBodyBytes,
 		ExtractionEnabled: w.rail != "",
-		Logger:            slog.New(slog.DiscardHandler),
+		Logger:            slog.New(w.logs),
 	}))
 
 	return nil
@@ -345,8 +426,8 @@ func (w *world) shutdown(ctx context.Context) {
 		_ = w.store.Close(ctx)
 	}
 
-	if w.dbPath != "" {
-		_ = os.RemoveAll(filepath.Dir(w.dbPath))
+	if w.dir != "" {
+		_ = os.RemoveAll(w.dir)
 	}
 }
 
