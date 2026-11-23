@@ -53,7 +53,7 @@ results, and enabling both is a contradiction.
 `gosec` (all rules except G104, which `errcheck` reports better) `bidichk` `forbidigo`
 `gomoddirectives` `nosprintfhostport` `asciicheck` `gochecknoinits` `importas`
 
-`forbidigo` bans `fmt.Print*`, `log.Print*`, bare `os.Getenv` outside `internal/config`,
+`forbidigo` bans `fmt.Print*`, `log.Print*`, bare `os.Getenv` outside `internal/common/config`,
 `http.Get` and `http.DefaultClient` (no timeouts), and direct `os.Create`/`os.WriteFile`
 so file permissions always go through the adapter. Each ban has a message explaining
 what to use instead.
@@ -74,8 +74,8 @@ The two patterns that exist:
 
 1. **`_test.go`** loosens `errcheck`, `wrapcheck`, `funlen`, `dupl`, `goconst`, `gosec`,
    and the opinion linters. Tests assert; they do not defend.
-2. **Named paths** — `internal/config` may read the environment, `cmd/` may log to
-   stdout and return interfaces (`main` is the composition root), `internal/bdd` may
+2. **Named paths** — `internal/common/config` may read the environment, `cmd/` may log to
+   stdout and return interfaces (`main` is the composition root), `uat` may
    ignore `contextcheck` because godog dictates its callback signatures.
 
 ## Adding a linter

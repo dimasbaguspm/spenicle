@@ -39,7 +39,7 @@ linters:
         - pattern: ^log\.Print.*$
           msg: use log/slog
         - pattern: ^os\.Getenv$
-          msg: read configuration in internal/config only
+          msg: read configuration in internal/common/config only
         - pattern: ^http\.DefaultClient$
           msg: set explicit timeouts, never the default client
         - pattern: ^http\.Get$
@@ -55,10 +55,10 @@ linters:
       # alias would be noise. The list below matters when a name differs.
       no-unaliased: false
       alias:
-        - pkg: github.com/dimasbaguspm/spenicle/internal/domain
-          alias: domain
-        - pkg: github.com/dimasbaguspm/spenicle/internal/port
-          alias: port
+        - pkg: github.com/dimasbaguspm/spenicle/internal/entity
+          alias: entity
+        - pkg: github.com/dimasbaguspm/spenicle/internal/repository
+          alias: repository
 
   exclusions:
     generated: strict
@@ -72,7 +72,7 @@ linters:
           - gosec
           - forbidigo
       # The config package is the one place allowed to read the environment.
-      - path: internal/config/
+      - path: internal/common/config/
         linters:
           - forbidigo
       # main wires stdout logging and process exit on purpose.

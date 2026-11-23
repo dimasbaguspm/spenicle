@@ -13,7 +13,7 @@ ARG VERSION=dev
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath \
     -ldflags="-s -w -X main.version=${VERSION}" \
-    -o /out/spenicle ./cmd/spenicle
+    -o /out/spenicle ./cmd/http
 
 FROM alpine:3.22
 

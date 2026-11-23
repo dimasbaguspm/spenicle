@@ -127,7 +127,7 @@ linters:
         - tx *sql.Tx
         - s *Store
         - t *testing.T
-        - e domain.Entry
+        - e entity.Entry
         - e Entry
     nlreturn:
       block-size: 2
@@ -158,12 +158,21 @@ linters:
           - nlreturn
           - wsl_v5
           - mnd
-      - path: internal/bdd/
+      - path: uat/
         linters:
           - paralleltest
           - tparallel
           - varnamelen
           - funlen
+      # Constructors that pick an implementation by configuration (a sealer that
+      # may be AES or a passthrough, an extractor that may be absent) can only
+      # return the interface: the concrete type is decided at runtime.
+      - path: internal/common/seal/
+        linters:
+          - ireturn
+      - path: internal/repository/snaptojson/
+        linters:
+          - ireturn
       # main wires interfaces by design; returning them is the composition root's job.
       - path: cmd/
         linters:

@@ -32,6 +32,33 @@ place to defer a decision. v2 fixes all three.
 | history | fresh start; statement import can backfill via extraction when enabled |
 | deletions | none, ever. Void and reject instead; `audit_log` records everything |
 
+## Layout
+
+```
+cmd/http/             binary: main.go, bootstrap.go (composition root), routes.go
+cmd/http/handlers/    one file per endpoint group; owns the route table
+cmd/http/middlewares/ recovery, tracing, request logging
+uat/                  Gherkin suite: uat.go (entry point), steps.go, world.go, features/
+internal/common/      utilities with no business logic: config, clock, seal, otel, httpx
+internal/constant/    every fixed value shared by more than one package
+internal/entity/      shared structs and the invariants that must hold forever
+internal/module/      business logic: ledger, bootstrap
+internal/repository/  third-party comms: the contracts, plus sqlite and snaptojson
+```
+
+Two rules keep it pluggable:
+
+1. Each directory has a root file that presents nothing but its interface —
+   `repository.go`, `ledger.go`, `entity.go`, `uat.go`. A caller reads one file to
+   learn what the package offers; a second adapter means one new implementation,
+   not a new call site.
+2. Dependencies point inward: `cmd` → `module` → `entity` + `repository` contracts.
+   `entity` imports only the standard library and `constant`, so it can never
+   create a cycle.
+
+`cmd/http` is `package main`, so `uat` assembles the same graph by hand from
+`repository/sqlite`, `module/bootstrap`, `module/ledger` and `handlers.New`.
+
 ## Non-goals for v2.0
 
 Multi-user, tags, geo/map, TUI, envelope budgets, cross-currency account transfers,

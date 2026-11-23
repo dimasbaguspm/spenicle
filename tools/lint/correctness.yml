@@ -104,7 +104,7 @@ linters:
           - bodyclose
           - exhaustruct
       # godog callbacks must match its signature.
-      - path: internal/bdd/
+      - path: uat/
         linters:
           - wrapcheck
           - contextcheck
