@@ -1,0 +1,160 @@
+# AGENTS.md
+
+Context for any agent working in this repository. Read this first, then the design
+doc it points at. Keep it current: if you change a command, a path or a release
+rule, update this file in the same commit.
+
+## What this is
+
+**Spenicle v2** — a self-hosted, single-user expense tracker in Go. One binary, one
+SQLite file, one container. The point is that logging a coffee costs two seconds, so
+a missed week does not become a quit: **capture is separate from organizing**, and
+nothing is organized automatically.
+
+Not a SaaS template. Not multi-tenant. Not a general ledger product. The design is
+locked in [`docs/v2-design.md`](./docs/v2-design.md); schema and endpoints in
+[`docs/v2-api.md`](./docs/v2-api.md). When those documents and the code disagree,
+the document wins until you change the document too.
+
+## Invariants you must not break
+
+1. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
+   zero. `entity.CheckZeroSum` runs before the insert and again inside the write
+   transaction.
+2. **No deletes.** Void (`voided_at`) or reject. Every mutation appends to `audit_log`.
+3. **Money is integers.** Minor units + ISO 4217 code. No `float64` anywhere, ever.
+   Rates are exact decimals stored as `TEXT` and handled with `math/big.Rat`; rounding
+   happens exactly once, half away from zero.
+4. **Base currency is locked** at first boot (`settings.base_currency`). A foreign
+   currency is a property of one transaction, never of an account.
+5. **Capture ≠ ledger.** A capture never writes a ledger entry on its own. Approval does.
+6. **Single process, single file.** No Postgres, no Redis, no queue, no sidecar.
+   Adding infrastructure needs a design-doc change first.
+
+## Layout
+
+```
+cmd/http/              main.go · bootstrap.go (composition root) · routes.go
+cmd/http/handlers/     route table + one file per endpoint group
+cmd/http/middlewares/  recovery, span per request, structured request log
+uat/                   godog suite: uat.go, steps.go, world.go, features/
+internal/common/       no business logic: config, clock, seal, otel, httpx
+internal/constant/     every fixed value shared by more than one package
+internal/entity/       shared structs + invariants; imports stdlib + constant only
+internal/module/       business logic: ledger, bootstrap
+internal/repository/   contracts, plus the adapters: sqlite, snaptojson
+```
+
+Rules that keep it pluggable:
+
+- Every directory has a root file that presents **only its interface**
+  (`repository.go`, `ledger.go`, `entity.go`, `uat.go`, `sqlite.go`). A second adapter
+  is one new implementation, not a new call site.
+- Dependencies point inward: `cmd` → `module` → `entity` + `repository` contracts.
+- Every method that crosses a boundary takes `ctx context.Context` first and opens one
+  span named after the layer: `Repository.Sqlite.InsertEntry`, `Module.Ledger.Post`,
+  `Handler.Entries.Post`, `Common.Seal.Seal`. There is exactly one
+  `context.Background()`, in `cmd/http/main.go`, wrapped in `signal.NotifyContext`;
+  everything derives from it. Pure value code (`entity` validation, `clock`) takes no
+  context and opens no span.
+
+## Commands
+
+```bash
+make build      # bin/spenicle
+make run        # DATA_DIR=./data ADDR=:8080 go run ./cmd/http
+make test       # go test ./... (unit + UAT)
+make bdd        # godog suite only, verbose
+make cover      # coverage over the whole module
+make fmt        # gofmt the tree
+make lint       # all four groups; every one must stay at 0 issues
+make lint-fix   # safe automatic fixes (style, then correctness)
+```
+
+Run `make lint` and `make test` before you call anything done. All four lint groups
+report `0 issues` today; a new finding is yours to fix, not to silence — unless it is
+a documented false positive, in which case use the narrowest `//nolint` with a reason
+string.
+
+Lint is four configs, not one, on purpose: `tools/lint/{correctness,style,security,performance}.yml`.
+There is deliberately **no root `.golangci.yml`** (the union drifts). CI runs each group
+in its own job, so a style failure cannot hide a security failure.
+
+## Environment
+
+Un-prefixed, all optional except `PASSWORD` in practice:
+
+| var | default | meaning |
+|---|---|---|
+| `DATA_DIR` | `./data` | SQLite file and artifacts live here |
+| `ADDR` | `:8080` | listen address |
+| `BASE_CURRENCY` | `IDR` | locked at first boot |
+| `PASSWORD` | — | single user's password |
+| `APP_SECRET` | — | ≥ 16 bytes; seals sensitive columns. Unset = honest passthrough |
+| `EXTRACTION_API_KEY` | — | enables the extraction vendor; unset = manual entry |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | empty = tracing/metrics are no-ops |
+
+`/healthz` returns `status`, `version` (`<tag>+<sha7>`), `schema_version`,
+`app_secret` fingerprint and `base_currency`. Use it to prove a running process is
+the build you think it is.
+
+## Testing
+
+- Unit tests sit next to the code they test (`internal/entity/money_test.go`,
+  `internal/repository/sqlite/store_test.go`). Use `t.Context()`, never
+  `context.Background()`.
+- UAT is Gherkin via godog, over the **real** handler and a **real** SQLite file in a
+  temp dir — no mocks. Steps are generic (`I send a POST to "/api/entries" with:`,
+  `the response JSON at $.postings[0].amount_minor is "-15000"`), so a new endpoint
+  usually needs no new step. `{{account:Cash}}` placeholders expand to the id created
+  earlier in the scenario.
+- `uat` assembles the dependency graph by hand because `cmd/http` is `package main`
+  and therefore not importable. Adding a dependency to `cmd/http/bootstrap.go` means
+  adding it to `uat/world.go` too.
+
+## Committing
+
+Conventional Commits, one logical change per commit, imperative subject, no body
+unless a fact cannot fit the subject:
+
+```
+feat: trace every method and derive every context from the caller
+fix: flush telemetry after the signal cancels the context
+docs: link every commit in the release notes
+```
+
+Scopes exist but are rarely needed. Never a file path or a ticket number.
+
+## Releasing
+
+**A pushed git tag is the only way to release.** No workflow dispatch, no manual
+upload:
+
+```bash
+git tag -a v0.2.0 -m "v0.2.0"
+git push origin v0.2.0
+```
+
+- Tag must be semver (`vMAJOR.MINOR.PATCH`); anything else matching `v*` fails the run
+  before publishing.
+- The artifact is the **container image only**: `ghcr.io/<owner>/spenicle` tagged
+  `v0.2.0`, `0.2.0`, `sha-<sha7>`, `latest`, built for `linux/amd64` and
+  `linux/arm64`. No tarballs, no checksums — see
+  [`docs/releasing.md`](./docs/releasing.md) for why and for the digest-pinning recipe.
+- Release notes are generated: a table (image, digest, platforms, commit, version) plus
+  every commit since the previous tag as a **clickable link**, then a compare link.
+- Never move or reuse a tag. Broken release → tag the next patch.
+
+## Known traps
+
+- `docker run` as uid `10001`: use a **named volume** (`-v spenicle-data:/data`). A bind
+  mount needs `chown -R 10001:10001 ./data` first.
+- The telemetry flush uses `context.WithoutCancel`; the signal that stops the process
+  already cancelled the root context, and without this the last span batch is lost.
+- `golangci-lint` `dupword --fix` has silently eaten SQL (`NULL` removed from a
+  `VALUES` list) and `golines` flattened raw SQL into escaped one-liners. Both are
+  removed from the lint configs; do not re-add them.
+- `internal/common/otel` is package `telemetry` (import alias) so it does not shadow
+  `go.opentelemetry.io/otel`.
+- Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
+  Forwards only. Never edit an applied migration; add the next number.
