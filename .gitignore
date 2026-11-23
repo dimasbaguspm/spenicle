@@ -10,3 +10,12 @@
 /bin/
 /spenicle
 coverage.out
+
+# supervision artefacts: the s6-overlay payloads, the rootfs unpacked from them,
+# the runtime state s6 writes and the `down` marker that disables a service.
+# config/s6/s6-rc.d/** stays tracked: those are the sources the image copies.
+/run/
+/command/
+s6-overlay-*.tar.xz
+/config/s6/rootfs/
+down
