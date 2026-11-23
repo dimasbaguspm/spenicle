@@ -1,7 +1,0 @@
-node_modules/
-test-results/
-test-results.txt
-playwright-report/
-.env
-.auth/
- 
