@@ -85,6 +85,16 @@ type Connections interface {
 	RevokeConnection(ctx context.Context, ref string, at time.Time) (entity.Connection, bool, error)
 }
 
+type MailMessages interface {
+	InsertMailMessage(ctx context.Context, message entity.MailMessage) (entity.MailMessage, error)
+	MailMessageByRef(ctx context.Context, ref string) (entity.MailMessage, bool, error)
+	MailMessageBySource(
+		ctx context.Context,
+		source, messageRef string,
+	) (entity.MailMessage, bool, error)
+	UpdateMailMessage(ctx context.Context, message entity.MailMessage) (entity.MailMessage, error)
+}
+
 type Analytics interface {
 	MonthlyTotals(ctx context.Context, from, to time.Time) ([]entity.MonthTotal, error)
 	CategoryTotals(ctx context.Context, from, to time.Time, kind string) ([]entity.CategoryTotal, error)

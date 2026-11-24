@@ -9,6 +9,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
+	"github.com/dimasbaguspm/spenicle/internal/module/intake"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
@@ -32,6 +33,7 @@ type Deps struct {
 	Audit             repository.Audit
 	Tokens            tokens.Contract
 	Connections       connections.Contract
+	Intake            intake.Contract
 	ArtifactFiles     repository.ArtifactFiles
 	ExportFiles       repository.ArtifactFiles
 	Exports           exports.Contract

@@ -21,12 +21,14 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
+	"github.com/dimasbaguspm/spenicle/internal/module/intake"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/module/tokens"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
+	gmailmail "github.com/dimasbaguspm/spenicle/internal/repository/mailbox/gmail"
 	"github.com/dimasbaguspm/spenicle/internal/repository/oauth/google"
 )
 
@@ -192,6 +194,11 @@ func (s *server) credentialRoutes(group routeGroup) {
 	group.route("", "GET /api/connections", s.api.GetConnection)
 	group.route("", "POST /api/connections/google", s.api.StartConnection)
 	group.route("", "POST /api/connections/{ref}/revoke", s.api.RevokeConnection)
+	group.route("", "GET /api/intake", s.api.GetIntakeConfig)
+	group.route("", "PATCH /api/intake", s.api.PatchIntakeConfig)
+	group.route("", "POST /api/intake/run", s.api.RunIntake)
+	group.route("", "GET /api/intake/messages/{ref}", s.api.GetIntakeMessage)
+	group.route("", "POST /api/intake/messages/{ref}/refresh", s.api.RefreshIntakeMessage)
 }
 
 // credential is who is calling: the root credential (the password session) or one
@@ -357,12 +364,17 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 	connector := connections.New(store, store, process.Sealer, google.New(nil, "", "", ""),
 		clock.System{})
 
+	captured := captures.New(
+		store, process.Ledger, process.Sealer, process.Artifacts, store, extractor, store,
+		clock.System{}, clock.System{},
+	)
+
+	intaker := intake.New(store, captured, store, process.Sealer,
+		gmailmail.New(nil, "", connector))
+
 	return handlers.Deps{
-		Ledger: process.Ledger,
-		Captures: captures.New(
-			store, process.Ledger, process.Sealer, process.Artifacts, store, extractor, store,
-			clock.System{}, clock.System{},
-		),
+		Ledger:        process.Ledger,
+		Captures:      captured,
 		Rates:         process.Rates,
 		Accounts:      store,
 		Payees:        store,
@@ -388,6 +400,7 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		Audit:             store,
 		Tokens:            tokens.New(store, process.Sealer, clock.System{}),
 		Connections:       connector,
+		Intake:            intaker,
 		Sealer:            process.Sealer,
 		BaseCurrency:      process.BaseCurrency,
 		Timezone:          process.Cfg.Timezone,
