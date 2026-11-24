@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  },
+  "payees": [
+    {
+      "archived": false,
+      "created_at": "<timestamp>",
+      "name": "Warung Bu Tini",
+      "ref": "<ref>"
+    }
+  ]
+}

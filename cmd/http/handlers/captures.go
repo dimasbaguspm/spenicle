@@ -63,6 +63,7 @@ type capturePatchRequest struct {
 	EntryRef   string           `json:"entry_ref,omitempty"   validate:"omitempty,ref"`
 	Currency   string           `json:"currency,omitempty"    validate:"omitempty,currency"`
 	Postings   []postingRequest `json:"postings,omitempty"    validate:"omitempty,min=2,dive"`
+	Learn      *bool            `json:"learn,omitempty"       validate:"omitempty"`
 }
 
 type captureApprovedResponse struct {
@@ -228,6 +229,8 @@ func (s *Server) approveCapture(
 
 		return
 	}
+
+	s.rememberCategory(ctx, request, postings)
 
 	entryBody, err := s.entryResponse(ctx, entry)
 	if err != nil {
@@ -459,4 +462,43 @@ func toCapturePostingInputs(request []postingRequest) ([]captures.PostingInput, 
 	}
 
 	return postings, nil
+}
+
+func (s *Server) rememberCategory(
+	ctx context.Context,
+	request capturePatchRequest,
+	postings []captures.PostingInput,
+) {
+	if request.PayeeRef == "" || (request.Learn != nil && !*request.Learn) {
+		return
+	}
+
+	payee, found, err := s.deps.Payees.PayeeByRef(ctx, request.PayeeRef)
+	if err != nil || !found || payee.DefaultCategoryRef != "" {
+		return
+	}
+
+	for _, posting := range postings {
+		account, ok, accountErr := s.deps.Accounts.AccountByRef(ctx, posting.AccountRef)
+		if accountErr != nil {
+			return
+		}
+
+		if !ok || !isCategoryKind(account.Kind) {
+			continue
+		}
+
+		payee.DefaultCategoryRef = account.Ref
+
+		if _, updateErr := s.deps.Payees.UpdatePayee(ctx, payee); updateErr != nil {
+			s.deps.Logger.Warn(ctx, "remember the approved category",
+				slog.String("payee", payee.Ref), slog.String("error", updateErr.Error()))
+		}
+
+		return
+	}
+}
+
+func isCategoryKind(kind string) bool {
+	return kind == constant.AccountKindExpense || kind == constant.AccountKindIncome
 }

@@ -127,3 +127,41 @@ Feature: PATCH /api/captures/{{ref}}
       """
     Then the response status is 422
     And the response JSON matches the snapshot "patch_api_captures_:ref__a_match_without_an_entry_ref_is_refused"
+
+  Scenario: Approving a capture remembers the payee's category
+    Given a running API
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"Kopi Kenangan"}
+      """
+    And the last ref is remembered as "kopi"
+    And I send a POST to "/api/captures" with:
+      """json
+      {"kind":"share","raw_text":"KOPI KENANGAN 18.000"}
+      """
+    When I send a PATCH to "/api/captures/{{ref}}" with:
+      """json
+      {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","payee_ref":"{{ref:kopi}}","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    Then the response status is 201
+    When I send a GET to "/api/payees?refs={{ref:kopi}}"
+    Then the response JSON matches the snapshot "patch_api_captures_:ref__approving_a_capture_remembers_the_payees_category"
+
+  Scenario: Learning can be turned off for one approval
+    Given a running API
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"Warung Bu Tini"}
+      """
+    And the last ref is remembered as "warung"
+    And I send a POST to "/api/captures" with:
+      """json
+      {"kind":"share","raw_text":"WARUNG 12.000"}
+      """
+    When I send a PATCH to "/api/captures/{{ref}}" with:
+      """json
+      {"action":"approve","learn":false,"occurred_on":"2026-02-14","currency":"IDR","payee_ref":"{{ref:warung}}","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-12000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"12000"}]}
+      """
+    Then the response status is 201
+    When I send a GET to "/api/payees?refs={{ref:warung}}"
+    Then the response JSON matches the snapshot "patch_api_captures_:ref__learning_can_be_turned_off_for_one_approval"
