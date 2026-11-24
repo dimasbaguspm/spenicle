@@ -22,6 +22,8 @@ func TestFeatures(t *testing.T) {
 				OpenAIEndpoint:       endpoint(mockOpenAI),
 				OpenAIDownEndpoint:   endpoint(mockOpenAIDown),
 				OpenAIBrokenEndpoint: endpoint(mockOpenAIBroken),
+				GoogleTokenEndpoint:  endpoint("/oauth/token"),
+				GoogleRevokeEndpoint: endpoint("/oauth/revoke"),
 			})
 		},
 		Options: &godog.Options{

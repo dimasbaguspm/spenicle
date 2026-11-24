@@ -56,6 +56,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the first capture ref is remembered$`, theFirstCaptureRefIsRemembered)
 	sc.Step(`^the recurring worker runs$`, theRecurringWorkerRuns)
 	sc.Step(`^the store holds:$`, theStoreHolds)
+	sc.Step(`^I complete the google authorisation with the code "([^"]*)"$`, iCompleteTheGoogleAuthorisation)
 	sc.Step(`^the journal holds (\d+) "([^"]*)" rows$`, theJournalHolds)
 	sc.Step(`^the last journal row names the token as its actor$`, theLastJournalRowNamesTheToken)
 	sc.Step(`^the instance password is "([^"]*)"$`, theInstancePasswordIs)
@@ -91,6 +92,8 @@ type Options struct {
 	OpenAIEndpoint       string
 	OpenAIDownEndpoint   string
 	OpenAIBrokenEndpoint string
+	GoogleTokenEndpoint  string
+	GoogleRevokeEndpoint string
 }
 
 func (o Options) vendorsReady() bool {

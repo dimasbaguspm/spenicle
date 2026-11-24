@@ -1,0 +1,13 @@
+{
+  "access_expires_at": "<timestamp>",
+  "account": "mailbox@example.com",
+  "last_refreshed_at": "<timestamp>",
+  "provider": "google",
+  "ref": "<ref>",
+  "scopes": [
+    "openid",
+    "email",
+    "https://www.googleapis.com/auth/gmail.readonly"
+  ],
+  "status": "active"
+}

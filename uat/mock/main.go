@@ -64,6 +64,7 @@ func newMux() http.Handler {
 	registerSnapToJSON(mux)
 	registerOpenAI(mux)
 	registerECB(mux)
+	registerGoogle(mux)
 
 	return mux
 }
