@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -107,12 +108,15 @@ type categoryAnalyticsQuery struct {
 	To     string `query:"to"     validate:"omitempty,datestr"`
 	Kind   string `query:"kind"   validate:"omitempty,oneof=expense income"`
 	Rollup string `query:"rollup" validate:"omitempty,oneof=parent"`
+	Bucket string `query:"bucket" validate:"omitempty,oneof=month"`
 }
 
 type categoryTotalResponse struct {
-	AccountRef  string `json:"account_ref"`
-	AccountName string `json:"account_name"`
-	AmountMinor string `json:"amount_minor"`
+	AccountRef      string `json:"account_ref"`
+	AccountName     string `json:"account_name"`
+	AmountMinor     string `json:"amount_minor"`
+	FirstOccurredOn string `json:"first_occurred_on,omitempty"`
+	LastOccurredOn  string `json:"last_occurred_on,omitempty"`
 }
 
 type categoryAnalyticsResponse struct {
@@ -120,6 +124,25 @@ type categoryAnalyticsResponse struct {
 	To         string                  `json:"to"`
 	Kind       string                  `json:"kind"`
 	Categories []categoryTotalResponse `json:"categories"`
+}
+
+type categoryMonthResponse struct {
+	Month      string `json:"month"`
+	SpendMinor string `json:"spend_minor"`
+}
+
+type categoryMonthsResponse struct {
+	AccountRef  string                  `json:"account_ref"`
+	AccountName string                  `json:"account_name"`
+	Months      []categoryMonthResponse `json:"months"`
+}
+
+type bucketedCategoryAnalyticsResponse struct {
+	From       string                   `json:"from"`
+	To         string                   `json:"to"`
+	Kind       string                   `json:"kind"`
+	Bucket     string                   `json:"bucket"`
+	Categories []categoryMonthsResponse `json:"categories"`
 }
 
 func (s *Server) CategoryAnalytics(w http.ResponseWriter, r *http.Request) {
@@ -145,6 +168,18 @@ func (s *Server) CategoryAnalytics(w http.ResponseWriter, r *http.Request) {
 		kind = "expense"
 	}
 
+	if query.Bucket != "" && query.Rollup != "" {
+		writeBucketRollup(w)
+
+		return
+	}
+
+	if query.Bucket == "month" {
+		s.writeCategoryMonths(ctx, w, from, to, kind)
+
+		return
+	}
+
 	categories := s.deps.Analytics.CategoryTotals
 	if query.Rollup == "parent" {
 		categories = s.deps.Analytics.CategoryTotalsByRoot
@@ -166,11 +201,59 @@ func (s *Server) CategoryAnalytics(w http.ResponseWriter, r *http.Request) {
 
 	for _, total := range totals {
 		out.Categories = append(out.Categories, categoryTotalResponse{
-			AccountRef:  total.AccountRef,
-			AccountName: total.AccountName,
-			AmountMinor: strconv.FormatInt(total.AmountMinor, 10),
+			AccountRef:      total.AccountRef,
+			AccountName:     total.AccountName,
+			AmountMinor:     strconv.FormatInt(total.AmountMinor, 10),
+			FirstOccurredOn: total.FirstOccurredOn,
+			LastOccurredOn:  total.LastOccurredOn,
 		})
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+func (s *Server) writeCategoryMonths(
+	ctx context.Context,
+	w http.ResponseWriter,
+	from, to time.Time,
+	kind string,
+) {
+	totals, err := s.deps.Analytics.CategoryTotalsByMonth(ctx, from, to, kind)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	out := bucketedCategoryAnalyticsResponse{
+		From:       from.Format(constant.DateLayout),
+		To:         to.Format(constant.DateLayout),
+		Kind:       kind,
+		Bucket:     "month",
+		Categories: make([]categoryMonthsResponse, 0, len(totals)),
+	}
+
+	for _, total := range totals {
+		months := make([]categoryMonthResponse, 0, len(total.Months))
+
+		for _, month := range total.Months {
+			months = append(months, categoryMonthResponse{
+				Month:      month.Month,
+				SpendMinor: strconv.FormatInt(month.AmountMinor, 10),
+			})
+		}
+
+		out.Categories = append(out.Categories, categoryMonthsResponse{
+			AccountRef:  total.AccountRef,
+			AccountName: total.AccountName,
+			Months:      months,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+func writeBucketRollup(w http.ResponseWriter) {
+	httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+		"bucket and rollup cannot be combined: send bucket=month or rollup=parent, not both")
 }

@@ -79,3 +79,35 @@ Feature: GET /api/analytics/categories
       | query | rollup | branch |
     Then the response status is 422
     And the response JSON matches the snapshot "get_api_analytics_categories__an_unknown_roll_up_is_refused"
+
+  Scenario: A category reports the first and the last day it moved
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-01-05","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1000"}]}
+      """
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-20","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2000"}]}
+      """
+    When I send a GET to "/api/analytics/categories?from=2026-01-01&to=2026-02-28"
+    Then the response JSON matches the snapshot "get_api_analytics_categories__a_category_reports_the_first_and_the_last_day_it_moved"
+
+  Scenario: The monthly bucket splits a category per month
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-01-05","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1000"}]}
+      """
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-20","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2000"}]}
+      """
+    When I send a GET to "/api/analytics/categories?from=2026-01-01&to=2026-02-28&bucket=month"
+    Then the response JSON matches the snapshot "get_api_analytics_categories__the_monthly_bucket_splits_a_category_per_month"
+
+  Scenario: A bucket and a roll-up cannot be asked for together
+    Given a running API
+    When I send a GET to "/api/analytics/categories?bucket=month&rollup=parent"
+    Then the response status is 422
+    And the response JSON matches the snapshot "get_api_analytics_categories__a_bucket_and_a_roll_up_cannot_be_asked_for_together"

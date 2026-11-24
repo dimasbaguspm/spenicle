@@ -8,3 +8,14 @@ type MonthTotal struct {
 }
 
 func (m MonthTotal) Net() int64 { return m.IncomeMinor - m.SpendMinor }
+
+type CategoryMonthTotal struct {
+	Month       string
+	AmountMinor int64
+}
+
+type CategoryMonthlyTotal struct {
+	AccountRef  string
+	AccountName string
+	Months      []CategoryMonthTotal
+}

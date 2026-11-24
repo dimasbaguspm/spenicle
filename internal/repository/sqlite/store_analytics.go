@@ -57,7 +57,8 @@ func (s *Store) MonthlyTotals(
 }
 
 const categoryTotalsQuery = `
-	SELECT a.ref, a.name, a.kind, SUM(p.base_amount_minor)
+	SELECT a.ref, a.name, a.kind, SUM(p.base_amount_minor),
+	       MIN(e.occurred_on), MAX(e.occurred_on)
 	FROM ledger_postings p
 	JOIN ledger_entries e ON e.id = p.entry_id
 	JOIN accounts a ON a.id = p.account_id
@@ -74,7 +75,8 @@ const categoryTotalsByRootQuery = `
 		UNION ALL
 		SELECT a.id, tree.root_id FROM accounts a JOIN tree ON a.parent_id = tree.id
 	)
-	SELECT root.ref, root.name, root.kind, SUM(p.base_amount_minor)
+	SELECT root.ref, root.name, root.kind, SUM(p.base_amount_minor),
+	       MIN(e.occurred_on), MAX(e.occurred_on)
 	FROM ledger_postings p
 	JOIN ledger_entries e ON e.id = p.entry_id
 	JOIN tree ON tree.id = p.account_id
@@ -85,6 +87,18 @@ const categoryTotalsByRootQuery = `
 	GROUP BY root.id
 	HAVING SUM(p.base_amount_minor) <> 0
 	ORDER BY SUM(p.base_amount_minor) DESC`
+
+const categoryTotalsByMonthQuery = `
+	SELECT a.ref, a.name, substr(e.occurred_on, 1, 7), SUM(p.base_amount_minor)
+	FROM ledger_postings p
+	JOIN ledger_entries e ON e.id = p.entry_id
+	JOIN accounts a ON a.id = p.account_id
+	WHERE e.voided_at IS NULL AND e.reverses_entry_id IS NULL
+	  AND e.occurred_on BETWEEN ? AND ?
+	  AND a.kind = ?
+	GROUP BY a.id, substr(e.occurred_on, 1, 7)
+	HAVING SUM(p.base_amount_minor) <> 0
+	ORDER BY a.name, substr(e.occurred_on, 1, 7)`
 
 func (s *Store) CategoryTotals(
 	ctx context.Context,
@@ -124,6 +138,49 @@ func (s *Store) CategoryTotalsByRoot(
 	return scanCategoryTotals(rows)
 }
 
+func (s *Store) CategoryTotalsByMonth(
+	ctx context.Context,
+	from, to time.Time,
+	kind string,
+) ([]entity.CategoryMonthlyTotal, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CategoryTotalsByMonth")
+	defer endSpan()
+
+	rows, err := s.db.QueryContext(ctx, categoryTotalsByMonthQuery,
+		from.Format(constant.DateLayout), to.Format(constant.DateLayout), kind)
+	if err != nil {
+		return nil, fmt.Errorf("select category months: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	var out []entity.CategoryMonthlyTotal
+
+	for rows.Next() {
+		var (
+			ref   string
+			name  string
+			total entity.CategoryMonthTotal
+		)
+
+		if scanErr := rows.Scan(&ref, &name, &total.Month, &total.AmountMinor); scanErr != nil {
+			return nil, fmt.Errorf("scan category month: %w", scanErr)
+		}
+
+		if len(out) == 0 || out[len(out)-1].AccountRef != ref {
+			out = append(out, entity.CategoryMonthlyTotal{AccountRef: ref, AccountName: name})
+		}
+
+		out[len(out)-1].Months = append(out[len(out)-1].Months, total)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate category months: %w", err)
+	}
+
+	return out, nil
+}
+
 func scanCategoryTotals(rows *sql.Rows) ([]entity.CategoryTotal, error) {
 	var out []entity.CategoryTotal
 
@@ -131,7 +188,7 @@ func scanCategoryTotals(rows *sql.Rows) ([]entity.CategoryTotal, error) {
 		var total entity.CategoryTotal
 
 		if err := rows.Scan(&total.AccountRef, &total.AccountName, &total.Kind,
-			&total.AmountMinor); err != nil {
+			&total.AmountMinor, &total.FirstOccurredOn, &total.LastOccurredOn); err != nil {
 			return nil, fmt.Errorf("scan category total: %w", err)
 		}
 

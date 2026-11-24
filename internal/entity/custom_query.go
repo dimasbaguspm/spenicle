@@ -13,8 +13,10 @@ type CustomQuery struct {
 }
 
 type CategoryTotal struct {
-	AccountRef  string
-	AccountName string
-	Kind        string
-	AmountMinor int64
+	AccountRef      string
+	AccountName     string
+	Kind            string
+	AmountMinor     int64
+	FirstOccurredOn string
+	LastOccurredOn  string
 }
