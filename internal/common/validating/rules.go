@@ -50,6 +50,10 @@ var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only ru
 	"shift":           validShift,
 	"capturestatus":   validCaptureStatus,
 	"exportstatus":    validExportStatus,
+	"scope":           validScope,
+	"auditkind":       validAuditKind,
+	"auditaction":     validAuditAction,
+	"auditactor":      validAuditActor,
 }
 
 func validRef(field validator.FieldLevel) bool {
@@ -165,6 +169,41 @@ func validExportStatus(field validator.FieldLevel) bool {
 	switch field.Field().String() {
 	case constant.ExportStatusQueued, constant.ExportStatusRunning, constant.ExportStatusReady,
 		constant.ExportStatusFailed, constant.ExportStatusExpired:
+		return true
+	default:
+		return false
+	}
+}
+
+func validScope(field validator.FieldLevel) bool {
+	return entity.KnownScope(field.Field().String())
+}
+
+func validAuditKind(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.AuditEntitySetting, constant.AuditEntityAccount, constant.AuditEntityPayee,
+		constant.AuditEntityRecurring, constant.AuditEntityEntry, constant.AuditEntityCapture,
+		constant.AuditEntityToken:
+		return true
+	default:
+		return false
+	}
+}
+
+func validAuditAction(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.AuditActionCreate, constant.AuditActionUpdate, constant.AuditActionVoid,
+		constant.AuditActionApprove, constant.AuditActionReject, constant.AuditActionRetry,
+		constant.AuditActionGenerate, constant.AuditActionAdvance, constant.AuditActionRevoke:
+		return true
+	default:
+		return false
+	}
+}
+
+func validAuditActor(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.AuditActorUser, constant.AuditActorWorker, constant.AuditActorSystem:
 		return true
 	default:
 		return false

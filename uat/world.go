@@ -16,6 +16,7 @@ import (
 	"github.com/cucumber/godog"
 
 	workerhandlers "github.com/dimasbaguspm/spenicle/cmd/worker/handlers"
+	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
@@ -97,17 +98,23 @@ type world struct {
 	lastRef     string
 	refs        map[string]string
 
-	ledger        ledger.Contract
-	artifacts     *filestore.Store
-	exportFiles   *filestore.Store
-	parts         *filestore.Parts
-	location      *time.Location
-	commitChunk   int
-	exports       exports.Contract
-	exportDeps    export.Deps
-	limits        entity.AppConfig
-	asOf          time.Time
-	workerSummary workerhandlers.Summary
+	ledger         ledger.Contract
+	artifacts      *filestore.Store
+	exportFiles    *filestore.Store
+	parts          *filestore.Parts
+	location       *time.Location
+	sealer         seal.Sealer
+	commitChunk    int
+	exports        exports.Contract
+	exportDeps     export.Deps
+	limits         entity.AppConfig
+	asOf           time.Time
+	workerSummary  workerhandlers.Summary
+	password       string
+	rootCredential string
+	credential     string
+	issued         string
+	issuedRef      string
 }
 
 type fixedClock struct{ at time.Time }

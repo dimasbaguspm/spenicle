@@ -1,0 +1,22 @@
+{
+  "audit": [
+    {
+      "action": "create",
+      "actor_kind": "user",
+      "at": "<timestamp>",
+      "entity_kind": "ledger_entry",
+      "entity_ref": "<ref>",
+      "ref": "<ref>",
+      "to": {
+        "currency": "IDR",
+        "occurred_on": "2026-02-14",
+        "postings": 2,
+        "source": "manual"
+      }
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

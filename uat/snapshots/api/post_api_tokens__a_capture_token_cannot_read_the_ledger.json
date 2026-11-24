@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "forbidden",
+    "message": "this credential cannot reach GET /api/entries: it needs the entries:read scope"
+  }
+}

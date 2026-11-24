@@ -8,6 +8,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/cmd/worker/handlers"
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
+	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
@@ -24,7 +25,8 @@ func Serve(ctx context.Context, process *config.Process) {
 	}
 
 	runner := handlers.New(
-		store, store, process.Ledger, store, store, process.Artifacts, process.Exports, parts,
+		store, store, captures.NewQueue(store, process.Sealer, clock.System{}),
+		store, store, process.Artifacts, process.Exports, parts,
 		process.Cfg.ArtifactRetention,
 		exports.New(store, store, store, process.Exports, process.Cfg.ExportRetention, clock.System{}),
 		export.Deps{

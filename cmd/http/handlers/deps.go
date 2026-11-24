@@ -11,6 +11,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
+	"github.com/dimasbaguspm/spenicle/internal/module/tokens"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 )
 
@@ -27,6 +28,8 @@ type Deps struct {
 	CustomQueries     repository.CustomQueries
 	Artifacts         repository.Artifacts
 	Health            repository.System
+	Audit             repository.Audit
+	Tokens            tokens.Contract
 	ArtifactFiles     repository.ArtifactFiles
 	ExportFiles       repository.ArtifactFiles
 	Exports           exports.Contract

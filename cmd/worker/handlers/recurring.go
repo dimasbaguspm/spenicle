@@ -6,10 +6,11 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle/internal/common/actor"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
-	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
+	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 )
 
 const (
@@ -18,13 +19,13 @@ const (
 	daysPerWeek    = 7
 	minutesPerHour = 60
 	minutesPerDay  = 24 * minutesPerHour
-	clientIDPrefix = "recurring:"
-	fallbackNote   = "recurring rule"
 )
 
 func (r *Runner) Run(ctx context.Context) (Summary, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Worker.Recurring.Run")
 	defer endSpan()
+
+	ctx = actor.With(ctx, actor.From{Kind: constant.AuditActorWorker})
 
 	now := r.clock.Now()
 
@@ -85,7 +86,7 @@ func (r *Runner) runRule(
 	today := localTime(now, 0, 0, r.zone())
 
 	for count := 0; count < catchUpCap && !due.After(today) && !pastEnd(rule, due); count++ {
-		created, err := r.post(ctx, rule, due)
+		created, err := r.enqueue(ctx, rule, due)
 		if err != nil {
 			summary.Failed++
 
@@ -93,7 +94,7 @@ func (r *Runner) runRule(
 		}
 
 		if created {
-			summary.Posted++
+			summary.Queued++
 		} else {
 			summary.Skipped++
 		}
@@ -119,16 +120,16 @@ func (r *Runner) runRule(
 	return nil
 }
 
-func (r *Runner) post(ctx context.Context, rule entity.Recurring, due time.Time) (bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Worker.Recurring.Post")
+func (r *Runner) enqueue(ctx context.Context, rule entity.Recurring, due time.Time) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Worker.Recurring.Enqueue")
 	defer endSpan()
 
-	input, err := r.postInput(ctx, rule, due)
+	draft, err := r.draft(ctx, rule, due)
 	if err != nil {
 		return false, err
 	}
 
-	_, created, err := r.entries.Post(ctx, input)
+	_, created, err := r.queue.Enqueue(ctx, draft)
 	if err != nil {
 		return false, err
 	}
@@ -136,26 +137,24 @@ func (r *Runner) post(ctx context.Context, rule entity.Recurring, due time.Time)
 	return created, nil
 }
 
-func (r *Runner) postInput(
+func (r *Runner) draft(
 	ctx context.Context,
 	rule entity.Recurring,
 	due time.Time,
-) (ledger.PostInput, error) {
+) (captures.EnqueueInput, error) {
 	categoryRef, err := r.categoryRef(ctx, rule.CategoryRef)
 	if err != nil {
-		return ledger.PostInput{}, err
+		return captures.EnqueueInput{}, err
 	}
 
-	return ledger.PostInput{
-		ClientID:   clientIDPrefix + rule.Ref + ":" + due.Format(constant.DateLayout),
-		OccurredOn: due,
-		Note:       r.payeeName(ctx, rule.PayeeRef),
-		Currency:   rule.Currency,
-		Source:     constant.EntrySourceRecurring,
-		Postings: []ledger.PostingInput{
-			{AccountRef: rule.AccountRef, AmountMinor: -rule.AmountMinor},
-			{AccountRef: categoryRef, AmountMinor: rule.AmountMinor},
-		},
+	return captures.EnqueueInput{
+		RuleRef:     rule.Ref,
+		OccurredOn:  due,
+		PayeeRef:    rule.PayeeRef,
+		AccountRef:  rule.AccountRef,
+		CategoryRef: categoryRef,
+		AmountMinor: rule.AmountMinor,
+		Currency:    rule.Currency,
 	}, nil
 }
 
@@ -165,7 +164,8 @@ func (r *Runner) categoryRef(ctx context.Context, ref string) (string, error) {
 	}
 
 	account, found, err := r.store.FindAccount(
-		ctx, constant.SeedExpenseAccount, constant.AccountKindExpense)
+		ctx, constant.SeedExpenseAccount, constant.AccountKindExpense,
+	)
 	if err != nil {
 		return "", fmt.Errorf("find account %s: %w", constant.SeedExpenseAccount, err)
 	}
@@ -175,15 +175,6 @@ func (r *Runner) categoryRef(ctx context.Context, ref string) (string, error) {
 	}
 
 	return account.Ref, nil
-}
-
-func (r *Runner) payeeName(ctx context.Context, ref string) string {
-	payee, found, err := r.store.PayeeByRef(ctx, ref)
-	if err != nil || !found {
-		return fallbackNote
-	}
-
-	return payee.Name
 }
 
 func (r *Runner) tick(ctx context.Context) {
@@ -196,7 +187,7 @@ func (r *Runner) tick(ctx context.Context) {
 		outcome = telemetry.OutcomeFailed
 	}
 
-	telemetry.RecordWorkerRun(ctx, telemetry.JobRecurring, outcome, int64(summary.Posted), time.Since(start))
+	telemetry.RecordWorkerRun(ctx, telemetry.JobRecurring, outcome, int64(summary.Queued), time.Since(start))
 
 	if err != nil {
 		r.logger.Error(ctx, "recurring run failed", slog.Any("error", err))
@@ -205,7 +196,7 @@ func (r *Runner) tick(ctx context.Context) {
 	}
 
 	r.logger.Info(ctx, "recurring run finished",
-		slog.Int("posted", summary.Posted),
+		slog.Int("queued", summary.Queued),
 		slog.Int("skipped", summary.Skipped))
 }
 

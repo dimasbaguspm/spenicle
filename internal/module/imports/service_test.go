@@ -385,7 +385,8 @@ func postRow(ctx context.Context, h harness, batch entity.ImportBatch, index int
 	}
 
 	unsorted, found, err := h.store.FindAccount(
-		ctx, constant.SeedExpenseAccount, constant.AccountKindExpense)
+		ctx, constant.SeedExpenseAccount, constant.AccountKindExpense,
+	)
 	if err != nil || !found {
 		return fmt.Errorf("unsorted account: found=%v err=%w", found, err)
 	}

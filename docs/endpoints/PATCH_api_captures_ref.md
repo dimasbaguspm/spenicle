@@ -12,7 +12,9 @@ Review screen; the vendor reading a snap back.
 
 ## Downstream
 
-`approve` → `Module.Ledger.Post` then `UpdateCapture`;
+`approve` → `Module.Ledger.Post` then `UpdateCapture` (a `kind='recurring'` capture also
+resolves `recurring_rule_id` from its draft, so `(recurring_rule_id, occurred_on)` stays
+unique and the journal records who tapped it);
 `reject` → sealed reason + `UpdateCapture`; `retry` → `Repository.Snaptojson.Polling`
 (a single-shot rail such as OpenAI answers `409 invalid_state`)
 then map the report onto the row.

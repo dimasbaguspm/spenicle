@@ -53,7 +53,7 @@ Feature: POST /api/entries
       | table           | count |
       | ledger_entries  | 1     |
       | ledger_postings | 2     |
-      | audit_log       | 1     |
+    And the journal holds 1 "ledger_entry" rows
 
   Scenario: Replaying a client id returns the stored entry instead of a duplicate
     Given the base currency is "IDR"
@@ -203,7 +203,8 @@ Feature: POST /api/entries
     And the store holds:
       | table          | count |
       | ledger_entries | 1     |
-      | audit_log      | 1     |
+    And the journal holds 1 "ledger_entry" rows
+    And the journal holds 1 "payee" rows
 
   Scenario: An unknown payee is refused
     Given a running API

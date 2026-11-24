@@ -64,7 +64,8 @@ Feature: PATCH /api/entries/{{ref}}
     And the store holds:
       | table          | count |
       | ledger_entries | 1     |
-      | audit_log      | 2     |
+    And the journal holds 2 "ledger_entry" rows
+    And the journal holds 1 "payee" rows
 
   Scenario: A payee can be cleared again
     Given a running API
@@ -90,7 +91,8 @@ Feature: PATCH /api/entries/{{ref}}
     And the store holds:
       | table          | count |
       | ledger_entries | 1     |
-      | audit_log      | 3     |
+    And the journal holds 3 "ledger_entry" rows
+    And the journal holds 1 "payee" rows
 
   Scenario: A patch that asks for nothing is refused
     Given a running API

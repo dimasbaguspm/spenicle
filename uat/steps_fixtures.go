@@ -2,13 +2,116 @@ package uat
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/cucumber/godog"
+
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
+
+func theInstancePasswordIs(ctx context.Context, password string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.server != nil {
+		return ctx, errors.New("set the instance password before starting the API")
+	}
+
+	w.password = password
+
+	return ctx, nil
+}
+
+func iSignInWithTheInstancePassword(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	body := []byte(`{"password":` + strconv.Quote(w.password) + `}`)
+
+	if err := w.call(ctx, http.MethodPost, "/api/session", body, nil, nil); err != nil {
+		return ctx, err
+	}
+
+	var signed struct {
+		Token string `json:"token"`
+	}
+
+	if unmarshalErr := json.Unmarshal(w.body, &signed); unmarshalErr != nil {
+		return ctx, fmt.Errorf("the sign-in response is not JSON (%q): %w",
+			preview(string(w.body)), unmarshalErr)
+	}
+
+	if signed.Token == "" {
+		return ctx, errors.New("the sign-in response carries no credential")
+	}
+
+	w.rootCredential = signed.Token
+	w.credential = signed.Token
+
+	return ctx, nil
+}
+
+func theIssuedTokenIsTheBearer(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	var issued struct {
+		Token string `json:"token"`
+		Ref   string `json:"ref"`
+	}
+
+	if unmarshalErr := json.Unmarshal(w.body, &issued); unmarshalErr != nil {
+		return ctx, fmt.Errorf("the token response is not JSON (%q): %w",
+			preview(string(w.body)), unmarshalErr)
+	}
+
+	if issued.Token == "" {
+		return ctx, errors.New("the response carries no token")
+	}
+
+	w.credential = issued.Token
+	w.issued = issued.Token
+	w.issuedRef = issued.Ref
+
+	return ctx, nil
+}
+
+func theSameTokenIsTheBearerAgain(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.issued == "" {
+		return ctx, errors.New("no token was issued in this scenario yet")
+	}
+
+	w.credential = w.issued
+
+	return ctx, nil
+}
+
+func theRootSessionOnly(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	w.credential = w.rootCredential
+
+	return ctx, nil
+}
 
 func theAccountExists(ctx context.Context, name, kind string) (context.Context, error) {
 	w, err := worldFrom(ctx)
@@ -33,6 +136,49 @@ func theAccountExists(ctx context.Context, name, kind string) (context.Context, 
 	}
 
 	w.accounts[name] = account.Ref
+
+	return ctx, nil
+}
+
+func theJournalHolds(ctx context.Context, want int, kind string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	got, err := w.countAudit(ctx, kind)
+	if err != nil {
+		return ctx, err
+	}
+
+	if got != want {
+		return ctx, fmt.Errorf("the journal holds %d %q rows, want %d", got, kind, want)
+	}
+
+	return ctx, nil
+}
+
+func theLastJournalRowNamesTheToken(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.store == nil {
+		return ctx, errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	var kind, ref string
+
+	if err := w.store.DB().QueryRowContext(ctx,
+		`SELECT actor_kind, COALESCE(actor_ref, '') FROM audit_log ORDER BY id DESC LIMIT 1`,
+	).Scan(&kind, &ref); err != nil {
+		return ctx, fmt.Errorf("read the last journal actor: %w", err)
+	}
+
+	if kind != constant.AuditActorUser || ref != w.issuedRef {
+		return ctx, fmt.Errorf("the last journal row is %s/%q, want user/%q", kind, ref, w.issuedRef)
+	}
 
 	return ctx, nil
 }

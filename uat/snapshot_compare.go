@@ -149,6 +149,11 @@ func normaliseString(value string) string {
 		return "<sealed>"
 	}
 
+	// an issued token is random by design; the snapshot asserts one came back
+	if strings.HasPrefix(value, "spl_") {
+		return "<token>"
+	}
+
 	if refPattern.MatchString(value) {
 		return "<ref>"
 	}

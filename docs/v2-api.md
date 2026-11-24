@@ -2,7 +2,7 @@
 
 Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`../README.md`](../README.md).
 
-**12 tables, 28 endpoints, one sequence diagram each.**
+**19 tables, 46 routes** (one of them `/healthz`).
 
 Base path `/api`. No version prefix: we are the only consumer, and an agent can adapt to a
 change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, timestamps ISO
@@ -24,21 +24,22 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 3 | `GET /api/meta` | live |
 | 9 | `GET /api/entries` | live (filters, cursor, limit) |
 | 10 | `POST /api/entries` | live |
-| 11 | `PATCH /api/entries/{id}` | partial: `void` only; field edits next |
+| 11 | `PATCH /api/entries/{id}` | live: `void` (writes the reversal) and `payee_ref` |
 | 12 | `GET /api/captures` | live (status filter, cursor, limit) |
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
-| 14 | `PATCH /api/captures/{id}` | partial: `approve`, `reject`, `retry`; `match`/`extracted` next |
+| 14 | `PATCH /api/captures/{id}` | live: `approve`, `reject`, `retry`; a recurring approval resolves `recurring_rule_id` from the draft |
 | 21 | `GET /healthz` | live |
 | 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `client_id` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `client_id` |
 | 1 | `POST /api/setup` | live: chooses the base currency once, before the first entry |
 | 2 | `POST /api/session`, `POST /api/password` | live: cookie session, password rotation |
 | 4 | `GET/PATCH /api/settings` | `GET` is live; `PATCH` accepts no field yet — `base_currency` is not patchable |
-| 5, 6 | accounts create/patch | next |
-| 7, 8 | payees | next |
-| 15, 16 | recurring | next |
-| 17, 18 | months report, dashboard | next |
-| 19, 20 | tokens | next |
+| 5, 6 | accounts create/patch | live |
+| 7, 8 | payees | live |
+| 15, 16 | recurring | live: a due rule queues a `captures` row and never posts the ledger; the approval posts it |
+| 17, 18 | months report, dashboard | live |
+| 19, 20 | `POST/GET /api/tokens`, `DELETE /api/tokens/{ref}` | live: root-session only, scoped Bearer credential, digest stored, revoke never deletes |
+| — | `GET /api/audit` | live: the journal, filtered by kind, ref, action, actor and a day range |
 
 ## Review rounds folded in
 
@@ -98,11 +99,20 @@ Consequences, stated plainly:
 | API token | agents, scripts, cron | `Authorization: Bearer <token>` |
 
 Scopes: `entries:read|write`, `captures:read|write`, `accounts:read|write`, `payees:read|write`,
-`recurring:read|write`, `dashboard:read`, `admin`, plus `*`.
+`recurring:read|write`, `imports:read|write`, `exports:read|write`, `analytics:read`,
+`audit:read`, `dashboard:read`, `settings:read`, `rates:read`, `admin`, plus `*`.
 
-Each endpoint declares its scope; a subset returns `403 forbidden`. The typical agent token is
-`captures:write` + `dashboard:read` — it can dump receipts and read safe-to-spend, but cannot
+Each endpoint declares its scope (`routeScopes` in `cmd/http/handler.go`); a subset returns
+`403 forbidden`. `admin` and `*` cover every scoped route. A route with **no** scope in that
+table needs the root session — `/api/tokens*`, `/api/password`, `PATCH /api/settings`,
+`DELETE /api/session` — so a token can never mint another token. The typical agent token is
+`captures:write` + `dashboard:read`: it can dump receipts and read safe-to-spend, but cannot
 touch the ledger.
+
+The plaintext token is returned exactly once, by the `201` that created it. Only
+`HMAC-SHA256(APP_SECRET-derived key, "spenicle/token/v1\\x00" + token)` is stored, the same
+way a password hash is stored. Revoking stamps `revoked_at`: the row stays (and its journal
+entry stays), and the credential answers `401 unauthorized` at once.
 
 ## Conventions
 
@@ -265,16 +275,26 @@ The single review queue. One row per thing captured, from any channel.
 
 ## 1.10 `audit_log`
 
+The journal: one append-only row per state change, written in the same transaction as the
+change. `entity_kind` is a bounded name, and `entity_ref` is the wire ref when the row has
+one (a `setting` has none: its key travels in `to_json`, because a setting value can be the
+sealed envelope).
+
 | column | type | notes |
 | --- | --- | --- |
 | `id` | INTEGER PK | |
-| `entity_table` | TEXT | `captures`, `ledger_entries`, `recurring_rules`, `settings`, `api_tokens` |
+| `entity_kind` | TEXT | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `setting`, `api_token` |
 | `entity_id` | INTEGER NULL | |
-| `action` | TEXT | `create`, `approve`, `reject`, `retry`, `void`, `update`, `revoke`, `reseal` |
-| `from_json` | TEXT NULL | |
-| `to_json` | TEXT NULL | |
-| `actor` | TEXT | `user`, `token:<id>`, `worker`, `extractor` |
+| `entity_ref` | TEXT NULL | the row's ref, when it has one |
+| `action` | TEXT | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke` |
+| `actor_kind` | TEXT | `user`, `token`, `worker`, `system` — CHECK-constrained |
+| `actor_ref` | TEXT NULL | the token's ref when a token made the change |
+| `from_json` | TEXT NULL | what the change moved away from |
+| `to_json` | TEXT NULL | what it moved to |
 | `at` | TEXT | |
+
+Imports and exports keep their own `import_events`/`export_events` rather than being
+journaled twice; artifact rows are metadata of a capture and are not journaled at all.
 
 ## 1.11 Canonical DDL
 
@@ -407,17 +427,23 @@ CREATE INDEX ix_captures_queue ON captures (status, received_at);
 CREATE INDEX ix_captures_batch ON captures (batch_id);
 
 CREATE TABLE audit_log (
-  id           INTEGER PRIMARY KEY,
-  entity_table TEXT NOT NULL,
-  entity_id    INTEGER,
-  action       TEXT NOT NULL,
-  from_json    TEXT,
-  to_json      TEXT,
-  actor        TEXT NOT NULL DEFAULT 'user',
-  at           TEXT NOT NULL
+  id          INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  entity_kind TEXT NOT NULL,
+  entity_id   INTEGER,
+  entity_ref  TEXT,
+  action      TEXT NOT NULL,
+  actor_kind  TEXT NOT NULL
+              CHECK (actor_kind IN ('user','token','worker','system')),
+  actor_ref   TEXT,
+  from_json   TEXT,
+  to_json     TEXT,
+  at          TEXT NOT NULL
 );
 
-CREATE INDEX ix_audit_entity ON audit_log (entity_table, entity_id);
+CREATE INDEX ix_audit_entity ON audit_log (entity_kind, entity_ref, id);
+CREATE INDEX ix_audit_actor ON audit_log (actor_kind, at);
+CREATE INDEX ix_audit_action ON audit_log (action, at);
 ```
 
 ---

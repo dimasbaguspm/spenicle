@@ -416,7 +416,8 @@ func (s *Service) postChunks(
 	}
 
 	closed, err := s.batches.CloseImportBatch(
-		ctx, batch.Ref, constant.ImportStatusCommitted, s.clock.Now())
+		ctx, batch.Ref, constant.ImportStatusCommitted, s.clock.Now(),
+	)
 	if err != nil {
 		return entity.ImportBatch{}, err
 	}
@@ -691,7 +692,8 @@ func (s *Service) defaultAccount(ctx context.Context, ref string) (entity.Accoun
 
 func (s *Service) unsorted(ctx context.Context) (entity.Account, error) {
 	account, found, err := s.accounts.FindAccount(
-		ctx, constant.SeedExpenseAccount, constant.AccountKindExpense)
+		ctx, constant.SeedExpenseAccount, constant.AccountKindExpense,
+	)
 	if err != nil {
 		return entity.Account{}, fmt.Errorf("unsorted account: %w", err)
 	}
@@ -1032,7 +1034,8 @@ func (s *Service) storeChunk(
 	}
 
 	inserted, err := s.batches.AppendImportChunk(
-		ctx, upload.Ref, in.ChunkIndex, int64(len(in.Bytes)), s.clock.Now())
+		ctx, upload.Ref, in.ChunkIndex, int64(len(in.Bytes)), s.clock.Now(),
+	)
 	if err != nil {
 		return false, err
 	}

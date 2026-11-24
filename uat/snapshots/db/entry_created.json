@@ -26,15 +26,43 @@
   "artifacts": [],
   "audit_log": [
     {
-      "action": "create",
-      "actor": "user",
+      "action": "update",
+      "actor_kind": "system",
+      "actor_ref": null,
       "at": "<timestamp>",
-      "entity_id": 1,
-      "entity_table": "ledger_entries",
+      "entity_id": null,
+      "entity_kind": "setting",
+      "entity_ref": null,
       "from_json": null,
       "id": 1,
       "ref": "<ref>",
-      "to_json": null
+      "to_json": "{\"key\":\"secret_fingerprint\"}"
+    },
+    {
+      "action": "create",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": null,
+      "entity_kind": "setting",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 2,
+      "ref": "<ref>",
+      "to_json": "{\"key\":\"app_settings\"}"
+    },
+    {
+      "action": "create",
+      "actor_kind": "user",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": 1,
+      "entity_kind": "ledger_entry",
+      "entity_ref": "<ref>",
+      "from_json": null,
+      "id": 3,
+      "ref": "<ref>",
+      "to_json": "{\"occurred_on\":\"2026-02-14\",\"currency\":\"IDR\",\"source\":\"manual\",\"postings\":2}"
     }
   ],
   "captures": [],

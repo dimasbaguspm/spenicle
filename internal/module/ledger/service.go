@@ -56,14 +56,15 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 	}
 
 	newEntry, err := entity.NewEntry(entity.Entry{
-		ClientID:   in.ClientID,
-		OccurredOn: in.OccurredOn,
-		PayeeID:    payeeID,
-		Note:       in.Note,
-		Currency:   nativeCurrency.Code,
-		Source:     in.Source,
-		Postings:   postings,
-		CreatedAt:  s.clock.Now(),
+		ClientID:        in.ClientID,
+		OccurredOn:      in.OccurredOn,
+		PayeeID:         payeeID,
+		Note:            in.Note,
+		Currency:        nativeCurrency.Code,
+		Source:          in.Source,
+		Postings:        postings,
+		RecurringRuleID: in.RecurringRuleID,
+		CreatedAt:       s.clock.Now(),
 	})
 	if err != nil {
 		return entity.Entry{}, false, err

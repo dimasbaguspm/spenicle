@@ -102,13 +102,15 @@ func (w *world) countTable(ctx context.Context, table string) (int, error) {
 
 func (w *world) openFiles() error {
 	artifacts, err := filestore.New(
-		filepath.Join(w.dir, config.DefaultArtifactDirName), []byte(appSecret))
+		filepath.Join(w.dir, config.DefaultArtifactDirName), []byte(appSecret),
+	)
 	if err != nil {
 		return fmt.Errorf("filestore: %w", err)
 	}
 
 	exportFiles, err := filestore.New(
-		filepath.Join(w.dir, config.DefaultExportDirName), []byte(appSecret))
+		filepath.Join(w.dir, config.DefaultExportDirName), []byte(appSecret),
+	)
 	if err != nil {
 		return fmt.Errorf("export filestore: %w", err)
 	}
@@ -126,8 +128,16 @@ func (w *world) openFiles() error {
 }
 
 func (w *world) seedSettings(ctx context.Context, service *settings.Service) error {
-	if _, _, err := service.EnsureInitial(ctx, "", ""); err != nil {
+	if _, _, err := service.EnsureInitial(ctx, w.password, ""); err != nil {
 		return fmt.Errorf("settings: %w", err)
+	}
+
+	if w.password != "" {
+		// the first boot pins "change this generated password"; a scenario that
+		// chose its own password already did, so the flag is cleared here
+		if _, err := service.ChangePassword(ctx, w.password, w.password); err != nil {
+			return fmt.Errorf("password: %w", err)
+		}
 	}
 
 	if _, err := service.EnsureTimezone(ctx, ""); err != nil {

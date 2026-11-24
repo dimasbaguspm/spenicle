@@ -54,6 +54,18 @@ type Capture struct {
 	ResolvedAt      *time.Time
 }
 
+// RecurringDraft is what a due recurring rule leaves in the queue: the fields the
+// review screen prefills, so a rule never posts a ledger entry on its own.
+type RecurringDraft struct {
+	RuleRef     string `json:"recurring_rule_ref"`
+	PayeeRef    string `json:"payee_ref,omitempty"`
+	AccountRef  string `json:"account_ref"`
+	CategoryRef string `json:"category_ref,omitempty"`
+	AmountMinor string `json:"amount_minor"`
+	Currency    string `json:"currency"`
+	DueOn       string `json:"due_on"`
+}
+
 func (c Capture) Transition(to string) error {
 	allowed, known := captureTransitions[c.Status]
 	if !known {

@@ -43,13 +43,14 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 			INSERT INTO ledger_entries
 				(ref, occurred_on, payee_id, note, currency, source, recurring_rule_id,
 				 client_id, reverses_entry_id, voided_at, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?)`,
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
 			entryRef,
 			e.OccurredOn.Format(constant.DateLayout),
 			nullInt(e.PayeeID),
 			nullString(e.Note),
 			e.Currency,
 			e.Source,
+			nullInt(e.RecurringRuleID),
 			nullString(e.ClientID),
 			nullInt(e.ReversesID),
 			createdAt.Format(constant.TimestampLayout),
@@ -69,17 +70,7 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 			return postErr
 		}
 
-		if _, auditErr := tx.ExecContext(ctx, `
-			INSERT INTO audit_log (ref, entity_table, entity_id, action, from_json, to_json, actor, at)
-			VALUES (?, 'ledger_entries', ?, 'create', NULL, NULL, 'user', ?)`,
-			uuid.New(),
-			entryID,
-			createdAt.Format(constant.TimestampLayout),
-		); auditErr != nil {
-			return fmt.Errorf("audit: %w", auditErr)
-		}
-
-		return nil
+		return appendEntryCreated(ctx, tx, e, entryID, entryRef)
 	})
 	if err != nil {
 		return entity.Entry{}, err
@@ -243,8 +234,6 @@ func (s *Store) UpdateEntryPayee(
 		return entity.Entry{}, false, nil
 	}
 
-	at := time.Now().UTC().Format(constant.TimestampLayout)
-
 	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		if _, execErr := tx.ExecContext(ctx,
 			`UPDATE ledger_entries SET payee_id = ? WHERE id = ?`,
@@ -253,15 +242,14 @@ func (s *Store) UpdateEntryPayee(
 			return fmt.Errorf("update payee: %w", execErr)
 		}
 
-		if _, auditErr := tx.ExecContext(ctx, `
-			INSERT INTO audit_log (ref, entity_table, entity_id, action, from_json, to_json, actor, at)
-			VALUES (?, 'ledger_entries', ?, 'update', NULL, NULL, 'user', ?)`,
-			uuid.New(), original.ID, at,
-		); auditErr != nil {
-			return fmt.Errorf("audit update: %w", auditErr)
-		}
-
-		return nil
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityEntry,
+			ID:     original.ID,
+			Ref:    original.Ref,
+			Action: constant.AuditActionUpdate,
+			From:   entity.EntryPayee{PayeeID: original.PayeeID},
+			To:     entity.EntryPayee{PayeeID: payeeID},
+		})
 	})
 	if err != nil {
 		return entity.Entry{}, false, err
@@ -466,12 +454,14 @@ func (s *Store) VoidEntry(
 }
 
 func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal entity.Entry) error {
+	reversalRef := uuid.New()
+
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO ledger_entries
 			(ref, occurred_on, payee_id, note, currency, source, recurring_rule_id,
 			 client_id, reverses_entry_id, voided_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL, ?)`,
-		uuid.New(),
+		reversalRef,
 		reversal.OccurredOn.Format(constant.DateLayout),
 		nullInt(reversal.PayeeID),
 		nullString(reversal.Note),
@@ -493,14 +483,13 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 		return err
 	}
 
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO audit_log (ref, entity_table, entity_id, action, from_json, to_json, actor, at)
-		VALUES (?, 'ledger_entries', ?, 'void', NULL, NULL, 'user', ?)`,
-		uuid.New(), reversalID, reversal.CreatedAt.Format(constant.TimestampLayout)); err != nil {
-		return fmt.Errorf("audit void: %w", err)
-	}
-
-	return nil
+	return appendAudit(ctx, tx, auditRecord{
+		Kind:   constant.AuditEntityEntry,
+		ID:     reversalID,
+		Ref:    reversalRef,
+		Action: constant.AuditActionVoid,
+		To:     entity.EntryVoided{VoidedEntryID: originalID, ReversalEntryID: reversalID},
+	})
 }
 
 func (s *Store) reversalByReversesID(ctx context.Context, originalID int64) (entity.Entry, error) {

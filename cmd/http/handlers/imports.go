@@ -380,7 +380,8 @@ func toRowUpdate(request importRowPatchRequest) (imports.RowUpdate, error) {
 
 	if update.DescribesNothing() {
 		return imports.RowUpdate{}, errors.New(
-			"send at least one of occurred_on, amount_minor, description, category_ref, payee_ref, status")
+			"send at least one of occurred_on, amount_minor, description, category_ref, payee_ref, status",
+		)
 	}
 
 	return update, nil

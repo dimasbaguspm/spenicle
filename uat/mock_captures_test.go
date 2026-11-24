@@ -56,7 +56,7 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 		t.Fatalf("filestore: %v", err)
 	}
 
-	return captures.New(store, ledgerService, sealer, artifacts, store, extractor, clockSystem, clockSystem)
+	return captures.New(store, ledgerService, sealer, artifacts, store, extractor, store, clockSystem, clockSystem)
 }
 
 type fixedCurrency struct{ code string }

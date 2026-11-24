@@ -36,18 +36,19 @@ type Posting struct {
 }
 
 type Entry struct {
-	ID         int64
-	Ref        string
-	ClientID   string
-	OccurredOn time.Time
-	PayeeID    *int64
-	Note       string
-	Currency   string
-	Source     string
-	Postings   []Posting
-	VoidedAt   *time.Time
-	CreatedAt  time.Time
-	ReversesID *int64
+	ID              int64
+	Ref             string
+	ClientID        string
+	OccurredOn      time.Time
+	PayeeID         *int64
+	Note            string
+	Currency        string
+	Source          string
+	Postings        []Posting
+	VoidedAt        *time.Time
+	CreatedAt       time.Time
+	ReversesID      *int64
+	RecurringRuleID *int64
 }
 
 func NewEntry(entry Entry) (Entry, error) {

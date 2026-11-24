@@ -7,7 +7,7 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
-	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
+	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 )
 
 func parseDay(t *testing.T, value string) time.Time {
@@ -102,24 +102,14 @@ func TestNextOccurrence(t *testing.T) {
 	}
 }
 
-type stubLedger struct{ posts []ledger.PostInput }
+type stubQueue struct{ drafts []captures.EnqueueInput }
 
-func (s *stubLedger) Post(_ context.Context, in ledger.PostInput) (entity.Entry, bool, error) {
-	s.posts = append(s.posts, in)
+func (s *stubQueue) Enqueue(
+	_ context.Context, in captures.EnqueueInput,
+) (entity.Capture, bool, error) {
+	s.drafts = append(s.drafts, in)
 
-	return entity.Entry{}, true, nil
-}
-
-func (s *stubLedger) List(context.Context, entity.EntryFilter) ([]entity.Entry, error) {
-	return nil, nil
-}
-
-func (s *stubLedger) Void(context.Context, string, string) (entity.Entry, error) {
-	return entity.Entry{}, nil
-}
-
-func (s *stubLedger) UpdatePayee(context.Context, string, string) (entity.Entry, error) {
-	return entity.Entry{}, nil
+	return entity.Capture{}, true, nil
 }
 
 type stubStore struct{ advanced int }
@@ -136,10 +126,6 @@ func (s *stubStore) AdvanceRecurring(
 	return true, nil
 }
 
-func (s *stubStore) PayeeByRef(context.Context, string) (entity.Payee, bool, error) {
-	return entity.Payee{Name: "Kopi Kenangan"}, true, nil
-}
-
 func (s *stubStore) FindAccount(context.Context, string, string) (entity.Account, bool, error) {
 	return entity.Account{Ref: "0123456789abcdef0123456789abcdef"}, true, nil
 }
@@ -152,11 +138,11 @@ func TestRunRuleStopsAtEndsOn(t *testing.T) {
 	cases := []struct {
 		name       string
 		nextDueOn  string
-		wantPosted int
+		wantQueued int
 		wantLast   string
 	}{
-		{name: "stops at ends_on", nextDueOn: "2026-04-08", wantPosted: 3, wantLast: "2026-04-10"},
-		{name: "posts nothing past ends_on", nextDueOn: "2026-04-12", wantPosted: 0},
+		{name: "stops at ends_on", nextDueOn: "2026-04-08", wantQueued: 3, wantLast: "2026-04-10"},
+		{name: "queues nothing past ends_on", nextDueOn: "2026-04-12", wantQueued: 0},
 	}
 
 	for _, testCase := range cases {
@@ -176,28 +162,29 @@ func TestRunRuleStopsAtEndsOn(t *testing.T) {
 				State:            constant.RecurringStateActive,
 			}
 
-			entries := &stubLedger{}
-			rules := &Runner{store: &stubStore{}, entries: entries}
+			queued := &stubQueue{}
+			rules := &Runner{store: &stubStore{}, queue: queued}
 
 			var summary Summary
 			if err := rules.runRule(
-				t.Context(), rule, parseDay(t, "2026-04-15"), &summary); err != nil {
+				t.Context(), rule, parseDay(t, "2026-04-15"), &summary,
+			); err != nil {
 				t.Fatalf("run rule: %v", err)
 			}
 
-			if len(entries.posts) != testCase.wantPosted {
-				t.Fatalf("posted %d entries, want %d", len(entries.posts), testCase.wantPosted)
+			if len(queued.drafts) != testCase.wantQueued {
+				t.Fatalf("queued %d captures, want %d", len(queued.drafts), testCase.wantQueued)
 			}
-			if summary.Posted != testCase.wantPosted {
-				t.Fatalf("summary posted = %d, want %d", summary.Posted, testCase.wantPosted)
+			if summary.Queued != testCase.wantQueued {
+				t.Fatalf("summary queued = %d, want %d", summary.Queued, testCase.wantQueued)
 			}
-			if testCase.wantPosted == 0 {
+			if testCase.wantQueued == 0 {
 				return
 			}
 
-			last := entries.posts[len(entries.posts)-1].OccurredOn.Format(constant.DateLayout)
+			last := queued.drafts[len(queued.drafts)-1].OccurredOn.Format(constant.DateLayout)
 			if last != testCase.wantLast {
-				t.Fatalf("last posted on %s, want %s", last, testCase.wantLast)
+				t.Fatalf("last queued for %s, want %s", last, testCase.wantLast)
 			}
 		})
 	}
@@ -245,10 +232,10 @@ func TestRunRuleUsesTheInstanceTimezone(t *testing.T) {
 	cases := []struct {
 		name       string
 		zone       string
-		wantPosted int
+		wantQueued int
 	}{
-		{name: "23:30 UTC is already tomorrow in Jakarta", zone: "Asia/Jakarta", wantPosted: 1},
-		{name: "the same instant in UTC is still today", zone: "UTC", wantPosted: 0},
+		{name: "23:30 UTC is already tomorrow in Jakarta", zone: "Asia/Jakarta", wantQueued: 1},
+		{name: "the same instant in UTC is still today", zone: "UTC", wantQueued: 0},
 	}
 
 	for _, testCase := range cases {
@@ -274,16 +261,16 @@ func TestRunRuleUsesTheInstanceTimezone(t *testing.T) {
 				State:            constant.RecurringStateActive,
 			}
 
-			entries := &stubLedger{}
-			rules := &Runner{store: &stubStore{}, entries: entries, loc: location}
+			queued := &stubQueue{}
+			rules := &Runner{store: &stubStore{}, queue: queued, loc: location}
 
 			var summary Summary
 			if runErr := rules.runRule(t.Context(), rule, at, &summary); runErr != nil {
 				t.Fatalf("run rule: %v", runErr)
 			}
 
-			if len(entries.posts) != testCase.wantPosted {
-				t.Fatalf("posted %d entries, want %d", len(entries.posts), testCase.wantPosted)
+			if len(queued.drafts) != testCase.wantQueued {
+				t.Fatalf("queued %d captures, want %d", len(queued.drafts), testCase.wantQueued)
 			}
 		})
 	}

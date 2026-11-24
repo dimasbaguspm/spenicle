@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "forbidden",
+    "message": "this route needs the root credential"
+  }
+}

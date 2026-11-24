@@ -1,0 +1,15 @@
+{
+  "captures": [
+    {
+      "draft_json": "{\"recurring_rule_ref\":\"<ref>\",\"payee_ref\":\"<ref>\",\"account_ref\":\"<ref>\",\"category_ref\":\"<ref>\",\"amount_minor\":\"25000\",\"currency\":\"IDR\",\"due_on\":\"2026-04-14\"}",
+      "kind": "recurring",
+      "received_at": "<timestamp>",
+      "ref": "<ref>",
+      "status": "pending"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

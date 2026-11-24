@@ -1,0 +1,53 @@
+{
+  "audit": [
+    {
+      "action": "create",
+      "actor_kind": "user",
+      "at": "<timestamp>",
+      "entity_kind": "ledger_entry",
+      "entity_ref": "<ref>",
+      "ref": "<ref>",
+      "to": {
+        "currency": "IDR",
+        "occurred_on": "2026-02-14",
+        "postings": 2,
+        "source": "manual"
+      }
+    },
+    {
+      "action": "create",
+      "actor_kind": "user",
+      "at": "<timestamp>",
+      "entity_kind": "payee",
+      "entity_ref": "<ref>",
+      "ref": "<ref>",
+      "to": {
+        "name": "Kopi Kenangan"
+      }
+    },
+    {
+      "action": "create",
+      "actor_kind": "system",
+      "at": "<timestamp>",
+      "entity_kind": "setting",
+      "ref": "<ref>",
+      "to": {
+        "key": "app_settings"
+      }
+    },
+    {
+      "action": "update",
+      "actor_kind": "system",
+      "at": "<timestamp>",
+      "entity_kind": "setting",
+      "ref": "<ref>",
+      "to": {
+        "key": "secret_fingerprint"
+      }
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

@@ -2,6 +2,7 @@ package uat
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -71,8 +72,8 @@ func theRecurringWorkerReports(ctx context.Context, want int, counter string) (c
 	var got int
 
 	switch counter {
-	case "posted":
-		got = w.workerSummary.Posted
+	case "queued":
+		got = w.workerSummary.Queued
 	case "skipped":
 		got = w.workerSummary.Skipped
 	case "failed":
@@ -187,4 +188,29 @@ func theAPIRestarts(ctx context.Context) (context.Context, error) {
 	}
 
 	return ctx, w.restart(ctx)
+}
+
+func theFirstCaptureRefIsRemembered(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	var page struct {
+		Captures []struct {
+			Ref string `json:"ref"`
+		} `json:"captures"`
+	}
+
+	if unmarshalErr := json.Unmarshal(w.body, &page); unmarshalErr != nil {
+		return ctx, fmt.Errorf("the capture page is not JSON (%q): %w", preview(string(w.body)), unmarshalErr)
+	}
+
+	if len(page.Captures) == 0 {
+		return ctx, errors.New("the capture page is empty")
+	}
+
+	w.lastRef = page.Captures[0].Ref
+
+	return ctx, nil
 }

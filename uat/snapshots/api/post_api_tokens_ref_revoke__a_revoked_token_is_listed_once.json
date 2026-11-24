@@ -1,0 +1,12 @@
+{
+  "created_at": "<timestamp>",
+  "last_used_at": "<timestamp>",
+  "name": "iphone-shortcut",
+  "preview": "<token>",
+  "ref": "<ref>",
+  "revoked_at": "<timestamp>",
+  "scopes": [
+    "captures:read",
+    "captures:write"
+  ]
+}

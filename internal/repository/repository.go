@@ -60,6 +60,18 @@ type System interface {
 	HasEntries(ctx context.Context) (bool, error)
 }
 
+type Audit interface {
+	ListAudit(ctx context.Context, filter entity.AuditFilter) ([]entity.Audit, error)
+}
+
+type Tokens interface {
+	InsertToken(ctx context.Context, token entity.Token) (entity.Token, error)
+	TokenByDigest(ctx context.Context, digest string) (entity.Token, bool, error)
+	ListTokens(ctx context.Context, filter entity.TokenFilter) ([]entity.Token, error)
+	RevokeToken(ctx context.Context, ref string, at time.Time) (entity.Token, bool, error)
+	TouchToken(ctx context.Context, ref string, at time.Time) error
+}
+
 type Payees interface {
 	CreatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error)
 	PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool, error)

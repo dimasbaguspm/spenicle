@@ -1,5 +1,6 @@
 // Package handlers runs the scheduled half of the product: the recurring rules
-// that must post their own ledger entry with no browser open.
+// that must land in the review queue with no browser open, the artifact and
+// draft retention, and the export jobs.
 //
 // worker.go is the package's public surface: what a runner needs, what one run
 // reports and the heartbeat /healthz reads. recurring.go implements the run.
@@ -14,9 +15,9 @@ import (
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
-	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
@@ -25,7 +26,6 @@ import (
 type Store interface {
 	DueRecurring(ctx context.Context, asOf time.Time, limit int) ([]entity.Recurring, error)
 	AdvanceRecurring(ctx context.Context, ref string, from, to, postedAt time.Time) (bool, error)
-	PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool, error)
 	FindAccount(ctx context.Context, name, kind string) (entity.Account, bool, error)
 	SetSetting(ctx context.Context, key, value string) error
 }
@@ -42,7 +42,7 @@ type PartFiles interface {
 type TimeSource interface{ Now() time.Time }
 
 type Summary struct {
-	Posted  int
+	Queued  int
 	Skipped int
 	Failed  int
 }
@@ -50,7 +50,7 @@ type Summary struct {
 type Runner struct {
 	rules       repository.Recurring
 	store       Store
-	entries     ledger.Contract
+	queue       captures.Queue
 	artifacts   repository.Artifacts
 	imports     repository.Imports
 	files       ArtifactFiles
@@ -68,7 +68,7 @@ type Runner struct {
 func New(
 	rules repository.Recurring,
 	store Store,
-	entries ledger.Contract,
+	queue captures.Queue,
 	artifacts repository.Artifacts,
 	imports repository.Imports,
 	files ArtifactFiles,
@@ -91,7 +91,7 @@ func New(
 	}
 
 	return &Runner{
-		rules: rules, store: store, entries: entries, artifacts: artifacts,
+		rules: rules, store: store, queue: queue, artifacts: artifacts,
 		imports: imports, files: files, exportFiles: exportFiles, parts: parts,
 		retention: retention,
 		jobs:      jobs, documents: documents, staleAfter: staleAfter,

@@ -87,6 +87,17 @@ func (q *listQuery) archived(column, want string) {
 	}
 }
 
+// null keeps or drops the rows where a nullable column is set: `true` means
+// "only the rows that have it", `false` means "only the rows that do not".
+func (q *listQuery) null(column string, set bool) {
+	switch {
+	case set:
+		q.where = append(q.where, column+` IS NOT NULL`)
+	case !set:
+		q.where = append(q.where, column+` IS NULL`)
+	}
+}
+
 func (q *listQuery) before(column, table, ref string) {
 	if ref == "" {
 		return

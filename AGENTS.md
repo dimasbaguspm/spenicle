@@ -25,17 +25,25 @@ the document wins until you change the document too.
 2. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
    zero. `entity.CheckZeroSum` runs before the insert and again inside the write
    transaction.
-3. **No deletes.** Void (`voided_at`) or reject. Every mutation appends to `audit_log`.
+3. **No deletes.** Void (`voided_at`) or reject. Every state change on `accounts`,
+   `payees`, `recurring_rules`, `ledger_entries`, `captures`, `settings` and `api_tokens`
+   appends one `audit_log` row inside the same transaction, through
+   `sqlite.appendAudit`. Import and export jobs keep their own append-only
+   `import_events`/`export_events` instead of being journaled twice; artifact rows are
+   metadata of a capture and are not journaled at all.
 4. **Money is integers.** Minor units + ISO 4217 code. No `float64` anywhere, ever.
    Rates are exact decimals stored as `TEXT` and handled with `math/big.Rat`; rounding
    happens exactly once, half away from zero.
 5. **Base currency is locked** at first boot (`settings.base_currency`). A foreign
    currency is a property of one transaction, never of an account.
 6. **Capture ≠ ledger.** A capture never writes a ledger entry on its own. Approval does.
+   This includes the recurring rules: the worker queues a `captures` row
+   (`kind='recurring'`, `dedupe_key = sha256(rule|due)`) and never posts an entry, so the
+   worker process holds no ledger contract at all.
 7. **One container, two supervised processes, one SQLite file.** `spenicle http` is
-   the only listener, `spenicle worker` only posts due rules, and runit in the
-   image supervises both. No Postgres, no Redis, no queue, no sidecar: adding
-   infrastructure needs a design-doc change first.
+   the only listener, `spenicle worker` only queues captures and renders exports, and
+   runit in the image supervises both. No Postgres, no Redis, no queue, no sidecar:
+   adding infrastructure needs a design-doc change first.
 
 ## Layout
 
@@ -49,15 +57,18 @@ cmd/worker/handlers/   `Runner`: the recurring rules, the catch-up cap and the h
 config/runit/          the two runit services the image supervises: run + finish each
 uat/                   godog suite: uat.go, steps_*.go, world_*.go, snapshot*.go, features/
 internal/common/       no business logic: config (also the process graph), clock, seal,
-                       otel, httpx, uuid, binding, validating, list
-internal/constant/     every fixed value shared by more than one package
+                       otel, httpx, uuid, binding, validating, list, actor (who the
+                       current change belongs to, for the journal)
+internal/constant/     every fixed value shared by more than one package: enums, the
+                       audit kinds/actions/actors, the token scopes
 internal/entity/       shared structs + invariants; imports stdlib + constant only
-internal/module/       business logic: ledger, captures, imports, rates, settings
+internal/module/       business logic: ledger, captures (queue.go is the worker's half),
+                       imports, exports, export, rates, settings, tokens
 internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore,
                        extraction/{snaptojson,openai}
 ```
 
-The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` posts the
+The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` queues the
 due recurring rules and opens no port, and the hidden
 `spenicle all` runs both in one process for local development. Each command owns its
 composition root: `cmd/http/http.go` and `cmd/worker/worker.go` mount the command,
@@ -166,6 +177,17 @@ row, and the session cookie is a digest of `APP_SECRET`'s fingerprint plus that 
 changing the password invalidates every cookie at once. The base currency is editable
 while the ledger is empty and locked after the first entry.
 
+That password is the **root** credential: the cookie it issues answers every route,
+including `/api/tokens`. Everything else is a token — a named, scoped, non-root
+credential (`module/tokens`) carried as `Authorization: Bearer <token>`. Only the
+SHA-256 HMAC digest of the token under `APP_SECRET` (`sealer.Digest`) is stored, so the
+plaintext exists exactly once, in the `201` that created it. A token answers a route
+only if the route has a scope in `routeScopes` (`cmd/http/handler.go`) and the token
+carries that scope; a route with no entry there — `/api/tokens*`, `/api/password`,
+`PATCH /api/settings` — needs the root session, so a token can never mint a token.
+`admin` and `*` cover every scoped route. Revoking stamps `revoked_at`: the row and its
+journal entry stay, the credential stops working.
+
 Uploaded capture artifacts live **outside** the database, under
 `./data/artifacts/<sha[0:2]>/<sha[2:4]>/<sha256>`: the bytes are gzipped when the
 content type is compressible (`text/*`, `application/json`, `application/xml`,
@@ -252,7 +274,8 @@ assembles the draft on the last chunk (`409 import_conflict` when the total disa
 a replayed commit resumes from the rows whose ledger `client_id` is still missing. A row
 edit while `committing` is `409 import_committing`.
 
-The worker does five things per run, in this order: post the due recurring rules, reclaim
+The worker does five things per run, in this order: queue a capture for each due recurring
+rule (never an entry — the worker holds no ledger contract), reclaim
 the artifacts of rejected captures, drop expired import drafts and `open` uploads older than
 24h, then claim up to 5 export jobs and sweep the queue. Every calendar decision it makes
 ("today", the due comparison, the business-day shift) runs in `APP_TIMEZONE`, not UTC.
@@ -357,8 +380,14 @@ reason in the MR, not a `go get`.
   `clearOrder` in `uat/world_database.go`), `the local cache is cleared` (the rates cache, so
   the next read proves the database fallback), `the connection is broken` (the store
   is closed, so the next call must answer `500 internal_error` with the generic message
-  `internal error`, plus `the failure is logged`, `the store holds:` for row counts and
-  `the account "Cash" exists as "asset"` for seeds.
+  `internal error`, plus `the failure is logged`, `the store holds:` for row counts,
+  `the journal holds N "<entity_kind>" rows` when a raw total would count the rows the
+  boot itself seeds, and `the account "Cash" exists as "asset"` for seeds.
+- Authentication: the suite runs in open mode by default — no password is seeded, so every
+  request passes. `the instance password is "..."` seeds one *before* boot, `I sign in with
+  the instance password` stores the cookie the world then sends, `the issued token is the
+  bearer credential` swaps in the token from the last response, and `only the root session
+  is used` drops it again. That is the whole harness for scope tests.
 - `boot.feature` covers the process, not a route: an unusable database path and a
   database whose migration cannot run must stop the boot (`I boot the API`, `the boot
   fails`, `the boot failure mentions "..."`) instead of serving a half-ready API.
@@ -476,7 +505,9 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
-  One file today (`0001_init.sql`), the whole schema, so `schema_version` is 1. Nothing
-  has shipped, so the schema stays squashed instead of grown. Once a release exists,
-  forwards only — never edit an applied migration, add the next number. The splitter is
-  naive: no `;` inside a migration comment.
+  One file today (`0001_init.sql`), the whole schema, so `schema_version` is 1. The
+  `v0.0.x` tags are the v1 tree (`apps/backend/`), so no v2 release exists and the schema
+  still stays squashed: the audit journal and the token table were folded into
+  `0001_init.sql` instead of growing a `0002`. Once a v2 release exists, forwards only —
+  never edit an applied migration, add the next number. The splitter is naive: no `;`
+  inside a migration comment.

@@ -138,7 +138,8 @@ base_balance_minor)`, written when you review a month (12 rows/account/year).
 3. A posting's base amount is computed once, at write time, and never recomputed.
    This is why a past month's numbers cannot drift when rates change.
 4. No `DELETE` on ledger, inbox, or rules. Void, reject, archive.
-5. Every state change on those tables appends an `audit_log` row.
+5. Every state change on an account, payee, rule, entry, capture, setting or token appends
+   one `audit_log` row inside the same transaction, naming the actor (see *Audit journal*).
 
 ## Why postings exist
 
@@ -261,18 +262,24 @@ number that later becomes the close diff's "unlogged spend" bucket.
 
 ## Recurring
 
-`recurring_rules` never writes to the ledger. It writes a `captures` row:
+`recurring_rules` never writes to the ledger, and neither does the worker: a due rule
+queues a `captures` row and waits for a tap.
 
 ```
 rule.next_due_on <= today
-  → INSERT captures(kind='recurring', dedupe_key=sha256(rule_id|due_on),
-                   draft_json=<payee, amount, account, category>)
+  → INSERT captures(kind='recurring',
+                    dedupe_key=sha256("recurring|" + rule_ref + "|" + due_on),
+                    draft_json=<payee, account, category, amount, currency, due_on>,
+                    status='pending')
   → rule.next_due_on = next occurrence, last_posted_on = due date
 ```
 
-Approving it creates the entry with `source='recurring'` and `recurring_rule_id`; the
-unique index `(recurring_rule_id, occurred_on)` makes replays idempotent. Rejecting
-skips that cycle and leaves a reason.
+`dedupe_key` is the cross-run idempotency: the same occurrence queued twice is one row,
+however often the worker ticks. Approving the capture posts the entry with
+`source='recurring'` and `recurring_rule_id` resolved from the draft, so the unique index
+`(recurring_rule_id, occurred_on)` still refuses a double post; rejecting it skips that
+cycle and leaves a reason. The worker holds no ledger contract at all (`captures.Queue`
+is its half of the module), which is what makes the rule mechanical instead of a promise.
 
 Because recurring bills enter the same queue, "review all untracked payments" covers
 rent and Netflix as well as stray card taps. Expected spend for the month is computed
@@ -351,6 +358,38 @@ still answers "what did I spend" from a backup of the old file.
 a foot-gun that silently accepts every future mismatch; deleting the file is
 explicit, visible in the operator's shell history, and cannot be mistaken for a
 routine boot.
+
+## Audit journal
+
+`audit_log` is a journal, not a trigger table: one append-only row per state change,
+written inside the same transaction as the change, so a rolled-back write leaves nothing
+behind and a committed one cannot be forgotten.
+
+| column | what it answers |
+| --- | --- |
+| `entity_kind` | which table, as a bounded name: `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `setting`, `api_token` |
+| `entity_id` / `entity_ref` | the row, by integer for joins and by ref for filtering without one |
+| `action` | `create`, `update`, `void`, `approve`, `reject`, `advance`, `revoke`, `generate`, `retry` |
+| `actor_kind` / `actor_ref` | `user`, `token`, `worker`, `system` — and the token's ref when a token did it |
+| `from_json` / `to_json` | what the change touched, as small JSON objects |
+| `at` | when, UTC |
+
+The actor is not a parameter on every repository method: it rides the context
+(`internal/common/actor`), set once at each boundary — the HTTP middleware after it knows
+whether a cookie or a token authenticated, the worker run, and the system default for
+anything with no actor. The journal is read through `GET /api/audit`, filtered by kind,
+ref, action, actor and a day range.
+
+What is deliberately **not** journaled twice:
+
+- imports and exports keep their own append-only `import_events`/`export_events`, which
+  are also the API's own resource; the batch or job lifecycle is the journal for them.
+- `artifacts` rows are metadata of a capture, and the capture's own row already says what
+  was received; the metadata is not a second event.
+- `settings` rows are journaled by **key only**, never by value: one of those values is the
+  sealed password envelope, and the journal is not a second copy of it. The worker
+  heartbeat (`worker_last_run_at`) is a metric, so it writes none at all.
+- an API token's `last_used_at` is a usage stamp, not a state change.
 
 ## FX
 

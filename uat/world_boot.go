@@ -22,6 +22,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
+	"github.com/dimasbaguspm/spenicle/internal/module/tokens"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -109,13 +110,15 @@ func (w *world) boot(ctx context.Context) error {
 
 	w.store = store
 	w.ledger = ledgerService
+	w.sealer = sealer
 
 	for _, account := range accounts {
 		w.accounts[account.Name] = account.Ref
 	}
 
 	queue := captures.New(
-		store, ledgerService, sealer, artifacts, store, built.extractor, clockSystem, clockSystem,
+		store, ledgerService, sealer, artifacts, store, built.extractor, store,
+		clockSystem, clockSystem,
 	)
 
 	w.exportDeps = export.Deps{
@@ -150,6 +153,8 @@ func (w *world) boot(ctx context.Context) error {
 		ArtifactFiles:     artifacts,
 		ExportFiles:       w.exportFiles,
 		Health:            store,
+		Audit:             store,
+		Tokens:            tokens.New(store, sealer, clockSystem),
 		Settings:          settingsService,
 		Rates:             built.rates,
 		Sealer:            sealer,

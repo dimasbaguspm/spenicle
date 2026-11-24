@@ -60,7 +60,8 @@ func uploadStatementFor(
 		ref, ok := w.accounts[account]
 		if !ok {
 			return ctx, fmt.Errorf(
-				`unknown account %q: create it with "the account ... exists as ..."`, account)
+				`unknown account %q: create it with "the account ... exists as ..."`, account,
+			)
 		}
 
 		if err = form.WriteField("account_ref", ref); err != nil {

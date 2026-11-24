@@ -34,10 +34,14 @@ type Sealer interface {
 	Seal(ctx context.Context, plain []byte) (string, error)
 	Open(ctx context.Context, sealed string) ([]byte, error)
 	Fingerprint() string
+	// Digest keys a high-entropy secret (an API token) so the row can be looked up
+	// without storing anything that reverses to the token itself.
+	Digest(plain string) string
 }
 
 type AES struct {
 	aead        cipher.AEAD
+	macKey      []byte
 	fingerprint string
 }
 
@@ -66,7 +70,7 @@ func New(secret string) (*AES, error) {
 	mac.Write([]byte("fingerprint"))
 	fingerprint := hex.EncodeToString(mac.Sum(nil))[:fingerprintLen]
 
-	return &AES{aead: aead, fingerprint: fingerprint}, nil
+	return &AES{aead: aead, macKey: key[:], fingerprint: fingerprint}, nil
 }
 
 func (s *AES) Seal(ctx context.Context, plain []byte) (string, error) {
@@ -111,3 +115,10 @@ func (s *AES) Open(ctx context.Context, sealed string) ([]byte, error) {
 }
 
 func (s *AES) Fingerprint() string { return s.fingerprint }
+
+func (s *AES) Digest(plain string) string {
+	mac := hmac.New(sha256.New, s.macKey)
+	mac.Write([]byte("spenicle/token/v1\x00" + plain))
+
+	return hex.EncodeToString(mac.Sum(nil))
+}

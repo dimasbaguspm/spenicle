@@ -136,7 +136,8 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 	if err := validate.Struct(cfg); err != nil {
 		return entity.AppConfig{}, fmt.Errorf(
 			"APP_SECRET is required, at least 16 bytes (generate one with "+
-				"`openssl rand -base64 32`): %w", err)
+				"`openssl rand -base64 32`): %w", err,
+		)
 	}
 
 	return cfg, nil

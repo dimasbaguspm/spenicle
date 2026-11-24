@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ type Service struct {
 	sealer    seal.Sealer
 	blobs     ArtifactStore
 	artifacts ArtifactRows
+	recurring RecurringSource
 	clock     TimeSource
 	ids       IDSource
 	extractor extraction.Extractor
@@ -42,12 +44,13 @@ func New(
 	blobs ArtifactStore,
 	artifacts ArtifactRows,
 	extractor extraction.Extractor,
+	recurring RecurringSource,
 	clock TimeSource,
 	ids IDSource,
 ) *Service {
 	return &Service{
 		captures: captures, entries: entries, sealer: sealer, blobs: blobs, artifacts: artifacts,
-		extractor: extractor, clock: clock, ids: ids,
+		extractor: extractor, recurring: recurring, clock: clock, ids: ids,
 	}
 }
 
@@ -152,6 +155,11 @@ func (s *Service) Approve(
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
+	ruleID, err := s.recurringRuleID(ctx, capture)
+	if err != nil {
+		return entity.Entry{}, entity.Capture{}, err
+	}
+
 	postings := make([]ledger.PostingInput, 0, len(in.Postings))
 	for _, posting := range in.Postings {
 		postings = append(postings, ledger.PostingInput{
@@ -163,11 +171,12 @@ func (s *Service) Approve(
 	}
 
 	entry, _, err := s.entries.Post(ctx, ledger.PostInput{
-		OccurredOn: in.OccurredOn,
-		Note:       in.Note,
-		Currency:   in.Currency,
-		Source:     sourceOf(capture.Kind),
-		Postings:   postings,
+		OccurredOn:      in.OccurredOn,
+		Note:            in.Note,
+		Currency:        in.Currency,
+		Source:          sourceOf(capture.Kind),
+		RecurringRuleID: ruleID,
+		Postings:        postings,
 	})
 	if err != nil {
 		return entity.Entry{}, entity.Capture{}, err
@@ -237,6 +246,10 @@ func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error)
 	}
 
 	return s.open(ctx, updated)
+}
+
+func (s *Service) Enqueue(ctx context.Context, in EnqueueInput) (entity.Capture, bool, error) {
+	return enqueue(ctx, s.captures, s.sealer, s.clock, in)
 }
 
 func (s *Service) storeArtifact(
@@ -388,51 +401,11 @@ func (s *Service) resolve(
 }
 
 func (s *Service) open(ctx context.Context, capture entity.Capture) (entity.Capture, error) {
-	var err error
-
-	if capture.RawText, err = s.openText(ctx, capture.RawText); err != nil {
-		return entity.Capture{}, err
-	}
-
-	if capture.ResolutionNote, err = s.openText(ctx, capture.ResolutionNote); err != nil {
-		return entity.Capture{}, err
-	}
-
-	if capture.DraftJSON, err = s.openText(ctx, capture.DraftJSON); err != nil {
-		return entity.Capture{}, err
-	}
-
-	return capture, nil
+	return openCapture(ctx, s.sealer, capture)
 }
 
 func (s *Service) sealText(ctx context.Context, plain string) (string, error) {
-	if strings.TrimSpace(plain) == "" {
-		return "", nil
-	}
-
-	sealed, err := s.sealer.Seal(ctx, []byte(plain))
-	if err != nil {
-		return "", fmt.Errorf("seal capture text: %w", err)
-	}
-
-	return sealed, nil
-}
-
-func (s *Service) openText(ctx context.Context, sealed string) (string, error) {
-	if strings.TrimSpace(sealed) == "" {
-		return "", nil
-	}
-
-	plain, err := s.sealer.Open(ctx, sealed)
-	if err != nil {
-		if errors.Is(err, seal.ErrNoSecret) {
-			return "", nil
-		}
-
-		return "", fmt.Errorf("open capture text: %w", err)
-	}
-
-	return string(plain), nil
+	return sealTextWith(ctx, s.sealer, plain)
 }
 
 type draftEnvelope struct {
@@ -476,4 +449,197 @@ func sourceOf(kind string) string {
 	default:
 		return constant.EntrySourceManual
 	}
+}
+
+// recurringRuleID links an approval back to the rule that queued it, so
+// (recurring_rule_id, occurred_on) stays unique and a replay cannot double-post.
+func (s *Service) recurringRuleID(ctx context.Context, capture entity.Capture) (*int64, error) {
+	ruleRef, err := s.recurringRuleRef(ctx, capture)
+	if err != nil {
+		return nil, err
+	}
+
+	if ruleRef == "" || s.recurring == nil {
+		return nil, nil //nolint:nilnil // a capture that names no rule needs no link
+	}
+
+	rule, found, err := s.recurring.RecurringByRef(ctx, ruleRef)
+	if err != nil {
+		return nil, err
+	}
+
+	if !found {
+		return nil, nil //nolint:nilnil // the rule is gone, the approval still stands
+	}
+
+	return &rule.ID, nil
+}
+
+func (s *Service) recurringRuleRef(ctx context.Context, capture entity.Capture) (string, error) {
+	if capture.Kind != constant.CaptureKindRecurring {
+		return "", nil
+	}
+
+	plain, err := openTextWith(ctx, s.sealer, capture.DraftJSON)
+	if err != nil {
+		return "", err
+	}
+
+	var draft entity.RecurringDraft
+	if unmarshalErr := json.Unmarshal([]byte(plain), &draft); unmarshalErr != nil {
+		return "", nil //nolint:nilerr // an unreadable draft is still approvable
+	}
+
+	return draft.RuleRef, nil
+}
+
+type queue struct {
+	captures repository.Captures
+	sealer   seal.Sealer
+	clock    TimeSource
+}
+
+// NewQueue builds the worker's half of the module: the recurring rules write
+// into the queue through it, and it holds no ledger contract to write with.
+//
+//nolint:ireturn // the worker wants the Queue surface, not the concrete type
+func NewQueue(captures repository.Captures, sealer seal.Sealer, clock TimeSource) Queue {
+	return &queue{captures: captures, sealer: sealer, clock: clock}
+}
+
+func (q *queue) Enqueue(ctx context.Context, in EnqueueInput) (entity.Capture, bool, error) {
+	return enqueue(ctx, q.captures, q.sealer, q.clock, in)
+}
+
+func enqueue(
+	ctx context.Context,
+	captures repository.Captures,
+	sealer seal.Sealer,
+	clock TimeSource,
+	in EnqueueInput,
+) (entity.Capture, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Enqueue")
+	defer endSpan()
+
+	key := recurringDedupeKey(in.RuleRef, in.OccurredOn)
+
+	existing, found, err := captures.CaptureByDedupeKey(ctx, key)
+	if err != nil {
+		return entity.Capture{}, false, err
+	}
+
+	if found {
+		opened, openErr := openCapture(ctx, sealer, existing)
+
+		return opened, false, openErr
+	}
+
+	sealed, err := sealDraft(ctx, sealer, in)
+	if err != nil {
+		return entity.Capture{}, false, err
+	}
+
+	receivedAt := in.ReceivedAt
+	if receivedAt.IsZero() {
+		receivedAt = clock.Now()
+	}
+
+	stored, err := captures.InsertCapture(ctx, entity.Capture{
+		Kind:       constant.CaptureKindRecurring,
+		Status:     constant.CaptureStatusPending,
+		DedupeKey:  key,
+		DraftJSON:  sealed,
+		ReceivedAt: receivedAt,
+	})
+	if err != nil {
+		// two runs can race on the same due date: the unique dedupe_key decides
+		raced, racedFound, lookErr := captures.CaptureByDedupeKey(ctx, key)
+		if lookErr != nil || !racedFound {
+			return entity.Capture{}, false, err
+		}
+
+		opened, openErr := openCapture(ctx, sealer, raced)
+
+		return opened, false, openErr
+	}
+
+	opened, err := openCapture(ctx, sealer, stored)
+
+	return opened, true, err
+}
+
+// recurringDedupeKey is the cross-run idempotency of one rule and one due date:
+// the same occurrence queued twice is one row, however often the worker ticks.
+func recurringDedupeKey(ruleRef string, due time.Time) string {
+	joined := strings.Join([]string{"recurring", ruleRef, due.Format(constant.DateLayout)}, "\x00")
+
+	sum := sha256.Sum256([]byte(joined))
+
+	return hex.EncodeToString(sum[:])
+}
+
+func sealDraft(ctx context.Context, sealer seal.Sealer, in EnqueueInput) (string, error) {
+	draft, err := json.Marshal(entity.RecurringDraft{
+		RuleRef:     in.RuleRef,
+		PayeeRef:    in.PayeeRef,
+		AccountRef:  in.AccountRef,
+		CategoryRef: in.CategoryRef,
+		AmountMinor: strconv.FormatInt(in.AmountMinor, 10),
+		Currency:    in.Currency,
+		DueOn:       in.OccurredOn.Format(constant.DateLayout),
+	})
+	if err != nil {
+		return "", fmt.Errorf("encode recurring draft: %w", err)
+	}
+
+	return sealTextWith(ctx, sealer, string(draft))
+}
+
+func openCapture(ctx context.Context, sealer seal.Sealer, capture entity.Capture) (entity.Capture, error) {
+	var err error
+
+	if capture.RawText, err = openTextWith(ctx, sealer, capture.RawText); err != nil {
+		return entity.Capture{}, err
+	}
+
+	if capture.ResolutionNote, err = openTextWith(ctx, sealer, capture.ResolutionNote); err != nil {
+		return entity.Capture{}, err
+	}
+
+	if capture.DraftJSON, err = openTextWith(ctx, sealer, capture.DraftJSON); err != nil {
+		return entity.Capture{}, err
+	}
+
+	return capture, nil
+}
+
+func sealTextWith(ctx context.Context, sealer seal.Sealer, plain string) (string, error) {
+	if strings.TrimSpace(plain) == "" {
+		return "", nil
+	}
+
+	sealed, err := sealer.Seal(ctx, []byte(plain))
+	if err != nil {
+		return "", fmt.Errorf("seal capture text: %w", err)
+	}
+
+	return sealed, nil
+}
+
+func openTextWith(ctx context.Context, sealer seal.Sealer, sealed string) (string, error) {
+	if strings.TrimSpace(sealed) == "" {
+		return "", nil
+	}
+
+	plain, err := sealer.Open(ctx, sealed)
+	if err != nil {
+		// a capture written before APP_SECRET existed stays readable as a row
+		if errors.Is(err, seal.ErrNoSecret) {
+			return "", nil
+		}
+
+		return "", fmt.Errorf("open capture text: %w", err)
+	}
+
+	return string(plain), nil
 }

@@ -20,7 +20,18 @@ type ArtifactRows interface {
 	InsertArtifact(ctx context.Context, artifact entity.Artifact) (entity.Artifact, error)
 }
 
+type RecurringSource interface {
+	RecurringByRef(ctx context.Context, ref string) (entity.Recurring, bool, error)
+}
+
+// Queue is the half of the module the worker needs: it never posts an entry, it
+// parks what a due rule expects so a human still taps approve.
+type Queue interface {
+	Enqueue(ctx context.Context, in EnqueueInput) (entity.Capture, bool, error)
+}
+
 type Contract interface {
+	Queue
 	Create(ctx context.Context, in CreateInput) (entity.Capture, bool, error)
 	List(ctx context.Context, filter entity.CaptureFilter) ([]entity.Capture, error)
 	Approve(ctx context.Context, ref string, in ApproveInput) (entity.Entry, entity.Capture, error)
@@ -36,6 +47,17 @@ type CreateInput struct {
 	BatchID      string
 	ReceivedAt   time.Time
 	Artifact     *extraction.Artifact
+}
+
+type EnqueueInput struct {
+	RuleRef     string
+	OccurredOn  time.Time
+	PayeeRef    string
+	AccountRef  string
+	CategoryRef string
+	AmountMinor int64
+	Currency    string
+	ReceivedAt  time.Time
 }
 
 type ApproveInput struct {

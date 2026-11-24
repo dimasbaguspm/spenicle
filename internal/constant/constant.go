@@ -137,8 +137,6 @@ const (
 	ExportActorWorker = "worker"
 )
 
-const SessionCookie = "spenicle_session"
-
 const (
 	SeedAssetAccount   = "Cash"
 	SeedExpenseAccount = "Unsorted"
@@ -149,4 +147,66 @@ const (
 	SnapStatusExecuting  = "EXECUTING"
 	SnapStatusCompleted  = "COMPLETED"
 	SnapStatusFailed     = "FAILED"
+)
+
+const (
+	AuditEntitySetting   = "setting"
+	AuditEntityAccount   = "account"
+	AuditEntityPayee     = "payee"
+	AuditEntityRecurring = "recurring_rule"
+	AuditEntityEntry     = "ledger_entry"
+	AuditEntityCapture   = "capture"
+	AuditEntityToken     = "api_token"
+)
+
+const (
+	AuditActionCreate   = "create"
+	AuditActionUpdate   = "update"
+	AuditActionVoid     = "void"
+	AuditActionApprove  = "approve"
+	AuditActionReject   = "reject"
+	AuditActionRetry    = "retry"
+	AuditActionGenerate = "generate"
+	AuditActionAdvance  = "advance"
+	AuditActionRevoke   = "revoke"
+)
+
+const (
+	AuditActorUser   = "user"
+	AuditActorWorker = "worker"
+	AuditActorSystem = "system"
+)
+
+// A token carries the scopes it was created with. The root password is not a
+// scope: it is the session itself, and it answers every route.
+const (
+	ScopeAll            = "*"
+	ScopeAdmin          = "admin"
+	ScopeEntriesRead    = "entries:read"
+	ScopeEntriesWrite   = "entries:write"
+	ScopeCapturesRead   = "captures:read"
+	ScopeCapturesWrite  = "captures:write"
+	ScopeAccountsRead   = "accounts:read"
+	ScopeAccountsWrite  = "accounts:write"
+	ScopePayeesRead     = "payees:read"
+	ScopePayeesWrite    = "payees:write"
+	ScopeRecurringRead  = "recurring:read"
+	ScopeRecurringWrite = "recurring:write"
+	ScopeImportsRead    = "imports:read"
+	ScopeImportsWrite   = "imports:write"
+	ScopeExportsRead    = "exports:read"
+	ScopeExportsWrite   = "exports:write"
+	ScopeAnalyticsRead  = "analytics:read"
+	ScopeAuditRead      = "audit:read"
+	ScopeDashboardRead  = "dashboard:read"
+	ScopeSettingsRead   = "settings:read"
+	ScopeRatesRead      = "rates:read"
+)
+
+const (
+	TokenStatusActive  = "active"
+	TokenStatusRevoked = "revoked"
+
+	TokenUsed   = "used"
+	TokenUnused = "never"
 )

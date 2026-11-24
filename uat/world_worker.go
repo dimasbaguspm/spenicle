@@ -16,6 +16,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 )
 
@@ -30,7 +31,8 @@ func (w *world) runRecurring(ctx context.Context) error {
 	}
 
 	runner := workerhandlers.New(
-		w.store, w.store, w.ledger, w.store, w.store, w.artifacts, w.exportFiles, w.parts,
+		w.store, w.store, captures.NewQueue(w.store, w.sealer, clockSource),
+		w.store, w.store, w.artifacts, w.exportFiles, w.parts,
 		w.limits.ArtifactRetention,
 		w.exports, w.exportDeps, w.limits.ExportStaleAfter,
 		clockSource, w.zone(), logging.From(slog.New(w.logs), telemetry.ComponentWorker),
@@ -70,6 +72,21 @@ func (w *world) ageImportBatch(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (w *world) countAudit(ctx context.Context, kind string) (int, error) {
+	if w.store == nil {
+		return 0, errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	var count int
+
+	if err := w.store.DB().QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM audit_log WHERE entity_kind = ?`, kind).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count %s journal rows: %w", kind, err)
+	}
+
+	return count, nil
 }
 
 func (w *world) countImportEvents(ctx context.Context, kind string) (int, error) {

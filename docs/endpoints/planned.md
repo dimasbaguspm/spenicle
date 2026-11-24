@@ -1,12 +1,15 @@
 # Planned, not implemented
 
-Nothing on the roadmap is unbuilt at the moment. The two decisions that closed the list:
+Nothing on the roadmap is unbuilt at the moment. The decisions that closed the list:
 
-- **API tokens are not ours to build.** The web client is the only supported client, and
-  better-auth ships an API-key plugin (hashed at rest, scoped, revocable) for the first
-  machine client. A second credential store here would only be migration cost.
+- **API tokens are ours, after all — and now exist.** `POST/GET /api/tokens` and
+  `DELETE /api/tokens/{ref}` mint, list and revoke a scoped, digest-at-rest credential that
+  is strictly less than the root cookie (no scope in `routeScopes` means root-only, so a
+  token can never mint one). The earlier "use better-auth's plugin" answer died with the
+  Go backend: there is no second runtime to host it.
 - **`/api/months/{yyyy-mm}` became `/api/analytics/<namespace>`.** One concrete shape per
   question (`months`, `categories`, saved views) beats one polymorphic analytics route.
 
 Open questions kept deliberately out of the API: opening balance on `POST /api/setup`,
-parent roll-up in `categories`, and `custom` namespaces beyond the two implemented.
+parent roll-up in `categories`, `custom` namespaces beyond the two implemented, token
+expiry, and a per-token rate limit.

@@ -13,6 +13,7 @@ CREATE TABLE api_tokens (
   id           INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
   name         TEXT NOT NULL,
+  token_preview TEXT NOT NULL,
   token_hash   TEXT NOT NULL UNIQUE,
   scopes       TEXT NOT NULL,
   created_at   TEXT NOT NULL,
@@ -277,15 +278,20 @@ CREATE TABLE custom_queries (
 );
 
 CREATE TABLE audit_log (
-  id           INTEGER PRIMARY KEY,
+  id          INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  entity_table TEXT NOT NULL,
-  entity_id    INTEGER,
-  action       TEXT NOT NULL,
-  from_json    TEXT,
-  to_json      TEXT,
-  actor        TEXT NOT NULL DEFAULT 'user',
-  at           TEXT NOT NULL
+  entity_kind TEXT NOT NULL,
+  entity_id   INTEGER,
+  entity_ref  TEXT,
+  action      TEXT NOT NULL,
+  actor_kind  TEXT NOT NULL
+              CHECK (actor_kind IN ('user','worker','system')),
+  actor_ref   TEXT,
+  from_json   TEXT,
+  to_json     TEXT,
+  at          TEXT NOT NULL
 );
 
-CREATE INDEX ix_audit_entity ON audit_log (entity_table, entity_id);
+CREATE INDEX ix_audit_entity ON audit_log (entity_kind, entity_ref, id);
+CREATE INDEX ix_audit_actor ON audit_log (actor_kind, at);
+CREATE INDEX ix_audit_action ON audit_log (action, at);

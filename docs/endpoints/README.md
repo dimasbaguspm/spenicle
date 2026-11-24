@@ -46,6 +46,10 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/dashboard` | the landing tiles in one response | [`GET_api_dashboard.md`](./GET_api_dashboard.md) |
 | `POST` | `/api/setup` | open the ledger with a base currency | [`POST_api_setup.md`](./POST_api_setup.md) |
 | `GET` | `/api/rates` | the cached ECB reference rate for one day | [`GET_api_rates.md`](./GET_api_rates.md) |
+| `GET` | `/api/audit` | the journal: what changed, who changed it | [`GET_api_audit.md`](./GET_api_audit.md) |
+| `POST` | `/api/tokens` | mint a scoped, non-root credential (root only) | [`POST_api_tokens.md`](./POST_api_tokens.md) |
+| `GET` | `/api/tokens` | every issued token, never its secret (root only) | [`GET_api_tokens.md`](./GET_api_tokens.md) |
+| `DELETE` | `/api/tokens/{ref}` | revoke a token; the row stays (root only) | [`DELETE_api_tokens_ref.md`](./DELETE_api_tokens_ref.md) |
 | `POST` | `/api/exports` | queue an export the worker renders | [`POST_api_exports.md`](./POST_api_exports.md) |
 | `GET` | `/api/exports` | every export job, newest first | [`GET_api_exports.md`](./GET_api_exports.md) |
 | `GET` | `/api/exports/{ref}` | one export job and its status | [`GET_api_exports_ref.md`](./GET_api_exports_ref.md) |

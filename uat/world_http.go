@@ -58,15 +58,7 @@ func (w *world) call(
 		return fmt.Errorf("build request: %w", err)
 	}
 
-	for key, values := range headers {
-		for _, value := range values {
-			req.Header.Add(key, value)
-		}
-	}
-
-	if body != nil && req.Header.Get("Content-Type") == "" {
-		req.Header.Set("Content-Type", "application/json")
-	}
+	w.dress(req, body, headers)
 
 	resp, err := w.server.Client().Do(req)
 	if err != nil {
@@ -89,6 +81,24 @@ func (w *world) call(
 	}
 
 	return nil
+}
+
+// dress applies the scenario's headers and the credential it has earned: the
+// root credential from sign-in, or an API token that replaced it.
+func (w *world) dress(req *http.Request, body []byte, headers http.Header) {
+	for key, values := range headers {
+		for _, value := range values {
+			req.Header.Add(key, value)
+		}
+	}
+
+	if body != nil && req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	if w.credential != "" {
+		req.Header.Set("Authorization", "Bearer "+w.credential)
+	}
 }
 
 func refOf(body []byte) string {

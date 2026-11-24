@@ -38,21 +38,37 @@ func (s *Store) CreatePayee(ctx context.Context, payee entity.Payee) (entity.Pay
 	payee.Ref = uuid.New()
 	payee.CreatedAt = time.Now().UTC()
 
-	res, err := s.db.ExecContext(ctx, `
-		INSERT INTO payees (ref, name, default_account_id, default_category_id, archived_at, created_at)
-		VALUES (?, ?, ?, ?, NULL, ?)`,
-		payee.Ref,
-		payee.Name,
-		accountID,
-		categoryID,
-		payee.CreatedAt.Format(constant.TimestampLayout),
-	)
-	if err != nil {
-		return entity.Payee{}, fmt.Errorf("create payee %q: %w", payee.Name, err)
-	}
+	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx, `
+			INSERT INTO payees (ref, name, default_account_id, default_category_id, archived_at, created_at)
+			VALUES (?, ?, ?, ?, NULL, ?)`,
+			payee.Ref,
+			payee.Name,
+			accountID,
+			categoryID,
+			payee.CreatedAt.Format(constant.TimestampLayout),
+		)
+		if execErr != nil {
+			return fmt.Errorf("create payee %q: %w", payee.Name, execErr)
+		}
 
-	if payee.ID, err = res.LastInsertId(); err != nil {
-		return entity.Payee{}, fmt.Errorf("payee id: %w", err)
+		inserted, idErr := res.LastInsertId()
+		if idErr != nil {
+			return fmt.Errorf("payee id: %w", idErr)
+		}
+
+		payee.ID = inserted
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityPayee,
+			ID:     payee.ID,
+			Ref:    payee.Ref,
+			Action: constant.AuditActionCreate,
+			To:     entity.PayeeChanged{Name: payee.Name},
+		})
+	})
+	if err != nil {
+		return entity.Payee{}, err
 	}
 
 	return payee, nil
@@ -132,17 +148,30 @@ func (s *Store) UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Pay
 		return entity.Payee{}, err
 	}
 
-	if _, err := s.db.ExecContext(ctx, `
-		UPDATE payees SET name = ?, default_account_id = ?, default_category_id = ?,
-			archived_at = ?
-		WHERE ref = ?`,
-		payee.Name,
-		accountID,
-		categoryID,
-		nullTime(payee.ArchivedAt),
-		payee.Ref,
-	); err != nil {
-		return entity.Payee{}, fmt.Errorf("update payee %q: %w", payee.Ref, err)
+	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		if _, execErr := tx.ExecContext(ctx, `
+			UPDATE payees SET name = ?, default_account_id = ?, default_category_id = ?,
+				archived_at = ?
+			WHERE ref = ?`,
+			payee.Name,
+			accountID,
+			categoryID,
+			nullTime(payee.ArchivedAt),
+			payee.Ref,
+		); execErr != nil {
+			return fmt.Errorf("update payee %q: %w", payee.Ref, execErr)
+		}
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityPayee,
+			ID:     payee.ID,
+			Ref:    payee.Ref,
+			Action: constant.AuditActionUpdate,
+			To:     entity.PayeeChanged{Name: payee.Name, ArchivedAt: auditTime(payee.ArchivedAt)},
+		})
+	})
+	if err != nil {
+		return entity.Payee{}, err
 	}
 
 	return payee, nil

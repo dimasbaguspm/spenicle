@@ -60,13 +60,14 @@ func New(
 var _ Contract = (*Service)(nil)
 
 type PostInput struct {
-	ClientID   string
-	OccurredOn time.Time
-	PayeeRef   string
-	Note       string
-	Currency   string
-	Source     string
-	Postings   []PostingInput
+	ClientID        string
+	OccurredOn      time.Time
+	PayeeRef        string
+	Note            string
+	Currency        string
+	Source          string
+	RecurringRuleID *int64
+	Postings        []PostingInput
 }
 
 type PostingInput struct {

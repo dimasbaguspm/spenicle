@@ -34,23 +34,40 @@ func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) 
 	createdAt := time.Now().UTC()
 	ref := uuid.New()
 
-	res, err := s.db.ExecContext(
-		ctx,
-		`INSERT INTO accounts (ref, name, kind, parent_id, currency, icon, archived_at, created_at)
-		 VALUES (?, ?, ?, NULL, ?, NULL, NULL, ?)`,
-		ref,
-		name,
-		kind,
-		currency,
-		createdAt.Format(constant.TimestampLayout),
-	)
-	if err != nil {
-		return entity.Account{}, fmt.Errorf("create account %q: %w", name, err)
-	}
+	var id int64
 
-	id, err := res.LastInsertId()
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(
+			ctx,
+			`INSERT INTO accounts (ref, name, kind, parent_id, currency, icon, archived_at, created_at)
+			 VALUES (?, ?, ?, NULL, ?, NULL, NULL, ?)`,
+			ref,
+			name,
+			kind,
+			currency,
+			createdAt.Format(constant.TimestampLayout),
+		)
+		if execErr != nil {
+			return fmt.Errorf("create account %q: %w", name, execErr)
+		}
+
+		inserted, idErr := res.LastInsertId()
+		if idErr != nil {
+			return fmt.Errorf("account id: %w", idErr)
+		}
+
+		id = inserted
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityAccount,
+			ID:     id,
+			Ref:    ref,
+			Action: constant.AuditActionCreate,
+			To:     entity.AccountChanged{Name: name, Kind: kind, Currency: currency},
+		})
+	})
 	if err != nil {
-		return entity.Account{}, fmt.Errorf("account id: %w", err)
+		return entity.Account{}, err
 	}
 
 	return entity.Account{
@@ -86,25 +103,40 @@ func (s *Store) UpdateAccount(ctx context.Context, account entity.Account) (enti
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateAccount")
 	defer endSpan()
 
-	res, err := s.db.ExecContext(ctx, `
-		UPDATE accounts SET name = ?, icon = ?, archived_at = ?
-		WHERE ref = ?`,
-		account.Name,
-		nullString(account.Icon),
-		nullTime(account.ArchivedAt),
-		account.Ref,
-	)
-	if err != nil {
-		return entity.Account{}, fmt.Errorf("update account %q: %w", account.Ref, err)
-	}
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx, `
+			UPDATE accounts SET name = ?, icon = ?, archived_at = ?
+			WHERE ref = ?`,
+			account.Name,
+			nullString(account.Icon),
+			nullTime(account.ArchivedAt),
+			account.Ref,
+		)
+		if execErr != nil {
+			return fmt.Errorf("update account %q: %w", account.Ref, execErr)
+		}
 
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return entity.Account{}, fmt.Errorf("account rows: %w", err)
-	}
+		affected, rowsErr := res.RowsAffected()
+		if rowsErr != nil {
+			return fmt.Errorf("account rows: %w", rowsErr)
+		}
 
-	if affected == 0 {
-		return entity.Account{}, fmt.Errorf("%w: account %s", entity.ErrNotFound, account.Ref)
+		if affected == 0 {
+			return fmt.Errorf("%w: account %s", entity.ErrNotFound, account.Ref)
+		}
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityAccount,
+			ID:     account.ID,
+			Ref:    account.Ref,
+			Action: constant.AuditActionUpdate,
+			To: entity.AccountChanged{
+				Name: account.Name, Icon: account.Icon, ArchivedAt: auditTime(account.ArchivedAt),
+			},
+		})
+	})
+	if err != nil {
+		return entity.Account{}, err
 	}
 
 	return account, nil

@@ -25,41 +25,54 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 		capture.Ref = uuid.New()
 	}
 
-	res, err := s.db.ExecContext(ctx, `
-		INSERT INTO captures
-			(ref, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
-			 raw_text, draft_json, extraction_error, extraction_job_ref,
-			 extraction_rail, extraction_model, resolved_entry_id, resolution_note,
-			 received_at, resolved_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		capture.Ref,
-		capture.Kind,
-		capture.Status,
-		nullString(capture.ClientID),
-		capture.DedupeKey,
-		nullString(capture.BatchID),
-		nullString(capture.ArtifactHash),
-		nullString(capture.RawText),
-		nullString(capture.DraftJSON),
-		nullString(capture.ExtractionError),
-		nullString(capture.JobRef),
-		nullString(capture.ExtractionRail),
-		nullString(capture.ExtractionModel),
-		nullInt(capture.ResolvedEntryID),
-		nullString(capture.ResolutionNote),
-		capture.ReceivedAt.Format(constant.TimestampLayout),
-		nullTime(capture.ResolvedAt),
-	)
-	if err != nil {
-		return entity.Capture{}, fmt.Errorf("insert capture: %w", err)
-	}
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx, `
+			INSERT INTO captures
+				(ref, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
+				 raw_text, draft_json, extraction_error, extraction_job_ref,
+				 extraction_rail, extraction_model, resolved_entry_id, resolution_note,
+				 received_at, resolved_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			capture.Ref,
+			capture.Kind,
+			capture.Status,
+			nullString(capture.ClientID),
+			capture.DedupeKey,
+			nullString(capture.BatchID),
+			nullString(capture.ArtifactHash),
+			nullString(capture.RawText),
+			nullString(capture.DraftJSON),
+			nullString(capture.ExtractionError),
+			nullString(capture.JobRef),
+			nullString(capture.ExtractionRail),
+			nullString(capture.ExtractionModel),
+			nullInt(capture.ResolvedEntryID),
+			nullString(capture.ResolutionNote),
+			capture.ReceivedAt.Format(constant.TimestampLayout),
+			nullTime(capture.ResolvedAt),
+		)
+		if execErr != nil {
+			return fmt.Errorf("insert capture: %w", execErr)
+		}
 
-	id, err := res.LastInsertId()
-	if err != nil {
-		return entity.Capture{}, fmt.Errorf("capture id: %w", err)
-	}
+		id, idErr := res.LastInsertId()
+		if idErr != nil {
+			return fmt.Errorf("capture id: %w", idErr)
+		}
 
-	capture.ID = id
+		capture.ID = id
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityCapture,
+			ID:     capture.ID,
+			Ref:    capture.Ref,
+			Action: constant.AuditActionCreate,
+			To:     entity.CaptureChanged{Kind: capture.Kind, Status: capture.Status},
+		})
+	})
+	if err != nil {
+		return entity.Capture{}, err
+	}
 
 	return capture, nil
 }
@@ -127,34 +140,47 @@ func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (enti
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateCapture")
 	defer endSpan()
 
-	res, err := s.db.ExecContext(ctx, `
-		UPDATE captures SET
-			status = ?, draft_json = ?, extraction_error = ?, extraction_job_ref = ?,
-			extraction_rail = ?, extraction_model = ?,
-			resolved_entry_id = ?, resolution_note = ?, resolved_at = ?
-		WHERE id = ?`,
-		capture.Status,
-		nullString(capture.DraftJSON),
-		nullString(capture.ExtractionError),
-		nullString(capture.JobRef),
-		nullString(capture.ExtractionRail),
-		nullString(capture.ExtractionModel),
-		nullInt(capture.ResolvedEntryID),
-		nullString(capture.ResolutionNote),
-		nullTime(capture.ResolvedAt),
-		capture.ID,
-	)
-	if err != nil {
-		return entity.Capture{}, fmt.Errorf("update capture: %w", err)
-	}
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx, `
+			UPDATE captures SET
+				status = ?, draft_json = ?, extraction_error = ?, extraction_job_ref = ?,
+				extraction_rail = ?, extraction_model = ?,
+				resolved_entry_id = ?, resolution_note = ?, resolved_at = ?
+			WHERE id = ?`,
+			capture.Status,
+			nullString(capture.DraftJSON),
+			nullString(capture.ExtractionError),
+			nullString(capture.JobRef),
+			nullString(capture.ExtractionRail),
+			nullString(capture.ExtractionModel),
+			nullInt(capture.ResolvedEntryID),
+			nullString(capture.ResolutionNote),
+			nullTime(capture.ResolvedAt),
+			capture.ID,
+		)
+		if execErr != nil {
+			return fmt.Errorf("update capture: %w", execErr)
+		}
 
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return entity.Capture{}, fmt.Errorf("capture rows: %w", err)
-	}
+		affected, rowsErr := res.RowsAffected()
+		if rowsErr != nil {
+			return fmt.Errorf("capture rows: %w", rowsErr)
+		}
 
-	if affected == 0 {
-		return entity.Capture{}, fmt.Errorf("%w: capture %d", entity.ErrNotFound, capture.ID)
+		if affected == 0 {
+			return fmt.Errorf("%w: capture %d", entity.ErrNotFound, capture.ID)
+		}
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityCapture,
+			ID:     capture.ID,
+			Ref:    capture.Ref,
+			Action: auditActionOf(capture.Status),
+			To:     entity.CaptureChanged{Status: capture.Status, ResolvedEntryID: capture.ResolvedEntryID},
+		})
+	})
+	if err != nil {
+		return entity.Capture{}, err
 	}
 
 	return capture, nil

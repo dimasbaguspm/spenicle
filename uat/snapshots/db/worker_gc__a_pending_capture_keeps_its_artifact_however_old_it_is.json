@@ -37,7 +37,47 @@
       "stored_bytes": 51
     }
   ],
-  "audit_log": [],
+  "audit_log": [
+    {
+      "action": "update",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": null,
+      "entity_kind": "setting",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 1,
+      "ref": "<ref>",
+      "to_json": "{\"key\":\"secret_fingerprint\"}"
+    },
+    {
+      "action": "create",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": null,
+      "entity_kind": "setting",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 2,
+      "ref": "<ref>",
+      "to_json": "{\"key\":\"app_settings\"}"
+    },
+    {
+      "action": "create",
+      "actor_kind": "user",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": 1,
+      "entity_kind": "capture",
+      "entity_ref": "<ref>",
+      "from_json": null,
+      "id": 3,
+      "ref": "<ref>",
+      "to_json": "{\"kind\":\"image\",\"status\":\"pending\"}"
+    }
+  ],
   "captures": [
     {
       "artifact_hash": "b3be5f5a9d30ee36242604380bd4ce604ee24fa17095cc02b062086e09983819",

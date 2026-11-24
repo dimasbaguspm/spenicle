@@ -50,34 +50,44 @@ func (s *Store) CreateRecurring(ctx context.Context, rule entity.Recurring) (ent
 	rule.Origin = constant.RecurringOriginUser
 	rule.CreatedAt = time.Now().UTC()
 
-	res, err := s.db.ExecContext(ctx, `
-		INSERT INTO recurring_rules
-			(ref, payee_id, account_id, category_id, amount_minor, currency, cadence,
-			 interval_n, day_of_month, business_day_shift, next_due_on, ends_on,
-			 origin, state, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		rule.Ref,
-		payee.ID,
-		accountID.Int64,
-		categoryID,
-		rule.AmountMinor,
-		rule.Currency,
-		rule.Cadence,
-		rule.IntervalN,
-		nullInt(dayOfMonth(rule.DayOfMonth)),
-		rule.BusinessDayShift,
-		rule.NextDueOn.Format(constant.DateLayout),
-		nullDay(rule.EndsOn),
-		rule.Origin,
-		rule.State,
-		rule.CreatedAt.Format(constant.TimestampLayout),
-	)
-	if err != nil {
-		return entity.Recurring{}, fmt.Errorf("create recurring rule: %w", err)
-	}
+	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx, `
+			INSERT INTO recurring_rules
+				(ref, payee_id, account_id, category_id, amount_minor, currency, cadence,
+				 interval_n, day_of_month, business_day_shift, next_due_on, ends_on,
+				 origin, state, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			rule.Ref,
+			payee.ID,
+			accountID.Int64,
+			categoryID,
+			rule.AmountMinor,
+			rule.Currency,
+			rule.Cadence,
+			rule.IntervalN,
+			nullInt(dayOfMonth(rule.DayOfMonth)),
+			rule.BusinessDayShift,
+			rule.NextDueOn.Format(constant.DateLayout),
+			nullDay(rule.EndsOn),
+			rule.Origin,
+			rule.State,
+			rule.CreatedAt.Format(constant.TimestampLayout),
+		)
+		if execErr != nil {
+			return fmt.Errorf("create recurring rule: %w", execErr)
+		}
 
-	if rule.ID, err = res.LastInsertId(); err != nil {
-		return entity.Recurring{}, fmt.Errorf("recurring id: %w", err)
+		inserted, idErr := res.LastInsertId()
+		if idErr != nil {
+			return fmt.Errorf("recurring id: %w", idErr)
+		}
+
+		rule.ID = inserted
+
+		return appendRecurringCreated(ctx, tx, rule)
+	})
+	if err != nil {
+		return entity.Recurring{}, err
 	}
 
 	return rule, nil
@@ -191,22 +201,41 @@ func (s *Store) UpdateRecurring(ctx context.Context, rule entity.Recurring) (ent
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateRecurring")
 	defer endSpan()
 
-	if _, err := s.db.ExecContext(ctx, `
-		UPDATE recurring_rules SET amount_minor = ?, cadence = ?, interval_n = ?,
-			day_of_month = ?, business_day_shift = ?, next_due_on = ?, ends_on = ?,
-			state = ?
-		WHERE ref = ?`,
-		rule.AmountMinor,
-		rule.Cadence,
-		rule.IntervalN,
-		nullInt(dayOfMonth(rule.DayOfMonth)),
-		rule.BusinessDayShift,
-		rule.NextDueOn.Format(constant.DateLayout),
-		nullDay(rule.EndsOn),
-		rule.State,
-		rule.Ref,
-	); err != nil {
-		return entity.Recurring{}, fmt.Errorf("update recurring %q: %w", rule.Ref, err)
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		if _, execErr := tx.ExecContext(ctx, `
+			UPDATE recurring_rules SET amount_minor = ?, cadence = ?, interval_n = ?,
+				day_of_month = ?, business_day_shift = ?, next_due_on = ?, ends_on = ?,
+				state = ?
+			WHERE ref = ?`,
+			rule.AmountMinor,
+			rule.Cadence,
+			rule.IntervalN,
+			nullInt(dayOfMonth(rule.DayOfMonth)),
+			rule.BusinessDayShift,
+			rule.NextDueOn.Format(constant.DateLayout),
+			nullDay(rule.EndsOn),
+			rule.State,
+			rule.Ref,
+		); execErr != nil {
+			return fmt.Errorf("update recurring %q: %w", rule.Ref, execErr)
+		}
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityRecurring,
+			ID:     rule.ID,
+			Ref:    rule.Ref,
+			Action: constant.AuditActionUpdate,
+			To: entity.RecurringChanged{
+				Cadence:   rule.Cadence,
+				Amount:    rule.AmountMinor,
+				Currency:  rule.Currency,
+				State:     rule.State,
+				NextDueOn: rule.NextDueOn.Format(constant.DateLayout),
+			},
+		})
+	})
+	if err != nil {
+		return entity.Recurring{}, err
 	}
 
 	return rule, nil
@@ -220,24 +249,45 @@ func (s *Store) AdvanceRecurring(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.AdvanceRecurring")
 	defer endSpan()
 
-	res, err := s.db.ExecContext(ctx, `
-		UPDATE recurring_rules SET next_due_on = ?, last_posted_on = ?
-		WHERE ref = ? AND next_due_on = ?`,
-		to.Format(constant.DateLayout),
-		postedAt.Format(constant.DateLayout),
-		ref,
-		from.Format(constant.DateLayout),
-	)
+	var advanced bool
+
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx, `
+			UPDATE recurring_rules SET next_due_on = ?, last_posted_on = ?
+			WHERE ref = ? AND next_due_on = ?`,
+			to.Format(constant.DateLayout),
+			postedAt.Format(constant.DateLayout),
+			ref,
+			from.Format(constant.DateLayout),
+		)
+		if execErr != nil {
+			return fmt.Errorf("advance recurring %q: %w", ref, execErr)
+		}
+
+		affected, rowsErr := res.RowsAffected()
+		if rowsErr != nil {
+			return fmt.Errorf("recurring rows: %w", rowsErr)
+		}
+
+		advanced = affected == 1
+
+		if !advanced {
+			return nil
+		}
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityRecurring,
+			Ref:    ref,
+			Action: constant.AuditActionAdvance,
+			From:   entity.RecurringChanged{NextDueOn: from.Format(constant.DateLayout)},
+			To:     entity.RecurringChanged{NextDueOn: to.Format(constant.DateLayout)},
+		})
+	})
 	if err != nil {
-		return false, fmt.Errorf("advance recurring %q: %w", ref, err)
+		return false, err
 	}
 
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return false, fmt.Errorf("recurring rows: %w", err)
-	}
-
-	return affected == 1, nil
+	return advanced, nil
 }
 
 func dayOfMonth(day int) *int64 {
