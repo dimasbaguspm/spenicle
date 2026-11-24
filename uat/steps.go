@@ -62,7 +62,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^I sign in with the instance password$`, iSignInWithTheInstancePassword)
 	sc.Step(`^the issued token is the bearer credential$`, theIssuedTokenIsTheBearer)
 	sc.Step(`^the same token is the bearer credential again$`, theSameTokenIsTheBearerAgain)
-	sc.Step(`^only the root session is used$`, theRootSessionOnly)
+	sc.Step(`^only the root credential is used$`, theRootCredentialOnly)
 	sc.Step(`^the last ref is remembered as "([^"]*)"$`, theLastRefIsRemembered)
 	sc.Step(`^the last ref is still "([^"]*)"$`, theLastRefIsStill)
 	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)

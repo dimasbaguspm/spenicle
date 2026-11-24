@@ -17,7 +17,7 @@ Feature: POST /api/tokens/{ref}/revoke
     When the issued token is the bearer credential
     And I send a GET to "/api/captures"
     Then the response status is 200
-    When only the root session is used
+    When only the root credential is used
     And I send a POST to "/api/tokens/{{ref}}/revoke"
     Then the response status is 200
     And the response JSON matches the snapshot "post_api_tokens_ref_revoke__a_revoked_token_is_listed_once"

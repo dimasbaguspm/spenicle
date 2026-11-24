@@ -86,7 +86,7 @@ func theSameTokenIsTheBearerAgain(ctx context.Context) (context.Context, error) 
 	return ctx, nil
 }
 
-func theRootSessionOnly(ctx context.Context) (context.Context, error) {
+func theRootCredentialOnly(ctx context.Context) (context.Context, error) {
 	w, err := worldFrom(ctx)
 	if err != nil {
 		return ctx, err

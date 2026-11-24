@@ -395,7 +395,7 @@ reason in the MR, not a `go get`.
 - Authentication: the suite runs in open mode by default — no password is seeded, so every
   request passes. `the instance password is "..."` seeds one *before* boot, `I sign in with
   the instance password` stores the credential the world then sends, `the issued token is the
-  bearer credential` swaps in the token from the last response, and `only the root session
+  bearer credential` swaps in the token from the last response, and `only the root credential
   is used` drops it again. That is the whole harness for scope tests.
 - `boot.feature` covers the process, not a route: an unusable database path and a
   database whose migration cannot run must stop the boot (`I boot the API`, `the boot
