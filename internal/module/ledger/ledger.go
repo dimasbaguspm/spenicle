@@ -16,6 +16,7 @@ type Contract interface {
 	Get(ctx context.Context, ref string) (entity.Entry, error)
 	Void(ctx context.Context, ref, reason string) (entity.Entry, error)
 	UpdatePayee(ctx context.Context, ref, payeeRef string) (entity.Entry, error)
+	Correct(ctx context.Context, ref string, in CorrectInput) (entity.Entry, error)
 }
 
 type Service struct {
@@ -60,6 +61,12 @@ func New(
 
 var _ Contract = (*Service)(nil)
 
+type CorrectInput struct {
+	OccurredOn *time.Time
+	Note       *string
+	Postings   []PostingInput
+	Reason     string
+}
 type PostInput struct {
 	ClientID        string
 	OccurredOn      time.Time

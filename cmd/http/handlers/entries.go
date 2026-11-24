@@ -66,9 +66,12 @@ type entryResponse struct {
 }
 
 type entryPatchRequest struct {
-	Void     *bool   `json:"void,omitempty"`
-	Reason   string  `json:"reason,omitempty"    validate:"max=2000"`
-	PayeeRef *string `json:"payee_ref,omitempty" validate:"omitempty,ref"`
+	Void       *bool            `json:"void,omitempty"`
+	Reason     string           `json:"reason,omitempty"     validate:"max=2000"`
+	PayeeRef   *string          `json:"payee_ref,omitempty"  validate:"omitempty,ref"`
+	OccurredOn string           `json:"occurred_on,omitempty" validate:"omitempty,datestr"`
+	Note       *string          `json:"note,omitempty"       validate:"omitempty,max=2000"`
+	Postings   []postingRequest `json:"postings,omitempty"   validate:"omitempty,min=2,dive"`
 }
 
 func (s *Server) ListEntries(w http.ResponseWriter, r *http.Request) {
@@ -160,20 +163,35 @@ func (s *Server) entryPatch(
 	ref string,
 	request entryPatchRequest,
 ) (entity.Entry, bool) {
+	corrects := request.OccurredOn != "" || request.Note != nil || len(request.Postings) > 0
+
+	actions := 0
+	if request.Void != nil {
+		actions++
+	}
+
+	if request.PayeeRef != nil {
+		actions++
+	}
+
+	if corrects {
+		actions++
+	}
+
 	switch {
-	case request.Void == nil && request.PayeeRef == nil:
+	case actions == 0:
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
-			`send {"void": true} or {"payee_ref": "..."}`)
+			`send {"void": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings`)
 
 		return entity.Entry{}, false
-	case request.Void != nil && request.PayeeRef != nil:
+	case actions > 1:
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
-			"void and payee_ref are separate actions")
+			"void, payee_ref and a correction are separate actions")
 
 		return entity.Entry{}, false
 	case request.Void != nil && !*request.Void:
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_patch",
-			"only {\"void\": true} is supported today")
+			`only {"void": true} is supported today`)
 
 		return entity.Entry{}, false
 	}
@@ -183,10 +201,18 @@ func (s *Server) entryPatch(
 		err   error
 	)
 
-	if request.Void != nil {
+	switch {
+	case request.Void != nil:
 		entry, err = s.deps.Ledger.Void(ctx, ref, request.Reason)
-	} else {
+	case request.PayeeRef != nil:
 		entry, err = s.deps.Ledger.UpdatePayee(ctx, ref, *request.PayeeRef)
+	default:
+		input, ok := correctionInput(w, request)
+		if !ok {
+			return entity.Entry{}, false
+		}
+
+		entry, err = s.deps.Ledger.Correct(ctx, ref, input)
 	}
 
 	if err != nil {
@@ -242,20 +268,9 @@ func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
 		return ledger.PostInput{}, err
 	}
 
-	postings := make([]ledger.PostingInput, 0, len(request.Postings))
-
-	for _, posting := range request.Postings {
-		amount, err := validating.Money(posting.AmountMinor, "amount_minor")
-		if err != nil {
-			return ledger.PostInput{}, err
-		}
-
-		postings = append(postings, ledger.PostingInput{
-			AccountRef:  posting.AccountRef,
-			AmountMinor: amount,
-			FXRate:      posting.FXRate,
-			FXRateDate:  posting.FXRateDate,
-		})
+	postings, err := postingInputs(request.Postings)
+	if err != nil {
+		return ledger.PostInput{}, err
 	}
 
 	return ledger.PostInput{
@@ -374,6 +389,7 @@ var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{entity.ErrSecretMismatch, http.StatusConflict, "secret_mismatch"},
 	{entity.ErrNotFound, http.StatusNotFound, "not_found"},
 	{entity.ErrDuplicate, http.StatusConflict, "duplicate"},
+	{entity.ErrInvalidParent, http.StatusUnprocessableEntity, "invalid_request"},
 	{entity.ErrUnknownCaptureKind, http.StatusUnprocessableEntity, "unknown_capture_kind"},
 	{entity.ErrCaptureResolved, http.StatusConflict, "capture_resolved"},
 	{entity.ErrInvalidState, http.StatusConflict, "invalid_state"},
@@ -394,4 +410,50 @@ var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{connections.ErrClientMissing, http.StatusUnprocessableEntity, "invalid_request"},
 	{connections.ErrNotConnected, http.StatusNotFound, "not_found"},
 	{intake.ErrNotConfigured, http.StatusConflict, "intake_disabled"},
+}
+
+func correctionInput(w http.ResponseWriter, request entryPatchRequest) (ledger.CorrectInput, bool) {
+	input := ledger.CorrectInput{Note: request.Note, Reason: request.Reason}
+
+	if request.OccurredOn != "" {
+		occurredOn, err := validating.Day(request.OccurredOn, "occurred_on")
+		if err != nil {
+			writeInvalid(w, err)
+
+			return ledger.CorrectInput{}, false
+		}
+
+		input.OccurredOn = &occurredOn
+	}
+
+	postings, err := postingInputs(request.Postings)
+	if err != nil {
+		writeInvalid(w, err)
+
+		return ledger.CorrectInput{}, false
+	}
+
+	input.Postings = postings
+
+	return input, true
+}
+
+func postingInputs(request []postingRequest) ([]ledger.PostingInput, error) {
+	postings := make([]ledger.PostingInput, 0, len(request))
+
+	for _, posting := range request {
+		amount, err := validating.Money(posting.AmountMinor, "amount_minor")
+		if err != nil {
+			return nil, err
+		}
+
+		postings = append(postings, ledger.PostingInput{
+			AccountRef:  posting.AccountRef,
+			AmountMinor: amount,
+			FXRate:      posting.FXRate,
+			FXRateDate:  posting.FXRateDate,
+		})
+	}
+
+	return postings, nil
 }

@@ -20,6 +20,7 @@ type Ledger interface {
 	VoidEntry(ctx context.Context, ref, reason string, at time.Time) (entity.Entry, error)
 	UpdateEntryPayee(ctx context.Context, ref string, payeeID *int64) (entity.Entry, bool, error)
 	MatchingEntryRef(ctx context.Context, probe entity.EntryProbe) (string, bool, error)
+	ReplaceEntry(ctx context.Context, ref string, replacement entity.Entry, reason string, at time.Time) (entity.Entry, error)
 }
 
 type Captures interface {
@@ -33,6 +34,9 @@ type Captures interface {
 type Accounts interface {
 	CountAccounts(ctx context.Context) (int, error)
 	CreateAccount(ctx context.Context, name, kind, currency string) (entity.Account, error)
+	CreateAccountWithParent(
+		ctx context.Context, name, kind, currency, parentRef string,
+	) (entity.Account, error)
 	FindAccount(ctx context.Context, name, kind string) (entity.Account, bool, error)
 	AccountByRef(ctx context.Context, ref string) (entity.Account, bool, error)
 	UpdateAccount(ctx context.Context, account entity.Account) (entity.Account, error)
@@ -99,6 +103,7 @@ type MailMessages interface {
 type Analytics interface {
 	MonthlyTotals(ctx context.Context, from, to time.Time) ([]entity.MonthTotal, error)
 	CategoryTotals(ctx context.Context, from, to time.Time, kind string) ([]entity.CategoryTotal, error)
+	CategoryTotalsByRoot(ctx context.Context, from, to time.Time, kind string) ([]entity.CategoryTotal, error)
 	CaptureCount(ctx context.Context, status string) (int, error)
 }
 

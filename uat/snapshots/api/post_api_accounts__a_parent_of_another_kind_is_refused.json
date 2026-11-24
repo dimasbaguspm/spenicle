@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "invalid parent: a parent must share the child's kind \"expense\""
+  }
+}

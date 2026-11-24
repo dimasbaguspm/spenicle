@@ -205,6 +205,87 @@ func (s *Service) UpdatePayee(ctx context.Context, ref, payeeRef string) (entity
 	return updated, nil
 }
 
+func (s *Service) Correct(ctx context.Context, ref string, in CorrectInput) (entity.Entry, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Correct")
+	defer endSpan()
+
+	original, err := s.Get(ctx, ref)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	if original.VoidedAt != nil {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s is voided", entity.ErrInvalidState, ref)
+	}
+
+	occurredOn := original.OccurredOn
+	if in.OccurredOn != nil {
+		occurredOn = *in.OccurredOn
+	}
+
+	note := original.Note
+	if in.Note != nil {
+		note = *in.Note
+	}
+
+	postings := in.Postings
+	if len(postings) == 0 {
+		postings = make([]PostingInput, 0, len(original.Postings))
+
+		for _, posting := range original.Postings {
+			postings = append(postings, PostingInput{
+				AccountRef:  posting.AccountRef,
+				AmountMinor: posting.AmountMinor,
+				FXRate:      posting.FXRate,
+				FXRateDate:  posting.FXRateDate,
+			})
+		}
+	}
+
+	baseCode, err := s.base.BaseCurrency(ctx)
+	if err != nil {
+		return entity.Entry{}, fmt.Errorf("base currency: %w", err)
+	}
+
+	nativeCurrency, err := entity.CurrencyByCode(original.Currency)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	baseCurrency, err := entity.CurrencyByCode(baseCode)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	built, err := s.buildPostings(ctx, PostInput{
+		OccurredOn: occurredOn,
+		Currency:   original.Currency,
+		Postings:   postings,
+	}, nativeCurrency, baseCurrency)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	replacement, err := entity.NewEntry(entity.Entry{
+		OccurredOn: occurredOn,
+		PayeeID:    original.PayeeID,
+		Note:       note,
+		Currency:   original.Currency,
+		Source:     constant.EntrySourceAdjustment,
+		Postings:   built,
+	})
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	reason := in.Reason
+	if reason == "" {
+		reason = "corrected " + ref
+	}
+
+	return s.entries.ReplaceEntry(ctx, ref, replacement, reason, s.clock.Now())
+}
+
 func (s *Service) resolvePayee(ctx context.Context, ref string) (int64, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.ResolvePayee")
 	defer endSpan()

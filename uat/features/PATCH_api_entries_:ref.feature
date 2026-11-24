@@ -107,3 +107,63 @@ Feature: PATCH /api/entries/{{ref}}
       """
     Then the response status is 422
     And the response JSON matches the snapshot "patch_api_entries_:ref__a_patch_that_asks_for_nothing_is_refused"
+
+  Scenario: Correcting the amount voids the original and posts the replacement
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","note":"coffee","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    When I send a PATCH to "/api/entries/{{ref}}" with:
+      """json
+      {"reason":"wrong amount","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-20000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"20000"}]}
+      """
+    Then the response status is 200
+    And the response JSON matches the snapshot "patch_api_entries_:ref__correcting_the_amount_voids_the_original_and_posts_the_replacement"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 3     |
+
+  Scenario: Correcting only the note keeps the money
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","note":"coffee","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    When I send a PATCH to "/api/entries/{{ref}}" with:
+      """json
+      {"note":"coffee and a bun"}
+      """
+    Then the response status is 200
+    And the response JSON matches the snapshot "patch_api_entries_:ref__correcting_only_the_note_keeps_the_money"
+
+  Scenario: A correction and a void do not travel together
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    When I send a PATCH to "/api/entries/{{ref}}" with:
+      """json
+      {"void":true,"note":"both","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1"}]}
+      """
+    Then the response status is 422
+    And the response JSON matches the snapshot "patch_api_entries_:ref__a_correction_and_a_void_do_not_travel_together"
+
+  Scenario: A correction on a voided entry is refused
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    And the last ref is remembered as "original"
+    And I send a PATCH to "/api/entries/{{ref:original}}" with:
+      """json
+      {"void":true,"reason":"duplicate"}
+      """
+    When I send a PATCH to "/api/entries/{{ref:original}}" with:
+      """json
+      {"note":"too late"}
+      """
+    Then the response status is 409
+    And the response JSON matches the snapshot "patch_api_entries_:ref__a_correction_on_a_voided_entry_is_refused"

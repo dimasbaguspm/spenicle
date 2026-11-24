@@ -1,0 +1,33 @@
+{
+  "accounts": [
+    {
+      "archived": false,
+      "base_amount_minor": "0",
+      "currency": "IDR",
+      "kind": "expense",
+      "name": "Food",
+      "ref": "<ref>"
+    },
+    {
+      "archived": false,
+      "base_amount_minor": "0",
+      "currency": "IDR",
+      "kind": "expense",
+      "name": "Groceries",
+      "parent_ref": "<ref>",
+      "ref": "<ref>"
+    },
+    {
+      "archived": false,
+      "base_amount_minor": "0",
+      "currency": "IDR",
+      "kind": "expense",
+      "name": "Unsorted",
+      "ref": "<ref>"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

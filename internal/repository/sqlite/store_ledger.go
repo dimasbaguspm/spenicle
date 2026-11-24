@@ -39,36 +39,12 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 	entryRef := uuid.New()
 
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
-		res, execErr := tx.ExecContext(ctx, `
-			INSERT INTO ledger_entries
-				(ref, occurred_on, payee_id, note, currency, source, recurring_rule_id,
-				 client_id, reverses_entry_id, voided_at, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
-			entryRef,
-			e.OccurredOn.Format(constant.DateLayout),
-			nullInt(e.PayeeID),
-			nullString(e.Note),
-			e.Currency,
-			e.Source,
-			nullInt(e.RecurringRuleID),
-			nullString(e.ClientID),
-			nullInt(e.ReversesID),
-			createdAt.Format(constant.TimestampLayout),
-		)
-		if execErr != nil {
-			return fmt.Errorf("insert entry: %w", execErr)
-		}
-
-		id, idErr := res.LastInsertId()
-		if idErr != nil {
-			return fmt.Errorf("entry id: %w", idErr)
+		id, insErr := insertEntryRow(ctx, tx, e, entryRef, createdAt)
+		if insErr != nil {
+			return insErr
 		}
 
 		entryID = id
-
-		if postErr := insertPostings(ctx, tx, entryID, e.Postings); postErr != nil {
-			return postErr
-		}
 
 		return appendEntryCreated(ctx, tx, e, entryID, entryRef)
 	})
@@ -434,25 +410,7 @@ func (s *Store) VoidEntry(
 		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
 	}
 
-	reversal := entity.Entry{
-		OccurredOn: original.OccurredOn,
-		PayeeID:    original.PayeeID,
-		Note:       reason,
-		Currency:   original.Currency,
-		Source:     constant.EntrySourceAdjustment,
-		ReversesID: &original.ID,
-		CreatedAt:  at,
-	}
-
-	postings := make([]entity.Posting, 0, len(original.Postings))
-
-	for _, posting := range original.Postings {
-		posting.AmountMinor = -posting.AmountMinor
-		posting.BaseAmountMinor = -posting.BaseAmountMinor
-		postings = append(postings, posting)
-	}
-
-	reversal.Postings = postings
+	reversal := reversalOf(original, reason, at)
 
 	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
@@ -631,4 +589,142 @@ func (s *Store) MatchingEntryRef(
 	}
 
 	return ref, true, nil
+}
+
+func insertEntryRow(
+	ctx context.Context,
+	tx *sql.Tx,
+	e entity.Entry,
+	ref string,
+	createdAt time.Time,
+) (int64, error) {
+	res, err := tx.ExecContext(ctx, `
+		INSERT INTO ledger_entries
+			(ref, occurred_on, payee_id, note, currency, source, recurring_rule_id,
+			 client_id, reverses_entry_id, voided_at, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
+		ref,
+		e.OccurredOn.Format(constant.DateLayout),
+		nullInt(e.PayeeID),
+		nullString(e.Note),
+		e.Currency,
+		e.Source,
+		nullInt(e.RecurringRuleID),
+		nullString(e.ClientID),
+		nullInt(e.ReversesID),
+		createdAt.Format(constant.TimestampLayout),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("insert entry: %w", err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("entry id: %w", err)
+	}
+
+	if err := insertPostings(ctx, tx, id, e.Postings); err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+
+func reversalOf(original entity.Entry, reason string, at time.Time) entity.Entry {
+	reversal := entity.Entry{
+		OccurredOn: original.OccurredOn,
+		PayeeID:    original.PayeeID,
+		Note:       reason,
+		Currency:   original.Currency,
+		Source:     constant.EntrySourceAdjustment,
+		ReversesID: &original.ID,
+		CreatedAt:  at,
+	}
+
+	for _, posting := range original.Postings {
+		posting.AmountMinor = -posting.AmountMinor
+		posting.BaseAmountMinor = -posting.BaseAmountMinor
+		reversal.Postings = append(reversal.Postings, posting)
+	}
+
+	return reversal
+}
+
+func (s *Store) ReplaceEntry(
+	ctx context.Context,
+	ref string,
+	replacement entity.Entry,
+	reason string,
+	at time.Time,
+) (entity.Entry, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ReplaceEntry")
+	defer endSpan()
+
+	original, found, err := s.EntryByRef(ctx, ref)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	if !found {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
+	}
+
+	if original.VoidedAt != nil {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s is voided", entity.ErrInvalidState, ref)
+	}
+
+	if zeroErr := entity.CheckZeroSum(replacement.Postings); zeroErr != nil {
+		return entity.Entry{}, zeroErr
+	}
+
+	reversal := reversalOf(original, reason, at)
+	replacement.Ref = uuid.New()
+	replacement.Source = constant.EntrySourceAdjustment
+	replacement.CreatedAt = at
+
+	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx, `
+			UPDATE ledger_entries SET voided_at = ?
+			WHERE id = ? AND voided_at IS NULL`,
+			at.Format(constant.TimestampLayout), original.ID)
+		if execErr != nil {
+			return fmt.Errorf("mark voided: %w", execErr)
+		}
+
+		affected, rowsErr := res.RowsAffected()
+		if rowsErr != nil {
+			return fmt.Errorf("replace rows: %w", rowsErr)
+		}
+
+		if affected == 0 {
+			return fmt.Errorf("%w: entry %s is already voided", entity.ErrInvalidState, ref)
+		}
+
+		if revErr := insertReversal(ctx, tx, original.ID, reversal); revErr != nil {
+			return revErr
+		}
+
+		id, insErr := insertEntryRow(ctx, tx, replacement, replacement.Ref, at)
+		if insErr != nil {
+			return insErr
+		}
+
+		replacement.ID = id
+
+		return appendEntryCreated(ctx, tx, replacement, id, replacement.Ref)
+	})
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	entry, found, readErr := s.EntryByRef(ctx, replacement.Ref)
+	if readErr != nil {
+		return entity.Entry{}, readErr
+	}
+
+	if !found {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, replacement.Ref)
+	}
+
+	return entry, nil
 }

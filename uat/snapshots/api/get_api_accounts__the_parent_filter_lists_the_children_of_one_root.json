@@ -1,0 +1,17 @@
+{
+  "accounts": [
+    {
+      "archived": false,
+      "base_amount_minor": "0",
+      "currency": "IDR",
+      "kind": "expense",
+      "name": "Groceries",
+      "parent_ref": "<ref>",
+      "ref": "<ref>"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}
