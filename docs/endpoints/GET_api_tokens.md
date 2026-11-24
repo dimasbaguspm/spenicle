@@ -1,6 +1,6 @@
 # GET /api/tokens
 
-**Auth.** **Root session only** — a token listing credentials would be a privilege
+**Auth.** **The instance password only** — a token listing credentials would be a privilege
 escalation, so this route has no scope and answers `403 forbidden` to a Bearer credential.
 
 ## Purpose

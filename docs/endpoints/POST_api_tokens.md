@@ -1,7 +1,7 @@
 # POST /api/tokens
 
-**Auth.** **Root session only.** A token can never mint another token: this route has no
-scope in `routeScopes`, so a Bearer credential answers `403 forbidden`.
+**Auth.** **The instance password only.** A token can never mint another token: this route has no
+root-only mux, so a Bearer credential answers `403 forbidden`.
 
 ## Purpose
 

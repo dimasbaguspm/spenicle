@@ -2,7 +2,7 @@
 
 Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`../README.md`](../README.md).
 
-**19 tables, 46 routes** (one of them `/healthz`).
+**19 tables, 44 routes** (one of them `/healthz`).
 
 Base path `/api`. No version prefix: we are the only consumer, and an agent can adapt to a
 change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, timestamps ISO
@@ -106,7 +106,7 @@ Scopes: `entries:read|write`, `captures:read|write`, `accounts:read|write`, `pay
 `recurring:read|write`, `imports:read|write`, `exports:read|write`, `analytics:read`,
 `audit:read`, `dashboard:read`, `settings:read`, `rates:read`, `admin`, plus `*`.
 
-Each endpoint declares its scope (`routeScopes` in `cmd/http/handler.go`); a subset returns
+Each endpoint declares its scope when it is registered (`groups.scoped.route(scope, pattern, handler)` in `cmd/http/handler.go`); a subset returns
 `403 forbidden`. `admin` and `*` cover every scoped route. Routes with **no** scope live in
 their own mux that only the root credential reaches — `/api/tokens*`, `/api/password`,
 `PATCH /api/settings` — so a token can never mint another token. The typical agent token is
@@ -459,7 +459,6 @@ CREATE INDEX ix_audit_action ON audit_log (action, at);
 | # | method | path | scope | purpose |
 | --- | --- | --- | --- | --- |
 | 1 | POST | `/api/setup` | none, once | wizard: base currency, accounts, seeded categories |
-| 2 | POST | `/api/session` | none | password login, returns the root credential |
 | 3 | GET | `/api/meta` | `*:read` | bootstrap: settings, accounts, payees, rules, currencies |
 | 4 | PATCH | `/api/settings` | `admin` | mutable settings |
 | 5 | POST | `/api/accounts` | `accounts:write` | create account or category |
@@ -936,7 +935,7 @@ sequenceDiagram
     participant API as Tokens handler
     participant DB as SQLite
     U->>API: POST token with name and scopes
-    API->>API: require session credential, require APP_SECRET for hashing
+    API->>API: require the credential, require APP_SECRET for hashing
     API->>API: validate scopes, generate 32 byte secret
     API->>DB: BEGIN IMMEDIATE
     API->>DB: INSERT api_tokens with HMAC of secret
