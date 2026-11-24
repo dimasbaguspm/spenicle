@@ -43,6 +43,7 @@ done are marked there as well.
 | G9 | intake captures only `text/plain` bodies, attachments are not captured, and only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank attachment never becomes a capture | forward the text, or use the share sheet |
 | G10 | `PATCH /api/settings` refuses every body (`base_currency`, `timezone` are not patchable) | no in-app settings beyond setup | settings are environment variables: `APP_TIMEZONE`, restart, or a fresh database |
 | G11 | `ai_assistance` is still computed from `OPENAI_*` and returned by `GET /api/settings` and `GET /api/meta`, but `config.SelectRail` only builds the SnapToJSON rail and the OpenAI adapter is wired by tests only | a client that gates a screen on it offers a feature that does not exist | gate on `extraction_enabled`; treat `ai_assistance` as unknown-until-removed |
+| G12 | the export does not carry `categorization_rules`: `module/export` renders accounts, payees, entries, captures, recurring, rates and saved views, so a backup/restore loses the rules | a restored instance forgets why a merchant was filed | re-create the rules by hand; export is still the complete ledger. Closing this is the next `feat:` |
 
 Doc debt left after the five closures (fix in the same MR as the next docs change):
 `docs/endpoints/README.md` still has no rows for the four `/api/connections*` routes;

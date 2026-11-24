@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "a note rule matches contains or prefix, never exact"
+  }
+}

@@ -52,3 +52,13 @@ Feature: POST /api/categorization/rules
       """
     Then the response status is 422
     And the response JSON matches the snapshot "post_api_categorization_rules__a_one_character_pattern_is_refused"
+
+  Scenario: A note rule cannot be exact
+    Given a running API
+    And the account "Cat" exists as "expense"
+    When I send a POST to "/api/categorization/rules" with:
+      """json
+      {"pattern":"whiskas","field":"note","match_kind":"exact","category_ref":"{{account:Cat}}"}
+      """
+    Then the response status is 422
+    And the response JSON matches the snapshot "post_api_categorization_rules__a_note_rule_cannot_be_exact"

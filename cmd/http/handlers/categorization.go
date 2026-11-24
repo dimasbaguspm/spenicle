@@ -97,6 +97,13 @@ func (s *Server) CreateCategorizationRule(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if request.Field == constant.RuleFieldNote && request.MatchKind == constant.RuleMatchExact {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+			"a note rule matches contains or prefix, never exact")
+
+		return
+	}
+
 	if !s.categoryExists(ctx, w, request.CategoryRef) {
 		return
 	}
