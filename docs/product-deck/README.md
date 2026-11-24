@@ -100,9 +100,9 @@ is re-coded to the domain code when the table knows it, so `unknown_currency` an
 - **Money is a minor-unit string.** `"25000"` next to `"currency":"IDR"`. Never a
   float, never a formatted string. A client formats; the API never does.
 - **Refs only.** Every row has a 32-lowercase-hex `ref`; that is the only identifier
-  the API speaks. Requests send `account_ref`, `payee_ref`, `category_ref`, responses
-  carry `ref`. One exception exists and is called out in [F9](./09-gaps-and-next.md)
-  gap 1: capture approve's body declares a `payee_id` integer — and ignores it.
+  the API speaks. Requests send `account_ref`, `payee_ref`, `category_ref`, `entry_ref`,
+  responses carry `ref` (and `resolved_entry_ref`). No route accepts or returns an
+  integer id: an unknown field such as `payee_id` is `400 invalid_json`.
 - **Dates** are `YYYY-MM-DD`, timestamps RFC3339 in UTC. Every calendar decision
   ("today", "due", "this month") is made in `APP_TIMEZONE`, pinned at the first boot
   and reported by `GET /api/settings` and `GET /healthz`.

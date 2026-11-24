@@ -8,6 +8,24 @@ instead; **(B)** the feature cuts worth shipping next, each with its own RRR ske
 acceptance stub. Nothing in (B) is in the design doc yet, so each one starts with a
 `docs/v2-design.md` change.
 
+## What shipped since this list was written
+
+Five of the gaps below are **closed** on `main`. The row keeps its number so older links
+still resolve, and the third column says what replaced it:
+
+| gap | shipped as | commit |
+| --- | --- | --- |
+| 1 | `PATCH /api/captures/{ref}` takes `payee_ref`, resolves it through `PayeeSource.PayeeByRef`, and every capture answers `resolved_entry_ref`; an integer `payee_id` is now `400 invalid_json` | `feat: resolve a capture with refs, never integer ids` |
+| 2 | `PATCH /api/entries/{ref}` takes `occurred_on`, `note` and `postings` and replaces the entry in one write (void + replacement, one transaction) | `feat: correct an entry's amount, date or note in one write` |
+| 4 | `POST`/`PATCH /api/accounts` take `parent_ref` (same kind, no cycle, three levels) and `GET /api/analytics/categories?rollup=parent` sums a child into its root | `feat: nest a category under a parent and roll it up` |
+| 6 | a duplicate `name`+`kind`, `payees.name` or `custom_queries.name` answers `409 duplicate` | `fix: answer 409 for a duplicate name` |
+| 8 | `PATCH /api/captures/{ref}` accepts `{"action":"match","entry_ref":"…"}`, moving the capture to `duplicate` without touching the ledger | `feat: resolve a capture with refs, never integer ids` |
+
+Still open: **3** (opening balances in the one-shot setup), **9** (the ledger resolving a
+rate itself), and the cross-cutting rows from 5 onward. The next cuts in (B) that are now
+done are marked there as well.
+
+---
 ---
 
 ## A. Gaps in the API as shipped
