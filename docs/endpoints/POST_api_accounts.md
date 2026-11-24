@@ -51,8 +51,7 @@ would close a cycle; `422 unknown_currency` for a code this build does not know;
 
 No icon or opening balance in this route yet — use `PATCH /api/accounts/{ref}` to rename,
 add an icon or archive. Three levels is the ceiling (`child → parent → grandparent`). A
-duplicate `name`+`kind` pair is refused by the unique index (a `500` today, not a
-friendly `409`).
+duplicate `name`+`kind` pair answers `409 duplicate`, not a `500`.
 
 ## Sequence
 

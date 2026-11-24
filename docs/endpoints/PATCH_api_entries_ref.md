@@ -4,13 +4,14 @@
 
 ## Purpose
 
-Two separate corrections, one at a time: void the entry, or set (or clear) its payee.
-Voiding never deletes — it writes the compensating entry and stamps `voided_at` on the
-original, in one transaction.
+Three corrections, one at a time: void the entry, set (or clear) its payee, or correct
+it — the date, the note, or the postings — which voids the original and posts the
+replacement in the same transaction. Nothing is ever deleted.
 
 ## Upstream
 
-Ledger screen ("I logged this twice", "this was Kopi Kenangan, not the supermarket").
+Ledger screen ("I logged this twice", "this was Kopi Kenangan, not the supermarket",
+"that coffee was 20 000, not 18 000").
 
 ## Downstream
 
@@ -23,6 +24,12 @@ resolve the payee through `PayeeSource.PayeeByRef`, `UPDATE ledger_entries SET p
 insert `audit_log` action `update` on `ledger_entries`, then reload the entry with its
 postings.
 
+`{"occurred_on"|"note"|"postings"}` → `Module.Ledger.Correct` → `Repository.Sqlite.ReplaceEntry`
+in one transaction: stamp `voided_at` on the original, insert the reversal, insert the
+replacement (source `adjustment`, same currency and payee, the corrected date/note and
+the postings you sent, rebuilt through the normal zero-sum and FX path), and append the
+`void` and `create` audit rows.
+
 ## Path / query params
 
 `ref` (32-hex ref, required).
@@ -31,41 +38,47 @@ postings.
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
-| `void` | bool | one of the two | must be `true` |
-| `payee_ref` | ref | one of the two | `""` clears the payee; an unknown ref is `404 not_found` |
-| `reason` | string | no | becomes the reversal's note |
+| `void` | bool | one action | must be `true` |
+| `payee_ref` | ref | one action | `""` clears the payee; an unknown ref is `404 not_found` |
+| `occurred_on` | date | one action | the corrected date |
+| `note` | string | one action | ≤ 2000; `""` clears it |
+| `postings` | array | optional with a correction | ≥ 2, sums to zero; omitted keeps the original amounts |
+| `reason` | string | no | the reversal's note |
 
-The two actions never travel together. A body that sends neither `void` nor `payee_ref`
-is refused, and so is a body that sends both:
+Exactly one action per request. A body that sends none, or two, is refused:
 
 | body | status | code | message |
 | --- | --- | --- | --- |
 | `{"void":true,"reason":"duplicate"}` | `200` | — | the reversal entry |
 | `{"payee_ref":"<32 hex>"}` | `200` | — | the entry, now carrying `payee{ref,name}` |
 | `{"payee_ref":""}` | `200` | — | the entry, without `payee` |
-| `{"reason":"nothing"}` | `422` | `invalid_request` | `send {"void": true} or {"payee_ref": "..."}` |
-| `{"void":true,"payee_ref":"<32 hex>"}` | `422` | `invalid_request` | `void and payee_ref are separate actions` |
+| `{"note":"coffee and a bun"}` | `200` | — | the replacement entry (a reversal pair is written) |
+| `{"occurred_on":"2026-02-15","postings":[…]}` | `200` | — | the replacement entry with the new date |
+| `{"reason":"nothing"}` | `422` | `invalid_request` | `send {"void": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings` |
+| `{"void":true,"note":"both"}` | `422` | `invalid_request` | `void, payee_ref and a correction are separate actions` |
 | `{"void":false}` | `422` | `unsupported_patch` | `only {"void": true} is supported today` |
 
 ## Response
 
 `200` with the full entry: `ref`, `occurred_on`, `currency`, `source`, `note`, the
-postings, `voided_at` on the reversal, and `payee: {ref, name}` whenever the entry has a
-payee. The body is the same shape `GET /api/entries` returns per row.
+postings, `payee: {ref, name}` when the entry has one. `void` answers the reversal; a
+correction answers the replacement (`source: "adjustment"`).
 
 ## Errors
 
 `404 not_found` (unknown entry or unknown `payee_ref`); `409 invalid_state` (already
-voided); `422 invalid_request` (no action, both actions, a `{ref}` or `payee_ref` that is
-not a 32-hex ref); `422 unsupported_patch` for `{"void": false}`; `400 invalid_json`.
+voided, for both a second void and a correction); `422 invalid_request` (no action, more
+than one action, a `{ref}` or `payee_ref` that is not 32 hex, an unbalanced posting set);
+`422 postings_not_balanced`, `422 invalid_postings`, `422 unknown_currency`,
+`422 invalid_rate` from the ledger; `422 unsupported_patch` for `{"void": false}`;
+`400 invalid_json`.
 
 ## Limitations
 
-The note is not editable; void and re-post remains the correction for everything except
-the payee. `voided_at` is not serialised in listings yet; the reversal row is the
-evidence.
-
-
+A correction is never an in-place edit: it writes a reversal pair, so three rows exist
+after one correction and the store keeps the history. Sending `postings` re-derives the
+base amounts with the rates you send; omitting them reuses the original amounts and
+rates. A correction on a voided entry is `409`, and re-posting is the way forward.
 
 ---
 
@@ -78,33 +91,19 @@ sequenceDiagram
     participant H as Entries handler
     participant L as Ledger module
     participant DB as SQLite
-    C->>H: PATCH /api/entries/{ref} {void:true, reason} or {payee_ref}
+    C->>H: PATCH /api/entries/{ref} {void|payee_ref|occurred_on,note,postings}
     alt void
         H->>L: Void(ref, reason)
-        L->>DB: SELECT entry + postings
-        alt missing
-            H-->>C: 404 not_found
-        end
-        L->>DB: BEGIN
-        L->>DB: UPDATE ledger_entries SET voided_at WHERE id=? AND voided_at IS NULL
-        alt already voided
-            L->>DB: ROLLBACK
-            H-->>C: 409 invalid_state
-        else
-            L->>DB: INSERT reversal entry (reverses_entry_id)
-            L->>DB: INSERT negated postings
-            L->>DB: INSERT audit_log action=void
-            L->>DB: COMMIT
-            H-->>C: 200 reversal entry
-        end
+        L->>DB: BEGIN; UPDATE voided_at WHERE NULL; INSERT reversal + audit; COMMIT
+        H-->>C: 200 reversal
     else payee
         H->>L: UpdatePayee(ref, payee_ref)
-        L->>DB: SELECT payee WHERE ref=?
-        alt unknown payee
-            H-->>C: 404 not_found
-        end
-        L->>DB: BEGIN; UPDATE ledger_entries SET payee_id; INSERT audit_log action=update; COMMIT
-        L->>DB: SELECT entry + postings
-        H-->>C: 200 entry with payee
+        L->>DB: BEGIN; UPDATE payee_id; INSERT audit; COMMIT
+        H-->>C: 200 entry
+    else correction
+        H->>L: Correct(ref, occurred_on?, note?, postings?)
+        L->>L: rebuild postings, CheckZeroSum
+        L->>DB: BEGIN; UPDATE voided_at; INSERT reversal; INSERT replacement + audit; COMMIT
+        H-->>C: 200 replacement
     end
 ```
