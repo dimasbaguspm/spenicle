@@ -49,6 +49,11 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `POST` | `/api/tokens` | mint a scoped, non-root credential (root only) | [`POST_api_tokens.md`](./POST_api_tokens.md) |
 | `GET` | `/api/tokens` | every issued token, never its secret (root only) | [`GET_api_tokens.md`](./GET_api_tokens.md) |
 | `POST` | `/api/tokens/{ref}/revoke` | revoke a token; the row stays (root only) | [`POST_api_tokens_ref_revoke.md`](./POST_api_tokens_ref_revoke.md) |
+| `GET` | `/api/intake` | the intake configuration, never its secrets | [`GET_api_intake.md`](./GET_api_intake.md) |
+| `PATCH` | `/api/intake` | turn polling on, set the sender allowlist | [`PATCH_api_intake.md`](./PATCH_api_intake.md) |
+| `POST` | `/api/intake/run` | poll the mailbox once, now | [`POST_api_intake_run.md`](./POST_api_intake_run.md) |
+| `GET` | `/api/intake/messages/{ref}` | one mail reference and what it became | [`GET_api_intake_messages_ref.md`](./GET_api_intake_messages_ref.md) |
+| `POST` | `/api/intake/messages/{ref}/refresh` | the latest state of one mail | [`POST_api_intake_messages_ref_refresh.md`](./POST_api_intake_messages_ref_refresh.md) |
 | `POST` | `/api/exports` | queue an export the worker renders | [`POST_api_exports.md`](./POST_api_exports.md) |
 | `GET` | `/api/exports` | every export job, newest first | [`GET_api_exports.md`](./GET_api_exports.md) |
 | `GET` | `/api/exports/{ref}` | one export job and its status | [`GET_api_exports_ref.md`](./GET_api_exports_ref.md) |
