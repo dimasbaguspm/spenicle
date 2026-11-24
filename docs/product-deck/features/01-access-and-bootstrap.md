@@ -50,7 +50,7 @@ Scope vocabulary (a token carries 1–20 of these; `admin` and `*` cover every s
 route): `entries:read|write`, `captures:read|write`, `accounts:read|write`,
 `payees:read|write`, `recurring:read|write`, `imports:read|write`,
 `exports:read|write`, `analytics:read`, `audit:read`, `dashboard:read`,
-`settings:read`, `rates:read`.
+`settings:read`, `rates:read`, `categorization:read|write`.
 
 ### 2.3 Authorise the mailbox (Google rail)
 

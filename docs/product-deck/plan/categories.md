@@ -2,8 +2,24 @@
 
 **Question** "`KOPI KENANGAN` should land in *Personal food* every time. `WHISKAS` should
 land in *Cat*. `INDOMARET` should land in *Grocery*, not in *Personal food*." **State**
-phase 1 is ready to build (no schema change). **Blocks** the budget feature, which is
-useless while `Unsorted` holds half the ledger.
+**shipped** — all three slices are live, see the decision record below. It is what the
+budget feature rests on.
+
+## 0. Decision record
+
+Closed on the way in, so nobody re-opens them:
+
+| question | decision |
+| --- | --- |
+| first-wins or last-wins on a learned default? | **first-wins**: the approve path fills an *empty* `payees.default_category_ref` and never overwrites one; changing it is an explicit `PATCH /api/payees/{ref}` |
+| which fields can a rule match? | both `payee` and `note` exist in the schema; the ladder applies payee rules first and note rules last, so a note rule can never beat a merchant rule |
+| regex? | no. `exact`, `contains`, `prefix` only — deterministic and explainable |
+| who may write the ledger? | nobody new: a suggestion is a read; `approve` and `commit` stay the only writes |
+
+What shipped, in order: `feat: remember the category a capture approval chose` (slice 1),
+`feat: map a text pattern to a category and suggest it` (slice 2, migration `0002`), and
+`feat: split category spend per month and report its first day` (slice 3). The client-facing
+contract is [F10](../features/10-categories.md).
 
 ## 1. The real problem
 
@@ -13,8 +29,10 @@ the right category on every capture, entry and imported row.
 
 What exists today:
 
-- `payees.default_category_ref` — a manual default, set on the payee sheet, prefilling the
-  entry form; it is per payee, and nothing learns it.
+- `payees.default_category_ref` — a per-payee default; since `feat: remember the category a
+  capture approval chose` an approval fills it when it is empty, first-wins.
+- `categorization_rules` — explicit `pattern → category` rules (migration `0002`), applied
+  after the payee default and before anything else.
 - a capture `draft_json` (sealed) with whatever the extractor guessed, and an approve body
   that must carry the postings — the client resolves the category.
 - import rows, which carry a `category_ref` the user patches one row at a time.

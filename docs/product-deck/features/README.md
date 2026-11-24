@@ -23,19 +23,18 @@ here follows the same six sections, so a reader can jump to the part they need:
 | [F7](./07-insights.md) | how did the month go | live |
 | [F8](./08-export.md) | the door out | live |
 | [F9](./09-gaps-and-next.md) | what we cannot ship yet | live (the honest list) |
+| [F10](./10-categories.md) | categories that land in the same place every time | live (suggest, rules, learning) |
 
 "Live" means: the routes exist, the UAT suite covers them, `make test` is green and the
 endpoint docs under [`../../endpoints/`](../../endpoints/README.md) match the code.
 
-## Ready to build (not shipped)
+## Ships with the deck
 
-Nothing has graduated yet. The closest is **`plan/categories.md` phase 1** — learning a
-payee's category on approval — which needs no schema change, no new route and no new
-dependency. It is the first slice of the [categories plan](../plan/categories.md).
-
-The other two plans are still asking their questions:
-[budget](../plan/budget.md) waits on rollover and period, and
-[account-groups](../plan/account-groups.md) waits on the group-vs-parent separation.
+Every page above is live: the routes exist, the UAT suite covers them, `make test` is green
+and the endpoint docs under [`../../endpoints/`](../../endpoints/README.md) match the code.
+There is nothing waiting in this folder — a page lands here only after its code does.
+The two plans still asking questions are [budget](../plan/budget.md) (rollover, period) and
+[account-groups](../plan/account-groups.md) (group vs. parent).
 
 ## How a page gets here
 

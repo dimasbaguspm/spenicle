@@ -8,7 +8,7 @@ writes code. A plan is allowed to be wrong; a feature page is not.
 | --- | --- | --- |
 | [budget](./budget.md) | "Rp 1 500 000 for food this month — am I okay?" | decisions open (rollover, period) |
 | [account-groups](./account-groups.md) | "show me all liquid money, not one account" | decisions open (taxonomy vs. tags) |
-| [categories](./categories.md) | "KOPI KENANGAN should always land in Personal food, without me thinking" | **closest to ready**: phase 1 needs no schema change |
+| [categories](./categories.md) | "KOPI KENANGAN should always land in Personal food, without me thinking" | **shipped** → [F10](../features/10-categories.md) |
 
 ## How a plan graduates
 
