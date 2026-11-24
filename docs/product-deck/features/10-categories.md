@@ -75,8 +75,9 @@ GET  /api/analytics/categories    → CategoryTotals | CategoryTotalsByRoot | Ca
 - **One ladder, not configurable.** payee default → exact rule on the payee name →
   `contains`/`prefix` on the payee name → `contains`/`prefix` on the note → `none`. Inside a
   tier: `priority DESC`, pattern length `DESC`, `created_at ASC`. The same function answers
-  the suggest route, the capture draft and the import row, so one merchant cannot resolve
-  two ways.
+  every `GET /api/categorization/suggest`, so one merchant cannot resolve two ways — but the
+  capture and import responses do **not** carry a suggestion yet: the client asks the route,
+  then prefills the form it is showing.
 - **Rules are refs + rows.** `categorization_rules` points at an account (`expense`/
   `income` only) with a partial unique index over live rules; every write appends
   `categorization_rule/create|update`. A rule whose category was archived is skipped.
