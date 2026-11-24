@@ -34,15 +34,15 @@ Three surfaces, one API:
 
 | page | feature | client sees | backend areas |
 | --- | --- | --- | --- |
-| [F1](./01-access-and-bootstrap.md) | open the instance, then keep it closed | first-run wizard, forced password change, token screen, audit |
-| [F2](./02-capture-inbox.md) | capture now, decide later | share sheet, review queue, receipt viewer, mail intake |
-| [F3](./03-ledger.md) | the ledger is the truth | entry form, ledger list, entry detail, void |
-| [F4](./04-accounts-and-payees.md) | accounts, categories, merchants | chart of accounts, payee picker |
-| [F5](./05-recurring.md) | predictable money arrives on its own | recurring rules, queue items the worker queued |
-| [F6](./06-statement-import.md) | a bank CSV becomes a reviewable draft | import wizard, row editor, commit |
-| [F7](./07-insights.md) | how did the month go | dashboard tiles, month bars, category pie, saved views |
-| [F8](./08-export.md) | the door out | export job, progress polling, download |
-| [F9](./09-gaps-and-next.md) | what we cannot ship yet | — (the honest list) |
+| [F1](./features/01-access-and-bootstrap.md) | open the instance, then keep it closed | first-run wizard, forced password change, token screen, audit |
+| [F2](./features/02-capture-inbox.md) | capture now, decide later | share sheet, review queue, receipt viewer, mail intake |
+| [F3](./features/03-ledger.md) | the ledger is the truth | entry form, ledger list, entry detail, void, correction |
+| [F4](./features/04-accounts-and-payees.md) | accounts, categories, merchants | chart of accounts, payee picker, parent tree |
+| [F5](./features/05-recurring.md) | predictable money arrives on its own | recurring rules, queue items the worker queued |
+| [F6](./features/06-statement-import.md) | a bank CSV becomes a reviewable draft | import wizard, row editor, commit |
+| [F7](./features/07-insights.md) | how did the month go | dashboard tiles, month bars, category pie, saved views |
+| [F8](./features/08-export.md) | the door out | export job, progress polling, download |
+| [F9](./features/09-gaps-and-next.md) | what we cannot ship yet | — (the honest list) |
 
 Status of every feature page here is **live**: the route exists, the UAT suite covers
 it, `make test` and `make lint` are green. F9 lists what is *not* live and what it
@@ -178,7 +178,7 @@ worker is thinking".
 | no push channel | a recurring capture or a finished export waits up to `WorkerInterval` | every job route exposes its status and its event log, so the client can explain the wait instead of guessing; `worker_last_run_at` names the last tick |
 | one writer at a time | SQLite `BEGIN IMMEDIATE` serialises writes; a long import commit blocks every other write | commits run in chunks of `ImportCommitChunk` (500) and are resumable, so a blocked writer is a slow writer, never a lost one |
 | retention sweeps | a rejected capture loses its receipt after 720h; a ready export 410s after 720h | the row survives with `deleted_at`/`status = expired`, and the UI is told to say "the file was reclaimed", never "not found" |
-| integer ids on the wire | capture approve's request struct accepts a `payee_id` integer and never reads it: a client that fills it believes a payee was attached | [F9](./09-gaps-and-next.md) gap 1 — the field has to be removed (and replaced by `payee_ref`), not honoured |
+| approve needs postings | a capture draft is a suggestion, not an entry: the client builds the postings from `draft_json` or gets `422 invalid_request` | the review screen prefills from the draft; the API never posts from one. [F9](./features/09-gaps-and-next.md) |
 
 ### Rollout
 
@@ -208,3 +208,13 @@ Before a client ships a feature that touches money, the readiness checklist is:
 Rollback is never "delete the migration": the container keeps a forward-only schema,
 so rolling back means running the previous image against the same file. Nothing in
 this deck writes a destructive migration.
+
+## Where this deck lives
+
+| path | what |
+| --- | --- |
+| [`./features/`](./features/README.md) | one page per **shipped** feature, the same six sections each; the contract a client codes against |
+| [`./plan/`](./plan/README.md) | brainstorms: budget, account groups, category detection — job, options, decision, open questions, exit criteria |
+
+The rule between them: a `plan/` page is allowed to be wrong, a `features/` page is not.
+A plan graduates when its open questions are answered and the code is already in.

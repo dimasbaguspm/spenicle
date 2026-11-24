@@ -234,6 +234,6 @@ Scenario: A token without the scope is refused by name
 
 - No password history, no reuse check, no per-device sign-out.
 - No token expiry and no per-token rate limit (both are open questions in
-  [`../endpoints/planned.md`](../endpoints/planned.md)).
+  [`../../endpoints/planned.md`](../../endpoints/planned.md)).
 - No `PATCH /api/settings`: every body it receives is refused, by design.
-- No `PATCH /api/accounts/{ref}` for `kind` and no reparenting — see [F4](./04-accounts-and-payees.md).
+- No `PATCH /api/accounts/{ref}` for `kind`; reparenting and the roll-up ship in [F4](./04-accounts-and-payees.md).

@@ -64,7 +64,7 @@ used when SnapToJSON is unset", and `docs/v2-api.md` still ties `ai_assistance` 
 
 Ordered by "unblocks a client screen per unit of backend risk". Each one is a vertical
 slice with its own acceptance criteria, in the shape
-[`CONTRIBUTING.md`](../../CONTRIBUTING.md) asks for.
+[`CONTRIBUTING.md`](../../../CONTRIBUTING.md) asks for.
 
 ### N1 — Approve a capture with a payee ref *(fixes gap 1)*
 
