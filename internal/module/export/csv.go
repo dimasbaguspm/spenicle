@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	manifestName = "manifest.json"
-	summaryName  = "summary.json"
+	manifestName    = "manifest.json"
+	summaryName     = "summary.json"
+	createdAtColumn = "created_at"
 )
 
 type sheet struct {
@@ -87,14 +88,14 @@ func sheets(snap *snapshot) []sheet {
 		{
 			name: "accounts.csv",
 			header: []string{
-				"ref", "name", "kind", "parent_ref", "currency", "icon", "archived_at", "created_at",
+				"ref", "name", "kind", "parent_ref", "currency", "icon", "archived_at", createdAtColumn,
 			},
 			rows: accountSheet(snap),
 		},
 		{
 			name: "payees.csv",
 			header: []string{
-				"ref", "name", "default_account_ref", "default_category_ref", "archived_at", "created_at",
+				"ref", "name", "default_account_ref", "default_category_ref", "archived_at", createdAtColumn,
 			},
 			rows: payeeSheet(snap),
 		},
@@ -102,7 +103,7 @@ func sheets(snap *snapshot) []sheet {
 			name: "entries.csv",
 			header: []string{
 				"ref", "occurred_on", "currency", "source", "note", "client_id",
-				"payee_ref", "reverses_ref", "voided_at", "created_at",
+				"payee_ref", "reverses_ref", "voided_at", createdAtColumn,
 			},
 			rows: entrySheet(snap),
 		},
@@ -132,13 +133,13 @@ func sheets(snap *snapshot) []sheet {
 			header: []string{
 				"ref", "payee_ref", "account_ref", "category_ref", "amount_minor",
 				"currency", "cadence", "interval_n", "day_of_month", "business_day_shift",
-				"next_due_on", "ends_on", "origin", "state", "last_posted_on", "created_at",
+				"next_due_on", "ends_on", "origin", "state", "last_posted_on", createdAtColumn,
 			},
 			rows: recurringSheet(snap),
 		},
 		{
 			name:   "custom_queries.csv",
-			header: []string{"ref", "name", "namespace", "chart", "created_at", "updated_at"},
+			header: []string{"ref", "name", "namespace", "chart", createdAtColumn, "updated_at"},
 			rows:   customQuerySheet(snap),
 		},
 	}

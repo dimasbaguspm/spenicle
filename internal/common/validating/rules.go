@@ -9,13 +9,25 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const refLength = 32
+const (
+	refLength        = 32
+	tagCurrency      = "currency"
+	tagCaptureAction = "captureaction"
+)
 
 var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only rule table
-	"currency": func(field validator.FieldLevel) bool {
+	tagCurrency: func(field validator.FieldLevel) bool {
 		_, err := entity.CurrencyByCode(field.Field().String())
 
 		return err == nil
+	},
+	tagCaptureAction: func(field validator.FieldLevel) bool {
+		switch field.Field().String() {
+		case "approve", "reject", "retry", "match":
+			return true
+		default:
+			return false
+		}
 	},
 	"money": func(field validator.FieldLevel) bool {
 		_, err := Money(field.Field().String(), "money")

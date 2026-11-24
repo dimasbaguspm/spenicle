@@ -62,6 +62,7 @@ func handleSnaps(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxBody)
 
+	//nolint:gosec // G120: r.Body is capped by the MaxBytesReader above.
 	if err := r.ParseMultipartForm(maxMemory); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_body", "file or snap_id")
 

@@ -660,6 +660,31 @@ func (s *Store) ReplaceEntry(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ReplaceEntry")
 	defer endSpan()
 
+	original, err := s.replacementTarget(ctx, ref, replacement)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	reversal := reversalOf(original, reason, at)
+	replacement.Ref = uuid.New()
+	replacement.Source = constant.EntrySourceAdjustment
+	replacement.CreatedAt = at
+
+	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		return writeReplacement(ctx, tx, original, replacement, reversal, at)
+	})
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	return s.requiredEntry(ctx, replacement.Ref)
+}
+
+func (s *Store) replacementTarget(
+	ctx context.Context,
+	ref string,
+	replacement entity.Entry,
+) (entity.Entry, error) {
 	original, found, err := s.EntryByRef(ctx, ref)
 	if err != nil {
 		return entity.Entry{}, err
@@ -677,53 +702,52 @@ func (s *Store) ReplaceEntry(
 		return entity.Entry{}, zeroErr
 	}
 
-	reversal := reversalOf(original, reason, at)
-	replacement.Ref = uuid.New()
-	replacement.Source = constant.EntrySourceAdjustment
-	replacement.CreatedAt = at
+	return original, nil
+}
 
-	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
-		res, execErr := tx.ExecContext(ctx, `
-			UPDATE ledger_entries SET voided_at = ?
-			WHERE id = ? AND voided_at IS NULL`,
-			at.Format(constant.TimestampLayout), original.ID)
-		if execErr != nil {
-			return fmt.Errorf("mark voided: %w", execErr)
-		}
+func writeReplacement(
+	ctx context.Context,
+	tx *sql.Tx,
+	original, replacement, reversal entity.Entry,
+	at time.Time,
+) error {
+	res, err := tx.ExecContext(ctx, `
+		UPDATE ledger_entries SET voided_at = ?
+		WHERE id = ? AND voided_at IS NULL`,
+		at.Format(constant.TimestampLayout), original.ID)
+	if err != nil {
+		return fmt.Errorf("mark voided: %w", err)
+	}
 
-		affected, rowsErr := res.RowsAffected()
-		if rowsErr != nil {
-			return fmt.Errorf("replace rows: %w", rowsErr)
-		}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("replace rows: %w", err)
+	}
 
-		if affected == 0 {
-			return fmt.Errorf("%w: entry %s is already voided", entity.ErrInvalidState, ref)
-		}
+	if affected == 0 {
+		return fmt.Errorf("%w: entry %s is already voided", entity.ErrInvalidState, original.Ref)
+	}
 
-		if revErr := insertReversal(ctx, tx, original.ID, reversal); revErr != nil {
-			return revErr
-		}
+	if revErr := insertReversal(ctx, tx, original.ID, reversal); revErr != nil {
+		return revErr
+	}
 
-		id, insErr := insertEntryRow(ctx, tx, replacement, replacement.Ref, at)
-		if insErr != nil {
-			return insErr
-		}
+	id, err := insertEntryRow(ctx, tx, replacement, replacement.Ref, at)
+	if err != nil {
+		return err
+	}
 
-		replacement.ID = id
+	return appendEntryCreated(ctx, tx, replacement, id, replacement.Ref)
+}
 
-		return appendEntryCreated(ctx, tx, replacement, id, replacement.Ref)
-	})
+func (s *Store) requiredEntry(ctx context.Context, ref string) (entity.Entry, error) {
+	entry, found, err := s.EntryByRef(ctx, ref)
 	if err != nil {
 		return entity.Entry{}, err
 	}
 
-	entry, found, readErr := s.EntryByRef(ctx, replacement.Ref)
-	if readErr != nil {
-		return entity.Entry{}, readErr
-	}
-
 	if !found {
-		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, replacement.Ref)
+		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
 	}
 
 	return entry, nil

@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	kindPtr    = reflect.Ptr
 	kindStruct = reflect.Struct
 	kindString = reflect.String
 	kindInt64  = reflect.Int64
@@ -22,7 +21,7 @@ var timeType = reflect.TypeOf(time.Time{}) //nolint:gochecknoglobals // a type, 
 
 func Fill(target any, tag string, lookup func(string) (string, bool)) error {
 	inspect := reflect.ValueOf(target)
-	if inspect.Kind() != kindPtr || inspect.Elem().Kind() != kindStruct {
+	if inspect.Kind() != reflect.Pointer || inspect.Elem().Kind() != kindStruct {
 		return errors.New("bind target must be a pointer to a struct")
 	}
 

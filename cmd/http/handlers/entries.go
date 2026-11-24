@@ -67,11 +67,11 @@ type entryResponse struct {
 
 type entryPatchRequest struct {
 	Void       *bool            `json:"void,omitempty"`
-	Reason     string           `json:"reason,omitempty"     validate:"max=2000"`
-	PayeeRef   *string          `json:"payee_ref,omitempty"  validate:"omitempty,ref"`
+	Reason     string           `json:"reason,omitempty"      validate:"max=2000"`
+	PayeeRef   *string          `json:"payee_ref,omitempty"   validate:"omitempty,ref"`
 	OccurredOn string           `json:"occurred_on,omitempty" validate:"omitempty,datestr"`
-	Note       *string          `json:"note,omitempty"       validate:"omitempty,max=2000"`
-	Postings   []postingRequest `json:"postings,omitempty"   validate:"omitempty,min=2,dive"`
+	Note       *string          `json:"note,omitempty"        validate:"omitempty,max=2000"`
+	Postings   []postingRequest `json:"postings,omitempty"    validate:"omitempty,min=2,dive"`
 }
 
 func (s *Server) ListEntries(w http.ResponseWriter, r *http.Request) {
@@ -163,48 +163,29 @@ func (s *Server) entryPatch(
 	ref string,
 	request entryPatchRequest,
 ) (entity.Entry, bool) {
-	corrects := request.OccurredOn != "" || request.Note != nil || len(request.Postings) > 0
-
-	actions := 0
-	if request.Void != nil {
-		actions++
-	}
-
-	if request.PayeeRef != nil {
-		actions++
-	}
-
-	if corrects {
-		actions++
-	}
-
-	switch {
-	case actions == 0:
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
-			`send {"void": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings`)
-
-		return entity.Entry{}, false
-	case actions > 1:
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
-			"void, payee_ref and a correction are separate actions")
-
-		return entity.Entry{}, false
-	case request.Void != nil && !*request.Void:
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_patch",
-			`only {"void": true} is supported today`)
-
+	action, ok := entryPatchAction(w, request)
+	if !ok {
 		return entity.Entry{}, false
 	}
 
+	return s.applyEntryPatch(ctx, w, ref, action, request)
+}
+
+func (s *Server) applyEntryPatch(
+	ctx context.Context,
+	w http.ResponseWriter,
+	ref, action string,
+	request entryPatchRequest,
+) (entity.Entry, bool) {
 	var (
 		entry entity.Entry
 		err   error
 	)
 
-	switch {
-	case request.Void != nil:
+	switch action {
+	case entryPatchVoid:
 		entry, err = s.deps.Ledger.Void(ctx, ref, request.Reason)
-	case request.PayeeRef != nil:
+	case entryPatchPayee:
 		entry, err = s.deps.Ledger.UpdatePayee(ctx, ref, *request.PayeeRef)
 	default:
 		input, ok := correctionInput(w, request)
@@ -456,4 +437,49 @@ func postingInputs(request []postingRequest) ([]ledger.PostingInput, error) {
 	}
 
 	return postings, nil
+}
+
+const (
+	entryPatchVoid    = "void"
+	entryPatchPayee   = "payee"
+	entryPatchCorrect = "correct"
+)
+
+func entryPatchAction(w http.ResponseWriter, request entryPatchRequest) (string, bool) {
+	corrects := request.OccurredOn != "" || request.Note != nil || len(request.Postings) > 0
+
+	actions := 0
+
+	for _, present := range []bool{request.Void != nil, request.PayeeRef != nil, corrects} {
+		if present {
+			actions++
+		}
+	}
+
+	switch {
+	case actions == 0:
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+			`send {"void": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings`)
+
+		return "", false
+	case actions > 1:
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+			"void, payee_ref and a correction are separate actions")
+
+		return "", false
+	case request.Void != nil && !*request.Void:
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_patch",
+			`only {"void": true} is supported today`)
+
+		return "", false
+	}
+
+	switch {
+	case request.Void != nil:
+		return entryPatchVoid, true
+	case request.PayeeRef != nil:
+		return entryPatchPayee, true
+	default:
+		return entryPatchCorrect, true
+	}
 }

@@ -55,10 +55,10 @@ type captureResponse struct {
 }
 
 type capturePatchRequest struct {
-	Action     string           `json:"action"                validate:"required,oneof=approve reject retry match"`
+	Action     string           `json:"action"                validate:"required,captureaction"`
 	Reason     string           `json:"reason,omitempty"      validate:"max=2000"`
 	OccurredOn string           `json:"occurred_on,omitempty" validate:"omitempty,datestr"`
-	PayeeRef   string           `json:"payee_ref,omitempty"  validate:"omitempty,ref"`
+	PayeeRef   string           `json:"payee_ref,omitempty"   validate:"omitempty,ref"`
 	Note       string           `json:"note,omitempty"        validate:"max=2000"`
 	EntryRef   string           `json:"entry_ref,omitempty"   validate:"omitempty,ref"`
 	Currency   string           `json:"currency,omitempty"    validate:"omitempty,currency"`
@@ -93,7 +93,7 @@ func (s *Server) CreateCapture(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, s.deps.MaxBodyBytes)
 
-	request, err := readCapture(r)
+	request, err := readCapture(w, r)
 	if err != nil {
 		writeInvalid(w, err)
 
@@ -351,9 +351,9 @@ func attachmentFilename(name string) string {
 	return cleaned
 }
 
-func readCapture(r *http.Request) (captureRequest, error) {
+func readCapture(w http.ResponseWriter, r *http.Request) (captureRequest, error) {
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
-		return readCaptureForm(r)
+		return readCaptureForm(w, r)
 	}
 
 	var request captureRequest
@@ -375,7 +375,10 @@ func (c captureRequest) input() captures.CreateInput {
 	}
 }
 
-func readCaptureForm(r *http.Request) (captureRequest, error) {
+func readCaptureForm(w http.ResponseWriter, r *http.Request) (captureRequest, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormBytes)
+
+	//nolint:gosec // G120: r.Body is capped by the MaxBytesReader above.
 	if err := r.ParseMultipartForm(maxFormBytes); err != nil {
 		return captureRequest{}, fmt.Errorf("multipart: %w", err)
 	}
@@ -412,6 +415,7 @@ func readCaptureForm(r *http.Request) (captureRequest, error) {
 		ContentType: header.Header.Get("Content-Type"),
 		Bytes:       body,
 	}
+
 	return request, nil
 }
 

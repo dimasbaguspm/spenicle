@@ -20,7 +20,13 @@ type Ledger interface {
 	VoidEntry(ctx context.Context, ref, reason string, at time.Time) (entity.Entry, error)
 	UpdateEntryPayee(ctx context.Context, ref string, payeeID *int64) (entity.Entry, bool, error)
 	MatchingEntryRef(ctx context.Context, probe entity.EntryProbe) (string, bool, error)
-	ReplaceEntry(ctx context.Context, ref string, replacement entity.Entry, reason string, at time.Time) (entity.Entry, error)
+	ReplaceEntry(
+		ctx context.Context,
+		ref string,
+		replacement entity.Entry,
+		reason string,
+		at time.Time,
+	) (entity.Entry, error)
 }
 
 type Captures interface {

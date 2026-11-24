@@ -38,7 +38,9 @@ func (s *Store) CreateCustomQuery(
 		now.Format(constant.TimestampLayout),
 	)
 	if err != nil {
-		return entity.CustomQuery{}, fmt.Errorf("create custom query %q: %w", query.Name, uniqueViolation(err))
+		return entity.CustomQuery{}, fmt.Errorf(
+			"create custom query %q: %w", query.Name, uniqueViolation(err),
+		)
 	}
 
 	if query.ID, err = res.LastInsertId(); err != nil {

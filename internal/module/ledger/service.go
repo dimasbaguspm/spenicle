@@ -228,31 +228,7 @@ func (s *Service) Correct(ctx context.Context, ref string, in CorrectInput) (ent
 		note = *in.Note
 	}
 
-	postings := in.Postings
-	if len(postings) == 0 {
-		postings = make([]PostingInput, 0, len(original.Postings))
-
-		for _, posting := range original.Postings {
-			postings = append(postings, PostingInput{
-				AccountRef:  posting.AccountRef,
-				AmountMinor: posting.AmountMinor,
-				FXRate:      posting.FXRate,
-				FXRateDate:  posting.FXRateDate,
-			})
-		}
-	}
-
-	baseCode, err := s.base.BaseCurrency(ctx)
-	if err != nil {
-		return entity.Entry{}, fmt.Errorf("base currency: %w", err)
-	}
-
-	nativeCurrency, err := entity.CurrencyByCode(original.Currency)
-	if err != nil {
-		return entity.Entry{}, err
-	}
-
-	baseCurrency, err := entity.CurrencyByCode(baseCode)
+	nativeCurrency, baseCurrency, err := s.currencyPair(ctx, original.Currency)
 	if err != nil {
 		return entity.Entry{}, err
 	}
@@ -260,7 +236,7 @@ func (s *Service) Correct(ctx context.Context, ref string, in CorrectInput) (ent
 	built, err := s.buildPostings(ctx, PostInput{
 		OccurredOn: occurredOn,
 		Currency:   original.Currency,
-		Postings:   postings,
+		Postings:   correctionPostings(original, in.Postings),
 	}, nativeCurrency, baseCurrency)
 	if err != nil {
 		return entity.Entry{}, err
@@ -278,12 +254,56 @@ func (s *Service) Correct(ctx context.Context, ref string, in CorrectInput) (ent
 		return entity.Entry{}, err
 	}
 
-	reason := in.Reason
-	if reason == "" {
-		reason = "corrected " + ref
+	return s.entries.ReplaceEntry(ctx, ref, replacement, correctionReason(in.Reason, ref), s.clock.Now())
+}
+
+func (s *Service) currencyPair(
+	ctx context.Context,
+	native string,
+) (entity.Currency, entity.Currency, error) {
+	baseCode, err := s.base.BaseCurrency(ctx)
+	if err != nil {
+		return entity.Currency{}, entity.Currency{}, fmt.Errorf("base currency: %w", err)
 	}
 
-	return s.entries.ReplaceEntry(ctx, ref, replacement, reason, s.clock.Now())
+	nativeCurrency, err := entity.CurrencyByCode(native)
+	if err != nil {
+		return entity.Currency{}, entity.Currency{}, err
+	}
+
+	baseCurrency, err := entity.CurrencyByCode(baseCode)
+	if err != nil {
+		return entity.Currency{}, entity.Currency{}, err
+	}
+
+	return nativeCurrency, baseCurrency, nil
+}
+
+func correctionPostings(original entity.Entry, sent []PostingInput) []PostingInput {
+	if len(sent) > 0 {
+		return sent
+	}
+
+	postings := make([]PostingInput, 0, len(original.Postings))
+
+	for _, posting := range original.Postings {
+		postings = append(postings, PostingInput{
+			AccountRef:  posting.AccountRef,
+			AmountMinor: posting.AmountMinor,
+			FXRate:      posting.FXRate,
+			FXRateDate:  posting.FXRateDate,
+		})
+	}
+
+	return postings
+}
+
+func correctionReason(reason, ref string) string {
+	if reason != "" {
+		return reason
+	}
+
+	return "corrected " + ref
 }
 
 func (s *Service) resolvePayee(ctx context.Context, ref string) (int64, error) {

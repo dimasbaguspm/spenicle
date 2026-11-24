@@ -110,7 +110,7 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, s.deps.ImportMaxBytes)
 
-	request, chunk, chunked, err := readImportUpload(r)
+	request, chunk, chunked, err := readImportUpload(w, r)
 	if err != nil {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", err.Error())
 
@@ -386,7 +386,13 @@ func toRowUpdate(request importRowPatchRequest) (imports.RowUpdate, error) {
 	return update, nil
 }
 
-func readImportUpload(r *http.Request) (importUploadRequest, importChunkFields, bool, error) {
+func readImportUpload(
+	w http.ResponseWriter,
+	r *http.Request,
+) (importUploadRequest, importChunkFields, bool, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormBytes)
+
+	//nolint:gosec // G120: r.Body is capped by the MaxBytesReader above.
 	if err := r.ParseMultipartForm(maxFormBytes); err != nil {
 		return importUploadRequest{}, importChunkFields{}, false, fmt.Errorf("multipart: %w", err)
 	}
