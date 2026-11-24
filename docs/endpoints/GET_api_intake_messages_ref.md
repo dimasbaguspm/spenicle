@@ -30,7 +30,7 @@ None.
 **200**
 
 ```json
-{"ref":"<32 hex>","source":"gmail","message_ref":"18c…","message_id_header":"<abc@bank.example>",
+{"ref":"<32 hex>","source":"gmail","handle":"18c…","message_id_header":"<abc@bank.example>",
  "provider_revision":"1042","received_at":"2026-02-14T09:00:00Z","observed_at":"2026-02-14T09:05:00Z",
  "status":"captured","last_synced_at":"2026-02-14T09:05:00Z"}
 ```

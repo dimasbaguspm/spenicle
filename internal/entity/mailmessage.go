@@ -23,3 +23,10 @@ type MailMessage struct {
 	LastSyncedAt     time.Time
 	SupersededBy     string
 }
+
+type MailMessageFilter struct {
+	Source string
+	Status string
+	Cursor string
+	Limit  int
+}

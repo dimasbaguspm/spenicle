@@ -52,6 +52,7 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/intake` | the intake configuration, never its secrets | [`GET_api_intake.md`](./GET_api_intake.md) |
 | `PATCH` | `/api/intake` | turn polling on, set the sender allowlist | [`PATCH_api_intake.md`](./PATCH_api_intake.md) |
 | `POST` | `/api/intake/run` | poll the mailbox once, now | [`POST_api_intake_run.md`](./POST_api_intake_run.md) |
+| `GET` | `/api/intake/messages` | every mail reference, newest first | [`GET_api_intake_messages.md`](./GET_api_intake_messages.md) |
 | `GET` | `/api/intake/messages/{ref}` | one mail reference and what it became | [`GET_api_intake_messages_ref.md`](./GET_api_intake_messages_ref.md) |
 | `POST` | `/api/intake/messages/{ref}/refresh` | the latest state of one mail | [`POST_api_intake_messages_ref_refresh.md`](./POST_api_intake_messages_ref_refresh.md) |
 | `POST` | `/api/exports` | queue an export the worker renders | [`POST_api_exports.md`](./POST_api_exports.md) |

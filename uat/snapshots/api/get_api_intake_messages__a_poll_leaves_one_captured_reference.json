@@ -1,0 +1,19 @@
+{
+  "messages": [
+    {
+      "handle": "gmail-uat-1",
+      "last_synced_at": "<timestamp>",
+      "message_id_header": "<uat-1@bank.example>",
+      "observed_at": "<timestamp>",
+      "provider_revision": "1",
+      "received_at": "<timestamp>",
+      "ref": "<ref>",
+      "source": "gmail",
+      "status": "captured"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

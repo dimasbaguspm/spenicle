@@ -92,6 +92,19 @@ func (s *fakeStore) UpdateMailMessage(
 	return message, nil
 }
 
+func (s *fakeStore) ListMailMessages(
+	_ context.Context,
+	_ entity.MailMessageFilter,
+) ([]entity.MailMessage, error) {
+	out := make([]entity.MailMessage, 0, len(s.bySource))
+
+	for _, message := range s.bySource {
+		out = append(out, message)
+	}
+
+	return out, nil
+}
+
 type fakeCaptures struct{ created int }
 
 func (c *fakeCaptures) Create(

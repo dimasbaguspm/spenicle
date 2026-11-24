@@ -40,6 +40,7 @@ type Contract interface {
 	Poll(ctx context.Context, now time.Time) (Result, error)
 	Refresh(ctx context.Context, ref string, now time.Time) (entity.MailMessage, error)
 	MessageByRef(ctx context.Context, ref string) (entity.MailMessage, bool, error)
+	Messages(ctx context.Context, filter entity.MailMessageFilter) ([]entity.MailMessage, error)
 	Configure(ctx context.Context, in Config) (Config, error)
 	Config(ctx context.Context) (Config, error)
 }
@@ -64,6 +65,10 @@ type Store interface {
 		source, messageRef string,
 	) (entity.MailMessage, bool, error)
 	UpdateMailMessage(ctx context.Context, message entity.MailMessage) (entity.MailMessage, error)
+	ListMailMessages(
+		ctx context.Context,
+		filter entity.MailMessageFilter,
+	) ([]entity.MailMessage, error)
 }
 
 type Captures interface {

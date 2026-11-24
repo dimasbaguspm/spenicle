@@ -197,6 +197,7 @@ func (s *server) credentialRoutes(group routeGroup) {
 	group.route("", "GET /api/intake", s.api.GetIntakeConfig)
 	group.route("", "PATCH /api/intake", s.api.PatchIntakeConfig)
 	group.route("", "POST /api/intake/run", s.api.RunIntake)
+	group.route("", "GET /api/intake/messages", s.api.ListIntakeMessages)
 	group.route("", "GET /api/intake/messages/{ref}", s.api.GetIntakeMessage)
 	group.route("", "POST /api/intake/messages/{ref}/refresh", s.api.RefreshIntakeMessage)
 }

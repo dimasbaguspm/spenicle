@@ -217,6 +217,16 @@ func (s *Service) MessageByRef(
 	return s.store.MailMessageByRef(ctx, ref)
 }
 
+func (s *Service) Messages(
+	ctx context.Context,
+	filter entity.MailMessageFilter,
+) ([]entity.MailMessage, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Intake.Messages")
+	defer endSpan()
+
+	return s.store.ListMailMessages(ctx, filter)
+}
+
 func (s *Service) ingest(ctx context.Context, message Mail, now time.Time) string {
 	known, found, err := s.store.MailMessageBySource(ctx, s.mailbox.Source(), message.Ref)
 	if err != nil {

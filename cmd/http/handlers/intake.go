@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/intake"
@@ -27,10 +29,17 @@ type intakeResultResponse struct {
 	Unchanged int `json:"unchanged"`
 }
 
+type mailMessageQuery struct {
+	Status string `query:"status" validate:"omitempty,oneof=captured skipped failed gone"`
+	Source string `query:"source" validate:"omitempty,oneof=imap gmail"`
+	Cursor string `query:"cursor" validate:"omitempty,ref"`
+	Limit  int64  `query:"limit"  validate:"omitempty,gte=0,lte=200"`
+}
+
 type mailMessageResponse struct {
 	Ref              string `json:"ref"`
 	Source           string `json:"source"`
-	MessageRef       string `json:"message_ref"`
+	Handle           string `json:"handle"`
 	ThreadRef        string `json:"thread_ref,omitempty"`
 	MessageIDHeader  string `json:"message_id_header,omitempty"`
 	ProviderRevision string `json:"provider_revision,omitempty"`
@@ -99,8 +108,51 @@ func (s *Server) RunIntake(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) ListIntakeMessages(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Intake.ListMessages")
+	defer endSpan()
+
+	var query mailMessageQuery
+	if err := bindQuery(r, &query); err != nil {
+		writeInvalid(w, err)
+
+		return
+	}
+
+	filter := entity.MailMessageFilter{
+		Status: query.Status,
+		Source: query.Source,
+		Cursor: query.Cursor,
+		Limit:  list.ClampLimit(query.Limit),
+	}
+
+	writeList(ctx, w, s, "messages", filter.Limit,
+		func() ([]entity.MailMessage, error) { return s.deps.Intake.Messages(ctx, filter) },
+		func(message entity.MailMessage) string { return message.Ref },
+		toMailMessageResponse,
+	)
+}
+
 func (s *Server) GetIntakeMessage(w http.ResponseWriter, r *http.Request) {
-	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Intake.GetMessage")
+	s.serveIntakeMessage(w, r, "Handler.Intake.GetMessage", s.deps.Intake.MessageByRef)
+}
+
+func (s *Server) RefreshIntakeMessage(w http.ResponseWriter, r *http.Request) {
+	s.serveIntakeMessage(w, r, "Handler.Intake.RefreshMessage",
+		func(ctx context.Context, ref string) (entity.MailMessage, bool, error) {
+			message, err := s.deps.Intake.Refresh(ctx, ref, time.Now().UTC())
+
+			return message, err == nil, err
+		})
+}
+
+func (s *Server) serveIntakeMessage(
+	w http.ResponseWriter,
+	r *http.Request,
+	span string,
+	load func(ctx context.Context, ref string) (entity.MailMessage, bool, error),
+) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), span)
 	defer endSpan()
 
 	var path pathRefRequest
@@ -110,7 +162,7 @@ func (s *Server) GetIntakeMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	message, found, err := s.deps.Intake.MessageByRef(ctx, path.Ref)
+	message, found, err := load(ctx, path.Ref)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 
@@ -126,32 +178,11 @@ func (s *Server) GetIntakeMessage(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toMailMessageResponse(message))
 }
 
-func (s *Server) RefreshIntakeMessage(w http.ResponseWriter, r *http.Request) {
-	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Intake.RefreshMessage")
-	defer endSpan()
-
-	var path pathRefRequest
-	if err := bindPath(r, &path); err != nil {
-		writeInvalid(w, err)
-
-		return
-	}
-
-	message, err := s.deps.Intake.Refresh(ctx, path.Ref, time.Now().UTC())
-	if err != nil {
-		s.writeClassified(ctx, w, err)
-
-		return
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, toMailMessageResponse(message))
-}
-
 func toMailMessageResponse(message entity.MailMessage) mailMessageResponse {
 	response := mailMessageResponse{
 		Ref:              message.Ref,
 		Source:           message.Source,
-		MessageRef:       message.MessageRef,
+		Handle:           message.MessageRef,
 		ThreadRef:        message.ThreadRef,
 		MessageIDHeader:  message.MessageIDHeader,
 		ProviderRevision: message.ProviderRevision,

@@ -93,6 +93,7 @@ type MailMessages interface {
 		source, messageRef string,
 	) (entity.MailMessage, bool, error)
 	UpdateMailMessage(ctx context.Context, message entity.MailMessage) (entity.MailMessage, error)
+	ListMailMessages(ctx context.Context, filter entity.MailMessageFilter) ([]entity.MailMessage, error)
 }
 
 type Analytics interface {

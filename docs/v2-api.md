@@ -41,7 +41,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 17, 18 | months report, dashboard | live |
 | 19, 20 | `POST/GET /api/tokens`, `POST /api/tokens/{ref}/revoke` | live: root credential only, scoped Bearer credential, digest stored, masked preview, `last_used_at`, revoke never deletes |
 | — | `GET /api/audit` | live: the journal, filtered by kind, ref, action, actor and a day range |
-| — | `GET/PATCH /api/intake`, `POST /api/intake/run`, `GET /api/intake/messages/{ref}`, `POST /api/intake/messages/{ref}/refresh` | live: a mailbox poll queues captures, a reference records what became of each mail |
+| — | `GET/PATCH /api/intake`, `POST /api/intake/run`, `GET /api/intake/messages`, `GET /api/intake/messages/{ref}`, `POST /api/intake/messages/{ref}/refresh` | live: a mailbox poll queues captures, a reference records what became of each mail |
 | — | `GET /api/connections`, `POST /api/connections/google`, `GET /api/connections/google/callback`, `POST /api/connections/{ref}/revoke` | live: one sealed credential per provider, re-authorising replaces it |
 
 ## Review rounds folded in
@@ -549,6 +549,7 @@ CREATE INDEX ix_mail_messages_capture ON mail_messages (capture_id);
 | — | GET | `/api/intake` | `admin` | intake settings, cursor and last outcome, redacted |
 | — | PATCH | `/api/intake` | `admin` | mailbox credentials, window and allowlist |
 | — | POST | `/api/intake/run` | `admin` | poll once now, return counts |
+| — | GET | `/api/intake/messages` | `admin` | every mail reference, newest first |
 | — | GET | `/api/intake/messages/{ref}` | `admin` | one reference and the capture it made |
 | — | POST | `/api/intake/messages/{ref}/refresh` | `admin` | latest state of that mail |
 | — | GET/POST | `/api/connections`, `/api/connections/google` | `admin` | read status, start an authorisation |

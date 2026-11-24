@@ -188,3 +188,92 @@ func (s *Store) scanMailMessage(
 
 	return message, true, nil
 }
+
+func (s *Store) ListMailMessages(
+	ctx context.Context,
+	filter entity.MailMessageFilter,
+) ([]entity.MailMessage, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ListMailMessages")
+	defer endSpan()
+
+	builder := newList("mail_messages", mailMessageColumns)
+
+	builder.eq("source", filter.Source)
+	builder.eq("status", filter.Status)
+	builder.before("mail_messages.id", "mail_messages", filter.Cursor)
+	builder.orderBy("id DESC")
+
+	query, args := builder.page(clampLimit(filter.Limit))
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select mail messages: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	out := make([]entity.MailMessage, 0, clampLimit(filter.Limit))
+
+	for rows.Next() {
+		message, scanErr := scanMailMessageRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+
+		out = append(out, message)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate mail messages: %w", err)
+	}
+
+	return out, nil
+}
+
+func scanMailMessageRow(rows *sql.Rows) (entity.MailMessage, error) {
+	var (
+		message      entity.MailMessage
+		thread       sql.NullString
+		messageID    sql.NullString
+		revision     sql.NullString
+		receivedAt   string
+		observedAt   string
+		captureID    sql.NullInt64
+		skipReason   sql.NullString
+		lastError    sql.NullString
+		lastSyncedAt sql.NullString
+		supersededBy sql.NullString
+	)
+
+	err := rows.Scan(&message.ID, &message.Ref, &message.Source, &message.MessageRef, &thread,
+		&messageID, &revision, &receivedAt, &observedAt, &captureID, &message.Status,
+		&skipReason, &message.Attempts, &lastError, &lastSyncedAt, &supersededBy)
+	if err != nil {
+		return entity.MailMessage{}, fmt.Errorf("scan mail message: %w", err)
+	}
+
+	message.ThreadRef = thread.String
+	message.MessageIDHeader = messageID.String
+	message.ProviderRevision = revision.String
+	message.SkipReason = skipReason.String
+	message.LastError = lastError.String
+	message.SupersededBy = supersededBy.String
+
+	if captureID.Valid {
+		message.CaptureID = &captureID.Int64
+	}
+
+	var parseErr error
+
+	if message.ReceivedAt, parseErr = parseTimestamp("received_at", receivedAt); parseErr != nil {
+		return entity.MailMessage{}, parseErr
+	}
+
+	if message.ObservedAt, parseErr = parseTimestamp("observed_at", observedAt); parseErr != nil {
+		return entity.MailMessage{}, parseErr
+	}
+
+	message.LastSyncedAt, _ = nullableTimestamp("last_synced_at", lastSyncedAt.String)
+
+	return message, nil
+}
