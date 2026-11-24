@@ -268,6 +268,11 @@ func (s *Server) PatchImportRow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if update.CategoryRef != nil && *update.CategoryRef != "" &&
+		!s.categoryAccount(ctx, w, *update.CategoryRef) {
+		return
+	}
+
 	batch, err := s.deps.Imports.PatchRow(ctx, path.Ref, path.Index, update)
 	if err != nil {
 		s.writeClassified(ctx, w, err)

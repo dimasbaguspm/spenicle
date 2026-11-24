@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -78,4 +79,28 @@ func writeInvalid(w http.ResponseWriter, err error) {
 	}
 
 	httpx.WriteError(w, http.StatusBadRequest, "invalid_request", err.Error())
+}
+
+func (s *Server) categoryAccount(ctx context.Context, w http.ResponseWriter, ref string) bool {
+	account, found, err := s.deps.Accounts.AccountByRef(ctx, ref)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return false
+	}
+
+	if !found {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "unknown_reference", "no account "+ref)
+
+		return false
+	}
+
+	if !isCategoryKind(account.Kind) {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+			"category_ref must name an expense or income account")
+
+		return false
+	}
+
+	return true
 }

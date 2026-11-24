@@ -27,3 +27,12 @@ Feature: POST /api/payees
       """
     Then the response status is 422
     And the response JSON matches the snapshot "post_api_payees__a_missing_name_is_refused"
+
+  Scenario: A default category must name a category
+    Given a running API
+    When I send a POST to "/api/payees" with:
+      """json
+      {"name":"Wrong default","default_category_ref":"{{account:Cash}}"}
+      """
+    Then the response status is 422
+    And the response JSON matches the snapshot "post_api_payees__a_default_category_must_name_a_category"

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "category_ref must name an expense or income account"
+  }
+}

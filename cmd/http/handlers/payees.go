@@ -134,10 +134,7 @@ func (s *Server) fillPayeeRefs(
 	}
 
 	if categoryRef != "" {
-		if _, found, err := s.deps.Accounts.AccountByRef(ctx, categoryRef); err != nil || !found {
-			httpx.WriteError(w, http.StatusUnprocessableEntity, "unknown_reference",
-				"no account "+categoryRef)
-
+		if !s.categoryAccount(ctx, w, categoryRef) {
 			return false
 		}
 

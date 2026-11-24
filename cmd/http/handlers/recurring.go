@@ -77,6 +77,10 @@ func (s *Server) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if request.CategoryRef != "" && !s.categoryAccount(ctx, w, request.CategoryRef) {
+		return
+	}
+
 	rule := entity.Recurring{
 		PayeeRef:         request.PayeeRef,
 		AccountRef:       request.AccountRef,
