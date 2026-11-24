@@ -1,16 +1,19 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
@@ -27,6 +30,8 @@ const (
 type exportCreateRequest struct {
 	ClientID string `json:"client_id" validate:"required,max=64"`
 	Format   string `json:"format"    validate:"omitempty,oneof=json csv"`
+	From     string `json:"from"      validate:"omitempty,datestr"`
+	To       string `json:"to"        validate:"omitempty,datestr"`
 }
 
 type exportListRequest struct {
@@ -41,6 +46,8 @@ type exportResponse struct {
 	ClientID      string         `json:"client_id"`
 	Status        string         `json:"status"`
 	Format        string         `json:"format"`
+	From          string         `json:"from,omitempty"`
+	To            string         `json:"to,omitempty"`
 	SchemaVersion int            `json:"schema_version"`
 	Counts        map[string]int `json:"counts,omitempty"`
 	Bytes         int64          `json:"bytes"`
@@ -68,6 +75,11 @@ func (s *Server) CreateExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fromOn, toOn, ok := exportWindow(w, request.From, request.To)
+	if !ok {
+		return
+	}
+
 	format := request.Format
 	if format == "" {
 		format = constant.ExportFormatJSON
@@ -76,6 +88,8 @@ func (s *Server) CreateExport(w http.ResponseWriter, r *http.Request) {
 	job, created, err := s.deps.Exports.Create(ctx, exports.CreateInput{
 		ClientID: strings.TrimSpace(request.ClientID),
 		Format:   format,
+		FromOn:   fromOn,
+		ToOn:     toOn,
 	})
 	if err != nil {
 		s.writeClassified(ctx, w, err)
@@ -127,17 +141,8 @@ func (s *Server) GetExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	job, found, err := s.deps.Exports.Get(ctx, ref)
-	if err != nil {
-		s.writeClassified(ctx, w, err)
-
-		return
-	}
-
-	if !found {
-		httpx.WriteError(w, http.StatusNotFound, "not_found",
-			fmt.Sprintf("%v: export %s", entity.ErrNotFound, ref))
-
+	job, ok := s.exportJob(ctx, w, ref)
+	if !ok {
 		return
 	}
 
@@ -153,6 +158,11 @@ func (s *Server) ListExportEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	job, ok := s.exportJob(ctx, w, ref)
+	if !ok {
+		return
+	}
+
 	writeEventPage(ctx, w, r, s,
 		func(cursor string, limit int) ([]entity.ExportEvent, error) {
 			return s.deps.Exports.Events(ctx, ref,
@@ -160,6 +170,7 @@ func (s *Server) ListExportEvents(w http.ResponseWriter, r *http.Request) {
 		},
 		func(event entity.ExportEvent) string { return event.Ref },
 		toExportEventResponse,
+		exportWindowFields(job),
 	)
 }
 
@@ -192,8 +203,8 @@ func (s *Server) DownloadExport(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", exportCacheControl)
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="spenicle-%s.%s"`,
-		exportDay(job), extension))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.%s"`,
+		exportName(job), extension))
 	w.WriteHeader(http.StatusOK)
 
 	if _, copyErr := io.Copy(w, body); copyErr != nil {
@@ -207,6 +218,8 @@ func toExportResponse(job entity.Export) exportResponse {
 		ClientID:      job.ClientID,
 		Status:        job.Status,
 		Format:        job.Format,
+		From:          exportDayStamp(job.FromOn),
+		To:            exportDayStamp(job.ToOn),
 		SchemaVersion: job.SchemaVersion,
 		Counts:        exportCounts(job.CountsJSON),
 		Bytes:         job.Bytes,
@@ -283,4 +296,84 @@ func exportDay(job entity.Export) string {
 	}
 
 	return at.UTC().Format(constant.DateLayout)
+}
+
+func exportName(job entity.Export) string {
+	from, to := exportDayStamp(job.FromOn), exportDayStamp(job.ToOn)
+	if from != "" && to != "" {
+		return "spenicle-" + from + "_" + to
+	}
+
+	return "spenicle-" + exportDay(job)
+}
+
+func exportDayStamp(day *time.Time) string {
+	if day == nil {
+		return ""
+	}
+
+	return day.UTC().Format(constant.DateLayout)
+}
+
+func exportWindowFields(job entity.Export) map[string]any {
+	from, to := exportDayStamp(job.FromOn), exportDayStamp(job.ToOn)
+	if from == "" || to == "" {
+		return nil
+	}
+
+	return map[string]any{"from": from, "to": to}
+}
+
+func exportWindow(
+	w http.ResponseWriter,
+	from, to string,
+) (*time.Time, *time.Time, bool) {
+	if from == "" && to == "" {
+		return nil, nil, true
+	}
+
+	if from == "" || to == "" {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+			"from and to are both required for a window")
+
+		return nil, nil, false
+	}
+
+	fromOn, err := validating.Day(from, "from")
+	if err != nil {
+		writeWindowInvalid(w, err)
+
+		return nil, nil, false
+	}
+
+	toOn, err := validating.Day(to, "to")
+	if err != nil {
+		writeWindowInvalid(w, err)
+
+		return nil, nil, false
+	}
+
+	return &fromOn, &toOn, true
+}
+
+func writeWindowInvalid(w http.ResponseWriter, err error) {
+	httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", err.Error())
+}
+
+func (s *Server) exportJob(ctx context.Context, w http.ResponseWriter, ref string) (entity.Export, bool) {
+	job, found, err := s.deps.Exports.Get(ctx, ref)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return entity.Export{}, false
+	}
+
+	if !found {
+		httpx.WriteError(w, http.StatusNotFound, "not_found",
+			fmt.Sprintf("%v: export %s", entity.ErrNotFound, ref))
+
+		return entity.Export{}, false
+	}
+
+	return job, true
 }

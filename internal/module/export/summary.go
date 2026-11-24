@@ -29,11 +29,17 @@ type summaryCategory struct {
 	SpendMinor string `json:"spend_minor"`
 }
 
+type summaryWindow struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
 type summary struct {
 	Accounts   []summaryAccount  `json:"accounts"`
 	Months     []summaryMonth    `json:"months"`
 	Categories []summaryCategory `json:"categories"`
 	Counts     map[string]int    `json:"counts"`
+	Window     *summaryWindow    `json:"window,omitempty"`
 }
 
 type monthAccrual struct {
@@ -80,12 +86,21 @@ func (s *snapshot) summarise() summary {
 		}
 	}
 
-	return summary{
+	out := summary{
 		Accounts:   s.summaryAccounts(balances),
 		Months:     s.summaryMonths(months),
 		Categories: s.summaryCategories(categories, names),
 		Counts:     s.counts(),
 	}
+
+	if s.window != nil {
+		out.Window = &summaryWindow{
+			From: s.window.From.Format(constant.DateLayout),
+			To:   s.window.To.Format(constant.DateLayout),
+		}
+	}
+
+	return out
 }
 
 func (s *snapshot) summaryAccounts(balances map[int64]int64) []summaryAccount {

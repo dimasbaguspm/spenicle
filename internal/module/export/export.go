@@ -45,11 +45,16 @@ type Document struct {
 	Counts      map[string]int
 }
 
-func Render(ctx context.Context, deps Deps, format string) (Document, error) {
+type Window struct {
+	From time.Time
+	To   time.Time
+}
+
+func Render(ctx context.Context, deps Deps, format string, window *Window) (Document, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Export.Render")
 	defer endSpan()
 
-	snapshot, err := collect(ctx, deps)
+	snapshot, err := collect(ctx, deps, window)
 	if err != nil {
 		return Document{}, err
 	}

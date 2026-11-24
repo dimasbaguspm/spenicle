@@ -14,7 +14,8 @@ import (
 )
 
 const exportColumns = `id, ref, client_id, status, format, schema_version, counts_json,
-	file_hash, bytes, created_at, started_at, finished_at, expires_at, error_message`
+	file_hash, bytes, created_at, started_at, finished_at, expires_at, from_on, to_on,
+	error_message`
 
 const exportEventColumns = `id, ref, export_id, kind, payload_json, actor, at`
 
@@ -29,14 +30,16 @@ func (s *Store) InsertExport(ctx context.Context, job entity.Export) (entity.Exp
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO exports
 			(ref, client_id, status, format, schema_version, counts_json, file_hash, bytes,
-			 created_at, started_at, finished_at, expires_at, error_message)
-		VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, ?, NULL, NULL, NULL, NULL)`,
+			 created_at, started_at, finished_at, expires_at, from_on, to_on, error_message)
+		VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, ?, NULL, NULL, NULL, ?, ?, NULL)`,
 		job.Ref,
 		job.ClientID,
 		job.Status,
 		job.Format,
 		job.SchemaVersion,
 		job.CreatedAt.UTC().Format(constant.TimestampLayout),
+		nullDay(job.FromOn),
+		nullDay(job.ToOn),
 	)
 	if err != nil {
 		return entity.Export{}, fmt.Errorf("insert export: %w", err)
@@ -87,7 +90,7 @@ func (s *Store) QueuedExports(ctx context.Context, limit int) ([]entity.Export, 
 	defer endSpan()
 
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, ref, format FROM exports WHERE status = ? ORDER BY id LIMIT ?`,
+		`SELECT id, ref, format, from_on, to_on FROM exports WHERE status = ? ORDER BY id LIMIT ?`,
 		constant.ExportStatusQueued, clampLimit(limit))
 	if err != nil {
 		return nil, fmt.Errorf("select queued exports: %w", err)
@@ -98,9 +101,20 @@ func (s *Store) QueuedExports(ctx context.Context, limit int) ([]entity.Export, 
 	var queued []entity.Export
 
 	for rows.Next() {
-		var job entity.Export
+		var (
+			job          entity.Export
+			fromOn, toOn sql.NullString
+		)
 
-		if err := rows.Scan(&job.ID, &job.Ref, &job.Format); err != nil {
+		if scanErr := rows.Scan(&job.ID, &job.Ref, &job.Format, &fromOn, &toOn); scanErr != nil {
+			return nil, fmt.Errorf("scan queued export: %w", scanErr)
+		}
+
+		if job.FromOn, err = parseDay(fromOn); err != nil {
+			return nil, fmt.Errorf("scan queued export: %w", err)
+		}
+
+		if job.ToOn, err = parseDay(toOn); err != nil {
 			return nil, fmt.Errorf("scan queued export: %w", err)
 		}
 
@@ -392,12 +406,15 @@ func scanExportRow(scanner interface{ Scan(dest ...any) error }) (entity.Export,
 		started    sql.NullString
 		finished   sql.NullString
 		expires    sql.NullString
+		fromOn     sql.NullString
+		toOn       sql.NullString
 		message    sql.NullString
 	)
 
 	err := scanner.Scan(
 		&job.ID, &job.Ref, &job.ClientID, &job.Status, &job.Format, &job.SchemaVersion,
-		&counts, &fileHash, &job.Bytes, &createdRaw, &started, &finished, &expires, &message,
+		&counts, &fileHash, &job.Bytes, &createdRaw, &started, &finished, &expires,
+		&fromOn, &toOn, &message,
 	)
 	if err != nil {
 		return entity.Export{}, err
@@ -423,6 +440,14 @@ func scanExportRow(scanner interface{ Scan(dest ...any) error }) (entity.Export,
 		if job.ExpiresAt, err = timestampOf("expires_at", expires.String); err != nil {
 			return entity.Export{}, err
 		}
+	}
+
+	if job.FromOn, err = parseDay(fromOn); err != nil {
+		return entity.Export{}, err
+	}
+
+	if job.ToOn, err = parseDay(toOn); err != nil {
+		return entity.Export{}, err
 	}
 
 	job.CountsJSON = counts.String

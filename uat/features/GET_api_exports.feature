@@ -39,3 +39,19 @@ Feature: GET /api/exports
       | query | status | bogus  |
     Then the response status is 422
     And the response JSON matches the snapshot "get_api_exports__an_unknown_status_is_refused"
+
+  Scenario: A windowed job echoes its window in the listing
+    Given a running API
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-1","format":"json","from":"2025-01-01","to":"2025-12-31"}
+      """
+    Then the response status is 201
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-2","format":"json"}
+      """
+    Then the response status is 201
+    When I send a GET to "/api/exports"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_exports__a_windowed_job_echoes_its_window"

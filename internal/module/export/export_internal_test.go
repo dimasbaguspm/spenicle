@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -87,7 +88,7 @@ func TestExportCarriesEveryRowPastOnePage(t *testing.T) {
 	}
 
 	t.Run("json", func(t *testing.T) {
-		document := exportedJSON(t, deps)
+		document := exportedJSON(t, deps, nil)
 
 		var decoded struct {
 			Data struct {
@@ -125,7 +126,7 @@ func TestExportCarriesEveryRowPastOnePage(t *testing.T) {
 	})
 
 	t.Run("csv", func(t *testing.T) {
-		counts := manifestRows(t, exportedArchive(t, deps))
+		counts := manifestRows(t, exportedArchive(t, deps, nil))
 
 		for _, name := range []string{"accounts.csv", "payees.csv", "captures.csv", "recurring.csv"} {
 			if counts[name] != exportedRows {
@@ -135,10 +136,10 @@ func TestExportCarriesEveryRowPastOnePage(t *testing.T) {
 	})
 }
 
-func exportedJSON(t *testing.T, deps Deps) []byte {
+func exportedJSON(t *testing.T, deps Deps, window *Window) []byte {
 	t.Helper()
 
-	document, err := Render(t.Context(), deps, constant.ExportFormatJSON)
+	document, err := Render(t.Context(), deps, constant.ExportFormatJSON, window)
 	if err != nil {
 		t.Fatalf("json export: %v", err)
 	}
@@ -146,10 +147,10 @@ func exportedJSON(t *testing.T, deps Deps) []byte {
 	return document.Bytes
 }
 
-func exportedArchive(t *testing.T, deps Deps) []byte {
+func exportedArchive(t *testing.T, deps Deps, window *Window) []byte {
 	t.Helper()
 
-	document, err := Render(t.Context(), deps, constant.ExportFormatCSV)
+	document, err := Render(t.Context(), deps, constant.ExportFormatCSV, window)
 	if err != nil {
 		t.Fatalf("csv export: %v", err)
 	}
@@ -339,6 +340,62 @@ func ptr(value int64) *int64 {
 	return &value
 }
 
+func TestWindowedExportFollowsTheWindow(t *testing.T) {
+	t.Parallel()
+
+	deps := windowedDeps(t)
+
+	tests := []struct {
+		name           string
+		window         *Window
+		wantMonths     []string
+		wantEntries    int
+		wantPostings   int
+		wantCategories int
+	}{
+		{
+			name:           "no window carries every entry",
+			wantMonths:     []string{"2024-06", "2025-06"},
+			wantEntries:    2,
+			wantPostings:   4,
+			wantCategories: 1,
+		},
+		{
+			name:           "an in-window entry is kept",
+			window:         &Window{From: day(2025, time.January, 1), To: day(2025, time.December, 31)},
+			wantMonths:     []string{"2025-06"},
+			wantEntries:    1,
+			wantPostings:   2,
+			wantCategories: 1,
+		},
+		{
+			name:           "an out-of-window entry is dropped",
+			window:         &Window{From: day(2024, time.January, 1), To: day(2024, time.December, 31)},
+			wantMonths:     []string{"2024-06"},
+			wantEntries:    1,
+			wantPostings:   2,
+			wantCategories: 1,
+		},
+		{
+			name:           "a window that matches nothing renders empty arrays",
+			window:         &Window{From: day(2030, time.January, 1), To: day(2030, time.December, 31)},
+			wantMonths:     []string{},
+			wantEntries:    0,
+			wantPostings:   0,
+			wantCategories: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assertWindowedDocument(t, deps, test.window,
+				test.wantEntries, test.wantPostings, test.wantCategories)
+			assertWindowedMonths(t, deps, test.window, test.wantMonths)
+			assertWindowedSheets(t, deps, test.window, test.wantEntries, test.wantPostings)
+		})
+	}
+}
+
 const (
 	exportedRows = 250
 
@@ -347,3 +404,177 @@ const (
 	refC = "00000000000000000000000000000003"
 	refD = "00000000000000000000000000000004"
 )
+
+func windowedDeps(t *testing.T) Deps {
+	t.Helper()
+
+	ctx := t.Context()
+
+	db, err := sqlite.Open(ctx, sqlite.Config{Path: filepath.Join(t.TempDir(), "window.db")})
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+
+	t.Cleanup(func() { _ = db.Close() })
+
+	if migrateErr := sqlite.Migrate(ctx, db); migrateErr != nil {
+		t.Fatalf("migrate: %v", migrateErr)
+	}
+
+	store := sqlite.NewStore(db)
+
+	cash, err := store.CreateAccount(ctx, "Cash", "asset", "IDR")
+	if err != nil {
+		t.Fatalf("create asset: %v", err)
+	}
+
+	expense, err := store.CreateAccount(ctx, "Unsorted", "expense", "IDR")
+	if err != nil {
+		t.Fatalf("create expense: %v", err)
+	}
+
+	spends := []struct {
+		day    time.Time
+		amount int64
+	}{
+		{day: day(2024, time.June, 15), amount: 40_000},
+		{day: day(2025, time.June, 15), amount: 25_000},
+	}
+
+	for _, spend := range spends {
+		entry, entryErr := entity.NewEntry(entity.Entry{
+			OccurredOn: spend.day,
+			Currency:   "IDR",
+			Postings: []entity.Posting{
+				{AccountID: expense.ID, AmountMinor: spend.amount, BaseAmountMinor: spend.amount},
+				{AccountID: cash.ID, AmountMinor: -spend.amount, BaseAmountMinor: -spend.amount},
+			},
+		})
+		if entryErr != nil {
+			t.Fatalf("new entry: %v", entryErr)
+		}
+
+		if _, entryErr = store.InsertEntry(ctx, entry); entryErr != nil {
+			t.Fatalf("insert entry: %v", entryErr)
+		}
+	}
+
+	return Deps{
+		Ledger:        store,
+		Exporter:      store,
+		CustomQueries: store,
+		Rates:         store,
+		System:        store,
+		Clock:         fixedClock{at: time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)},
+		BaseCurrency:  "IDR",
+	}
+}
+
+type windowedDocument struct {
+	Data struct {
+		Entries []json.RawMessage `json:"entries"`
+	} `json:"data"`
+	Summary struct {
+		Months []struct {
+			Month string `json:"month"`
+		} `json:"months"`
+		Categories []json.RawMessage `json:"categories"`
+		Counts     map[string]int    `json:"counts"`
+		Window     *struct {
+			From string `json:"from"`
+			To   string `json:"to"`
+		} `json:"window"`
+	} `json:"summary"`
+}
+
+func windowedExport(t *testing.T, deps Deps, window *Window) windowedDocument {
+	t.Helper()
+
+	var decoded windowedDocument
+	if err := json.Unmarshal(exportedJSON(t, deps, window), &decoded); err != nil {
+		t.Fatalf("decode export: %v", err)
+	}
+
+	return decoded
+}
+
+func assertWindowedDocument(
+	t *testing.T,
+	deps Deps,
+	window *Window,
+	entries, postings, categories int,
+) {
+	t.Helper()
+
+	decoded := windowedExport(t, deps, window)
+
+	if len(decoded.Data.Entries) != entries {
+		t.Fatalf("the document carries %d entries, want %d", len(decoded.Data.Entries), entries)
+	}
+
+	counts := map[string]int{"entries": entries, "postings": postings, "accounts": 2}
+
+	for name, want := range counts {
+		if decoded.Summary.Counts[name] != want {
+			t.Fatalf("the summary counts %d %s, want %d", decoded.Summary.Counts[name], name, want)
+		}
+	}
+
+	if len(decoded.Summary.Categories) != categories {
+		t.Fatalf("the summary carries %d categories, want %d",
+			len(decoded.Summary.Categories), categories)
+	}
+
+	if window == nil {
+		if decoded.Summary.Window != nil {
+			t.Fatalf("an unwindowed summary carries a window: %+v", decoded.Summary.Window)
+		}
+
+		return
+	}
+
+	if decoded.Summary.Window == nil {
+		t.Fatal("the summary carries no window")
+	}
+
+	wantFrom := window.From.Format(constant.DateLayout)
+	wantTo := window.To.Format(constant.DateLayout)
+
+	if decoded.Summary.Window.From != wantFrom || decoded.Summary.Window.To != wantTo {
+		t.Fatalf("the summary window is %s..%s, want %s..%s",
+			decoded.Summary.Window.From, decoded.Summary.Window.To, wantFrom, wantTo)
+	}
+}
+
+func assertWindowedMonths(t *testing.T, deps Deps, window *Window, want []string) {
+	t.Helper()
+
+	decoded := windowedExport(t, deps, window)
+
+	got := make([]string, 0, len(decoded.Summary.Months))
+	for _, month := range decoded.Summary.Months {
+		got = append(got, month.Month)
+	}
+
+	if !slices.Equal(got, want) {
+		t.Fatalf("the summary months are %v, want %v", got, want)
+	}
+}
+
+func assertWindowedSheets(t *testing.T, deps Deps, window *Window, entries, postings int) {
+	t.Helper()
+
+	counts := manifestRows(t, exportedArchive(t, deps, window))
+
+	if counts["entries.csv"] != entries {
+		t.Fatalf("entries.csv carries %d rows, want %d", counts["entries.csv"], entries)
+	}
+
+	if counts["postings.csv"] != postings {
+		t.Fatalf("postings.csv carries %d rows, want %d", counts["postings.csv"], postings)
+	}
+}
+
+func day(year int, month time.Month, dayOfMonth int) time.Time {
+	return time.Date(year, month, dayOfMonth, 0, 0, 0, 0, time.UTC)
+}

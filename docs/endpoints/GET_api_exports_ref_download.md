@@ -38,10 +38,11 @@ None.
 
 ```
 Content-Disposition: attachment; filename="spenicle-<YYYY-MM-DD>.<json|zip>"
+Content-Disposition: attachment; filename="spenicle-<from>_<to>.<json|zip>"
 Cache-Control: private, no-store
 ```
 
-The date is the day the job finished. The JSON document:
+The first form is an unwindowed job and the date is the day it finished; the second is a windowed job and the name carries its window, so `spenicle-2025-01-01_2025-12-31.json` is "just 2025". The JSON document:
 
 ```json
 {
@@ -55,7 +56,8 @@ The date is the day the job finished. The JSON document:
     "months": [{"month": "2026-02", "spend_minor": "25000", "income_minor": "0"}],
     "categories": [{"account_ref": "…", "name": "Unsorted", "spend_minor": "25000"}],
     "counts": {"accounts": 2, "payees": 0, "entries": 1, "postings": 2, "captures": 0,
-               "recurring": 0, "rates": 3, "custom_queries": 0}
+               "recurring": 0, "rates": 3, "custom_queries": 0},
+    "window": {"from": "2025-01-01", "to": "2025-12-31"}
   },
   "data": {
     "accounts": […], "payees": […], "entries": […], "captures": […],
@@ -65,6 +67,10 @@ The date is the day the job finished. The JSON document:
 ```
 
 `data` is the canonical, re-importable half: money is a string of minor units, timestamps are RFC3339, dates are `YYYY-MM-DD`, every reference is a 32-hex ref, and no integer id or sealed value appears. `summary` is display sugar computed from the same rows: one balance per account (base currency), spend and income per month, spend per expense category, and the row count per table — it is not re-importable and never replaces `data`.
+
+`summary.window` appears only when the job was queued with `from`/`to`, and repeats the window the document covers. A window narrows the entries: an entry whose `occurred_on` falls outside is excluded, its postings with it, and `summary.months`, `summary.categories`, the per-account balances and the `entries`/`postings` counts are computed from what is left. `accounts`, `payees`, `captures`, `recurring`, `rates` and `custom_queries` are exported whole, so a year can still be read against the full account tree. A window that matches nothing is a valid document with empty `entries`, empty `months` and zero counts, never an error.
+
+The `csv` job follows the same rule: `entries.csv` and `postings.csv` carry the window, `summary.json` carries the same `summary` object (window included), and the other sheets are whole.
 
 The `csv` job is a zip, in this fixed order: `accounts.csv`, `payees.csv`, `entries.csv`, `postings.csv`, `captures.csv`, `rates.csv`, `recurring.csv`, `custom_queries.csv`, `summary.json` (the same `summary` object), `manifest.json` (`{"schema_version":…,"exported_at":"…","files":[{"name":"entries.csv","rows":42,"sha256":"<hex>"}]}`). Each sheet is a header row plus one row per record; `postings.csv` is the money sheet, one row per posting.
 

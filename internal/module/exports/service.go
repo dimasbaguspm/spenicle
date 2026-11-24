@@ -56,7 +56,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Export, bo
 	}
 
 	if found {
-		return s.resume(ctx, existing, in.Format)
+		return s.resume(ctx, existing, in)
 	}
 
 	version, err := s.versions.SchemaVersion(ctx)
@@ -70,6 +70,8 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Export, bo
 		Format:        in.Format,
 		SchemaVersion: version,
 		CreatedAt:     s.clock.Now(),
+		FromOn:        in.FromOn,
+		ToOn:          in.ToOn,
 	})
 	if err != nil {
 		return s.raced(ctx, in, err)
@@ -338,9 +340,9 @@ func (s *Service) discard(ctx context.Context, job entity.Export) error {
 func (s *Service) resume(
 	ctx context.Context,
 	job entity.Export,
-	format string,
+	in CreateInput,
 ) (entity.Export, bool, error) {
-	if job.Format != format {
+	if job.Format != in.Format || !sameWindow(job, in.FromOn, in.ToOn) {
 		return entity.Export{}, false, fmt.Errorf("%w: %s", entity.ErrExportConflict, job.ClientID)
 	}
 
@@ -349,6 +351,18 @@ func (s *Service) resume(
 	}
 
 	return job, false, nil
+}
+
+func sameWindow(job entity.Export, fromOn, toOn *time.Time) bool {
+	if fromOn == nil || toOn == nil {
+		return job.FromOn == nil && job.ToOn == nil
+	}
+
+	if job.FromOn == nil || job.ToOn == nil {
+		return false
+	}
+
+	return job.FromOn.Equal(*fromOn) && job.ToOn.Equal(*toOn)
 }
 
 func (s *Service) raced(
@@ -361,7 +375,7 @@ func (s *Service) raced(
 		return entity.Export{}, false, cause
 	}
 
-	return s.resume(ctx, existing, in.Format)
+	return s.resume(ctx, existing, in)
 }
 
 func (s *Service) load(ctx context.Context, ref string) (entity.Export, error) {

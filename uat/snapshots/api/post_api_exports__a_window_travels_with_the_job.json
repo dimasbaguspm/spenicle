@@ -1,0 +1,11 @@
+{
+  "bytes": 0,
+  "client_id": "export-1",
+  "created_at": "<timestamp>",
+  "format": "json",
+  "from": "2025-01-01",
+  "ref": "<ref>",
+  "schema_version": 3,
+  "status": "queued",
+  "to": "2025-12-31"
+}

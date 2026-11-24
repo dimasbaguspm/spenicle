@@ -15,6 +15,7 @@ type snapshot struct {
 	schemaVersion int
 	exportedAt    time.Time
 	baseCurrency  string
+	window        *Window
 	accounts      []entity.Account
 	payees        []entity.Payee
 	entries       []entity.Entry
@@ -27,7 +28,7 @@ type snapshot struct {
 	entryRefs     map[int64]string
 }
 
-func collect(ctx context.Context, deps Deps) (*snapshot, error) {
+func collect(ctx context.Context, deps Deps, window *Window) (*snapshot, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Export.Collect")
 	defer endSpan()
 
@@ -71,8 +72,31 @@ func collect(ctx context.Context, deps Deps) (*snapshot, error) {
 	}
 
 	out.sort()
+	out.keep(window)
 
 	return out, nil
+}
+
+func (s *snapshot) keep(window *Window) {
+	s.window = window
+
+	if window == nil {
+		return
+	}
+
+	kept := make([]entity.Entry, 0, len(s.entries))
+
+	for _, entry := range s.entries {
+		if window.Holds(entry.OccurredOn) {
+			kept = append(kept, entry)
+		}
+	}
+
+	s.entries = kept
+}
+
+func (w Window) Holds(day time.Time) bool {
+	return !day.Before(w.From) && !day.After(w.To)
 }
 
 func (s *snapshot) sort() {

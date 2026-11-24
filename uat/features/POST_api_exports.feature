@@ -41,3 +41,35 @@ Feature: POST /api/exports
       """
     Then the response status is 422
     And the response JSON matches the snapshot "post_api_exports__an_unknown_format_is_refused"
+
+  Scenario: A window travels with the job
+    Given a running API
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-1","format":"json","from":"2025-01-01","to":"2025-12-31"}
+      """
+    Then the response status is 201
+    And the response JSON matches the snapshot "post_api_exports__a_window_travels_with_the_job"
+
+  Scenario: One end of a window alone is refused
+    Given a running API
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-1","from":"2025-01-01"}
+      """
+    Then the response status is 422
+    And the response JSON matches the snapshot "post_api_exports__one_end_of_a_window_alone_is_refused"
+
+  Scenario: The same client id with another window is refused
+    Given a running API
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-1","format":"json"}
+      """
+    Then the response status is 201
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-1","format":"json","from":"2025-01-01","to":"2025-12-31"}
+      """
+    Then the response status is 409
+    And the response JSON matches the snapshot "post_api_exports__the_same_client_id_with_another_window_is_refused"

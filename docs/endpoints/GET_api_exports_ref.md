@@ -4,7 +4,7 @@
 
 ## Purpose
 
-One export job by ref: its status, its format, the counts of what it rendered and the moment it expires. The job is the promise `POST /api/exports` made, and this is the route a client watches until it reads `ready`.
+One export job by ref: its status, its format, the window it covers, the counts of what it rendered and the moment it expires. The job is the promise `POST /api/exports` made, and this is the route a client watches until it reads `ready`.
 
 ## Upstream
 
@@ -34,6 +34,8 @@ None.
   "client_id": "laptop-2026-02-14",
   "status": "ready",
   "format": "json",
+  "from": "2025-01-01",
+  "to": "2025-12-31",
   "schema_version": 1,
   "counts": {"accounts": 3, "entries": 42, "postings": 84},
   "bytes": 1908,
@@ -44,7 +46,7 @@ None.
 }
 ```
 
-The status is one of `queued`, `running`, `ready`, `failed` or `expired`. `counts` is omitted until the job finished, `error_message` only when it failed, and the three timestamps as they happen.
+The status is one of `queued`, `running`, `ready`, `failed` or `expired`. `counts` is omitted until the job finished, `error_message` only when it failed, and the three timestamps as they happen. `from` and `to` echo the window the job renders and are omitted for an unwindowed job; they are part of the job's identity, so a `client_id` cannot be replayed with another window.
 
 ## Errors
 

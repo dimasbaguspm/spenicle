@@ -59,3 +59,16 @@ Feature: GET /api/exports/{ref}/download
     When I send a GET to "/api/exports/00000000000000000000000000000000/download"
     Then the response status is 404
     And the response JSON matches the snapshot "get_api_exports_ref_download__an_unknown_job_is_not_found"
+
+  Scenario: A windowed job is named with its window
+    Given a running API
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-1","format":"json","from":"2025-01-01","to":"2025-12-31"}
+      """
+    Then the response status is 201
+    And the export worker runs
+    When I send a GET to "/api/exports/{{ref}}/download"
+    Then the response status is 200
+    And the response header "Content-Disposition" contains "spenicle-2025-01-01_2025-12-31.json"
+    And the response header "Content-Type" is "application/json"

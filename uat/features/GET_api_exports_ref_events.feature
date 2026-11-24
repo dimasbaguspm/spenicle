@@ -35,3 +35,15 @@ Feature: GET /api/exports/{ref}/events
     When I send a GET to "/api/exports/00000000000000000000000000000000/events"
     Then the response status is 404
     And the response JSON matches the snapshot "get_api_exports_ref_events__an_unknown_job_has_no_events"
+
+  Scenario: A windowed job echoes its window in its trail
+    Given a running API
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-1","format":"json","from":"2025-01-01","to":"2025-12-31"}
+      """
+    Then the response status is 201
+    And the export worker runs
+    When I send a GET to "/api/exports/{{ref}}/events"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_exports_ref_events__a_windowed_job_echoes_its_window"

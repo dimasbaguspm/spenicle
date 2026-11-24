@@ -39,6 +39,8 @@ None.
       "client_id": "laptop-2026-02-14",
       "status": "ready",
       "format": "json",
+      "from": "2025-01-01",
+      "to": "2025-12-31",
       "schema_version": 1,
       "counts": {"accounts": 3, "entries": 42, "postings": 84},
       "bytes": 1908,
@@ -52,7 +54,7 @@ None.
 }
 ```
 
-`counts` is omitted until the job is rendered; `error_message` only when it failed. `next_cursor` in `meta` is the ref to send back when `has_more` is true.
+`counts` is omitted until the job is rendered; `error_message` only when it failed. `from` and `to` echo the window the job was queued for, and are omitted for an unwindowed job. `next_cursor` in `meta` is the ref to send back when `has_more` is true.
 
 ## Errors
 
@@ -61,7 +63,7 @@ None.
 
 ## Limitations
 
-- No date range and no `client_id` filter: the queue is short and the ref is the identifier the rest of the API speaks.
+- No `client_id` filter and no window filter: the queue is short, the ref is the identifier the rest of the API speaks, and `from`/`to` on a row are what the job is, not what this list narrows by.
 - A `ready` job keeps appearing here after its blob is swept, as `expired`; the row is the receipt, the download answers `410`.
 
 ## Sequence

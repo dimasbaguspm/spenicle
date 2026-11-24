@@ -77,7 +77,7 @@
     "recurring": []
   },
   "exported_at": "<timestamp>",
-  "schema_version": 2,
+  "schema_version": 3,
   "summary": {
     "accounts": [
       {

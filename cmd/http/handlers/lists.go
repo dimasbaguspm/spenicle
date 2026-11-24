@@ -161,6 +161,7 @@ func writeEventPage[T, R any](
 	fetch func(cursor string, limit int) ([]T, error),
 	refOf func(T) string,
 	toRow func(T) R,
+	extra ...map[string]any,
 ) {
 	var request pageRequest
 	if err := bindQuery(r, &request); err != nil {
@@ -172,7 +173,7 @@ func writeEventPage[T, R any](
 	limit := list.ClampLimit(request.Limit)
 
 	writeList(ctx, w, server, "events", limit,
-		func() ([]T, error) { return fetch(request.Cursor, limit) }, refOf, toRow)
+		func() ([]T, error) { return fetch(request.Cursor, limit) }, refOf, toRow, extra...)
 }
 
 func writeList[T, R any](
@@ -184,6 +185,7 @@ func writeList[T, R any](
 	fetch func() ([]T, error),
 	refOf func(T) string,
 	toRow func(T) R,
+	extra ...map[string]any,
 ) {
 	items, err := fetch()
 	if err != nil {
@@ -200,5 +202,5 @@ func writeList[T, R any](
 		rows = append(rows, toRow(item))
 	}
 
-	list.Write(w, key, rows, meta)
+	list.Write(w, key, rows, meta, extra...)
 }

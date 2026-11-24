@@ -53,11 +53,13 @@ None.
       "at": "2026-02-14T10:00:01Z"
     }
   ],
+  "from": "2025-01-01",
+  "to": "2025-12-31",
   "meta": {"limit": 50, "has_more": false}
 }
 ```
 
-`payload` appears only when a kind carries one; no export kind carries one today. `next_cursor` in `meta` is the ref to send back when `has_more` is true.
+`payload` appears only when a kind carries one; no export kind carries one today. `from` and `to` echo the window of the job the trail belongs to and are omitted for an unwindowed job. `next_cursor` in `meta` is the ref to send back when `has_more` is true.
 
 ## Errors
 

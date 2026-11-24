@@ -26,6 +26,8 @@ type Export struct {
 	StartedAt     *time.Time
 	FinishedAt    *time.Time
 	ExpiresAt     *time.Time
+	FromOn        *time.Time
+	ToOn          *time.Time
 	ErrorMessage  string
 }
 

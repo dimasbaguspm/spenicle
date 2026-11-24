@@ -100,7 +100,7 @@ func (r *Runner) renderExport(ctx context.Context, job entity.Export) error {
 
 	telemetry.Ref(ctx, job.Ref)
 
-	document, err := export.Render(ctx, r.documents, job.Format)
+	document, err := export.Render(ctx, r.documents, job.Format, exportWindow(job))
 	if err != nil {
 		return fmt.Errorf("render %s export: %w", job.Format, err)
 	}
@@ -119,6 +119,14 @@ func (r *Runner) renderExport(ctx context.Context, job entity.Export) error {
 	_, err = r.jobs.Complete(ctx, job.Ref, record.SHA256, int64(len(document.Bytes)), document.Counts)
 
 	return err
+}
+
+func exportWindow(job entity.Export) *export.Window {
+	if job.FromOn == nil || job.ToOn == nil {
+		return nil
+	}
+
+	return &export.Window{From: *job.FromOn, To: *job.ToOn}
 }
 
 func (r *Runner) abandonExport(ctx context.Context, job entity.Export) {

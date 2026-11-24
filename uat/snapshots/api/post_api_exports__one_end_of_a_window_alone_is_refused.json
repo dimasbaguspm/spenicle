@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "from and to are both required for a window"
+  }
+}

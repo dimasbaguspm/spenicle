@@ -1,0 +1,28 @@
+{
+  "events": [
+    {
+      "actor": "worker",
+      "at": "<timestamp>",
+      "kind": "completed",
+      "ref": "<ref>"
+    },
+    {
+      "actor": "worker",
+      "at": "<timestamp>",
+      "kind": "started",
+      "ref": "<ref>"
+    },
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "queued",
+      "ref": "<ref>"
+    }
+  ],
+  "from": "2025-01-01",
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  },
+  "to": "2025-12-31"
+}
