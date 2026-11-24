@@ -136,7 +136,8 @@ func (s *server) routes() routeGroups {
 	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/months", s.api.MonthlyAnalytics)
 	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/categories", s.api.CategoryAnalytics)
 	groups.scoped.route(constant.ScopeAnalyticsRead, "POST /api/analytics/custom", s.api.CreateCustomQuery)
-	groups.scoped.route(constant.ScopeAnalyticsRead, "PATCH /api/analytics/custom/{ref}", s.api.PatchCustomQuery)
+	groups.scoped.route(constant.ScopeAnalyticsRead,
+		"PATCH /api/analytics/custom/{ref}", s.api.PatchCustomQuery)
 	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/custom/{ref}", s.api.RunCustomQuery)
 	groups.scoped.route(constant.ScopeDashboardRead, "GET /api/dashboard", s.api.GetDashboard)
 
@@ -157,14 +158,16 @@ func (s *server) routes() routeGroups {
 	groups.scoped.route(constant.ScopeCapturesRead, "GET /api/captures", s.api.ListCaptures)
 	groups.scoped.route(constant.ScopeCapturesWrite, "POST /api/captures", s.api.CreateCapture)
 	groups.scoped.route(constant.ScopeCapturesWrite, "PATCH /api/captures/{ref}", s.api.PatchCapture)
-	groups.scoped.route(constant.ScopeCapturesRead, "GET /api/captures/{ref}/artifact", s.api.GetCaptureArtifact)
+	groups.scoped.route(constant.ScopeCapturesRead,
+		"GET /api/captures/{ref}/artifact", s.api.GetCaptureArtifact)
 
 	groups.scoped.route(constant.ScopeImportsRead, "GET /api/imports", s.api.ListImports)
 	groups.scoped.route(constant.ScopeImportsWrite, "POST /api/imports", s.api.CreateImport)
 	groups.scoped.route(constant.ScopeImportsRead, "GET /api/imports/{ref}", s.api.GetImport)
 	groups.scoped.route(constant.ScopeImportsWrite, "PATCH /api/imports/{ref}", s.api.PatchImport)
 	groups.scoped.route(constant.ScopeImportsRead, "GET /api/imports/{ref}/events", s.api.ListImportEvents)
-	groups.scoped.route(constant.ScopeImportsWrite, "PATCH /api/imports/{ref}/rows/{index}", s.api.PatchImportRow)
+	groups.scoped.route(constant.ScopeImportsWrite,
+		"PATCH /api/imports/{ref}/rows/{index}", s.api.PatchImportRow)
 
 	groups.scoped.route(constant.ScopeExportsRead, "GET /api/exports", s.api.ListExports)
 	groups.scoped.route(constant.ScopeExportsWrite, "POST /api/exports", s.api.CreateExport)

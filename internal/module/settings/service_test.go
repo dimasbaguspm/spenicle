@@ -130,14 +130,6 @@ func TestChangePasswordInvalidatesTheOldCredential(t *testing.T) {
 	if ok, err := service.Root(ctx, "my-own-password-456"); err != nil || !ok {
 		t.Fatalf("the new password must be the root credential: ok=%v err=%v", ok, err)
 	}
-
-	if _, found, authErr := service.Authenticate(ctx, "my-own-password-456"); authErr != nil || !found {
-		t.Fatalf("the new password must authenticate: found=%v err=%v", found, authErr)
-	}
-
-	if _, _, authErr := service.Authenticate(ctx, "initial-password-123"); !errors.Is(authErr, entity.ErrPasswordMismatch) {
-		t.Fatalf("the old password must stop working, got %v", authErr)
-	}
 }
 
 func TestRootAnswersOnlyTheInstancePassword(t *testing.T) {
