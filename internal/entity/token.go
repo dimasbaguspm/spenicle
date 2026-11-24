@@ -66,7 +66,8 @@ func KnownScope(scope string) bool {
 		constant.ScopeExportsRead, constant.ScopeExportsWrite,
 		constant.ScopeAnalyticsRead, constant.ScopeAuditRead,
 		constant.ScopeDashboardRead, constant.ScopeSettingsRead,
-		constant.ScopeRatesRead:
+		constant.ScopeRatesRead, constant.ScopeCategorizationRead,
+		constant.ScopeCategorizationWrite:
 		return true
 	default:
 		return false

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "duplicate",
+    "message": "create rule \"indomaret\": duplicate name: constraint failed: UNIQUE constraint failed: categorization_rules.pattern, categorization_rules.field, categorization_rules.match_kind (2067)"
+  }
+}

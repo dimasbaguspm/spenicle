@@ -43,6 +43,10 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `PATCH` | `/api/analytics/custom/{ref}` | rename or re-chart a saved view | [`PATCH_api_analytics_custom_ref.md`](./PATCH_api_analytics_custom_ref.md) |
 | `GET` | `/api/analytics/custom/{ref}` | run a saved view over a window | [`GET_api_analytics_custom_ref.md`](./GET_api_analytics_custom_ref.md) |
 | `GET` | `/api/dashboard` | the landing tiles in one response | [`GET_api_dashboard.md`](./GET_api_dashboard.md) |
+| `GET` | `/api/categorization/rules` | the deterministic category rules, newest first | [`GET_api_categorization_rules.md`](./GET_api_categorization_rules.md) |
+| `POST` | `/api/categorization/rules` | teach one rule: a pattern, a field and a category | [`POST_api_categorization_rules.md`](./POST_api_categorization_rules.md) |
+| `PATCH` | `/api/categorization/rules/{ref}` | repoint, reprioritise or archive a rule | [`PATCH_api_categorization_rules_ref.md`](./PATCH_api_categorization_rules_ref.md) |
+| `GET` | `/api/categorization/suggest` | the category this payee or text would get, and why | [`GET_api_categorization_suggest.md`](./GET_api_categorization_suggest.md) |
 | `POST` | `/api/setup` | open the ledger with a base currency | [`POST_api_setup.md`](./POST_api_setup.md) |
 | `GET` | `/api/rates` | the cached ECB reference rate for one day | [`GET_api_rates.md`](./GET_api_rates.md) |
 | `GET` | `/api/audit` | the journal: what changed, who changed it | [`GET_api_audit.md`](./GET_api_audit.md) |

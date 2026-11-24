@@ -1,0 +1,6 @@
+{
+  "account_name": "Cat",
+  "account_ref": "<ref>",
+  "tier": "payee_default",
+  "why": "the payee already carries this default category"
+}

@@ -1,13 +1,14 @@
 package constant
 
 const (
-	AuditEntitySetting   = "setting"
-	AuditEntityAccount   = "account"
-	AuditEntityPayee     = "payee"
-	AuditEntityRecurring = "recurring_rule"
-	AuditEntityEntry     = "ledger_entry"
-	AuditEntityCapture   = "capture"
-	AuditEntityToken     = "api_token"
+	AuditEntitySetting            = "setting"
+	AuditEntityAccount            = "account"
+	AuditEntityPayee              = "payee"
+	AuditEntityRecurring          = "recurring_rule"
+	AuditEntityEntry              = "ledger_entry"
+	AuditEntityCapture            = "capture"
+	AuditEntityToken              = "api_token"
+	AuditEntityCategorizationRule = "categorization_rule"
 )
 
 const (

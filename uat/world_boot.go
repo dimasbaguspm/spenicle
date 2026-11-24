@@ -17,6 +17,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/categorization"
 	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
@@ -147,18 +148,20 @@ func (w *world) boot(ctx context.Context) error {
 			clockSystem,
 			imports.Options{MaxRows: limits.ImportMaxRows, CommitChunk: w.chunk()},
 		),
-		Accounts:      store,
-		Payees:        store,
-		Recurring:     store,
-		Analytics:     store,
-		CustomQueries: store,
-		Exports:       w.exports,
-		Artifacts:     store,
-		ArtifactFiles: artifacts,
-		ExportFiles:   w.exportFiles,
-		Health:        store,
-		Audit:         store,
-		Tokens:        tokens.New(store, sealer, clockSystem),
+		Accounts:       store,
+		Payees:         store,
+		Recurring:      store,
+		Rules:          store,
+		Categorization: categorization.New(store),
+		Analytics:      store,
+		CustomQueries:  store,
+		Exports:        w.exports,
+		Artifacts:      store,
+		ArtifactFiles:  artifacts,
+		ExportFiles:    w.exportFiles,
+		Health:         store,
+		Audit:          store,
+		Tokens:         tokens.New(store, sealer, clockSystem),
 		Connections: connections.New(store, store, sealer,
 			google.New(nil, "", w.options.GoogleTokenEndpoint,
 				w.options.GoogleRevokeEndpoint), clockSystem),

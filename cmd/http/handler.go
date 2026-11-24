@@ -18,6 +18,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/categorization"
 	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
@@ -139,6 +140,14 @@ func (s *server) routes() routeGroups {
 		"PATCH /api/analytics/custom/{ref}", s.api.PatchCustomQuery)
 	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/custom/{ref}", s.api.RunCustomQuery)
 	groups.scoped.route(constant.ScopeDashboardRead, "GET /api/dashboard", s.api.GetDashboard)
+	groups.scoped.route(constant.ScopeCategorizationRead,
+		"GET /api/categorization/rules", s.api.ListCategorizationRules)
+	groups.scoped.route(constant.ScopeCategorizationWrite,
+		"POST /api/categorization/rules", s.api.CreateCategorizationRule)
+	groups.scoped.route(constant.ScopeCategorizationWrite,
+		"PATCH /api/categorization/rules/{ref}", s.api.PatchCategorizationRule)
+	groups.scoped.route(constant.ScopeCategorizationRead,
+		"GET /api/categorization/suggest", s.api.SuggestCategory)
 
 	groups.scoped.route(constant.ScopeAccountsRead, "GET /api/accounts", s.api.ListAccounts)
 	groups.scoped.route(constant.ScopeAccountsWrite, "POST /api/accounts", s.api.CreateAccount)
@@ -372,17 +381,19 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		gmailmail.New(nil, "", connector))
 
 	return handlers.Deps{
-		Ledger:        process.Ledger,
-		Captures:      captured,
-		Rates:         process.Rates,
-		Accounts:      store,
-		Payees:        store,
-		Recurring:     store,
-		Analytics:     store,
-		CustomQueries: store,
-		Artifacts:     store,
-		ArtifactFiles: process.Artifacts,
-		ExportFiles:   process.Exports,
+		Ledger:         process.Ledger,
+		Captures:       captured,
+		Rates:          process.Rates,
+		Accounts:       store,
+		Payees:         store,
+		Recurring:      store,
+		Rules:          store,
+		Categorization: categorization.New(store),
+		Analytics:      store,
+		CustomQueries:  store,
+		Artifacts:      store,
+		ArtifactFiles:  process.Artifacts,
+		ExportFiles:    process.Exports,
 		Exports: exports.New(
 			store, store, store, process.Exports, process.Cfg.ExportRetention, clock.System{},
 		),

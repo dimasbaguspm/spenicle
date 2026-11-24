@@ -1,0 +1,7 @@
+{
+  "account_name": "Grocery",
+  "account_ref": "<ref>",
+  "rule_ref": "<ref>",
+  "tier": "rule_contains",
+  "why": "the payee name starts with \"indomaret\""
+}

@@ -1,0 +1,10 @@
+{
+  "archived": true,
+  "category_ref": "<ref>",
+  "created_at": "<timestamp>",
+  "field": "payee",
+  "match_kind": "contains",
+  "pattern": "indomaret point",
+  "priority": 10,
+  "ref": "<ref>"
+}

@@ -66,6 +66,7 @@ func (w *world) clearDatabase(ctx context.Context) error {
 		"payees",
 		"fx_rates",
 		"accounts",
+		"categorization_rules",
 		"settings",
 		"api_tokens",
 		"connections",

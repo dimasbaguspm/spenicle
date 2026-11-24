@@ -26,7 +26,8 @@ the document wins until you change the document too.
    zero. `entity.CheckZeroSum` runs before the insert and again inside the write
    transaction.
 3. **No deletes.** Void (`voided_at`) or reject. Every state change on `accounts`,
-   `payees`, `recurring_rules`, `ledger_entries`, `captures`, `settings` and `api_tokens`
+   `payees`, `recurring_rules`, `ledger_entries`, `captures`, `settings`, `api_tokens` and
+   `categorization_rules`
    appends one `audit_log` row inside the same transaction, through
    `sqlite.appendAudit`, which opens its own span and validates the typed payload
    (`entity.EntryCreated` and friends, same `validate` tags as the API). Import and export jobs keep their own append-only

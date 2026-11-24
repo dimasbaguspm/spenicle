@@ -96,3 +96,13 @@ type TokenChanged struct {
 	Scopes    []string `json:"scopes,omitempty"     validate:"omitempty,max=20,dive,scope"`
 	RevokedAt string   `json:"revoked_at,omitempty"`
 }
+
+// RuleChanged records a categorization rule that was created, repointed or archived.
+type RuleChanged struct {
+	Pattern     string `json:"pattern,omitempty"      validate:"omitempty,min=2,max=80"`
+	Field       string `json:"field,omitempty"        validate:"omitempty,rulefield"`
+	MatchKind   string `json:"match_kind,omitempty"   validate:"omitempty,rulematch"`
+	CategoryRef string `json:"category_ref,omitempty" validate:"omitempty,ref"`
+	Priority    int    `json:"priority,omitempty"`
+	ArchivedAt  string `json:"archived_at,omitempty"`
+}

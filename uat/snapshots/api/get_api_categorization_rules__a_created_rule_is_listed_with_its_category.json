@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  },
+  "rules": [
+    {
+      "archived": false,
+      "category_ref": "<ref>",
+      "created_at": "<timestamp>",
+      "field": "payee",
+      "match_kind": "contains",
+      "pattern": "indomaret",
+      "priority": 0,
+      "ref": "<ref>"
+    }
+  ]
+}

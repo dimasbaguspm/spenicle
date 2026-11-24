@@ -43,6 +43,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | — | `GET /api/audit` | live: the journal, filtered by kind, ref, action, actor and a day range |
 | — | `GET/PATCH /api/intake`, `POST /api/intake/run`, `GET /api/intake/messages`, `GET /api/intake/messages/{ref}`, `POST /api/intake/messages/{ref}/refresh` | live: a mailbox poll queues captures, a reference records what became of each mail |
 | — | `GET /api/connections`, `POST /api/connections/google`, `GET /api/connections/google/callback`, `POST /api/connections/{ref}/revoke` | live: one sealed credential per provider, re-authorising replaces it |
+| — | `GET/POST /api/categorization/rules`, `PATCH /api/categorization/rules/{ref}`, `GET /api/categorization/suggest` | live: deterministic rules suggest a category, the suggestion endpoint explains the tier and never posts |
 
 ## Review rounds folded in
 
@@ -107,7 +108,8 @@ it (and clears the verification cache by construction); signing out is dropping 
 
 Scopes: `entries:read|write`, `captures:read|write`, `accounts:read|write`, `payees:read|write`,
 `recurring:read|write`, `imports:read|write`, `exports:read|write`, `analytics:read`,
-`audit:read`, `dashboard:read`, `settings:read`, `rates:read`, `admin`, plus `*`.
+`categorization:read|write`, `audit:read`, `dashboard:read`, `settings:read`, `rates:read`,
+`admin`, plus `*`.
 
 Each endpoint declares its scope when it is registered (`groups.scoped.route(scope, pattern, handler)` in `cmd/http/handler.go`); a subset returns
 `403 forbidden`. `admin` and `*` cover every scoped route. Routes with **no** scope live in
@@ -328,7 +330,28 @@ The reference a mailbox poll leaves behind. No content: the body is sealed in
   `gone`
 - `attempts`, `last_error`, `last_synced_at`, `superseded_by` — retry and revision trail
 
-## 1.13 Canonical DDL
+## 1.13 `categorization_rules`
+
+| column | type | notes |
+| --- | --- | --- |
+| `id` | INTEGER PK | |
+| `pattern` | TEXT | trimmed and lowercased before it is stored, 2–80 characters |
+| `field` | TEXT | `payee` \| `note` — which text the pattern looks at |
+| `match_kind` | TEXT | `exact` \| `contains` \| `prefix` |
+| `account_id` | INTEGER | FK to `accounts`, always an `expense` or `income` row |
+| `priority` | INTEGER | default 0; higher wins inside a tier |
+| `archived_at` | TEXT NULL | retired, never deleted |
+| `created_at` | TEXT | |
+
+`CREATE UNIQUE INDEX ux_rules_live ON categorization_rules (pattern, field, match_kind) WHERE
+archived_at IS NULL`: a live rule is unique on the text it looks at and the way it compares,
+so two spellings of `INDOMARET` cannot both exist. A rule is a **suggestion** source, never a
+posting: the ledger still only changes through an approved entry. Resolution is pure and
+ordered — payee default, exact rule on the payee name, `contains`/`prefix` rule on the payee
+name, `contains`/`prefix` rule on the note, then `none` — and inside a tier it is decided by
+`priority DESC`, pattern length `DESC`, `created_at ASC`.
+
+## 1.14 Canonical DDL
 
 ```sql
 PRAGMA journal_mode = WAL;
@@ -517,6 +540,22 @@ CREATE TABLE mail_messages (
 CREATE UNIQUE INDEX ux_mail_messages_source ON mail_messages (source, message_ref);
 CREATE INDEX ix_mail_messages_observed ON mail_messages (observed_at);
 CREATE INDEX ix_mail_messages_capture ON mail_messages (capture_id);
+
+CREATE TABLE categorization_rules (
+  id          INTEGER PRIMARY KEY,
+  ref         TEXT NOT NULL UNIQUE,
+  pattern     TEXT NOT NULL,
+  field       TEXT NOT NULL CHECK (field IN ('payee','note')),
+  match_kind  TEXT NOT NULL CHECK (match_kind IN ('exact','contains','prefix')),
+  account_id  INTEGER NOT NULL REFERENCES accounts(id),
+  priority    INTEGER NOT NULL DEFAULT 0,
+  archived_at TEXT,
+  created_at  TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX ux_rules_live ON categorization_rules (pattern, field, match_kind)
+  WHERE archived_at IS NULL;
+CREATE INDEX ix_rules_account ON categorization_rules (account_id);
 ```
 
 ---
@@ -554,6 +593,10 @@ CREATE INDEX ix_mail_messages_capture ON mail_messages (capture_id);
 | — | POST | `/api/intake/messages/{ref}/refresh` | `admin` | latest state of that mail |
 | — | GET/POST | `/api/connections`, `/api/connections/google` | `admin` | read status, start an authorisation |
 | — | POST | `/api/connections/google/callback`, `/api/connections/{ref}/revoke` | `admin` | finish an authorisation, revoke |
+| — | GET | `/api/categorization/rules` | `categorization:read` | the live rules, paged, optionally with the archived ones |
+| — | POST | `/api/categorization/rules` | `categorization:write` | one deterministic rule: pattern, field, match kind, category |
+| — | PATCH | `/api/categorization/rules/{ref}` | `categorization:write` | repoint, reprioritise or archive a rule |
+| — | GET | `/api/categorization/suggest` | `categorization:read` | the category a payee or text would get, with its tier and reason |
 
 ## Removed, and where it went
 

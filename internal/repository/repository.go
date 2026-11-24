@@ -110,6 +110,11 @@ type Analytics interface {
 	MonthlyTotals(ctx context.Context, from, to time.Time) ([]entity.MonthTotal, error)
 	CategoryTotals(ctx context.Context, from, to time.Time, kind string) ([]entity.CategoryTotal, error)
 	CategoryTotalsByRoot(ctx context.Context, from, to time.Time, kind string) ([]entity.CategoryTotal, error)
+	CategoryTotalsByMonth(
+		ctx context.Context,
+		from, to time.Time,
+		kind string,
+	) ([]entity.CategoryMonthlyTotal, error)
 	CaptureCount(ctx context.Context, status string) (int, error)
 }
 
@@ -201,4 +206,12 @@ type ExportQueue interface {
 type ExportEvents interface {
 	InsertExportEvent(ctx context.Context, event entity.ExportEvent) (entity.ExportEvent, error)
 	ListExportEvents(ctx context.Context, filter entity.ExportEventFilter) ([]entity.ExportEvent, error)
+}
+
+type Categorization interface {
+	CreateRule(ctx context.Context, rule entity.CategorizationRule) (entity.CategorizationRule, error)
+	RuleByRef(ctx context.Context, ref string) (entity.CategorizationRule, bool, error)
+	ListRules(ctx context.Context, filter entity.CategorizationFilter) ([]entity.CategorizationRule, error)
+	UpdateRule(ctx context.Context, rule entity.CategorizationRule) (entity.CategorizationRule, error)
+	ListLiveRules(ctx context.Context) ([]entity.CategorizationRule, error)
 }

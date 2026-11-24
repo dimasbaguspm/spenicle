@@ -1,0 +1,22 @@
+{
+  "bucket": "month",
+  "categories": [
+    {
+      "account_name": "Unsorted",
+      "account_ref": "<ref>",
+      "months": [
+        {
+          "month": "2026-01",
+          "spend_minor": "1000"
+        },
+        {
+          "month": "2026-02",
+          "spend_minor": "2000"
+        }
+      ]
+    }
+  ],
+  "from": "2026-01-01",
+  "kind": "expense",
+  "to": "2026-02-28"
+}

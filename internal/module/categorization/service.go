@@ -1,0 +1,263 @@
+package categorization
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"strconv"
+
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
+)
+
+type Service struct {
+	store Store
+}
+
+func New(store Store) *Service {
+	return &Service{store: store}
+}
+
+var _ Contract = (*Service)(nil)
+
+func (s *Service) Resolve(ctx context.Context, in SuggestInput) (Suggestion, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Categorization.Resolve")
+	defer endSpan()
+
+	payeeName := in.Text
+	defaultCategory := ""
+
+	if in.PayeeRef != "" {
+		payee, found, err := s.store.PayeeByRef(ctx, in.PayeeRef)
+		if err != nil {
+			return Suggestion{}, err
+		}
+
+		if !found {
+			return Suggestion{}, fmt.Errorf("%w: payee %s", entity.ErrNotFound, in.PayeeRef)
+		}
+
+		payeeName = payee.Name
+
+		if defaultCategory, err = s.defaultCategory(ctx, in.Kind, payee.DefaultCategoryRef); err != nil {
+			return Suggestion{}, err
+		}
+	}
+
+	rules, err := s.store.ListLiveRules(ctx)
+	if err != nil {
+		return Suggestion{}, err
+	}
+
+	if in.Kind != "" {
+		if rules, err = s.keepKind(ctx, in.Kind, rules); err != nil {
+			return Suggestion{}, err
+		}
+	}
+
+	return s.describe(ctx, Suggest(payeeName, in.Text, defaultCategory, rules))
+}
+
+func (s *Service) defaultCategory(ctx context.Context, kind, ref string) (string, error) {
+	if ref == "" {
+		return "", nil
+	}
+
+	account, found, err := s.store.AccountByRef(ctx, ref)
+	if err != nil {
+		return "", err
+	}
+
+	if !found || account.ArchivedAt != nil {
+		return "", nil
+	}
+
+	if kind != "" && account.Kind != kind {
+		return "", nil
+	}
+
+	return ref, nil
+}
+
+func (s *Service) keepKind(
+	ctx context.Context,
+	kind string,
+	rules []entity.CategorizationRule,
+) ([]entity.CategorizationRule, error) {
+	kept := make([]entity.CategorizationRule, 0, len(rules))
+	kinds := make(map[string]bool, len(rules))
+
+	for _, rule := range rules {
+		known, seen := kinds[rule.AccountRef]
+		if !seen {
+			accountKind, err := s.accountKind(ctx, rule.AccountRef)
+			if err != nil {
+				return nil, err
+			}
+
+			known = accountKind == kind
+			kinds[rule.AccountRef] = known
+		}
+
+		if known {
+			kept = append(kept, rule)
+		}
+	}
+
+	return kept, nil
+}
+
+func (s *Service) accountKind(ctx context.Context, ref string) (string, error) {
+	account, found, err := s.store.AccountByRef(ctx, ref)
+	if err != nil {
+		return "", err
+	}
+
+	if !found {
+		return "", nil
+	}
+
+	return account.Kind, nil
+}
+
+func (s *Service) describe(
+	ctx context.Context,
+	resolved entity.CategorySuggestion,
+) (Suggestion, error) {
+	out := Suggestion{
+		AccountRef: resolved.AccountRef,
+		Why:        resolved.Why,
+		Tier:       resolved.Tier,
+		RuleRef:    resolved.RuleRef,
+	}
+
+	if resolved.AccountRef == "" {
+		fallback, found, err := s.store.FindAccount(
+			ctx, constant.SeedExpenseAccount, constant.AccountKindExpense,
+		)
+		if err != nil {
+			return Suggestion{}, err
+		}
+
+		if found {
+			out.AccountRef = fallback.Ref
+			out.AccountName = fallback.Name
+		}
+
+		return out, nil
+	}
+
+	account, found, err := s.store.AccountByRef(ctx, resolved.AccountRef)
+	if err != nil {
+		return Suggestion{}, err
+	}
+
+	if found {
+		out.AccountName = account.Name
+	}
+
+	return out, nil
+}
+
+func Suggest(
+	payeeName, note, payeeDefaultCategoryRef string,
+	rules []entity.CategorizationRule,
+) entity.CategorySuggestion {
+	if payeeDefaultCategoryRef != "" {
+		return entity.CategorySuggestion{
+			AccountRef: payeeDefaultCategoryRef,
+			Why:        "the payee already carries this default category",
+			Tier:       constant.SuggestionTierPayeeDefault,
+		}
+	}
+
+	if rule, ok := bestRule(rules, constant.RuleFieldPayee,
+		[]string{constant.RuleMatchExact}, payeeName, note); ok {
+		return suggestionOf(rule, constant.SuggestionTierRuleExact)
+	}
+
+	if rule, ok := bestRule(rules, constant.RuleFieldPayee,
+		[]string{constant.RuleMatchContains, constant.RuleMatchPrefix}, payeeName, note); ok {
+		return suggestionOf(rule, constant.SuggestionTierRuleContains)
+	}
+
+	if rule, ok := bestRule(rules, constant.RuleFieldNote,
+		[]string{constant.RuleMatchContains, constant.RuleMatchPrefix}, payeeName, note); ok {
+		return suggestionOf(rule, constant.SuggestionTierRuleContains)
+	}
+
+	return entity.CategorySuggestion{
+		Why:  "no payee default and no live rule matched",
+		Tier: constant.SuggestionTierNone,
+	}
+}
+
+func bestRule(
+	rules []entity.CategorizationRule,
+	field string,
+	kinds []string,
+	payeeName, note string,
+) (entity.CategorizationRule, bool) {
+	var best entity.CategorizationRule
+
+	found := false
+
+	for _, rule := range rules {
+		if rule.Field != field || !slices.Contains(kinds, rule.MatchKind) {
+			continue
+		}
+
+		if rule.ArchivedAt != nil || rule.AccountRef == "" {
+			continue
+		}
+
+		if !entity.MatchRule(rule, payeeName, note) {
+			continue
+		}
+
+		if !found || outranks(rule, best) {
+			best = rule
+			found = true
+		}
+	}
+
+	return best, found
+}
+
+func outranks(candidate, current entity.CategorizationRule) bool {
+	if candidate.Priority != current.Priority {
+		return candidate.Priority > current.Priority
+	}
+
+	if len(candidate.Pattern) != len(current.Pattern) {
+		return len(candidate.Pattern) > len(current.Pattern)
+	}
+
+	return candidate.CreatedAt.Before(current.CreatedAt)
+}
+
+func suggestionOf(rule entity.CategorizationRule, tier string) entity.CategorySuggestion {
+	return entity.CategorySuggestion{
+		AccountRef: rule.AccountRef,
+		Why:        whyFor(rule),
+		Tier:       tier,
+		RuleRef:    rule.Ref,
+	}
+}
+
+func whyFor(rule entity.CategorizationRule) string {
+	subject := "the payee name"
+	if rule.Field == constant.RuleFieldNote {
+		subject = "the note"
+	}
+
+	switch rule.MatchKind {
+	case constant.RuleMatchExact:
+		return subject + " is exactly " + strconv.Quote(rule.Pattern)
+	case constant.RuleMatchPrefix:
+		return subject + " starts with " + strconv.Quote(rule.Pattern)
+	default:
+		return subject + " contains " + strconv.Quote(rule.Pattern)
+	}
+}

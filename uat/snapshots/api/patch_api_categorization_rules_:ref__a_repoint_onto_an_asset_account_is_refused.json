@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "a rule needs an expense or income category"
+  }
+}

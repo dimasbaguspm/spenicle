@@ -1,0 +1,10 @@
+{
+  "archived": false,
+  "category_ref": "<ref>",
+  "created_at": "<timestamp>",
+  "field": "payee",
+  "match_kind": "exact",
+  "pattern": "whiskas",
+  "priority": 5,
+  "ref": "<ref>"
+}

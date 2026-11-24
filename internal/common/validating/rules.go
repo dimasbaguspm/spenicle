@@ -2,6 +2,7 @@ package validating
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/go-playground/validator/v10"
 
@@ -65,6 +66,9 @@ var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only ru
 	"scope":           validScope,
 	"auditkind":       validAuditKind,
 	"auditaction":     validAuditAction,
+	"rulefield":       validRuleField,
+	"rulematch":       validRuleMatch,
+	"rulepattern":     validRulePattern,
 	"auditactor":      validAuditActor,
 }
 
@@ -233,7 +237,7 @@ func validAuditKind(field validator.FieldLevel) bool {
 	switch field.Field().String() {
 	case constant.AuditEntitySetting, constant.AuditEntityAccount, constant.AuditEntityPayee,
 		constant.AuditEntityRecurring, constant.AuditEntityEntry, constant.AuditEntityCapture,
-		constant.AuditEntityToken:
+		constant.AuditEntityToken, constant.AuditEntityCategorizationRule:
 		return true
 	default:
 		return false
@@ -258,4 +262,28 @@ func validAuditActor(field validator.FieldLevel) bool {
 	default:
 		return false
 	}
+}
+
+func validRuleField(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.RuleFieldPayee, constant.RuleFieldNote:
+		return true
+	default:
+		return false
+	}
+}
+
+func validRuleMatch(field validator.FieldLevel) bool {
+	switch field.Field().String() {
+	case constant.RuleMatchExact, constant.RuleMatchContains, constant.RuleMatchPrefix:
+		return true
+	default:
+		return false
+	}
+}
+
+func validRulePattern(field validator.FieldLevel) bool {
+	length := utf8.RuneCountInString(strings.TrimSpace(field.Field().String()))
+
+	return length >= constant.RulePatternMinLength && length <= constant.RulePatternMaxLength
 }

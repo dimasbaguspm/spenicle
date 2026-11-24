@@ -1,0 +1,7 @@
+{
+  "account_name": "Cat",
+  "account_ref": "<ref>",
+  "rule_ref": "<ref>",
+  "tier": "rule_exact",
+  "why": "the payee name is exactly \"kopi kenangan\""
+}

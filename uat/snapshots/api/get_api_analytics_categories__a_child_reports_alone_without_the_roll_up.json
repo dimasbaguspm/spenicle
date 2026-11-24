@@ -3,7 +3,9 @@
     {
       "account_name": "Groceries",
       "account_ref": "<ref>",
-      "amount_minor": "25000"
+      "amount_minor": "25000",
+      "first_occurred_on": "2026-02-10",
+      "last_occurred_on": "2026-02-10"
     }
   ],
   "from": "2026-02-01",

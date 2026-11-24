@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "bucket and rollup cannot be combined: send bucket=month or rollup=parent, not both"
+  }
+}

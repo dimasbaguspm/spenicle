@@ -6,6 +6,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/categorization"
 	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
@@ -26,6 +27,8 @@ type Deps struct {
 	Accounts          repository.Accounts
 	Payees            repository.Payees
 	Recurring         repository.Recurring
+	Rules             repository.Categorization
+	Categorization    categorization.Contract
 	Analytics         repository.Analytics
 	CustomQueries     repository.CustomQueries
 	Artifacts         repository.Artifacts
