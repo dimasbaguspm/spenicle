@@ -13,6 +13,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/connections"
+	"github.com/dimasbaguspm/spenicle/internal/module/intake"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 )
 
@@ -391,4 +392,5 @@ var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{connections.ErrReauthRequired, http.StatusConflict, "reauth_required"},
 	{connections.ErrClientMissing, http.StatusUnprocessableEntity, "invalid_request"},
 	{connections.ErrNotConnected, http.StatusNotFound, "not_found"},
+	{intake.ErrNotConfigured, http.StatusConflict, "intake_disabled"},
 }

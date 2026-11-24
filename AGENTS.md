@@ -286,10 +286,11 @@ assembles the draft on the last chunk (`409 import_conflict` when the total disa
 a replayed commit resumes from the rows whose ledger `client_id` is still missing. A row
 edit while `committing` is `409 import_committing`.
 
-The worker does five things per run, in this order: queue a capture for each due recurring
+The worker does six things per run, in this order: queue a capture for each due recurring
 rule (never an entry — the worker holds no ledger contract), reclaim
 the artifacts of rejected captures, drop expired import drafts and `open` uploads older than
-24h, then claim up to 5 export jobs and sweep the queue. Every calendar decision it makes
+24h, then claim up to 5 export jobs and sweep the queue, and finally poll the configured mailbox
+(`Module.Intake.Poll`), which queues captures and never posts an entry. Every calendar decision it makes
 ("today", the due comparison, the business-day shift) runs in `APP_TIMEZONE`, not UTC.
 
 ## Observability

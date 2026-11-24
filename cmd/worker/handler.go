@@ -9,9 +9,13 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
+	"github.com/dimasbaguspm/spenicle/internal/module/intake"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
+	gmailmail "github.com/dimasbaguspm/spenicle/internal/repository/mailbox/gmail"
+	"github.com/dimasbaguspm/spenicle/internal/repository/oauth/google"
 )
 
 func Serve(ctx context.Context, process *config.Process) {
@@ -41,6 +45,15 @@ func Serve(ctx context.Context, process *config.Process) {
 		process.Cfg.ExportStaleAfter,
 		clock.Zoned{Loc: process.Location}, process.Location, process.Logger,
 	)
+
+	connector := connections.New(store, store, process.Sealer, google.New(nil, "", "", ""),
+		clock.System{})
+
+	captured := captures.New(store, process.Ledger, process.Sealer, process.Artifacts, store,
+		nil, store, clock.System{}, clock.System{})
+
+	runner.Intake = intake.New(store, captured, store, process.Sealer,
+		gmailmail.New(nil, "", connector))
 
 	process.Logger.Info(ctx, "recurring worker started",
 		slog.Duration("every", process.Cfg.WorkerInterval),

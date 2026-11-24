@@ -18,6 +18,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
+	"github.com/dimasbaguspm/spenicle/internal/module/intake"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
@@ -51,6 +52,7 @@ type Runner struct {
 	rules       repository.Recurring
 	store       Store
 	queue       captures.Queue
+	Intake      intake.Contract
 	artifacts   repository.Artifacts
 	imports     repository.Imports
 	files       ArtifactFiles

@@ -51,6 +51,7 @@ func (r *Runner) Run(ctx context.Context) (Summary, error) {
 	r.collectImports(ctx, now)
 	r.collectUploads(ctx, now)
 	r.runExports(ctx, now)
+	r.runIntake(ctx, now)
 
 	return summary, firstErr
 }

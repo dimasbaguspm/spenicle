@@ -21,6 +21,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
+	"github.com/dimasbaguspm/spenicle/internal/module/intake"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/module/tokens"
@@ -140,6 +141,7 @@ func (w *world) boot(ctx context.Context) error {
 	w.server = httptest.NewServer(httpcmd.New(handlers.Deps{
 		Ledger:   ledgerService,
 		Captures: queue,
+		Intake:   intake.New(store, queue, store, sealer, fakeMailbox{}),
 		Imports: imports.New(
 			store, store, store, store, ledgerService, artifacts, w.parts, settingsService,
 			clockSystem,

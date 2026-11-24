@@ -1,0 +1,6 @@
+{
+  "allowlist": [
+    "bank.example"
+  ],
+  "enabled": true
+}

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "intake_disabled",
+    "message": "intake is not configured"
+  }
+}
