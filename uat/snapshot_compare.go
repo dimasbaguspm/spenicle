@@ -158,6 +158,11 @@ func normaliseString(value string) string {
 		return "<ref>"
 	}
 
+	// a signed OAuth state is a timestamp and a MAC; the snapshot asserts it came back
+	if statePattern.MatchString(value) {
+		return statePattern.ReplaceAllString(value, "<state>")
+	}
+
 	return refInText.ReplaceAllString(value, "${1}<ref>${3}")
 }
 

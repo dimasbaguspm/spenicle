@@ -17,12 +17,14 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/export"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/module/tokens"
+	"github.com/dimasbaguspm/spenicle/internal/repository/oauth/google"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -143,18 +145,20 @@ func (w *world) boot(ctx context.Context) error {
 			clockSystem,
 			imports.Options{MaxRows: limits.ImportMaxRows, CommitChunk: w.chunk()},
 		),
-		Accounts:          store,
-		Payees:            store,
-		Recurring:         store,
-		Analytics:         store,
-		CustomQueries:     store,
-		Exports:           w.exports,
-		Artifacts:         store,
-		ArtifactFiles:     artifacts,
-		ExportFiles:       w.exportFiles,
-		Health:            store,
-		Audit:             store,
-		Tokens:            tokens.New(store, sealer, clockSystem),
+		Accounts:      store,
+		Payees:        store,
+		Recurring:     store,
+		Analytics:     store,
+		CustomQueries: store,
+		Exports:       w.exports,
+		Artifacts:     store,
+		ArtifactFiles: artifacts,
+		ExportFiles:   w.exportFiles,
+		Health:        store,
+		Audit:         store,
+		Tokens:        tokens.New(store, sealer, clockSystem),
+		Connections: connections.New(store, store, sealer,
+			google.New(nil, "", "", ""), clockSystem),
 		Settings:          settingsService,
 		Rates:             built.rates,
 		Sealer:            sealer,

@@ -295,3 +295,43 @@ CREATE TABLE audit_log (
 CREATE INDEX ix_audit_entity ON audit_log (entity_kind, entity_ref, id);
 CREATE INDEX ix_audit_actor ON audit_log (actor_kind, at);
 CREATE INDEX ix_audit_action ON audit_log (action, at);
+
+CREATE TABLE connections (
+  id                INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  provider          TEXT NOT NULL UNIQUE CHECK (provider IN ('google')),
+  account           TEXT NOT NULL,
+  external_sub      TEXT,
+  scopes            TEXT NOT NULL,
+  refresh_token     TEXT NOT NULL,
+  access_token      TEXT,
+  access_expires_at TEXT,
+  status            TEXT NOT NULL CHECK (status IN ('active','reauth_required')),
+  last_refreshed_at TEXT,
+  revoked_at        TEXT,
+  created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL
+);
+
+CREATE TABLE mail_messages (
+  id                INTEGER PRIMARY KEY,
+  ref               TEXT NOT NULL UNIQUE,
+  source            TEXT NOT NULL CHECK (source IN ('imap','gmail')),
+  message_ref       TEXT NOT NULL,
+  thread_ref        TEXT,
+  message_id_header TEXT,
+  provider_revision TEXT,
+  received_at       TEXT NOT NULL,
+  observed_at       TEXT NOT NULL,
+  capture_id        INTEGER REFERENCES captures(id),
+  status            TEXT NOT NULL CHECK (status IN ('captured','skipped','failed','gone')),
+  skip_reason       TEXT,
+  attempts          INTEGER NOT NULL DEFAULT 0,
+  last_error        TEXT,
+  last_synced_at    TEXT,
+  superseded_by     TEXT
+);
+
+CREATE UNIQUE INDEX ux_mail_messages_source ON mail_messages (source, message_ref);
+CREATE INDEX ix_mail_messages_observed ON mail_messages (observed_at);
+CREATE INDEX ix_mail_messages_capture ON mail_messages (capture_id);

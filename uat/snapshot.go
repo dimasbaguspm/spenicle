@@ -39,6 +39,9 @@ var refPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
 var refInText = regexp.MustCompile(`(^|[^0-9a-f])([0-9a-f]{32})([^0-9a-f]|$)`)
 
+// statePattern is a signed OAuth state: the issuing second, a dot, then an HMAC.
+var statePattern = regexp.MustCompile(`\d{9,11}\.[0-9a-f]{64}`)
+
 func (w *world) assertAPISnapshot(name string) error {
 	var document any
 	if err := json.Unmarshal(w.body, &document); err != nil {

@@ -41,6 +41,8 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 17, 18 | months report, dashboard | live |
 | 19, 20 | `POST/GET /api/tokens`, `POST /api/tokens/{ref}/revoke` | live: root credential only, scoped Bearer credential, digest stored, masked preview, `last_used_at`, revoke never deletes |
 | — | `GET /api/audit` | live: the journal, filtered by kind, ref, action, actor and a day range |
+| — | `GET/PATCH /api/intake`, `POST /api/intake/run`, `GET /api/intake/messages`, `GET /api/intake/messages/{ref}`, `POST /api/intake/messages/{ref}/refresh` | next: designed, not written — a mailbox poll queues captures |
+| — | `GET /api/connections`, `POST /api/connections/google`, `POST /api/connections/google/callback`, `POST /api/connections/{ref}/revoke` | next: designed, not written — one sealed credential per provider |
 
 ## Review rounds folded in
 
@@ -302,7 +304,31 @@ sealed envelope).
 Imports and exports keep their own `import_events`/`export_events` rather than being
 journaled twice; artifact rows are metadata of a capture and are not journaled at all.
 
-## 1.11 Canonical DDL
+## 1.11 `connections`
+
+One row per provider (`UNIQUE (provider)`), so a second Google service re-authorises the same
+credential instead of minting another.
+
+- `provider` — `google` only today; widening it is a CHECK change, not a migration
+- `account` / `external_sub` — the human address and the provider's stable subject claim
+- `scopes` — JSON array, a union across services
+- `refresh_token`, `access_token`, `access_expires_at` — sealed with `APP_SECRET`
+- `status` — `active` \| `reauth_required`; `revoked_at` marks a disconnect, never a delete
+
+## 1.12 `mail_messages`
+
+The reference a mailbox poll leaves behind. No content: the body is sealed in
+`captures.raw_text`, the same rule artifacts follow.
+
+- `source` / `message_ref` — `imap` \| `gmail` and the re-fetch handle, unique together
+- `thread_ref`, `message_id_header`, `provider_revision` — thread, RFC 5322 identity, provider
+  revision
+- `received_at` / `observed_at` — the mail's own date versus when the poll saw it
+- `capture_id`, `status`, `skip_reason` — what it became: `captured` \| `skipped` \| `failed` \|
+  `gone`
+- `attempts`, `last_error`, `last_synced_at`, `superseded_by` — retry and revision trail
+
+## 1.13 Canonical DDL
 
 ```sql
 PRAGMA journal_mode = WAL;
@@ -451,6 +477,46 @@ CREATE TABLE audit_log (
 CREATE INDEX ix_audit_entity ON audit_log (entity_kind, entity_ref, id);
 CREATE INDEX ix_audit_actor ON audit_log (actor_kind, at);
 CREATE INDEX ix_audit_action ON audit_log (action, at);
+
+CREATE TABLE connections (
+  id                INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  provider          TEXT NOT NULL UNIQUE CHECK (provider IN ('google')),
+  account           TEXT NOT NULL,
+  external_sub      TEXT,
+  scopes            TEXT NOT NULL,
+  refresh_token     TEXT NOT NULL,
+  access_token      TEXT,
+  access_expires_at TEXT,
+  status            TEXT NOT NULL CHECK (status IN ('active','reauth_required')),
+  last_refreshed_at TEXT,
+  revoked_at        TEXT,
+  created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL
+);
+
+CREATE TABLE mail_messages (
+  id                INTEGER PRIMARY KEY,
+  ref               TEXT NOT NULL UNIQUE,
+  source            TEXT NOT NULL CHECK (source IN ('imap','gmail')),
+  message_ref       TEXT NOT NULL,
+  thread_ref        TEXT,
+  message_id_header TEXT,
+  provider_revision TEXT,
+  received_at       TEXT NOT NULL,
+  observed_at       TEXT NOT NULL,
+  capture_id        INTEGER REFERENCES captures(id),
+  status            TEXT NOT NULL CHECK (status IN ('captured','skipped','failed','gone')),
+  skip_reason       TEXT,
+  attempts          INTEGER NOT NULL DEFAULT 0,
+  last_error        TEXT,
+  last_synced_at    TEXT,
+  superseded_by     TEXT
+);
+
+CREATE UNIQUE INDEX ux_mail_messages_source ON mail_messages (source, message_ref);
+CREATE INDEX ix_mail_messages_observed ON mail_messages (observed_at);
+CREATE INDEX ix_mail_messages_capture ON mail_messages (capture_id);
 ```
 
 ---
@@ -480,6 +546,14 @@ CREATE INDEX ix_audit_action ON audit_log (action, at);
 | 19 | POST | `/api/tokens` | `admin` | mint a scoped token, secret returned once |
 | 20 | PATCH | `/api/tokens/{id}` | `admin` | revoke |
 | 21 | GET | `/healthz` | none | liveness + migration state |
+| — | GET | `/api/intake` | `admin` | intake settings, cursor and last outcome, redacted |
+| — | PATCH | `/api/intake` | `admin` | mailbox credentials, window and allowlist |
+| — | POST | `/api/intake/run` | `admin` | poll once now, return counts |
+| — | GET | `/api/intake/messages` | `admin` | the mail reference list, filtered |
+| — | GET | `/api/intake/messages/{ref}` | `admin` | one reference and the capture it made |
+| — | POST | `/api/intake/messages/{ref}/refresh` | `admin` | latest state of that mail |
+| — | GET/POST | `/api/connections`, `/api/connections/google` | `admin` | read status, start an authorisation |
+| — | POST | `/api/connections/google/callback`, `/api/connections/{ref}/revoke` | `admin` | finish an authorisation, revoke |
 
 ## Removed, and where it went
 

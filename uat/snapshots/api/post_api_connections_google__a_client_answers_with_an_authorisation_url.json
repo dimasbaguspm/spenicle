@@ -1,0 +1,4 @@
+{
+  "authorize_url": "https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&client_id=client-id.apps.googleusercontent.com&include_granted_scopes=true&prompt=consent&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fapi%2Fconnections%2Fgoogle%2Fcallback&response_type=code&scope=openid+email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.readonly&state=<state>",
+  "state": "<state>"
+}

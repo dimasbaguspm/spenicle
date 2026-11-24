@@ -56,6 +56,7 @@ func (w *world) clearDatabase(ctx context.Context) error {
 		"import_rows",
 		"import_batches",
 		"artifacts",
+		"mail_messages",
 		"ledger_postings",
 		"captures",
 		"ledger_entries",
@@ -67,6 +68,7 @@ func (w *world) clearDatabase(ctx context.Context) error {
 		"accounts",
 		"settings",
 		"api_tokens",
+		"connections",
 	}
 
 	for _, table := range clearOrder {

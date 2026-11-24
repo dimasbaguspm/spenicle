@@ -12,6 +12,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 )
 
@@ -386,4 +387,8 @@ var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{entity.ErrExportNotReady, http.StatusConflict, "export_not_ready"},
 	{entity.ErrExportFailed, http.StatusConflict, "export_failed"},
 	{entity.ErrExportExpired, http.StatusGone, "gone"},
+	{connections.ErrStateInvalid, http.StatusUnauthorized, "invalid_state"},
+	{connections.ErrReauthRequired, http.StatusConflict, "reauth_required"},
+	{connections.ErrClientMissing, http.StatusUnprocessableEntity, "invalid_request"},
+	{connections.ErrNotConnected, http.StatusNotFound, "not_found"},
 }

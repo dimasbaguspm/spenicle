@@ -18,6 +18,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
@@ -26,6 +27,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
+	"github.com/dimasbaguspm/spenicle/internal/repository/oauth/google"
 )
 
 type server struct {
@@ -120,13 +122,10 @@ func (s *server) routes() routeGroups {
 
 	// open to everyone
 	groups.public.route("", "GET /healthz", s.api.Health)
+	groups.public.route("", "GET /api/connections/google/callback", s.api.CompleteConnection)
 
 	// root credential only
-	groups.root.route("", "POST /api/password", s.api.ChangePassword)
-	groups.root.route("", "PATCH /api/settings", s.api.PatchSettings)
-	groups.root.route("", "GET /api/tokens", s.api.ListTokens)
-	groups.root.route("", "POST /api/tokens", s.api.CreateToken)
-	groups.root.route("", "POST /api/tokens/{ref}/revoke", s.api.RevokeToken)
+	s.credentialRoutes(groups.root)
 
 	// any credential carrying the scope
 	groups.scoped.route(constant.ScopeSettingsRead, "GET /api/settings", s.api.GetSettings)
@@ -180,6 +179,19 @@ func (s *server) routes() routeGroups {
 	groups.scoped.route(constant.ScopeAuditRead, "GET /api/audit", s.api.ListAudit)
 
 	return groups
+}
+
+// credentialRoutes mount the surface only the root credential may reach, so no token can
+// ever mint a second credential of any kind.
+func (s *server) credentialRoutes(group routeGroup) {
+	group.route("", "POST /api/password", s.api.ChangePassword)
+	group.route("", "PATCH /api/settings", s.api.PatchSettings)
+	group.route("", "GET /api/tokens", s.api.ListTokens)
+	group.route("", "POST /api/tokens", s.api.CreateToken)
+	group.route("", "POST /api/tokens/{ref}/revoke", s.api.RevokeToken)
+	group.route("", "GET /api/connections", s.api.GetConnection)
+	group.route("", "POST /api/connections/google", s.api.StartConnection)
+	group.route("", "POST /api/connections/{ref}/revoke", s.api.RevokeConnection)
 }
 
 // credential is who is calling: the root credential (the password session) or one
@@ -342,6 +354,9 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 
 	store := process.Store
 
+	connector := connections.New(store, store, process.Sealer, google.New(nil, "", "", ""),
+		clock.System{})
+
 	return handlers.Deps{
 		Ledger: process.Ledger,
 		Captures: captures.New(
@@ -372,6 +387,7 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		Health:            store,
 		Audit:             store,
 		Tokens:            tokens.New(store, process.Sealer, clock.System{}),
+		Connections:       connector,
 		Sealer:            process.Sealer,
 		BaseCurrency:      process.BaseCurrency,
 		Timezone:          process.Cfg.Timezone,

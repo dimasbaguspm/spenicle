@@ -104,7 +104,7 @@ context and opens no span: there is no boundary to trace.
 Multi-user, tags, geo/map, TUI, envelope budgets, cross-currency account transfers,
 multi-currency account ledgers, auto-posting recurring rules, bank API integrations.
 
-## Schema (10 tables)
+## Schema (12 tables)
 
 Canonical DDL with every column lives in [`v2-api.md`](./v2-api.md). Summary:
 
@@ -121,6 +121,8 @@ Canonical DDL with every column lives in [`v2-api.md`](./v2-api.md). Summary:
 | `captures` | everything unconfirmed, the single review queue |
 | — | (no month table: the report is derived from the ledger) |
 | `audit_log` | append-only record of every state change |
+| `connections` | one sealed credential per provider, shared by every service that needs it |
+| `mail_messages` | the reference a mailbox poll leaves behind: handle, revision, outcome |
 
 Rates are exact decimal `TEXT`, money is signed `INTEGER` minor units, enums are `CHECK`
 constraints. Currencies are **not** a table: the ISO 4217 list (code, minor units, symbol) is
@@ -433,3 +435,40 @@ with the ledger destroys trust faster than a slow query.
 7. Offline PWA hardening, share target, outbox replay. ~1d
 
 ~1.5 weeks of focused work to a usable v2.0.
+
+## Email intake and provider connections
+
+Beyond v2.0, and not a bank API integration (still a non-goal): it reads a mailbox the user
+already controls and turns a message into a capture.
+
+1. **Intake is a transport, not a pipeline.** A poll produces a `captures` row through
+   `Module.Captures.Create`; approval still posts the ledger, so nothing here can write an
+   entry.
+2. **The worker owns the poll** — one tick on its own interval, bounded to the last 72h
+   (`IntakeWindow`) and capped per run. `http` never dials a mailbox, and a dead mailbox can
+   never stall the recurring tick.
+3. **One contract, one adapter per provider:** `repository/mailbox` with an `imap` adapter
+   first and a `gmail` adapter when a Workspace account wants the API's filtering. The MIME
+   parser is shared; an adapter owns only its wire format, its cursor and its credentials.
+4. **Credentials belong to a connection, not to intake.** `connections` holds one row per
+   provider (`UNIQUE (provider)`), tokens sealed with `APP_SECRET`, scopes kept as a union —
+   so Calendar later re-authorises the same row instead of minting a second credential.
+5. **A reference per message, and no content.** `mail_messages` records the re-fetch handle,
+   the provider revision and when it was seen; never a subject, a sender or a body. Content
+   stays sealed in the capture, exactly like an artifact. There is no payload hash: message
+   content is immutable at the provider, and what changes — labels, flags, deletion — is what
+   a refresh reports.
+6. **Refresh creates, never mutates.** Re-reading a message answers `unchanged`, or marks the
+   old row `superseded_by` and links a new capture. No ledger mutation, no delete.
+7. **Only the worker refreshes a token.** One writer means no compare-and-swap column; if a
+   second process ever needs a Google token, it reads the stored access token instead.
+8. **Personal Gmail is the awkward case.** The consent screen must be in `In production`
+   (unverified) or refresh tokens expire weekly; `invalid_grant` is persisted as
+   `status = reauth_required` so the UI asks for one re-authorisation instead of retrying
+   forever.
+
+Planned routes: `GET/PATCH /api/intake`, `POST /api/intake/run`,
+`GET /api/intake/messages`, `GET /api/intake/messages/{ref}`,
+`POST /api/intake/messages/{ref}/refresh`, plus the root-only connections surface
+`GET /api/connections`, `POST /api/connections/google`,
+`POST /api/connections/google/callback` and `POST /api/connections/{ref}/revoke`.

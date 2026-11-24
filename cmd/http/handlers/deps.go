@@ -6,6 +6,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/connections"
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
@@ -30,6 +31,7 @@ type Deps struct {
 	Health            repository.System
 	Audit             repository.Audit
 	Tokens            tokens.Contract
+	Connections       connections.Contract
 	ArtifactFiles     repository.ArtifactFiles
 	ExportFiles       repository.ArtifactFiles
 	Exports           exports.Contract

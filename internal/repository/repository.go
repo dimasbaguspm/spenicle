@@ -79,6 +79,12 @@ type Payees interface {
 	UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error)
 }
 
+type Connections interface {
+	ConnectionByProvider(ctx context.Context, provider string) (entity.Connection, bool, error)
+	SaveConnection(ctx context.Context, connection entity.Connection) (entity.Connection, error)
+	RevokeConnection(ctx context.Context, ref string, at time.Time) (entity.Connection, bool, error)
+}
+
 type Analytics interface {
 	MonthlyTotals(ctx context.Context, from, to time.Time) ([]entity.MonthTotal, error)
 	CategoryTotals(ctx context.Context, from, to time.Time, kind string) ([]entity.CategoryTotal, error)
