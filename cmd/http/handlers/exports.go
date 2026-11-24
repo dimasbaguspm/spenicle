@@ -91,6 +91,7 @@ func (s *Server) CreateExport(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, status, toExportResponse(job))
 }
 
+//nolint:dupl // the bind, filter and writeList shape is the list idiom, one per route
 func (s *Server) ListExports(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Exports.List")
 	defer endSpan()

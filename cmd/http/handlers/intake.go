@@ -108,6 +108,7 @@ func (s *Server) RunIntake(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+//nolint:dupl // the bind, filter and writeList shape is the list idiom, one per route
 func (s *Server) ListIntakeMessages(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Intake.ListMessages")
 	defer endSpan()

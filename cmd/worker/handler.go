@@ -49,8 +49,15 @@ func Serve(ctx context.Context, process *config.Process) {
 	connector := connections.New(store, store, process.Sealer, google.New(nil, "", "", ""),
 		clock.System{})
 
+	extractor, err := config.SelectRail(ctx, process.Cfg, process.Logger)
+	if err != nil {
+		process.Logger.Error(ctx, "extraction rail", slog.Any("error", err))
+
+		return
+	}
+
 	captured := captures.New(store, process.Ledger, process.Sealer, process.Artifacts, store,
-		nil, store, clock.System{}, clock.System{})
+		extractor, store, clock.System{}, clock.System{})
 
 	runner.Intake = intake.New(store, captured, store, process.Sealer,
 		gmailmail.New(nil, "", connector))

@@ -443,6 +443,7 @@ reason in the MR, not a `go get`.
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | branches, commits, MR body, ticket shape, review gates |
 | [`skills/`](./skills/README.md) | task recipes: release, observability, updates, contribute, ai-integration |
 | [`docs/endpoints/`](./docs/endpoints/README.md) | one page per route; same sections everywhere, including the sequence diagram |
+| [`docs/product-deck/`](./docs/product-deck/README.md) | one page per user-facing feature, client POV: journeys, backend path end to end, RRR, acceptance criteria |
 | [`.env.example`](./.env.example) | every variable with its default, copy to `.env` |
 | [`LICENSE`](./LICENSE) | source-available: personal unmodified use only, no commercial use |
 

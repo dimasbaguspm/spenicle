@@ -25,8 +25,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/module/tokens"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
-	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
-	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 	gmailmail "github.com/dimasbaguspm/spenicle/internal/repository/mailbox/gmail"
 	"github.com/dimasbaguspm/spenicle/internal/repository/oauth/google"
@@ -430,31 +428,7 @@ func selectRail(
 	cfg entity.AppConfig,
 	logger *logging.Logger,
 ) (extraction.Extractor, error) {
-	if cfg.SnapToJSONAPIKey != "" {
-		rail, err := snaptojson.New(cfg.SnapToJSONEndpoint, cfg.SnapToJSONAPIKey, cfg.SnapToJSONTimeout)
-		if err != nil {
-			return nil, fmt.Errorf("snaptojson rail: %w", err)
-		}
-
-		logger.Info(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))
-
-		return rail, nil
-	}
-
-	if cfg.OpenAIAPIKey != "" {
-		rail, err := openai.New(cfg.OpenAIAPIKey, cfg.OpenAIModel, cfg.OpenAIHost, cfg.SnapToJSONTimeout)
-		if err != nil {
-			return nil, fmt.Errorf("openai rail: %w", err)
-		}
-
-		logger.Info(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))
-
-		return rail, nil
-	}
-
-	logger.Info(ctx, "no extraction rail configured: captures stay manual")
-
-	return nil, nil //nolint:nilnil // nil extractor is the documented "disabled" mode
+	return config.SelectRail(ctx, cfg, logger)
 }
 
 func Serve(ctx context.Context, process *config.Process, handler http.Handler) error {
