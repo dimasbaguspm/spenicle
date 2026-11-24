@@ -107,3 +107,149 @@ Feature: GET /api/entries
     And the store holds:
       | table          | count |
       | ledger_entries | 2     |
+
+  Scenario: The amount floor drops the small ones
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"coffee","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
+      """
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-02","currency":"IDR","note":"rent","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2200000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2200000"}]}
+      """
+    When I send a GET to "/api/entries?amount_min=100000"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__the_amount_floor_drops_the_small_ones"
+
+  Scenario: One exact amount finds its entry
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"coffee","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
+      """
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-02","currency":"IDR","note":"rent","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2200000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2200000"}]}
+      """
+    When I send a GET to "/api/entries?amount_min=1500&amount_max=1500"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__one_exact_amount_finds_its_entry"
+
+  Scenario: The query reaches the payee name, not only the note
+    Given a running API
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"KOPI KENANGAN"}
+      """
+    And the last ref is remembered as "kopi"
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","payee_ref":"{{ref:kopi}}","note":"morning","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-02","currency":"IDR","note":"groceries","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-42000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"42000"}]}
+      """
+    When I send a GET to "/api/entries?query=kenangan"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__the_query_reaches_the_payee_name"
+
+  Scenario: Several payees answer in one listing
+    Given a running API
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"KOPI KENANGAN"}
+      """
+    And the last ref is remembered as "kopi"
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"INDOMARET"}
+      """
+    And the last ref is remembered as "indomaret"
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","payee_ref":"{{ref:kopi}}","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
+      """
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-02","currency":"IDR","payee_ref":"{{ref:indomaret}}","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-22000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"22000"}]}
+      """
+    When I send a GET to "/api/entries?payee_ref={{ref:kopi}},{{ref:indomaret}}"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__several_payees_answer_in_one_listing"
+
+  Scenario: Several accounts answer in one listing
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
+      """
+    When I send a GET to "/api/entries?account_ref={{account:Cash}},00000000000000000000000000000000"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__several_accounts_answer_in_one_listing"
+
+  Scenario: Several sources answer in one listing
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-14","currency":"IDR","note":"duplicate","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-15000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"15000"}]}
+      """
+    And I send a PATCH to "/api/entries/{{ref}}" with:
+      """json
+      {"void":true,"reason":"duplicate of 811"}
+      """
+    When I send a GET to "/api/entries?source=manual,adjustment"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__several_sources_answer_in_one_listing"
+
+  Scenario: The voided flag asks for what was voided
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"voided","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
+      """
+    And the last ref is remembered as "voided"
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-02","currency":"IDR","note":"live","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2200"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2200"}]}
+      """
+    And I send a PATCH to "/api/entries/{{ref:voided}}" with:
+      """json
+      {"void":true,"reason":"wrong amount"}
+      """
+    When I send a GET to "/api/entries?voided=true"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__the_voided_flag_asks_for_what_was_voided"
+
+  Scenario: The live flag drops what was voided
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"voided","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
+      """
+    And the last ref is remembered as "voided"
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-02","currency":"IDR","note":"live","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2200"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2200"}]}
+      """
+    And I send a PATCH to "/api/entries/{{ref:voided}}" with:
+      """json
+      {"void":true,"reason":"wrong amount"}
+      """
+    When I send a GET to "/api/entries?voided=false"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__the_live_flag_drops_what_was_voided"
+
+  Scenario Outline: A malformed listing filter is refused
+    Given a running API
+    When I send a GET to "/api/entries?<filter>=<value>"
+    Then the response status is 422
+    And the response JSON matches the snapshot "get_api_entries__a_malformed_listing_filter_is_refused_{{bodyhash}}"
+
+    Examples:
+      | filter      | value |
+      | amount_min  | abc   |
+      | account_ref | zzz   |
+      | source      | nope  |
+      | voided      | maybe |

@@ -41,7 +41,9 @@ var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only ru
 	},
 	"capturekind":     validCaptureKind,
 	"source":          validEntrySource,
+	"sourcelist":      validSourceList,
 	"ref":             validRef,
+	"reflist":         validRefList,
 	"accountkind":     validAccountKind,
 	"cadence":         validCadence,
 	"importstatus":    validImportStatus,
@@ -58,10 +60,21 @@ var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only ru
 
 func validRef(field validator.FieldLevel) bool {
 	raw := strings.TrimSpace(field.Field().String())
-	if raw == "" {
-		return true
+
+	return raw == "" || isRef(raw)
+}
+
+func validRefList(field validator.FieldLevel) bool {
+	for _, part := range splitList(field.Field().String()) {
+		if !isRef(part) {
+			return false
+		}
 	}
 
+	return true
+}
+
+func isRef(raw string) bool {
 	if len(raw) != refLength {
 		return false
 	}
@@ -144,7 +157,21 @@ func validCaptureKind(field validator.FieldLevel) bool {
 }
 
 func validEntrySource(field validator.FieldLevel) bool {
-	switch field.Field().String() {
+	return isEntrySource(field.Field().String())
+}
+
+func validSourceList(field validator.FieldLevel) bool {
+	for _, part := range splitList(field.Field().String()) {
+		if !isEntrySource(part) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func isEntrySource(value string) bool {
+	switch value {
 	case constant.EntrySourceManual, constant.EntrySourceShare, constant.EntrySourceEmail,
 		constant.EntrySourceStatement, constant.EntrySourceRecurring,
 		constant.EntrySourceAdjustment:
@@ -152,6 +179,19 @@ func validEntrySource(field validator.FieldLevel) bool {
 	default:
 		return false
 	}
+}
+
+func splitList(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+
+	return out
 }
 
 func validCaptureStatus(field validator.FieldLevel) bool {

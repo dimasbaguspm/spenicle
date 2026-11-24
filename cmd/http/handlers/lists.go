@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
@@ -19,14 +20,15 @@ func entryFilter(params list.Params) (entity.EntryFilter, error) {
 	}
 
 	filter := entity.EntryFilter{
-		AccountRef: params.AccountRef,
-		PayeeRef:   params.PayeeRef,
-		Source:     params.Source,
-		Currency:   params.Currency,
-		Query:      params.Query,
-		Refs:       refs,
-		Cursor:     params.Cursor,
-		Limit:      list.ClampLimit(params.Limit),
+		AccountRefs: list.Split(params.AccountRefs),
+		PayeeRefs:   list.Split(params.PayeeRefs),
+		Sources:     list.Split(params.Sources),
+		Currency:    params.Currency,
+		Query:       params.Query,
+		Refs:        refs,
+		Voided:      params.Voided,
+		Cursor:      params.Cursor,
+		Limit:       list.ClampLimit(params.Limit),
 	}
 
 	if filter.From, err = parseDayValue(params.From, "from"); err != nil {
@@ -35,6 +37,18 @@ func entryFilter(params list.Params) (entity.EntryFilter, error) {
 
 	if filter.To, err = parseDayValue(params.To, "to"); err != nil {
 		return entity.EntryFilter{}, err
+	}
+
+	if params.AmountMin != "" {
+		if filter.AmountMin, err = parseMoney(params.AmountMin, "amount_min"); err != nil {
+			return entity.EntryFilter{}, err
+		}
+	}
+
+	if params.AmountMax != "" {
+		if filter.AmountMax, err = parseMoney(params.AmountMax, "amount_max"); err != nil {
+			return entity.EntryFilter{}, err
+		}
 	}
 
 	return filter, nil
@@ -114,6 +128,15 @@ func parseDayValue(raw, name string) (time.Time, error) {
 	}
 
 	return parsed, nil
+}
+
+func parseMoney(raw, name string) (*int64, error) {
+	parsed, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("parse %s: %w", name, err)
+	}
+
+	return &parsed, nil
 }
 
 func bindListParams[T any](

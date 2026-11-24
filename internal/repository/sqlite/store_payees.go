@@ -102,8 +102,8 @@ func (s *Store) ListPayees(ctx context.Context, filter entity.PayeeFilter) ([]en
 	builder := newList("payees p", payeeColumns)
 	builder.join(payeeJoins)
 	builder.like("p.name", filter.Query)
-	builder.inRefs("p.ref", filter.Refs)
-	builder.archived("p.archived_at", filter.Archived)
+	builder.inList("p.ref", filter.Refs)
+	builder.nullFlag("p.archived_at", filter.Archived)
 	builder.before("p.id", "payees", filter.Cursor)
 	builder.orderBy("p.name, p.id")
 

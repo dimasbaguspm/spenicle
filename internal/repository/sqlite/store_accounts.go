@@ -174,8 +174,8 @@ func (s *Store) ListAccounts(ctx context.Context, filter entity.AccountFilter) (
 	builder.eq("currency", filter.Currency)
 	builder.like("name", filter.Query)
 	builder.parentRef("parent_id", "accounts", filter.ParentRef)
-	builder.inRefs("ref", filter.Refs)
-	builder.archived("archived_at", filter.Archived)
+	builder.inList("ref", filter.Refs)
+	builder.nullFlag("archived_at", filter.Archived)
 	builder.before("accounts.id", "accounts", filter.Cursor)
 	builder.orderBy("kind, name, id")
 

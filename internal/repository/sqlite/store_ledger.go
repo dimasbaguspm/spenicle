@@ -17,9 +17,9 @@ const entryColumns = `id, ref, occurred_on, payee_id, note, currency, source, cl
 	reverses_entry_id, voided_at, created_at`
 
 const entryAccountSubquery = `SELECT p.entry_id FROM ledger_postings p
-	JOIN accounts a ON a.id = p.account_id WHERE a.ref = ?`
+	JOIN accounts a ON a.id = p.account_id WHERE a.ref`
 
-const payeeSubquery = `SELECT id FROM payees WHERE ref = ?`
+const payeeSubquery = `SELECT id FROM payees WHERE ref`
 
 func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertEntry")
@@ -377,16 +377,44 @@ func entryQuery(filter entity.EntryFilter) (string, []any) {
 		builder.lte("occurred_on", filter.To.Format(constant.DateLayout))
 	}
 
-	builder.inSubquery("id", entryAccountSubquery, filter.AccountRef)
-	builder.eq("source", filter.Source)
+	builder.inSubquery("id", entryAccountSubquery, filter.AccountRefs...)
+	builder.inList("source", filter.Sources)
 	builder.eq("currency", filter.Currency)
-	builder.like("note", filter.Query)
-	builder.inRefs("ref", filter.Refs)
-	builder.inSubquery("payee_id", payeeSubquery, filter.PayeeRef)
+	entrySearch(builder, filter.Query)
+	builder.inList("ref", filter.Refs)
+	builder.inSubquery("payee_id", payeeSubquery, filter.PayeeRefs...)
+	entryAmountRange(builder, filter.AmountMin, filter.AmountMax)
+	builder.nullFlag("voided_at", filter.Voided)
 	builder.before("ledger_entries.id", "ledger_entries", filter.Cursor)
 	builder.orderBy("id DESC")
 
 	return builder.page(clampLimit(filter.Limit))
+}
+
+func entrySearch(builder *listQuery, term string) {
+	if term == "" {
+		return
+	}
+
+	pattern := "%" + escapeLike(term) + "%"
+
+	builder.and(`(note LIKE ? ESCAPE '\' OR EXISTS (
+		SELECT 1 FROM payees p WHERE p.id = payee_id AND p.name LIKE ? ESCAPE '\'))`,
+		pattern, pattern)
+}
+
+func entryAmountRange(builder *listQuery, low, high *int64) {
+	const match = `EXISTS (SELECT 1 FROM ledger_postings p
+		WHERE p.entry_id = ledger_entries.id AND ABS(p.base_amount_minor) `
+
+	switch {
+	case low != nil && high != nil:
+		builder.and(match+`BETWEEN ? AND ?)`, *low, *high)
+	case low != nil:
+		builder.and(match+`>= ?)`, *low)
+	case high != nil:
+		builder.and(match+`<= ?)`, *high)
+	}
 }
 
 func (s *Store) VoidEntry(

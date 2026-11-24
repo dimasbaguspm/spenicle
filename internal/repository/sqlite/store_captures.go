@@ -101,7 +101,7 @@ func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) (
 
 	builder := newList("captures", captureColumns)
 	builder.eq("status", filter.Status)
-	builder.inRefs("ref", filter.Refs)
+	builder.inList("ref", filter.Refs)
 	builder.before("captures.id", "captures", filter.Cursor)
 	builder.orderBy(`CASE status
 			WHEN 'extracting' THEN 0

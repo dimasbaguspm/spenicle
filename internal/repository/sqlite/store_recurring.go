@@ -166,7 +166,7 @@ func (s *Store) ListRecurring(
 	builder.eq("r.state", filter.State)
 	builder.eq("r.cadence", filter.Cadence)
 	builder.like("p.name", filter.Query)
-	builder.inRefs("r.ref", filter.Refs)
+	builder.inList("r.ref", filter.Refs)
 	builder.before("r.id", "recurring_rules", filter.Cursor)
 	builder.orderBy("r.next_due_on, r.id")
 

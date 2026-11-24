@@ -39,14 +39,17 @@ type CaptureFilter struct {
 }
 
 type EntryFilter struct {
-	From       time.Time
-	To         time.Time
-	AccountRef string
-	PayeeRef   string
-	Source     string
-	Currency   string
-	Query      string
-	Refs       []string
-	Cursor     string
-	Limit      int
+	From        time.Time
+	To          time.Time
+	AccountRefs []string
+	PayeeRefs   []string
+	Sources     []string
+	Currency    string
+	Query       string
+	Refs        []string
+	Voided      string
+	AmountMin   *int64
+	AmountMax   *int64
+	Cursor      string
+	Limit       int
 }

@@ -49,25 +49,26 @@ func (q *listQuery) like(column, value string) {
 	q.and(column+` LIKE ? ESCAPE '\'`, "%"+escapeLike(value)+"%")
 }
 
-func (q *listQuery) inRefs(column string, refs []string) {
-	if len(refs) == 0 {
+func (q *listQuery) inList(column string, values []string) {
+	if len(values) == 0 {
 		return
 	}
 
 	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
-	q.where = append(q.where, column+` IN (`+placeholders(len(refs))+`)`)
+	q.where = append(q.where, column+` IN (`+placeholders(len(values))+`)`)
 
-	for _, ref := range refs {
-		q.args = append(q.args, ref)
+	for _, value := range values {
+		q.args = append(q.args, value)
 	}
 }
 
-func (q *listQuery) inSubquery(column, subquery, value string) {
-	if value == "" {
+func (q *listQuery) inSubquery(column, subquery string, values ...string) {
+	if len(values) == 0 {
 		return
 	}
 
-	q.and(column+` IN (`+subquery+`)`, value)
+	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
+	q.and(column+` IN (`+subquery+` IN (`+placeholders(len(values))+`))`, toAny(values)...)
 }
 
 func (q *listQuery) parentRef(column, table, ref string) {
@@ -78,12 +79,14 @@ func (q *listQuery) parentRef(column, table, ref string) {
 	q.and(column+` = (SELECT id FROM `+table+` WHERE ref = ?)`, ref)
 }
 
-func (q *listQuery) archived(column, want string) {
+// nullFlag keeps or drops the rows where a nullable column is set: an absent value
+// means both, `true` means "only the rows that have it".
+func (q *listQuery) nullFlag(column, want string) {
 	switch want {
 	case "true":
-		q.where = append(q.where, column+` IS NOT NULL`)
+		q.null(column, true)
 	case "false":
-		q.where = append(q.where, column+` IS NULL`)
+		q.null(column, false)
 	}
 }
 
@@ -96,6 +99,16 @@ func (q *listQuery) null(column string, set bool) {
 	case !set:
 		q.where = append(q.where, column+` IS NULL`)
 	}
+}
+
+func toAny(values []string) []any {
+	out := make([]any, 0, len(values))
+
+	for _, value := range values {
+		out = append(out, value)
+	}
+
+	return out
 }
 
 func (q *listQuery) before(column, table, ref string) {

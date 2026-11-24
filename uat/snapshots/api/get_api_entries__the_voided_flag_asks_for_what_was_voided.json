@@ -1,0 +1,42 @@
+{
+  "entries": [
+    {
+      "currency": "IDR",
+      "note": "voided",
+      "occurred_on": "2026-02-01",
+      "postings": [
+        {
+          "account": {
+            "kind": "asset",
+            "name": "Cash",
+            "ref": "<ref>"
+          },
+          "account_ref": "<ref>",
+          "amount_minor": "-1500",
+          "base_amount_minor": "-1500",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        },
+        {
+          "account": {
+            "kind": "expense",
+            "name": "Unsorted",
+            "ref": "<ref>"
+          },
+          "account_ref": "<ref>",
+          "amount_minor": "1500",
+          "base_amount_minor": "1500",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        }
+      ],
+      "ref": "<ref>",
+      "source": "manual",
+      "voided_at": "<timestamp>"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

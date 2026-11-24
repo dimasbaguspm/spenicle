@@ -21,14 +21,26 @@ entries, one per entry for its postings).
 | --- | --- | --- | --- |
 | `from` | date | — | `occurred_on >= from` |
 | `to` | date | — | `occurred_on <= to` |
-| `account_ref` | ref | — | entries touching that account |
-| `payee_ref` | ref | — | entries for that payee |
-| `source` | string | — | `manual`, `share`, `email`, `statement`, `recurring`, `adjustment` |
+| `account_ref` | ref list | — | comma-separated: entries touching any of these accounts |
+| `payee_ref` | ref list | — | comma-separated: entries for any of these payees |
+| `source` | source list | — | comma-separated: `manual`, `share`, `email`, `statement`, `recurring`, `adjustment` |
 | `currency` | string | — | ISO 4217, the entry's own currency |
-| `query` | string | — | substring of the entry note |
-| `refs` | string | — | comma-separated entry refs |
+| `query` | string | — | substring of the note or of the payee name |
+| `refs` | ref list | — | comma-separated entry refs |
+| `voided` | bool | — | `true` only voided entries, `false` only live ones, absent both |
+| `amount_min` | money | — | smallest absolute posting amount to match |
+| `amount_max` | money | — | largest absolute posting amount to match |
 | `cursor` | ref | — | return entries older than the entry with that ref |
 | `limit` | int | 50 | clamped to 200 |
+
+Every `* list` parameter takes one value or many, separated by commas, and a repeated
+member is harmless. The lists widen: `payee_ref=a,b` is "either payee", never "both".
+
+`amount_min` and `amount_max` compare against `ABS(base_amount_minor)` of the entry's
+postings in the **base currency**, and an entry matches when at least one posting falls
+inside the range. So a spend of 18.000 and an income of 18.000 match the same bounds, and
+`amount_min=18000&amount_max=18000` is the exact-amount lookup a bank SMS wants. An upside
+down range (`min > max`) is not an error, it matches nothing.
 
 ## Body
 
@@ -52,18 +64,21 @@ pure data adapter, the HTTP layer owns presentation.
 
 ## Errors
 
-`422 invalid_request` for a malformed date, an unknown `currency` or `source`, a `refs`
-entry, a `cursor`, `account_ref` or `payee_ref` that is not a 32-hex ref, or a `limit`
-over 200.
+`422 invalid_request` for a malformed date, a `currency` outside ISO 4217, an
+`amount_min`/`amount_max` that is not an integer, a `source` outside the enum, a list
+member that is not a 32-hex ref, a `cursor` that is not a ref, a `voided` value other than
+`true`/`false`, or a `limit` over 200.
 
 ## Limitations
 
 Keyset paging by entry ref only; no running balance (`running_balance` from the design is
 not implemented); postings are loaded per entry (N+1), acceptable at one user's volume.
-`query` matches the note only, not the payee name. There is no amount filter: the filter
-matches dates, accounts, payees, source, currency and refs, never a number. One entry by
-ref is [`GET /api/entries/{ref}`](./GET_api_entries_ref.md); `refs` stays the way to fetch
-a batch of unrelated entries in one call.
+Filters deliberately absent: an amount in the entry's own currency (the range is
+base-currency), a sort order (always newest first), and a posting-level match —
+`account_ref` and `amount_min` are separate `EXISTS` clauses, so an entry can satisfy them
+through two different postings. One entry by ref is
+[`GET /api/entries/{ref}`](./GET_api_entries_ref.md); `refs` stays the way to fetch a batch
+of unrelated entries in one call.
 
 
 
@@ -78,7 +93,7 @@ sequenceDiagram
     participant H as Entries handler
     participant L as Ledger module
     participant DB as SQLite
-    UI->>H: GET /api/entries?from&to&account_ref&payee_ref&source&currency&query&refs&cursor&limit
+    UI->>H: GET /api/entries?from&to&account_ref&payee_ref&source&currency&query&refs&voided&amount_min&amount_max&cursor&limit
     H->>H: bind and validate the params, build the filter
     H->>L: List(filter)
     L->>DB: SELECT entries WHERE … ORDER BY id DESC LIMIT ? (limit + 1)

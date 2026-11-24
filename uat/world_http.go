@@ -27,7 +27,7 @@ func (w *world) doWith(
 		return errors.New(`no running API: add the step "a running API" first`)
 	}
 
-	path, err := w.substituteRefs(path)
+	path, err := w.expand(path)
 	if err != nil {
 		return err
 	}

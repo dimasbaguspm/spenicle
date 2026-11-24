@@ -652,7 +652,13 @@ sequenceDiagram
 
 ## 3.8 `GET /api/entries`
 
-`?from&to&account_id&payee_id&id&source&running_balance=true&cursor&limit`
+`?from&to&account_ref&payee_ref&source&currency&query&refs&voided&amount_min&amount_max&cursor&limit`
+
+The ref filters and `source` take comma-separated unions (`payee_ref=a,b` is either payee),
+`query` matches the note or the payee name, and `amount_min`/`amount_max` match any
+posting's `ABS(base_amount_minor)` in the base currency. `running_balance` stays
+unimplemented; [`endpoints/GET_api_entries.md`](./endpoints/GET_api_entries.md) is the
+current contract.
 
 ```mermaid
 sequenceDiagram
@@ -663,10 +669,6 @@ sequenceDiagram
     UI->>API: GET entries with filters
     API->>DB: SELECT entries joined payee, paged by id desc
     API->>DB: SELECT postings with account names for returned ids
-    opt running_balance requested
-        API->>DB: SELECT opening balance and window SUM over postings
-        API->>API: attach running_balance_minor per row
-    end
     API-->>UI: 200 entries and next_cursor
 ```
 

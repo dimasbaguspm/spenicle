@@ -27,22 +27,25 @@ type Meta struct {
 }
 
 type Params struct {
-	Cursor     string `query:"cursor"      validate:"omitempty,ref"`
-	Limit      int64  `query:"limit"       validate:"omitempty,gte=0,lte=200"`
-	Query      string `query:"query"       validate:"omitempty,max=200"`
-	Refs       string `query:"refs"        validate:"omitempty,max=4096"`
-	Currency   string `query:"currency"    validate:"omitempty,currency"`
-	Kind       string `query:"kind"        validate:"omitempty,accountkind"`
-	ParentRef  string `query:"parent_ref"  validate:"omitempty,ref"`
-	Archived   string `query:"archived"    validate:"omitempty,oneof=true false"`
-	State      string `query:"state"       validate:"omitempty,recurringstate"`
-	Cadence    string `query:"cadence"     validate:"omitempty,cadence"`
-	Status     string `query:"status"      validate:"omitempty,capturestatus"`
-	Source     string `query:"source"      validate:"omitempty,source"`
-	AccountRef string `query:"account_ref" validate:"omitempty,ref"`
-	PayeeRef   string `query:"payee_ref"   validate:"omitempty,ref"`
-	From       string `query:"from"        validate:"omitempty,datestr"`
-	To         string `query:"to"          validate:"omitempty,datestr"`
+	Cursor      string `query:"cursor"      validate:"omitempty,ref"`
+	Limit       int64  `query:"limit"       validate:"omitempty,gte=0,lte=200"`
+	Query       string `query:"query"       validate:"omitempty,max=200"`
+	Refs        string `query:"refs"        validate:"omitempty,max=4096"`
+	Currency    string `query:"currency"    validate:"omitempty,currency"`
+	Kind        string `query:"kind"        validate:"omitempty,accountkind"`
+	ParentRef   string `query:"parent_ref"  validate:"omitempty,ref"`
+	Archived    string `query:"archived"    validate:"omitempty,oneof=true false"`
+	State       string `query:"state"       validate:"omitempty,recurringstate"`
+	Cadence     string `query:"cadence"     validate:"omitempty,cadence"`
+	Status      string `query:"status"      validate:"omitempty,capturestatus"`
+	Sources     string `query:"source"      validate:"omitempty,sourcelist"`
+	AccountRefs string `query:"account_ref" validate:"omitempty,reflist"`
+	PayeeRefs   string `query:"payee_ref"   validate:"omitempty,reflist"`
+	Voided      string `query:"voided"      validate:"omitempty,oneof=true false"`
+	AmountMin   string `query:"amount_min"  validate:"omitempty,money"`
+	AmountMax   string `query:"amount_max"  validate:"omitempty,money"`
+	From        string `query:"from"        validate:"omitempty,datestr"`
+	To          string `query:"to"          validate:"omitempty,datestr"`
 }
 
 func (p Params) SplitRefs() ([]string, error) {
@@ -67,6 +70,25 @@ func (p Params) SplitRefs() ([]string, error) {
 	}
 
 	return out, nil
+}
+
+// Split turns a validated comma-separated query value into its members: the tags
+// already checked every one, so this only trims and drops the empty parts.
+func Split(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+
+	return out
 }
 
 func ClampLimit(want int64) int {
