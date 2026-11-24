@@ -162,9 +162,9 @@ stores and every timeout are constants in `internal/common/config/config.go`.
 | `APP_TIMEZONE` | `UTC` | IANA name for every calendar decision (the worker's "today"); set once, at the first boot |
 | `SNAPTOJSON_API_KEY` | — | enables the SnapToJSON extraction vendor; unset = manual entry |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override for a proxy or a staging account |
-| `OPENAI_API_KEY` | — | second extraction rail; used when SnapToJSON is unset |
-| `OPENAI_MODEL` | `gpt-4o-mini` (`DefaultOpenAIModel`) | vision model for the OpenAI rail |
-| `OPENAI_HOST` | — | base URL for the OpenAI client; empty keeps the SDK default (`DefaultOpenAIHost` documents it) |
+| `OPENAI_API_KEY` | — | **reserved**: the OpenAI adapter exists but `config.SelectRail` never builds it, so extraction is SnapToJSON only and `ai_assistance` is inert until the chat rail lands |
+| `OPENAI_MODEL` | `gpt-4o-mini` (`DefaultOpenAIModel`) | model the OpenAI adapter asks for; wired by tests only today |
+| `OPENAI_HOST` | — | base URL for the OpenAI adapter; empty keeps the SDK default (`DefaultOpenAIHost` documents it) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
 
 `APP_SECRET` is mandatory: `config.Load` fails without it, and `EnsureBaseline`

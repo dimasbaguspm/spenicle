@@ -202,10 +202,11 @@ capture.
 | rail | call shape | polling | span |
 | --- | --- | --- | --- |
 | `snaptojson` | multipart, one partner route | yes (`snap_id`) | `Repository.Snaptojson.Posting` / `.Polling` |
-| `openai` | one vision chat completion, JSON answer | no (`ErrNoPolling`) | `Repository.OpenAI.Posting` |
+| `openai` | one vision chat completion, JSON answer | no (`ErrNoPolling`) | `Repository.OpenAI.Posting` — adapter kept for the chat rail, not wired by `config.SelectRail` today |
 
-Selection is config: `SNAPTOJSON_API_KEY` wins, `OPENAI_API_KEY` is the fallback,
-neither means extraction is off.
+Selection is config: `SNAPTOJSON_API_KEY` builds the rail, and without it extraction is off
+and every capture stays manual. The OpenAI adapter is **not** a fallback — one vendor reads
+email, text and PDF, and the second code path is kept for the chat rail.
 
 ### SnapToJSON
 

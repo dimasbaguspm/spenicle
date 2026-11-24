@@ -10,7 +10,7 @@ acceptance stub. Nothing in (B) is in the design doc yet, so each one starts wit
 
 ## What shipped since this list was written
 
-Five gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
+Eight gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
 The table below records them once; section (A) lists only what is still open.
 
 | gap | shipped as | commit |
@@ -20,10 +20,12 @@ The table below records them once; section (A) lists only what is still open.
 | 4 | `POST`/`PATCH /api/accounts` take `parent_ref` (same kind, no cycle, three levels) and `GET /api/analytics/categories?rollup=parent` sums a child into its root | `feat: nest a category under a parent and roll it up` |
 | 6 | a duplicate `name`+`kind`, `payees.name` or `custom_queries.name` answers `409 duplicate` | `fix: answer 409 for a duplicate name` |
 | 8 | `PATCH /api/captures/{ref}` accepts `{"action":"match","entry_ref":"…"}`, moving the capture to `duplicate` without touching the ledger | `feat: resolve a capture with refs, never integer ids` |
+| 7 | `POST /api/exports` takes `from`/`to` (`YYYY-MM-DD`, both or neither), keeps them on the job as `exports.from_on`/`to_on`, drops every entry outside the window with its postings, and echoes the window on the listing, the job, the events and the download name; reading an export back in is still open, this ships the window only | `feat: export one date window instead of the whole ledger` |
+| G4 | the ledger resolves the rate itself: a foreign entry posted without `fx_rate` takes the exact sheet day, else the nearest earlier business day, else a cross rate through EUR, and the posting is stamped with the rate, its `fx_source` (`ecb`/`cached`) and the day actually used; `GET /api/rates` carries the nearest earlier day and answers `source: "cached"`; an explicit `fx_rate` still wins | `feat: resolve the rate in the ledger and carry the last sheet day` |
+| G6 | `GET /api/entries` takes `with_balance=true` with one `account_ref` and answers `running_balance_minor` per row from one windowed query over `SUM(base_amount_minor)`, and the page's postings load in one query instead of one per entry | `feat: page a running balance and read postings once` |
 
-Still open: **G1** (opening balances in the one-shot setup), **G4** (the ledger resolving a
-rate itself), and the cross-cutting rows from 5 onward. The next cuts in (B) that are now
-done are marked there as well.
+Still open: **G1** (opening balances in the one-shot setup) and the cross-cutting rows from 5
+onward. The next cuts in (B) that are now done are marked there as well.
 
 ---
 ---
@@ -35,10 +37,7 @@ done are marked there as well.
 | G1 | `POST /api/setup` takes only `base_currency`: no accounts, no opening balances | a fresh instance shows every balance at zero and no way to seed reality | post one `adjustment` entry per account with its opening balance |
 | G2 | `GET /api/meta` carries settings, accounts and currencies only — no payees, no rules, no `password_must_change` | the shell needs 2–3 extra calls on a cold start | `GET /api/payees`, `GET /api/recurring`, `GET /api/settings` after meta |
 | G3 | tokens have no expiry, no per-token rate limit, no un-revoke | a leaked shortcut token lives until someone revokes it | revoke and re-issue; `last_used_at` is the only signal |
-| G4 | the ledger never resolves a rate itself: `GET /api/rates` is exact-day, EUR-based, no cross rates, no nearest-business-day fallback | a foreign-currency entry needs the client to compute and send `fx_rate` | ask the user for the rate, or post in the base currency |
 | G5 | import is one currency (the base) with no FX column and no column mapping | a USD statement cannot be imported with its own dates and rates | import as base-currency rows, fix by void + repost |
-| G6 | no running balance on `GET /api/entries`; postings loaded per entry (N+1) | a "balance after this row" column needs client-side accumulation | accumulate client-side, or show the balance per account |
-| G7 | no export date range, and no route reads an export back in | "give me just 2025" is not possible | export everything; the document is a complete backup by design |
 | G8 | no ETag / `If-None-Match` anywhere; every wait is a poll | polling cost on the export and import screens | poll with backoff; stop on a terminal status |
 | G9 | intake captures only `text/plain` bodies, attachments are not captured, and only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank attachment never becomes a capture | forward the text, or use the share sheet |
 | G10 | `PATCH /api/settings` refuses every body (`base_currency`, `timezone` are not patchable) | no in-app settings beyond setup | settings are environment variables: `APP_TIMEZONE`, restart, or a fresh database |
