@@ -10,8 +10,8 @@ acceptance stub. Nothing in (B) is in the design doc yet, so each one starts wit
 
 ## What shipped since this list was written
 
-Five of the gaps below are **closed** on `main`. The row keeps its number so older links
-still resolve, and the third column says what replaced it:
+Five gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
+The table below records them once; section (A) lists only what is still open.
 
 | gap | shipped as | commit |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ still resolve, and the third column says what replaced it:
 | 6 | a duplicate `name`+`kind`, `payees.name` or `custom_queries.name` answers `409 duplicate` | `fix: answer 409 for a duplicate name` |
 | 8 | `PATCH /api/captures/{ref}` accepts `{"action":"match","entry_ref":"…"}`, moving the capture to `duplicate` without touching the ledger | `feat: resolve a capture with refs, never integer ids` |
 
-Still open: **3** (opening balances in the one-shot setup), **9** (the ledger resolving a
+Still open: **G1** (opening balances in the one-shot setup), **G4** (the ledger resolving a
 rate itself), and the cross-cutting rows from 5 onward. The next cuts in (B) that are now
 done are marked there as well.
 
@@ -30,33 +30,26 @@ done are marked there as well.
 
 ## A. Gaps in the API as shipped
 
-| # | gap (verified in code) | what it costs the client | workaround today |
+| id | gap (verified in code) | what it costs the client | workaround today |
 | --- | --- | --- | --- |
-| 1 | `PATCH /api/captures/{ref}` (approve) has no payee at all: `capturePatchRequest` declares `payee_id` as an **integer**, `approveCapture` never forwards it, and `captures.ApproveInput` has no payee field — so the field is accepted, validated and silently dropped | a client cannot set a merchant while approving, and a client that sends `payee_id` believes it did | approve, then `PATCH /api/entries/{ref}` with `{"payee_ref":"…"}`. Closing this is N1 |
-| 2 | `PATCH /api/entries/{ref}` accepts only `void` or `payee_ref` | no fix for a typo'd amount/date/note, no "edit note" | void + repost; two rows, both visible |
-| 3 | `POST /api/setup` takes only `base_currency`; there is no opening balance | a fresh instance shows every balance at zero and no way to seed reality | post an `adjustment` entry per account with its opening balance |
-| 4 | `accounts.parent_id` is never written; no route sets a parent, and `GET /api/analytics/categories` has no roll-up | category hierarchy cannot be built or reported | flat categories; `parent_ref` on `GET /api/accounts` filters a tree nobody can create |
-| 5 | `GET /api/meta` carries settings, accounts and currencies only — no payees, no rules, and no `password_must_change` | the shell needs 2–3 extra calls on a cold start | `GET /api/payees`, `GET /api/recurring`, `GET /api/settings` after meta |
-| 6 | a duplicate `accounts(name, kind)` or `custom_queries.name` answers `500 internal_error` | the user sees "internal error" for a name collision | pre-check client-side; treat `500` on create as "name taken" |
-| 7 | tokens have no expiry, no per-token rate limit, no un-revoke | a leaked shortcut token lives until someone revokes it | revoke and re-issue; `last_used_at` is the only signal |
-| 8 | the capture status `duplicate` is unreachable: no action sets it (`match` is unimplemented), and `extracted` (vendor push) does not exist either | the review screen cannot link a capture to an existing entry | approve with the same amount and let the ledger hold both; or reject |
-| 9 | the ledger never resolves a rate itself: `GET /api/rates` is exact-day, EUR-based, no cross rates, no nearest-business-day fallback | a foreign-currency entry needs the client to compute and send `fx_rate` | ask the user for the rate, or post in the base currency |
-| 10 | import is one currency (the base) with no FX column and no column mapping | a USD statement cannot be imported with its own dates-and-rates | import as base-currency rows, fix by void + repost |
-| 11 | no running balance on `GET /api/entries`, postings loaded per entry (N+1) | a "balance after this row" column needs client-side accumulation | sum client-side from the account balance backwards, or show balance per account only |
-| 12 | no export date range, no re-import of an export | "give me just 2025" is not possible | export everything; the JSON document is complete by design |
-| 13 | no ETag / `If-None-Match` anywhere; every wait is a poll | polling cost on the export and import screens | poll with backoff; stop on a terminal status |
-| 14 | intake captures only `text/plain` bodies; attachments are not captured; only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank attachment never becomes a capture | forward the text, or use the share sheet |
-| 15 | `PATCH /api/settings` refuses every body (`base_currency`, `timezone` are not patchable) | no in-app settings beyond setup | settings are environment variables: `APP_TIMEZONE`, restart, or a fresh database |
-| 16 | `ai_assistance` is still computed from `OPENAI_*` and returned by `GET /api/settings` and `GET /api/meta`, but `config.SelectRail` only ever builds the SnapToJSON rail (`OpenAI is not a fallback on purpose`), and the OpenAI adapter is wired by tests only | a client that gates a screen on `ai_assistance` offers a feature that does not exist; the flag says "configured" while nothing consumes it | gate on `extraction_enabled`; treat `ai_assistance` as unknown-until-removed |
+| G1 | `POST /api/setup` takes only `base_currency`: no accounts, no opening balances | a fresh instance shows every balance at zero and no way to seed reality | post one `adjustment` entry per account with its opening balance |
+| G2 | `GET /api/meta` carries settings, accounts and currencies only — no payees, no rules, no `password_must_change` | the shell needs 2–3 extra calls on a cold start | `GET /api/payees`, `GET /api/recurring`, `GET /api/settings` after meta |
+| G3 | tokens have no expiry, no per-token rate limit, no un-revoke | a leaked shortcut token lives until someone revokes it | revoke and re-issue; `last_used_at` is the only signal |
+| G4 | the ledger never resolves a rate itself: `GET /api/rates` is exact-day, EUR-based, no cross rates, no nearest-business-day fallback | a foreign-currency entry needs the client to compute and send `fx_rate` | ask the user for the rate, or post in the base currency |
+| G5 | import is one currency (the base) with no FX column and no column mapping | a USD statement cannot be imported with its own dates and rates | import as base-currency rows, fix by void + repost |
+| G6 | no running balance on `GET /api/entries`; postings loaded per entry (N+1) | a "balance after this row" column needs client-side accumulation | accumulate client-side, or show the balance per account |
+| G7 | no export date range, and no route reads an export back in | "give me just 2025" is not possible | export everything; the document is a complete backup by design |
+| G8 | no ETag / `If-None-Match` anywhere; every wait is a poll | polling cost on the export and import screens | poll with backoff; stop on a terminal status |
+| G9 | intake captures only `text/plain` bodies, attachments are not captured, and only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank attachment never becomes a capture | forward the text, or use the share sheet |
+| G10 | `PATCH /api/settings` refuses every body (`base_currency`, `timezone` are not patchable) | no in-app settings beyond setup | settings are environment variables: `APP_TIMEZONE`, restart, or a fresh database |
+| G11 | `ai_assistance` is still computed from `OPENAI_*` and returned by `GET /api/settings` and `GET /api/meta`, but `config.SelectRail` only builds the SnapToJSON rail and the OpenAI adapter is wired by tests only | a client that gates a screen on it offers a feature that does not exist | gate on `extraction_enabled`; treat `ai_assistance` as unknown-until-removed |
 
-Doc debt that this deck had to route around (fix in the same MR as the next docs change):
-`docs/endpoints/README.md` has no rows for the four `/api/connections*` routes;
-`PATCH_api_captures_ref.md` still says `{id}` for the path ref and lists `payee_id` as an
-approve field (gap 1), and still calls OpenAI a "single-shot rail"; `GET_api_exports_ref_download.md`
-says export retention is "24h by default" (it is `ExportRetention` = 720h); `GET_api_meta.md`
-still claims there is no payees route; `POST_api_captures.md` does not mention that pasted
-text now goes to the rail; `AGENTS.md` still describes `OPENAI_*` as "second extraction rail;
-used when SnapToJSON is unset", and `docs/v2-api.md` still ties `ai_assistance` to a rail.
+Doc debt left after the five closures (fix in the same MR as the next docs change):
+`docs/endpoints/README.md` still has no rows for the four `/api/connections*` routes;
+`GET_api_meta.md` still claims there is no payees route; `GET_api_exports_ref_download.md` says
+export retention is "24h by default" (it is `ExportRetention` = 720h); `AGENTS.md` still
+describes `OPENAI_*` as a "second extraction rail; used when SnapToJSON is unset", and
+`docs/v2-api.md` still ties `ai_assistance` to a rail.
 
 ---
 
@@ -66,7 +59,7 @@ Ordered by "unblocks a client screen per unit of backend risk". Each one is a ve
 slice with its own acceptance criteria, in the shape
 [`CONTRIBUTING.md`](../../../CONTRIBUTING.md) asks for.
 
-### N1 — Approve a capture with a payee ref *(fixes gap 1)*
+### N1 — Approve a capture with a payee ref *(shipped: `payee_ref` on approve)*
 
 - **Client sees:** the review screen offers the merchant picker, and the entry an approval
   posts already carries that merchant — one tap, no follow-up call.
@@ -88,7 +81,7 @@ slice with its own acceptance criteria, in the shape
   an unknown `payee_ref` is `404 not_found` and the capture stays `pending`; a snapshot of
   approve proves no integer id anywhere in the body.
 
-### N2 — Match a capture to an existing entry *(fixes gap 8)*
+### N2 — Match a capture to an existing entry *(shipped: `{"action":"match","entry_ref":"…"}`)*
 
 - **Client sees:** "you already logged this" — approve becomes approve-or-link.
 - **Backend change:** `{"action":"match","entry_ref":"…"}` in `Module.Captures`, moving the
@@ -100,7 +93,7 @@ slice with its own acceptance criteria, in the shape
 - **Acceptance:** match resolves the capture to `duplicate`; the ledger row count is
   unchanged; approving a matched capture is `409 capture_resolved`.
 
-### N3 — A correction route for entries *(fixes gap 2)*
+### N3 — A correction route for entries *(shipped: `PATCH` with `occurred_on`/`note`/`postings`)*
 
 - **Client sees:** "edit this entry" with a required reason, showing both the original and
   the correction.
@@ -115,7 +108,7 @@ slice with its own acceptance criteria, in the shape
 - **Acceptance:** one call yields two entries and one `void` audit row; the account balance
   is unchanged when the correction equals the original; a replayed call is `409`.
 
-### N4 — Opening balances in the setup wizard *(fixes gap 3)*
+### N4 — Opening balances in the setup wizard *(open: G1)*
 
 - **Client sees:** a first-run wizard that ends with real balances, not zeros.
 - **Backend change:** extend `POST /api/setup` with `accounts: [{name, kind, opening_balance_minor}]`,
@@ -131,7 +124,7 @@ slice with its own acceptance criteria, in the shape
   calling setup twice is `409 base_currency_locked`; an unbalanced opening balance is `422
   postings_not_balanced`.
 
-### N5 — Rates that resolve themselves *(fixes gap 9)*
+### N5 — Rates that resolve themselves *(open: G4)*
 
 - **Client sees:** "1 USD = 16 240 IDR (ECB, 13 Feb)" pre-filled, editable.
 - **Backend change:** `Module.Ledger.Post` reads `fx_rates` (nearest earlier business day,
@@ -146,7 +139,7 @@ slice with its own acceptance criteria, in the shape
   non-empty `fx_rate_date`; a date with no fetched sheet is `422 invalid_rate`; the same
   entry with an explicit rate keeps `fx_source: "manual"`.
 
-### N6 — Category hierarchy with roll-up *(fixes gap 4)*
+### N6 — Category hierarchy with roll-up *(shipped: `parent_ref` + `?rollup=parent`)*
 
 - **Client sees:** Food → Groceries/Coffee, with one parent number.
 - **Backend change:** `parent_ref` on `POST/PATCH /api/accounts` with a cycle guard and a
@@ -159,7 +152,7 @@ slice with its own acceptance criteria, in the shape
 - **Acceptance:** a cycle is `422 invalid_request`; `categories?rollup=parent` sums
   children; `categories` without the flag is unchanged.
 
-### N7 — Live updates instead of polling *(fixes gap 13)*
+### N7 — Live updates instead of polling *(open: G8)*
 
 - **Client sees:** the export flips to ready, the queue badge moves — without a refresh.
 - **Backend change:** `GET /api/events` as Server-Sent Events over the same credential,
@@ -174,7 +167,7 @@ slice with its own acceptance criteria, in the shape
 - **Acceptance:** a queued export emits `export.ready` after the worker run; a client that
   never opens the stream behaves exactly as today; a revoked token's stream closes.
 
-### N8 — Credential hygiene *(fixes gap 7)*
+### N8 — Credential hygiene *(open: G3)*
 
 - **Client sees:** "this shortcut token expires in 90 days", and a revoke that can be
   reversed within the grace window.

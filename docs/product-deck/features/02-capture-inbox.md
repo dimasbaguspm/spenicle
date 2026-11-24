@@ -60,11 +60,12 @@ exists and it is safe. Status `pending` means "a human must decide", `extracting
  "note":"coffee"}
 ```
 
-The approve body carries **no payee**. It posts with the capture's own source (`share` and
-`image` → `share`, `email`, `statement`, `recurring`, else `manual`), answers `201` with
-`{entry, capture}`, and stamps the capture `approved` in the same call. The request struct
-still accepts a `payee_id` integer, but nothing reads it ([F9](./09-gaps-and-next.md) gap 1),
-so the merchant is attached afterwards with `PATCH /api/entries/{ref}`.
+The approve body carries a **payee**: `payee_ref` is resolved through `PayeeSource.PayeeByRef`
+and stored on the entry, while the postings carry the money. It answers `201` with
+`{entry, capture}`, stamps the capture `approved` in the same call, and the capture carries
+`resolved_entry_ref`. The `match` action links the capture to an entry that already exists
+instead — `200`, status `duplicate`, no ledger write — and an integer `payee_id` is an unknown
+field, so it answers `400 invalid_json`.
 
 `reject` takes `{"action":"reject","reason":"not mine"}` — the reason is sealed into
 `resolution_note` and the row becomes `rejected`; the artifact stays until the worker
@@ -167,7 +168,7 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
 | --- | --- | --- |
 | vendor outage mid-extraction | the user's receipt sits in `extracting` or `failed` with an `extraction_error` | the row is still there and still approvable by hand: `approve` does not need the vendor, it needs the postings the user typed |
 | `retry` on a never-submitted capture | confusing "why does retry fail" for the user | it is `409 invalid_state` because there is no `job_ref`; the UI should hide retry unless `status = failed` **and** `job_ref` is non-empty |
-| the approve body accepts `payee_id` (integer) and **ignores it** | the client has no route that returns an integer id, so it can never fill that field; a client that sends it believes a payee was set when nothing was | approve, then `PATCH /api/entries/{ref}` with `{"payee_ref":"…"}`. Closing this is [F9](./09-gaps-and-next.md) gap 1 |
+| an approve names a payee that does not exist | the approval is refused after the user has picked everything | it is `404 not_found`, the capture stays `pending`, and the client resolves the ref from `GET /api/payees?query=` first |
 | duplicate receipts across channels | the same email and the same photo would double-count | the dedupe key includes `kind`, so identical bytes through two channels are two rows — intentionally: they are two pieces of evidence. The ledger only ever sees the one the user approves |
 | one artifact per capture | a multi-page statement cannot be one capture | `UNIQUE (capture_id)` on artifacts; a statement is imported through [F6](./06-statement-import.md) instead |
 | allowlist is a substring match | `example` accepts `evil-example.net` | the setting screen must show the match rule verbatim, and the docs say "keep entries specific"; an empty allowlist means *everyone* once polling is on |
@@ -263,7 +264,7 @@ Scenario: Intake is off until it is configured
 ## 6. What this page does not promise
 
 - No `batch_id` filter on the queue, no unread counts, no push.
-- `duplicate` exists in the state machine but no action sets it: `match` (link a capture
-  to an existing entry) is not implemented. The status is reachable, the feature is not.
+- `extracted` (a provider pushing a draft) is not implemented. A capture is resolved by
+  `approve`, `reject` or `match`; there is no action that edits the entry it produced.
 - No PDF parsing, no vendor-side draft push (`extracted`), no completeness gate.
 - Mail attachments are not captured; only a `text/plain` body becomes `raw_text`.
