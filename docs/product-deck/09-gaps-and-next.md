@@ -14,7 +14,7 @@ acceptance stub. Nothing in (B) is in the design doc yet, so each one starts wit
 
 | # | gap (verified in code) | what it costs the client | workaround today |
 | --- | --- | --- | --- |
-| 1 | `PATCH /api/captures/{ref}` accepts `payee_id` — an **integer** — and no route ever returns an integer id | a client cannot set a payee while approving a capture; it is also a breach of "refs only" | approve without a payee, then `PATCH /api/entries/{ref}` with `{"payee_ref":"…"}` |
+| 1 | `PATCH /api/captures/{ref}` (approve) has no payee at all: `capturePatchRequest` declares `payee_id` as an **integer**, `approveCapture` never forwards it, and `captures.ApproveInput` has no payee field — so the field is accepted, validated and silently dropped | a client cannot set a merchant while approving, and a client that sends `payee_id` believes it did | approve, then `PATCH /api/entries/{ref}` with `{"payee_ref":"…"}`. Closing this is N1 |
 | 2 | `PATCH /api/entries/{ref}` accepts only `void` or `payee_ref` | no fix for a typo'd amount/date/note, no "edit note" | void + repost; two rows, both visible |
 | 3 | `POST /api/setup` takes only `base_currency`; there is no opening balance | a fresh instance shows every balance at zero and no way to seed reality | post an `adjustment` entry per account with its opening balance |
 | 4 | `accounts.parent_id` is never written; no route sets a parent, and `GET /api/analytics/categories` has no roll-up | category hierarchy cannot be built or reported | flat categories; `parent_ref` on `GET /api/accounts` filters a tree nobody can create |
@@ -29,12 +29,16 @@ acceptance stub. Nothing in (B) is in the design doc yet, so each one starts wit
 | 13 | no ETag / `If-None-Match` anywhere; every wait is a poll | polling cost on the export and import screens | poll with backoff; stop on a terminal status |
 | 14 | intake captures only `text/plain` bodies; attachments are not captured; only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank attachment never becomes a capture | forward the text, or use the share sheet |
 | 15 | `PATCH /api/settings` refuses every body (`base_currency`, `timezone` are not patchable) | no in-app settings beyond setup | settings are environment variables: `APP_TIMEZONE`, restart, or a fresh database |
+| 16 | `ai_assistance` is still computed from `OPENAI_*` and returned by `GET /api/settings` and `GET /api/meta`, but `config.SelectRail` only ever builds the SnapToJSON rail (`OpenAI is not a fallback on purpose`), and the OpenAI adapter is wired by tests only | a client that gates a screen on `ai_assistance` offers a feature that does not exist; the flag says "configured" while nothing consumes it | gate on `extraction_enabled`; treat `ai_assistance` as unknown-until-removed |
 
 Doc debt that this deck had to route around (fix in the same MR as the next docs change):
 `docs/endpoints/README.md` has no rows for the four `/api/connections*` routes;
-`GET_api_exports_ref_download.md` still says export retention is "24h by default" (it is
-`ExportRetention` = 720h); `GET_api_meta.md` and `PATCH_api_captures_ref.md` still describe
-an earlier shape (no payees route; `{id}` instead of `{ref}`).
+`PATCH_api_captures_ref.md` still says `{id}` for the path ref and lists `payee_id` as an
+approve field (gap 1), and still calls OpenAI a "single-shot rail"; `GET_api_exports_ref_download.md`
+says export retention is "24h by default" (it is `ExportRetention` = 720h); `GET_api_meta.md`
+still claims there is no payees route; `POST_api_captures.md` does not mention that pasted
+text now goes to the rail; `AGENTS.md` still describes `OPENAI_*` as "second extraction rail;
+used when SnapToJSON is unset", and `docs/v2-api.md` still ties `ai_assistance` to a rail.
 
 ---
 
@@ -46,18 +50,25 @@ slice with its own acceptance criteria, in the shape
 
 ### N1 — Approve a capture with a payee ref *(fixes gap 1)*
 
-- **Client sees:** the review screen finally offers the merchant picker, and the entry it
-  posts is complete in one tap.
-- **Backend change:** rename `payee_id` to `payee_ref` on `capturePatchRequest`, resolve
-  through `PayeeSource.PayeeByRef` in `Module.Captures.Approve` (the same path
-  `PATCH /api/entries` uses). Small, isolated, and it removes the only integer id on the
-  wire.
-- **RRR:** *Requirement* — no route accepts or returns an integer id. *Risk* — a client
-  already sending `payee_id` (there is none live, since no route returns one) breaks;
-  accept `payee_ref` only and answer `422 invalid_request` for `payee_id`. *Rollout* — a
-  single MR, additive for clients, breaking only for a body nobody can construct.
-- **Acceptance:** `PATCH /api/captures/{ref}` with `payee_ref` posts an entry carrying that
-  payee; a body with `payee_id` is `422`; a snapshot proves no integer id in any response.
+- **Client sees:** the review screen offers the merchant picker, and the entry an approval
+  posts already carries that merchant — one tap, no follow-up call.
+- **Backend change:** replace `PayeeID *int64` with `PayeeRef string` (`validate:"omitempty,ref"`)
+  on `capturePatchRequest`, carry it on `captures.ApproveInput` (the module already has a
+  `PayeeRef` field on `EnqueueInput`, so the shape exists), resolve it with
+  `PayeeSource.PayeeByRef` in `Module.Captures.Approve`, and pass the id into
+  `ledger.PostInput` — the same path `PATCH /api/entries` already takes. Struct, input,
+  one resolve: no new query type, no schema change.
+- **RRR:** *Requirement* — a client can set every field of the entry it approves, and no
+  route accepts or returns an integer id. *Risk* — removing `payee_id` breaks a body no
+  client can construct today (nothing returns an int id), and because the decoder refuses
+  unknown fields a stale client gets a loud `400 invalid_json` instead of a silent drop;
+  that is the behaviour we want, so ship it with the review screen. *Rollout* — one MR, no
+  migration, no data change: the field is additive, and today's silent-ignore becomes an
+  explicit refusal.
+- **Acceptance:** `{"action":"approve","payee_ref":"<32 hex>"}` answers `201` and the
+  returned `entry` carries `payee {ref, name}`; a body with `payee_id` is `400 invalid_json`;
+  an unknown `payee_ref` is `404 not_found` and the capture stays `pending`; a snapshot of
+  approve proves no integer id anywhere in the body.
 
 ### N2 — Match a capture to an existing entry *(fixes gap 8)*
 

@@ -31,9 +31,12 @@ capped at 8000 characters. Two things happen after the insert, and both are invi
 the caller:
 
 1. the payload is sealed (AES-256-GCM, `v1:` envelope) before it touches a column;
-2. when an extraction rail is configured, the artifact is submitted — SnapToJSON
-   (`status: extracting`, poll later with `retry`) or OpenAI (single-shot, the answer
-   arrives on the row as `draft_json`).
+2. when SnapToJSON is configured, the rail reads it — the uploaded file, or the pasted
+   text as a `capture.txt` — and the row becomes `extracting` with a `job_ref`;
+   `retry` polls that job, the vendor's report lands in the sealed `draft_json` and the
+   row moves to `pending` (or `failed` with `extraction_error` when the submit or the
+   report was refused). SnapToJSON is the only rail: OpenAI is not a fallback, so an
+   instance without `SNAPTOJSON_API_KEY` keeps every capture manual.
 
 So the first response is the whole story from the shortcut's point of view: the capture
 exists and it is safe. Status `pending` means "a human must decide", `extracting` means
@@ -57,13 +60,20 @@ exists and it is safe. Status `pending` means "a human must decide", `extracting
  "note":"coffee"}
 ```
 
+The approve body carries **no payee**. It posts with the capture's own source (`share` and
+`image` → `share`, `email`, `statement`, `recurring`, else `manual`), answers `201` with
+`{entry, capture}`, and stamps the capture `approved` in the same call. The request struct
+still accepts a `payee_id` integer, but nothing reads it ([F9](./09-gaps-and-next.md) gap 1),
+so the merchant is attached afterwards with `PATCH /api/entries/{ref}`.
+
 `reject` takes `{"action":"reject","reason":"not mine"}` — the reason is sealed into
 `resolution_note` and the row becomes `rejected`; the artifact stays until the worker
 reclaims it after `ArtifactRetention` (720h), after which the download route answers
 `410 gone` while the row survives.
 
-`retry` re-reads the vendor job (`job_ref`). A rail that answers in one shot (OpenAI) has
-no job to poll and answers `409 invalid_state`.
+`retry` re-reads the vendor job named by `job_ref` and maps the report onto the row. A capture
+that was never submitted has no `job_ref`, so it answers `409 invalid_state` rather than
+pretending to retry.
 
 The response is `{entry, capture}` for `approve` — the posted entry and the resolved
 capture in one body, so the review screen advances without a second read.
@@ -157,7 +167,7 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
 | --- | --- | --- |
 | vendor outage mid-extraction | the user's receipt sits in `extracting` or `failed` with an `extraction_error` | the row is still there and still approvable by hand: `approve` does not need the vendor, it needs the postings the user typed |
 | `retry` on a never-submitted capture | confusing "why does retry fail" for the user | it is `409 invalid_state` because there is no `job_ref`; the UI should hide retry unless `status = failed` **and** `job_ref` is non-empty |
-| the approve body takes `payee_id` (integer) | the client has no route that returns an integer id, so it cannot set a payee on approval | send the payee separately: `PATCH /api/entries/{ref}` takes `payee_ref`. Closing this is [F9](./09-gaps-and-next.md) item 1 |
+| the approve body accepts `payee_id` (integer) and **ignores it** | the client has no route that returns an integer id, so it can never fill that field; a client that sends it believes a payee was set when nothing was | approve, then `PATCH /api/entries/{ref}` with `{"payee_ref":"…"}`. Closing this is [F9](./09-gaps-and-next.md) gap 1 |
 | duplicate receipts across channels | the same email and the same photo would double-count | the dedupe key includes `kind`, so identical bytes through two channels are two rows — intentionally: they are two pieces of evidence. The ledger only ever sees the one the user approves |
 | one artifact per capture | a multi-page statement cannot be one capture | `UNIQUE (capture_id)` on artifacts; a statement is imported through [F6](./06-statement-import.md) instead |
 | allowlist is a substring match | `example` accepts `evil-example.net` | the setting screen must show the match rule verbatim, and the docs say "keep entries specific"; an empty allowlist means *everyone* once polling is on |
@@ -206,7 +216,7 @@ Scenario: Approving a capture posts one entry and resolves the capture
      "postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},
                  {"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
     """
-  Then the response status is 200
+  Then the response status is 201
   And the response body carries "entry" and "capture"
   And the capture status is "approved"
   And the store holds 1 "ledger_entries" row

@@ -173,7 +173,7 @@ Scenario: The catch-up cap spreads a backlog instead of dropping it
 Scenario: Approving a recurring capture posts it with the rule attached
   Given a queued recurring capture for "2026-03-01"
   When I approve it with the draft's postings
-  Then the response status is 200
+  Then the response status is 201
   And the entry carries recurring_rule_id
   And a second approve of the same capture is 409 "capture_resolved"
 

@@ -16,7 +16,7 @@ still has a credential?" and "who voided that entry?".
 | # | call | why it cannot be skipped |
 | --- | --- | --- |
 | 1 | `GET /healthz` | proves the process booted, migrated, and which build this is |
-| 2 | `GET /api/settings` | `base_currency`, `timezone`, `password_must_change`, and the two capability flags |
+| 2 | `GET /api/settings` | `base_currency`, `timezone`, `password_must_change`, and the capability flags: `extraction_enabled` drives the rail, `ai_assistance` is informational only ([F9](./09-gaps-and-next.md) gap 16) |
 | 3 | `POST /api/setup {"base_currency":"IDR"}` | the wizard's only write; `200` with the settings payload |
 | 4 | `POST /api/password {current_password, new_password}` | closes the instance; the response carries the new root credential |
 | 5 | `GET /api/meta` | one round trip fills the shell: settings, accounts with balances, the ISO currency list |
@@ -117,7 +117,10 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
    first boot; a later boot that disagrees with the stored value refuses to start.
 4. `GET /api/settings` always carries `base_currency`, `timezone`,
    `password_must_change`, `extraction_enabled` and `ai_assistance` — no `omitempty`,
-   so a client never guesses a default.
+   so a client never guesses a default. `extraction_enabled` is the flag that matters:
+   it says SnapToJSON is wired. `ai_assistance` is computed from the `OPENAI_*`
+   variables but no rail consumes it any more ([F9](./09-gaps-and-next.md) gap 16), so a
+   client must not gate a feature on it.
 5. A token's plaintext is returned by its creating `201` and by nothing else, ever.
 6. Revoking is idempotent in effect: a second revoke is `404`, and every request
    carrying the revoked secret answers `401` from then on.

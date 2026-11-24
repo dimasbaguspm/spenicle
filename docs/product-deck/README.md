@@ -101,8 +101,8 @@ is re-coded to the domain code when the table knows it, so `unknown_currency` an
   float, never a formatted string. A client formats; the API never does.
 - **Refs only.** Every row has a 32-lowercase-hex `ref`; that is the only identifier
   the API speaks. Requests send `account_ref`, `payee_ref`, `category_ref`, responses
-  carry `ref`. One exception exists and is called out in F9: capture approve takes
-  `payee_id` (an integer) and no route exposes one.
+  carry `ref`. One exception exists and is called out in [F9](./09-gaps-and-next.md)
+  gap 1: capture approve's body declares a `payee_id` integer — and ignores it.
 - **Dates** are `YYYY-MM-DD`, timestamps RFC3339 in UTC. Every calendar decision
   ("today", "due", "this month") is made in `APP_TIMEZONE`, pinned at the first boot
   and reported by `GET /api/settings` and `GET /healthz`.
@@ -178,7 +178,7 @@ worker is thinking".
 | no push channel | a recurring capture or a finished export waits up to `WorkerInterval` | every job route exposes its status and its event log, so the client can explain the wait instead of guessing; `worker_last_run_at` names the last tick |
 | one writer at a time | SQLite `BEGIN IMMEDIATE` serialises writes; a long import commit blocks every other write | commits run in chunks of `ImportCommitChunk` (500) and are resumable, so a blocked writer is a slow writer, never a lost one |
 | retention sweeps | a rejected capture loses its receipt after 720h; a ready export 410s after 720h | the row survives with `deleted_at`/`status = expired`, and the UI is told to say "the file was reclaimed", never "not found" |
-| integer ids leaking | one known route (capture approve's `payee_id`) breaks "refs only" | listed in [F9](./09-gaps-and-next.md) as a defect to close before the client builds around it |
+| integer ids on the wire | capture approve's request struct accepts a `payee_id` integer and never reads it: a client that fills it believes a payee was attached | [F9](./09-gaps-and-next.md) gap 1 — the field has to be removed (and replaced by `payee_ref`), not honoured |
 
 ### Rollout
 

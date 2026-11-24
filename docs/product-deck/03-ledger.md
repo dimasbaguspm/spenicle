@@ -42,8 +42,9 @@ carries `account {ref, name, kind}`, `account_ref`, `amount_minor`, `base_amount
 
 Signs carry the meaning: money leaving an asset is negative, the expense category is
 positive, and the two always sum to zero. `source` defaults to `manual`; a capture
-approval sends `share`, `email` or `image`, an import `statement`, and a voided original's
-reversal is `adjustment`.
+approval derives it from the capture kind (`share` and `image` → `share`, `email`,
+`statement`, `recurring`, anything else → `manual`), an import sends `statement`, and a
+voided original's reversal is `adjustment`.
 
 ### 2.2 Read it
 
