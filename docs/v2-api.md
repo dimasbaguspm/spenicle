@@ -23,6 +23,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | --- | --- | --- |
 | 3 | `GET /api/meta` | live |
 | 9 | `GET /api/entries` | live (filters, cursor, limit) |
+| 9 | `GET /api/entries/{ref}` | live: one entry with its postings, `404` for an unknown ref |
 | 10 | `POST /api/entries` | live |
 | 11 | `PATCH /api/entries/{id}` | live: `void` (writes the reversal) and `payee_ref` |
 | 12 | `GET /api/captures` | live (status filter, cursor, limit) |
@@ -468,6 +469,7 @@ CREATE INDEX ix_audit_action ON audit_log (action, at);
 | 9 | GET | `/api/entries` | `entries:read` | list, filter, optional running balance |
 | 10 | POST | `/api/entries` | `entries:write` | write entry + postings |
 | 11 | PATCH | `/api/entries/{id}` | `entries:write` | edit, void |
+| — | GET | `/api/entries/{ref}` | `entries:read` | one entry by ref, postings and display names included |
 | 12 | GET | `/api/captures` | `captures:read` | the review queue, paged |
 | 13 | POST | `/api/captures` | `captures:write` | capture: share text, image, file, email, manual |
 | 14 | PATCH | `/api/captures/{id}` | `captures:write` | approve, reject, retry, match, extracted |
@@ -486,7 +488,7 @@ CREATE INDEX ix_audit_action ON audit_log (action, at);
 | `GET/PATCH /settings` split | `GET /meta` reads, `PATCH /settings` writes |
 | `GET /accounts`, `GET /payees`, `GET /recurring` | one `GET /meta` bootstrap call |
 | `GET /accounts/{id}/register` | `GET /entries?account_id=&running_balance=true` |
-| `GET /entries/{id}` | `GET /entries?id=` |
+| `GET /entries/{id}` | `GET /entries/{ref}`, or `GET /entries?refs=` for a batch |
 | `POST /entries/{id}/void` | `PATCH /entries/{id}` `{"void":true,"reason":"..."}` |
 | approve / reject / retry endpoints | `PATCH /captures/{id}` `{"action":"approve"}` etc. |
 | `POST /recurring/detect` | weekly worker, no HTTP surface |

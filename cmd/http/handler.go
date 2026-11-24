@@ -152,6 +152,7 @@ func (s *server) routes() routeGroups {
 	groups.scoped.route(constant.ScopeRecurringWrite, "PATCH /api/recurring/{ref}", s.api.PatchRecurring)
 
 	groups.scoped.route(constant.ScopeEntriesRead, "GET /api/entries", s.api.ListEntries)
+	groups.scoped.route(constant.ScopeEntriesRead, "GET /api/entries/{ref}", s.api.GetEntry)
 	groups.scoped.route(constant.ScopeEntriesWrite, "POST /api/entries", s.api.PostEntry)
 	groups.scoped.route(constant.ScopeEntriesWrite, "PATCH /api/entries/{ref}", s.api.PatchEntry)
 

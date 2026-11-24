@@ -60,7 +60,10 @@ over 200.
 
 Keyset paging by entry ref only; no running balance (`running_balance` from the design is
 not implemented); postings are loaded per entry (N+1), acceptable at one user's volume.
-`query` matches the note only, not the payee name.
+`query` matches the note only, not the payee name. There is no amount filter: the filter
+matches dates, accounts, payees, source, currency and refs, never a number. One entry by
+ref is [`GET /api/entries/{ref}`](./GET_api_entries_ref.md); `refs` stays the way to fetch
+a batch of unrelated entries in one call.
 
 
 

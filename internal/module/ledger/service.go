@@ -150,6 +150,22 @@ func (s *Service) List(
 	return s.entries.ListEntries(ctx, filter)
 }
 
+func (s *Service) Get(ctx context.Context, ref string) (entity.Entry, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Get")
+	defer endSpan()
+
+	entry, found, err := s.entries.EntryByRef(ctx, ref)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	if !found {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
+	}
+
+	return entry, nil
+}
+
 func (s *Service) Void(ctx context.Context, ref, reason string) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Void")
 	defer endSpan()

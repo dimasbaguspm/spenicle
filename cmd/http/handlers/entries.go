@@ -94,6 +94,34 @@ func (s *Server) ListEntries(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+func (s *Server) GetEntry(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Get")
+	defer endSpan()
+
+	var path pathRefRequest
+	if err := bindPath(r, &path); err != nil {
+		writeInvalid(w, err)
+
+		return
+	}
+
+	entry, err := s.deps.Ledger.Get(ctx, path.Ref)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	body, err := s.entryResponse(ctx, entry)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, body)
+}
+
 func (s *Server) PatchEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Patch")
 	defer endSpan()
