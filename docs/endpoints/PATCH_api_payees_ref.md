@@ -36,8 +36,9 @@ one `UPDATE` of `name`, both default ids and `archived_at`.
 
 ## Errors
 
-`404 not_found` for an unknown payee; `422 unknown_reference` when a new default points
-at an account nobody owns; `422 invalid_request` for a name over the limit.
+`404 not_found` for an unknown payee; `422 invalid_request` when a new `default_category_ref`
+names an `asset`/`liability` account; `422 unknown_reference` when a new default points at an
+account nobody owns.
 
 ## Limitations
 

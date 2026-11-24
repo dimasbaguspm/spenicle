@@ -34,8 +34,9 @@ None.
 
 ## Errors
 
-`422 invalid_request` for a missing name; `422 unknown_reference` when a default points
-at an account `ref` nobody owns.
+`422 invalid_request` for a missing name, and for a `default_category_ref` that names an
+`asset`/`liability` account (a category must be `expense` or `income`); `422 unknown_reference`
+when a default points at an account nobody owns.
 
 ## Limitations
 
