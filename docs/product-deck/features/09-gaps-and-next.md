@@ -44,6 +44,9 @@ done are marked there as well.
 | G10 | `PATCH /api/settings` refuses every body (`base_currency`, `timezone` are not patchable) | no in-app settings beyond setup | settings are environment variables: `APP_TIMEZONE`, restart, or a fresh database |
 | G11 | `ai_assistance` is still computed from `OPENAI_*` and returned by `GET /api/settings` and `GET /api/meta`, but `config.SelectRail` only builds the SnapToJSON rail and the OpenAI adapter is wired by tests only | a client that gates a screen on it offers a feature that does not exist | gate on `extraction_enabled`; treat `ai_assistance` as unknown-until-removed |
 | G12 | the export does not carry `categorization_rules`: `module/export` renders accounts, payees, entries, captures, recurring, rates and saved views, so a backup/restore loses the rules | a restored instance forgets why a merchant was filed | re-create the rules by hand; export is still the complete ledger. Closing this is the next `feat:` |
+| G13 | an import commit does not learn a payee's default category — only a capture approval does | a CSV-first user gets no consistency for free | pick the category per row; `GET /api/categorization/suggest` still answers |
+| G14 | neither `POST /api/captures` nor `POST /api/imports` carries a suggestion in its response | every client must call `GET /api/categorization/suggest` itself, and one that forgets shows `Unsorted` | call suggest, then prefill (F10 §2.2) |
+| G15 | no ceiling on how many categorization rules exist, and `suggest` reads every live rule | a few hundred rules turn each suggestion into a full scan | keep the list short; the list route pages at 200 like every other |
 
 Doc debt left after the five closures (fix in the same MR as the next docs change):
 `docs/endpoints/README.md` still has no rows for the four `/api/connections*` routes;

@@ -43,9 +43,10 @@ it, so `INDOMARET` and `indomaret` collide.
 ## Errors
 
 `404 not_found` when `category_ref` names no account; `422 invalid_request` when the category
-is an `asset` or `liability` account, when the pattern is outside 2–80 characters, or when
-`field`/`match_kind` is not one of the three; `409 duplicate` when a live rule already covers
-the same pattern, field and match kind.
+is an `asset` or `liability` account, when the pattern is outside 2–80 characters, when
+`field`/`match_kind` is not a known pair, or when `field: "note"` asks for
+`match_kind: "exact"` (a note is prose — use `contains` or `prefix`); `409 duplicate` when a
+live rule already covers the same pattern, field and match kind.
 
 ## Limitations
 

@@ -214,3 +214,4 @@ Scenario: A default pointing at nothing is refused
 - No merge, no rename-everywhere, no `kind` change, no reparenting.
 - No icon catalogue: `icon` is an opaque string up to 32 characters the client interprets.
 - No per-pair (native currency) balance on an account.
+- A `default_category_ref` must name an `expense`/`income` account; an asset there answers `422 invalid_request`.

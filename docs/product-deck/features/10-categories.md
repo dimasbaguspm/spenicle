@@ -175,6 +175,6 @@ Scenario: A bucket and a roll-up cannot be asked for together
 - No auto-posting: a suggestion is a read; a category is applied only by `approve` or
   `commit`.
 - No learning from import commits yet, and no bulk re-file of history.
-- An exact rule stored on the note never fires — note rules are `contains`/`prefix` only in
-  the ladder.
+- A `field: "note"` rule with `match_kind: "exact"` is refused (`422 invalid_request`): a note is
+  prose, so only `contains`/`prefix` make sense there.
 - `bucket=month` and `rollup=parent` are separate questions and cannot be asked together.
