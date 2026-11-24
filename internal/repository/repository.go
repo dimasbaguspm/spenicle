@@ -20,6 +20,7 @@ type Ledger interface {
 	VoidEntry(ctx context.Context, ref, reason string, at time.Time) (entity.Entry, error)
 	UpdateEntryPayee(ctx context.Context, ref string, payeeID *int64) (entity.Entry, bool, error)
 	MatchingEntryRef(ctx context.Context, probe entity.EntryProbe) (string, bool, error)
+	RunningBalances(ctx context.Context, accountRef string, entryIDs []int64) (map[int64]int64, error)
 	ReplaceEntry(
 		ctx context.Context,
 		ref string,
@@ -182,6 +183,7 @@ type RateSource interface {
 type RateStore interface {
 	SaveRates(ctx context.Context, rates []entity.Rate) error
 	RateOn(ctx context.Context, base, quote string, on time.Time) (entity.Rate, bool, error)
+	RateOnOrBefore(ctx context.Context, base, quote string, on time.Time) (entity.Rate, bool, error)
 	ListRates(ctx context.Context) ([]entity.Rate, error)
 }
 

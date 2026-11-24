@@ -121,13 +121,14 @@ func boot(ctx context.Context, cfg entity.AppConfig, logger *logging.Logger) (*P
 		return nil, fmt.Errorf("export filestore: %w", err)
 	}
 
-	ledgerService := ledger.New(store, store, store, settingsService, clock.System{}, clock.System{})
-
 	ratesService, err := ratesFor(ctx, cfg, store, logger)
 	if err != nil {
 		_ = store.Close(ctx)
 		return nil, err
 	}
+
+	ledgerService := ledger.New(store, store, store, settingsService, ratesService,
+		clock.System{}, clock.System{})
 
 	return &Process{
 		Cfg:          cfg,

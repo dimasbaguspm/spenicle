@@ -1,0 +1,33 @@
+{
+  "currency": "EUR",
+  "note": "oom",
+  "occurred_on": "2026-11-20",
+  "postings": [
+    {
+      "account": {
+        "kind": "expense",
+        "name": "Coffee",
+        "ref": "<ref>"
+      },
+      "account_ref": "<ref>",
+      "amount_minor": "1000",
+      "base_amount_minor": "160005",
+      "fx_rate": "16000.50",
+      "fx_source": "ecb"
+    },
+    {
+      "account": {
+        "kind": "asset",
+        "name": "Cash",
+        "ref": "<ref>"
+      },
+      "account_ref": "<ref>",
+      "amount_minor": "-1000",
+      "base_amount_minor": "-160005",
+      "fx_rate": "16000.50",
+      "fx_source": "ecb"
+    }
+  ],
+  "ref": "<ref>",
+  "source": "manual"
+}

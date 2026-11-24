@@ -73,7 +73,7 @@ func newHarness(t *testing.T, options imports.Options) harness {
 	at := time.Date(2025, 2, 10, 9, 0, 0, 0, time.UTC)
 	source := fixedClock{at: at}
 
-	postings := ledger.New(store, store, store, baseStub{}, source, source)
+	postings := ledger.New(store, store, store, baseStub{}, nil, source, source)
 
 	return harness{
 		store: store,

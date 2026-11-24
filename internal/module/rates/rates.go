@@ -4,7 +4,6 @@ package rates
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -22,7 +21,7 @@ type Report struct {
 
 type Contract interface {
 	Refresh(ctx context.Context) (Report, error)
-	Rate(ctx context.Context, base, quote string, on time.Time) (entity.Rate, error)
+	Rate(ctx context.Context, base, quote string, on time.Time) (entity.Rate, bool, error)
 }
 
 type TimeSource interface{ Now() time.Time }
@@ -74,7 +73,7 @@ func (s *Service) Rate(
 	ctx context.Context,
 	base, quote string,
 	on time.Time,
-) (entity.Rate, error) {
+) (entity.Rate, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Rates.Rate")
 	defer endSpan()
 
@@ -83,22 +82,25 @@ func (s *Service) Rate(
 	}
 
 	if cached, ok := s.cached(base, quote, on); ok {
-		return cached, nil
+		return cached, true, nil
 	}
 
-	rate, found, err := s.store.RateOn(ctx, base, quote, on)
+	rate, found, err := s.store.RateOnOrBefore(ctx, base, quote, on)
 	if err != nil {
-		return entity.Rate{}, err
+		return entity.Rate{}, false, err
 	}
 
 	if !found {
-		return entity.Rate{}, fmt.Errorf("%w: no %s/%s rate on %s",
-			entity.ErrNotFound, base, quote, on.Format(constant.DateLayout))
+		return entity.Rate{}, false, nil
+	}
+
+	if rate.OnDate.Format(constant.DateLayout) != on.Format(constant.DateLayout) {
+		rate.Source = constant.FXSourceCached
 	}
 
 	s.remember([]entity.Rate{rate})
 
-	return rate, nil
+	return rate, true, nil
 }
 
 func (s *Service) Clear() {

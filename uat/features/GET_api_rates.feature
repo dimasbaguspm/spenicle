@@ -21,6 +21,16 @@ Feature: GET /api/rates
     Then the response status is 404
     And the response JSON matches the snapshot "get_api_rates__a_day_nobody_fetched_answers_404"
 
+  Scenario: A day after the last sheet day carries the nearest earlier rate
+    Given a running API
+    When I send a GET to "/api/rates" with headers/query:
+      | type  | key   | value      |
+      | query | base  | EUR        |
+      | query | quote | USD        |
+      | query | on    | 2026-11-21 |
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_rates__a_day_after_the_last_sheet_day_carries_the_nearest_earlier_rate"
+
   Scenario: An unknown currency code is refused before any lookup
     Given a running API
     When I send a GET to "/api/rates" with headers/query:

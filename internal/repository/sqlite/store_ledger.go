@@ -282,7 +282,105 @@ func (s *Store) ListEntries(
 		out[i].Postings = postings[out[i].ID]
 	}
 
+	for i := range out {
+		out[i].Postings = postings[out[i].ID]
+	}
+
+	if err := s.attachBalances(ctx, filter, ids, out); err != nil {
+		return nil, err
+	}
+
 	return out, nil
+}
+
+func (s *Store) attachBalances(
+	ctx context.Context,
+	filter entity.EntryFilter,
+	ids []int64,
+	entries []entity.Entry,
+) error {
+	if !filter.WithBalance || len(filter.AccountRefs) != 1 {
+		return nil
+	}
+
+	balances, err := s.RunningBalances(ctx, filter.AccountRefs[0], ids)
+	if err != nil {
+		return err
+	}
+
+	for index := range entries {
+		balance, found := balances[entries[index].ID]
+		if !found {
+			continue
+		}
+
+		entries[index].RunningBalanceMinor = &balance
+	}
+
+	return nil
+}
+
+func (s *Store) RunningBalances(
+	ctx context.Context,
+	accountRef string,
+	entryIDs []int64,
+) (map[int64]int64, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.RunningBalances")
+	defer endSpan()
+
+	balances := make(map[int64]int64, len(entryIDs))
+
+	if accountRef == "" || len(entryIDs) == 0 {
+		return balances, nil
+	}
+
+	args := make([]any, 0, len(entryIDs)+1)
+	args = append(args, accountRef)
+
+	for _, id := range entryIDs {
+		args = append(args, id)
+	}
+
+	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
+	query := `
+		SELECT running.id, running.balance_minor FROM (
+			SELECT e.id AS id,
+			       SUM(SUM(p.base_amount_minor)) OVER (
+			           ORDER BY e.occurred_on, e.id
+			           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balance_minor
+			FROM ledger_postings p
+			JOIN ledger_entries e ON e.id = p.entry_id
+			JOIN accounts a ON a.id = p.account_id
+			WHERE a.ref = ?
+			GROUP BY e.id
+		) running
+		WHERE running.id IN (` + placeholders(len(entryIDs)) + `)`
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select running balances: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var (
+			entryID int64
+			balance int64
+		)
+
+		if scanErr := rows.Scan(&entryID, &balance); scanErr != nil {
+			return nil, fmt.Errorf("scan running balance: %w", scanErr)
+		}
+
+		balances[entryID] = balance
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate running balances: %w", err)
+	}
+
+	return balances, nil
 }
 
 func (s *Store) postingsByEntryIDs(

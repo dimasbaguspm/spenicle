@@ -88,4 +88,5 @@ type EntryFilter struct {
 	AmountMax   *int64
 	Cursor      string
 	Limit       int
+	WithBalance bool
 }

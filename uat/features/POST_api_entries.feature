@@ -126,6 +126,32 @@ Feature: POST /api/entries
     Then the response status is 201
     And the response JSON matches the snapshot "post_api_entries__a_foreign_amount_with_a_rate_is_converted_once"
 
+  @vendors
+  Scenario: A foreign entry takes the sheet's rate for its own day
+    Given the base currency is "IDR"
+    And a running API
+    And the account "Cash" exists as "asset"
+    And the account "Coffee" exists as "expense"
+    When I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-11-20","currency":"EUR","note":"oom","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"1000"},{"account_ref":"{{account:Cash}}","amount_minor":"-1000"}]}
+      """
+    Then the response status is 201
+    And the response JSON matches the snapshot "post_api_entries__a_foreign_entry_takes_the_sheets_rate_for_its_own_day"
+
+  @vendors
+  Scenario: A carried day and a cross rate still convert a foreign entry
+    Given the base currency is "IDR"
+    And a running API
+    And the account "Cash" exists as "asset"
+    And the account "Coffee" exists as "expense"
+    When I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-11-21","currency":"USD","note":"abroad","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"1000"},{"account_ref":"{{account:Cash}}","amount_minor":"-1000"}]}
+      """
+    Then the response status is 201
+    And the response JSON matches the snapshot "post_api_entries__a_carried_day_and_a_cross_rate_still_convert_a_foreign_entry"
+
   Scenario: An unknown currency is refused
     Given the base currency is "IDR"
     And a running API

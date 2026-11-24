@@ -14,9 +14,12 @@ Manual entry screen, agents, approvals from captures.
 
 `Module.Ledger.Post`: idempotency lookup by `client_id`, the payee resolution
 (`PayeeSource.PayeeByRef`, unknown ref → `404 not_found`), base currency from settings,
-per-posting FX conversion (`big.Rat`, one rounding), `entity.NewEntry` (`CheckZeroSum`),
-then one transaction in `Repository.Sqlite.InsertEntry` (entry + postings + `audit_log`).
-Zero-sum is checked again inside the transaction.
+rate resolution for a posting that carries no `fx_rate` (`RateSource.Rate`, the
+`module/rates` service: the in-memory cache, then `fx_rates` for the exact day, then the
+nearest **earlier** day, then a cross rate through EUR), per-posting FX conversion
+(`big.Rat`, one rounding), `entity.NewEntry` (`CheckZeroSum`), then one transaction in
+`Repository.Sqlite.InsertEntry` (entry + postings + `audit_log`). Zero-sum is checked again
+inside the transaction.
 
 ## Path / query params
 
@@ -35,14 +38,19 @@ None.
 | `postings` | array | yes | ≥ 2, sums to zero |
 | `postings[].account_ref` | int | yes | |
 | `postings[].amount_minor` | string | yes | signed integer string |
-| `postings[].fx_rate` | string | no | required when `currency` ≠ base |
-| `postings[].fx_rate_date` | string | no | |
+| `postings[].fx_rate` | string | no | an explicit rate always wins; absent, a foreign posting takes the resolved rate and a base posting is `identity` |
+| `postings[].fx_rate_date` | string | no | the day the caller used; a resolved posting is stamped with the day the sheet actually carried |
 
 ## Response
 
 `201` with the posted entry (`200` when `client_id` replays one already stored). The body
 carries `ref`, `occurred_on`, `currency`, `source`, `note`, the postings — each with its
-account's `{ref,name,kind}` — and, when the entry has a payee, `payee: {ref, name}`.
+account's `{ref,name,kind}`, its `fx_rate` and its `fx_source` — and, when the entry has a
+payee, `payee: {ref, name}`.
+
+`fx_source` says where the rate came from: `identity` on a base-currency posting, `manual`
+when the caller sent `fx_rate`, `ecb` when the sheet has that exact day, and `cached` for a
+rate carried from the nearest earlier business day or derived as a cross rate.
 
 ## Errors
 
@@ -52,10 +60,11 @@ account's `{ref,name,kind}` — and, when the entry has a payee, `payee: {ref, n
 
 ## Limitations
 
-No automatic rate resolution yet: the ledger does not read `fx_rates`, so a foreign entry
-must send `fx_rate` (the system scrapes the ECB sheet at boot and keeps it in memory).
-After posting, only the payee (`PATCH /api/entries/{ref}`) can change; anything else is
-void plus re-post.
+An explicit `fx_rate` always wins over the resolver. A foreign entry whose day, and every
+earlier day, is missing from the sheet is `422 invalid_rate`: the ledger does not guess a
+future rate, and with no sheet at all (no vendor configured) every foreign entry still
+needs its own `fx_rate`. After posting, only the payee
+(`PATCH /api/entries/{ref}`) can change; anything else is void plus re-post.
 
 
 
@@ -70,6 +79,7 @@ sequenceDiagram
     participant H as Entries handler
     participant L as Ledger module
     participant S as Settings module
+    participant R as Rates module
     participant DB as SQLite
     C->>H: POST /api/entries {currency, postings, client_id}
     H->>H: parse amounts (minor units as strings)
@@ -82,6 +92,15 @@ sequenceDiagram
         end
     end
     L->>S: BaseCurrency()
+    opt posting has no fx_rate and the entry is foreign
+        L->>R: Rate(native, base, occurred_on)
+        R->>DB: cache, then fx_rates at or before the day
+        alt no direct pair
+            L->>R: Rate(EUR, base) and Rate(EUR, native)
+            R-->>L: two legs, crossed as eurToBase / eurToNative
+        end
+        R-->>L: rate, day used, source (ecb | cached)
+    end
     L->>L: convert each posting (big.Rat, one rounding)
     L->>L: CheckZeroSum(native, base)
     L->>DB: BEGIN; INSERT entry; INSERT postings; INSERT audit; COMMIT

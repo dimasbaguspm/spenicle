@@ -44,6 +44,7 @@ type Params struct {
 	Voided      string `query:"voided"       validate:"omitempty,oneof=true false"`
 	AmountMin   string `query:"amount_min"   validate:"omitempty,money"`
 	AmountMax   string `query:"amount_max"   validate:"omitempty,money"`
+	WithBalance string `query:"with_balance" validate:"omitempty,oneof=true false"`
 	From        string `query:"from"         validate:"omitempty,datestr"`
 	To          string `query:"to"           validate:"omitempty,datestr"`
 }

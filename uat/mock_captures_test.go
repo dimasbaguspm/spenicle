@@ -49,7 +49,7 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 	}
 
 	clockSystem := clock.System{}
-	ledgerService := ledger.New(store, store, store, fixedCurrency{code: "IDR"}, clockSystem, clockSystem)
+	ledgerService := ledger.New(store, store, store, fixedCurrency{code: "IDR"}, nil, clockSystem, clockSystem)
 
 	artifacts, err := filestore.New(filepath.Join(dir, "artifacts"), []byte("0123456789abcdef"))
 	if err != nil {

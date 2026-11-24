@@ -1,6 +1,6 @@
 {
   "error": {
     "code": "invalid_rate",
-    "message": "posting 0: invalid rate: rate required for USD to IDR"
+    "message": "posting 0: invalid rate: no USD to IDR rate on 2025-09-14"
   }
 }

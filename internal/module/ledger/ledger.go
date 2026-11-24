@@ -24,12 +24,17 @@ type Service struct {
 	accounts repository.Accounts
 	payees   PayeeSource
 	base     BaseCurrencySource
+	rates    RateSource
 	clock    TimeSource
 	ids      IDSource
 }
 
 type BaseCurrencySource interface {
 	BaseCurrency(ctx context.Context) (string, error)
+}
+
+type RateSource interface {
+	Rate(ctx context.Context, base, quote string, on time.Time) (entity.Rate, bool, error)
 }
 
 type PayeeSource interface {
@@ -46,6 +51,7 @@ func New(
 	accounts repository.Accounts,
 	payees PayeeSource,
 	base BaseCurrencySource,
+	rates RateSource,
 	clock TimeSource,
 	ids IDSource,
 ) *Service {
@@ -54,6 +60,7 @@ func New(
 		accounts: accounts,
 		payees:   payees,
 		base:     base,
+		rates:    rates,
 		clock:    clock,
 		ids:      ids,
 	}

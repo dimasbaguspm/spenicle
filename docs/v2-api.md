@@ -769,13 +769,15 @@ sequenceDiagram
 
 ## 3.8 `GET /api/entries`
 
-`?from&to&account_ref&payee_ref&source&currency&query&refs&voided&amount_min&amount_max&cursor&limit`
+`?from&to&account_ref&payee_ref&source&currency&query&refs&voided&amount_min&amount_max&cursor&with_balance&limit`
 
 The ref filters and `source` take comma-separated unions (`payee_ref=a,b` is either payee),
 `query` matches the note or the payee name, and `amount_min`/`amount_max` match any
-posting's `ABS(base_amount_minor)` in the base currency. `running_balance` stays
-unimplemented; [`endpoints/GET_api_entries.md`](./endpoints/GET_api_entries.md) is the
-current contract.
+posting's `ABS(base_amount_minor)` in the base currency. `with_balance=true` with exactly
+one `account_ref` adds `running_balance_minor`, the balance of that account after each row
+(one windowed `SUM(base_amount_minor)` query per page); without one account there is no
+single balance to walk and the field is omitted.
+[`endpoints/GET_api_entries.md`](./endpoints/GET_api_entries.md) is the current contract.
 
 ```mermaid
 sequenceDiagram

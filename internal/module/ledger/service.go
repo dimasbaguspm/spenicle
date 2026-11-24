@@ -3,6 +3,8 @@ package ledger
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
@@ -108,36 +110,178 @@ func (s *Service) buildPostings(
 			FXRateDate:  input.FXRateDate,
 		}
 
-		switch {
-		case nativeCurrency.Code == baseCurrency.Code:
-			posting.BaseAmountMinor = input.AmountMinor
-			posting.FXRate = "1"
-			posting.FXSource = constant.FXSourceIdentity
-
-		case input.FXRate != "":
-			rate, err := entity.ParseRate(input.FXRate)
-			if err != nil {
-				return nil, fmt.Errorf("posting %d: %w", index, err)
-			}
-
-			baseAmount, err := entity.ConvertBase(input.AmountMinor, nativeCurrency, baseCurrency, rate)
-			if err != nil {
-				return nil, fmt.Errorf("posting %d: %w", index, err)
-			}
-
-			posting.BaseAmountMinor = baseAmount
-			posting.FXRate = input.FXRate
-			posting.FXSource = constant.FXSourceManual
-
-		default:
-			return nil, fmt.Errorf("posting %d: %w: rate required for %s to %s",
-				index, entity.ErrInvalidRate, nativeCurrency.Code, baseCurrency.Code)
+		if err := s.applyRate(ctx, &posting, input, in.OccurredOn, nativeCurrency, baseCurrency); err != nil {
+			return nil, fmt.Errorf("posting %d: %w", index, err)
 		}
 
 		postings = append(postings, posting)
 	}
 
 	return postings, nil
+}
+
+func (s *Service) applyRate(
+	ctx context.Context,
+	posting *entity.Posting,
+	input PostingInput,
+	on time.Time,
+	native, base entity.Currency,
+) error {
+	switch {
+	case native.Code == base.Code:
+		posting.BaseAmountMinor = input.AmountMinor
+		posting.FXRate = "1"
+		posting.FXSource = constant.FXSourceIdentity
+
+		return nil
+	case input.FXRate != "":
+		return convertWith(posting, input, input.FXRate, constant.FXSourceManual, "", native, base)
+	default:
+		resolved, err := s.resolveRate(ctx, on, native.Code, base.Code)
+		if err != nil {
+			return err
+		}
+
+		return convertWith(posting, input, resolved.Rate, resolved.Source,
+			resolved.OnDate.Format(constant.DateLayout), native, base)
+	}
+}
+
+func convertWith(
+	posting *entity.Posting,
+	input PostingInput,
+	rateText, source, rateDate string,
+	native, base entity.Currency,
+) error {
+	rate, err := entity.ParseRate(rateText)
+	if err != nil {
+		return err
+	}
+
+	baseAmount, err := entity.ConvertBase(input.AmountMinor, native, base, rate)
+	if err != nil {
+		return err
+	}
+
+	posting.BaseAmountMinor = baseAmount
+	posting.FXRate = rateText
+	posting.FXSource = source
+
+	if rateDate != "" {
+		posting.FXRateDate = rateDate
+	}
+
+	return nil
+}
+
+const (
+	eurCode            = "EUR"
+	crossRatePrecision = 12
+)
+
+func (s *Service) resolveRate(
+	ctx context.Context,
+	on time.Time,
+	native, base string,
+) (entity.Rate, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.ResolveRate")
+	defer endSpan()
+
+	if s.rates == nil {
+		return entity.Rate{}, noRate(native, base, on)
+	}
+
+	rate, found, err := s.rates.Rate(ctx, native, base, on)
+	if err != nil {
+		return entity.Rate{}, fmt.Errorf("rate: %w", err)
+	}
+
+	if found {
+		if !sameDay(rate.OnDate, on) {
+			rate.Source = constant.FXSourceCached
+		}
+
+		return rate, nil
+	}
+
+	crossed, crossedFound, err := s.crossRate(ctx, on, native, base)
+	if err != nil {
+		return entity.Rate{}, err
+	}
+
+	if crossedFound {
+		return crossed, nil
+	}
+
+	return entity.Rate{}, noRate(native, base, on)
+}
+
+func noRate(native, base string, on time.Time) error {
+	return fmt.Errorf("%w: no %s to %s rate on %s",
+		entity.ErrInvalidRate, native, base, on.Format(constant.DateLayout))
+}
+
+func (s *Service) crossRate(
+	ctx context.Context,
+	on time.Time,
+	native, base string,
+) (entity.Rate, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.CrossRate")
+	defer endSpan()
+
+	toBase, found, err := s.eurPer(ctx, base, on)
+	if err != nil || !found {
+		return entity.Rate{}, false, err
+	}
+
+	toNative, found, err := s.eurPer(ctx, native, on)
+	if err != nil || !found {
+		return entity.Rate{}, false, err
+	}
+
+	numerator, err := entity.ParseRate(toBase.Rate)
+	if err != nil {
+		return entity.Rate{}, false, err
+	}
+
+	denominator, err := entity.ParseRate(toNative.Rate)
+	if err != nil {
+		return entity.Rate{}, false, err
+	}
+
+	return entity.Rate{
+		Base:   native,
+		Quote:  base,
+		OnDate: olderDay(toBase.OnDate, toNative.OnDate),
+		Rate:   new(big.Rat).Quo(numerator, denominator).FloatString(crossRatePrecision),
+		Source: constant.FXSourceCached,
+	}, true, nil
+}
+
+func (s *Service) eurPer(ctx context.Context, code string, on time.Time) (entity.Rate, bool, error) {
+	if code == eurCode {
+		return entity.Rate{
+			Base:   eurCode,
+			Quote:  eurCode,
+			OnDate: on,
+			Rate:   "1",
+			Source: constant.FXSourceIdentity,
+		}, true, nil
+	}
+
+	return s.rates.Rate(ctx, eurCode, code, on)
+}
+
+func sameDay(left, right time.Time) bool {
+	return left.Format(constant.DateLayout) == right.Format(constant.DateLayout)
+}
+
+func olderDay(left, right time.Time) time.Time {
+	if left.Before(right) {
+		return left
+	}
+
+	return right
 }
 
 func (s *Service) List(

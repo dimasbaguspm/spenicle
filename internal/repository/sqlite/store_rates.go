@@ -59,18 +59,40 @@ func (s *Store) RateOn(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.RateOn")
 	defer endSpan()
 
+	return s.rateWhere(ctx, base, quote, `AND on_date = ?`, on.Format(constant.DateLayout))
+}
+
+func (s *Store) RateOnOrBefore(
+	ctx context.Context,
+	base, quote string,
+	on time.Time,
+) (entity.Rate, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.RateOnOrBefore")
+	defer endSpan()
+
+	return s.rateWhere(ctx, base, quote,
+		`AND on_date <= ? ORDER BY on_date DESC LIMIT 1`, on.Format(constant.DateLayout))
+}
+
+func (s *Store) rateWhere(
+	ctx context.Context,
+	base, quote, condition string,
+	arg any,
+) (entity.Rate, bool, error) {
 	var (
 		rate      entity.Rate
 		onDate    string
 		fetchedAt string
 	)
 
-	err := s.db.QueryRowContext(ctx, `
+	//nolint:gosec // G202: condition is one of two literals, never caller text
+	query := `
 		SELECT ref, base, quote, on_date, rate, source, fetched_at
 		FROM fx_rates
-		WHERE base = ? AND quote = ? AND on_date = ?`,
-		base, quote, on.Format(constant.DateLayout),
-	).Scan(&rate.Ref, &rate.Base, &rate.Quote, &onDate, &rate.Rate, &rate.Source, &fetchedAt)
+		WHERE base = ? AND quote = ? ` + condition
+
+	err := s.db.QueryRowContext(ctx, query, base, quote, arg).
+		Scan(&rate.Ref, &rate.Base, &rate.Quote, &onDate, &rate.Rate, &rate.Source, &fetchedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Rate{}, false, nil
 	}

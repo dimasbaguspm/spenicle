@@ -1,0 +1,33 @@
+{
+  "currency": "USD",
+  "note": "abroad",
+  "occurred_on": "2026-11-21",
+  "postings": [
+    {
+      "account": {
+        "kind": "expense",
+        "name": "Coffee",
+        "ref": "<ref>"
+      },
+      "account_ref": "<ref>",
+      "amount_minor": "1000",
+      "base_amount_minor": "145591",
+      "fx_rate": "14559.144676979072",
+      "fx_source": "cached"
+    },
+    {
+      "account": {
+        "kind": "asset",
+        "name": "Cash",
+        "ref": "<ref>"
+      },
+      "account_ref": "<ref>",
+      "amount_minor": "-1000",
+      "base_amount_minor": "-145591",
+      "fx_rate": "14559.144676979072",
+      "fx_source": "cached"
+    }
+  ],
+  "ref": "<ref>",
+  "source": "manual"
+}

@@ -253,3 +253,29 @@ Feature: GET /api/entries
       | account_ref | zzz   |
       | source      | nope  |
       | voided      | maybe |
+      | with_balance | maybe |
+
+  Scenario: The running balance walks the one account the filter names
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"first","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1000"}]}
+      """
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-02","currency":"IDR","note":"second","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2000"}]}
+      """
+    When I send a GET to "/api/entries?account_ref={{account:Cash}}&with_balance=true"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__the_running_balance_walks_the_one_account_the_filter_names"
+
+  Scenario: The balance stays out when the filter names two accounts
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"first","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1000"}]}
+      """
+    When I send a GET to "/api/entries?account_ref={{account:Cash}},{{account:Unsorted}}&with_balance=true"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_entries__the_balance_stays_out_when_the_filter_names_two_accounts"
+

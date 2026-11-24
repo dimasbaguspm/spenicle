@@ -58,6 +58,8 @@ func entryFilter(params list.Params) (entity.EntryFilter, error) {
 		filter.AmountMax = &amount
 	}
 
+	filter.WithBalance = params.WithBalance == "true" && len(filter.AccountRefs) == 1
+
 	return filter, nil
 }
 

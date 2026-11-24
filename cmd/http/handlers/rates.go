@@ -50,9 +50,15 @@ func (s *Server) GetRate(w http.ResponseWriter, r *http.Request) {
 		on = parsed
 	}
 
-	rate, err := s.deps.Rates.Rate(ctx, query.Base, query.Quote, on)
+	rate, found, err := s.deps.Rates.Rate(ctx, query.Base, query.Quote, on)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	if !found {
+		httpx.WriteError(w, http.StatusNotFound, "not_found", rateNotFound(query, on))
 
 		return
 	}
@@ -66,4 +72,13 @@ func (s *Server) GetRate(w http.ResponseWriter, r *http.Request) {
 		Source:    rate.Source,
 		FetchedAt: rate.FetchedAt.Format(constant.TimestampLayout),
 	})
+}
+
+func rateNotFound(query rateQuery, on time.Time) string {
+	until := "today"
+	if !on.IsZero() {
+		until = "on or before " + query.On
+	}
+
+	return "not found: no " + query.Base + "/" + query.Quote + " rate " + until
 }

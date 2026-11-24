@@ -55,14 +55,15 @@ type postingResponse struct {
 }
 
 type entryResponse struct {
-	Ref        string            `json:"ref"`
-	OccurredOn string            `json:"occurred_on"`
-	Currency   string            `json:"currency"`
-	Source     string            `json:"source"`
-	Note       string            `json:"note,omitempty"`
-	Payee      *payeeSummary     `json:"payee,omitempty"`
-	VoidedAt   string            `json:"voided_at,omitempty"`
-	Postings   []postingResponse `json:"postings"`
+	Ref                 string            `json:"ref"`
+	OccurredOn          string            `json:"occurred_on"`
+	Currency            string            `json:"currency"`
+	Source              string            `json:"source"`
+	Note                string            `json:"note,omitempty"`
+	Payee               *payeeSummary     `json:"payee,omitempty"`
+	VoidedAt            string            `json:"voided_at,omitempty"`
+	Postings            []postingResponse `json:"postings"`
+	RunningBalanceMinor string            `json:"running_balance_minor,omitempty"`
 }
 
 type entryPatchRequest struct {
@@ -313,6 +314,10 @@ func toEntryResponse(entry entity.Entry, names displayNames) entryResponse {
 		Currency:   entry.Currency,
 		Source:     entry.Source,
 		Note:       entry.Note,
+	}
+
+	if entry.RunningBalanceMinor != nil {
+		out.RunningBalanceMinor = strconv.FormatInt(*entry.RunningBalanceMinor, 10)
 	}
 
 	if entry.VoidedAt != nil {
