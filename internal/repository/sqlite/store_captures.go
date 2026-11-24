@@ -15,7 +15,8 @@ import (
 
 const captureColumns = `id, ref, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
 	raw_text, draft_json, extraction_error, extraction_job_ref, extraction_rail,
-	extraction_model, resolved_entry_id, resolution_note, received_at, resolved_at`
+	extraction_model, resolved_entry_id, resolution_note, received_at, resolved_at,
+	(SELECT e.ref FROM ledger_entries e WHERE e.id = resolved_entry_id)`
 
 func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertCapture")
@@ -214,6 +215,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 		rail        sql.NullString
 		model       sql.NullString
 		resolvedID  sql.NullInt64
+		resolvedRf  sql.NullString
 		resolvedNt  sql.NullString
 		receivedRaw string
 		resolvedRaw sql.NullString
@@ -222,7 +224,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 	err := scanner.Scan(
 		&capture.ID, &capture.Ref, &capture.Kind, &capture.Status, &clientID, &capture.DedupeKey,
 		&batchID, &artifact, &rawText, &draft, &extractErr, &jobRef, &rail, &model, &resolvedID,
-		&resolvedNt, &receivedRaw, &resolvedRaw,
+		&resolvedNt, &receivedRaw, &resolvedRaw, &resolvedRf,
 	)
 	if err != nil {
 		return entity.Capture{}, err
@@ -238,6 +240,8 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 	capture.ExtractionRail = rail.String
 	capture.ExtractionModel = model.String
 	capture.ResolutionNote = resolvedNt.String
+
+	capture.ResolvedEntryRef = resolvedRf.String
 
 	if resolvedID.Valid {
 		id := resolvedID.Int64

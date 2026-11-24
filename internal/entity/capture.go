@@ -34,24 +34,25 @@ var captureTransitions = map[string]map[string]bool{
 }
 
 type Capture struct {
-	ID              int64
-	Ref             string
-	Kind            string
-	Status          string
-	ClientID        string
-	DedupeKey       string
-	BatchID         string
-	ArtifactHash    string
-	RawText         string
-	DraftJSON       string
-	ExtractionError string
-	JobRef          string
-	ExtractionRail  string
-	ExtractionModel string
-	ResolvedEntryID *int64
-	ResolutionNote  string
-	ReceivedAt      time.Time
-	ResolvedAt      *time.Time
+	ID               int64
+	Ref              string
+	Kind             string
+	Status           string
+	ClientID         string
+	DedupeKey        string
+	BatchID          string
+	ArtifactHash     string
+	RawText          string
+	DraftJSON        string
+	ExtractionError  string
+	JobRef           string
+	ExtractionRail   string
+	ExtractionModel  string
+	ResolvedEntryID  *int64
+	ResolvedEntryRef string
+	ResolutionNote   string
+	ReceivedAt       time.Time
+	ResolvedAt       *time.Time
 }
 
 // RecurringDraft is what a due recurring rule leaves in the queue: the fields the

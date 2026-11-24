@@ -173,6 +173,7 @@ func (s *Service) Approve(
 	entry, _, err := s.entries.Post(ctx, ledger.PostInput{
 		OccurredOn:      in.OccurredOn,
 		Note:            in.Note,
+		PayeeRef:        in.PayeeRef,
 		Currency:        in.Currency,
 		Source:          sourceOf(capture.Kind),
 		RecurringRuleID: ruleID,
@@ -205,6 +206,28 @@ func (s *Service) Reject(ctx context.Context, ref, reason string) (entity.Captur
 	}
 
 	return s.resolve(ctx, capture, constant.CaptureStatusRejected, sealedNote, nil)
+}
+
+func (s *Service) Match(ctx context.Context, ref, entryRef string) (entity.Capture, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Match")
+	defer endSpan()
+
+	capture, err := s.pending(ctx, ref)
+	if err != nil {
+		return entity.Capture{}, err
+	}
+
+	entry, err := s.entries.Get(ctx, entryRef)
+	if err != nil {
+		return entity.Capture{}, err
+	}
+
+	note, err := s.sealText(ctx, "matched "+entry.Ref)
+	if err != nil {
+		return entity.Capture{}, err
+	}
+
+	return s.resolve(ctx, capture, constant.CaptureStatusDuplicate, note, &entry.ID)
 }
 
 func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error) {
@@ -411,6 +434,15 @@ func (s *Service) resolve(
 	updated, err := s.captures.UpdateCapture(ctx, capture)
 	if err != nil {
 		return entity.Capture{}, err
+	}
+
+	reloaded, found, readErr := s.captures.CaptureByRef(ctx, updated.Ref)
+	if readErr != nil {
+		return entity.Capture{}, readErr
+	}
+
+	if found {
+		updated = reloaded
 	}
 
 	telemetry.RecordCaptureTransition(ctx, updated.Kind, status)

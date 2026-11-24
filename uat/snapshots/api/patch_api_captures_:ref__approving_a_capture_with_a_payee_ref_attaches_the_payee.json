@@ -1,0 +1,47 @@
+{
+  "capture": {
+    "kind": "share",
+    "raw_text": "KOPI KENANGAN 18.000",
+    "received_at": "<timestamp>",
+    "ref": "<ref>",
+    "resolved_at": "<timestamp>",
+    "resolved_entry_ref": "<ref>",
+    "status": "approved"
+  },
+  "entry": {
+    "currency": "IDR",
+    "occurred_on": "2026-02-14",
+    "payee": {
+      "name": "Kopi Kenangan",
+      "ref": "<ref>"
+    },
+    "postings": [
+      {
+        "account": {
+          "kind": "expense",
+          "name": "Unsorted",
+          "ref": "<ref>"
+        },
+        "account_ref": "<ref>",
+        "amount_minor": "18000",
+        "base_amount_minor": "18000",
+        "fx_rate": "1",
+        "fx_source": "identity"
+      },
+      {
+        "account": {
+          "kind": "asset",
+          "name": "Cash",
+          "ref": "<ref>"
+        },
+        "account_ref": "<ref>",
+        "amount_minor": "-18000",
+        "base_amount_minor": "-18000",
+        "fx_rate": "1",
+        "fx_source": "identity"
+      }
+    ],
+    "ref": "<ref>",
+    "source": "share"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "duplicate",
+    "message": "create account \"Groceries\": duplicate name: constraint failed: UNIQUE constraint failed: accounts.name, accounts.kind (2067)"
+  }
+}

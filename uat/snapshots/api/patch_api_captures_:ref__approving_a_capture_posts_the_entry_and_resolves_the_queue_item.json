@@ -5,6 +5,7 @@
     "received_at": "<timestamp>",
     "ref": "<ref>",
     "resolved_at": "<timestamp>",
+    "resolved_entry_ref": "<ref>",
     "status": "approved"
   },
   "entry": {

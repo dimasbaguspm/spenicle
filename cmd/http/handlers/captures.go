@@ -49,17 +49,18 @@ type captureResponse struct {
 	JobRef          string `json:"job_ref,omitempty"`
 	ExtractionRail  string `json:"extraction_rail,omitempty"`
 	ExtractionModel string `json:"extraction_model,omitempty"`
-	EntryID         *int64 `json:"resolved_entry_id,omitempty"`
+	EntryRef        string `json:"resolved_entry_ref,omitempty"`
 	ReceivedAt      string `json:"received_at"`
 	ResolvedAt      string `json:"resolved_at,omitempty"`
 }
 
 type capturePatchRequest struct {
-	Action     string           `json:"action"                validate:"required,oneof=approve reject retry"`
+	Action     string           `json:"action"                validate:"required,oneof=approve reject retry match"`
 	Reason     string           `json:"reason,omitempty"      validate:"max=2000"`
 	OccurredOn string           `json:"occurred_on,omitempty" validate:"omitempty,datestr"`
-	PayeeID    *int64           `json:"payee_id,omitempty"    validate:"omitempty,gt=0"`
+	PayeeRef   string           `json:"payee_ref,omitempty"  validate:"omitempty,ref"`
 	Note       string           `json:"note,omitempty"        validate:"max=2000"`
+	EntryRef   string           `json:"entry_ref,omitempty"   validate:"omitempty,ref"`
 	Currency   string           `json:"currency,omitempty"    validate:"omitempty,currency"`
 	Postings   []postingRequest `json:"postings,omitempty"    validate:"omitempty,min=2,dive"`
 }
@@ -156,7 +157,31 @@ func (s *Server) PatchCapture(w http.ResponseWriter, r *http.Request) {
 		}
 
 		httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
+	case "match":
+		s.matchCapture(ctx, w, path.Ref, request)
 	}
+}
+
+func (s *Server) matchCapture(
+	ctx context.Context,
+	w http.ResponseWriter,
+	ref string,
+	request capturePatchRequest,
+) {
+	if request.EntryRef == "" {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", "match needs an entry_ref")
+
+		return
+	}
+
+	capture, err := s.deps.Captures.Match(ctx, ref, request.EntryRef)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
 }
 
 func (s *Server) approveCapture(
@@ -195,6 +220,7 @@ func (s *Server) approveCapture(
 		OccurredOn: occurredOn,
 		Note:       request.Note,
 		Currency:   approval.Currency,
+		PayeeRef:   request.PayeeRef,
 		Postings:   postings,
 	})
 	if err != nil {
@@ -386,7 +412,6 @@ func readCaptureForm(r *http.Request) (captureRequest, error) {
 		ContentType: header.Header.Get("Content-Type"),
 		Bytes:       body,
 	}
-
 	return request, nil
 }
 
@@ -401,6 +426,7 @@ func toCaptureResponse(capture entity.Capture) captureResponse {
 		JobRef:          capture.JobRef,
 		ExtractionRail:  capture.ExtractionRail,
 		ExtractionModel: capture.ExtractionModel,
+		EntryRef:        capture.ResolvedEntryRef,
 		ReceivedAt:      capture.ReceivedAt.Format(constant.TimestampLayout),
 	}
 

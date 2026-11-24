@@ -1,0 +1,10 @@
+{
+  "kind": "share",
+  "raw_text": "KOPI 25.000 already logged",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "resolution_note": "matched <ref>",
+  "resolved_at": "<timestamp>",
+  "resolved_entry_ref": "<ref>",
+  "status": "duplicate"
+}

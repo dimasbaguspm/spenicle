@@ -60,3 +60,70 @@ Feature: PATCH /api/captures/{{ref}}
       | table    | count |
       | captures | 1     |
       | ledger_entries | 0 |
+
+  Scenario: Approving a capture with a payee ref attaches the payee
+    Given a running API
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"Kopi Kenangan"}
+      """
+    And the last ref is remembered as "kopi"
+    And I send a POST to "/api/captures" with:
+      """json
+      {"kind":"share","raw_text":"KOPI KENANGAN 18.000"}
+      """
+    And the last ref is remembered as "receipt"
+    When I send a PATCH to "/api/captures/{{ref:receipt}}" with:
+      """json
+      {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","payee_ref":"{{ref:kopi}}","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"18000"},{"account_ref":"{{account:Cash}}","amount_minor":"-18000"}]}
+      """
+    Then the response status is 201
+    And the response JSON matches the snapshot "patch_api_captures_:ref__approving_a_capture_with_a_payee_ref_attaches_the_payee"
+
+  Scenario: An approve body with an integer payee id is refused
+    Given a running API
+    And I send a POST to "/api/captures" with:
+      """json
+      {"kind":"manual","raw_text":"typed by hand"}
+      """
+    When I send a PATCH to "/api/captures/{{ref}}" with:
+      """json
+      {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","payee_id":1,"postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"100"},{"account_ref":"{{account:Cash}}","amount_minor":"-100"}]}
+      """
+    Then the response status is 400
+    And the response JSON matches the snapshot "patch_api_captures_:ref__an_approve_body_with_an_integer_payee_id_is_refused"
+
+  Scenario: Matching a capture resolves it without touching the ledger
+    Given a running API
+    And I send a POST to "/api/entries" with:
+      """json
+      {"occurred_on":"2026-02-13","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-25000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"25000"}]}
+      """
+    And the last ref is remembered as "entry"
+    And I send a POST to "/api/captures" with:
+      """json
+      {"kind":"share","raw_text":"KOPI 25.000 already logged"}
+      """
+    When I send a PATCH to "/api/captures/{{ref}}" with:
+      """json
+      {"action":"match","entry_ref":"{{ref:entry}}"}
+      """
+    Then the response status is 200
+    And the response JSON matches the snapshot "patch_api_captures_:ref__matching_a_capture_resolves_it_without_touching_the_ledger"
+    And the store holds:
+      | table          | count |
+      | ledger_entries | 1     |
+      | captures       | 1     |
+
+  Scenario: A match without an entry ref is refused
+    Given a running API
+    And I send a POST to "/api/captures" with:
+      """json
+      {"kind":"share","raw_text":"no entry named"}
+      """
+    When I send a PATCH to "/api/captures/{{ref}}" with:
+      """json
+      {"action":"match"}
+      """
+    Then the response status is 422
+    And the response JSON matches the snapshot "patch_api_captures_:ref__a_match_without_an_entry_ref_is_refused"
