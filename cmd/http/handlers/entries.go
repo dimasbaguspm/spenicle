@@ -373,6 +373,7 @@ var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{entity.ErrInvalidAmount, http.StatusUnprocessableEntity, "invalid_rate"},
 	{entity.ErrSecretMismatch, http.StatusConflict, "secret_mismatch"},
 	{entity.ErrNotFound, http.StatusNotFound, "not_found"},
+	{entity.ErrDuplicate, http.StatusConflict, "duplicate"},
 	{entity.ErrUnknownCaptureKind, http.StatusUnprocessableEntity, "unknown_capture_kind"},
 	{entity.ErrCaptureResolved, http.StatusConflict, "capture_resolved"},
 	{entity.ErrInvalidState, http.StatusConflict, "invalid_state"},

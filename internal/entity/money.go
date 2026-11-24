@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrNotFound        = errors.New("not found")
+	ErrDuplicate       = errors.New("duplicate name")
 	ErrUnknownCurrency = errors.New("unknown currency")
 	ErrInvalidAmount   = errors.New("invalid amount")
 	ErrInvalidRate     = errors.New("invalid rate")

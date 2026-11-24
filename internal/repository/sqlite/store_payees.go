@@ -49,7 +49,7 @@ func (s *Store) CreatePayee(ctx context.Context, payee entity.Payee) (entity.Pay
 			payee.CreatedAt.Format(constant.TimestampLayout),
 		)
 		if execErr != nil {
-			return fmt.Errorf("create payee %q: %w", payee.Name, execErr)
+			return fmt.Errorf("create payee %q: %w", payee.Name, uniqueViolation(execErr))
 		}
 
 		inserted, idErr := res.LastInsertId()
@@ -159,7 +159,7 @@ func (s *Store) UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Pay
 			nullTime(payee.ArchivedAt),
 			payee.Ref,
 		); execErr != nil {
-			return fmt.Errorf("update payee %q: %w", payee.Ref, execErr)
+			return fmt.Errorf("update payee %q: %w", payee.Ref, uniqueViolation(execErr))
 		}
 
 		return appendAudit(ctx, tx, auditRecord{

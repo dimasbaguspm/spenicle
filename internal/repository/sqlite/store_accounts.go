@@ -48,7 +48,7 @@ func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) 
 			createdAt.Format(constant.TimestampLayout),
 		)
 		if execErr != nil {
-			return fmt.Errorf("create account %q: %w", name, execErr)
+			return fmt.Errorf("create account %q: %w", name, uniqueViolation(execErr))
 		}
 
 		inserted, idErr := res.LastInsertId()
@@ -113,7 +113,7 @@ func (s *Store) UpdateAccount(ctx context.Context, account entity.Account) (enti
 			account.Ref,
 		)
 		if execErr != nil {
-			return fmt.Errorf("update account %q: %w", account.Ref, execErr)
+			return fmt.Errorf("update account %q: %w", account.Ref, uniqueViolation(execErr))
 		}
 
 		affected, rowsErr := res.RowsAffected()

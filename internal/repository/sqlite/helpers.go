@@ -2,9 +2,15 @@ package sqlite
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 
+	sqlite "modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
+
 	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
 func nullString(v string) sql.NullString {
@@ -45,4 +51,13 @@ func nullDay(v *time.Time) sql.NullString {
 	}
 
 	return sql.NullString{String: v.UTC().Format(constant.DateLayout), Valid: true}
+}
+
+func uniqueViolation(err error) error {
+	var driverErr *sqlite.Error
+	if errors.As(err, &driverErr) && driverErr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE {
+		return fmt.Errorf("%w: %s", entity.ErrDuplicate, driverErr.Error())
+	}
+
+	return err
 }

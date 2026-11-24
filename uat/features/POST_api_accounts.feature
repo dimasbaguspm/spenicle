@@ -27,3 +27,16 @@ Feature: POST /api/accounts
       """
     Then the response status is 422
     And the response JSON matches the snapshot "post_api_accounts__an_unknown_currency_is_refused"
+
+  Scenario: A duplicate name is refused with a conflict
+    Given a running API
+    And I send a POST to "/api/accounts" with:
+      """json
+      {"name":"Groceries","kind":"expense"}
+      """
+    When I send a POST to "/api/accounts" with:
+      """json
+      {"name":"Groceries","kind":"expense"}
+      """
+    Then the response status is 409
+    And the response JSON matches the snapshot "post_api_accounts__a_duplicate_name_is_refused_with_a_conflict"
