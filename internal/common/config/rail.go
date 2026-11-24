@@ -8,12 +8,13 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
-	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/openai"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction/snaptojson"
 )
 
 // SelectRail picks the extraction rail both commands share: SnapToJSON when its key is set,
-// then OpenAI, then no rail at all. A nil extractor is the documented "captures stay manual".
+// and no rail otherwise, which is the documented "captures stay manual". OpenAI is not a
+// fallback on purpose: one vendor reads email, text and PDF, and one code path is easier to
+// trust than two that answer differently.
 //
 //nolint:ireturn // the rail is the seam both commands consume
 func SelectRail(
@@ -25,17 +26,6 @@ func SelectRail(
 		rail, err := snaptojson.New(cfg.SnapToJSONEndpoint, cfg.SnapToJSONAPIKey, cfg.SnapToJSONTimeout)
 		if err != nil {
 			return nil, fmt.Errorf("snaptojson rail: %w", err)
-		}
-
-		logger.Info(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))
-
-		return rail, nil
-	}
-
-	if cfg.OpenAIAPIKey != "" {
-		rail, err := openai.New(cfg.OpenAIAPIKey, cfg.OpenAIModel, cfg.OpenAIHost, cfg.SnapToJSONTimeout)
-		if err != nil {
-			return nil, fmt.Errorf("openai rail: %w", err)
 		}
 
 		logger.Info(ctx, "extraction rail enabled", slog.String("rail", rail.Rail()))

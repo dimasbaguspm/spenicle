@@ -106,7 +106,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Capture, b
 		return entity.Capture{}, false, err
 	}
 
-	stored, err = s.extract(ctx, stored, in.Artifact)
+	stored, err = s.extract(ctx, stored, artifactOf(in))
 	if err != nil {
 		return entity.Capture{}, false, err
 	}
@@ -282,6 +282,24 @@ func (s *Service) storeArtifact(
 	}
 
 	return capture, nil
+}
+
+// artifactOf is what the rail reads: the uploaded file when there is one, else the text
+// itself, because SnapToJSON extracts an email or a pasted body as readily as a document.
+func artifactOf(in CreateInput) *extraction.Artifact {
+	if in.Artifact != nil {
+		return in.Artifact
+	}
+
+	if strings.TrimSpace(in.RawText) == "" {
+		return nil
+	}
+
+	return &extraction.Artifact{
+		Filename:    "capture.txt",
+		ContentType: "text/plain; charset=utf-8",
+		Bytes:       []byte(in.RawText),
+	}
 }
 
 func (s *Service) extract(

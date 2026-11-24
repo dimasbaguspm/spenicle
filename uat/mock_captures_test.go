@@ -116,15 +116,14 @@ func TestMockVendorRefusesAReadBackWithoutAJobRef(t *testing.T) {
 	ctx := t.Context()
 
 	capture, _, err := service.Create(ctx, captures.CreateInput{
-		Kind:    constant.CaptureKindManual,
-		RawText: "typed by hand, never submitted",
+		Kind: constant.CaptureKindManual,
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 
 	if capture.JobRef != "" {
-		t.Fatalf("a manual capture must not get a job_ref, got %q", capture.JobRef)
+		t.Fatalf("a capture with nothing to read must not get a job_ref, got %q", capture.JobRef)
 	}
 
 	if _, err := service.Retry(ctx, capture.Ref); !errors.Is(err, entity.ErrInvalidState) {
