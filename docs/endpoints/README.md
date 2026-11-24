@@ -10,8 +10,7 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | method | path | purpose | file |
 | --- | --- | --- | --- |
 | `GET` | `/healthz` | liveness, build and schema fingerprint | [`GET_healthz.md`](./GET_healthz.md) |
-| `POST` | `/api/session` | exchange the password for a cookie | [`POST_api_session.md`](./POST_api_session.md) |
-| `DELETE` | `/api/session` | sign out: clear the cookie | [`DELETE_api_session.md`](./DELETE_api_session.md) |
+| `POST` | `/api/session` | exchange the password for the root credential | [`POST_api_session.md`](./POST_api_session.md) |
 | `POST` | `/api/password` | replace the generated password | [`POST_api_password.md`](./POST_api_password.md) |
 | `GET` | `/api/settings` | the in-app settings the shell reads | [`GET_api_settings.md`](./GET_api_settings.md) |
 | `PATCH` | `/api/settings` | change the base currency while the ledger is empty | [`PATCH_api_settings.md`](./PATCH_api_settings.md) |
@@ -49,7 +48,7 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/audit` | the journal: what changed, who changed it | [`GET_api_audit.md`](./GET_api_audit.md) |
 | `POST` | `/api/tokens` | mint a scoped, non-root credential (root only) | [`POST_api_tokens.md`](./POST_api_tokens.md) |
 | `GET` | `/api/tokens` | every issued token, never its secret (root only) | [`GET_api_tokens.md`](./GET_api_tokens.md) |
-| `DELETE` | `/api/tokens/{ref}` | revoke a token; the row stays (root only) | [`DELETE_api_tokens_ref.md`](./DELETE_api_tokens_ref.md) |
+| `POST` | `/api/tokens/{ref}/revoke` | revoke a token; the row stays (root only) | [`POST_api_tokens_ref_revoke.md`](./POST_api_tokens_ref_revoke.md) |
 | `POST` | `/api/exports` | queue an export the worker renders | [`POST_api_exports.md`](./POST_api_exports.md) |
 | `GET` | `/api/exports` | every export job, newest first | [`GET_api_exports.md`](./GET_api_exports.md) |
 | `GET` | `/api/exports/{ref}` | one export job and its status | [`GET_api_exports_ref.md`](./GET_api_exports_ref.md) |

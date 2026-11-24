@@ -1,6 +1,6 @@
 # GET /healthz
 
-**Auth.** None: the route answers without a password.
+**Auth.** None: the route answers without a credential.
 
 ## Purpose
 

@@ -1,6 +1,6 @@
 # POST /api/password
 
-**Auth.** Session cookie (`spenicle_session`). Open mode passes everything through; with a password set, a missing or stale cookie is `401 unauthorized`.
+**Auth.** `Authorization: Bearer <credential>`: the root credential from `POST /api/session`, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or stale credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
 
 ## Purpose
 
@@ -28,7 +28,7 @@ None.
 
 ## Response
 
-`{"base_currency":"IDR","timezone":"UTC","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
+`{"base_currency":"IDR","timezone":"UTC","password_must_change":false,"extraction_enabled":false,"ai_assistance":false,"token":"<the new root credential>"}`
 
 ## Errors
 
@@ -37,9 +37,9 @@ None.
 
 ## Limitations
 
-No history, no reuse check, no "sign out other devices" — the new hash
-is folded into the cookie, so every existing session dies at once. The response sets a
-fresh cookie for the caller.
+No history, no reuse check, no "sign out other devices" — the root credential is derived
+from the password hash, so every existing credential dies at once. The response carries the
+new one, so the caller replaces its header instead of being locked out.
 
 
 

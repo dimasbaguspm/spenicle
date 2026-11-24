@@ -32,13 +32,13 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `client_id` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `client_id` |
 | 1 | `POST /api/setup` | live: chooses the base currency once, before the first entry |
-| 2 | `POST /api/session`, `POST /api/password` | live: cookie session, password rotation |
+| 2 | `POST /api/session`, `POST /api/password` | live: the password becomes the root credential (header only), rotation returns the new one |
 | 4 | `GET/PATCH /api/settings` | `GET` is live; `PATCH` accepts no field yet — `base_currency` is not patchable |
 | 5, 6 | accounts create/patch | live |
 | 7, 8 | payees | live |
 | 15, 16 | recurring | live: a due rule queues a `captures` row and never posts the ledger; the approval posts it |
 | 17, 18 | months report, dashboard | live |
-| 19, 20 | `POST/GET /api/tokens`, `DELETE /api/tokens/{ref}` | live: root-session only, scoped Bearer credential, digest stored, revoke never deletes |
+| 19, 20 | `POST/GET /api/tokens`, `POST /api/tokens/{ref}/revoke` | live: root credential only, scoped Bearer credential, digest stored, masked preview, `last_used_at`, revoke never deletes |
 | — | `GET /api/audit` | live: the journal, filtered by kind, ref, action, actor and a day range |
 
 ## Review rounds folded in
@@ -50,7 +50,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | `currencies` table | embedded ISO 4217 list | static data belongs in the binary |
 | `periods`, `closed_periods`, `month_closes` | none | each attempt at a lock or snapshot got deleted; the ledger is the truth |
 | 28 endpoints | 21 | actions moved into the body |
-| session-only auth | session cookie **or** scoped API token | agents and scripts use the same API as the PWA |
+| session-only auth | one `Authorization: Bearer` header, root credential **or** scoped API token | no cookie, no second transport |
 | plaintext captures and artifacts | sealed with `APP_SECRET` | bank emails and receipts are the sensitive part |
 | `/api/v2/...` | `/api/...` | no version prefix |
 
@@ -58,7 +58,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 
 | env | default | effect |
 | --- | --- | --- |
-| `APP_SECRET` | **required** | seals cookies, artifacts, capture payloads, token hashes |
+| `APP_SECRET` | **required** | keys the root credential and the token digests; seals artifacts and capture payloads |
 | `APP_TIMEZONE` | `UTC` | the calendar every date decision uses; set once, at the first boot |
 | `SNAPTOJSON_API_KEY` | unset | enables the SnapToJSON extraction worker |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override the partner URL (proxy, staging) |
@@ -73,7 +73,7 @@ them yourself — `spenicle.env` is the cheapest separator.
 
 | sealed | how |
 | --- | --- |
-| session cookie | HMAC-SHA256; rotating the secret invalidates every session |
+| the root credential | HMAC-SHA256 over the password hash; changing the password invalidates it |
 | `captures.raw_text`, `draft_json`, `resolution_note` | AES-256-GCM per row, `v1:` + base64 envelope |
 | `artifacts/<sha256>` files | AES-256-GCM, key = HKDF-SHA256(secret, info `spenicle/artifact/v1`), sha256 as AAD |
 | `api_tokens.token_hash` | HMAC-SHA256(secret, token), not bare sha256 |
@@ -95,17 +95,21 @@ Consequences, stated plainly:
 
 | credential | used by | transport |
 | --- | --- | --- |
-| session cookie | the PWA | `POST /api/session`; skipped while no password is set (open mode) |
-| API token | agents, scripts, cron | `Authorization: Bearer <token>` |
+| root credential | the PWA, `curl`, whoever holds the password | `POST /api/session` returns it in the body; **every** request sends `Authorization: Bearer <credential>`; skipped while no password is set (open mode) |
+| API token | agents, scripts, cron | the same header; the token store decides its scopes |
+
+There is no cookie and no second transport: the header is the only place a credential
+travels. The root credential is derived from the password hash, so `POST /api/password`
+rotates it and answers with the new one; signing out is dropping it client-side.
 
 Scopes: `entries:read|write`, `captures:read|write`, `accounts:read|write`, `payees:read|write`,
 `recurring:read|write`, `imports:read|write`, `exports:read|write`, `analytics:read`,
 `audit:read`, `dashboard:read`, `settings:read`, `rates:read`, `admin`, plus `*`.
 
 Each endpoint declares its scope (`routeScopes` in `cmd/http/handler.go`); a subset returns
-`403 forbidden`. `admin` and `*` cover every scoped route. A route with **no** scope in that
-table needs the root session — `/api/tokens*`, `/api/password`, `PATCH /api/settings`,
-`DELETE /api/session` — so a token can never mint another token. The typical agent token is
+`403 forbidden`. `admin` and `*` cover every scoped route. Routes with **no** scope live in
+their own mux that only the root credential reaches — `/api/tokens*`, `/api/password`,
+`PATCH /api/settings` — so a token can never mint another token. The typical agent token is
 `captures:write` + `dashboard:read`: it can dump receipts and read safe-to-spend, but cannot
 touch the ledger.
 
@@ -151,6 +155,7 @@ independent.
 | --- | --- | --- |
 | `id` | INTEGER PK | |
 | `name` | TEXT | `laptop-agent`, `iphone-shortcut` |
+| `token_preview` | TEXT | the mask the caller sees, `spl_ab12…9f3c` |
 | `token_hash` | TEXT UNIQUE | HMAC-SHA256 under `APP_SECRET` |
 | `scopes` | TEXT | space-separated |
 | `created_at` | TEXT | |
@@ -287,7 +292,7 @@ sealed envelope).
 | `entity_id` | INTEGER NULL | |
 | `entity_ref` | TEXT NULL | the row's ref, when it has one |
 | `action` | TEXT | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke` |
-| `actor_kind` | TEXT | `user`, `token`, `worker`, `system` — CHECK-constrained |
+| `actor_kind` | TEXT | `user`, `worker`, `system` — CHECK-constrained; a token is `user` with its ref in `actor_ref` |
 | `actor_ref` | TEXT NULL | the token's ref when a token made the change |
 | `from_json` | TEXT NULL | what the change moved away from |
 | `to_json` | TEXT NULL | what it moved to |
@@ -310,6 +315,7 @@ CREATE TABLE settings (
 CREATE TABLE api_tokens (
   id           INTEGER PRIMARY KEY,
   name         TEXT NOT NULL,
+  token_preview TEXT NOT NULL,
   token_hash   TEXT NOT NULL UNIQUE,
   scopes       TEXT NOT NULL,
   created_at   TEXT NOT NULL,
@@ -434,7 +440,7 @@ CREATE TABLE audit_log (
   entity_ref  TEXT,
   action      TEXT NOT NULL,
   actor_kind  TEXT NOT NULL
-              CHECK (actor_kind IN ('user','token','worker','system')),
+              CHECK (actor_kind IN ('user','worker','system')),
   actor_ref   TEXT,
   from_json   TEXT,
   to_json     TEXT,
@@ -453,7 +459,7 @@ CREATE INDEX ix_audit_action ON audit_log (action, at);
 | # | method | path | scope | purpose |
 | --- | --- | --- | --- | --- |
 | 1 | POST | `/api/setup` | none, once | wizard: base currency, accounts, seeded categories |
-| 2 | POST | `/api/session` | none | password login, sets cookie |
+| 2 | POST | `/api/session` | none | password login, returns the root credential |
 | 3 | GET | `/api/meta` | `*:read` | bootstrap: settings, accounts, payees, rules, currencies |
 | 4 | PATCH | `/api/settings` | `admin` | mutable settings |
 | 5 | POST | `/api/accounts` | `accounts:write` | create account or category |
@@ -544,7 +550,7 @@ sequenceDiagram
         API->>DB: INSERT audit_log action create actor anonymous
         API-->>UI: 401 invalid_credentials
     else match
-        API->>API: mint cookie HMAC signed with APP_SECRET
+        API->>API: derive the root credential: HMAC(password hash) under APP_SECRET
         API-->>UI: 204 Set-Cookie session
     end
 ```

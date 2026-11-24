@@ -17,7 +17,7 @@ place to defer a decision. v2 fixes all three.
 | storage | SQLite, single binary, no Redis |
 | deployment | one `docker run` / one compose file, port 8080 |
 | auth | optional password for the browser; scoped API tokens for agents and scripts |
-| sealing | `APP_SECRET` is mandatory; it encrypts captures, artifacts and cookies, and the ledger stays readable plaintext |
+| sealing | `APP_SECRET` is mandatory; it encrypts captures and artifacts and keys the root credential and the token digests, and the ledger stays readable plaintext |
 | capture | PWA share target + offline IndexedDB outbox |
 | review | single `captures` queue for every channel |
 | ledger | double-entry: `ledger_entries` + `ledger_postings`, zero-sum per entry |
@@ -327,7 +327,7 @@ encryption — a promise that a stolen `spenicle.db` is not a stolen mailbox.
 
 | sealed | how |
 | --- | --- |
-| session cookie | HMAC-SHA256; rotating the secret invalidates sessions |
+| the root credential | HMAC-SHA256 over the password hash; changing the password invalidates it |
 | `captures.raw_text`, `draft_json`, `resolution_note` | AES-256-GCM per row |
 | `raw/<sha256>` receipts and statements | AES-256-GCM, key = HKDF(secret, file hash) |
 | `api_tokens.token_hash` | HMAC-SHA256 instead of bare sha256 |
@@ -370,14 +370,14 @@ behind and a committed one cannot be forgotten.
 | `entity_kind` | which table, as a bounded name: `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `setting`, `api_token` |
 | `entity_id` / `entity_ref` | the row, by integer for joins and by ref for filtering without one |
 | `action` | `create`, `update`, `void`, `approve`, `reject`, `advance`, `revoke`, `generate`, `retry` |
-| `actor_kind` / `actor_ref` | `user`, `token`, `worker`, `system` — and the token's ref when a token did it |
-| `from_json` / `to_json` | what the change touched, as small JSON objects |
+| `actor_kind` / `actor_ref` | `user`, `worker`, `system` — and, for a token, its ref in `actor_ref` (the kind stays `user`) |
+| `from_json` / `to_json` | what the change touched, as typed payload structs (`entity.EntryCreated`, …) validated with the same tags the API uses |
 | `at` | when, UTC |
 
 The actor is not a parameter on every repository method: it rides the context
-(`internal/common/actor`), set once at each boundary — the HTTP middleware after it knows
-whether a cookie or a token authenticated, the worker run, and the system default for
-anything with no actor. The journal is read through `GET /api/audit`, filtered by kind,
+(`internal/common/actor`), set once at each boundary — the HTTP identity middleware, which
+puts a token's ref in `actor_ref`, the worker run, and the system default for anything with
+no actor. The journal is read through `GET /api/audit`, filtered by kind,
 ref, action, actor and a day range.
 
 What is deliberately **not** journaled twice:

@@ -1,6 +1,6 @@
 # PATCH /api/settings
 
-**Auth.** Session cookie (`spenicle_session`). Open mode passes everything through; with a password set, a missing or stale cookie is `401 unauthorized`.
+**Auth.** **Root credential only**: `Authorization: Bearer <root credential>` from `POST /api/session`. A token answers `403 forbidden`.
 
 ## Purpose
 

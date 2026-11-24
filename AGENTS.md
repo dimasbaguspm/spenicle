@@ -28,7 +28,8 @@ the document wins until you change the document too.
 3. **No deletes.** Void (`voided_at`) or reject. Every state change on `accounts`,
    `payees`, `recurring_rules`, `ledger_entries`, `captures`, `settings` and `api_tokens`
    appends one `audit_log` row inside the same transaction, through
-   `sqlite.appendAudit`. Import and export jobs keep their own append-only
+   `sqlite.appendAudit`, which opens its own span and validates the typed payload
+   (`entity.EntryCreated` and friends, same `validate` tags as the API). Import and export jobs keep their own append-only
    `import_events`/`export_events` instead of being journaled twice; artifact rows are
    metadata of a capture and are not journaled at all.
 4. **Money is integers.** Minor units + ISO 4217 code. No `float64` anywhere, ever.
@@ -62,8 +63,8 @@ internal/common/       no business logic: config (also the process graph), clock
 internal/constant/     every fixed value shared by more than one package: enums, the
                        audit kinds/actions/actors, the token scopes
 internal/entity/       shared structs + invariants; imports stdlib + constant only
-internal/module/       business logic: ledger, captures (queue.go is the worker's half),
-                       imports, exports, export, rates, settings, tokens
+internal/module/       business logic: ledger, captures, imports, exports, export,
+                       rates, settings, tokens
 internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore,
                        extraction/{snaptojson,openai}
 ```
@@ -173,20 +174,27 @@ The base currency and the login password are **not** environment variables: they
 the sealed JSON row in `settings` (`entity.Settings`), owned by `module/settings`. A
 fresh boot generates the first password, prints it once, and requires a change after
 the first sign-in. The password is stored as a PBKDF2-SHA256 hash inside that sealed
-row, and the session cookie is a digest of `APP_SECRET`'s fingerprint plus that hash:
-changing the password invalidates every cookie at once. The base currency is editable
-while the ledger is empty and locked after the first entry.
+row. The base currency is editable while the ledger is empty and locked after the first
+entry.
 
-That password is the **root** credential: the cookie it issues answers every route,
-including `/api/tokens`. Everything else is a token — a named, scoped, non-root
-credential (`module/tokens`) carried as `Authorization: Bearer <token>`. Only the
-SHA-256 HMAC digest of the token under `APP_SECRET` (`sealer.Digest`) is stored, so the
-plaintext exists exactly once, in the `201` that created it. A token answers a route
-only if the route has a scope in `routeScopes` (`cmd/http/handler.go`) and the token
-carries that scope; a route with no entry there — `/api/tokens*`, `/api/password`,
-`PATCH /api/settings` — needs the root session, so a token can never mint a token.
-`admin` and `*` cover every scoped route. Revoking stamps `revoked_at`: the row and its
-journal entry stay, the credential stops working.
+**One credential header, two kinds.** There is no cookie: `POST /api/session` exchanges
+the password for the **root credential** (a digest of `APP_SECRET`'s fingerprint plus the
+password hash) and hands it back in the body. Every request carries
+`Authorization: Bearer <credential>`. Because it is derived from the password hash,
+changing the password rotates it at once — and `POST /api/password` answers with the new
+one so the caller is not locked out.
+
+Everything else is a token — a named, scoped, non-root credential (`module/tokens`).
+Only the HMAC digest of the plaintext under `APP_SECRET` (`sealer.Digest`) is stored,
+plus a masked preview (`spl_ab12…9f3c`) so two tokens are told apart; the plaintext
+exists exactly once, in the `201` that created it. A token answers a route only if the
+route lives in the scoped mux and the token carries the scope `routeScopes` names for it;
+the root-only mux (`/api/tokens*`, `/api/password`, `PATCH /api/settings`) is unreachable
+for a token, so a token can never mint a token. `admin` and `*` cover every scoped route.
+Revoking is `POST /api/tokens/{ref}/revoke`: a token is never deleted, `revoked_at`
+stamps it, the row and its journal entries stay and the credential stops working. The
+middleware stamps `last_used_at` on every authenticated request, and the listing filters
+on it (`?status=active|revoked&used=used|never`).
 
 Uploaded capture artifacts live **outside** the database, under
 `./data/artifacts/<sha[0:2]>/<sha[2:4]>/<sha256>`: the bytes are gzipped when the
@@ -385,7 +393,7 @@ reason in the MR, not a `go get`.
   boot itself seeds, and `the account "Cash" exists as "asset"` for seeds.
 - Authentication: the suite runs in open mode by default — no password is seeded, so every
   request passes. `the instance password is "..."` seeds one *before* boot, `I sign in with
-  the instance password` stores the cookie the world then sends, `the issued token is the
+  the instance password` stores the credential the world then sends, `the issued token is the
   bearer credential` swaps in the token from the last response, and `only the root session
   is used` drops it again. That is the whole harness for scope tests.
 - `boot.feature` covers the process, not a route: an unusable database path and a

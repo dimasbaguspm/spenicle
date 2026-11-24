@@ -9,7 +9,7 @@ Mint a named, scoped, non-root credential for an agent, a shortcut or a cron job
 
 ## Upstream
 
-The settings screen, or `curl` with the session cookie.
+The settings screen, or `curl` carrying the root credential.
 
 ## Downstream
 
@@ -31,8 +31,8 @@ None.
 
 ## Response
 
-`201` with `ref`, `name`, `scopes`, `created_at` and **`token`** — the plaintext, returned
-here and nowhere else, ever.
+`201` with `ref`, `name`, `preview` (`spl_ab12…9f3c`), `scopes`, `created_at` and
+**`token`** — the plaintext, returned here and nowhere else, ever.
 
 ## Errors
 
@@ -42,8 +42,8 @@ token tries it.
 
 ## Limitations
 
-No expiry: a token lives until `DELETE /api/tokens/{ref}`. `last_used_at` is stamped on the
-first authenticated request, not here.
+No expiry: a token lives until `POST /api/tokens/{ref}/revoke`. `last_used_at` is stamped by
+the identity middleware on every authenticated request, not here.
 
 ## Sequence
 

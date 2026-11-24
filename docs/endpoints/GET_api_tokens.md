@@ -17,7 +17,11 @@ The settings screen.
 
 ## Path / query params
 
-None.
+| param | notes |
+| --- | --- |
+| `status` | `active` or `revoked` |
+| `used` | `used` or `never`: filtered on `last_used_at` |
+| `cursor`, `limit` | the shared paging (default 50, max 200) |
 
 ## Body
 
@@ -25,9 +29,10 @@ None.
 
 ## Response
 
-`200` with `{"tokens": [...], "meta": {...}}`; each row is `ref`, `name`, `scopes`,
-`created_at`, and `last_used_at` / `revoked_at` when set. There is no `token` field: the
-plaintext exists only in the `201` that created it.
+`200` with `{"tokens": [...], "meta": {...}}`; each row is `ref`, `name`, `preview`
+(`spl_ab12…9f3c`), `scopes`, `created_at`, and `last_used_at` / `revoked_at` when set.
+There is no `token` field: the plaintext exists only in the `201` that created it, and the
+preview is four characters at each edge of it.
 
 ## Errors
 
@@ -35,8 +40,8 @@ plaintext exists only in the `201` that created it.
 
 ## Limitations
 
-No cursor paging (the list is capped at 200). Revoked rows stay listed on purpose: the
-credential stops working, the record does not disappear.
+Revoked rows stay listed on purpose: the credential stops working, the record does not
+disappear. Pass `?status=active` to hide them.
 
 ## Sequence
 
@@ -46,7 +51,7 @@ sequenceDiagram
     participant C as Client (root)
     participant H as Tokens handler
     participant DB as SQLite
-    C->>H: GET /api/tokens
+    C->>H: GET /api/tokens?status=active&used=never
     H->>DB: SELECT ref, name, scopes, created_at, last_used_at, revoked_at ORDER BY id DESC LIMIT 200
     DB-->>H: rows (no token_hash, no plaintext)
     H-->>C: 200 {tokens: [...], meta}

@@ -1,6 +1,6 @@
 # GET /api/audit
 
-**Auth.** Session cookie, or a token carrying `audit:read`.
+**Auth.** `Authorization: Bearer <credential>`: the root credential, or a token carrying `audit:read`.
 
 ## Purpose
 
@@ -22,7 +22,7 @@ on `audit_log.id`. Rows are never written here.
 | `entity_kind` | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `setting`, `api_token` |
 | `entity_ref` | the row's ref; a `setting` has none (its key is in `to.key`) |
 | `action` | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke` |
-| `actor_kind` | `user`, `token`, `worker`, `system` |
+| `actor_kind` | `user` (a person or a token — its ref is in `actor_ref`), `worker`, `system` |
 | `from`, `to` | `YYYY-MM-DD`, inclusive |
 | `cursor`, `limit` | the shared paging (default 50, max 200) |
 
