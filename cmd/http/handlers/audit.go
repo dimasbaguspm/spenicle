@@ -7,6 +7,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -70,18 +71,23 @@ func auditFilterOf(query auditQuery) (entity.AuditFilter, error) {
 		Limit:      list.ClampLimit(query.Limit),
 	}
 
-	from, err := parseDayValue(query.From, "from")
-	if err != nil {
-		return entity.AuditFilter{}, err
+	if query.From != "" {
+		from, err := validating.Day(query.From, "from")
+		if err != nil {
+			return entity.AuditFilter{}, err
+		}
+
+		filter.From = from
 	}
 
-	to, err := parseDayValue(query.To, "to")
-	if err != nil {
-		return entity.AuditFilter{}, err
-	}
+	if query.To != "" {
+		to, err := validating.Day(query.To, "to")
+		if err != nil {
+			return entity.AuditFilter{}, err
+		}
 
-	filter.From = from
-	filter.To = to
+		filter.To = to
+	}
 
 	return filter, nil
 }

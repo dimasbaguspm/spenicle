@@ -6,6 +6,7 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
@@ -39,7 +40,7 @@ func (s *Server) GetRate(w http.ResponseWriter, r *http.Request) {
 	var on time.Time
 
 	if query.On != "" {
-		parsed, err := time.Parse(constant.DateLayout, query.On)
+		parsed, err := validating.Day(query.On, "on")
 		if err != nil {
 			writeInvalid(w, err)
 

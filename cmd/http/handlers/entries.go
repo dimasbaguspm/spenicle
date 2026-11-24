@@ -3,14 +3,13 @@ package handlers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
@@ -236,17 +235,17 @@ func (s *Server) PostEntry(w http.ResponseWriter, r *http.Request) {
 }
 
 func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
-	occurredOn, err := time.Parse(constant.DateLayout, request.OccurredOn)
+	occurredOn, err := validating.Day(request.OccurredOn, "occurred_on")
 	if err != nil {
-		return ledger.PostInput{}, fmt.Errorf("parse occurred_on: %w", err)
+		return ledger.PostInput{}, err
 	}
 
 	postings := make([]ledger.PostingInput, 0, len(request.Postings))
 
 	for _, posting := range request.Postings {
-		amount, err := strconv.ParseInt(posting.AmountMinor, 10, 64)
+		amount, err := validating.Money(posting.AmountMinor, "amount_minor")
 		if err != nil {
-			return ledger.PostInput{}, fmt.Errorf("parse amount_minor: %w", err)
+			return ledger.PostInput{}, err
 		}
 
 		postings = append(postings, ledger.PostingInput{

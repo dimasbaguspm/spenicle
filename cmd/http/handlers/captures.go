@@ -10,9 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
@@ -179,7 +177,7 @@ func (s *Server) approveCapture(
 		return
 	}
 
-	occurredOn, err := time.Parse(constant.DateLayout, approval.OccurredOn)
+	occurredOn, err := validating.Day(approval.OccurredOn, "occurred_on")
 	if err != nil {
 		writeInvalid(w, err)
 
@@ -417,7 +415,7 @@ func toCapturePostingInputs(request []postingRequest) ([]captures.PostingInput, 
 	postings := make([]captures.PostingInput, 0, len(request))
 
 	for _, posting := range request {
-		amount, err := strconv.ParseInt(strings.TrimSpace(posting.AmountMinor), 10, 64)
+		amount, err := validating.Money(posting.AmountMinor, "amount_minor")
 		if err != nil {
 			return nil, errors.New("amount_minor must be an integer string")
 		}

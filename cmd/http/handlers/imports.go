@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
@@ -361,18 +360,18 @@ func toRowUpdate(request importRowPatchRequest) (imports.RowUpdate, error) {
 	}
 
 	if request.OccurredOn != nil {
-		occurredOn, err := time.Parse(constant.DateLayout, *request.OccurredOn)
+		occurredOn, err := validating.Day(*request.OccurredOn, "occurred_on")
 		if err != nil {
-			return imports.RowUpdate{}, fmt.Errorf("parse occurred_on: %w", err)
+			return imports.RowUpdate{}, err
 		}
 
 		update.OccurredOn = &occurredOn
 	}
 
 	if request.AmountMinor != nil {
-		amount, err := strconv.ParseInt(strings.TrimSpace(*request.AmountMinor), 10, 64)
+		amount, err := validating.Money(*request.AmountMinor, "amount_minor")
 		if err != nil {
-			return imports.RowUpdate{}, fmt.Errorf("parse amount_minor: %w", err)
+			return imports.RowUpdate{}, err
 		}
 
 		update.AmountMinor = &amount

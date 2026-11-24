@@ -16,6 +16,7 @@ import (
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
@@ -900,12 +901,12 @@ func parseRow(record []string) statementRow {
 		return unreadableRow()
 	}
 
-	occurredOn, err := time.Parse(constant.DateLayout, strings.TrimSpace(record[0]))
+	occurredOn, err := validating.Day(record[0], "occurred_on")
 	if err != nil {
 		return unreadableRow()
 	}
 
-	amount, err := strconv.ParseInt(strings.TrimSpace(record[1]), 10, 64)
+	amount, err := validating.Money(record[1], "amount_minor")
 	if err != nil {
 		return unreadableRow()
 	}

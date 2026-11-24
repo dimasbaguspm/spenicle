@@ -6,10 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strconv"
 	"time"
 
-	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 )
 
 const (
@@ -42,7 +41,7 @@ func Fill(target any, tag string, lookup func(string) (string, bool)) error {
 			continue
 		}
 
-		if err := setField(element.Field(index), raw); err != nil {
+		if err := setField(element.Field(index), name, raw); err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
 	}
@@ -50,7 +49,7 @@ func Fill(target any, tag string, lookup func(string) (string, bool)) error {
 	return nil
 }
 
-func setField(field reflect.Value, raw string) error {
+func setField(field reflect.Value, name, raw string) error {
 	if !field.CanSet() {
 		return errors.New("field is not settable")
 	}
@@ -59,16 +58,16 @@ func setField(field reflect.Value, raw string) error {
 	case field.Kind() == kindString:
 		field.SetString(raw)
 	case field.Kind() == kindInt64:
-		parsed, err := strconv.ParseInt(raw, 10, 64)
+		parsed, err := validating.Money(raw, name)
 		if err != nil {
-			return fmt.Errorf("%q is not an integer", raw)
+			return err
 		}
 
 		field.SetInt(parsed)
 	case field.Type() == timeType:
-		parsed, err := time.Parse(constant.DateLayout, raw)
+		parsed, err := validating.Day(raw, name)
 		if err != nil {
-			return fmt.Errorf("%q is not %s", raw, constant.DateLayout)
+			return err
 		}
 
 		field.Set(reflect.ValueOf(parsed))

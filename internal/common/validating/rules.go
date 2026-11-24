@@ -1,9 +1,7 @@
 package validating
 
 import (
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 
@@ -20,7 +18,7 @@ var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only ru
 		return err == nil
 	},
 	"money": func(field validator.FieldLevel) bool {
-		_, err := strconv.ParseInt(strings.TrimSpace(field.Field().String()), 10, 64)
+		_, err := Money(field.Field().String(), "money")
 
 		return err == nil
 	},
@@ -30,7 +28,7 @@ var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only ru
 			return false
 		}
 
-		_, err := time.Parse(constant.DateLayout, raw)
+		_, err := Day(raw, "date")
 
 		return err == nil
 	},

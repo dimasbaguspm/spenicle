@@ -106,6 +106,9 @@ Rules that keep it pluggable:
   declared inside a function. `writeInvalid` turns the failure into `422` and the
   `validating` code table promotes a field failure back to the domain code a client
   branches on (`unknown_currency`, `invalid_postings`).
+  A date or an amount is parsed in exactly one place: `validating.Day` and
+  `validating.Money`, used by `binding` and by every handler. A store may still parse a
+  column it is scanning back (that is corrupt data, not a bad request) and nothing else.
 - The code documents itself. No comment restates what a name already says, and no
   method carries a doc comment. The only comments left are the package doc comment
   (`revive` requires it) and toolchain directives: `//go:embed`, `//go:build`, and

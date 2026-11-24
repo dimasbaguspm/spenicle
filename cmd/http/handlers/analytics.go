@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
@@ -82,18 +82,18 @@ func analyticsWindow(query analyticsRangeQuery) (time.Time, time.Time, error) {
 	from = time.Date(from.Year(), from.Month(), 1, 0, 0, 0, 0, time.UTC)
 
 	if query.From != "" {
-		parsed, err := time.Parse(constant.DateLayout, query.From)
+		parsed, err := validating.Day(query.From, "from")
 		if err != nil {
-			return time.Time{}, time.Time{}, fmt.Errorf("parse from: %w", err)
+			return time.Time{}, time.Time{}, err
 		}
 
 		from = parsed
 	}
 
 	if query.To != "" {
-		parsed, err := time.Parse(constant.DateLayout, query.To)
+		parsed, err := validating.Day(query.To, "to")
 		if err != nil {
-			return time.Time{}, time.Time{}, fmt.Errorf("parse to: %w", err)
+			return time.Time{}, time.Time{}, err
 		}
 
 		to = parsed

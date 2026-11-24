@@ -2,14 +2,11 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
-	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
@@ -31,24 +28,34 @@ func entryFilter(params list.Params) (entity.EntryFilter, error) {
 		Limit:       list.ClampLimit(params.Limit),
 	}
 
-	if filter.From, err = parseDayValue(params.From, "from"); err != nil {
-		return entity.EntryFilter{}, err
+	if params.From != "" {
+		if filter.From, err = validating.Day(params.From, "from"); err != nil {
+			return entity.EntryFilter{}, err
+		}
 	}
 
-	if filter.To, err = parseDayValue(params.To, "to"); err != nil {
-		return entity.EntryFilter{}, err
+	if params.To != "" {
+		if filter.To, err = validating.Day(params.To, "to"); err != nil {
+			return entity.EntryFilter{}, err
+		}
 	}
 
 	if params.AmountMin != "" {
-		if filter.AmountMin, err = parseMoney(params.AmountMin, "amount_min"); err != nil {
+		amount, err := validating.Money(params.AmountMin, "amount_min")
+		if err != nil {
 			return entity.EntryFilter{}, err
 		}
+
+		filter.AmountMin = &amount
 	}
 
 	if params.AmountMax != "" {
-		if filter.AmountMax, err = parseMoney(params.AmountMax, "amount_max"); err != nil {
+		amount, err := validating.Money(params.AmountMax, "amount_max")
+		if err != nil {
 			return entity.EntryFilter{}, err
 		}
+
+		filter.AmountMax = &amount
 	}
 
 	return filter, nil
@@ -115,28 +122,6 @@ func recurringFilter(params list.Params) (entity.RecurringFilter, error) {
 		Cursor:  params.Cursor,
 		Limit:   list.ClampLimit(params.Limit),
 	}, nil
-}
-
-func parseDayValue(raw, name string) (time.Time, error) {
-	if raw == "" {
-		return time.Time{}, nil
-	}
-
-	parsed, err := time.Parse(constant.DateLayout, raw)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("parse %s: %w", name, err)
-	}
-
-	return parsed, nil
-}
-
-func parseMoney(raw, name string) (*int64, error) {
-	parsed, err := strconv.ParseInt(raw, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", name, err)
-	}
-
-	return &parsed, nil
 }
 
 func bindListParams[T any](

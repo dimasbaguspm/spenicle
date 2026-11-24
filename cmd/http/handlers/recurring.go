@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -63,14 +63,14 @@ func (s *Server) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	amount, err := strconv.ParseInt(request.AmountMinor, 10, 64)
+	amount, err := validating.Money(request.AmountMinor, "amount_minor")
 	if err != nil {
 		writeInvalid(w, err)
 
 		return
 	}
 
-	nextDue, err := time.Parse(constant.DateLayout, request.NextDueOn)
+	nextDue, err := validating.Day(request.NextDueOn, "next_due_on")
 	if err != nil {
 		writeInvalid(w, err)
 
@@ -199,9 +199,9 @@ func parseOptionalDay(raw string) (*time.Time, error) {
 		return nil, nil //nolint:nilnil // an absent date is not an error
 	}
 
-	parsed, err := time.Parse(constant.DateLayout, raw)
+	parsed, err := validating.Day(raw, "day")
 	if err != nil {
-		return nil, fmt.Errorf("parse %q as a day: %w", raw, err)
+		return nil, err
 	}
 
 	return &parsed, nil
@@ -225,9 +225,9 @@ func orOne(value int) int {
 
 func applyRecurringPatch(rule *entity.Recurring, request recurringPatchRequest) error {
 	if request.AmountMinor != nil {
-		amount, err := strconv.ParseInt(*request.AmountMinor, 10, 64)
+		amount, err := validating.Money(*request.AmountMinor, "amount_minor")
 		if err != nil {
-			return fmt.Errorf("parse amount_minor: %w", err)
+			return err
 		}
 
 		rule.AmountMinor = amount
@@ -250,9 +250,9 @@ func applyRecurringPatch(rule *entity.Recurring, request recurringPatchRequest) 
 	}
 
 	if request.NextDueOn != nil {
-		next, err := time.Parse(constant.DateLayout, *request.NextDueOn)
+		next, err := validating.Day(*request.NextDueOn, "next_due_on")
 		if err != nil {
-			return fmt.Errorf("parse next_due_on: %w", err)
+			return err
 		}
 
 		rule.NextDueOn = next
