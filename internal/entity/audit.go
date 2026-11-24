@@ -59,6 +59,7 @@ type AccountChanged struct {
 	Kind       string `json:"kind,omitempty"        validate:"omitempty,accountkind"`
 	Currency   string `json:"currency,omitempty"    validate:"omitempty,currency"`
 	Icon       string `json:"icon,omitempty"        validate:"omitempty,max=64"`
+	ParentRef  string `json:"parent_ref,omitempty"  validate:"omitempty,ref"`
 	ArchivedAt string `json:"archived_at,omitempty"`
 }
 

@@ -29,6 +29,16 @@ func nullInt(v *int64) sql.NullInt64 {
 	return sql.NullInt64{Int64: *v, Valid: true}
 }
 
+func intPtr(v sql.NullInt64) *int64 {
+	if !v.Valid {
+		return nil
+	}
+
+	value := v.Int64
+
+	return &value
+}
+
 func orDefault(v, fallback string) string {
 	if v == "" {
 		return fallback

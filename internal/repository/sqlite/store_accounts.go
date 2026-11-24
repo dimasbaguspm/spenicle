@@ -13,7 +13,8 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const accountColumns = `id, ref, name, kind, parent_id, currency, icon, archived_at, created_at`
+const accountColumns = `id, ref, name, kind, parent_id, currency, icon, archived_at, created_at,
+	COALESCE((SELECT ancestry.ref FROM accounts ancestry WHERE ancestry.id = accounts.parent_id), '')`
 
 func (s *Store) CountAccounts(ctx context.Context) (int, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CountAccounts")
@@ -28,22 +29,40 @@ func (s *Store) CountAccounts(ctx context.Context) (int, error) {
 }
 
 func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) (entity.Account, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreateAccount")
+	return s.CreateAccountWithParent(ctx, name, kind, currency, "")
+}
+
+func (s *Store) CreateAccountWithParent(
+	ctx context.Context,
+	name, kind, currency, parentRef string,
+) (entity.Account, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreateAccountWithParent")
 	defer endSpan()
 
 	createdAt := time.Now().UTC()
 	ref := uuid.New()
 
-	var id int64
+	var (
+		id       int64
+		parentID sql.NullInt64
+	)
 
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		resolved, resolveErr := s.resolveParent(ctx, tx, entity.Account{Kind: kind}, parentRef)
+		if resolveErr != nil {
+			return resolveErr
+		}
+
+		parentID = resolved
+
 		res, execErr := tx.ExecContext(
 			ctx,
 			`INSERT INTO accounts (ref, name, kind, parent_id, currency, icon, archived_at, created_at)
-			 VALUES (?, ?, ?, NULL, ?, NULL, NULL, ?)`,
+			 VALUES (?, ?, ?, ?, ?, NULL, NULL, ?)`,
 			ref,
 			name,
 			kind,
+			parentID,
 			currency,
 			createdAt.Format(constant.TimestampLayout),
 		)
@@ -63,7 +82,9 @@ func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) 
 			ID:     id,
 			Ref:    ref,
 			Action: constant.AuditActionCreate,
-			To:     entity.AccountChanged{Name: name, Kind: kind, Currency: currency},
+			To: entity.AccountChanged{
+				Name: name, Kind: kind, Currency: currency, ParentRef: parentRef,
+			},
 		})
 	})
 	if err != nil {
@@ -75,6 +96,8 @@ func (s *Store) CreateAccount(ctx context.Context, name, kind, currency string) 
 		Ref:       ref,
 		Name:      name,
 		Kind:      kind,
+		ParentID:  intPtr(parentID),
+		ParentRef: parentRef,
 		Currency:  currency,
 		CreatedAt: createdAt,
 	}, nil
@@ -103,13 +126,23 @@ func (s *Store) UpdateAccount(ctx context.Context, account entity.Account) (enti
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateAccount")
 	defer endSpan()
 
+	var parentID sql.NullInt64
+
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		resolved, resolveErr := s.resolveParent(ctx, tx, account, account.ParentRef)
+		if resolveErr != nil {
+			return resolveErr
+		}
+
+		parentID = resolved
+
 		res, execErr := tx.ExecContext(ctx, `
-			UPDATE accounts SET name = ?, icon = ?, archived_at = ?
+			UPDATE accounts SET name = ?, icon = ?, archived_at = ?, parent_id = ?
 			WHERE ref = ?`,
 			account.Name,
 			nullString(account.Icon),
 			nullTime(account.ArchivedAt),
+			parentID,
 			account.Ref,
 		)
 		if execErr != nil {
@@ -131,7 +164,10 @@ func (s *Store) UpdateAccount(ctx context.Context, account entity.Account) (enti
 			Ref:    account.Ref,
 			Action: constant.AuditActionUpdate,
 			To: entity.AccountChanged{
-				Name: account.Name, Icon: account.Icon, ArchivedAt: auditTime(account.ArchivedAt),
+				Name:       account.Name,
+				Icon:       account.Icon,
+				ParentRef:  account.ParentRef,
+				ArchivedAt: auditTime(account.ArchivedAt),
 			},
 		})
 	})
@@ -139,7 +175,107 @@ func (s *Store) UpdateAccount(ctx context.Context, account entity.Account) (enti
 		return entity.Account{}, err
 	}
 
+	account.ParentID = intPtr(parentID)
+
 	return account, nil
+}
+
+func (s *Store) resolveParent(
+	ctx context.Context,
+	tx *sql.Tx,
+	child entity.Account,
+	parentRef string,
+) (sql.NullInt64, error) {
+	if parentRef == "" {
+		return sql.NullInt64{}, nil
+	}
+
+	chain, err := s.parentChain(ctx, tx, parentRef)
+	if err != nil {
+		return sql.NullInt64{}, err
+	}
+
+	descendants := 0
+
+	if child.ID != 0 {
+		height, heightErr := s.subtreeHeight(ctx, tx, child.ID)
+		if heightErr != nil {
+			return sql.NullInt64{}, heightErr
+		}
+
+		descendants = height
+	}
+
+	if err := entity.CheckParent(entity.AccountParent{
+		ChildID:     child.ID,
+		ChildKind:   child.Kind,
+		Ancestors:   chain,
+		Descendants: descendants,
+	}); err != nil {
+		return sql.NullInt64{}, err
+	}
+
+	return sql.NullInt64{Int64: chain[0].ID, Valid: true}, nil
+}
+
+func (s *Store) parentChain(ctx context.Context, tx *sql.Tx, ref string) ([]entity.Account, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ParentChain")
+	defer endSpan()
+
+	rows, err := tx.QueryContext(ctx, `
+		WITH RECURSIVE chain(id, ref, kind, parent_id, depth) AS (
+			SELECT id, ref, kind, parent_id, 1 FROM accounts WHERE ref = ?
+			UNION ALL
+			SELECT a.id, a.ref, a.kind, a.parent_id, chain.depth + 1
+			FROM accounts a JOIN chain ON a.id = chain.parent_id
+		)
+		SELECT id, ref, kind FROM chain ORDER BY depth`, ref)
+	if err != nil {
+		return nil, fmt.Errorf("select parent chain %q: %w", ref, err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	var out []entity.Account
+
+	for rows.Next() {
+		var account entity.Account
+
+		if scanErr := rows.Scan(&account.ID, &account.Ref, &account.Kind); scanErr != nil {
+			return nil, fmt.Errorf("scan parent chain: %w", scanErr)
+		}
+
+		out = append(out, account)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate parent chain: %w", err)
+	}
+
+	if len(out) == 0 {
+		return nil, fmt.Errorf("%w: account %s", entity.ErrNotFound, ref)
+	}
+
+	return out, nil
+}
+
+func (s *Store) subtreeHeight(ctx context.Context, tx *sql.Tx, id int64) (int, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.SubtreeHeight")
+	defer endSpan()
+
+	var height int
+
+	if err := tx.QueryRowContext(ctx, `
+		WITH RECURSIVE down(id, depth) AS (
+			SELECT id, 0 FROM accounts WHERE id = ?
+			UNION ALL
+			SELECT a.id, down.depth + 1 FROM accounts a JOIN down ON a.parent_id = down.id
+		)
+		SELECT COALESCE(MAX(depth), 0) FROM down`, id).Scan(&height); err != nil {
+		return 0, fmt.Errorf("measure subtree %d: %w", id, err)
+	}
+
+	return height, nil
 }
 
 func (s *Store) AccountByRef(
@@ -261,6 +397,7 @@ func scanAccountRow(scanner interface{ Scan(dest ...any) error }) (entity.Accoun
 		&icon,
 		&archivedRaw,
 		&createdRaw,
+		&account.ParentRef,
 	); err != nil {
 		return entity.Account{}, err
 	}

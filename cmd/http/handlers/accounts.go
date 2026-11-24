@@ -12,24 +12,27 @@ import (
 )
 
 type accountCreateRequest struct {
-	Name     string `json:"name"     validate:"required,max=80"`
-	Kind     string `json:"kind"     validate:"required,accountkind"`
-	Currency string `json:"currency" validate:"omitempty,currency"`
+	Name      string `json:"name"       validate:"required,max=80"`
+	Kind      string `json:"kind"       validate:"required,accountkind"`
+	Currency  string `json:"currency"   validate:"omitempty,currency"`
+	ParentRef string `json:"parent_ref" validate:"omitempty,ref"`
 }
 
 type accountPatchRequest struct {
-	Name     *string `json:"name,omitempty"     validate:"omitempty,max=80"`
-	Icon     *string `json:"icon,omitempty"     validate:"omitempty,max=32"`
-	Archived *bool   `json:"archived,omitempty"`
+	Name      *string `json:"name,omitempty"       validate:"omitempty,max=80"`
+	Icon      *string `json:"icon,omitempty"       validate:"omitempty,max=32"`
+	ParentRef *string `json:"parent_ref,omitempty" validate:"omitempty,ref"`
+	Archived  *bool   `json:"archived,omitempty"`
 }
 
 type accountDetailResponse struct {
-	Ref      string `json:"ref"`
-	Name     string `json:"name"`
-	Kind     string `json:"kind"`
-	Currency string `json:"currency"`
-	Icon     string `json:"icon,omitempty"`
-	Archived bool   `json:"archived"`
+	Ref       string `json:"ref"`
+	Name      string `json:"name"`
+	Kind      string `json:"kind"`
+	Currency  string `json:"currency"`
+	ParentRef string `json:"parent_ref,omitempty"`
+	Icon      string `json:"icon,omitempty"`
+	Archived  bool   `json:"archived"`
 }
 
 func (s *Server) CreateAccount(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +55,13 @@ func (s *Server) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := s.deps.Accounts.CreateAccount(ctx, request.Name, request.Kind, currency)
+	if !s.parentExists(ctx, w, request.ParentRef) {
+		return
+	}
+
+	account, err := s.deps.Accounts.CreateAccountWithParent(
+		ctx, request.Name, request.Kind, currency, request.ParentRef,
+	)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 
@@ -60,6 +69,20 @@ func (s *Server) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusCreated, toAccountResponse(account))
+}
+
+func (s *Server) parentExists(ctx context.Context, w http.ResponseWriter, ref string) bool {
+	if ref == "" {
+		return true
+	}
+
+	if _, found, err := s.deps.Accounts.AccountByRef(ctx, ref); err != nil || !found {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "unknown_reference", "no account "+ref)
+
+		return false
+	}
+
+	return true
 }
 
 func (s *Server) PatchAccount(w http.ResponseWriter, r *http.Request) {
@@ -99,6 +122,14 @@ func (s *Server) PatchAccount(w http.ResponseWriter, r *http.Request) {
 		account.Icon = *request.Icon
 	}
 
+	if request.ParentRef != nil {
+		if !s.parentExists(ctx, w, *request.ParentRef) {
+			return
+		}
+
+		account.ParentRef = *request.ParentRef
+	}
+
 	if request.Archived != nil {
 		account.ArchivedAt = archivedAt(*request.Archived)
 	}
@@ -115,12 +146,13 @@ func (s *Server) PatchAccount(w http.ResponseWriter, r *http.Request) {
 
 func toAccountResponse(account entity.Account) accountDetailResponse {
 	return accountDetailResponse{
-		Ref:      account.Ref,
-		Name:     account.Name,
-		Kind:     account.Kind,
-		Currency: account.Currency,
-		Icon:     account.Icon,
-		Archived: account.ArchivedAt != nil,
+		Ref:       account.Ref,
+		Name:      account.Name,
+		Kind:      account.Kind,
+		Currency:  account.Currency,
+		ParentRef: account.ParentRef,
+		Icon:      account.Icon,
+		Archived:  account.ArchivedAt != nil,
 	}
 }
 
@@ -183,6 +215,7 @@ func accountRow(account entity.Account, balances map[int64]int64) accountRespons
 		Kind:            account.Kind,
 		Currency:        account.Currency,
 		BaseAmountMinor: strconv.FormatInt(balances[account.ID], 10),
+		ParentRef:       account.ParentRef,
 		Icon:            account.Icon,
 		Archived:        account.ArchivedAt != nil,
 	}

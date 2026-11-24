@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -55,6 +56,36 @@ func (s *Store) MonthlyTotals(
 	return out, nil
 }
 
+const categoryTotalsQuery = `
+	SELECT a.ref, a.name, a.kind, SUM(p.base_amount_minor)
+	FROM ledger_postings p
+	JOIN ledger_entries e ON e.id = p.entry_id
+	JOIN accounts a ON a.id = p.account_id
+	WHERE e.voided_at IS NULL AND e.reverses_entry_id IS NULL
+	  AND e.occurred_on BETWEEN ? AND ?
+	  AND a.kind = ?
+	GROUP BY a.id
+	HAVING SUM(p.base_amount_minor) <> 0
+	ORDER BY SUM(p.base_amount_minor) DESC`
+
+const categoryTotalsByRootQuery = `
+	WITH RECURSIVE tree(id, root_id) AS (
+		SELECT id, id FROM accounts WHERE parent_id IS NULL
+		UNION ALL
+		SELECT a.id, tree.root_id FROM accounts a JOIN tree ON a.parent_id = tree.id
+	)
+	SELECT root.ref, root.name, root.kind, SUM(p.base_amount_minor)
+	FROM ledger_postings p
+	JOIN ledger_entries e ON e.id = p.entry_id
+	JOIN tree ON tree.id = p.account_id
+	JOIN accounts root ON root.id = tree.root_id
+	WHERE e.voided_at IS NULL AND e.reverses_entry_id IS NULL
+	  AND e.occurred_on BETWEEN ? AND ?
+	  AND root.kind = ?
+	GROUP BY root.id
+	HAVING SUM(p.base_amount_minor) <> 0
+	ORDER BY SUM(p.base_amount_minor) DESC`
+
 func (s *Store) CategoryTotals(
 	ctx context.Context,
 	from, to time.Time,
@@ -63,17 +94,7 @@ func (s *Store) CategoryTotals(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CategoryTotals")
 	defer endSpan()
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT a.ref, a.name, a.kind, SUM(p.base_amount_minor)
-		FROM ledger_postings p
-		JOIN ledger_entries e ON e.id = p.entry_id
-		JOIN accounts a ON a.id = p.account_id
-		WHERE e.voided_at IS NULL AND e.reverses_entry_id IS NULL
-		  AND e.occurred_on BETWEEN ? AND ?
-		  AND a.kind = ?
-		GROUP BY a.id
-		HAVING SUM(p.base_amount_minor) <> 0
-		ORDER BY SUM(p.base_amount_minor) DESC`,
+	rows, err := s.db.QueryContext(ctx, categoryTotalsQuery,
 		from.Format(constant.DateLayout), to.Format(constant.DateLayout), kind)
 	if err != nil {
 		return nil, fmt.Errorf("select category totals: %w", err)
@@ -81,6 +102,29 @@ func (s *Store) CategoryTotals(
 
 	defer func() { _ = rows.Close() }()
 
+	return scanCategoryTotals(rows)
+}
+
+func (s *Store) CategoryTotalsByRoot(
+	ctx context.Context,
+	from, to time.Time,
+	kind string,
+) ([]entity.CategoryTotal, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CategoryTotalsByRoot")
+	defer endSpan()
+
+	rows, err := s.db.QueryContext(ctx, categoryTotalsByRootQuery,
+		from.Format(constant.DateLayout), to.Format(constant.DateLayout), kind)
+	if err != nil {
+		return nil, fmt.Errorf("select category roll-up: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	return scanCategoryTotals(rows)
+}
+
+func scanCategoryTotals(rows *sql.Rows) ([]entity.CategoryTotal, error) {
 	var out []entity.CategoryTotal
 
 	for rows.Next() {

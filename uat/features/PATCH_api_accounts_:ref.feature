@@ -28,3 +28,63 @@ Feature: PATCH /api/accounts/{ref}
       | header | Content-Type | application/json |
     Then the response status is 404
     And the response JSON matches the snapshot "patch_api_accounts_:ref__an_unknown_ref_answers_404"
+
+  Scenario: A category is moved under a parent
+    Given a running API
+    And I send a POST to "/api/accounts" with:
+      """json
+      {"name":"Food","kind":"expense"}
+      """
+    And the last ref is remembered as "food"
+    And I send a POST to "/api/accounts" with:
+      """json
+      {"name":"Groceries","kind":"expense"}
+      """
+    And the last ref is remembered as "groceries"
+    And the request body is:
+      """json
+      {"parent_ref":"{{ref:food}}"}
+      """
+    When I send a PATCH to "/api/accounts/{{ref:groceries}}" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 200
+    And the response JSON matches the snapshot "patch_api_accounts_:ref__a_category_is_moved_under_a_parent"
+
+  Scenario: A parent that would close a cycle is refused
+    Given a running API
+    And I send a POST to "/api/accounts" with:
+      """json
+      {"name":"Food","kind":"expense"}
+      """
+    And the last ref is remembered as "food"
+    And I send a POST to "/api/accounts" with:
+      """json
+      {"name":"Groceries","kind":"expense","parent_ref":"{{ref:food}}"}
+      """
+    And the last ref is remembered as "groceries"
+    And the request body is:
+      """json
+      {"parent_ref":"{{ref:groceries}}"}
+      """
+    When I send a PATCH to "/api/accounts/{{ref:food}}" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 422
+    And the response JSON matches the snapshot "patch_api_accounts_:ref__a_parent_that_would_close_a_cycle_is_refused"
+
+  Scenario: A parent that does not exist is refused
+    Given a running API
+    And I send a POST to "/api/accounts" with:
+      """json
+      {"name":"Groceries","kind":"expense"}
+      """
+    And the request body is:
+      """json
+      {"parent_ref":"00000000000000000000000000000000"}
+      """
+    When I send a PATCH to "/api/accounts/{{ref}}" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 422
+    And the response JSON matches the snapshot "patch_api_accounts_:ref__a_parent_that_does_not_exist_is_refused"

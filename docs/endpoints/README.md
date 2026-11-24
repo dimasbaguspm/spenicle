@@ -16,7 +16,7 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/api/meta` | bootstrap payload: settings, accounts, currencies | [`GET_api_meta.md`](./GET_api_meta.md) |
 | `GET` | `/api/accounts` | every account with the balance the ledger implies | [`GET_api_accounts.md`](./GET_api_accounts.md) |
 | `POST` | `/api/accounts` | create an account or a category | [`POST_api_accounts.md`](./POST_api_accounts.md) |
-| `PATCH` | `/api/accounts/{ref}` | rename, re-icon, archive an account | [`PATCH_api_accounts_ref.md`](./PATCH_api_accounts_ref.md) |
+| `PATCH` | `/api/accounts/{ref}` | rename, re-icon, reparent, archive an account | [`PATCH_api_accounts_ref.md`](./PATCH_api_accounts_ref.md) |
 | `POST` | `/api/payees` | create a payee with optional defaults | [`POST_api_payees.md`](./POST_api_payees.md) |
 | `PATCH` | `/api/payees/{ref}` | rename, re-default, archive a payee | [`PATCH_api_payees_ref.md`](./PATCH_api_payees_ref.md) |
 | `GET` | `/api/payees` | every payee with its default accounts | [`GET_api_payees.md`](./GET_api_payees.md) |
@@ -38,7 +38,7 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `PATCH` | `/api/imports/{ref}` | commit the draft or reject it, one body action | [`PATCH_api_imports_ref.md`](./PATCH_api_imports_ref.md) |
 | `GET` | `/api/imports/{ref}/events` | the append-only log of one batch | [`GET_api_imports_ref_events.md`](./GET_api_imports_ref_events.md) |
 | `GET` | `/api/analytics/months` | spend and income per calendar month | [`GET_api_analytics_months.md`](./GET_api_analytics_months.md) |
-| `GET` | `/api/analytics/categories` | spend per category for a range | [`GET_api_analytics_categories.md`](./GET_api_analytics_categories.md) |
+| `GET` | `/api/analytics/categories` | spend per category for a range, optional parent roll-up | [`GET_api_analytics_categories.md`](./GET_api_analytics_categories.md) |
 | `POST` | `/api/analytics/custom` | save a named analytics view | [`POST_api_analytics_custom.md`](./POST_api_analytics_custom.md) |
 | `PATCH` | `/api/analytics/custom/{ref}` | rename or re-chart a saved view | [`PATCH_api_analytics_custom_ref.md`](./PATCH_api_analytics_custom_ref.md) |
 | `GET` | `/api/analytics/custom/{ref}` | run a saved view over a window | [`GET_api_analytics_custom_ref.md`](./GET_api_analytics_custom_ref.md) |

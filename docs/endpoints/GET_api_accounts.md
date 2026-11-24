@@ -33,9 +33,9 @@ None.
 
 ## Response
 
-`{"accounts":[{"ref":"<32 hex>","name":"Cash","kind":"asset","currency":"IDR","base_amount_minor":"-1500","archived":false}],"meta":{"limit":50,"has_more":false,"next_cursor":"<32 hex>"}}`
+`{"accounts":[{"ref":"<32 hex>","name":"Cash","kind":"asset","currency":"IDR","base_amount_minor":"-1500","parent_ref":"<32 hex>","archived":false}],"meta":{"limit":50,"has_more":false,"next_cursor":"<32 hex>"}}`
 
-`base_amount_minor` is a signed string of minor units in the base currency; negative means the account owes. `meta` is the block every list route answers: `limit` is the clamped page size, `has_more` is exact (the store fetches `limit + 1`, the handler trims) and `next_cursor` is the `ref` of the last returned account, omitted on an empty page.
+`base_amount_minor` is a signed string of minor units in the base currency; negative means the account owes. `parent_ref` is the account this one rolls up into, omitted at the top of the tree. `meta` is the block every list route answers: `limit` is the clamped page size, `has_more` is exact (the store fetches `limit + 1`, the handler trims) and `next_cursor` is the `ref` of the last returned account, omitted on an empty page.
 
 ## Errors
 
@@ -43,7 +43,7 @@ None.
 
 ## Limitations
 
-Paged like every list, but a personal ledger never needs the second page: the default 50 covers it. Per-pair balances (native currency) are not exposed yet — only the base amount. `query` matches the name only.
+Paged like every list, but a personal ledger never needs the second page: the default 50 covers it. Per-pair balances (native currency) are not exposed yet — only the base amount, and it is the account's own postings, not its subtree: roll a tree up through `GET /api/analytics/categories?rollup=parent`. `query` matches the name only.
 
 ## Sequence
 

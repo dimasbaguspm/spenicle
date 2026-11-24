@@ -103,9 +103,10 @@ func analyticsWindow(query analyticsRangeQuery) (time.Time, time.Time, error) {
 }
 
 type categoryAnalyticsQuery struct {
-	From string `query:"from" validate:"omitempty,datestr"`
-	To   string `query:"to"   validate:"omitempty,datestr"`
-	Kind string `query:"kind" validate:"omitempty,oneof=expense income"`
+	From   string `query:"from"   validate:"omitempty,datestr"`
+	To     string `query:"to"     validate:"omitempty,datestr"`
+	Kind   string `query:"kind"   validate:"omitempty,oneof=expense income"`
+	Rollup string `query:"rollup" validate:"omitempty,oneof=parent"`
 }
 
 type categoryTotalResponse struct {
@@ -144,7 +145,12 @@ func (s *Server) CategoryAnalytics(w http.ResponseWriter, r *http.Request) {
 		kind = "expense"
 	}
 
-	totals, err := s.deps.Analytics.CategoryTotals(ctx, from, to, kind)
+	categories := s.deps.Analytics.CategoryTotals
+	if query.Rollup == "parent" {
+		categories = s.deps.Analytics.CategoryTotalsByRoot
+	}
+
+	totals, err := categories(ctx, from, to, kind)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 

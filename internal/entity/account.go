@@ -1,6 +1,14 @@
 package entity
 
-import "time"
+import (
+	"errors"
+	"fmt"
+	"time"
+)
+
+var ErrInvalidParent = errors.New("invalid parent")
+
+const AccountMaxDepth = 3
 
 type Account struct {
 	ID         int64
@@ -8,10 +16,38 @@ type Account struct {
 	Name       string
 	Kind       string
 	ParentID   *int64
+	ParentRef  string
 	Currency   string
 	Icon       string
 	ArchivedAt *time.Time
 	CreatedAt  time.Time
+}
+
+type AccountParent struct {
+	ChildID     int64
+	ChildKind   string
+	Ancestors   []Account
+	Descendants int
+}
+
+func CheckParent(candidate AccountParent) error {
+	for _, ancestor := range candidate.Ancestors {
+		if ancestor.Kind != candidate.ChildKind {
+			return fmt.Errorf(
+				"%w: a parent must share the child's kind %q", ErrInvalidParent, candidate.ChildKind,
+			)
+		}
+
+		if candidate.ChildID != 0 && ancestor.ID == candidate.ChildID {
+			return fmt.Errorf("%w: an account cannot descend from itself", ErrInvalidParent)
+		}
+	}
+
+	if depth := len(candidate.Ancestors) + 1 + candidate.Descendants; depth > AccountMaxDepth {
+		return fmt.Errorf("%w: depth %d exceeds %d", ErrInvalidParent, depth, AccountMaxDepth)
+	}
+
+	return nil
 }
 
 type AccountBalance struct {

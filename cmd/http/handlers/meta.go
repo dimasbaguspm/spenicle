@@ -21,6 +21,7 @@ type accountResponse struct {
 	Kind            string `json:"kind"`
 	Currency        string `json:"currency"`
 	BaseAmountMinor string `json:"base_amount_minor"`
+	ParentRef       string `json:"parent_ref,omitempty"`
 	Icon            string `json:"icon,omitempty"`
 	Archived        bool   `json:"archived"`
 }
