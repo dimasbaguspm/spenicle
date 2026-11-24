@@ -102,7 +102,7 @@ func TestAuthenticateVerifiesTheHash(t *testing.T) {
 	}
 }
 
-func TestChangePasswordRotatesTheSession(t *testing.T) {
+func TestChangePasswordInvalidatesTheOldCredential(t *testing.T) {
 	service := newService(t)
 	ctx := t.Context()
 
@@ -110,9 +110,8 @@ func TestChangePasswordRotatesTheSession(t *testing.T) {
 		t.Fatalf("ensure: %v", err)
 	}
 
-	before, err := service.SessionToken(ctx)
-	if err != nil {
-		t.Fatalf("token before: %v", err)
+	if ok, err := service.Root(ctx, "initial-password-123"); err != nil || !ok {
+		t.Fatalf("the seeded password must be the root credential: ok=%v err=%v", ok, err)
 	}
 
 	changed, err := service.ChangePassword(ctx, "initial-password-123", "my-own-password-456")
@@ -124,13 +123,12 @@ func TestChangePasswordRotatesTheSession(t *testing.T) {
 		t.Fatal("choosing your own password clears the flag")
 	}
 
-	after, err := service.SessionToken(ctx)
-	if err != nil {
-		t.Fatalf("token after: %v", err)
+	if ok, err := service.Root(ctx, "initial-password-123"); err != nil || ok {
+		t.Fatalf("the old password must stop working: ok=%v err=%v", ok, err)
 	}
 
-	if before == after {
-		t.Fatal("changing the password must invalidate every existing session")
+	if ok, err := service.Root(ctx, "my-own-password-456"); err != nil || !ok {
+		t.Fatalf("the new password must be the root credential: ok=%v err=%v", ok, err)
 	}
 
 	if _, found, authErr := service.Authenticate(ctx, "my-own-password-456"); authErr != nil || !found {
@@ -142,26 +140,38 @@ func TestChangePasswordRotatesTheSession(t *testing.T) {
 	}
 }
 
-func TestSessionTokenIsStableForOnePassword(t *testing.T) {
-	service := newService(t)
-	ctx := t.Context()
-
-	if _, _, err := service.EnsureInitial(ctx, "initial-password-123", ""); err != nil {
-		t.Fatalf("ensure: %v", err)
+func TestRootAnswersOnlyTheInstancePassword(t *testing.T) {
+	cases := []struct {
+		name      string
+		presented string
+		want      bool
+	}{
+		{name: "the password itself", presented: "initial-password-123", want: true},
+		{name: "a truncated password", presented: "initial-password-12", want: false},
+		{name: "a blank credential", presented: "  ", want: false},
 	}
 
-	first, err := service.SessionToken(ctx)
-	if err != nil {
-		t.Fatalf("first token: %v", err)
-	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			service := newService(t)
 
-	second, err := service.SessionToken(ctx)
-	if err != nil {
-		t.Fatalf("second token: %v", err)
-	}
+			if _, _, err := service.EnsureInitial(t.Context(), "initial-password-123", ""); err != nil {
+				t.Fatalf("ensure: %v", err)
+			}
 
-	if first != second {
-		t.Fatalf("the token must be stable across calls: %q vs %q", first, second)
+			// twice: the second call answers from the remembered digest
+			for attempt := range 2 {
+				ok, err := service.Root(t.Context(), testCase.presented)
+				if err != nil {
+					t.Fatalf("attempt %d: %v", attempt, err)
+				}
+
+				if ok != testCase.want {
+					t.Fatalf("attempt %d: Root(%q) = %v, want %v",
+						attempt, testCase.presented, ok, testCase.want)
+				}
+			}
+		})
 	}
 }
 

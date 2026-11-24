@@ -10,7 +10,6 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | method | path | purpose | file |
 | --- | --- | --- | --- |
 | `GET` | `/healthz` | liveness, build and schema fingerprint | [`GET_healthz.md`](./GET_healthz.md) |
-| `POST` | `/api/session` | exchange the password for the root credential | [`POST_api_session.md`](./POST_api_session.md) |
 | `POST` | `/api/password` | replace the generated password | [`POST_api_password.md`](./POST_api_password.md) |
 | `GET` | `/api/settings` | the in-app settings the shell reads | [`GET_api_settings.md`](./GET_api_settings.md) |
 | `PATCH` | `/api/settings` | change the base currency while the ledger is empty | [`PATCH_api_settings.md`](./PATCH_api_settings.md) |

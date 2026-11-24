@@ -6,7 +6,6 @@ Feature: POST /api/tokens/{ref}/revoke
     Given the instance password is "uat-password-1234"
     And a running API
     When I sign in with the instance password
-    Then the response status is 200
     When the request body is:
       """json
       {"name":"iphone-shortcut","scopes":["captures:read","captures:write"]}
@@ -32,7 +31,6 @@ Feature: POST /api/tokens/{ref}/revoke
     Given the instance password is "uat-password-1234"
     And a running API
     When I sign in with the instance password
-    Then the response status is 200
     When I send a POST to "/api/tokens/00000000000000000000000000000000/revoke"
     Then the response status is 404
     And the response JSON matches the snapshot "post_api_tokens_ref_revoke__an_unknown_token_is_not_found"

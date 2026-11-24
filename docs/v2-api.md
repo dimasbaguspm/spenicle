@@ -32,7 +32,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `client_id` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `client_id` |
 | 1 | `POST /api/setup` | live: chooses the base currency once, before the first entry |
-| 2 | `POST /api/session`, `POST /api/password` | live: the password becomes the root credential (header only), rotation returns the new one |
+| 2 | `POST /api/password` | live: password rotation; the password itself is the root credential |
 | 4 | `GET/PATCH /api/settings` | `GET` is live; `PATCH` accepts no field yet — `base_currency` is not patchable |
 | 5, 6 | accounts create/patch | live |
 | 7, 8 | payees | live |
@@ -95,12 +95,12 @@ Consequences, stated plainly:
 
 | credential | used by | transport |
 | --- | --- | --- |
-| root credential | the PWA, `curl`, whoever holds the password | `POST /api/session` returns it in the body; **every** request sends `Authorization: Bearer <credential>`; skipped while no password is set (open mode) |
+| the instance password (root) | the PWA, `curl`, whoever holds it | **every** request sends `Authorization: Bearer <password>`; skipped while no password is set (open mode); a verified password is cached in memory so PBKDF2 runs once per process |
 | API token | agents, scripts, cron | the same header; the token store decides its scopes |
 
-There is no cookie and no second transport: the header is the only place a credential
-travels. The root credential is derived from the password hash, so `POST /api/password`
-rotates it and answers with the new one; signing out is dropping it client-side.
+There is no cookie, no exchange route and no second transport: the header is the only place
+a credential travels, and the root one is the password itself. `POST /api/password` rotates
+it (and clears the verification cache by construction); signing out is dropping it.
 
 Scopes: `entries:read|write`, `captures:read|write`, `accounts:read|write`, `payees:read|write`,
 `recurring:read|write`, `imports:read|write`, `exports:read|write`, `analytics:read`,
@@ -531,31 +531,7 @@ sequenceDiagram
     end
 ```
 
-## 3.2 `POST /api/session`
-
-`{ "password": "..." }` → `Set-Cookie: spenicle=...; HttpOnly; SameSite=Lax`.
-`409 no_password_set` while the instance runs in open mode, so the UI skips the login screen.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant UI as PWA
-    participant API as Session handler
-    participant DB as SQLite
-    UI->>API: POST session with password
-    API->>API: compare against the sealed settings password in constant time
-    alt password not configured
-        API-->>UI: 501 auth_not_configured
-    else mismatch
-        API->>DB: INSERT audit_log action create actor anonymous
-        API-->>UI: 401 invalid_credentials
-    else match
-        API->>API: derive the root credential: HMAC(password hash) under APP_SECRET
-        API-->>UI: 204 Set-Cookie session
-    end
-```
-
-## 3.3 `GET /api/meta`
+## 3.2 `GET /api/meta`
 
 ```json
 { "settings": { "base_currency":"IDR", "timezone":"UTC", "extraction_enabled":false, "ai_assistance":false },
@@ -581,7 +557,7 @@ sequenceDiagram
     API-->>SW: 200 bootstrap payload, cached by service worker
 ```
 
-## 3.4 `PATCH /api/settings`
+## 3.3 `PATCH /api/settings`
 
 No field is accepted yet. The base currency is chosen once by `POST /api/setup` while the
 ledger is empty (`409 base_currency_locked` afterwards), and the timezone is pinned at boot
@@ -599,7 +575,7 @@ sequenceDiagram
     API-->>UI: 422 empty_patch
 ```
 
-## 3.5 `POST /api/accounts`
+## 3.4 `POST /api/accounts`
 
 ```mermaid
 sequenceDiagram
@@ -619,7 +595,7 @@ sequenceDiagram
     API-->>UI: 201 account
 ```
 
-## 3.6 `PATCH /api/accounts/{id}`
+## 3.5 `PATCH /api/accounts/{id}`
 
 ```mermaid
 sequenceDiagram
@@ -640,7 +616,7 @@ sequenceDiagram
     end
 ```
 
-## 3.7 `POST /api/payees`
+## 3.6 `POST /api/payees`
 
 ```mermaid
 sequenceDiagram
@@ -658,7 +634,7 @@ sequenceDiagram
     end
 ```
 
-## 3.8 `PATCH /api/payees/{id}`
+## 3.7 `PATCH /api/payees/{id}`
 
 ```mermaid
 sequenceDiagram
@@ -673,7 +649,7 @@ sequenceDiagram
     API-->>UI: 200 payee
 ```
 
-## 3.9 `GET /api/entries`
+## 3.8 `GET /api/entries`
 
 `?from&to&account_id&payee_id&id&source&running_balance=true&cursor&limit`
 
@@ -693,7 +669,7 @@ sequenceDiagram
     API-->>UI: 200 entries and next_cursor
 ```
 
-## 3.10 `POST /api/entries`
+## 3.9 `POST /api/entries`
 
 ```json
 { "client_id":"01924f7c-8f3a-7c11-9d0e-2b7f5a1c9e42",
@@ -733,7 +709,7 @@ sequenceDiagram
     end
 ```
 
-## 3.11 `PATCH /api/entries/{id}`
+## 3.10 `PATCH /api/entries/{id}`
 
 ```json
 { "note":"flat white, large", "payee_id":13 }
@@ -765,7 +741,7 @@ sequenceDiagram
     end
 ```
 
-## 3.12 `GET /api/captures`
+## 3.11 `GET /api/captures`
 
 `?status=pending&batch_id=&cursor=&limit=20`. Extracting first, then oldest pending.
 
@@ -782,7 +758,7 @@ sequenceDiagram
     API-->>UI: 200 captures and next_cursor
 ```
 
-## 3.13 `POST /api/captures`
+## 3.12 `POST /api/captures`
 
 ```json
 { "client_id":"01924f7c-...", "kind":"share",
@@ -819,7 +795,7 @@ sequenceDiagram
     end
 ```
 
-## 3.14 `PATCH /api/captures/{id}`
+## 3.13 `PATCH /api/captures/{id}`
 
 ```json
 { "action": "approve", "payee_id": 12, "occurred_on": "2025-09-14", "currency": "IDR",
@@ -863,7 +839,7 @@ sequenceDiagram
     end
 ```
 
-## 3.15 `POST /api/recurring`
+## 3.14 `POST /api/recurring`
 
 Create directly, or promote an entry: `?from_entry_id=812`.
 
@@ -884,7 +860,7 @@ sequenceDiagram
     API-->>UI: 201 rule
 ```
 
-## 3.16 `PATCH /api/recurring/{id}`
+## 3.15 `PATCH /api/recurring/{id}`
 
 ```mermaid
 sequenceDiagram
@@ -904,7 +880,7 @@ sequenceDiagram
     end
 ```
 
-## 3.17 `GET /api/months/{year_month}`
+## 3.16 `GET /api/months/{year_month}`
 
 Derived, never stored. Optional `?statement_balance[3]=9540000` per account.
 
@@ -929,7 +905,7 @@ sequenceDiagram
 The response carries `adjustment_body`, a ready-to-POST `POST /api/entries` payload for the
 unlogged bucket. Posting it is your decision; the report itself writes nothing.
 
-## 3.18 `GET /api/dashboard`
+## 3.17 `GET /api/dashboard`
 
 ```mermaid
 sequenceDiagram
@@ -948,7 +924,7 @@ sequenceDiagram
     API-->>UI: 200 all five tiles in one round trip
 ```
 
-## 3.19 `POST /api/tokens`
+## 3.18 `POST /api/tokens`
 
 `{ "name":"laptop-agent", "scopes":["captures:write","dashboard:read"] }`
 Returns `{ "id":2, "token":"spn_...", "scopes":[...] }` — plaintext shown once.
@@ -969,7 +945,7 @@ sequenceDiagram
     API-->>U: 201 token secret shown once
 ```
 
-## 3.20 `PATCH /api/tokens/{id}`
+## 3.19 `PATCH /api/tokens/{id}`
 
 ```mermaid
 sequenceDiagram
@@ -985,7 +961,7 @@ sequenceDiagram
     API-->>U: 200 token row, secret never returned again
 ```
 
-## 3.21 `GET /healthz`
+## 3.20 `GET /healthz`
 
 `200 {"status":"ok","schema_version":1,"app_secret":"sealed","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}`
 

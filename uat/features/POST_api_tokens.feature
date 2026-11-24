@@ -6,7 +6,6 @@ Feature: POST /api/tokens
     Given the instance password is "uat-password-1234"
     And a running API
     When I sign in with the instance password
-    Then the response status is 200
     When the request body is:
       """json
       {"name":"iphone-shortcut","scopes":["captures:write"]}
@@ -22,7 +21,6 @@ Feature: POST /api/tokens
     Given the instance password is "uat-password-1234"
     And a running API
     When I sign in with the instance password
-    Then the response status is 200
     When the request body is:
       """json
       {"name":"iphone-shortcut","scopes":["captures:write"]}
@@ -58,7 +56,6 @@ Feature: POST /api/tokens
     Given the instance password is "uat-password-1234"
     And a running API
     When I sign in with the instance password
-    Then the response status is 200
     When the request body is:
       """json
       <body>

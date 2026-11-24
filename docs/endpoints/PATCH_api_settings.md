@@ -1,6 +1,6 @@
 # PATCH /api/settings
 
-**Auth.** **Root credential only**: `Authorization: Bearer <root credential>` from `POST /api/session`. A token answers `403 forbidden`.
+**Auth.** **The instance password only**: `Authorization: Bearer <password>`. A token answers `403 forbidden`.
 
 ## Purpose
 

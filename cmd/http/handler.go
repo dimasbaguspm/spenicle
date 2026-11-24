@@ -2,7 +2,6 @@ package httpcmd
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -62,7 +61,7 @@ func New(deps handlers.Deps) http.Handler {
 	return httpx.Chain(
 		instance.authenticate(groups),
 		httpx.Recover(deps.Logger),
-		httpx.Observe(routeOf(groups.public, groups.root, groups.scoped)),
+		httpx.Observe(routeOf(groups.public.mux, groups.root.mux, groups.scoped.mux)),
 		httpx.Log(deps.Logger),
 	)
 }
@@ -87,131 +86,96 @@ func patternOf(mux *http.ServeMux, r *http.Request) string {
 
 const notFoundPattern = "/*"
 
-// routeGroups is the three surfaces of the API: open to everyone, root
-// credential only, or any credential carrying the scope the route asks for.
-type routeGroups struct {
-	public *http.ServeMux
-	root   *http.ServeMux
-	scoped *http.ServeMux
+// routeGroup is one surface of the API and the scope book it collects while the
+// routes register: a token reads its allow-list from the group it was mounted in,
+// so a route and the scope it needs are declared on the same line.
+type routeGroup struct {
+	mux    *http.ServeMux
+	scopes map[string]string
 }
 
-// routes declares each route exactly once, in the group that may reach it.
-func (s *server) routes() routeGroups {
-	groups := routeGroups{
-		public: http.NewServeMux(),
-		root:   http.NewServeMux(),
-		scoped: http.NewServeMux(),
-	}
+type routeGroups struct {
+	public routeGroup
+	root   routeGroup
+	scoped routeGroup
+}
 
-	groups.public.HandleFunc("GET /healthz", s.api.Health)
-	groups.public.HandleFunc("POST /api/session", s.api.Session)
+func newGroup() routeGroup {
+	return routeGroup{mux: http.NewServeMux(), scopes: make(map[string]string)}
+}
+
+// route mounts one pattern with the scope a token needs; an empty scope means the
+// root credential only, which is what the public and root groups use.
+func (g routeGroup) route(scope, pattern string, handler http.HandlerFunc) {
+	g.mux.HandleFunc(pattern, handler)
+
+	if scope != "" {
+		g.scopes[pattern] = scope
+	}
+}
+
+// routes declares each route exactly once, next to the scope it asks for.
+func (s *server) routes() routeGroups {
+	groups := routeGroups{public: newGroup(), root: newGroup(), scoped: newGroup()}
+
+	// open to everyone
+	groups.public.route("", "GET /healthz", s.api.Health)
 
 	// root credential only
-	groups.root.HandleFunc("POST /api/password", s.api.ChangePassword)
-	groups.root.HandleFunc("PATCH /api/settings", s.api.PatchSettings)
-	groups.root.HandleFunc("GET /api/tokens", s.api.ListTokens)
-	groups.root.HandleFunc("POST /api/tokens", s.api.CreateToken)
-	groups.root.HandleFunc("POST /api/tokens/{ref}/revoke", s.api.RevokeToken)
+	groups.root.route("", "POST /api/password", s.api.ChangePassword)
+	groups.root.route("", "PATCH /api/settings", s.api.PatchSettings)
+	groups.root.route("", "GET /api/tokens", s.api.ListTokens)
+	groups.root.route("", "POST /api/tokens", s.api.CreateToken)
+	groups.root.route("", "POST /api/tokens/{ref}/revoke", s.api.RevokeToken)
 
-	// any credential with the route's scope
-	groups.scoped.HandleFunc("GET /api/settings", s.api.GetSettings)
-	groups.scoped.HandleFunc("GET /api/meta", s.api.GetMeta)
-	groups.scoped.HandleFunc("POST /api/setup", s.api.Setup)
+	// any credential carrying the scope
+	groups.scoped.route(constant.ScopeSettingsRead, "GET /api/settings", s.api.GetSettings)
+	groups.scoped.route(constant.ScopeSettingsRead, "GET /api/meta", s.api.GetMeta)
+	groups.scoped.route(constant.ScopeAdmin, "POST /api/setup", s.api.Setup)
 
-	groups.scoped.HandleFunc("GET /api/analytics/months", s.api.MonthlyAnalytics)
-	groups.scoped.HandleFunc("GET /api/analytics/categories", s.api.CategoryAnalytics)
-	groups.scoped.HandleFunc("POST /api/analytics/custom", s.api.CreateCustomQuery)
-	groups.scoped.HandleFunc("PATCH /api/analytics/custom/{ref}", s.api.PatchCustomQuery)
-	groups.scoped.HandleFunc("GET /api/analytics/custom/{ref}", s.api.RunCustomQuery)
-	groups.scoped.HandleFunc("GET /api/dashboard", s.api.GetDashboard)
+	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/months", s.api.MonthlyAnalytics)
+	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/categories", s.api.CategoryAnalytics)
+	groups.scoped.route(constant.ScopeAnalyticsRead, "POST /api/analytics/custom", s.api.CreateCustomQuery)
+	groups.scoped.route(constant.ScopeAnalyticsRead, "PATCH /api/analytics/custom/{ref}", s.api.PatchCustomQuery)
+	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/custom/{ref}", s.api.RunCustomQuery)
+	groups.scoped.route(constant.ScopeDashboardRead, "GET /api/dashboard", s.api.GetDashboard)
 
-	groups.scoped.HandleFunc("GET /api/accounts", s.api.ListAccounts)
-	groups.scoped.HandleFunc("POST /api/accounts", s.api.CreateAccount)
-	groups.scoped.HandleFunc("PATCH /api/accounts/{ref}", s.api.PatchAccount)
-	groups.scoped.HandleFunc("GET /api/payees", s.api.ListPayees)
-	groups.scoped.HandleFunc("POST /api/payees", s.api.CreatePayee)
-	groups.scoped.HandleFunc("PATCH /api/payees/{ref}", s.api.PatchPayee)
-	groups.scoped.HandleFunc("GET /api/recurring", s.api.ListRecurring)
-	groups.scoped.HandleFunc("POST /api/recurring", s.api.CreateRecurring)
-	groups.scoped.HandleFunc("PATCH /api/recurring/{ref}", s.api.PatchRecurring)
+	groups.scoped.route(constant.ScopeAccountsRead, "GET /api/accounts", s.api.ListAccounts)
+	groups.scoped.route(constant.ScopeAccountsWrite, "POST /api/accounts", s.api.CreateAccount)
+	groups.scoped.route(constant.ScopeAccountsWrite, "PATCH /api/accounts/{ref}", s.api.PatchAccount)
+	groups.scoped.route(constant.ScopePayeesRead, "GET /api/payees", s.api.ListPayees)
+	groups.scoped.route(constant.ScopePayeesWrite, "POST /api/payees", s.api.CreatePayee)
+	groups.scoped.route(constant.ScopePayeesWrite, "PATCH /api/payees/{ref}", s.api.PatchPayee)
+	groups.scoped.route(constant.ScopeRecurringRead, "GET /api/recurring", s.api.ListRecurring)
+	groups.scoped.route(constant.ScopeRecurringWrite, "POST /api/recurring", s.api.CreateRecurring)
+	groups.scoped.route(constant.ScopeRecurringWrite, "PATCH /api/recurring/{ref}", s.api.PatchRecurring)
 
-	groups.scoped.HandleFunc("GET /api/entries", s.api.ListEntries)
-	groups.scoped.HandleFunc("POST /api/entries", s.api.PostEntry)
-	groups.scoped.HandleFunc("PATCH /api/entries/{ref}", s.api.PatchEntry)
+	groups.scoped.route(constant.ScopeEntriesRead, "GET /api/entries", s.api.ListEntries)
+	groups.scoped.route(constant.ScopeEntriesWrite, "POST /api/entries", s.api.PostEntry)
+	groups.scoped.route(constant.ScopeEntriesWrite, "PATCH /api/entries/{ref}", s.api.PatchEntry)
 
-	groups.scoped.HandleFunc("GET /api/captures", s.api.ListCaptures)
-	groups.scoped.HandleFunc("POST /api/captures", s.api.CreateCapture)
-	groups.scoped.HandleFunc("PATCH /api/captures/{ref}", s.api.PatchCapture)
-	groups.scoped.HandleFunc("GET /api/captures/{ref}/artifact", s.api.GetCaptureArtifact)
+	groups.scoped.route(constant.ScopeCapturesRead, "GET /api/captures", s.api.ListCaptures)
+	groups.scoped.route(constant.ScopeCapturesWrite, "POST /api/captures", s.api.CreateCapture)
+	groups.scoped.route(constant.ScopeCapturesWrite, "PATCH /api/captures/{ref}", s.api.PatchCapture)
+	groups.scoped.route(constant.ScopeCapturesRead, "GET /api/captures/{ref}/artifact", s.api.GetCaptureArtifact)
 
-	groups.scoped.HandleFunc("GET /api/imports", s.api.ListImports)
-	groups.scoped.HandleFunc("POST /api/imports", s.api.CreateImport)
-	groups.scoped.HandleFunc("GET /api/imports/{ref}", s.api.GetImport)
-	groups.scoped.HandleFunc("PATCH /api/imports/{ref}", s.api.PatchImport)
-	groups.scoped.HandleFunc("GET /api/imports/{ref}/events", s.api.ListImportEvents)
-	groups.scoped.HandleFunc("PATCH /api/imports/{ref}/rows/{index}", s.api.PatchImportRow)
+	groups.scoped.route(constant.ScopeImportsRead, "GET /api/imports", s.api.ListImports)
+	groups.scoped.route(constant.ScopeImportsWrite, "POST /api/imports", s.api.CreateImport)
+	groups.scoped.route(constant.ScopeImportsRead, "GET /api/imports/{ref}", s.api.GetImport)
+	groups.scoped.route(constant.ScopeImportsWrite, "PATCH /api/imports/{ref}", s.api.PatchImport)
+	groups.scoped.route(constant.ScopeImportsRead, "GET /api/imports/{ref}/events", s.api.ListImportEvents)
+	groups.scoped.route(constant.ScopeImportsWrite, "PATCH /api/imports/{ref}/rows/{index}", s.api.PatchImportRow)
 
-	groups.scoped.HandleFunc("GET /api/exports", s.api.ListExports)
-	groups.scoped.HandleFunc("POST /api/exports", s.api.CreateExport)
-	groups.scoped.HandleFunc("GET /api/exports/{ref}", s.api.GetExport)
-	groups.scoped.HandleFunc("GET /api/exports/{ref}/events", s.api.ListExportEvents)
-	groups.scoped.HandleFunc("GET /api/exports/{ref}/download", s.api.DownloadExport)
+	groups.scoped.route(constant.ScopeExportsRead, "GET /api/exports", s.api.ListExports)
+	groups.scoped.route(constant.ScopeExportsWrite, "POST /api/exports", s.api.CreateExport)
+	groups.scoped.route(constant.ScopeExportsRead, "GET /api/exports/{ref}", s.api.GetExport)
+	groups.scoped.route(constant.ScopeExportsRead, "GET /api/exports/{ref}/events", s.api.ListExportEvents)
+	groups.scoped.route(constant.ScopeExportsRead, "GET /api/exports/{ref}/download", s.api.DownloadExport)
 
-	groups.scoped.HandleFunc("GET /api/rates", s.api.GetRate)
-	groups.scoped.HandleFunc("GET /api/audit", s.api.ListAudit)
+	groups.scoped.route(constant.ScopeRatesRead, "GET /api/rates", s.api.GetRate)
+	groups.scoped.route(constant.ScopeAuditRead, "GET /api/audit", s.api.ListAudit)
 
 	return groups
-}
-
-// routeScopes is the one table that says which scope a token needs. Root-only
-// routes are not listed: they live in their own mux, so a token cannot reach
-// them at all.
-var routeScopes = map[string]string{ //nolint:gochecknoglobals // one read-only table
-	"GET /api/settings": constant.ScopeSettingsRead,
-	"GET /api/meta":     constant.ScopeSettingsRead,
-	"POST /api/setup":   constant.ScopeAdmin,
-
-	"GET /api/analytics/months":         constant.ScopeAnalyticsRead,
-	"GET /api/analytics/categories":     constant.ScopeAnalyticsRead,
-	"POST /api/analytics/custom":        constant.ScopeAnalyticsRead,
-	"PATCH /api/analytics/custom/{ref}": constant.ScopeAnalyticsRead,
-	"GET /api/analytics/custom/{ref}":   constant.ScopeAnalyticsRead,
-	"GET /api/dashboard":                constant.ScopeDashboardRead,
-
-	"GET /api/accounts":          constant.ScopeAccountsRead,
-	"POST /api/accounts":         constant.ScopeAccountsWrite,
-	"PATCH /api/accounts/{ref}":  constant.ScopeAccountsWrite,
-	"GET /api/payees":            constant.ScopePayeesRead,
-	"POST /api/payees":           constant.ScopePayeesWrite,
-	"PATCH /api/payees/{ref}":    constant.ScopePayeesWrite,
-	"GET /api/recurring":         constant.ScopeRecurringRead,
-	"POST /api/recurring":        constant.ScopeRecurringWrite,
-	"PATCH /api/recurring/{ref}": constant.ScopeRecurringWrite,
-
-	"GET /api/entries":         constant.ScopeEntriesRead,
-	"POST /api/entries":        constant.ScopeEntriesWrite,
-	"PATCH /api/entries/{ref}": constant.ScopeEntriesWrite,
-
-	"GET /api/captures":                constant.ScopeCapturesRead,
-	"POST /api/captures":               constant.ScopeCapturesWrite,
-	"PATCH /api/captures/{ref}":        constant.ScopeCapturesWrite,
-	"GET /api/captures/{ref}/artifact": constant.ScopeCapturesRead,
-
-	"GET /api/imports":                      constant.ScopeImportsRead,
-	"POST /api/imports":                     constant.ScopeImportsWrite,
-	"GET /api/imports/{ref}":                constant.ScopeImportsRead,
-	"PATCH /api/imports/{ref}":              constant.ScopeImportsWrite,
-	"GET /api/imports/{ref}/events":         constant.ScopeImportsRead,
-	"PATCH /api/imports/{ref}/rows/{index}": constant.ScopeImportsWrite,
-
-	"GET /api/exports":                constant.ScopeExportsRead,
-	"POST /api/exports":               constant.ScopeExportsWrite,
-	"GET /api/exports/{ref}":          constant.ScopeExportsRead,
-	"GET /api/exports/{ref}/events":   constant.ScopeExportsRead,
-	"GET /api/exports/{ref}/download": constant.ScopeExportsRead,
-
-	"GET /api/rates": constant.ScopeRatesRead,
-	"GET /api/audit": constant.ScopeAuditRead,
 }
 
 // credential is who is calling: the root credential (the password session) or one
@@ -226,8 +190,8 @@ type credential struct {
 // belongs to: public, root-only, or scoped.
 func (s *server) authenticate(groups routeGroups) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if patternOf(groups.public, r) != "" {
-			groups.public.ServeHTTP(w, r.WithContext(actor.With(r.Context(), userActor(""))))
+		if patternOf(groups.public.mux, r) != "" {
+			groups.public.mux.ServeHTTP(w, r.WithContext(actor.With(r.Context(), userActor(""))))
 
 			return
 		}
@@ -239,7 +203,7 @@ func (s *server) authenticate(groups routeGroups) http.Handler {
 
 		r = r.WithContext(actor.With(r.Context(), who.actor))
 
-		if patternOf(groups.root, r) != "" {
+		if patternOf(groups.root.mux, r) != "" {
 			if !who.root {
 				httpx.WriteError(w, http.StatusForbidden, "forbidden",
 					"this route needs the root credential")
@@ -247,26 +211,26 @@ func (s *server) authenticate(groups routeGroups) http.Handler {
 				return
 			}
 
-			groups.root.ServeHTTP(w, r)
+			groups.root.mux.ServeHTTP(w, r)
 
 			return
 		}
 
-		pattern := patternOf(groups.scoped, r)
+		pattern := patternOf(groups.scoped.mux, r)
 		if pattern == "" {
 			s.api.NotFound(w, r)
 
 			return
 		}
 
-		if !who.root && !s.mayReach(who, pattern) {
+		if !who.root && !who.mayReach(groups.scoped, pattern) {
 			httpx.WriteError(w, http.StatusForbidden, "forbidden",
-				"this credential cannot reach "+pattern+requiredFor(routeScopes[pattern]))
+				"this credential cannot reach "+pattern+requiredFor(groups.scoped.scopes[pattern]))
 
 			return
 		}
 
-		groups.scoped.ServeHTTP(w, r)
+		groups.scoped.mux.ServeHTTP(w, r)
 	})
 }
 
@@ -302,14 +266,14 @@ func (s *server) identify(w http.ResponseWriter, r *http.Request) (credential, b
 		return credential{}, false
 	}
 
-	rootToken, err := s.settings.SessionToken(ctx)
+	root, err := s.settings.Root(ctx, presented)
 	if err != nil {
 		s.writeInternal(ctx, w, err)
 
 		return credential{}, false
 	}
 
-	if subtle.ConstantTimeCompare([]byte(presented), []byte(rootToken)) == 1 {
+	if root {
 		return credential{root: true, actor: userActor("")}, true
 	}
 
@@ -335,8 +299,8 @@ func (s *server) identify(w http.ResponseWriter, r *http.Request) (credential, b
 	return credential{token: token, actor: userActor(token.Ref)}, true
 }
 
-func (s *server) mayReach(who credential, pattern string) bool {
-	scope, delegated := routeScopes[pattern]
+func (who credential) mayReach(group routeGroup, pattern string) bool {
+	scope, delegated := group.scopes[pattern]
 	if !delegated {
 		return false
 	}

@@ -31,14 +31,6 @@ func TestEverySettingsPayloadCarriesTheBaseCurrencyAndTheTimezone(t *testing.T) 
 			payload: toSettingsResponse(appSettings, false, false),
 		},
 		{
-			name: "POST /api/session",
-			payload: signInResponse{
-				Status:       "signed_in",
-				BaseCurrency: appSettings.BaseCurrency,
-				Timezone:     appSettings.Timezone,
-			},
-		},
-		{
 			name:    "GET /api/meta settings block",
 			payload: metaSettings(appSettings, false, false),
 		},

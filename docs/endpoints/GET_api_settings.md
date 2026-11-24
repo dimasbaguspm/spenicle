@@ -1,6 +1,6 @@
 # GET /api/settings
 
-**Auth.** `Authorization: Bearer <credential>`: the root credential from `POST /api/session`, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or stale credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
+**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
 
 ## Purpose
 
@@ -45,8 +45,8 @@ stored in the sealed `settings` row, and no request can change it. A later boot 
 of the worker and the calendar the client reads can never drift apart.
 
 `base_currency` and `timezone` are always in the body — no `omitempty` — in this route and
-in every other payload that carries them (`GET /api/meta`, `POST /api/session`,
-`POST /api/setup`, `POST /api/password`, `GET /healthz`), so a client never has to guess a
+in every other payload that carries them (`GET /api/meta`, `POST /api/setup`,
+`POST /api/password`, `GET /healthz`), so a client never has to guess a
 missing default.
 
 

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -30,6 +31,8 @@ const (
 	hashSaltBytes  = 16
 	hashKeyBytes   = 32
 	hashFields     = 4
+
+	verifiedLimit = 8
 )
 
 var validate = validator.New() //nolint:gochecknoglobals // one registry, built once
@@ -43,12 +46,18 @@ type Service struct {
 	store  repository.System
 	sealer seal.Sealer
 	clock  TimeSource
+
+	mu       sync.Mutex
+	verified map[string]bool
 }
 
 type TimeSource interface{ Now() time.Time }
 
 func New(store repository.System, sealer seal.Sealer, clock TimeSource) *Service {
-	return &Service{store: store, sealer: sealer, clock: clock}
+	return &Service{
+		store: store, sealer: sealer, clock: clock,
+		verified: make(map[string]bool),
+	}
 }
 
 var _ Contract = (*Service)(nil)
@@ -236,20 +245,62 @@ func (s *Service) EnsureTimezone(ctx context.Context, name string) (entity.Setti
 		entity.ErrTimezoneSetOnce, stored, name)
 }
 
-func (s *Service) SessionToken(ctx context.Context) (string, error) {
-	_, endSpan := telemetry.StartSpan(ctx, "Module.Settings.SessionToken")
+// Root answers whether a presented credential is the instance password. PBKDF2 is
+// deliberately slow, so a verified credential is remembered as a digest for the
+// life of the process: the key includes the stored hash, so a password change
+// invalidates every remembered one, and nothing outlives the process.
+func (s *Service) Root(ctx context.Context, presented string) (bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.Root")
 	defer endSpan()
 
-	settings, _, err := s.load(ctx)
-	if err != nil {
-		return "", err
+	trimmed := strings.TrimSpace(presented)
+	if trimmed == "" {
+		return false, nil
 	}
 
-	sum := sha256.Sum256([]byte(strings.Join(
-		[]string{"spenicle/session/v2", s.sealer.Fingerprint(), settings.PasswordHash}, "\x00",
-	)))
+	settings, found, err := s.load(ctx)
+	if err != nil {
+		return false, err
+	}
 
-	return hex.EncodeToString(sum[:16]), nil
+	if !found || !settings.HasPassword() {
+		return false, nil
+	}
+
+	key := credentialDigest(settings.PasswordHash, trimmed)
+
+	s.mu.Lock()
+	remembered := s.verified[key]
+	s.mu.Unlock()
+
+	if remembered {
+		return true, nil
+	}
+
+	if verifyErr := verifyPassword(settings.PasswordHash, trimmed); verifyErr != nil {
+		return false, nil
+	}
+
+	s.remember(key)
+
+	return true, nil
+}
+
+func (s *Service) remember(key string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if len(s.verified) >= verifiedLimit {
+		s.verified = make(map[string]bool, verifiedLimit)
+	}
+
+	s.verified[key] = true
+}
+
+func credentialDigest(passwordHash, presented string) string {
+	sum := sha256.Sum256([]byte(passwordHash + "\x00" + presented))
+
+	return hex.EncodeToString(sum[:])
 }
 
 func hashPassword(password string) (string, error) {

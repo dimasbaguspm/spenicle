@@ -177,20 +177,21 @@ the first sign-in. The password is stored as a PBKDF2-SHA256 hash inside that se
 row. The base currency is editable while the ledger is empty and locked after the first
 entry.
 
-**One credential header, two kinds.** There is no cookie: `POST /api/session` exchanges
-the password for the **root credential** (a digest of `APP_SECRET`'s fingerprint plus the
-password hash) and hands it back in the body. Every request carries
-`Authorization: Bearer <credential>`. Because it is derived from the password hash,
-changing the password rotates it at once — and `POST /api/password` answers with the new
-one so the caller is not locked out.
+**One credential header, two kinds.** There is no cookie and no exchange route: every
+request carries `Authorization: Bearer <credential>`, and the **instance password** *is*
+the root credential. `module/settings.Root` verifies it against the stored PBKDF2 hash —
+600k rounds, so the first verification is the slow one and a verified credential is
+remembered as an in-memory digest for the life of the process (the key includes the stored
+hash, so changing the password invalidates it, and the cache never touches disk).
 
 Everything else is a token — a named, scoped, non-root credential (`module/tokens`).
 Only the HMAC digest of the plaintext under `APP_SECRET` (`sealer.Digest`) is stored,
 plus a masked preview (`spl_ab12…9f3c`) so two tokens are told apart; the plaintext
 exists exactly once, in the `201` that created it. A token answers a route only if the
-route lives in the scoped mux and the token carries the scope `routeScopes` names for it;
-the root-only mux (`/api/tokens*`, `/api/password`, `PATCH /api/settings`) is unreachable
-for a token, so a token can never mint a token. `admin` and `*` cover every scoped route.
+route lives in the scoped mux and the token carries the scope that route was registered
+with (`groups.scoped.route(scope, pattern, handler)` — one line per route, no second
+table); the root-only mux (`/api/tokens*`, `/api/password`, `PATCH /api/settings`) is
+unreachable for a token, so a token can never mint a token. `admin` and `*` cover every scoped route.
 Revoking is `POST /api/tokens/{ref}/revoke`: a token is never deleted, `revoked_at`
 stamps it, the row and its journal entries stay and the credential stops working. The
 middleware stamps `last_used_at` on every authenticated request, and the listing filters

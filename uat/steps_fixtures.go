@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -35,27 +34,12 @@ func iSignInWithTheInstancePassword(ctx context.Context) (context.Context, error
 		return ctx, err
 	}
 
-	body := []byte(`{"password":` + strconv.Quote(w.password) + `}`)
-
-	if err := w.call(ctx, http.MethodPost, "/api/session", body, nil, nil); err != nil {
-		return ctx, err
+	if w.password == "" {
+		return ctx, errors.New(`no instance password: add the step "the instance password is ..." first`)
 	}
 
-	var signed struct {
-		Token string `json:"token"`
-	}
-
-	if unmarshalErr := json.Unmarshal(w.body, &signed); unmarshalErr != nil {
-		return ctx, fmt.Errorf("the sign-in response is not JSON (%q): %w",
-			preview(string(w.body)), unmarshalErr)
-	}
-
-	if signed.Token == "" {
-		return ctx, errors.New("the sign-in response carries no credential")
-	}
-
-	w.rootCredential = signed.Token
-	w.credential = signed.Token
+	w.credential = w.password
+	w.rootCredential = w.password
 
 	return ctx, nil
 }

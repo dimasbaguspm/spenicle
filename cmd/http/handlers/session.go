@@ -8,22 +8,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-type sessionRequest struct {
-	Password string `json:"password" validate:"required"`
-}
-
-// signInResponse carries the root credential itself: there is no cookie, so the
-// caller keeps it and sends it as `Authorization: Bearer <token>`.
-type signInResponse struct {
-	Status            string `json:"status"`
-	Token             string `json:"token"`
-	MustChange        bool   `json:"must_change"`
-	BaseCurrency      string `json:"base_currency"`
-	Timezone          string `json:"timezone"`
-	ExtractionEnabled bool   `json:"extraction_enabled"`
-	AIAssistance      bool   `json:"ai_assistance"`
-}
-
 type passwordChangeRequest struct {
 	CurrentPassword string `json:"current_password" validate:"required"`
 	NewPassword     string `json:"new_password"     validate:"required,min=12,max=200"`
@@ -37,53 +21,6 @@ type settingsResponse struct {
 	PasswordMustChange bool   `json:"password_must_change"`
 	ExtractionEnabled  bool   `json:"extraction_enabled"`
 	AIAssistance       bool   `json:"ai_assistance"`
-}
-
-type passwordChangedResponse struct {
-	settingsResponse
-
-	Token string `json:"token"`
-}
-
-func (s *Server) Session(w http.ResponseWriter, r *http.Request) {
-	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Session.Create")
-	defer endSpan()
-
-	var request sessionRequest
-	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
-		return
-	}
-
-	settings, found, err := s.deps.Settings.Authenticate(ctx, request.Password)
-	if err != nil {
-		httpx.WriteError(w, http.StatusUnauthorized, "invalid_password", "password does not match")
-
-		return
-	}
-
-	if !found {
-		httpx.WriteError(w, http.StatusConflict, "no_password_set",
-			"this instance runs in open mode: no password has been set yet")
-
-		return
-	}
-
-	token, err := s.deps.Settings.SessionToken(ctx)
-	if err != nil {
-		s.InternalError(ctx, w, err)
-
-		return
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, signInResponse{
-		Status:            "signed_in",
-		Token:             token,
-		MustChange:        settings.PasswordMustChange,
-		BaseCurrency:      settings.BaseCurrency,
-		Timezone:          settings.Timezone,
-		ExtractionEnabled: s.deps.ExtractionEnabled,
-		AIAssistance:      s.deps.AIAssistance,
-	})
 }
 
 func (s *Server) ChangePassword(w http.ResponseWriter, r *http.Request) {
@@ -102,19 +39,7 @@ func (s *Server) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// the root credential is derived from the password hash, so it rotated with
-	// it: the caller gets the new one instead of a dead header
-	token, err := s.deps.Settings.SessionToken(ctx)
-	if err != nil {
-		s.InternalError(ctx, w, err)
-
-		return
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, passwordChangedResponse{
-		settingsResponse: toSettingsResponse(settings, s.deps.ExtractionEnabled, s.deps.AIAssistance),
-		Token:            token,
-	})
+	s.writeSettings(w, settings)
 }
 
 func (s *Server) PatchSettings(w http.ResponseWriter, r *http.Request) {
