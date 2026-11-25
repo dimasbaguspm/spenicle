@@ -22,3 +22,5 @@ const (
 	RulePatternMinLength = 2
 	RulePatternMaxLength = 80
 )
+
+const CategorizationRuleLimit = 200

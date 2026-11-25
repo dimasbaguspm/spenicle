@@ -54,7 +54,7 @@ reserved for a future chat endpoint, so `ai_assistance` must never gate a screen
 | G12 | the export does not carry `categorization_rules`: `module/export` renders accounts, payees, entries, captures, recurring, rates and saved views, so a backup/restore loses the rules | a restored instance forgets why a merchant was filed | re-create the rules by hand; export is still the complete ledger. Closing this is the next `feat:` |
 | G13 | an import commit does not learn a payee's default category — only a capture approval does | a CSV-first user gets no consistency for free | pick the category per row; `GET /api/categorization/suggest` still answers |
 | G14 | neither `POST /api/captures` nor `POST /api/imports` carries a suggestion in its response | every client must call `GET /api/categorization/suggest` itself, and one that forgets shows `Unsorted` | call suggest, then prefill (F10 §2.2) |
-| G15 | no ceiling on how many categorization rules exist, and `suggest` reads every live rule | a few hundred rules turn each suggestion into a full scan | keep the list short; the list route pages at 200 like every other |
+| G15 | ~~no ceiling~~ — `POST /api/categorization/rules` refuses beyond `CategorizationRuleLimit` (200) | closed | ceiling enforced at the handler |
 
 ---
 

@@ -108,6 +108,20 @@ func (s *Server) CreateCategorizationRule(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	rules, err := s.deps.Rules.ListRules(ctx, entity.CategorizationFilter{IncludeArchived: true, Limit: 1000})
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	if len(rules) >= constant.CategorizationRuleLimit {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+			"too many categorization rules")
+
+		return
+	}
+
 	created, err := s.deps.Rules.CreateRule(ctx, entity.CategorizationRule{
 		Pattern:    request.Pattern,
 		Field:      request.Field,
