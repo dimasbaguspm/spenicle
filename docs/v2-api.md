@@ -663,12 +663,29 @@ sequenceDiagram
 ## 3.2 `GET /api/meta`
 
 ```json
-{ "settings": { "base_currency":"IDR", "timezone":"UTC", "extraction_enabled":false, "ai_assistance":false },
-  "accounts": [{ "id":3, "name":"BCA Tahapan", "kind":"asset", "balance_minor":"9540000" }],
-  "payees": [{ "id":12, "name":"Kopi Kenangan", "last_used_at":"2026-02-14" }],
-  "recurring": [{ "id":4, "payee":"Netflix", "cadence":"monthly", "next_due_on":"2026-03-02" }],
+{ "settings": { "base_currency":"IDR", "timezone":"UTC", "password_must_change":false,
+                "extraction_enabled":false, "ai_assistance":false },
+  "accounts": [{ "ref":"00000000000000000000000000000003", "name":"BCA Tahapan",
+                "kind":"asset", "currency":"IDR", "base_amount_minor":"9540000",
+                "archived":false }],
+  "payees": [{ "ref":"0000000000000000000000000000000c", "name":"Kopi Kenangan",
+              "default_account_ref":"00000000000000000000000000000003",
+              "archived":false, "created_at":"2026-02-14T08:00:00Z" }],
+  "recurring": [{ "ref":"00000000000000000000000000000004",
+                 "payee_ref":"0000000000000000000000000000000c",
+                 "account_ref":"00000000000000000000000000000003",
+                 "amount_minor":"25000", "currency":"IDR", "cadence":"monthly",
+                 "interval_n":1, "business_day_shift":"none",
+                 "next_due_on":"2026-03-02", "origin":"user", "state":"active",
+                 "created_at":"2026-02-14T08:00:00Z" }],
   "currencies": [{ "code":"IDR", "minor_units":0, "symbol":"Rp" }] }
 ```
+
+The settings block is shared with `GET /api/settings`, so the first-boot
+`password_must_change` flag arrives with the shell. Every account, payee and recurring
+rule is returned by following repository cursors internally; the list routes' 200-row
+page cap does not truncate this payload. Empty collections are `[]`, and every entity
+identifier is a 32-character lowercase hex ref.
 
 ```mermaid
 sequenceDiagram
@@ -677,13 +694,12 @@ sequenceDiagram
     participant API as Meta handler
     participant DB as SQLite
     SW->>API: GET meta
-    API->>DB: SELECT settings keys needed by the shell
-    API->>DB: SELECT accounts with SUM base_amount_minor per account
-    API->>DB: SELECT payees active with last_used_at
-    API->>DB: SELECT recurring rules active and suggested
-    API->>DB: SELECT counts by status for the queue badges
+    API->>DB: load sealed settings
+    API->>DB: page accounts with SUM base_amount_minor per account
+    API->>DB: page payees
+    API->>DB: page recurring rules
     API->>API: attach embedded currency list
-    API-->>SW: 200 bootstrap payload, cached by service worker
+    API-->>SW: 200 complete bootstrap payload
 ```
 
 ## 3.3 `PATCH /api/settings`

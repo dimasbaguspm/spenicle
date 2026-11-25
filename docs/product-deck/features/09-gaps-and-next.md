@@ -10,7 +10,7 @@ acceptance stub. Nothing in (B) is in the design doc yet, so each one starts wit
 
 ## What shipped since this list was written
 
-Eleven gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
+Twelve gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
 The table below records them once; section (A) lists only what is still open.
 
 | gap | shipped as | commit |
@@ -27,9 +27,11 @@ The table below records them once; section (A) lists only what is still open.
 
 | G6 | `GET /api/entries` takes `with_balance=true` with one `account_ref` and answers `running_balance_minor` per row from one windowed query over `SUM(base_amount_minor)`; the page's postings load in one query instead of one per entry | `feat: resolve a missing rate in the ledger and carry a running balance` |
 | G1 | `POST /api/setup` accepts up to 100 `{name, kind, opening_balance_minor}` accounts and atomically creates or reuses them, posts one balanced `adjustment` per nonzero balance against `Opening balance` equity, seals settings and writes the one-shot completion marker; currency-only setup stays valid | `feat: seed opening balances during setup` |
+| G2 | `GET /api/meta` returns the shared settings flags, every account with its balance, every payee, every recurring rule and the ISO currency list; empty collections are `[]` and internal cursor pages prevent silent truncation | `feat: return the complete shell bootstrap from meta` |
 
-Still open: **G5** (per-row import currency), the attachment half of **G9**, and the
-cross-cutting rows from 12 onward.
+Still open: **G3** (credential hygiene), **G5** (per-row import currency and column
+mapping), the attachment and IMAP halves of **G9**, and the cross-cutting rows from
+12 onward.
 The next cuts in (B) that are now done are marked there as well.
 
 **G8 is excluded from the current backlog.** Polling is sufficient for the single-user
@@ -46,7 +48,6 @@ reserved for a future chat endpoint, so `ai_assistance` must never gate a screen
 
 | id | gap (verified in code) | what it costs the client | workaround today |
 | --- | --- | --- | --- |
-| G2 | `GET /api/meta` carries settings, accounts and currencies only — no payees, no rules, no `password_must_change` | the shell needs 2–3 extra calls on a cold start | `GET /api/payees`, `GET /api/recurring`, `GET /api/settings` after meta |
 | G3 | tokens have no expiry, no per-token rate limit, no un-revoke | a leaked shortcut token lives until someone revokes it | revoke and re-issue; `last_used_at` is the only signal |
 | G5 | import has no per-row currency or column mapping: a 4-column statement cannot keep a USD row in USD | a USD statement cannot be imported without void + repost | use the 3-column format in base currency; per-row currency and mapping are the next import cut |
 | G9 | attachments still are not captured, and only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank PDF or JPEG never becomes a capture | forward the text, or use the share sheet; attachments and IMAP are separate remaining cuts |

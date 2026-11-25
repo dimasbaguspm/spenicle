@@ -20,8 +20,8 @@ wrong, and pre-fill the next entry from a payee's defaults.
 
 | # | call | notes |
 | --- | --- | --- |
-| 1 | `GET /api/meta` | settings + every account with `base_amount_minor` + the ISO currency list — enough for the first paint |
-| 2 | `GET /api/payees` | the picker; includes archived rows **flagged**, so the client decides to hide them |
+| 1 | `GET /api/meta` | settings + every account with `base_amount_minor` + every payee + every recurring rule + the ISO currency list — enough for the first paint |
+| 2 | `GET /api/payees` | a focused refresh of the picker; includes archived rows **flagged**, so the client decides to hide them |
 | 3 | `GET /api/accounts?kind=expense` | the category picker |
 
 The seed is `Cash` (asset) and `Unsorted` (expense), written by `EnsureBaseline` at

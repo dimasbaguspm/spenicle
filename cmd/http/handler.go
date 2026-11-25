@@ -282,7 +282,7 @@ func (s *server) identify(w http.ResponseWriter, r *http.Request) (credential, b
 		return credential{root: true, actor: userActor("")}, true
 	}
 
-	if current.PasswordMustChange && r.URL.Path != "/api/password" {
+	if current.PasswordMustChange && r.URL.Path != "/api/password" && r.URL.Path != "/api/meta" {
 		httpx.WriteError(w, http.StatusConflict, "password_change_required",
 			"sign in with the generated password, then set your own at /api/password")
 

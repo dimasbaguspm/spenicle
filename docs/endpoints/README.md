@@ -13,7 +13,7 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `POST` | `/api/password` | replace the generated password | [`POST_api_password.md`](./POST_api_password.md) |
 | `GET` | `/api/settings` | the in-app settings the shell reads | [`GET_api_settings.md`](./GET_api_settings.md) |
 | `PATCH` | `/api/settings` | discover that no setting is patchable | [`PATCH_api_settings.md`](./PATCH_api_settings.md) |
-| `GET` | `/api/meta` | bootstrap payload: settings, accounts, currencies | [`GET_api_meta.md`](./GET_api_meta.md) |
+| `GET` | `/api/meta` | bootstrap payload: settings, accounts, payees, recurring rules, currencies | [`GET_api_meta.md`](./GET_api_meta.md) |
 | `GET` | `/api/accounts` | every account with the balance the ledger implies | [`GET_api_accounts.md`](./GET_api_accounts.md) |
 | `POST` | `/api/accounts` | create an account or a category | [`POST_api_accounts.md`](./POST_api_accounts.md) |
 | `PATCH` | `/api/accounts/{ref}` | rename, re-icon, reparent, archive an account | [`PATCH_api_accounts_ref.md`](./PATCH_api_accounts_ref.md) |

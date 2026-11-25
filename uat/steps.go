@@ -61,6 +61,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the journal holds (\d+) "([^"]*)" rows$`, theJournalHolds)
 	sc.Step(`^the last journal row names the token as its actor$`, theLastJournalRowNamesTheToken)
 	sc.Step(`^the instance password is "([^"]*)"$`, theInstancePasswordIs)
+	sc.Step(`^the instance password must be changed$`, theInstancePasswordMustBeChanged)
 	sc.Step(`^I sign in with the instance password$`, iSignInWithTheInstancePassword)
 	sc.Step(`^the issued token is the bearer credential$`, theIssuedTokenIsTheBearer)
 	sc.Step(`^the same token is the bearer credential again$`, theSameTokenIsTheBearerAgain)

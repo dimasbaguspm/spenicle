@@ -19,7 +19,7 @@ still has a credential?" and "who voided that entry?".
 | 2 | `GET /api/settings` | `base_currency`, `timezone`, `password_must_change`, and the capability flags: `extraction_enabled` drives SnapToJSON; `ai_assistance` is informational only and must not gate a feature ([F9](./09-gaps-and-next.md) G11) |
 | 3 | `POST /api/setup {"base_currency":"IDR","accounts":[{"name":"Cash","kind":"asset","opening_balance_minor":"500000"}]}` | the wizard's only write; optional opening balances post atomically, then `200` returns the settings payload |
 | 4 | `POST /api/password {current_password, new_password}` | closes the instance; the response carries the new root credential |
-| 5 | `GET /api/meta` | one round trip fills the shell: settings, accounts with balances, the ISO currency list |
+| 5 | `GET /api/meta` | one round trip fills the shell: shared settings, every account with its balance, every payee, every recurring rule and the ISO currency list |
 
 Step 1 and step 2 are separate on purpose: `/healthz` is public and answers even when
 the credential is wrong, so a client can distinguish "server down" from "server says no".
@@ -76,7 +76,7 @@ plus the shared cursor/limit. `actor_ref` names the token when a token made the 
 ```
 GET /healthz        Handler.Health      → Repository.Sqlite.SchemaVersion + Ping
 POST /api/setup     Handler.Setup       → Module.Settings.Setup (one-shot guard, opening entries, re-seal)
-GET /api/meta       Handler.Meta.Get    → Settings.Load + ListAccounts + BalancesByAccount + entity.Currencies()
+GET /api/meta       Handler.Meta.Get    → Settings.Load + all account/payee/recurring pages + BalancesByAccount + entity.Currencies()
 POST /api/password  Handler.Session.ChangePassword → Module.Settings.ChangePassword (PBKDF2, re-seal)
 POST /api/tokens    Handler.Tokens.Create → Module.Tokens.Create (sealer.Digest, InsertToken + journal)
 GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
@@ -116,18 +116,24 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
    Voiding entries does not unlock it. Optional opening balances commit with that marker.
 3. `timezone` is never writable through the API. It comes from `APP_TIMEZONE` at the
    first boot; a later boot that disagrees with the stored value refuses to start.
-4. `GET /api/settings` always carries `base_currency`, `timezone`,
-   `password_must_change`, `extraction_enabled` and `ai_assistance` — no `omitempty`,
-   so a client never guesses a default. `extraction_enabled` is the flag that matters:
-   it says SnapToJSON is wired. `ai_assistance` is computed from the `OPENAI_*`
-   variables but the OpenAI adapter is reserved for the future chat endpoint
-   ([F9](./09-gaps-and-next.md) G11), so a client must not gate a feature on it.
-5. A token's plaintext is returned by its creating `201` and by nothing else, ever.
-6. Revoking is idempotent in effect: a second revoke is `404`, and every request
+4. `GET /api/settings` and the `settings` object in `GET /api/meta` always carry
+   `base_currency`, `timezone`, `password_must_change`, `extraction_enabled` and
+   `ai_assistance` — no `omitempty`, so a client never guesses a default.
+   `extraction_enabled` is the flag that matters: it says SnapToJSON is wired.
+   `ai_assistance` is computed from the `OPENAI_*` variables but the OpenAI adapter
+   is reserved for the future chat endpoint ([F9](./09-gaps-and-next.md) G11), so a
+   client must not gate a feature on it.
+5. `GET /api/meta` is the complete cold-start payload: the shared settings, every
+   account with its ledger balance, every payee, every recurring rule and every
+   supported currency. Empty collections are `[]`, relationships carry refs only,
+   and the server follows its own cursor pages rather than returning one truncated
+   page.
+6. A token's plaintext is returned by its creating `201` and by nothing else, ever.
+7. Revoking is idempotent in effect: a second revoke is `404`, and every request
    carrying the revoked secret answers `401` from then on.
-7. Root-only routes stay unreachable from a token, so escalation is impossible by
+8. Root-only routes stay unreachable from a token, so escalation is impossible by
    construction.
-8. Every state change on the journaled tables appends one audit row in its own
+9. Every state change on the journaled tables appends one audit row in its own
    transaction; the journal is readable but never writable by a client.
 
 ### Risks
@@ -139,7 +145,7 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 | token sprawl | a leaked shortcut token can dump receipts | scopes are a closed set, `captures:write` alone cannot read the ledger, `last_used_at` makes an unused token visible, and revoke keeps the row so the history is intact |
 | password is the only root credential | no "sign out other devices" | rotation kills every derived credential at once; this is the design, and the client must not present a per-device session model |
 | OAuth callback is a public route | the provider redirect carries no bearer header, so the route skips auth entirely | the `state` value is validated against the pending authorisation (`401 invalid_state` on mismatch or replay); the client must not reuse a `state` |
-| `GET /api/meta` has no payees and no rules | a client that bootstraps from meta alone has no pickers | call `GET /api/payees` and `GET /api/recurring` for those screens; or use meta for the first paint and fetch on demand |
+| the bootstrap payload grows with every payee and rule | a cold start slows down as pickers accumulate | the server follows cursor pages and returns one complete response; the client caches it after sign-in and uses focused list routes for later refreshes |
 
 ### Rollout
 
@@ -190,6 +196,25 @@ Scenario: Opening balances land with the currency lock
   And the store holds 2 "ledger_entries" rows
   And the account "Bank" carries base_amount_minor "500000"
   And the account "Card" carries base_amount_minor "-75000"
+
+Scenario: The shell bootstraps from one complete payload
+  Given a running API
+  When I send a POST to "/api/payees" with:
+    """
+    {"name":"Kopi Kenangan","default_account_ref":"{{account:Cash}}","default_category_ref":"{{account:Unsorted}}"}
+    """
+  Then the response status is 201
+  And the request body is:
+    """
+    {"payee_ref":"{{ref}}","account_ref":"{{account:Cash}}","category_ref":"{{account:Unsorted}}","amount_minor":"25000","currency":"IDR","cadence":"monthly","next_due_on":"2026-12-20"}
+    """
+  And I send a POST to "/api/recurring" with headers/query:
+    | type   | key          | value            |
+    | header | Content-Type | application/json |
+  Then the response status is 201
+  When I send a GET to "/api/meta"
+  Then the response status is 200
+  And the response JSON matches the snapshot "get_api_meta__payees_and_recurring_rules_arrive_with_the_bootstrap_payload"
 
 Scenario: A weak password is refused and a good one rotates the root credential
   Given the instance password is "generated-password"

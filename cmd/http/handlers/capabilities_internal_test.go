@@ -35,13 +35,8 @@ func TestCapabilitiesAreIndependent(t *testing.T) {
 				t.Fatalf("timezone = %q, want the stored value", payload.Timezone)
 			}
 
-			block := metaSettings(appSettings, testCase.extraction, testCase.ai)
-			if block["extraction_enabled"] != testCase.extraction {
-				t.Fatalf("meta extraction_enabled = %v, want %v", block["extraction_enabled"], testCase.extraction)
-			}
-
-			if block["ai_assistance"] != testCase.ai {
-				t.Fatalf("meta ai_assistance = %v, want %v", block["ai_assistance"], testCase.ai)
+			if payload.PasswordMustChange {
+				t.Fatal("password_must_change = true, want false")
 			}
 		})
 	}

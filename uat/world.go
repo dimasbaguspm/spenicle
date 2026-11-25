@@ -98,24 +98,25 @@ type world struct {
 	lastRef     string
 	refs        map[string]string
 
-	ledger         ledger.Contract
-	artifacts      *filestore.Store
-	exportFiles    *filestore.Store
-	parts          *filestore.Parts
-	location       *time.Location
-	sealer         seal.Sealer
-	commitChunk    int
-	exports        exports.Contract
-	exportDeps     export.Deps
-	limits         entity.AppConfig
-	apiAsOf        time.Time
-	asOf           time.Time
-	workerSummary  workerhandlers.Summary
-	password       string
-	rootCredential string
-	credential     string
-	issued         string
-	issuedRef      string
+	ledger             ledger.Contract
+	artifacts          *filestore.Store
+	exportFiles        *filestore.Store
+	parts              *filestore.Parts
+	location           *time.Location
+	sealer             seal.Sealer
+	commitChunk        int
+	exports            exports.Contract
+	exportDeps         export.Deps
+	limits             entity.AppConfig
+	apiAsOf            time.Time
+	asOf               time.Time
+	workerSummary      workerhandlers.Summary
+	password           string
+	passwordMustChange bool
+	rootCredential     string
+	credential         string
+	issued             string
+	issuedRef          string
 }
 
 type fixedClock struct{ at time.Time }

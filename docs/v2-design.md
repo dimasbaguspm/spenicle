@@ -86,6 +86,17 @@ marker, so a second call is `409 base_currency_locked` even with an empty ledger
 Invalid input or a failed write rolls back the whole setup.
 
 
+### Cold-start payload
+
+`GET /api/meta` is the authenticated shell bootstrap. It returns the same settings
+shape as `GET /api/settings` (including `password_must_change`), every account with its
+all-time derived base balance, every payee, every recurring rule and the embedded ISO
+currency list. Collections are complete: the handler follows repository cursors
+internally instead of exposing the normal 200-row page cap, and an empty collection is
+`[]`. Accounts, payees and recurring rules are related only by refs; no integer id
+leaves the database. Queue counts are deliberately not part of this payload.
+
+
 Configuration is one file: `internal/common/config/config.go` holds every environment
 variable, **every default** (DB path, HTTP timeouts, shutdown budgets, body cap, pool
 sizes, service and tracer names) and the validation; the resolved value is
