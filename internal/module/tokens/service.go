@@ -52,6 +52,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Token, str
 		Preview:   maskToken(plain),
 		Digest:    s.digestor.Digest(plain),
 		Scopes:    scopes,
+		ExpiresAt: in.ExpiresAt,
 		CreatedAt: s.clock.Now(),
 	})
 	if err != nil {

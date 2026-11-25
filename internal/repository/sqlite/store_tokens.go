@@ -16,7 +16,7 @@ import (
 
 //nolint:gosec // G101: a column list, not a credential
 const tokenColumns = `id, ref, name, token_preview, token_hash, scopes, created_at,
-	last_used_at, revoked_at`
+	last_used_at, revoked_at, expires_at`
 
 func (s *Store) InsertToken(ctx context.Context, token entity.Token) (entity.Token, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertToken")
@@ -33,14 +33,15 @@ func (s *Store) InsertToken(ctx context.Context, token entity.Token) (entity.Tok
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
 			INSERT INTO api_tokens (ref, name, token_preview, token_hash, scopes, created_at,
-				last_used_at, revoked_at)
-			VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)`,
+				last_used_at, revoked_at, expires_at)
+			VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?)`,
 			token.Ref,
 			token.Name,
 			token.Preview,
 			token.Digest,
 			token.ScopeList(),
 			token.CreatedAt.Format(constant.TimestampLayout),
+			nullTime(token.ExpiresAt),
 		)
 		if execErr != nil {
 			return fmt.Errorf("insert token: %w", execErr)
@@ -213,10 +214,11 @@ func scanTokenRow(scanner interface{ Scan(dest ...any) error }) (entity.Token, e
 		createdRaw string
 		usedRaw    sql.NullString
 		revokedRaw sql.NullString
+		expiresRaw sql.NullString
 	)
 
 	if err := scanner.Scan(&token.ID, &token.Ref, &token.Name, &token.Preview, &token.Digest,
-		&scopes, &createdRaw, &usedRaw, &revokedRaw); err != nil {
+		&scopes, &createdRaw, &usedRaw, &revokedRaw, &expiresRaw); err != nil {
 		return entity.Token{}, err
 	}
 
@@ -233,6 +235,10 @@ func scanTokenRow(scanner interface{ Scan(dest ...any) error }) (entity.Token, e
 	}
 
 	if token.RevokedAt, err = parseOptionalTimestamp(revokedRaw); err != nil {
+		return entity.Token{}, err
+	}
+
+	if token.ExpiresAt, err = parseOptionalTimestamp(expiresRaw); err != nil {
 		return entity.Token{}, err
 	}
 

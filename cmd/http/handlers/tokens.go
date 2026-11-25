@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
@@ -13,8 +14,9 @@ import (
 )
 
 type tokenCreateRequest struct {
-	Name   string   `json:"name"   validate:"required,min=1,max=100"`
-	Scopes []string `json:"scopes" validate:"required,min=1,max=20,dive,scope"`
+	Name      string     `json:"name"       validate:"required,min=1,max=100"`
+	Scopes    []string   `json:"scopes"     validate:"required,min=1,max=20,dive,scope"`
+	ExpiresAt *time.Time `json:"expires_at"`
 }
 
 type tokenListQuery struct {
@@ -32,6 +34,7 @@ type tokenResponse struct {
 	CreatedAt  string   `json:"created_at"`
 	LastUsedAt string   `json:"last_used_at,omitempty"`
 	RevokedAt  string   `json:"revoked_at,omitempty"`
+	ExpiresAt  string   `json:"expires_at,omitempty"`
 }
 
 type tokenIssuedResponse struct {
@@ -50,8 +53,9 @@ func (s *Server) CreateToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token, plain, err := s.deps.Tokens.Create(ctx, tokens.CreateInput{
-		Name:   request.Name,
-		Scopes: request.Scopes,
+		Name:      request.Name,
+		Scopes:    request.Scopes,
+		ExpiresAt: request.ExpiresAt,
 	})
 	if err != nil {
 		s.writeClassified(ctx, w, err)

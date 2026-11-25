@@ -6,7 +6,7 @@
       "created_at": "<timestamp>",
       "format": "json",
       "ref": "<ref>",
-      "schema_version": 5,
+      "schema_version": 6,
       "status": "queued"
     }
   ],

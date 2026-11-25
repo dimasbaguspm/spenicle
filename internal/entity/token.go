@@ -27,6 +27,7 @@ type Token struct {
 	CreatedAt  time.Time
 	LastUsedAt *time.Time
 	RevokedAt  *time.Time
+	ExpiresAt  *time.Time
 }
 
 // TokenFilter narrows the listing: by state, and by whether it was ever used.
@@ -37,7 +38,15 @@ type TokenFilter struct {
 	Limit  int
 }
 
-func (t Token) Active() bool { return t.RevokedAt == nil }
+func (t Token) Active() bool {
+	if t.RevokedAt != nil {
+		return false
+	}
+	if t.ExpiresAt != nil && time.Now().After(*t.ExpiresAt) {
+		return false
+	}
+	return true
+}
 
 func (t Token) Has(scope string) bool {
 	for _, granted := range t.Scopes {

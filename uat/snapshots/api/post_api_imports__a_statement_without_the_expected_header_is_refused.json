@@ -1,6 +1,6 @@
 {
   "error": {
     "code": "invalid_request",
-    "message": "invalid statement: the header must be \"occurred_on,amount_minor,description\""
+    "message": "invalid statement: the header must include \"occurred_on\""
   }
 }

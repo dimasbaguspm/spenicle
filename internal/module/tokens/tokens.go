@@ -34,6 +34,7 @@ type Contract interface {
 }
 
 type CreateInput struct {
-	Name   string
-	Scopes []string
+	Name      string
+	Scopes    []string
+	ExpiresAt *time.Time
 }
