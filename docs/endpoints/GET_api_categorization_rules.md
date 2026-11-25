@@ -4,7 +4,7 @@
 
 ## Purpose
 
-List the deterministic rules that suggest a category, newest first, so the settings screen
+List the deterministic rules that suggest a category, oldest first by creation (id) order, so the settings screen
 can show what the ledger will pre-fill and the user can retire a rule that aged badly.
 
 ## Upstream

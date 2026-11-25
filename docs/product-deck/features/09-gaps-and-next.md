@@ -10,7 +10,7 @@ acceptance stub. Nothing in (B) is in the design doc yet, so each one starts wit
 
 ## What shipped since this list was written
 
-Twelve gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
+Fifteen gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
 The table below records them once; section (A) lists only what is still open.
 
 | gap | shipped as | commit |
@@ -25,6 +25,8 @@ The table below records them once; section (A) lists only what is still open.
 | G11 | verified: `config.SelectRail` builds SnapToJSON only; the OpenAI adapter is reserved for the future chat rail and `ai_assistance` is informational, never a capability gate | `docs: reserve the OpenAI adapter for the chat rail` |
 | G4 | the ledger resolves the rate itself: a foreign entry posted without `fx_rate` takes the exact sheet day, else the nearest earlier business day, else a cross rate through EUR, and the posting is stamped with the rate, its `fx_source` (`ecb`/`cached`) and the day actually used; `GET /api/rates` carries the nearest earlier day and answers `source: "cached"`; an explicit `fx_rate` still wins | `feat: resolve a missing rate in the ledger and carry a running balance` |
 
+| G12 | `module/export` now carries `categorization_rules` in JSON `data`, the zip CSV sheet and the summary `counts`; restored instances keep their rules | `feat: carry categorization rules in the export document` |
+| G14 | `POST /api/captures` and `POST /api/imports` carry `suggested_category_ref` in their create responses, including `Unsorted` when nothing matches; omitted only on resolver failure | `feat: carry a category suggestion in capture and import responses` |
 | G6 | `GET /api/entries` takes `with_balance=true` with one `account_ref` and answers `running_balance_minor` per row from one windowed query over `SUM(base_amount_minor)`; the page's postings load in one query instead of one per entry | `feat: resolve a missing rate in the ledger and carry a running balance` |
 | G1 | `POST /api/setup` accepts up to 100 `{name, kind, opening_balance_minor}` accounts and atomically creates or reuses them, posts one balanced `adjustment` per nonzero balance against `Opening balance` equity, seals settings and writes the one-shot completion marker; currency-only setup stays valid | `feat: seed opening balances during setup` |
 | G2 | `GET /api/meta` returns the shared settings flags, every account with its balance, every payee, every recurring rule and the ISO currency list; empty collections are `[]` and internal cursor pages prevent silent truncation | `feat: return the complete shell bootstrap from meta` |
@@ -51,9 +53,7 @@ reserved for a future chat endpoint, so `ai_assistance` must never gate a screen
 | G3 | tokens have no expiry, no per-token rate limit, no un-revoke | a leaked shortcut token lives until someone revokes it | revoke and re-issue; `last_used_at` is the only signal |
 | G5 | import has no per-row currency or column mapping: a 4-column statement cannot keep a USD row in USD | a USD statement cannot be imported without void + repost | use the 3-column format in base currency; per-row currency and mapping are the next import cut |
 | G9 | attachments still are not captured, and only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank PDF or JPEG never becomes a capture | forward the text, or use the share sheet; attachments and IMAP are separate remaining cuts |
-| G12 | the export does not carry `categorization_rules`: `module/export` renders accounts, payees, entries, captures, recurring, rates and saved views, so a backup/restore loses the rules | a restored instance forgets why a merchant was filed | re-create the rules by hand; export is still the complete ledger. Closing this is the next `feat:` |
 | G13 | an import commit does not learn a payee's default category — only a capture approval does | a CSV-first user gets no consistency for free | pick the category per row; `GET /api/categorization/suggest` still answers |
-| G14 | neither `POST /api/captures` nor `POST /api/imports` carries a suggestion in its response | every client must call `GET /api/categorization/suggest` itself, and one that forgets shows `Unsorted` | call suggest, then prefill (F10 §2.2) |
 | G15 | ~~no ceiling~~ — `POST /api/categorization/rules` refuses beyond `CategorizationRuleLimit` (200) | closed | ceiling enforced at the handler |
 
 ---

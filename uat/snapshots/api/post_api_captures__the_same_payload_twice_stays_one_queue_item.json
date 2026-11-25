@@ -3,5 +3,6 @@
   "raw_text": "same receipt",
   "received_at": "<timestamp>",
   "ref": "<ref>",
-  "status": "pending"
+  "status": "pending",
+  "suggested_category_ref": "<ref>"
 }

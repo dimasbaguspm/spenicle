@@ -4,5 +4,6 @@
   "kind": "image",
   "received_at": "<timestamp>",
   "ref": "<ref>",
-  "status": "extracting"
+  "status": "extracting",
+  "suggested_category_ref": "<ref>"
 }

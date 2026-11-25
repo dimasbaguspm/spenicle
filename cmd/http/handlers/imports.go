@@ -18,6 +18,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/module/categorization"
 	"github.com/dimasbaguspm/spenicle/internal/module/imports"
 )
 
@@ -50,17 +51,18 @@ type importRowPatchRequest struct {
 }
 
 type importRowResponse struct {
-	Ref           string `json:"ref"`
-	RowIndex      int    `json:"row_index"`
-	OccurredOn    string `json:"occurred_on"`
-	AmountMinor   string `json:"amount_minor"`
-	Description   string `json:"description"`
-	AccountRef    string `json:"account_ref"`
-	CategoryRef   string `json:"category_ref,omitempty"`
-	PayeeRef      string `json:"payee_ref,omitempty"`
-	Status        string `json:"status"`
-	ClashKind     string `json:"clash_kind,omitempty"`
-	ClashEntryRef string `json:"clash_entry_ref,omitempty"`
+	Ref                  string `json:"ref"`
+	RowIndex             int    `json:"row_index"`
+	OccurredOn           string `json:"occurred_on"`
+	AmountMinor          string `json:"amount_minor"`
+	Description          string `json:"description"`
+	AccountRef           string `json:"account_ref"`
+	CategoryRef          string `json:"category_ref,omitempty"`
+	SuggestedCategoryRef string `json:"suggested_category_ref,omitempty"`
+	PayeeRef             string `json:"payee_ref,omitempty"`
+	Status               string `json:"status"`
+	ClashKind            string `json:"clash_kind,omitempty"`
+	ClashEntryRef        string `json:"clash_entry_ref,omitempty"`
 }
 
 type importBatchResponse struct {
@@ -154,7 +156,19 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusCreated
 	}
 
-	httpx.WriteJSON(w, status, toImportResponse(batch, true))
+	response := toImportResponse(batch, true)
+	if s.deps.Categorization != nil {
+		for i := range response.Rows {
+			suggestion, err := s.deps.Categorization.Resolve(ctx, categorization.SuggestInput{
+				Text: response.Rows[i].Description,
+				Kind: constant.AccountKindExpense,
+			})
+			if err == nil {
+				response.Rows[i].SuggestedCategoryRef = suggestion.AccountRef
+			}
+		}
+	}
+	httpx.WriteJSON(w, status, response)
 }
 
 func (s *Server) writeChunk(

@@ -12,21 +12,21 @@ import (
 )
 
 type snapshot struct {
-	schemaVersion int
-	exportedAt    time.Time
-	baseCurrency  string
-	window        *Window
-	accounts      []entity.Account
-	payees        []entity.Payee
-	entries       []entity.Entry
-	captures      []entity.Capture
-	recurring     []entity.Recurring
-	rates         []entity.Rate
-	customQueries []entity.CustomQuery
+	schemaVersion       int
+	exportedAt          time.Time
+	baseCurrency        string
+	window              *Window
+	accounts            []entity.Account
+	payees              []entity.Payee
+	entries             []entity.Entry
+	captures            []entity.Capture
+	recurring           []entity.Recurring
+	rates               []entity.Rate
+	customQueries       []entity.CustomQuery
 	categorizationRules []entity.CategorizationRule
-	accountRefs   map[int64]string
-	payeeRefs     map[int64]string
-	entryRefs     map[int64]string
+	accountRefs         map[int64]string
+	payeeRefs           map[int64]string
+	entryRefs           map[int64]string
 }
 
 func collect(ctx context.Context, deps Deps, window *Window) (*snapshot, error) {

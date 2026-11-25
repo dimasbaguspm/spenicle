@@ -21,7 +21,7 @@ Approval does. A capture is evidence plus a draft; the ledger is a decision.
 | 1 | `POST /api/captures` | `{"kind":"share","raw_text":"KOPI KENANGAN 18.000","client_id":"<uuidv7>"}` |
 | 2 | `POST /api/captures` (multipart) | one `file` part — the receipt photo, up to `ArtifactMaxBytes` (10 MiB) |
 
-`201` when the row is new, `200` when the dedupe key already knew it — both carry the
+`202` when the row is new, `200` when the dedupe key already knew it — both carry the
 capture, so a retry after a network drop is safe by returning the same thing instead of
 a second row. The dedupe key is `sha256(kind | client_id | artifact_hash | raw_text)` and
 it is `UNIQUE` in the table: the uniqueness is the guard, not a client check.

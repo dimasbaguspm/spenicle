@@ -165,14 +165,14 @@ func (s *snapshot) counts() map[string]int {
 	}
 
 	return map[string]int{
-		"accounts":       len(s.accounts),
-		"payees":         len(s.payees),
-		"entries":        len(s.entries),
-		"postings":       postings,
-		"captures":       len(s.captures),
-		"recurring":      len(s.recurring),
-		"rates":          len(s.rates),
-		"custom_queries": len(s.customQueries),
+		"accounts":             len(s.accounts),
+		"payees":               len(s.payees),
+		"entries":              len(s.entries),
+		"postings":             postings,
+		"captures":             len(s.captures),
+		"recurring":            len(s.recurring),
+		"rates":                len(s.rates),
+		"custom_queries":       len(s.customQueries),
 		"categorization_rules": len(s.categorizationRules),
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
+	"github.com/dimasbaguspm/spenicle/internal/module/categorization"
 	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 )
@@ -40,18 +41,19 @@ type captureApprove struct {
 }
 
 type captureResponse struct {
-	Ref             string `json:"ref"`
-	Kind            string `json:"kind"`
-	Status          string `json:"status"`
-	RawText         string `json:"raw_text,omitempty"`
-	DraftJSON       string `json:"draft_json,omitempty"`
-	ResolutionNote  string `json:"resolution_note,omitempty"`
-	JobRef          string `json:"job_ref,omitempty"`
-	ExtractionRail  string `json:"extraction_rail,omitempty"`
-	ExtractionModel string `json:"extraction_model,omitempty"`
-	EntryRef        string `json:"resolved_entry_ref,omitempty"`
-	ReceivedAt      string `json:"received_at"`
-	ResolvedAt      string `json:"resolved_at,omitempty"`
+	Ref                  string `json:"ref"`
+	Kind                 string `json:"kind"`
+	Status               string `json:"status"`
+	RawText              string `json:"raw_text,omitempty"`
+	DraftJSON            string `json:"draft_json,omitempty"`
+	ResolutionNote       string `json:"resolution_note,omitempty"`
+	JobRef               string `json:"job_ref,omitempty"`
+	ExtractionRail       string `json:"extraction_rail,omitempty"`
+	ExtractionModel      string `json:"extraction_model,omitempty"`
+	EntryRef             string `json:"resolved_entry_ref,omitempty"`
+	SuggestedCategoryRef string `json:"suggested_category_ref,omitempty"`
+	ReceivedAt           string `json:"received_at"`
+	ResolvedAt           string `json:"resolved_at,omitempty"`
 }
 
 type capturePatchRequest struct {
@@ -125,7 +127,18 @@ func (s *Server) CreateCapture(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusOK
 	}
 
-	httpx.WriteJSON(w, status, toCaptureResponse(capture))
+	response := toCaptureResponse(capture)
+	if s.deps.Categorization != nil {
+		suggestion, err := s.deps.Categorization.Resolve(ctx, categorization.SuggestInput{
+			Text: capture.RawText,
+			Kind: constant.AccountKindExpense,
+		})
+		if err == nil {
+			response.SuggestedCategoryRef = suggestion.AccountRef
+		}
+	}
+
+	httpx.WriteJSON(w, status, response)
 }
 
 func (s *Server) PatchCapture(w http.ResponseWriter, r *http.Request) {

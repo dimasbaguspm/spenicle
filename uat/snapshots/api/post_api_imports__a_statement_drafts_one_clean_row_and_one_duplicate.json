@@ -16,7 +16,8 @@
       "occurred_on": "2025-01-02",
       "ref": "<ref>",
       "row_index": 0,
-      "status": "skipped"
+      "status": "skipped",
+      "suggested_category_ref": "<ref>"
     },
     {
       "account_ref": "<ref>",
@@ -25,7 +26,8 @@
       "occurred_on": "2025-02-10",
       "ref": "<ref>",
       "row_index": 1,
-      "status": "pending"
+      "status": "pending",
+      "suggested_category_ref": "<ref>"
     }
   ],
   "rows_total": 2,

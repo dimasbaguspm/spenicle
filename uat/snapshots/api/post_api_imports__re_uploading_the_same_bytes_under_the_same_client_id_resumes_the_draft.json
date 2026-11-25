@@ -14,7 +14,8 @@
       "occurred_on": "2025-02-10",
       "ref": "<ref>",
       "row_index": 0,
-      "status": "pending"
+      "status": "pending",
+      "suggested_category_ref": "<ref>"
     }
   ],
   "rows_total": 1,

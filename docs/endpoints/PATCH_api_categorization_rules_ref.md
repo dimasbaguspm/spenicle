@@ -23,7 +23,7 @@ that aged badly.
 
 | name | type | required | notes |
 | --- | --- | --- | --- |
-| `ref` | string | yes | the rule's dashless UUID |
+| `ref` | string | yes | the rule's 32 lowercase hex ref |
 
 ## Body
 
