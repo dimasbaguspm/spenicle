@@ -39,8 +39,9 @@ The table below records them once; section (A) lists only what is still open.
 | correctness | `/healthz` reports this process's UTC `started_at`; every boot appends a `system`/`start` audit row with service, build, schema version and start time, and the worker heartbeat is stamped only after the whole run finishes | `fix: make recovery and release evidence durable` |
 
 Still open: **G3** (per-token rate limit), **G13** (import payee learning), the
-attachment and IMAP halves of **G9**, and the cross-cutting rows from 12 onward.
-The next cuts in (B) that are now done are marked there as well.
+attachment and IMAP halves of **G9**, and cross-process trace propagation for export and
+import jobs. The other cross-cutting rows above are shipped. The next cuts in (B) that
+are now done are marked there as well.
 
 **G8 is excluded from the current backlog.** Polling is sufficient for the single-user
 workload, while live updates need a durable cross-process change feed, replay cursor and
@@ -61,6 +62,7 @@ reserved for a future chat endpoint, so `ai_assistance` must never gate a screen
 | G9 | attachments still are not captured, and only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank PDF or JPEG never becomes a capture | forward the text, or use the share sheet; attachments and IMAP are separate remaining cuts |
 | G13 | an import commit does not learn a payee's default category — only a capture approval does | a CSV-first user gets no consistency for free | pick the category per row; `GET /api/categorization/suggest` still answers |
 | G15 | ~~no ceiling~~ — `POST /api/categorization/rules` refuses beyond `CategorizationRuleLimit` (200) | closed | ceiling enforced at the handler |
+| cross-cutting | export and import jobs do not carry the caller's `traceparent`; the worker starts a new root span | an end-to-end trace stops at the job row | join by job ref and time window in logs until propagation lands |
 
 ---
 

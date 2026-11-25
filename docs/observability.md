@@ -46,8 +46,9 @@ The HTTP entry span belongs to `httpx.Observe`: it names the request with the ro
 `http.route`, `http.response.status_code`, and marks a 5xx with `codes.Error`.
 
 `http` and `worker` are separate processes and cannot share a trace by accident: each opens its
-own root span (`Worker.Recurring.Run` per tick). A job that crosses the boundary carries the
-caller's W3C `traceparent` on its row and the worker resumes it as a remote parent.
+own root span (`Worker.Recurring.Run` per tick). Cross-process propagation is **not wired**:
+export and import jobs do not carry the caller's `traceparent`, so the worker starts a new
+trace. Until that column and the remote-parent resume land, join by job ref and time window.
 
 ### Metrics
 

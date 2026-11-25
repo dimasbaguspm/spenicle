@@ -105,17 +105,17 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
   from native to base rounds **once**, half away from zero. There is no `float64` on the
   path, and `fx_source` records which of `ecb|cached|manual|identity` produced the rate.
 - **The base currency comes from settings, per request.** A posting in the base currency
-  gets `fx_rate: "1"` and `fx_source: "identity"`; anything else needs an explicit rate,
-  because the ledger does not resolve rates itself (`GET /api/rates` is the client's tool
-  for that, and it is exact-day only).
+  gets `fx_rate: "1"` and `fx_source: "identity"`; anything else takes an explicit rate or
+  resolves from `fx_rates` through exact day, nearest earlier business day, then a EUR
+  cross rate. The stored posting carries the rate, the day used and `ecb|cached|manual|identity`.
 - **Voiding is a write, not an undo.** The store updates the original's `voided_at` with
   `WHERE voided_at IS NULL` (that predicate is the concurrency guard: the loser gets
   `409`), inserts the reversal and its negated postings, and appends the `void` audit row
   — all in one transaction.
-- **Reads stay dumb.** `ListEntries` is one query plus one per entry for postings; the
-  handler joins account and payee display names once per request from
-  `ListAccounts`/`ListPayees`, so the store is a data adapter and presentation stays in
-  the HTTP layer.
+- **Reads stay dumb.** `ListEntries` is one query for the page plus one for all its
+  postings; `with_balance=true` with one `account_ref` adds one windowed sum. The handler
+  joins account and payee display names once per request from `ListAccounts`/`ListPayees`,
+  so the store is a data adapter and presentation stays in the HTTP layer.
 
 ## 4. RRR
 
@@ -124,14 +124,15 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
 1. Both sums — native and base — are zero for every stored entry. Enforced twice, never
    by the client.
 2. A replay of a `client_id` returns the stored entry with `200` and writes nothing.
-3. No route accepts an edit to `occurred_on`, `amount_minor`, `note` or the posting set.
-   The correction is void + repost, and the reversal is visible.
+3. No route edits a row in place. `PATCH /api/entries/{ref}` corrects with void + repost
+   in one transaction, and the reversal is visible.
 4. Void is idempotent in effect, not in status: the second attempt is `409 invalid_state`,
    and a voided entry's `voided_at` can never be cleared by an API call.
 5. Backdating is always allowed: no month gate, no period lock, no "you cannot edit a
    closed month".
-6. Money crosses the wire as minor-unit strings; a foreign entry must supply its own
-   `fx_rate` (there is no silent identity fallback).
+6. Money crosses the wire as minor-unit strings; a foreign entry may omit `fx_rate` and
+   let the ledger resolve it. No silent identity fallback: an unresolved rate is
+   `invalid_rate`.
 7. Every read is derived from postings. No stored balance, no stored total, no cache
    invalidation to get wrong.
 8. The audit row for a void names the entry, the action and the actor (a user, or the
@@ -141,8 +142,8 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
 
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
-| a client sends a wrong `fx_rate` | the base amount is wrong forever, and every report inherits it | the rate is stored per posting with its own `fx_rate_date` and `fx_source`, so a later correction is a void + repost; the client should read `GET /api/rates` and show the rate and its date on the confirm screen |
-| `GET /api/rates` is exact-day and EUR-based | `?on=today` usually misses (ECB publishes on business days), and IDR→USD needs a cross rate the API does not compute | the client must fall back to a manual rate the user can type, and `invalid_rate`/`unknown_currency` are the honest refusals |
+| a client sends a wrong `fx_rate` | the base amount is wrong forever, and every report inherits it | an explicit rate still wins and is stored per posting with `fx_rate_date`/`fx_source`; omit it to let the ledger resolve and show that date on the confirm screen |
+| a day has no ECB sheet | `?on=today` misses on weekends and holidays | the ledger and `GET /api/rates` walk back to the nearest earlier business day, then cross through EUR; a miss is `invalid_rate`, never an identity fallback |
 | voiding does not touch the capture that produced the entry | the review queue shows `approved` for an entry that no longer counts | void is the ledger's verb; the capture keeps `resolved_entry_id` as evidence. The UI must read the entry, not the capture, when it says "this receipt was filed" |
 | voiding a recurring-posted entry | the rule already advanced, so that due date is not re-queued | correct answer for the user: the month is genuinely skipped, and reversing it is a new manual entry |
 | an entry can be voided but never deleted | someone who wants the row gone will not get it | state the vocabulary in the UI ("void", never "delete"), and show the reversal in the list with `source: adjustment` |
@@ -235,8 +236,9 @@ Scenario: The payee is the only editable field
 
 ## 6. What this page does not promise
 
-- No running balance in the list (`running_balance` is designed, not implemented).
+- No running balance unless `with_balance=true` and exactly one `account_ref` are sent.
 - No sort order other than newest first, no filter on an entry's own currency amount.
-- No note edit, no amount edit, no date edit. Void + repost is the only correction.
-- No automatic FX resolution from `fx_rates` — the client supplies the rate.
-- No nearest-business-day fallback and no cross rates on `GET /api/rates`.
+- No in-place edit. A correction voids the original and posts a replacement in one write.
+- No guessed FX: an explicit `fx_rate` wins; without one the ledger resolves from ECB data
+  or refuses with `invalid_rate`.
+- No hidden rate: every foreign posting carries `fx_source` and `fx_rate_date`.

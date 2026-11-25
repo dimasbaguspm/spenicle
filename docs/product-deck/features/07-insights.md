@@ -107,6 +107,8 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 6. Saved views are addressable: `ref` is stable, the response always echoes the stored
    `query`, and `namespace` never changes.
 7. Every figure is derived from postings at read time — no stored total, no nightly job.
+8. `categories?rollup=parent` is opt-in; without it, a parent reports only its own
+   postings.
 
 ### Risks
 
@@ -114,10 +116,10 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 | --- | --- | --- |
 | the dashboard month is not "this month" | a tile labelled "February" that shows January's numbers reads as a bug | render the month name from `month`; when `month` is earlier than the client's current month, say "last month with activity" |
 | category totals depend on `kind` | an expense posted against an `asset` account (a cash purchase logged as a transfer) shows in no category and as no spend, though the balance is right | the entry form should push the two-leg shape (asset → expense); the pie is not the place to reconcile |
-| one bad custom name → `500` | `custom_queries.name` is unique and a duplicate answers `internal_error`, not `409` | check against the loaded list before saving; treat `500` on create as "name taken" |
+| one bad custom name | `custom_queries.name` is unique | create and patch answer `409 duplicate`; check the loaded list before saving |
 | an unbounded range is allowed | `?from=1970-01-01` is a full scan | the client should always send an explicit window; the default is already the useful one |
 | `categories` views cannot be income | a user saving an income pie gets expenses | `GET /api/analytics/categories?kind=income` works; the **saved** view cannot carry `kind` yet ([F9](./09-gaps-and-next.md)) |
-| no parent roll-up | child categories report alone, so a "Food" parent shows nothing | do not build a tree in the UI; flat categories are the model until the parent is writable |
+| parent roll-up can double-count | a parent with its own postings plus children | `?rollup=parent` is opt-in on `categories`; the flat view still reports each account alone |
 
 ### Rollout
 
@@ -190,7 +192,8 @@ Scenario: A report window is validated
 ## 6. What this page does not promise
 
 - No fiscal-month offset, no timezone-shifted months (entries carry a date, not a time).
-- No parent roll-up, no per-account split, no currency breakdown.
+- No parent roll-up on `months`, no per-account split, no currency breakdown.
+  `categories` has opt-in `rollup=parent`.
 - No caching, no materialised rollups, no incremental refresh.
 - `categories` saved views are always expense; `months` saved views always carry all
   four fields.

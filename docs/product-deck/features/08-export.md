@@ -125,6 +125,8 @@ Worker (per run)           resume `running` jobs left by a restart (`resumed`, b
 7. A restart does not lose a job: a `running` job is put back to `queued` with a `resumed`
    event before the worker claims again.
 8. Every transition is in `export_events`, readable and append-only.
+9. `from` and `to` are both-or-neither; the job, events, list and download name echo the
+   window.
 
 ### Risks
 
@@ -135,7 +137,7 @@ Worker (per run)           resume `running` jobs left by a restart (`resumed`, b
 | blobs expire after 720h | a month-old link answers `410` | the row stays `expired` and the list keeps it, so the client can explain and offer "queue it again" (a new `client_id`) |
 | the download is recorded before the first byte | a failed or aborted download still shows as downloaded | correct as an audit record; the UI must not treat it as "the user has the file" |
 | `APP_SECRET` rotation | every stored export becomes unreadable | boot refuses a changed secret; back the secret up next to the database |
-| no date range | a huge ledger is one big document | single user volume, and the file is meant to be a complete backup: rendering is a job, so a large ledger costs a wait, never a timeout |
+| a wide window | a huge ledger is one big document | `from`/`to` are both-or-neither and echo on the job; rendering is a job, so a large ledger costs a wait, never a timeout |
 | no cancel and no re-queue | a stuck job cannot be stopped | a `running` job older than 15 minutes is failed by the sweep; otherwise queue a new job with a new `client_id` |
 
 ### Rollout
@@ -219,7 +221,8 @@ Scenario: The CSV format is a zip with a manifest
 
 ## 6. What this page does not promise
 
-- No date range, no per-table filter, no `client_id` filter on the list.
+- The date window is all-or-nothing (`from` and `to`, both or neither); no per-table
+  filter, no `client_id` filter on the list.
 - No cancel, no re-queue, no ETag.
 - No re-import: the document is re-importable in shape, but no route reads an export back
   in (statement import is CSV in, [F6](./06-statement-import.md)).

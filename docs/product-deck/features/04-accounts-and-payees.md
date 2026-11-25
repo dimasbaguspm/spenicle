@@ -111,7 +111,8 @@ PATCH/api/payees     Handler.Payees.Patch   → PayeeByRef → UpdatePayee → a
    postings, never of account creation.
 3. Archiving hides from pickers but changes no historical number: the balance sum keeps
    including archived accounts unless the client filters them out.
-4. `kind` and `parent` are immutable through the API.
+4. `kind` is immutable; `parent_ref` requires the same `kind`, no cycle and at most three
+   levels.
 5. A payee's defaults are optional and individually clearable by omission on
    `POST /api/payees`; an unknown default ref is refused before anything is written.
 6. Archived payees stay listed (flagged) by default, so a client can show "archived
@@ -123,9 +124,9 @@ PATCH/api/payees     Handler.Payees.Patch   → PayeeByRef → UpdatePayee → a
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
 | `Unsorted` archived or renamed by the user | capture approve and import commit fall back to it by name (`constant.SeedExpenseAccount`) and then answer `404 not_found` | the client should refuse to archive `Unsorted` and say why; the backend keeps it findable by name, so a rename is worse than an archive |
-| duplicate `name`+`kind` → `500` | the user sees "internal error" for a typo | validate client-side (case-insensitive compare against the loaded list) and treat `500` as "that name is taken, pick another" |
+| duplicate `name`+`kind` | the user sees a conflict for a typo | create and patch answer `409 duplicate`; validate against the loaded list for a friendlier message |
 | per-pair balances are base-only | a USD account reports IDR, which reads wrong on an account screen | label the column "in <base currency>"; the native amount lives on the postings, not on the account |
-| `parent_ref` is filterable but unreachable | a client might build a tree from a field no route sets | do not ship category hierarchy: `parent_id` exists in the schema and nothing writes it (see [F9](./09-gaps-and-next.md)) |
+| reparenting changes history | moving a category re-labels past reports | same `kind`, cycle guard and three-level cap; prefer archive + create for a real taxonomy change |
 | archiving used as deleting | the payee still appears in history and in filters | the UI vocabulary is "archive", with the sentence "history keeps it" |
 | no merge of two payees | a duplicate merchant accumulates history under two refs | one of them is archived; entries are re-pointed one at a time through `PATCH /api/entries/{ref}` |
 
@@ -135,8 +136,8 @@ PATCH/api/payees     Handler.Payees.Patch   → PayeeByRef → UpdatePayee → a
    the entry form needs them and nothing can break.
 2. **Then create**, with the five `kind` values spelled out in the sheet: `asset`
    (wallet, bank), `liability` (card, loan), `equity`, `expense` and `income` (categories).
-3. **Then patch** (rename, icon, archive) — it is the feature that keeps the chart clean
-   without a delete button.
+3. **Then patch** (rename, icon, archive, reparent) — it keeps the chart clean without a
+   delete button.
 4. Rollback: none needed. Archiving is reversible (`archived:false`) and no route here
    touches a posting.
 
@@ -211,7 +212,8 @@ Scenario: A default pointing at nothing is refused
 ## 6. What this page does not promise
 
 - No delete: archive only, for accounts and payees.
-- No merge, no rename-everywhere, no `kind` change, no reparenting.
+- No merge, no rename-everywhere, no `kind` change. Reparenting is same-kind,
+  cycle-guarded and capped at three levels.
 - No icon catalogue: `icon` is an opaque string up to 32 characters the client interprets.
 - No per-pair (native currency) balance on an account.
 - A `default_category_ref` must name an `expense`/`income` account; an asset there answers `422 invalid_request`.
