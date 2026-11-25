@@ -57,7 +57,7 @@ force. That is the only way a dashboard cannot rewrite history.
 | `GET` | `/api/budgets/{ref}` | `?months=12` | the same row plus its history per window |
 | `POST` | `/api/budgets` | `{account_ref, amount_minor, period, starts_on, ends_on?, rollover?}` | `201`, `409 duplicate` when the category already has one |
 | `PATCH` | `/api/budgets/{ref}` | `{amount_minor, archived}` | archives the old version and writes a new one when the amount changes |
-| `GET` | `/api/dashboard` | — | one extra tile: `budget_left_minor`, `budget_pct`, `budget_account_name` |
+| `GET` | `/api/dashboard` | required `?from=YYYY-MM-DD&to=YYYY-MM-DD` | one extra tile: `budget_left_minor`, `budget_pct`, `budget_account_name` |
 
 Wire shapes follow the deck: money as minor-unit strings, `account_ref` in, `ref` out,
 `meta {limit, has_more, next_cursor}` on the list.

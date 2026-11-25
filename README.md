@@ -152,7 +152,7 @@ curl -X POST http://localhost:8080/api/captures \
   -F kind=image -F file=@receipt.jpg
 
 # and reading what it may spend
-curl http://localhost:8080/api/dashboard -H "Authorization: Bearer spn_..."
+curl 'http://localhost:8080/api/dashboard?from=2026-02-01&to=2026-02-28' -H "Authorization: Bearer spn_..."
 ```
 
 That agent can add captures and read the dashboard. It cannot touch the ledger. Give it

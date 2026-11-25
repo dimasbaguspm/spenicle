@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
@@ -15,7 +18,32 @@ type topCategoryResponse struct {
 	AmountMinor string `json:"amount_minor"`
 }
 
+type dashboardQuery struct {
+	From string `query:"from" validate:"required,datestr"`
+	To   string `query:"to" validate:"required,datestr"`
+}
+
+func dashboardWindow(query dashboardQuery) (time.Time, time.Time, error) {
+	from, err := validating.Day(query.From, "from")
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	to, err := validating.Day(query.To, "to")
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	if to.Before(from) {
+		return time.Time{}, time.Time{}, fmt.Errorf("from must not be after to")
+	}
+
+	return from, to, nil
+}
+
 type dashboardResponse struct {
+	From            string               `json:"from"`
+	To              string               `json:"to"`
 	BaseCurrency    string               `json:"base_currency"`
 	Month           string               `json:"month"`
 	SpendMinor      string               `json:"spend_minor"`
@@ -29,16 +57,23 @@ func (s *Server) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Dashboard.Get")
 	defer endSpan()
 
-	settings, err := s.deps.Settings.Load(ctx)
-	if err != nil {
-		s.writeClassified(ctx, w, err)
+	var query dashboardQuery
+	if err := bindQuery(r, &query); err != nil {
+		writeInvalid(w, err)
 
 		return
 	}
 
-	from, to, windowErr := analyticsWindow(analyticsRangeQuery{})
-	if windowErr != nil {
-		writeInvalid(w, windowErr)
+	from, to, err := dashboardWindow(query)
+	if err != nil {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", err.Error())
+
+		return
+	}
+
+	settings, err := s.deps.Settings.Load(ctx)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
 
 		return
 	}
@@ -51,6 +86,8 @@ func (s *Server) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := dashboardResponse{
+		From:         from.Format(constant.DateLayout),
+		To:           to.Format(constant.DateLayout),
 		BaseCurrency: settings.BaseCurrency,
 		SpendMinor:   "0",
 		IncomeMinor:  "0",
@@ -67,7 +104,7 @@ func (s *Server) GetDashboard(w http.ResponseWriter, r *http.Request) {
 		out.Month = to.Format(constant.DateLayout)[:7]
 	}
 
-	pending, err := s.deps.Analytics.CaptureCount(ctx, constant.CaptureStatusPending)
+	pending, err := s.deps.Analytics.CaptureCount(ctx, from, to, constant.CaptureStatusPending)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 

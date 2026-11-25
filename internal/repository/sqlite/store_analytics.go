@@ -202,14 +202,23 @@ func scanCategoryTotals(rows *sql.Rows) ([]entity.CategoryTotal, error) {
 	return out, nil
 }
 
-func (s *Store) CaptureCount(ctx context.Context, status string) (int, error) {
+func (s *Store) CaptureCount(
+	ctx context.Context,
+	from, to time.Time,
+	status string,
+) (int, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CaptureCount")
 	defer endSpan()
 
 	var count int
 
-	if err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM captures WHERE status = ?`, status).Scan(&count); err != nil {
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM captures
+		WHERE status = ? AND received_at >= ? AND received_at < ?`,
+		status,
+		from.Format(constant.TimestampLayout),
+		to.AddDate(0, 0, 1).Format(constant.TimestampLayout),
+	).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count captures %q: %w", status, err)
 	}
 

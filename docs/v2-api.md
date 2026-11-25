@@ -595,7 +595,7 @@ CREATE INDEX ix_rules_account ON categorization_rules (account_id);
 | 15 | POST | `/api/recurring` | `recurring:write` | create rule or promote an entry |
 | 16 | PATCH | `/api/recurring/{id}` | `recurring:write` | accept, pause, end, edit |
 | 17 | GET | `/api/months/{year_month}` | `dashboard:read` | derived diff report, writes nothing |
-| 18 | GET | `/api/dashboard` | `dashboard:read` | five tiles, one response |
+| 18 | GET | `/api/dashboard` | `dashboard:read` | five tiles for an explicit `from`/`to` window |
 | 19 | GET/POST | `/api/tokens` | root only | list tokens; mint a scoped token, secret returned once |
 | 20 | POST | `/api/tokens/{ref}/revoke` | root only | revoke without deleting the row |
 | 21 | GET | `/healthz` | none | liveness + migration state |
@@ -1072,16 +1072,18 @@ sequenceDiagram
     participant UI as Dashboard
     participant API as Dashboard handler
     participant DB as SQLite
-    UI->>API: GET dashboard with horizon days
-    API->>DB: SELECT asset balances from postings
-    API->>DB: SELECT recurring rules due before month end
-    API->>DB: SELECT avg daily variable spend last 90 days
-    API->>API: compute safe_to_spend, clamp at zero
-    API->>DB: SELECT rules and project forecast points
-    API->>DB: SELECT top payees this month and last
-    API->>DB: SELECT capture counts by status
-    API-->>UI: 200 all five tiles in one round trip
+    UI->>API: GET dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD
+    API->>API: require scope dashboard:read, validate ordered window
+    API->>DB: SELECT settings
+    API->>DB: SELECT monthly totals in the window
+    API->>DB: SELECT pending captures received in the window
+    API->>DB: SELECT top expense category in the window
+    API-->>UI: 200 {from, to, base_currency, month, money tiles, pending, top_category}
 ```
+
+`from` and `to` are required, inclusive, and echoed in the response. The month tile
+describes the newest month with data in that window; an empty window uses the month of
+`to`. There is no server-side default.
 
 ## 3.18 `POST /api/tokens`
 

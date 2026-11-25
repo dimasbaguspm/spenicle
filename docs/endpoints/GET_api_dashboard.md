@@ -4,22 +4,30 @@
 
 ## Purpose
 
-The landing screen in one request: this month's spend, income and net, how many captures
-wait for review, and the biggest expense category of the last twelve months. Every tile
-is derived from postings, so no counter can drift.
+The landing screen in one request: the newest month with data in the requested window,
+the number of captures received in that window and still waiting for review, and the
+biggest expense category in the same window. Every tile is derived from rows, so no
+counter can drift.
 
 ## Upstream
 
-The home screen on first paint.
+The home screen on first paint. The client chooses the window; the server never guesses
+one from the clock.
 
 ## Downstream
 
-`Settings.Load` for the base currency, `MonthlyTotals` for the month tiles,
-`CaptureCount` for the queue, `CategoryTotals` for the top category.
+`Settings.Load` for the base currency, `MonthlyTotals(from, to)` for the month tiles,
+`CaptureCount(from, to, status)` for the queue, `CategoryTotals(from, to, kind)` for the
+top category.
 
 ## Path / query params
 
-None: the window is fixed to the last twelve months, the tiles to the newest month.
+| name | type | required | meaning |
+| --- | --- | --- | --- |
+| `from` | `YYYY-MM-DD` | yes | first day of the window, inclusive |
+| `to` | `YYYY-MM-DD` | yes | last day of the window, inclusive |
+
+Both are required. `from` must not be after `to`. Dates are calendar days, not timestamps.
 
 ## Body
 
@@ -30,22 +38,27 @@ None.
 **200**
 
 ```json
-{"base_currency":"IDR","month":"2026-02","spend_minor":"10000","income_minor":"0",
- "net_minor":"-10000","pending_captures":0,
+{"from":"2026-02-01","to":"2026-02-28","base_currency":"IDR","month":"2026-02",
+ "spend_minor":"10000","income_minor":"0","net_minor":"-10000","pending_captures":0,
  "top_category":{"account_ref":"…","account_name":"Unsorted","amount_minor":"10000"}}
 ```
 
-An empty ledger answers zeroes and omits `top_category`, never an error.
+`month`, `spend_minor`, `income_minor` and `net_minor` describe the newest month with data
+inside the window; an empty window labels the month of `to` and answers zeroes.
+`pending_captures` counts captures with status `pending` whose `received_at` falls in the
+window. `top_category` is the largest expense category in the window and is omitted when
+there are no expenses.
 
 ## Errors
 
-`500 internal_error` only — every read is local.
+`422 invalid_request` when a date is missing or malformed, or when `from` is after `to`.
+`500 internal_error` for a local read failure.
 
 ## Limitations
 
 One currency: tiles are base-currency minor units, no per-account split. The month shown
-is the newest month with data, not necessarily the current calendar month. No caching;
-four queries per call.
+is the newest month with data in the requested window, not necessarily the current
+calendar month. No caching; four queries per call.
 
 ## Sequence
 
@@ -55,8 +68,9 @@ sequenceDiagram
     participant C as Client
     participant H as Dashboard handler
     participant DB as SQLite
-    C->>H: GET /api/dashboard
+    C->>H: GET /api/dashboard?from=2026-02-01&to=2026-02-28
+    H->>H: validate and echo the window
     H->>DB: settings, monthly totals, capture count, category totals
     DB-->>H: rows
-    H-->>C: 200 {base_currency, month, spend, income, net, pending, top_category}
+    H-->>C: 200 {from, to, base_currency, month, spend, income, net, pending, top_category}
 ```

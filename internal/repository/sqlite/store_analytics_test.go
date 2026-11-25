@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
@@ -187,4 +188,56 @@ func insertDatedSpending(
 	}
 
 	return entries
+}
+
+func TestCaptureCountUsesTheWindow(t *testing.T) {
+	store := newStore(t)
+	ctx := t.Context()
+
+	for _, item := range []struct {
+		status   string
+		received time.Time
+		key      string
+	}{
+		{constant.CaptureStatusPending, time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC), "jan-15"},
+		{constant.CaptureStatusPending, time.Date(2026, 1, 31, 23, 59, 0, 0, time.UTC), "jan-31"},
+		{constant.CaptureStatusExtracting, time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC), "extracting"},
+		{constant.CaptureStatusPending, time.Date(2026, 2, 5, 12, 0, 0, 0, time.UTC), "feb-5"},
+	} {
+		if _, err := store.InsertCapture(ctx, entity.Capture{
+			Kind: constant.CaptureKindManual, Status: item.status,
+			DedupeKey: item.key, RawText: item.key, ReceivedAt: item.received,
+		}); err != nil {
+			t.Fatalf("insert %s: %v", item.key, err)
+		}
+	}
+
+	january := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	lastDay := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+	february := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name   string
+		from   time.Time
+		to     time.Time
+		status string
+		want   int
+	}{
+		{"pending inside the month", january, lastDay, constant.CaptureStatusPending, 2},
+		{"the final day is inclusive", lastDay, lastDay, constant.CaptureStatusPending, 1},
+		{"the next month is separate", february, february, constant.CaptureStatusPending, 0},
+		{"other statuses do not match", january, lastDay, constant.CaptureStatusExtracting, 1},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := store.CaptureCount(t.Context(), tc.from, tc.to, tc.status)
+			if err != nil {
+				t.Fatalf("count: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("count = %d, want %d", got, tc.want)
+			}
+		})
+	}
 }

@@ -121,7 +121,7 @@ type Analytics interface {
 		from, to time.Time,
 		kind string,
 	) ([]entity.CategoryMonthlyTotal, error)
-	CaptureCount(ctx context.Context, status string) (int, error)
+	CaptureCount(ctx context.Context, from, to time.Time, status string) (int, error)
 }
 
 type CustomQueries interface {

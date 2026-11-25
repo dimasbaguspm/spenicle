@@ -1,0 +1,50 @@
+package handlers
+
+import (
+	"testing"
+	"time"
+
+	"github.com/dimasbaguspm/spenicle/internal/constant"
+)
+
+func TestDashboardWindowRequiresAnOrderedPairOfDays(t *testing.T) {
+	tests := []struct {
+		name     string
+		from     string
+		to       string
+		wantFrom string
+		wantTo   string
+		wantErr  bool
+	}{
+		{name: "explicit window", from: "2026-02-01", to: "2026-02-28", wantFrom: "2026-02-01", wantTo: "2026-02-28"},
+		{name: "missing from", to: "2026-02-28", wantErr: true},
+		{name: "missing to", from: "2026-02-01", wantErr: true},
+		{name: "malformed from", from: "02/01/2026", to: "2026-02-28", wantErr: true},
+		{name: "reversed window", from: "2026-03-01", to: "2026-02-28", wantErr: true},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			from, to, err := dashboardWindow(dashboardQuery{From: testCase.from, To: testCase.to})
+			if testCase.wantErr {
+				if err == nil {
+					t.Fatal("dashboardWindow() error = nil, want an error")
+				}
+
+				return
+			}
+			if err != nil {
+				t.Fatalf("dashboardWindow() error = %v", err)
+			}
+			if got := from.Format(constant.DateLayout); got != testCase.wantFrom {
+				t.Fatalf("from = %q, want %q", got, testCase.wantFrom)
+			}
+			if got := to.Format(constant.DateLayout); got != testCase.wantTo {
+				t.Fatalf("to = %q, want %q", got, testCase.wantTo)
+			}
+			if from.Location() != time.UTC || to.Location() != time.UTC {
+				t.Fatalf("window location = %s/%s, want UTC/UTC", from.Location(), to.Location())
+			}
+		})
+	}
+}

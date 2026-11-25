@@ -16,19 +16,20 @@ never needs a recalculation job.
 
 | # | call | notes |
 | --- | --- | --- |
-| 1 | `GET /api/dashboard` | one request, five tiles |
+| 1 | `GET /api/dashboard?from=2026-02-01&to=2026-02-28` | one request, five tiles, explicit window |
 
 ```json
-{"base_currency":"IDR","month":"2026-02","spend_minor":"10000","income_minor":"0",
- "net_minor":"-10000","pending_captures":0,
+{"from":"2026-02-01","to":"2026-02-28","base_currency":"IDR","month":"2026-02",
+ "spend_minor":"10000","income_minor":"0","net_minor":"-10000","pending_captures":0,
  "top_category":{"account_ref":"…","account_name":"Unsorted","amount_minor":"10000"}}
 ```
 
-`month` is the **newest month with data**, not necessarily the current calendar month: an
-empty February shows January. An empty ledger answers zeroes and omits `top_category` —
-never an error. `top_category` is the biggest expense category over the last twelve
-months, and `pending_captures` is the size of the review queue — the one number that
-turns the home screen into a to-do.
+`month` is the **newest month with data inside the requested window**, not necessarily
+the current calendar month: an empty February shows January. An empty window answers
+zeroes and omits `top_category` — never an error. `top_category` is the biggest expense
+category in that window; `pending_captures` counts pending captures received in the same
+window. The response echoes `from` and `to`, so the client never has to guess which window
+it rendered.
 
 ### 2.2 Drill into months and categories
 
@@ -68,9 +69,9 @@ pie needs a namespace the API does not have yet.
 ## 3. Backend, end to end
 
 ```
-GET /api/dashboard            Handler.Dashboard.Get → Settings.Load (base currency)
-                              + MonthlyTotals (month tiles) + CaptureCount (queue)
-                              + CategoryTotals (top category, 12-month window)
+GET /api/dashboard?from&to      Handler.Dashboard.Get → Settings.Load (base currency)
+                              + MonthlyTotals (window) + CaptureCount (window)
+                              + CategoryTotals (window, top category)
 GET /api/analytics/months     Handler.Analytics.Months → MonthlyTotals
 GET /api/analytics/categories Handler.Analytics.Categories → CategoryTotals(kind)
 POST /api/analytics/custom    Handler.Analytics.CreateCustom → CreateCustomQuery
@@ -97,9 +98,9 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 1. A void must not change any figure: the voided entry and its reversal are both excluded
    from every aggregate.
 2. Every money field is a minor-unit **string**; the client formats, the API never does.
-3. The window defaults are stable: months and categories default to the last twelve
-   months (first day of the month 11 months back → today); the dashboard window is fixed
-   at twelve months.
+3. The dashboard client supplies one explicit, ordered `from`/`to` window; every tile
+   uses it and the response echoes both dates. Months and categories keep their
+   twelve-month defaults when the client omits a window.
 4. An empty ledger answers zeroes and an omitted `top_category`, never a `404`.
 5. `month` on the dashboard is the newest month **with data**; the client must label the
    tile from that field, not from its own clock.
@@ -120,9 +121,9 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 
 ### Rollout
 
-1. **Ship the dashboard tile first.** One call, no parameters, all the numbers a home
-   screen needs — the cheapest possible "the app is alive and knows my money".
-2. **Then the two namespaces**, each with an explicit window the client controls.
+1. **Ship the dashboard tile first.** One call with an explicit window, all the numbers
+   a home screen needs — the cheapest possible "the app is alive and knows my money".
+2. **Then the two namespaces**, each with a window the client controls.
 3. **Saved views last.** They are a convenience over routes that already work, and they
    are the only place where a name collision is possible.
 4. Rollback: hide the chart screens; the dashboard and the ledger are independent of them
@@ -131,10 +132,11 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 ## 5. Acceptance criteria
 
 ```gherkin
-Scenario: The dashboard derives its tiles from the ledger
+Scenario: The dashboard derives its tiles from the requested window
   Given an entry spending "10000" in "2026-02"
-  When I send a GET to "/api/dashboard"
+  When I send a GET to "/api/dashboard?from=2026-02-01&to=2026-02-28"
   Then the response status is 200
+  And the response echoes from "2026-02-01" and to "2026-02-28"
   And the response body has month "2026-02"
   And the response body has spend_minor "10000"
   And the response body has net_minor "-10000"
@@ -142,7 +144,7 @@ Scenario: The dashboard derives its tiles from the ledger
 
 Scenario: An empty ledger answers zeroes
   Given an empty ledger
-  When I send a GET to "/api/dashboard"
+  When I send a GET to "/api/dashboard?from=2026-02-01&to=2026-02-28"
   Then the response status is 200
   And spend_minor, income_minor and net_minor are "0"
   And top_category is absent
@@ -152,7 +154,7 @@ Scenario: A void disappears from every chart
   When I void that entry
   And I send a GET to "/api/analytics/months?from=2026-02-01&to=2026-02-28"
   Then the month "2026-02" carries spend_minor "0"
-  When I send a GET to "/api/dashboard"
+  When I send a GET to "/api/dashboard?from=2026-02-01&to=2026-02-28"
   Then spend_minor is "0"
 
 Scenario: Months answer one row per month with a zero net
@@ -177,6 +179,9 @@ Scenario: A saved view runs with the same shape it was saved with
   And the response body carries "months"
 
 Scenario: A report window is validated
+  When I send a GET to "/api/dashboard"
+  Then the response status is 422
+  And the error code is "invalid_request"
   When I send a GET to "/api/analytics/months?from=2026-13-01"
   Then the response status is 422
   And the error code is "invalid_request"
