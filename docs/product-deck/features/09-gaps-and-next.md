@@ -31,7 +31,14 @@ Still open: **G1** (opening balances in the one-shot setup), **G5** (per-row imp
 currency), the attachment half of **G9**, and the cross-cutting rows from 12 onward.
 The next cuts in (B) that are now done are marked there as well.
 
----
+**G8 is excluded from the current backlog.** Polling is sufficient for the single-user
+workload, while live updates need a durable cross-process change feed, replay cursor and
+connection lifecycle that the design has not locked. Revisit it when concurrent clients
+make polling a measured bottleneck; ETags and SSE are not promised until then.
+
+G10 and G11 are verified, not open work. Extraction is SnapToJSON only; OpenAI is
+reserved for a future chat endpoint, so `ai_assistance` must never gate a screen.
+
 ---
 
 ## A. Gaps in the API as shipped
@@ -42,15 +49,11 @@ The next cuts in (B) that are now done are marked there as well.
 | G2 | `GET /api/meta` carries settings, accounts and currencies only — no payees, no rules, no `password_must_change` | the shell needs 2–3 extra calls on a cold start | `GET /api/payees`, `GET /api/recurring`, `GET /api/settings` after meta |
 | G3 | tokens have no expiry, no per-token rate limit, no un-revoke | a leaked shortcut token lives until someone revokes it | revoke and re-issue; `last_used_at` is the only signal |
 | G5 | import has no per-row currency or column mapping: a 4-column statement cannot keep a USD row in USD | a USD statement cannot be imported without void + repost | use the 3-column format in base currency; per-row currency and mapping are the next import cut |
-| G8 | no ETag / `If-None-Match` anywhere; every wait is a poll | polling cost on the export and import screens | poll with backoff; stop on a terminal status |
 | G9 | attachments still are not captured, and only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank PDF or JPEG never becomes a capture | forward the text, or use the share sheet; attachments and IMAP are separate remaining cuts |
 | G12 | the export does not carry `categorization_rules`: `module/export` renders accounts, payees, entries, captures, recurring, rates and saved views, so a backup/restore loses the rules | a restored instance forgets why a merchant was filed | re-create the rules by hand; export is still the complete ledger. Closing this is the next `feat:` |
 | G13 | an import commit does not learn a payee's default category — only a capture approval does | a CSV-first user gets no consistency for free | pick the category per row; `GET /api/categorization/suggest` still answers |
 | G14 | neither `POST /api/captures` nor `POST /api/imports` carries a suggestion in its response | every client must call `GET /api/categorization/suggest` itself, and one that forgets shows `Unsorted` | call suggest, then prefill (F10 §2.2) |
 | G15 | no ceiling on how many categorization rules exist, and `suggest` reads every live rule | a few hundred rules turn each suggestion into a full scan | keep the list short; the list route pages at 200 like every other |
-
-G10 and G11 are verified, not open work. Extraction is SnapToJSON only; OpenAI is
-reserved for a future chat endpoint, so `ai_assistance` must never gate a screen.
 
 ---
 
@@ -153,7 +156,7 @@ slice with its own acceptance criteria, in the shape
 - **Acceptance:** a cycle is `422 invalid_request`; `categories?rollup=parent` sums
   children; `categories` without the flag is unchanged.
 
-### N7 — Live updates instead of polling *(open: G8)*
+### N7 — Live updates instead of polling *(excluded for now: G8)*
 
 - **Client sees:** the export flips to ready, the queue badge moves — without a refresh.
 - **Backend change:** `GET /api/events` as Server-Sent Events over the same credential,
