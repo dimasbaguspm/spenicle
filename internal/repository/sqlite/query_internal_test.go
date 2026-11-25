@@ -67,6 +67,19 @@ func TestListQuery(t *testing.T) {
 				` WHERE 1 = 1 AND p.id < (SELECT id FROM payees WHERE ref = ?) LIMIT 51`,
 			args: []any{"abd"},
 		},
+
+		{
+			name: "after walks forward over the sort tuple",
+			build: func() *listQuery {
+				query := newList("payees p", "id")
+				query.after("p.name, p.id", "name, id", "payees", "abd")
+
+				return query
+			},
+			limit: 50,
+			want:  `SELECT id FROM payees p WHERE 1 = 1 AND (p.name, p.id) > (SELECT name, id FROM payees WHERE ref = ?) LIMIT 51`,
+			args:  []any{"abd"},
+		},
 		{
 			name: "nullFlag true keeps the rows that have the column set",
 			build: func() *listQuery {

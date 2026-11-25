@@ -119,6 +119,14 @@ func (q *listQuery) before(column, table, ref string) {
 	q.and(column+` < (SELECT id FROM `+table+` WHERE ref = ?)`, ref)
 }
 
+func (q *listQuery) after(outer, inner, table, ref string) {
+	if ref == "" {
+		return
+	}
+
+	q.and(`(`+outer+`) > (SELECT `+inner+` FROM `+table+` WHERE ref = ?)`, ref)
+}
+
 func (q *listQuery) orderBy(clause string) {
 	q.order = clause
 }

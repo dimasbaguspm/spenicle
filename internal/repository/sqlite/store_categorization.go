@@ -115,7 +115,7 @@ func (s *Store) ListRules(
 		builder.null("r.archived_at", false)
 	}
 
-	builder.before("r.id", "categorization_rules", filter.Cursor)
+	builder.after("r.id", "id", "categorization_rules", filter.Cursor)
 	builder.orderBy("r.id")
 
 	return pageScan(ctx, s.db, "categorization rules", builder, limit, scanRuleRow)

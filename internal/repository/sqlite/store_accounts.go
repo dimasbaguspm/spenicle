@@ -312,7 +312,7 @@ func (s *Store) ListAccounts(ctx context.Context, filter entity.AccountFilter) (
 	builder.parentRef("parent_id", "accounts", filter.ParentRef)
 	builder.inList("ref", filter.Refs)
 	builder.nullFlag("archived_at", filter.Archived)
-	builder.before("accounts.id", "accounts", filter.Cursor)
+	builder.after("accounts.kind, accounts.name, accounts.id", "kind, name, id", "accounts", filter.Cursor)
 	builder.orderBy("kind, name, id")
 
 	query, args := builder.page(limit)

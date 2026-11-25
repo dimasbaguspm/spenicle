@@ -18,6 +18,9 @@ const captureColumns = `id, ref, kind, status, client_id, dedupe_key, batch_id, 
 	extraction_model, resolved_entry_id, resolution_note, received_at, resolved_at,
 	(SELECT e.ref FROM ledger_entries e WHERE e.id = resolved_entry_id)`
 
+const captureStatusRank = `CASE status WHEN 'extracting' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END`
+const captureStatusRankAliased = `CASE captures.status WHEN 'extracting' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END`
+
 func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertCapture")
 	defer endSpan()
@@ -103,12 +106,9 @@ func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) (
 	builder := newList("captures", captureColumns)
 	builder.eq("status", filter.Status)
 	builder.inList("ref", filter.Refs)
-	builder.before("captures.id", "captures", filter.Cursor)
-	builder.orderBy(`CASE status
-			WHEN 'extracting' THEN 0
-			WHEN 'pending' THEN 1
-			ELSE 2
-		END, received_at ASC, id ASC`)
+	builder.after(captureStatusRankAliased+`, captures.received_at, captures.id`,
+		captureStatusRank+`, received_at, id`, "captures", filter.Cursor)
+	builder.orderBy(captureStatusRank + `, received_at ASC, id ASC`)
 
 	query, args := builder.page(limit)
 

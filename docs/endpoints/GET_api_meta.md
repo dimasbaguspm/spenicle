@@ -80,8 +80,8 @@ is configured (`SNAPTOJSON_API_KEY` set). `settings.ai_assistance` is true only 
 independent: OpenAI is reserved for a future chat endpoint and does not run extraction
 today, so only `extraction_enabled` gates a working feature.
 
-The handler follows every repository cursor internally. The normal 200-row list cap
-does not truncate this bootstrap payload.
+The handler follows every repository cursor internally, in the same sort order as each
+list endpoint, so the normal 200-row list cap does not truncate this bootstrap payload.
 
 ## Errors
 

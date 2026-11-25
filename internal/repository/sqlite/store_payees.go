@@ -104,7 +104,7 @@ func (s *Store) ListPayees(ctx context.Context, filter entity.PayeeFilter) ([]en
 	builder.like("p.name", filter.Query)
 	builder.inList("p.ref", filter.Refs)
 	builder.nullFlag("p.archived_at", filter.Archived)
-	builder.before("p.id", "payees", filter.Cursor)
+	builder.after("p.name, p.id", "name, id", "payees", filter.Cursor)
 	builder.orderBy("p.name, p.id")
 
 	query, args := builder.page(limit)

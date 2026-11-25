@@ -25,7 +25,7 @@ which model) and `job_ref` (the vendor's handle on that run).
 
 | `status` | string | all | `extracting`, `pending`, `duplicate`, `approved`, `rejected`, `failed` |
 | `refs` | string | — | comma-separated capture refs |
-| `cursor` | ref | — | `id < (SELECT id FROM captures WHERE ref = ?)` |
+| `cursor` | ref | — | captures after the one with that ref, in the order below |
 | `limit` | int | 50 | clamped to 200 |
 
 Ordering: `extracting` first, then `pending` oldest-first, then the resolved tail.
