@@ -71,3 +71,11 @@ func scanAll[T any](
 
 	return out, nil
 }
+
+func (s *Store) AllCategorizationRules(ctx context.Context) ([]entity.CategorizationRule, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.AllCategorizationRules")
+	defer endSpan()
+
+	return scanAll(ctx, s.db, "select all categorization rules",
+		`SELECT `+ruleColumns+` `+ruleFrom+` ORDER BY r.id`, scanRuleRow)
+}

@@ -142,6 +142,11 @@ func sheets(snap *snapshot) []sheet {
 			header: []string{"ref", "name", "namespace", "chart", createdAtColumn, "updated_at"},
 			rows:   customQuerySheet(snap),
 		},
+		{
+			name:   "categorization_rules.csv",
+			header: []string{"ref", "pattern", "field", "match_kind", "account_ref", "priority", "archived_at", createdAtColumn},
+			rows:   categorizationRuleSheet(snap),
+		},
 	}
 }
 
@@ -338,4 +343,23 @@ func writeEntry(writer *zip.Writer, name string, body []byte) error {
 	}
 
 	return nil
+}
+
+func categorizationRuleSheet(snap *snapshot) [][]string {
+	out := make([][]string, 0, len(snap.categorizationRules))
+
+	for _, rule := range snap.categorizationRules {
+		out = append(out, []string{
+			rule.Ref,
+			rule.Pattern,
+			rule.Field,
+			rule.MatchKind,
+			rule.AccountRef,
+			strconv.Itoa(rule.Priority),
+			optionalStamp(rule.ArchivedAt),
+			stamp(rule.CreatedAt),
+		})
+	}
+
+	return out
 }

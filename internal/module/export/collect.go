@@ -23,6 +23,7 @@ type snapshot struct {
 	recurring     []entity.Recurring
 	rates         []entity.Rate
 	customQueries []entity.CustomQuery
+	categorizationRules []entity.CategorizationRule
 	accountRefs   map[int64]string
 	payeeRefs     map[int64]string
 	entryRefs     map[int64]string
@@ -71,6 +72,10 @@ func collect(ctx context.Context, deps Deps, window *Window) (*snapshot, error) 
 		return nil, err
 	}
 
+	if out.categorizationRules, err = deps.Exporter.AllCategorizationRules(ctx); err != nil {
+		return nil, err
+	}
+
 	out.sort()
 	out.keep(window)
 
@@ -105,6 +110,7 @@ func (s *snapshot) sort() {
 	sortByRef(s.captures, func(capture entity.Capture) string { return capture.Ref })
 	sortByRef(s.recurring, func(rule entity.Recurring) string { return rule.Ref })
 	sortByRef(s.customQueries, func(query entity.CustomQuery) string { return query.Ref })
+	sortByRef(s.categorizationRules, func(rule entity.CategorizationRule) string { return rule.Ref })
 
 	slices.SortFunc(s.entries, func(left, right entity.Entry) int {
 		if order := left.OccurredOn.Compare(right.OccurredOn); order != 0 {

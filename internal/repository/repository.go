@@ -178,6 +178,7 @@ type Exporter interface {
 	AllPayees(ctx context.Context) ([]entity.Payee, error)
 	AllCaptures(ctx context.Context) ([]entity.Capture, error)
 	AllRecurring(ctx context.Context) ([]entity.Recurring, error)
+	AllCategorizationRules(ctx context.Context) ([]entity.CategorizationRule, error)
 }
 
 type RateSource interface {

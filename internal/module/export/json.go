@@ -104,6 +104,17 @@ type customQueryRow struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+type categorizationRuleRow struct {
+	Ref        string `json:"ref"`
+	Pattern    string `json:"pattern"`
+	Field      string `json:"field"`
+	MatchKind  string `json:"match_kind"`
+	AccountRef string `json:"account_ref"`
+	Priority   int    `json:"priority"`
+	ArchivedAt string `json:"archived_at,omitempty"`
+	CreatedAt  string `json:"created_at"`
+}
+
 type documentWriter struct {
 	out io.Writer
 	err error
@@ -129,6 +140,7 @@ func encodeJSON(snap *snapshot, out io.Writer) error {
 	writeArray(writer, false, "recurring", snap.recurring, snap.recurringRow)
 	writeArray(writer, false, "rates", snap.rates, snap.rateRow)
 	writeArray(writer, false, "custom_queries", snap.customQueries, snap.customQueryRow)
+	writeArray(writer, false, "categorization_rules", snap.categorizationRules, snap.categorizationRuleRow)
 
 	writer.raw("}}")
 
@@ -291,6 +303,19 @@ func (s *snapshot) customQueryRow(query entity.CustomQuery) any {
 		Chart:     query.Chart,
 		CreatedAt: stamp(query.CreatedAt),
 		UpdatedAt: stamp(query.UpdatedAt),
+	}
+}
+
+func (s *snapshot) categorizationRuleRow(rule entity.CategorizationRule) any {
+	return categorizationRuleRow{
+		Ref:        rule.Ref,
+		Pattern:    rule.Pattern,
+		Field:      rule.Field,
+		MatchKind:  rule.MatchKind,
+		AccountRef: rule.AccountRef,
+		Priority:   rule.Priority,
+		ArchivedAt: optionalStamp(rule.ArchivedAt),
+		CreatedAt:  stamp(rule.CreatedAt),
 	}
 }
 

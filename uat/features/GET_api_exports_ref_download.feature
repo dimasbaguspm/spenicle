@@ -32,7 +32,7 @@ Feature: GET /api/exports/{ref}/download
     And the response header "Content-Type" is "application/zip"
     And the response header "Cache-Control" is "private, no-store"
     And the response header "Content-Disposition" contains ".zip"
-    And the export archive holds "accounts.csv,payees.csv,entries.csv,postings.csv,captures.csv,rates.csv,recurring.csv,custom_queries.csv,summary.json,manifest.json"
+    And the export archive holds "accounts.csv,payees.csv,entries.csv,postings.csv,captures.csv,rates.csv,recurring.csv,custom_queries.csv,categorization_rules.csv,summary.json,manifest.json"
     And the export manifest reports "entries.csv" rows "1"
     And the export manifest reports "postings.csv" rows "2"
 

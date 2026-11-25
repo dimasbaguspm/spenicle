@@ -173,5 +173,6 @@ func (s *snapshot) counts() map[string]int {
 		"recurring":      len(s.recurring),
 		"rates":          len(s.rates),
 		"custom_queries": len(s.customQueries),
+		"categorization_rules": len(s.categorizationRules),
 	}
 }

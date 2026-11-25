@@ -1,9 +1,10 @@
 {
-  "bytes": 1908,
+  "bytes": 1959,
   "client_id": "export-1",
   "counts": {
     "accounts": 2,
     "captures": 0,
+    "categorization_rules": 0,
     "custom_queries": 0,
     "entries": 1,
     "payees": 0,

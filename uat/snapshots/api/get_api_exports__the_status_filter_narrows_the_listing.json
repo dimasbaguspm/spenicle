@@ -1,11 +1,12 @@
 {
   "exports": [
     {
-      "bytes": 1316,
+      "bytes": 1367,
       "client_id": "export-1",
       "counts": {
         "accounts": 2,
         "captures": 0,
+        "categorization_rules": 0,
         "custom_queries": 0,
         "entries": 0,
         "payees": 0,
