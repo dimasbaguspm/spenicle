@@ -4,19 +4,21 @@
 #   lefthook run pre-commit   # run the hook by hand
 #   git commit --no-verify    # skip it — say why in the MR if you do
 #
-# A hook people bypass is a hook that does not exist, so each job is scoped to Go
-# files and they run in parallel. The four checks are the four checks CI runs.
+# A hook people bypass is a hook that does not exist. Pre-commit is piped:
+# lint runs first and a finding stops the commit before the slower checks.
+# The four checks are the four checks CI runs.
 
 pre-commit:
-  parallel: true
+  piped: true
   jobs:
+    - name: lint
+      glob: "**/*.go"
+      run: make lint
+
     - name: build
       glob: "**/*.go"
       run: go build ./...
 
-    - name: lint
-      glob: "**/*.go"
-      run: make lint
 
     # Unit and adapter tests. UAT has its own job so a Gherkin failure is named
     # as such instead of hidden inside `make test`.
