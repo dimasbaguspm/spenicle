@@ -36,8 +36,10 @@ None.
 boot; `ai_assistance` reflects whether `OPENAI_HOST`, `OPENAI_API_KEY` and
 `OPENAI_MODEL` are all set. Neither is editable through the API yet, and the two are
 independent: a SnapToJSON deployment reports `extraction_enabled: true` with
-`ai_assistance: false`. `base_currency` is chosen once by
-[`POST /api/setup`](./POST_api_setup.md) and locked after the first entry;
+`ai_assistance: false`. OpenAI is reserved for a future chat endpoint and does not run
+extraction today, so only `extraction_enabled` gates a working feature.
+`base_currency` is chosen once by [`POST /api/setup`](./POST_api_setup.md) and locked
+after the first entry;
 [`PATCH /api/settings`](./PATCH_api_settings.md) refuses it as an unknown field. `timezone`
 is **read-only**: it is set once, at the first boot, from `APP_TIMEZONE` (default `UTC`),
 stored in the sealed `settings` row, and no request can change it. A later boot whose

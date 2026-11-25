@@ -36,8 +36,9 @@ None.
 
 `settings.extraction_enabled` is true when the SnapToJSON rail is configured
 (`SNAPTOJSON_API_KEY` set). `settings.ai_assistance` is true only when `OPENAI_HOST`,
-`OPENAI_API_KEY` and `OPENAI_MODEL` are all set. The two flags are independent: one
-rail can be configured without the other, and both can be false.
+`OPENAI_API_KEY` and `OPENAI_MODEL` are all set. The two flags are independent: OpenAI
+is reserved for a future chat endpoint and does not run extraction today, so only
+`extraction_enabled` gates a working feature.
 
 ## Errors
 
@@ -45,9 +46,9 @@ None.
 
 ## Limitations
 
-No payees or recurring rules yet (both tables exist, no endpoints);
-balances are all-time, not per month. `settings.timezone` is read-only: it is
-set once at the first boot from `APP_TIMEZONE` (default `UTC`).
+No recurring rules or payees in meta: read them from `GET /api/recurring` and
+`GET /api/payees`. Balances are all-time, not per month. `settings.timezone` is read-only:
+it is set once at the first boot from `APP_TIMEZONE` (default `UTC`).
 
 
 

@@ -79,7 +79,7 @@ The `csv` job is a zip, in this fixed order: `accounts.csv`, `payees.csv`, `entr
 - `404 not_found` — the ref names no job.
 - `409 export_not_ready` — the job is `queued` or `running`; wait for the worker.
 - `409 export_failed` — rendering failed; `GET /api/exports/{ref}` carries the generic `error_message`.
-- `410 gone` — the job is `expired`: its blob was swept after `ExportRetention` (24h by default).
+- `410 gone` — the job is `expired`: its blob was swept after `ExportRetention` (720h by default).
 - `422 invalid_request` — the ref is not 32 lowercase hex.
 - `500 internal_error` — the blob is missing or does not authenticate; the row and the document disagree, and the cause is logged, never sent.
 

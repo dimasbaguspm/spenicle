@@ -150,9 +150,11 @@ Keys: `base_currency`, `setup_completed_at`, `secret_fingerprint`, `timezone`,
 `extraction_enabled`, `ai_assistance`, `extraction_api_url`, `ecb_last_fetch_at`,
 `last_used_account_id`, `last_used_payee_id`. `timezone` is always present (UTC when
 `APP_TIMEZONE` is unset) and is pinned at the first boot; `extraction_enabled` means the
-SnapToJSON rail is configured (`SNAPTOJSON_API_KEY`) and `ai_assistance` means
-`OPENAI_HOST` + `OPENAI_API_KEY` + `OPENAI_MODEL` are all set — the two flags are
-independent.
+SnapToJSON rail is configured (`SNAPTOJSON_API_KEY`) and `ai_assistance` only records
+whether `OPENAI_HOST` + `OPENAI_API_KEY` + `OPENAI_MODEL` are all set. The two flags are
+independent: the OpenAI adapter is reserved for the future chat rail and does not run
+extraction today.
+
 
 ## 1.2 `api_tokens`
 
