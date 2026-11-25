@@ -16,7 +16,7 @@ The statement contract is fixed and small:
 | `amount_minor` | signed integer of minor units, negative = money out |
 | `description` | free text, at most 500 characters |
 
-The header row is required and must read exactly `occurred_on,amount_minor,description`. Anything else is `422 invalid_request` and no batch is written. A well-formed header with a bad row does **not** fail the upload: the row is stored with `status: "skipped"` and `clash_kind: "invalid_row"`.
+The header row is required and may read `occurred_on,amount_minor,description` or `occurred_on,amount_minor,description,currency`. Anything else is `422 invalid_request` and no batch is written. A well-formed header with a bad row does **not** fail the upload: the row is stored with `status: "skipped"` and `clash_kind: "invalid_row"`.
 
 ## Upstream
 
@@ -119,7 +119,7 @@ Idempotency is enforced by the unique index on `import_batches.client_id`: the l
 
 ## Limitations
 
-One currency per batch (the locked base currency) and no FX rate column in the CSV, so a statement in another currency needs the ledger's own routes. No column mapping, no delimiter or encoding detection. The draft expires 24 hours after the last edit unless it is committed; the worker drops it — rows, blob and an `expired` event — while a committed or rejected batch is kept forever.
+A row may override the batch currency with an optional `currency` column; the batch currency defaults to the locked base currency. No column mapping beyond that, no delimiter or encoding detection. The draft expires 24 hours after the last edit unless it is committed; the worker drops it — rows, blob and an `expired` event — while a committed or rejected batch is kept forever.
 
 ## Sequence
 

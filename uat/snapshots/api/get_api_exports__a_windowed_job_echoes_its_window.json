@@ -6,7 +6,7 @@
       "created_at": "<timestamp>",
       "format": "json",
       "ref": "<ref>",
-      "schema_version": 4,
+      "schema_version": 5,
       "status": "queued"
     },
     {
@@ -16,7 +16,7 @@
       "format": "json",
       "from": "2025-01-01",
       "ref": "<ref>",
-      "schema_version": 4,
+      "schema_version": 5,
       "status": "queued",
       "to": "2025-12-31"
     }

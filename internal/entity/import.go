@@ -63,6 +63,7 @@ type ImportRow struct {
 	RowIndex      int
 	OccurredOn    time.Time
 	AmountMinor   int64
+	Currency      string
 	Description   string
 	AccountRef    string
 	CategoryRef   string

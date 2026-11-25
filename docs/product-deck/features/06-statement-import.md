@@ -136,7 +136,7 @@ Worker (per run)               → collectImports: drop drafts past expires_at (
 7. Every state change on a batch is in `import_events`, with an actor; the log is readable
    and append-only.
 8. Nothing about the file is guessed: the header must be exactly
-   `occurred_on,amount_minor,description`, or the upload is refused with no batch.
+   `occurred_on,amount_minor,description` (or with an extra `currency` column), or the upload is refused with no batch.
 
 ### Risks
 
@@ -248,7 +248,7 @@ Scenario: Chunked uploads resume and assemble
 ## 6. What this page does not promise
 
 - No column mapping, no delimiter/encoding detection, no PDF, no XLSX.
-- One currency per batch: the locked base currency, no FX column.
+- Per-row currency is supported via an optional `currency` column; otherwise the batch (base) currency applies. No column mapping beyond that.
 - No partial-failure report in the commit response — the event log is the report.
 - No reopen of a rejected batch; no bulk row patch.
 - A reclaimed draft is gone, not tombstoned.

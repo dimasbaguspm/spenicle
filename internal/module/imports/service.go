@@ -82,6 +82,7 @@ var _ Contract = (*Service)(nil)
 type statementRow struct {
 	OccurredOn  time.Time
 	AmountMinor int64
+	Currency    string
 	Description string
 	Valid       bool
 }
@@ -538,7 +539,7 @@ func (s *Service) postRow(
 		OccurredOn: row.OccurredOn,
 		PayeeRef:   row.PayeeRef,
 		Note:       row.Description,
-		Currency:   batch.Currency,
+		Currency:   batchCurrency(row, batch),
 		Source:     constant.EntrySourceStatement,
 		Postings: []ledger.PostingInput{
 			{AccountRef: row.AccountRef, AmountMinor: -row.AmountMinor},
@@ -590,10 +591,15 @@ func (s *Service) draft(ctx context.Context, in CreateInput, now time.Time) (ent
 	}
 
 	for index, row := range parsed {
+		rowCurrency := currency
+		if row.Currency != "" {
+			rowCurrency = row.Currency
+		}
 		built := entity.ImportRow{
 			RowIndex:    index,
 			OccurredOn:  row.OccurredOn,
 			AmountMinor: row.AmountMinor,
+			Currency:    rowCurrency,
 			Description: row.Description,
 			AccountRef:  account.Ref,
 			Status:      constant.ImportRowStatusPending,
@@ -610,7 +616,7 @@ func (s *Service) draft(ctx context.Context, in CreateInput, now time.Time) (ent
 			continue
 		}
 
-		if err := s.detect(ctx, in.FileHash, currency, &built); err != nil {
+		if err := s.detect(ctx, in.FileHash, rowCurrency, &built); err != nil {
 			return entity.ImportBatch{}, err
 		}
 
@@ -872,8 +878,19 @@ func parseStatement(body []byte) ([]statementRow, error) {
 	reader.LazyQuotes = true
 
 	header, err := reader.Read()
-	if err != nil || strings.Join(header, ",") != statementHeader {
-		return nil, fmt.Errorf("%w: the header must be %q", entity.ErrInvalidImport, statementHeader)
+	if err != nil {
+		return nil, fmt.Errorf("%w: the header must include occurred_on, amount_minor and description", entity.ErrInvalidImport)
+	}
+
+	index := map[string]int{}
+	for i, h := range header {
+		index[strings.TrimSpace(h)] = i
+	}
+
+	for _, required := range []string{"occurred_on", "amount_minor", "description"} {
+		if _, ok := index[required]; !ok {
+			return nil, fmt.Errorf("%w: the header must include %q", entity.ErrInvalidImport, required)
+		}
 	}
 
 	out := make([]statementRow, 0)
@@ -890,38 +907,45 @@ func parseStatement(body []byte) ([]statementRow, error) {
 			break
 		}
 
-		out = append(out, parseRow(record))
+		out = append(out, parseRow(record, index))
 	}
 
 	return out, nil
 }
 
-func parseRow(record []string) statementRow {
-	if len(record) != statementColumns {
-		return unreadableRow()
+func parseRow(record []string, index map[string]int) statementRow {
+	get := func(name string) string {
+		if i, ok := index[name]; ok && i < len(record) {
+			return strings.TrimSpace(record[i])
+		}
+		return ""
 	}
 
-	occurredOn, err := validating.Day(record[0], "occurred_on")
+	occurredOn, err := validating.Day(get("occurred_on"), "occurred_on")
 	if err != nil {
 		return unreadableRow()
 	}
 
-	amount, err := validating.Money(record[1], "amount_minor")
+	amount, err := validating.Money(get("amount_minor"), "amount_minor")
 	if err != nil {
 		return unreadableRow()
 	}
 
-	description := strings.TrimSpace(record[2])
+	description := get("description")
 	if len([]rune(description)) > maxDescription {
 		return unreadableRow()
 	}
 
-	return statementRow{
+	row := statementRow{
 		OccurredOn:  occurredOn,
 		AmountMinor: amount,
 		Description: description,
 		Valid:       true,
 	}
+	if cur := get("currency"); cur != "" {
+		row.Currency = cur
+	}
+	return row
 }
 
 func unreadableRow() statementRow {
@@ -1090,4 +1114,11 @@ func (s *Service) assemble(
 	upload.CompletedAt = &now
 
 	return ChunkResult{Upload: upload, Batch: batch, Created: created}, nil
+}
+
+func batchCurrency(row entity.ImportRow, batch entity.ImportBatch) string {
+	if row.Currency != "" {
+		return row.Currency
+	}
+	return batch.Currency
 }

@@ -18,7 +18,7 @@ const importBatchColumns = `import_batches.id, import_batches.ref, import_batche
 	import_batches.rows_total, import_batches.currency, import_batches.created_at,
 	import_batches.expires_at, import_batches.committed_at, import_batches.rejected_at`
 
-const importRowColumns = `id, ref, batch_id, row_index, occurred_on, amount_minor, description,
+const importRowColumns = `id, ref, batch_id, row_index, occurred_on, amount_minor, currency, description,
 	account_ref, category_ref, payee_ref, status, clash_kind, clash_entry_ref, edited_at,
 	edited_fields, created_at, updated_at`
 
@@ -203,11 +203,12 @@ func (s *Store) UpdateImportRow(
 
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE import_rows SET
-			occurred_on = ?, amount_minor = ?, description = ?, category_ref = ?,
+			occurred_on = ?, amount_minor = ?, currency = ?, description = ?, category_ref = ?,
 			payee_ref = ?, status = ?, edited_at = ?, edited_fields = ?, updated_at = ?
 		WHERE id = ?`,
 		row.OccurredOn.Format(constant.DateLayout),
 		row.AmountMinor,
+		row.Currency,
 		row.Description,
 		nullString(row.CategoryRef),
 		nullString(row.PayeeRef),
@@ -475,7 +476,7 @@ func scanImportRowRow(scanner interface{ Scan(dest ...any) error }) (entity.Impo
 
 	err := scanner.Scan(
 		&row.ID, &row.Ref, &row.BatchID, &row.RowIndex, &occurredRaw, &row.AmountMinor,
-		&row.Description, &row.AccountRef, &category, &payee, &row.Status, &clashKind,
+		&row.Currency, &row.Description, &row.AccountRef, &category, &payee, &row.Status, &clashKind,
 		&clashEntry, &editedAt, &editedFields, &createdRaw, &updatedRaw,
 	)
 	if err != nil {
