@@ -12,6 +12,7 @@ import (
 type healthResponse struct {
 	Status          string `json:"status"`
 	Version         string `json:"version"`
+	StartedAt       string `json:"started_at"`
 	SchemaVersion   int    `json:"schema_version"`
 	AppSecret       string `json:"app_secret"`
 	BaseCurrency    string `json:"base_currency"`
@@ -54,6 +55,7 @@ func (s *Server) health(ctx context.Context) (healthResponse, error) {
 	return healthResponse{
 		Status:          "ok",
 		Version:         s.deps.Version,
+		StartedAt:       s.deps.StartedAt.UTC().Format(constant.TimestampLayout),
 		SchemaVersion:   schemaVersion,
 		AppSecret:       s.deps.Sealer.Fingerprint(),
 		BaseCurrency:    s.deps.BaseCurrency,

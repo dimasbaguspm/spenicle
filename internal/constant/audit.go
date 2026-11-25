@@ -9,6 +9,7 @@ const (
 	AuditEntityCapture            = "capture"
 	AuditEntityToken              = "api_token"
 	AuditEntityCategorizationRule = "categorization_rule"
+	AuditEntitySystem             = "system"
 )
 
 const (
@@ -21,6 +22,7 @@ const (
 	AuditActionGenerate = "generate"
 	AuditActionAdvance  = "advance"
 	AuditActionRevoke   = "revoke"
+	AuditActionStart    = "start"
 )
 
 const (

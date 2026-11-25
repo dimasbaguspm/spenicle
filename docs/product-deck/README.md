@@ -141,8 +141,8 @@ drafts and abandoned uploads, claim and sweep export jobs, then poll the mailbox
 There is no push channel: anything a job produces arrives on the next tick, so a
 client **polls its own ref** (`GET /api/exports/{ref}`, `GET /api/imports/{ref}`) and
 renders `queued`/`running` honestly instead of spinning. `GET /healthz` reports
-`worker_last_run_at`, which is how a client tells "the worker never ran" from "the
-worker is thinking".
+`worker_last_run_at`, the completion time of the last full worker run, so a client can
+tell "the worker never finished a run" from "work is still in progress".
 
 ## RRR — the deck as one product
 
@@ -176,7 +176,7 @@ worker is thinking".
 | --- | --- | --- |
 | `APP_SECRET` loss | capture payloads, receipt files and export blobs become unreadable; the ledger survives | boot refuses a changed secret (`secret_mismatch`) rather than silently re-keying; the docs tell the operator to back the secret up next to the database |
 | open mode on a public host | with no password set, every request is root | the first boot generates and prints a password once; the client shows the change-password screen first, and the readiness checklist below treats `password_must_change: true` as a blocker |
-| no push channel | a recurring capture or a finished export waits up to `WorkerInterval` | every job route exposes its status and its event log, so the client can explain the wait instead of guessing; `worker_last_run_at` names the last tick |
+| no push channel | a recurring capture or a finished export waits up to `WorkerInterval` | every job route exposes its status and its event log, so the client can explain the wait instead of guessing; `worker_last_run_at` names the last completed run |
 | one writer at a time | SQLite `BEGIN IMMEDIATE` serialises writes; a long import commit blocks every other write | commits run in chunks of `ImportCommitChunk` (500) and are resumable, so a blocked writer is a slow writer, never a lost one |
 | retention sweeps | a rejected capture loses its receipt after 720h; a ready export 410s after 720h | the row survives with `deleted_at`/`status = expired`, and the UI is told to say "the file was reclaimed", never "not found" |
 | approve needs postings | a capture draft is a suggestion, not an entry: the client builds the postings from `draft_json` or gets `422 invalid_request` | the review screen prefills from the draft; the API never posts from one. [F9](./features/09-gaps-and-next.md) |
@@ -196,9 +196,11 @@ orders that matter are:
 Before a client ships a feature that touches money, the readiness checklist is:
 
 - [ ] `GET /healthz` answers `status: ok`, and `schema_version` is the one the client
-      was built against (no version negotiation exists, so pin it).
-- [ ] `worker_last_run_at` is non-empty: the worker process is alive, so a recurring
-      capture or an export will not stall forever.
+      was built against (no version negotiation exists, so pin it). `version` and
+      `started_at` identify the running build and process; earlier boots are in
+      `/api/audit?entity_kind=system&action=start`.
+- [ ] `worker_last_run_at` is non-empty: the worker process completed a run, so a
+      recurring capture or an export will not stall forever.
 - [ ] The instance is closed: `password_must_change: false` on `GET /api/settings`,
       and the client holds a credential, not an open-mode session.
 - [ ] `APP_SECRET` is backed up next to `spenicle.db` (captures and exports are sealed

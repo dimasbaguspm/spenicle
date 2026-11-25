@@ -105,13 +105,16 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
   on every authenticated request, which is why the listing can filter `used|never`.
 - **Journal in the same transaction.** Every account/payee/rule/entry/capture/token/
   setting change appends its `audit_log` row inside the write transaction
-  (`sqlite.appendAudit`). A client reading the audit does not need to reconcile: the
-  journal cannot be missing a change that happened, or hold one that rolled back.
+  (`sqlite.appendAudit`), and every boot appends one `system`/`start` row with the
+  service, build version, schema version and UTC start time. A client reading the audit
+  does not need to reconcile: the journal cannot be missing a change that happened, or
+  hold one that rolled back.
 - **Boot order is a contract.** `config.Start` loads config (fails without
   `APP_SECRET`), opens SQLite (WAL retry, `busy_timeout`), migrates, seals, loads
   settings, then `EnsureBaseline` (fingerprint check, seed `Cash` + `Unsorted`,
-  generated password on a fresh database). If any step fails the process exits instead
-  of serving a half-ready API, so `/healthz` answering `ok` means all of it happened.
+  generated password on a fresh database) and records the `system`/`start` evidence.
+  If any step fails the process exits instead of serving a half-ready API, so
+  `/healthz` answering `ok` means all of it happened.
 
 ## 4. RRR
 

@@ -65,6 +65,19 @@
       "to_json": "{\"key\":\"app_settings\"}"
     },
     {
+      "action": "start",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": null,
+      "entity_kind": "system",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 3,
+      "ref": "<ref>",
+      "to_json": "{\"service\":\"spenicle-http\",\"version\":\"uat\",\"schema_version\":6,\"started_at\":\"<timestamp>\"}"
+    },
+    {
       "action": "create",
       "actor_kind": "user",
       "actor_ref": null,
@@ -73,7 +86,7 @@
       "entity_kind": "capture",
       "entity_ref": "<ref>",
       "from_json": null,
-      "id": 3,
+      "id": 4,
       "ref": "<ref>",
       "to_json": "{\"kind\":\"image\",\"status\":\"pending\"}"
     },
@@ -86,7 +99,7 @@
       "entity_kind": "capture",
       "entity_ref": "<ref>",
       "from_json": null,
-      "id": 4,
+      "id": 5,
       "ref": "<ref>",
       "to_json": "{\"status\":\"pending\"}"
     }

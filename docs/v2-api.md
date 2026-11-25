@@ -307,10 +307,10 @@ sealed envelope).
 | column | type | notes |
 | --- | --- | --- |
 | `id` | INTEGER PK | |
-| `entity_kind` | TEXT | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `setting`, `api_token` |
+| `entity_kind` | TEXT | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `categorization_rule`, `setting`, `api_token`, `system` |
 | `entity_id` | INTEGER NULL | |
 | `entity_ref` | TEXT NULL | the row's ref, when it has one |
-| `action` | TEXT | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke` |
+| `action` | TEXT | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke`, `start` |
 | `actor_kind` | TEXT | `user`, `worker`, `system` — CHECK-constrained; a token is `user` with its ref in `actor_ref` |
 | `actor_ref` | TEXT NULL | the token's ref when a token made the change |
 | `from_json` | TEXT NULL | what the change moved away from |
@@ -1124,7 +1124,7 @@ sequenceDiagram
 
 ## 3.20 `GET /healthz`
 
-`200 {"status":"ok","schema_version":4,"app_secret":"sealed","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}`
+`200 {"status":"ok","version":"v0.1.1+e0d15ce","started_at":"2026-04-15T08:00:00Z","schema_version":6,"app_secret":"sealed","base_currency":"IDR","timezone":"UTC","worker_last_run_at":"2026-04-15T09:00:00Z"}`
 
 ```mermaid
 sequenceDiagram
@@ -1135,13 +1135,17 @@ sequenceDiagram
     M->>API: GET healthz
     API->>DB: SELECT version FROM schema_migrations
     API->>DB: probe WAL writability with SELECT 1
-    API->>DB: compare settings secret_fingerprint with APP_SECRET
-    alt db ok and secret matches
-        API-->>M: 200 status ok
-    else mismatch or db failing
+    API->>DB: SELECT v FROM settings WHERE k = worker_last_run_at
+    alt db ok
+        API-->>M: 200 status ok, version, started_at, schema_version, fingerprint
+    else db failing
         API-->>M: 503 status degraded with reason
     end
 ```
+
+`config.Start` also appends one `audit_log` row (`entity_kind=system`, `action=start`,
+`actor_kind=system`) with the service name, build version, schema version and UTC start
+time, so a restarted process's release evidence remains in the database.
 
 ---
 

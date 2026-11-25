@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -273,5 +274,85 @@ func TestRunRuleUsesTheInstanceTimezone(t *testing.T) {
 				t.Fatalf("queued %d captures, want %d", len(queued.drafts), testCase.wantQueued)
 			}
 		})
+	}
+}
+
+type fixedClock struct{ at time.Time }
+
+func (c fixedClock) Now() time.Time { return c.at }
+
+type recordingStore struct {
+	calls     []string
+	heartbeat string
+}
+
+func (s *recordingStore) CreateRecurring(
+	context.Context, entity.Recurring,
+) (entity.Recurring, error) {
+	return entity.Recurring{}, nil
+}
+
+func (s *recordingStore) RecurringByRef(
+	context.Context, string,
+) (entity.Recurring, bool, error) {
+	return entity.Recurring{}, false, nil
+}
+
+func (s *recordingStore) ListRecurring(
+	context.Context, entity.RecurringFilter,
+) ([]entity.Recurring, error) {
+	return nil, nil
+
+}
+
+func (s *recordingStore) UpdateRecurring(
+	context.Context, entity.Recurring,
+) (entity.Recurring, error) {
+	return entity.Recurring{}, nil
+}
+
+func (s *recordingStore) DueRecurring(context.Context, time.Time, int) ([]entity.Recurring, error) {
+	s.calls = append(s.calls, "due")
+
+	return nil, nil
+}
+
+func (s *recordingStore) AdvanceRecurring(
+	context.Context, string, time.Time, time.Time, time.Time,
+) (bool, error) {
+	return true, nil
+}
+
+func (s *recordingStore) FindAccount(
+	context.Context, string, string,
+) (entity.Account, bool, error) {
+	return entity.Account{}, false, nil
+}
+
+func (s *recordingStore) SetSetting(_ context.Context, key, value string) error {
+	if key == constant.SettingWorkerLastRunAt {
+		s.calls = append(s.calls, "heartbeat")
+		s.heartbeat = value
+	}
+
+	return nil
+}
+
+func TestRunRecordsTheHeartbeatAfterTheWork(t *testing.T) {
+	at := time.Date(2026, 4, 15, 9, 0, 0, 0, time.UTC)
+	store := &recordingStore{}
+	runner := &Runner{
+		rules: store, store: store, queue: &stubQueue{}, clock: fixedClock{at: at},
+	}
+
+	if _, err := runner.Run(t.Context()); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	if got, want := strings.Join(store.calls, ","), "due,heartbeat"; got != want {
+		t.Fatalf("worker calls = %q, want %q", got, want)
+	}
+	if want := at.Format(constant.TimestampLayout); store.heartbeat != want {
+		t.Fatalf("heartbeat = %q, want %q", store.heartbeat, want)
 	}
 }

@@ -34,6 +34,9 @@ The table below records them once; section (A) lists only what is still open.
 | correctness | the route scope is the floor: handlers also require the scope for the data and side effect (`approve` → `entries:write`, payee learning → `payees:write`, `match` → `entries:read`, import `commit` → `entries:write`, `/api/meta` → four read scopes, export download → `entries:read`); `/api/setup` is root-only | `fix: enforce permissions for actual data and side effects` |
 | G5 | statement CSV headers are mapped by name (`occurred_on`, `amount_minor`, `description`, optional `currency`) and an optional fourth column keeps a row's currency instead of forcing the base currency | `feat: support column mapping by header name in statement imports` |
 | G3 | `POST /api/tokens` accepts optional `expires_at`; an expired credential is `401 unauthorized` and the listing exposes the expiry | `feat: add token expiry eligibility` |
+| correctness | list cursors now follow each endpoint's actual sort order (default and every allowed sort), so a client that walks all pages of a bootstrap collection neither skips nor repeats rows | `fix: align list cursors with their sort order` |
+| correctness | `/api/dashboard` takes one explicit `from`/`to` window for every tile; the server never derives a different period from the clock | `fix: give dashboard tiles one explicit window` |
+| correctness | `/healthz` reports this process's UTC `started_at`; every boot appends a `system`/`start` audit row with service, build, schema version and start time, and the worker heartbeat is stamped only after the whole run finishes | `fix: make recovery and release evidence durable` |
 
 Still open: **G3** (per-token rate limit), **G13** (import payee learning), the
 attachment and IMAP halves of **G9**, and the cross-cutting rows from 12 onward.

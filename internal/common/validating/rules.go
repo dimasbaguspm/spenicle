@@ -2,6 +2,7 @@ package validating
 
 import (
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/go-playground/validator/v10"
@@ -70,6 +71,7 @@ var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only ru
 	"rulematch":       validRuleMatch,
 	"rulepattern":     validRulePattern,
 	"auditactor":      validAuditActor,
+	"timestamp":       validTimestamp,
 }
 
 func validRef(field validator.FieldLevel) bool {
@@ -237,7 +239,7 @@ func validAuditKind(field validator.FieldLevel) bool {
 	switch field.Field().String() {
 	case constant.AuditEntitySetting, constant.AuditEntityAccount, constant.AuditEntityPayee,
 		constant.AuditEntityRecurring, constant.AuditEntityEntry, constant.AuditEntityCapture,
-		constant.AuditEntityToken, constant.AuditEntityCategorizationRule:
+		constant.AuditEntityToken, constant.AuditEntityCategorizationRule, constant.AuditEntitySystem:
 		return true
 	default:
 		return false
@@ -248,7 +250,8 @@ func validAuditAction(field validator.FieldLevel) bool {
 	switch field.Field().String() {
 	case constant.AuditActionCreate, constant.AuditActionUpdate, constant.AuditActionVoid,
 		constant.AuditActionApprove, constant.AuditActionReject, constant.AuditActionRetry,
-		constant.AuditActionGenerate, constant.AuditActionAdvance, constant.AuditActionRevoke:
+		constant.AuditActionGenerate, constant.AuditActionAdvance, constant.AuditActionRevoke,
+		constant.AuditActionStart:
 		return true
 	default:
 		return false
@@ -262,6 +265,17 @@ func validAuditActor(field validator.FieldLevel) bool {
 	default:
 		return false
 	}
+}
+
+func validTimestamp(field validator.FieldLevel) bool {
+	raw := strings.TrimSpace(field.Field().String())
+	if raw == "" {
+		return false
+	}
+
+	_, err := time.Parse(time.RFC3339, raw)
+
+	return err == nil
 }
 
 func validRuleField(field validator.FieldLevel) bool {

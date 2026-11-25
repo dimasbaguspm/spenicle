@@ -399,9 +399,9 @@ behind and a committed one cannot be forgotten.
 
 | column | what it answers |
 | --- | --- |
-| `entity_kind` | which table, as a bounded name: `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `setting`, `api_token` |
+| `entity_kind` | which table, as a bounded name: `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `categorization_rule`, `setting`, `api_token`, `system` |
 | `entity_id` / `entity_ref` | the row, by integer for joins and by ref for filtering without one |
-| `action` | `create`, `update`, `void`, `approve`, `reject`, `advance`, `revoke`, `generate`, `retry` |
+| `action` | `create`, `update`, `void`, `approve`, `reject`, `advance`, `revoke`, `generate`, `retry`, `start` |
 | `actor_kind` / `actor_ref` | `user`, `worker`, `system` — and, for a token, its ref in `actor_ref` (the kind stays `user`) |
 | `from_json` / `to_json` | what the change touched, as typed payload structs (`entity.EntryCreated`, …) validated with the same tags the API uses |
 | `at` | when, UTC |
@@ -420,7 +420,10 @@ What is deliberately **not** journaled twice:
   was received; the metadata is not a second event.
 - `settings` rows are journaled by **key only**, never by value: one of those values is the
   sealed password envelope, and the journal is not a second copy of it. The worker
-  heartbeat (`worker_last_run_at`) is a metric, so it writes none at all.
+  heartbeat (`worker_last_run_at`) is a metric, so it writes none at all; its stamp means
+  a whole run finished.
+- process boots are journaled once as `system`/`start` with the service, build version,
+  schema version and UTC start time, which is the durable recovery/release evidence.
 - an API token's `last_used_at` is a usage stamp, not a state change.
 
 ## FX

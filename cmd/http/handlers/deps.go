@@ -44,6 +44,7 @@ type Deps struct {
 	BaseCurrency      string
 	Timezone          string
 	Version           string
+	StartedAt         time.Time
 	HealthTimeout     time.Duration
 	MaxBodyBytes      int64
 	MaxArtifactBytes  int64

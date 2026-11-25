@@ -151,9 +151,12 @@ is `spenicle_exports_bytes_bucket` (the `_bytes` suffix is not doubled). Labels 
 same rule: `spenicle.job` is `spenicle_job`.
 
 The heartbeat panel reads `spenicle_worker_last_run_timestamp_seconds`, which nothing exports
-today: `worker_last_run_at` lives in the `settings` row that `/healthz` reports, so publish it
-with a textfile exporter or a probe of `GET /healthz` if you want the panel lit. Until then the
-panel reads `No data`, not wrong.
+today. The durable source is `worker_last_run_at` in `settings`, written by the worker only
+after every stage in a run has finished and reported by `GET /healthz`; publish it with a
+textfile exporter or a probe of `/healthz` if you want the panel lit. Until then the panel
+reads `No data`, not wrong. The same endpoint reports this process's `version` and
+`started_at`, and `GET /api/audit?entity_kind=system&action=start` holds one durable row per
+boot, which is how an operator identifies the build and start of an earlier process.
 
 ## Joining a log line to its span
 

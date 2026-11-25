@@ -74,6 +74,19 @@
       "to_json": "{\"key\":\"app_settings\"}"
     },
     {
+      "action": "start",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": null,
+      "entity_kind": "system",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 3,
+      "ref": "<ref>",
+      "to_json": "{\"service\":\"spenicle-http\",\"version\":\"uat\",\"schema_version\":6,\"started_at\":\"<timestamp>\"}"
+    },
+    {
       "action": "create",
       "actor_kind": "user",
       "actor_ref": null,
@@ -82,7 +95,7 @@
       "entity_kind": "account",
       "entity_ref": "<ref>",
       "from_json": null,
-      "id": 3,
+      "id": 4,
       "ref": "<ref>",
       "to_json": "{\"name\":\"Opening balance\",\"kind\":\"equity\",\"currency\":\"USD\"}"
     },
@@ -95,7 +108,7 @@
       "entity_kind": "account",
       "entity_ref": "<ref>",
       "from_json": "{\"name\":\"Cash\",\"kind\":\"asset\",\"currency\":\"IDR\"}",
-      "id": 4,
+      "id": 5,
       "ref": "<ref>",
       "to_json": "{\"name\":\"Cash\",\"kind\":\"asset\",\"currency\":\"USD\"}"
     },
@@ -108,7 +121,7 @@
       "entity_kind": "ledger_entry",
       "entity_ref": "<ref>",
       "from_json": null,
-      "id": 5,
+      "id": 6,
       "ref": "<ref>",
       "to_json": "{\"occurred_on\":\"2026-02-14\",\"currency\":\"USD\",\"source\":\"adjustment\",\"postings\":2}"
     },
@@ -121,7 +134,7 @@
       "entity_kind": "account",
       "entity_ref": "<ref>",
       "from_json": null,
-      "id": 6,
+      "id": 7,
       "ref": "<ref>",
       "to_json": "{\"name\":\"Card\",\"kind\":\"liability\",\"currency\":\"USD\"}"
     },
@@ -134,7 +147,7 @@
       "entity_kind": "ledger_entry",
       "entity_ref": "<ref>",
       "from_json": null,
-      "id": 7,
+      "id": 8,
       "ref": "<ref>",
       "to_json": "{\"occurred_on\":\"2026-02-14\",\"currency\":\"USD\",\"source\":\"adjustment\",\"postings\":2}"
     },
@@ -147,7 +160,7 @@
       "entity_kind": "setting",
       "entity_ref": null,
       "from_json": null,
-      "id": 8,
+      "id": 9,
       "ref": "<ref>",
       "to_json": "{\"key\":\"app_settings\"}"
     },
@@ -160,7 +173,7 @@
       "entity_kind": "setting",
       "entity_ref": null,
       "from_json": null,
-      "id": 9,
+      "id": 10,
       "ref": "<ref>",
       "to_json": "{\"key\":\"setup_completed_at\"}"
     }

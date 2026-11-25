@@ -46,12 +46,12 @@ func (r *Runner) Run(ctx context.Context) (Summary, error) {
 		}
 	}
 
-	r.record(ctx, now)
 	r.collect(ctx, now)
 	r.collectImports(ctx, now)
 	r.collectUploads(ctx, now)
 	r.runExports(ctx, now)
 	r.runIntake(ctx, now)
+	r.record(ctx, r.clock.Now())
 
 	return summary, firstErr
 }

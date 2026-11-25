@@ -6,11 +6,27 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/dimasbaguspm/spenicle/internal/common/actor"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
+
+func (s *Store) RecordSystemStart(ctx context.Context, event entity.SystemStarted) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.RecordSystemStart")
+	defer endSpan()
+
+	ctx = actor.With(ctx, actor.From{Kind: constant.AuditActorSystem})
+
+	return s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntitySystem,
+			Action: constant.AuditActionStart,
+			To:     event,
+		})
+	})
+}
 
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.SchemaVersion")

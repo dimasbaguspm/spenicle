@@ -419,6 +419,7 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		BaseCurrency:      process.BaseCurrency,
 		Timezone:          process.Cfg.Timezone,
 		Version:           config.Version,
+		StartedAt:         process.StartedAt,
 		HealthTimeout:     process.Cfg.HealthTimeout,
 		MaxBodyBytes:      process.Cfg.MaxBodyBytes,
 		MaxArtifactBytes:  process.Cfg.ArtifactMaxBytes,

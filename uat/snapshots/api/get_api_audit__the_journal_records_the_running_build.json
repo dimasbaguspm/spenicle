@@ -1,0 +1,21 @@
+{
+  "audit": [
+    {
+      "action": "start",
+      "actor_kind": "system",
+      "at": "<timestamp>",
+      "entity_kind": "system",
+      "ref": "<ref>",
+      "to": {
+        "schema_version": 6,
+        "service": "spenicle-http",
+        "started_at": "<timestamp>",
+        "version": "<version>"
+      }
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

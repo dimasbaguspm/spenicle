@@ -15,6 +15,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/captures"
 	"github.com/dimasbaguspm/spenicle/internal/module/categorization"
@@ -42,6 +43,7 @@ func (w *world) boot(ctx context.Context) error {
 	if w.server != nil {
 		return nil
 	}
+	startedAt := time.Now().UTC()
 
 	if err := w.prepare(); err != nil {
 		return err
@@ -140,6 +142,26 @@ func (w *world) boot(ctx context.Context) error {
 		store, store, store, w.exportFiles, limits.ExportRetention, clockSystem,
 	)
 
+	schemaVersion, err := store.SchemaVersion(ctx)
+	if err != nil {
+		_ = store.Close(ctx)
+
+		return fmt.Errorf("schema version: %w", err)
+	}
+
+	event := entity.SystemStarted{
+		Service:       "spenicle-http",
+		Version:       "uat",
+		SchemaVersion: schemaVersion,
+		StartedAt:     startedAt.Format(constant.TimestampLayout),
+	}
+
+	if err := store.RecordSystemStart(ctx, event); err != nil {
+		_ = store.Close(ctx)
+
+		return fmt.Errorf("record system start: %w", err)
+	}
+
 	w.server = httptest.NewServer(httpcmd.New(handlers.Deps{
 		Ledger:   ledgerService,
 		Captures: queue,
@@ -172,6 +194,7 @@ func (w *world) boot(ctx context.Context) error {
 		BaseCurrency:      baseCurrency,
 		Timezone:          w.zone().String(),
 		Version:           "uat",
+		StartedAt:         startedAt,
 		HealthTimeout:     limits.HealthTimeout,
 		MaxBodyBytes:      limits.MaxBodyBytes,
 		MaxArtifactBytes:  limits.ArtifactMaxBytes,

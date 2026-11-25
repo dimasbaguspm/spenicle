@@ -15,6 +15,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
@@ -36,11 +37,14 @@ type Process struct {
 	Rates        *rates.Service
 	BaseCurrency string
 	Location     *time.Location
+	StartedAt    time.Time
 
 	stopTelemetry func(context.Context) error
 }
 
 func Start(ctx context.Context, serviceName string) (*Process, error) {
+	startedAt := time.Now().UTC()
+
 	if strings.TrimSpace(serviceName) == "" {
 		return nil, errors.New("service name is required")
 	}
@@ -67,12 +71,40 @@ func Start(ctx context.Context, serviceName string) (*Process, error) {
 	process, err := boot(ctx, cfg, logger)
 	if err != nil {
 		flushTelemetry(ctx, logger, cfg.TelemetryShutdownTimeout, stopTelemetry)
+
 		return nil, err
 	}
 
+	process.StartedAt = startedAt
 	process.stopTelemetry = stopTelemetry
 
+	if err := process.recordStart(ctx, serviceName); err != nil {
+		process.Close(ctx)
+
+		return nil, err
+	}
+
 	return process, nil
+}
+
+func (p *Process) recordStart(ctx context.Context, service string) error {
+	schemaVersion, err := p.Store.SchemaVersion(ctx)
+	if err != nil {
+		return fmt.Errorf("schema version: %w", err)
+	}
+
+	event := entity.SystemStarted{
+		Service:       service,
+		Version:       Version,
+		SchemaVersion: schemaVersion,
+		StartedAt:     p.StartedAt.Format(constant.TimestampLayout),
+	}
+
+	if err := p.Store.RecordSystemStart(ctx, event); err != nil {
+		return fmt.Errorf("record system start: %w", err)
+	}
+
+	return nil
 }
 
 func (p *Process) Close(ctx context.Context) {

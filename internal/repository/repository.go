@@ -69,6 +69,7 @@ type System interface {
 	Setting(ctx context.Context, key string) (string, bool, error)
 	SetSetting(ctx context.Context, key, value string) error
 	CreateSetting(ctx context.Context, key, value string) (bool, error)
+	RecordSystemStart(ctx context.Context, event entity.SystemStarted) error
 	CompleteSetup(
 		ctx context.Context,
 		setup entity.Setup,

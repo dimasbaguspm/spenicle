@@ -50,3 +50,12 @@ Feature: GET /api/audit
       | query | entity_kind | nope  |
     Then the response status is 422
     And the response JSON matches the snapshot "get_api_audit__an_unknown_kind_is_refused"
+
+  Scenario: The journal records the running build
+    Given a running API
+    When I send a GET to "/api/audit" with headers/query:
+      | type  | key         | value  |
+      | query | entity_kind | system |
+      | query | action      | start  |
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_audit__the_journal_records_the_running_build"

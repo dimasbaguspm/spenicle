@@ -19,9 +19,9 @@ on `audit_log.id`. Rows are never written here.
 
 | param | notes |
 | --- | --- |
-| `entity_kind` | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `setting`, `api_token` |
+| `entity_kind` | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `categorization_rule`, `setting`, `api_token`, `system` |
 | `entity_ref` | the row's ref; a `setting` has none (its key is in `to.key`) |
-| `action` | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke` |
+| `action` | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke`, `start` |
 | `actor_kind` | `user` (a person or a token — its ref is in `actor_ref`), `worker`, `system` |
 | `from`, `to` | `YYYY-MM-DD`, inclusive |
 | `cursor`, `limit` | the shared paging (default 50, max 200) |
@@ -45,7 +45,10 @@ filter table is a closed set), `400 invalid_request` for a non-ref cursor.
 
 Read-only: there is no route that edits or deletes a journal row, and none that appends one
 by hand. The journal does not include import/export job steps (their own
-`import_events`/`export_events` are the record) or artifact rows.
+`import_events`/`export_events` are the record), artifact rows or the worker heartbeat.
+Every process boot does append one `system`/`start` row (`actor_kind=system`) with
+`service`, `version`, `schema_version` and UTC `started_at` in `to`, so release evidence
+survives a restart even though `/healthz` reports only the current process.
 
 ## Sequence
 

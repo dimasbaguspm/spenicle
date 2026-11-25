@@ -89,8 +89,11 @@ v0.2.0+ef11104
 
 - `-ldflags "-X main.version=..."` in the Dockerfile; the release passes the tag
   and short hash as build args.
-- `/healthz` returns it, so a running container can be identified without
-  inspecting the image tag: `{"status":"ok","version":"v0.2.0+ef11104", ...}`.
+- `/healthz` returns it, plus this process's UTC `started_at`:
+  `{"status":"ok","version":"v0.2.0+ef11104","started_at":"2026-04-15T08:00:00Z", ...}`.
+- an authenticated operator can read every boot from
+  `GET /api/audit?entity_kind=system&action=start`: the journal row carries `service`,
+  `version`, `schema_version` and UTC `started_at`, so evidence survives restarts.
 
 Rationale: a semver tag says what you intended to ship, the short hash says what you
 actually shipped. Both matter when a container has been running for three months.

@@ -77,8 +77,8 @@ Worker.Recurring.Run    every WorkerInterval (1h):
   per rule: for up to catchUpCap (60) occurrences while due <= today and not past ends_on
       → Module.Captures.Enqueue(draft)  dedupe_key = sha256(rule|due)
       → AdvanceRecurring(ref, from=due, to=next, now)   compare-and-swap, audit advance
-  record heartbeat (settings.worker_last_run_at)
   then: reclaim artifacts · drop import drafts/uploads · claim+sweep exports · poll mailbox
+  record heartbeat (settings.worker_last_run_at) last, with the completion time
 ```
 
 - **The worker holds no ledger contract.** `captures.Enqueue` writes a `captures` row with
@@ -119,7 +119,7 @@ Worker.Recurring.Run    every WorkerInterval (1h):
 
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
-| the worker process is not running | nothing is ever queued and the user blames the app ("my rent never showed up") | `worker_last_run_at` is empty or stale on `/healthz`; the UI should show "last checked" and say when it is stale. runit supervises both services in the image, so this is an operator error, not a code path |
+| the worker process is not running | nothing is ever queued and the user blames the app ("my rent never showed up") | `worker_last_run_at` is empty or stale on `/healthz`; it is stamped only after a whole run finishes, so it never claims a tick that failed halfway. runit supervises both services in the image, so this is an operator error, not a code path |
 | up to one hour of latency | a bill due at 00:01 appears at the next tick | acceptable and stated: the queue is a review queue, not an alarm clock. A client must not promise "at midnight" |
 | rule points at an archived account or a category that no longer exists | `enqueue` fails every run; the rule never produces anything and the log carries the error | the rules screen should show the referenced names (it does: `account_ref`, `category_ref` plus the joined names) and refuse to archive an account that has active rules |
 | `Unsorted` missing | a rule without `category_ref` falls back to `Unsorted` by name and fails with `404 not_found` | same guard as [F4](./04-accounts-and-payees.md): do not archive or rename `Unsorted` |
