@@ -13,6 +13,7 @@ that file.
 ## Before you write code
 
 ```bash
+mise install                  # go, golangci-lint, lefthook; once per clone
 cp .env.example .env          # fill APP_SECRET
 make hooks                    # git hook: build + lint + test + UAT before every commit
 make test                     # unit + integration tests, must be green before and after
@@ -21,12 +22,12 @@ make lint                     # four groups, all must stay at 0 issues
 make run                      # http://localhost:8080/healthz
 ```
 
-Requires [`lefthook`](https://github.com/evilmartians/lefthook) on your PATH
-(`go install github.com/evilmartians/lefthook@latest`). The hook is the same four
-checks CI runs; `git commit --no-verify` skips it, and CI will not.
+Versions come from `mise.toml`: Go from `go.mod`, `golangci-lint` from CI and
+[`lefthook`](https://github.com/evilmartians/lefthook) for the hooks. The hook is the same
+four checks CI runs; `git commit --no-verify` skips it, and CI will not.
 
-Requirements: Go 1.26, `golangci-lint`, Docker if you touch the image. No node, no
-package manager for the backend.
+Requirements: those tools, Docker if you touch the image. No node, no backend package
+manager.
 
 ## What a change must respect
 

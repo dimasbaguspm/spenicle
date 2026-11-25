@@ -1,6 +1,7 @@
 # Linting
 
-Four groups, four configs, four reasons to care. One `golangci-lint` binary.
+Four groups, four configs, four reasons to care. One `golangci-lint` binary, pinned
+at 2.11.4 in `mise.toml` and CI.
 
 ```bash
 make lint               # all four

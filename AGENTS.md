@@ -139,6 +139,10 @@ make lint       # all four groups; every one must stay at 0 issues
 make lint-fix   # safe automatic fixes (style, then correctness)
 ```
 
+`mise.toml` pins the local toolchain: `go` from `go.mod`, `golangci-lint` from CI
+and `lefthook` for the hooks. Run `mise install` once per clone; `make` stays the
+entry point.
+
 `lefthook.yml` wires the same four checks into `pre-commit` and `pre-push`; install it
 with `make hooks`. Agents that commit must run the checks themselves anyway — CI is
 the judge, the hook is the convenience.
