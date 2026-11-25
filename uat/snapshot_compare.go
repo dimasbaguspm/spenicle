@@ -141,9 +141,7 @@ func normalise(value any) any {
 }
 
 func normaliseString(value string) string {
-	if timestampPattern.MatchString(value) {
-		return "<timestamp>"
-	}
+	value = timestampPattern.ReplaceAllString(value, "<timestamp>")
 
 	if strings.HasPrefix(value, "v1:") {
 		return "<sealed>"

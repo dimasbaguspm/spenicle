@@ -36,8 +36,10 @@ the document wins until you change the document too.
 4. **Money is integers.** Minor units + ISO 4217 code. No `float64` anywhere, ever.
    Rates are exact decimals stored as `TEXT` and handled with `math/big.Rat`; rounding
    happens exactly once, half away from zero.
-5. **Base currency is locked** at first boot (`settings.base_currency`). A foreign
-   currency is a property of one transaction, never of an account.
+5. **Base currency and opening balances are locked together** when `POST /api/setup`
+   completes (`settings.setup_completed_at`). A legacy instance that already has
+   entries also stays locked. A foreign currency is a property of one transaction,
+   never of an account.
 6. **Capture ≠ ledger.** A capture never writes a ledger entry on its own. Approval does.
    This includes the recurring rules: the worker queues a `captures` row
    (`kind='recurring'`, `dedupe_key = sha256(rule|due)`) and never posts an entry, so the
@@ -178,8 +180,9 @@ The base currency and the login password are **not** environment variables: they
 the sealed JSON row in `settings` (`entity.Settings`), owned by `module/settings`. A
 fresh boot generates the first password, prints it once, and requires a change after
 the first sign-in. The password is stored as a PBKDF2-SHA256 hash inside that sealed
-row. The base currency is editable while the ledger is empty and locked after the first
-entry.
+row. `POST /api/setup` chooses the base currency and optionally creates accounts with
+nonzero opening balances in one transaction. Completion locks both, even when the
+request carries no opening accounts; a legacy database with entries is already locked.
 
 **One credential header, two kinds.** There is no cookie and no exchange route: every
 request carries `Authorization: Bearer <credential>`, and the **instance password** *is*
@@ -520,9 +523,8 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
-  One file today (`0001_init.sql`), the whole schema, so `schema_version` is 1. The
-  `v0.0.x` tags are the v1 tree (`apps/backend/`), so no v2 release exists and the schema
-  still stays squashed: the audit journal and the token table were folded into
-  `0001_init.sql` instead of growing a `0002`. Once a v2 release exists, forwards only —
-  never edit an applied migration, add the next number. The splitter is naive: no `;`
-  inside a migration comment.
+  `0001_init.sql` through `0004_equity_accounts.sql` are the current schema, so
+  `schema_version` is 4. The `v0.0.x` tags are the v1 tree (`apps/backend/`), so no v2
+  release exists yet. Once a v2 release exists, forwards only — never edit an applied
+  migration, add the next number. The splitter is naive: no `;` inside a migration
+  comment.

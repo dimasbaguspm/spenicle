@@ -105,7 +105,7 @@ func isRef(raw string) bool {
 func validAccountKind(field validator.FieldLevel) bool {
 	switch field.Field().String() {
 	case constant.AccountKindAsset, constant.AccountKindLiability,
-		constant.AccountKindExpense, constant.AccountKindIncome:
+		constant.AccountKindEquity, constant.AccountKindExpense, constant.AccountKindIncome:
 		return true
 	default:
 		return false

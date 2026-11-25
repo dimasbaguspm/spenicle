@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "invalid setup: account 0 has an invalid opening balance"
+  }
+}

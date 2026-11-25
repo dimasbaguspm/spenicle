@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "base_currency_locked",
+    "message": "base currency is locked once setup is complete"
+  }
+}

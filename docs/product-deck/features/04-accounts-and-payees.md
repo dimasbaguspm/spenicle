@@ -8,8 +8,8 @@
 "Tell the ledger where money lives and who it went to." Accounts are the where (cash,
 a bank, a card), categories are the why (groceries, rent) and payees are the who (the
 merchant, the landlord). All three are the same primitive in the backend: **a category is
-an account whose kind is `expense` or `income`**, so a screen that renders one renders
-all four kinds.
+an account whose kind is `expense` or `income`**, while the chart also carries `asset`,
+`liability` and setup-created `equity` accounts.
 
 Two things the user must be able to do from day one: rename/archive something they got
 wrong, and pre-fill the next entry from a payee's defaults.
@@ -37,9 +37,9 @@ POST /api/accounts
 ```
 
 `201` with `{ref, name, kind, currency, archived:false}`. `currency` is optional and
-defaults to the base currency; `kind` is one of `asset`, `liability`, `expense`,
-`income`. **No ledger entry is written** — an account with a zero balance is a normal
-state, and an opening balance is not part of this route.
+defaults to the base currency; `kind` is one of `asset`, `liability`, `equity`,
+`expense`, `income`. **No ledger entry is written** — an account with a zero balance is
+a normal state. Opening balances belong to `POST /api/setup`.
 
 ### 2.3 Change what it says about itself
 
@@ -133,8 +133,8 @@ PATCH/api/payees     Handler.Payees.Patch   → PayeeByRef → UpdatePayee → a
 
 1. **Ship read-only accounts and payees first** (`GET /api/accounts`, `GET /api/payees`):
    the entry form needs them and nothing can break.
-2. **Then create**, with the four `kind` values spelled out in the sheet: `asset` (wallet,
-   bank), `liability` (card, loan), `expense` and `income` (categories).
+2. **Then create**, with the five `kind` values spelled out in the sheet: `asset`
+   (wallet, bank), `liability` (card, loan), `equity`, `expense` and `income` (categories).
 3. **Then patch** (rename, icon, archive) — it is the feature that keeps the chart clean
    without a delete button.
 4. Rollback: none needed. Archiving is reversible (`archived:false`) and no route here

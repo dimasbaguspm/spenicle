@@ -68,7 +68,11 @@ type System interface {
 	Setting(ctx context.Context, key string) (string, bool, error)
 	SetSetting(ctx context.Context, key, value string) error
 	CreateSetting(ctx context.Context, key, value string) (bool, error)
-	HasEntries(ctx context.Context) (bool, error)
+	CompleteSetup(
+		ctx context.Context,
+		setup entity.Setup,
+		expectedSettings, settingsValue string,
+	) error
 }
 
 type Audit interface {

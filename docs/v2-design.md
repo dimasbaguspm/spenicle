@@ -22,7 +22,7 @@ place to defer a decision. v2 fixes all three.
 | review | single `captures` queue for every channel |
 | ledger | double-entry: `ledger_entries` + `ledger_postings`, zero-sum per entry |
 | categories | implemented as `accounts` rows with `kind IN ('expense','income')` |
-| base currency | in-app setting (default IDR), locked once the ledger has an entry |
+| base currency | in-app setting (default IDR), locked when `POST /api/setup` completes |
 | currencies | embedded ISO 4217 list, not a table |
 | FX rates | ECB daily EUR reference rates (XML feed), persisted and cached in memory |
 | foreign amounts | a property of the transaction, not of the account |
@@ -32,7 +32,7 @@ place to defer a decision. v2 fixes all three.
 | history | fresh start; statement import can backfill via extraction when enabled |
 | deletions | none, ever. Void and reject instead; `audit_log` records everything |
 | configuration | env vars only, every default in `common/config`, no viper, no config file |
-| first boot | adapter seeds the chart of accounts and locks the base currency; no bootstrap module |
+| first boot | adapter seeds `Cash` and `Unsorted`; `POST /api/setup` locks the currency and optional opening balances in one transaction |
 
 ## Layout
 
@@ -67,6 +67,24 @@ The commands own their wiring, and `uat` assembles the same graph by hand from
 (the route table and the middleware chain) and `handlers.New` (the endpoints).
 First-boot state lives in the adapter with the migrations, not in a module: it is
 initial data, and its rules come from `entity`.
+
+### One-shot setup
+
+`POST /api/setup` is the only route that chooses the base currency. Its optional
+`accounts` array carries up to 100 `{name, kind, opening_balance_minor}` objects;
+amounts are nonzero minor-unit strings, and `kind` is one of `asset`, `liability`,
+`equity`, `expense` or `income`. Each account gets one balanced `adjustment` entry
+dated today in `APP_TIMEZONE`, against a dedicated `Opening balance` equity account.
+Existing non-archived accounts are matched by `name` + `kind`; the name `Opening
+balance` is reserved for that equity account.
+
+The completion marker, sealed settings, accounts, opening entries and their audit
+rows commit together under `BEGIN IMMEDIATE`. The transaction refuses a completed
+setup, a legacy database that already has entries, or settings changed since the
+request was read. Currency-only setup remains valid and still writes the completion
+marker, so a second call is `409 base_currency_locked` even with an empty ledger.
+Invalid input or a failed write rolls back the whole setup.
+
 
 Configuration is one file: `internal/common/config/config.go` holds every environment
 variable, **every default** (DB path, HTTP timeouts, shutdown budgets, body cap, pool

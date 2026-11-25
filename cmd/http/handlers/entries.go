@@ -217,7 +217,7 @@ func (s *Server) PostEntry(w http.ResponseWriter, r *http.Request) {
 
 	input, err := toPostInput(request)
 	if err != nil {
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", err.Error())
+		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput, err.Error())
 
 		return
 	}
@@ -375,25 +375,27 @@ var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{entity.ErrSecretMismatch, http.StatusConflict, "secret_mismatch"},
 	{entity.ErrNotFound, http.StatusNotFound, "not_found"},
 	{entity.ErrDuplicate, http.StatusConflict, "duplicate"},
-	{entity.ErrInvalidParent, http.StatusUnprocessableEntity, "invalid_request"},
+	{entity.ErrInvalidParent, http.StatusUnprocessableEntity, codeInvalidInput},
 	{entity.ErrUnknownCaptureKind, http.StatusUnprocessableEntity, "unknown_capture_kind"},
+	{entity.ErrInvalidSetup, http.StatusUnprocessableEntity, codeInvalidInput},
 	{entity.ErrCaptureResolved, http.StatusConflict, "capture_resolved"},
 	{entity.ErrInvalidState, http.StatusConflict, "invalid_state"},
 	{entity.ErrPasswordMismatch, http.StatusUnauthorized, "invalid_password"},
 	{entity.ErrWeakPassword, http.StatusUnprocessableEntity, "weak_password"},
 	{entity.ErrBaseCurrencyLocked, http.StatusConflict, "base_currency_locked"},
+	{entity.ErrSetupConflict, http.StatusConflict, "setup_conflict"},
 	{entity.ErrImportConflict, http.StatusConflict, "import_conflict"},
 	{entity.ErrImportChunkConflict, http.StatusConflict, "import_conflict"},
 	{entity.ErrImportClosed, http.StatusConflict, "import_closed"},
 	{entity.ErrImportCommitting, http.StatusConflict, "import_committing"},
-	{entity.ErrInvalidImport, http.StatusUnprocessableEntity, "invalid_request"},
+	{entity.ErrInvalidImport, http.StatusUnprocessableEntity, codeInvalidInput},
 	{entity.ErrExportConflict, http.StatusConflict, "export_conflict"},
 	{entity.ErrExportNotReady, http.StatusConflict, "export_not_ready"},
 	{entity.ErrExportFailed, http.StatusConflict, "export_failed"},
 	{entity.ErrExportExpired, http.StatusGone, "gone"},
 	{connections.ErrStateInvalid, http.StatusUnauthorized, "invalid_state"},
 	{connections.ErrReauthRequired, http.StatusConflict, "reauth_required"},
-	{connections.ErrClientMissing, http.StatusUnprocessableEntity, "invalid_request"},
+	{connections.ErrClientMissing, http.StatusUnprocessableEntity, codeInvalidInput},
 	{connections.ErrNotConnected, http.StatusNotFound, "not_found"},
 	{intake.ErrNotConfigured, http.StatusConflict, "intake_disabled"},
 }
@@ -463,12 +465,12 @@ func entryPatchAction(w http.ResponseWriter, request entryPatchRequest) (string,
 
 	switch {
 	case actions == 0:
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput,
 			`send {"void": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings`)
 
 		return "", false
 	case actions > 1:
-		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
+		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput,
 			"void, payee_ref and a correction are separate actions")
 
 		return "", false

@@ -11,8 +11,9 @@ const DefaultTimezone = "UTC"
 
 var (
 	ErrPasswordMismatch   = errors.New("password does not match")
-	ErrBaseCurrencyLocked = errors.New("base currency is locked once the ledger has entries")
+	ErrBaseCurrencyLocked = errors.New("base currency is locked once setup is complete")
 	ErrWeakPassword       = errors.New("password must be at least 12 characters")
+	ErrSetupConflict      = errors.New("setup changed while it was being saved")
 	ErrTimezoneSetOnce    = errors.New("timezone is set once")
 	ErrTimezoneRequired   = errors.New("timezone is required")
 )

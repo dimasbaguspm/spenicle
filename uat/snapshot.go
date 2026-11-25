@@ -33,7 +33,7 @@ var allowedTables = []string{
 	"settings",
 }
 
-var timestampPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$`)
+var timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z`)
 
 var refPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 

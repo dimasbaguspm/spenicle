@@ -95,17 +95,17 @@ to `.env` and fill in `APP_SECRET`.
 The base currency and the login password are **not** environment variables. They live
 in the app's settings table: a fresh boot generates the first password and prints it
 once, the login screen accepts it, and you are asked to change it. The base currency
-is chosen once by `POST /api/setup` before the first entry — after that it is locked,
-because the numbers would stop meaning the same thing. `PATCH /api/settings` refuses it.
+is chosen once by `POST /api/setup`, which can also create accounts with opening
+balances. Completing setup locks it, even with an empty ledger. `PATCH /api/settings` refuses it.
 
 ## First run
 
-The wizard asks three things: base currency, your first account and its opening balance. It seeds
-a category tree you can rename later. That is the entire setup — no bank connection, no import
-required.
+The wizard asks for the base currency and can create accounts with their opening
+balances in the same call. Each nonzero balance posts a double-entry `adjustment`
+against an `Opening balance` equity account; currency-only setup is also valid.
 
-Base currency is locked after the first transaction. Changing it later would rewrite history,
-and history is the only thing worth protecting here.
+Base currency is locked when setup completes. Changing it later would rewrite
+history, and history is the only thing worth protecting here.
 
 ## Daily loop
 

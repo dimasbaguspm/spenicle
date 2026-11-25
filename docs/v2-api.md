@@ -32,7 +32,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 21 | `GET /healthz` | live |
 | 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `client_id` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `client_id` |
-| 1 | `POST /api/setup` | live: chooses the base currency once, before the first entry |
+| 1 | `POST /api/setup` | live: chooses the base currency once and optionally posts opening balances before setup completes |
 | 2 | `POST /api/password` | live: password rotation; the password itself is the root credential |
 | 4 | `GET/PATCH /api/settings` | `GET` is live; `PATCH` accepts no field yet — `base_currency` is not patchable |
 | 5, 6 | accounts create/patch | live |
@@ -148,12 +148,14 @@ entry stays), and the credential answers `401 unauthorized` at once.
 
 Keys: `base_currency`, `setup_completed_at`, `secret_fingerprint`, `timezone`,
 `extraction_enabled`, `ai_assistance`, `extraction_api_url`, `ecb_last_fetch_at`,
-`last_used_account_id`, `last_used_payee_id`. `timezone` is always present (UTC when
-`APP_TIMEZONE` is unset) and is pinned at the first boot; `extraction_enabled` means the
-SnapToJSON rail is configured (`SNAPTOJSON_API_KEY`) and `ai_assistance` only records
-whether `OPENAI_HOST` + `OPENAI_API_KEY` + `OPENAI_MODEL` are all set. The two flags are
-independent: the OpenAI adapter is reserved for the future chat rail and does not run
-extraction today.
+`last_used_account_id`, `last_used_payee_id`. `setup_completed_at` is the authoritative
+one-shot marker: once set, the base currency is locked even when the ledger is empty.
+A legacy database with ledger entries but no marker is also locked. `timezone` is always
+present (UTC when `APP_TIMEZONE` is unset) and is pinned at the first boot;
+`extraction_enabled` means the SnapToJSON rail is configured (`SNAPTOJSON_API_KEY`) and
+`ai_assistance` only records whether `OPENAI_HOST` + `OPENAI_API_KEY` + `OPENAI_MODEL`
+are all set. The two flags are independent: the OpenAI adapter is reserved for the
+future chat rail and does not run extraction today.
 
 
 ## 1.2 `api_tokens`
@@ -191,7 +193,7 @@ the worker prunes `artifacts/` instead: a rejected capture loses its document af
 | --- | --- | --- |
 | `id` | INTEGER PK | |
 | `name` | TEXT | |
-| `kind` | TEXT | `asset` \| `liability` \| `expense` \| `income` |
+| `kind` | TEXT | `asset` \| `liability` \| `equity` \| `expense` \| `income` |
 | `parent_id` | INTEGER NULL | self-FK, category hierarchy |
 | `currency` | TEXT | ISO code, validated in code against the embedded list |
 
@@ -388,7 +390,7 @@ CREATE TABLE fx_rates (
 CREATE TABLE accounts (
   id          INTEGER PRIMARY KEY,
   name        TEXT NOT NULL,
-  kind        TEXT NOT NULL CHECK (kind IN ('asset','liability','expense','income')),
+  kind        TEXT NOT NULL CHECK (kind IN ('asset','liability','equity','expense','income')),
   parent_id   INTEGER REFERENCES accounts(id),
   currency    TEXT NOT NULL,
   icon        TEXT,
@@ -619,14 +621,21 @@ CREATE INDEX ix_rules_account ON categorization_rules (account_id);
 
 # 3. Endpoints
 
-## 3.1 `POST /api/setup`
-
 ```json
 { "base_currency": "IDR",
-  "app_secret_configured": true,
-  "accounts": [{ "name": "BCA Tahapan", "kind": "asset", "opening_balance": "12000000" }],
-  "seed_categories": true }
+  "accounts": [
+    { "name": "BCA Tahapan", "kind": "asset", "opening_balance_minor": "12000000" },
+    { "name": "Credit card", "kind": "liability", "opening_balance_minor": "-750000" }
+  ] }
 ```
+
+`accounts` is optional, capped at 100, and every balance is a nonzero integer money
+string. A positive asset/expense amount and a negative liability/income amount follow
+the ledger's signed-posting convention. Each requested account is created, or matched
+by `name` + `kind` and reused, and receives one `adjustment` entry dated today in
+`APP_TIMEZONE`; the opposite posting lands on a dedicated `Opening balance` equity
+account. Accounts named `Opening balance` with kind `equity` are reserved. Setup,
+including all accounts, entries, postings, settings and audit rows, commits atomically.
 
 ```mermaid
 sequenceDiagram
@@ -634,20 +643,20 @@ sequenceDiagram
     participant U as User
     participant API as Setup handler
     participant DB as SQLite
-    U->>API: POST setup with base currency and accounts
-    API->>DB: SELECT v FROM settings WHERE k = setup_completed_at
-    alt already set
-        API-->>U: 409 already_initialized
+    U->>API: POST setup with base currency and optional accounts
+    API->>API: validate currency, account names, kinds and money strings
+    API->>DB: BEGIN IMMEDIATE
+    API->>DB: SELECT setup_completed_at and existing ledger entries
+    alt setup already completed or legacy ledger has entries
+        API->>DB: ROLLBACK
+        API-->>U: 409 base_currency_locked
     else first run
-        API->>API: validate codes against embedded ISO 4217 list
-        API->>API: require APP_SECRET when binding to a public interface
-        API->>DB: BEGIN IMMEDIATE
-        API->>DB: INSERT settings base_currency and secret_fingerprint
-        API->>DB: INSERT accounts asset rows and expense category tree
-        API->>DB: INSERT opening balance entry with two postings
-        API->>DB: INSERT settings setup_completed_at and COMMIT
-        API->>API: warm FX cache, start workers
-        API-->>U: 201 setup complete
+        API->>DB: SELECT expected sealed app_settings
+        API->>DB: create or reuse requested accounts and Opening balance equity
+        API->>DB: INSERT balanced adjustment entries and postings
+        API->>DB: INSERT typed audit rows, app_settings and setup_completed_at
+        API->>DB: COMMIT
+        API-->>U: 200 settings
     end
 ```
 
@@ -679,9 +688,10 @@ sequenceDiagram
 
 ## 3.3 `PATCH /api/settings`
 
-No field is accepted yet. The base currency is chosen once by `POST /api/setup` while the
-ledger is empty (`409 base_currency_locked` afterwards), and the timezone is pinned at boot
-from `APP_TIMEZONE`. Because the decoder refuses unknown fields, sending
+No field is accepted yet. The base currency is chosen once by `POST /api/setup`; the
+completion marker locks it even when the ledger is empty, and a legacy database with
+entries is also locked (`409 base_currency_locked` on setup). The timezone is pinned at
+boot from `APP_TIMEZONE`. Because the decoder refuses unknown fields, sending
 `{"base_currency": "USD"}` here answers `400 invalid_json`; `{}` answers `422 empty_patch`.
 
 ```mermaid
@@ -703,17 +713,16 @@ sequenceDiagram
     participant UI as PWA
     participant API as Accounts handler
     participant DB as SQLite
-    UI->>API: POST account with optional opening_balance
-    API->>API: validate kind, currency code, parent kind rules
+    UI->>API: POST account with name, kind and optional parent_ref
+    API->>API: validate kind, currency code and parent rules
     API->>DB: BEGIN IMMEDIATE
     API->>DB: INSERT accounts
-    opt opening_balance present
-        API->>DB: INSERT ledger_entries source adjustment
-        API->>DB: INSERT two postings summing zero
-    end
     API->>DB: INSERT audit_log and COMMIT
     API-->>UI: 201 account
 ```
+
+Opening balances are written only by `POST /api/setup`; account creation never posts
+to the ledger.
 
 ## 3.5 `PATCH /api/accounts/{id}`
 
@@ -1087,7 +1096,7 @@ sequenceDiagram
 
 ## 3.20 `GET /healthz`
 
-`200 {"status":"ok","schema_version":1,"app_secret":"sealed","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}`
+`200 {"status":"ok","schema_version":4,"app_secret":"sealed","base_currency":"IDR","worker_last_run_at":"2026-04-15T00:00:00Z"}`
 
 ```mermaid
 sequenceDiagram

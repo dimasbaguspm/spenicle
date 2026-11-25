@@ -28,8 +28,9 @@ None.
 
 `base_currency` is **not** part of this request. The decoder refuses unknown fields, so
 sending `{"base_currency":"USD"}` answers `400 invalid_json` — the currency can only be
-chosen through `POST /api/setup`, and only while the ledger is empty. `timezone` is
-refused the same way; it comes from `APP_TIMEZONE` and no request can change it.
+chosen through `POST /api/setup`, whose completion marker locks it even when the ledger
+is empty. `timezone` is refused the same way; it comes from `APP_TIMEZONE` and no request
+can change it.
 
 ## Response
 

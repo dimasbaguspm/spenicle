@@ -5,15 +5,25 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
 func newService(t *testing.T) *settings.Service {
+	t.Helper()
+
+	service, _ := newServiceWithStore(t)
+
+	return service
+}
+
+func newServiceWithStore(t *testing.T) (*settings.Service, *sqlite.Store) {
 	t.Helper()
 
 	db, err := sqlite.Open(t.Context(), sqlite.Config{Path: filepath.Join(t.TempDir(), "settings.db")})
@@ -32,7 +42,9 @@ func newService(t *testing.T) *settings.Service {
 		t.Fatalf("sealer: %v", err)
 	}
 
-	return settings.New(sqlite.NewStore(db), sealer, clock.System{})
+	store := sqlite.NewStore(db)
+
+	return settings.New(store, sealer, clock.System{}), store
 }
 
 func TestEnsureInitialDefaultsToIDRAndHashesThePassword(t *testing.T) {
@@ -316,5 +328,135 @@ func TestSettingsAlwaysCarryATimezone(t *testing.T) {
 				t.Fatalf("timezone = %q, want %q", appSettings.Timezone, testCase.want)
 			}
 		})
+	}
+}
+
+func TestSetupPersistsCurrencyAndOpeningEntries(t *testing.T) {
+	tests := []struct {
+		name         string
+		accounts     []entity.OpeningAccount
+		wantEntries  int
+		wantCurrency string
+		wantErr      error
+	}{
+		{
+			name:         "currency only stays compatible",
+			wantCurrency: "USD",
+		},
+		{
+			name: "opening accounts post balanced entries",
+			accounts: []entity.OpeningAccount{
+				{Name: "Cash", Kind: constant.AccountKindAsset, AmountMinor: 125_000},
+				{Name: "Card", Kind: constant.AccountKindLiability, AmountMinor: -50_000},
+			},
+			wantEntries:  2,
+			wantCurrency: "USD",
+		},
+		{
+			name: "an invalid account rolls the setup back",
+			accounts: []entity.OpeningAccount{
+				{Name: "Cash", Kind: constant.AccountKindAsset, AmountMinor: 0},
+			},
+			wantErr: entity.ErrInvalidSetup,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			service, store := newSetupService(t)
+			got, err := service.Setup(t.Context(), "usd", test.accounts)
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("setup error = %v, want %v", err, test.wantErr)
+			}
+
+			assertSetupEntryCount(t, store, test.wantEntries)
+			if test.wantErr != nil {
+				assertSetupRolledBack(t, store)
+
+				return
+			}
+
+			assertSetupCurrencyLocked(t, service, got, test.wantCurrency)
+		})
+	}
+}
+
+func newSetupService(t *testing.T) (*settings.Service, *sqlite.Store) {
+	t.Helper()
+
+	service, store := newServiceWithStore(t)
+	if _, _, err := service.EnsureInitial(t.Context(), "", ""); err != nil {
+		t.Fatalf("ensure initial: %v", err)
+	}
+
+	return service, store
+}
+
+func assertSetupEntryCount(t *testing.T, store *sqlite.Store, want int) {
+	t.Helper()
+
+	entries, err := store.ListEntries(t.Context(), entity.EntryFilter{})
+	if err != nil {
+		t.Fatalf("list entries: %v", err)
+	}
+
+	if len(entries) != want {
+		t.Fatalf("entries = %d, want %d", len(entries), want)
+	}
+}
+
+func assertSetupRolledBack(t *testing.T, store *sqlite.Store) {
+	t.Helper()
+
+	if _, found, err := store.Setting(t.Context(), constant.SettingSetupCompletedAt); err != nil || found {
+		t.Fatalf("failed setup left a marker: found=%v err=%v", found, err)
+	}
+}
+
+func assertSetupCurrencyLocked(t *testing.T, service *settings.Service, got entity.Settings, want string) {
+	t.Helper()
+
+	if got.BaseCurrency != want {
+		t.Fatalf("base currency = %q, want %q", got.BaseCurrency, want)
+	}
+
+	stored, err := service.Load(t.Context())
+	if err != nil || stored.BaseCurrency != want {
+		t.Fatalf("stored currency = %q err=%v", stored.BaseCurrency, err)
+	}
+
+	if _, err := service.Setup(t.Context(), "EUR", nil); !errors.Is(err, entity.ErrBaseCurrencyLocked) {
+		t.Fatalf("second setup error = %v, want ErrBaseCurrencyLocked", err)
+	}
+}
+
+func TestSetupDatesOpeningEntriesInTheConfiguredTimezone(t *testing.T) {
+	service, store := newServiceWithStore(t)
+	ctx := t.Context()
+	location, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+
+	if _, _, ensureErr := service.EnsureInitial(ctx, "", location.String()); ensureErr != nil {
+		t.Fatalf("ensure initial: %v", ensureErr)
+	}
+
+	before := time.Now().In(location).Format(constant.DateLayout)
+	if _, setupErr := service.Setup(ctx, "IDR", []entity.OpeningAccount{
+		{Name: "Cash", Kind: constant.AccountKindAsset, AmountMinor: 100_000},
+	}); setupErr != nil {
+		t.Fatalf("setup: %v", setupErr)
+	}
+	after := time.Now().In(location).Format(constant.DateLayout)
+
+	entries, err := store.ListEntries(ctx, entity.EntryFilter{})
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("entries = %d err=%v", len(entries), err)
+	}
+
+	got := entries[0].OccurredOn.Format(constant.DateLayout)
+	if got != before && got != after {
+		t.Fatalf("opening date = %q, want %q or %q", got, before, after)
 	}
 }

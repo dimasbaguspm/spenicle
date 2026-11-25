@@ -4,16 +4,20 @@
 
 ## Purpose
 
-Open the ledger: choose the base currency before the first entry. It is a one-shot
-wizard step — the same call answers `409` the moment the ledger has any entry.
+Open the ledger once: choose the base currency and optionally seed accounts with
+opening balances. The currency, accounts, balanced entries, settings and completion
+marker commit together; a second call is `409 base_currency_locked` even when the
+first call created no entries.
 
 ## Upstream
 
-The first-run screen.
+The first-run wizard.
 
 ## Downstream
 
-`Module.Settings.SetBaseCurrency`: `HasEntries` guard, then re-seal the settings row.
+`Module.Settings.Setup`: read the current sealed settings, validate the request,
+compute today's date in the stored timezone, then call
+`Repository.Sqlite.CompleteSetup` under `BEGIN IMMEDIATE`.
 
 ## Path / query params
 
@@ -24,6 +28,15 @@ None.
 | field | type | required | notes |
 | --- | --- | --- | --- |
 | `base_currency` | string | yes | ISO 4217, case-insensitive; `empty_setup` when absent |
+| `accounts` | array | no | at most 100 opening accounts |
+| `accounts[].name` | string | yes | trimmed, ≤ 80 characters; unique per `kind` in the request |
+| `accounts[].kind` | string | yes | `asset`, `liability`, `equity`, `expense`, `income` |
+| `accounts[].opening_balance_minor` | string | yes | nonzero signed minor units; wire money is a string |
+
+`Opening balance` is reserved for the equity account the server creates as the
+contra account. Existing non-archived accounts are reused by `name` + `kind` and
+updated to the chosen base currency. An archived match refuses the whole setup.
+Opening entries are dated today in `APP_TIMEZONE`; the client cannot backdate them.
 
 ## Response
 
@@ -31,14 +44,20 @@ None.
 
 ## Errors
 
-`422 empty_setup` when the body carries nothing; `409 base_currency_locked` once an
-entry exists; `422 unknown_currency` for a code this build does not know.
+`422 empty_setup` when `base_currency` is absent; `422 unknown_currency` for a code
+this build does not know; `422 invalid_request` for an invalid account, duplicate
+`name` + `kind`, zero balance or the reserved account name; `409 base_currency_locked`
+once setup has completed or a legacy database already has entries; `409 invalid_state`
+when a matching account is archived; `409 setup_conflict` when settings changed while
+the request was being saved.
 
 ## Limitations
 
-Only the currency: first account and opening balance are not part of this route yet, and
-the base currency cannot be changed afterwards (voiding entries does not unlock it). It is
-set exactly once here; `PATCH /api/settings` refuses it, and `timezone` is never settable
+Accounts are optional: currency-only setup remains valid and still locks the ledger.
+Each requested account receives one `adjustment` entry with two postings, against the
+dedicated `Opening balance` equity account. No opening equity account is created for
+currency-only setup. The base currency cannot be changed afterwards, voiding entries
+does not unlock it, and `PATCH /api/settings` refuses it. `timezone` is never settable
 through the API. Both fields stay in every settings payload, with no `omitempty`, so a
 client never has to guess a missing default.
 
@@ -51,13 +70,22 @@ sequenceDiagram
     participant H as Setup handler
     participant S as Settings module
     participant DB as SQLite
-    C->>H: POST /api/setup {base_currency}
-    H->>S: SetBaseCurrency(code)
-    S->>DB: SELECT EXISTS(ledger_entries)
-    alt ledger has entries
-        H-->>C: 409 base_currency_locked
-    else empty
-        S->>DB: UPDATE settings (re-sealed)
+    C->>H: POST /api/setup {base_currency, accounts?}
+    H->>S: Setup(code, accounts)
+    S->>DB: read app_settings and current settings
+    S->>S: validate, date today, seal settings
+    S->>DB: BEGIN IMMEDIATE
+    S->>DB: check completion marker, existing entries, expected settings
+    alt setup is closed or settings changed
+        DB-->>S: rollback
+        H-->>C: 409 base_currency_locked or setup_conflict
+    else setup is open
+        opt accounts supplied
+            S->>DB: create or reuse accounts and Opening balance equity
+            S->>DB: insert one balanced adjustment entry per account
+        end
+        S->>DB: write sealed settings and setup_completed_at
+        S->>DB: append audit rows and COMMIT
         H-->>C: 200 settings
     end
 ```

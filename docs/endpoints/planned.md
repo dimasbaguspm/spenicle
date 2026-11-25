@@ -10,6 +10,5 @@ Nothing on the roadmap is unbuilt at the moment. The decisions that closed the l
 - **`/api/months/{yyyy-mm}` became `/api/analytics/<namespace>`.** One concrete shape per
   question (`months`, `categories`, saved views) beats one polymorphic analytics route.
 
-Open questions kept deliberately out of the API: opening balance on `POST /api/setup`,
-parent roll-up in `categories`, `custom` namespaces beyond the two implemented, token
-expiry, and a per-token rate limit.
+Open questions kept deliberately out of the API: `custom` namespaces beyond the two
+implemented, token expiry, and a per-token rate limit.

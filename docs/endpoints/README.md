@@ -12,7 +12,7 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `GET` | `/healthz` | liveness, build and schema fingerprint | [`GET_healthz.md`](./GET_healthz.md) |
 | `POST` | `/api/password` | replace the generated password | [`POST_api_password.md`](./POST_api_password.md) |
 | `GET` | `/api/settings` | the in-app settings the shell reads | [`GET_api_settings.md`](./GET_api_settings.md) |
-| `PATCH` | `/api/settings` | change the base currency while the ledger is empty | [`PATCH_api_settings.md`](./PATCH_api_settings.md) |
+| `PATCH` | `/api/settings` | discover that no setting is patchable | [`PATCH_api_settings.md`](./PATCH_api_settings.md) |
 | `GET` | `/api/meta` | bootstrap payload: settings, accounts, currencies | [`GET_api_meta.md`](./GET_api_meta.md) |
 | `GET` | `/api/accounts` | every account with the balance the ledger implies | [`GET_api_accounts.md`](./GET_api_accounts.md) |
 | `POST` | `/api/accounts` | create an account or a category | [`POST_api_accounts.md`](./POST_api_accounts.md) |
@@ -47,7 +47,7 @@ Nothing is planned-but-unbuilt right now; the decisions that shaped the routes a
 | `POST` | `/api/categorization/rules` | teach one rule: a pattern, a field and a category | [`POST_api_categorization_rules.md`](./POST_api_categorization_rules.md) |
 | `PATCH` | `/api/categorization/rules/{ref}` | repoint, reprioritise or archive a rule | [`PATCH_api_categorization_rules_ref.md`](./PATCH_api_categorization_rules_ref.md) |
 | `GET` | `/api/categorization/suggest` | the category this payee or text would get, and why | [`GET_api_categorization_suggest.md`](./GET_api_categorization_suggest.md) |
-| `POST` | `/api/setup` | open the ledger with a base currency | [`POST_api_setup.md`](./POST_api_setup.md) |
+| `POST` | `/api/setup` | open the ledger with a base currency and optional opening balances | [`POST_api_setup.md`](./POST_api_setup.md) |
 | `GET` | `/api/rates` | the cached ECB reference rate for one day | [`GET_api_rates.md`](./GET_api_rates.md) |
 | `GET` | `/api/audit` | the journal: what changed, who changed it | [`GET_api_audit.md`](./GET_api_audit.md) |
 | `POST` | `/api/tokens` | mint a scoped, non-root credential (root only) | [`POST_api_tokens.md`](./POST_api_tokens.md) |

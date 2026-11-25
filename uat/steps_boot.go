@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
 func theBaseCurrencyIs(ctx context.Context, code string) (context.Context, error) {
@@ -31,6 +34,26 @@ func aRunningAPI(ctx context.Context) (context.Context, error) {
 	if err := w.boot(ctx); err != nil {
 		return ctx, err
 	}
+
+	return ctx, nil
+}
+
+func theAPIClockIs(ctx context.Context, day string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.server != nil {
+		return ctx, errors.New("set the API clock before starting the API")
+	}
+
+	at, err := time.Parse(constant.DateLayout, day)
+	if err != nil {
+		return ctx, err
+	}
+
+	w.apiAsOf = at
 
 	return ctx, nil
 }

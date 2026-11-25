@@ -51,6 +51,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the boot fails$`, theBootFails)
 	sc.Step(`^the boot failure mentions "([^"]*)"$`, theBootFailureMentions)
 	sc.Step(`^the failure is logged$`, theFailureIsLogged)
+	sc.Step(`^the API clock is "([^"]*)"$`, theAPIClockIs)
 	sc.Step(`^the recurring worker clock is "([^"]*)"$`, theRecurringWorkerClockIs)
 	sc.Step(`^the recurring worker reports "(\d+)" (queued|skipped|failed)$`, theRecurringWorkerReports)
 	sc.Step(`^the first capture ref is remembered$`, theFirstCaptureRefIsRemembered)

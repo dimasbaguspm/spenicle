@@ -1,6 +1,6 @@
 {
   "error": {
     "code": "base_currency_locked",
-    "message": "base currency is locked once the ledger has entries"
+    "message": "base currency is locked once setup is complete"
   }
 }

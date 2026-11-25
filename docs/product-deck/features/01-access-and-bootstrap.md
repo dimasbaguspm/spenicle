@@ -17,7 +17,7 @@ still has a credential?" and "who voided that entry?".
 | --- | --- | --- |
 | 1 | `GET /healthz` | proves the process booted, migrated, and which build this is |
 | 2 | `GET /api/settings` | `base_currency`, `timezone`, `password_must_change`, and the capability flags: `extraction_enabled` drives SnapToJSON; `ai_assistance` is informational only and must not gate a feature ([F9](./09-gaps-and-next.md) G11) |
-| 3 | `POST /api/setup {"base_currency":"IDR"}` | the wizard's only write; `200` with the settings payload |
+| 3 | `POST /api/setup {"base_currency":"IDR","accounts":[{"name":"Cash","kind":"asset","opening_balance_minor":"500000"}]}` | the wizard's only write; optional opening balances post atomically, then `200` returns the settings payload |
 | 4 | `POST /api/password {current_password, new_password}` | closes the instance; the response carries the new root credential |
 | 5 | `GET /api/meta` | one round trip fills the shell: settings, accounts with balances, the ISO currency list |
 
@@ -75,7 +75,7 @@ plus the shared cursor/limit. `actor_ref` names the token when a token made the 
 
 ```
 GET /healthz        Handler.Health      → Repository.Sqlite.SchemaVersion + Ping
-POST /api/setup     Handler.Setup       → Module.Settings.SetBaseCurrency (HasEntries guard, re-seal)
+POST /api/setup     Handler.Setup       → Module.Settings.Setup (one-shot guard, opening entries, re-seal)
 GET /api/meta       Handler.Meta.Get    → Settings.Load + ListAccounts + BalancesByAccount + entity.Currencies()
 POST /api/password  Handler.Session.ChangePassword → Module.Settings.ChangePassword (PBKDF2, re-seal)
 POST /api/tokens    Handler.Tokens.Create → Module.Tokens.Create (sealer.Digest, InsertToken + journal)
@@ -111,8 +111,9 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 
 1. A cold container must answer `GET /healthz` before anything else is asked of it, and
    must answer `ok` only after migrations, sealing and the baseline seeds succeeded.
-2. `POST /api/setup` succeeds exactly once: while the ledger is empty. Any entry makes
-   it `409 base_currency_locked`, and voiding entries does not unlock it.
+2. `POST /api/setup` succeeds exactly once. The completion marker locks the base
+   currency even when the ledger is empty; a legacy database with entries is also locked.
+   Voiding entries does not unlock it. Optional opening balances commit with that marker.
 3. `timezone` is never writable through the API. It comes from `APP_TIMEZONE` at the
    first boot; a later boot that disagrees with the stored value refuses to start.
 4. `GET /api/settings` always carries `base_currency`, `timezone`,
@@ -169,13 +170,26 @@ Scenario: The base currency is chosen once
     """
   Then the response status is 200
   And the response body has base_currency "USD"
-  When I post one entry
-  And I send a POST to "/api/setup" with:
+  When I send a POST to "/api/setup" with:
     """json
     {"base_currency":"EUR"}
     """
   Then the response status is 409
   And the error code is "base_currency_locked"
+
+Scenario: Opening balances land with the currency lock
+  Given an empty ledger
+  When I send a POST to "/api/setup" with:
+    """json
+    {"base_currency":"USD","accounts":[
+      {"name":"Bank","kind":"asset","opening_balance_minor":"500000"},
+      {"name":"Card","kind":"liability","opening_balance_minor":"-75000"}
+    ]}
+    """
+  Then the response status is 200
+  And the store holds 2 "ledger_entries" rows
+  And the account "Bank" carries base_amount_minor "500000"
+  And the account "Card" carries base_amount_minor "-75000"
 
 Scenario: A weak password is refused and a good one rotates the root credential
   Given the instance password is "generated-password"

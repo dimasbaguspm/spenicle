@@ -68,13 +68,63 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 }
 
 func applyOne(ctx context.Context, db *sql.DB, version int, body string) error {
-	tx, err := db.BeginTx(ctx, nil)
+	conn, err := db.Conn(ctx)
 	if err != nil {
-		return fmt.Errorf("begin migration %d: %w", version, err)
+		return fmt.Errorf("connect migration %d: %w", version, err)
 	}
 
-	defer func() { _ = tx.Rollback() }()
+	var foreignKeys int
 
+	if queryErr := conn.QueryRowContext(ctx, `PRAGMA foreign_keys`).Scan(&foreignKeys); queryErr != nil {
+		return errors.Join(fmt.Errorf("read foreign keys for migration %d: %w", version, queryErr),
+			conn.Close())
+	}
+
+	cleanup := func() error {
+		_, restoreErr := conn.ExecContext(context.WithoutCancel(ctx),
+			`PRAGMA foreign_keys = `+strconv.Itoa(foreignKeys))
+		closeErr := conn.Close()
+
+		if restoreErr != nil {
+			restoreErr = fmt.Errorf("restore foreign keys after migration %d: %w", version, restoreErr)
+		}
+
+		if closeErr != nil {
+			closeErr = fmt.Errorf("close migration %d connection: %w", version, closeErr)
+		}
+
+		return errors.Join(restoreErr, closeErr)
+	}
+
+	if _, disableErr := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); disableErr != nil {
+		return errors.Join(fmt.Errorf("disable foreign keys for migration %d: %w", version, disableErr),
+			cleanup())
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Join(fmt.Errorf("begin migration %d: %w", version, err), cleanup())
+	}
+
+	applyErr := applyMigration(ctx, tx, version, body)
+	if applyErr == nil {
+		applyErr = tx.Commit()
+		if applyErr != nil {
+			applyErr = fmt.Errorf("commit migration %d: %w", version, applyErr)
+		}
+	}
+
+	rollbackErr := tx.Rollback()
+	if rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
+		rollbackErr = fmt.Errorf("rollback migration %d: %w", version, rollbackErr)
+	} else {
+		rollbackErr = nil
+	}
+
+	return errors.Join(applyErr, rollbackErr, cleanup())
+}
+
+func applyMigration(ctx context.Context, tx *sql.Tx, version int, body string) error {
 	recorded, err := alreadyApplied(ctx, tx, version)
 	if err != nil {
 		return err
@@ -90,14 +140,42 @@ func applyOne(ctx context.Context, db *sql.DB, version int, body string) error {
 		}
 	}
 
+	if err := checkForeignKeys(ctx, tx); err != nil {
+		return err
+	}
+
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)`,
 		version, time.Now().UTC().Format(time.RFC3339)); err != nil {
 		return fmt.Errorf("record migration %d: %w", version, err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit migration %d: %w", version, err)
+	return nil
+}
+
+func checkForeignKeys(ctx context.Context, tx *sql.Tx) error {
+	rows, err := tx.QueryContext(ctx, `PRAGMA foreign_key_check`)
+	if err != nil {
+		return fmt.Errorf("check foreign keys: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	if rows.Next() {
+		var table, parent string
+
+		var rowID, constraintID sql.NullInt64
+
+		if scanErr := rows.Scan(&table, &rowID, &parent, &constraintID); scanErr != nil {
+			return fmt.Errorf("scan foreign key violation: %w", scanErr)
+		}
+
+		return fmt.Errorf("foreign key violation: table %q row %d references %q",
+			table, rowID.Int64, parent)
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate foreign key violations: %w", err)
 	}
 
 	return nil

@@ -18,7 +18,7 @@ The setup wizard, the "add account" sheet, an agent seeding defaults.
 `ref`, then the handler answers. When `parent_ref` is sent, the store walks the parent's
 ancestor chain in the same transaction and refuses a parent of another `kind`, a chain
 deeper than three levels, and a cycle. No ledger entry is written here — an account with
-0 balance is a normal state; only an opening balance (a future `POST /api/setup`) posts.
+0 balance is a normal state; opening balances belong to `POST /api/setup`.
 
 ## Path / query params
 
@@ -29,7 +29,7 @@ None.
 | field | type | required | notes |
 | --- | --- | --- | --- |
 | `name` | string | yes | ≤ 80 characters; unique per `kind` |
-| `kind` | string | yes | `asset`, `liability`, `expense`, `income` |
+| `kind` | string | yes | `asset`, `liability`, `equity`, `expense`, `income` |
 | `currency` | string | no | ISO 4217; defaults to the base currency |
 | `parent_ref` | ref | no | an existing account of the same `kind`; the new account becomes its child |
 
@@ -42,16 +42,17 @@ sends this value. `parent_ref` is omitted when the account sits at the top of th
 
 ## Errors
 
-`422 invalid_request` when `name` is missing, `kind` is not one of the four, the parent
+`422 invalid_request` when `name` is missing, `kind` is not one of the five, the parent
 carries another `kind`, the new account would land below the third level, or the parent
 would close a cycle; `422 unknown_currency` for a code this build does not know;
 `422 unknown_reference` when `parent_ref` names no account.
 
 ## Limitations
 
-No icon or opening balance in this route yet — use `PATCH /api/accounts/{ref}` to rename,
-add an icon or archive. Three levels is the ceiling (`child → parent → grandparent`). A
-duplicate `name`+`kind` pair answers `409 duplicate`, not a `500`.
+No icon or opening balance in this route — use `POST /api/setup` for opening balances,
+and `PATCH /api/accounts/{ref}` to rename, add an icon or archive. Three levels is the
+ceiling (`child → parent → grandparent`). A duplicate `name`+`kind` pair answers `409
+duplicate`, not a `500`.
 
 ## Sequence
 

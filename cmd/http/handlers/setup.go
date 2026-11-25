@@ -5,10 +5,19 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/validating"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
+type setupAccountRequest struct {
+	Name                string `json:"name"                  validate:"required,max=80"`
+	Kind                string `json:"kind"                  validate:"required,accountkind"`
+	OpeningBalanceMinor string `json:"opening_balance_minor" validate:"required,money"`
+}
+
 type setupRequest struct {
-	BaseCurrency string `json:"base_currency" validate:"omitempty,currency"`
+	BaseCurrency string                `json:"base_currency" validate:"omitempty,currency"`
+	Accounts     []setupAccountRequest `json:"accounts"      validate:"omitempty,max=100,dive"`
 }
 
 func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +36,20 @@ func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings, err := s.deps.Settings.SetBaseCurrency(ctx, request.BaseCurrency)
+	accounts := make([]entity.OpeningAccount, 0, len(request.Accounts))
+	for _, account := range request.Accounts {
+		amount, err := validating.Money(account.OpeningBalanceMinor, "opening_balance_minor")
+		if err != nil {
+			writeInvalid(w, err)
+			return
+		}
+
+		accounts = append(accounts, entity.OpeningAccount{
+			Name: account.Name, Kind: account.Kind, AmountMinor: amount,
+		})
+	}
+
+	settings, err := s.deps.Settings.Setup(ctx, request.BaseCurrency, accounts)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 

@@ -133,17 +133,3 @@ func auditSetting(ctx context.Context, tx *sql.Tx, key, action string) error {
 		To:     entity.SettingChanged{Key: key},
 	})
 }
-
-func (s *Store) HasEntries(ctx context.Context) (bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.HasEntries")
-	defer endSpan()
-
-	var exists int
-
-	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ledger_entries)`).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("has entries: %w", err)
-	}
-
-	return exists == 1, nil
-}

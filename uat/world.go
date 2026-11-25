@@ -108,6 +108,7 @@ type world struct {
 	exports        exports.Contract
 	exportDeps     export.Deps
 	limits         entity.AppConfig
+	apiAsOf        time.Time
 	asOf           time.Time
 	workerSummary  workerhandlers.Summary
 	password       string

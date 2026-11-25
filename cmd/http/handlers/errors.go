@@ -8,7 +8,10 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 )
 
-const codeInternal = "internal_error"
+const (
+	codeInternal     = "internal_error"
+	codeInvalidInput = "invalid_request"
+)
 
 func (s *Server) writeClassified(ctx context.Context, w http.ResponseWriter, err error) {
 	status, code := classify(err)

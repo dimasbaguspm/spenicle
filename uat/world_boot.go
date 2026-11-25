@@ -86,7 +86,7 @@ func (w *world) boot(ctx context.Context) error {
 	w.location = time.UTC
 	w.limits = limits
 
-	settingsService := settings.New(store, sealer, clockSystem)
+	settingsService := settings.New(store, sealer, settingsClock{at: w.apiAsOf})
 
 	if settingsErr := w.seedSettings(ctx, settingsService); settingsErr != nil {
 		_ = store.Close(ctx)
@@ -182,6 +182,16 @@ func (w *world) boot(ctx context.Context) error {
 	}))
 
 	return nil
+}
+
+type settingsClock struct{ at time.Time }
+
+func (c settingsClock) Now() time.Time {
+	if c.at.IsZero() {
+		return time.Now()
+	}
+
+	return c.at
 }
 
 func (w *world) restart(ctx context.Context) error {

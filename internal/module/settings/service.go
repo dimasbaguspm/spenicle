@@ -194,22 +194,17 @@ func (s *Service) ChangePassword(
 	return settings, nil
 }
 
-func (s *Service) SetBaseCurrency(ctx context.Context, code string) (entity.Settings, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.SetBaseCurrency")
+func (s *Service) Setup(
+	ctx context.Context,
+	code string,
+	accounts []entity.OpeningAccount,
+) (entity.Settings, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.Setup")
 	defer endSpan()
 
-	normalised := strings.ToUpper(strings.TrimSpace(code))
-	if _, err := entity.CurrencyByCode(normalised); err != nil {
-		return entity.Settings{}, err
-	}
-
-	hasEntries, err := s.store.HasEntries(ctx)
+	expectedSettings, _, err := s.store.Setting(ctx, constant.SettingAppSettings)
 	if err != nil {
 		return entity.Settings{}, err
-	}
-
-	if hasEntries {
-		return entity.Settings{}, entity.ErrBaseCurrencyLocked
 	}
 
 	settings, err := s.Load(ctx)
@@ -217,9 +212,27 @@ func (s *Service) SetBaseCurrency(ctx context.Context, code string) (entity.Sett
 		return entity.Settings{}, err
 	}
 
-	settings.BaseCurrency = normalised
+	location, err := time.LoadLocation(settings.Timezone)
+	if err != nil {
+		return entity.Settings{}, fmt.Errorf("load setup timezone: %w", err)
+	}
 
-	if err := s.save(ctx, settings); err != nil {
+	now := s.clock.Now().In(location)
+	occurredOn := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, location)
+
+	setup, err := entity.NewSetup(code, accounts, occurredOn)
+	if err != nil {
+		return entity.Settings{}, err
+	}
+
+	settings.BaseCurrency = setup.BaseCurrency
+
+	sealed, err := s.encode(ctx, settings)
+	if err != nil {
+		return entity.Settings{}, err
+	}
+
+	if err := s.store.CompleteSetup(ctx, setup, expectedSettings, sealed); err != nil {
 		return entity.Settings{}, err
 	}
 

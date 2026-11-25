@@ -10,7 +10,7 @@ acceptance stub. Nothing in (B) is in the design doc yet, so each one starts wit
 
 ## What shipped since this list was written
 
-Ten gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
+Eleven gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
 The table below records them once; section (A) lists only what is still open.
 
 | gap | shipped as | commit |
@@ -21,14 +21,15 @@ The table below records them once; section (A) lists only what is still open.
 | 6 | a duplicate `name`+`kind`, `payees.name` or `custom_queries.name` answers `409 duplicate` | `fix: answer 409 for a duplicate name` |
 | 8 | `PATCH /api/captures/{ref}` accepts `{"action":"match","entry_ref":"…"}`, moving the capture to `duplicate` without touching the ledger | `feat: resolve a capture with refs, never integer ids` |
 | G7 | `POST /api/exports` takes `from`/`to` (`YYYY-MM-DD`, both or neither), keeps them on the job as `exports.from_on`/`to_on`, drops every entry outside the window with its postings, and echoes the window on the listing, the job, the events and the download name; reading an export back in is still open, this ships the window only | `feat: render an export for a date window` |
-| G10 | `PATCH /api/settings` refusing every body is the design, not a defect: base currency is locked after the first entry and timezone after first boot | [v2-design.md](../../v2-design.md) |
+| G10 | `PATCH /api/settings` refusing every body is the design, not a defect: base currency is locked once setup completes and timezone after first boot | [v2-design.md](../../v2-design.md) |
 | G11 | verified: `config.SelectRail` builds SnapToJSON only; the OpenAI adapter is reserved for the future chat rail and `ai_assistance` is informational, never a capability gate | `docs: reserve the OpenAI adapter for the chat rail` |
 | G4 | the ledger resolves the rate itself: a foreign entry posted without `fx_rate` takes the exact sheet day, else the nearest earlier business day, else a cross rate through EUR, and the posting is stamped with the rate, its `fx_source` (`ecb`/`cached`) and the day actually used; `GET /api/rates` carries the nearest earlier day and answers `source: "cached"`; an explicit `fx_rate` still wins | `feat: resolve a missing rate in the ledger and carry a running balance` |
 
 | G6 | `GET /api/entries` takes `with_balance=true` with one `account_ref` and answers `running_balance_minor` per row from one windowed query over `SUM(base_amount_minor)`; the page's postings load in one query instead of one per entry | `feat: resolve a missing rate in the ledger and carry a running balance` |
+| G1 | `POST /api/setup` accepts up to 100 `{name, kind, opening_balance_minor}` accounts and atomically creates or reuses them, posts one balanced `adjustment` per nonzero balance against `Opening balance` equity, seals settings and writes the one-shot completion marker; currency-only setup stays valid | `feat: seed opening balances during setup` |
 
-Still open: **G1** (opening balances in the one-shot setup), **G5** (per-row import
-currency), the attachment half of **G9**, and the cross-cutting rows from 12 onward.
+Still open: **G5** (per-row import currency), the attachment half of **G9**, and the
+cross-cutting rows from 12 onward.
 The next cuts in (B) that are now done are marked there as well.
 
 **G8 is excluded from the current backlog.** Polling is sufficient for the single-user
@@ -45,7 +46,6 @@ reserved for a future chat endpoint, so `ai_assistance` must never gate a screen
 
 | id | gap (verified in code) | what it costs the client | workaround today |
 | --- | --- | --- | --- |
-| G1 | `POST /api/setup` takes only `base_currency`: no accounts, no opening balances | a fresh instance shows every balance at zero and no way to seed reality | post one `adjustment` entry per account with its opening balance |
 | G2 | `GET /api/meta` carries settings, accounts and currencies only — no payees, no rules, no `password_must_change` | the shell needs 2–3 extra calls on a cold start | `GET /api/payees`, `GET /api/recurring`, `GET /api/settings` after meta |
 | G3 | tokens have no expiry, no per-token rate limit, no un-revoke | a leaked shortcut token lives until someone revokes it | revoke and re-issue; `last_used_at` is the only signal |
 | G5 | import has no per-row currency or column mapping: a 4-column statement cannot keep a USD row in USD | a USD statement cannot be imported without void + repost | use the 3-column format in base currency; per-row currency and mapping are the next import cut |
@@ -112,21 +112,21 @@ slice with its own acceptance criteria, in the shape
 - **Acceptance:** one call yields two entries and one `void` audit row; the account balance
   is unchanged when the correction equals the original; a replayed call is `409`.
 
-### N4 — Opening balances in the setup wizard *(open: G1)*
+### N4 — Opening balances in the setup wizard *(shipped: G1)*
 
 - **Client sees:** a first-run wizard that ends with real balances, not zeros.
-- **Backend change:** extend `POST /api/setup` with `accounts: [{name, kind, opening_balance_minor}]`,
-  each posted as an `adjustment` entry against a dedicated `Opening balance` equity account
-  inside the same transaction that unlocks the currency. The `HasEntries` guard becomes
-  "the setup has not run".
-- **RRR:** *Requirement* — the base currency lock and the opening entries are the same
-  commit, so a wizard can never leave a half-configured instance. *Risk* — users entering a
-  negative cash balance (a card) need `liability` semantics; document the sign convention
-  in the wizard copy. *Rollout* — `POST /api/setup` stays backward compatible: without
-  `accounts`, nothing changes.
-- **Acceptance:** setup with two accounts yields two balanced entries and a locked currency;
-  calling setup twice is `409 base_currency_locked`; an unbalanced opening balance is `422
-  postings_not_balanced`.
+- **Backend change:** `POST /api/setup` takes `accounts: [{name, kind,
+  opening_balance_minor}]`, creates or reuses each account, and posts one `adjustment`
+  against a dedicated `Opening balance` equity account inside the transaction that seals
+  settings and writes the one-shot completion marker. A legacy ledger with entries is
+  also locked.
+- **RRR:** *Requirement* — the currency lock and opening entries are the same commit.
+  *Risk* — a negative balance needs the right account kind; the wizard explains the sign
+  convention. *Rollout* — currency-only setup stays backward compatible; accounts are
+  capped at 100.
+- **Acceptance:** setup with two accounts yields two balanced entries and a locked
+  currency; a replay is `409 base_currency_locked`; a zero, duplicate, reserved or
+  invalid account is `422 invalid_request`; any failure rolls back every setup write.
 
 ### N5 — Rates that resolve themselves *(shipped: G4)*
 

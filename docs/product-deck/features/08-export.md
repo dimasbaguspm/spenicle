@@ -61,7 +61,7 @@ disconnects mid-stream still leaves the record, which is deliberate (the audit t
 ### 2.4 What is in the file
 
 ```json
-{"schema_version":1,"exported_at":"…","base_currency":"IDR",
+{"schema_version":4,"exported_at":"…","base_currency":"IDR",
  "summary":{"accounts":[…],"months":[…],"categories":[…],"counts":{…}},
  "data":{"accounts":[…],"payees":[…],"entries":[…],"captures":[…],
          "recurring":[…],"rates":[…],"custom_queries":[…]}}

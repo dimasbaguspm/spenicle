@@ -17,6 +17,6 @@ type Contract interface {
 	EnsureInitial(ctx context.Context, initialPassword, timezone string) (entity.Settings, bool, error)
 	Authenticate(ctx context.Context, password string) (entity.Settings, bool, error)
 	ChangePassword(ctx context.Context, current, next string) (entity.Settings, error)
-	SetBaseCurrency(ctx context.Context, code string) (entity.Settings, error)
+	Setup(ctx context.Context, code string, accounts []entity.OpeningAccount) (entity.Settings, error)
 	Root(ctx context.Context, presented string) (bool, error)
 }

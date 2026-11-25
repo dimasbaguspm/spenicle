@@ -1,0 +1,119 @@
+{
+  "accounts": [
+    {
+      "archived_at": "<timestamp>",
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "icon": null,
+      "id": 1,
+      "kind": "asset",
+      "name": "Cash",
+      "parent_id": null,
+      "ref": "<ref>"
+    },
+    {
+      "archived_at": null,
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "icon": null,
+      "id": 2,
+      "kind": "expense",
+      "name": "Unsorted",
+      "parent_id": null,
+      "ref": "<ref>"
+    }
+  ],
+  "artifacts": [],
+  "audit_log": [
+    {
+      "action": "update",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": null,
+      "entity_kind": "setting",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 1,
+      "ref": "<ref>",
+      "to_json": "{\"key\":\"secret_fingerprint\"}"
+    },
+    {
+      "action": "create",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": null,
+      "entity_kind": "setting",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 2,
+      "ref": "<ref>",
+      "to_json": "{\"key\":\"app_settings\"}"
+    },
+    {
+      "action": "update",
+      "actor_kind": "user",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_id": 1,
+      "entity_kind": "account",
+      "entity_ref": "<ref>",
+      "from_json": null,
+      "id": 3,
+      "ref": "<ref>",
+      "to_json": "{\"name\":\"Cash\",\"archived_at\":\"<timestamp>\"}"
+    }
+  ],
+  "captures": [],
+  "fx_rates": [
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 1,
+      "on_date": "2026-11-20",
+      "quote": "USD",
+      "rate": "1.0990",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 2,
+      "on_date": "2026-11-20",
+      "quote": "JPY",
+      "rate": "174.35",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 3,
+      "on_date": "2026-11-20",
+      "quote": "IDR",
+      "rate": "16000.50",
+      "ref": "<ref>",
+      "source": "ecb"
+    }
+  ],
+  "import_batches": [],
+  "import_rows": [],
+  "ledger_entries": [],
+  "ledger_postings": [],
+  "settings": [
+    {
+      "id": 1,
+      "k": "secret_fingerprint",
+      "ref": "<ref>",
+      "v": "47ed2e331b50a9ee"
+    },
+    {
+      "id": 2,
+      "k": "app_settings",
+      "ref": "<ref>",
+      "v": "<sealed>"
+    }
+  ]
+}

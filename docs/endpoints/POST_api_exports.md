@@ -45,7 +45,7 @@ A window is both ends or neither: one date alone is `422 invalid_request`. The w
   "format": "json",
   "from": "2025-01-01",
   "to": "2025-12-31",
-  "schema_version": 1,
+  "schema_version": 4,
   "bytes": 0,
   "created_at": "2026-02-14T09:00:00Z"
 }
