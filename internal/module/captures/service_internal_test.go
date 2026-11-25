@@ -77,6 +77,60 @@ func (e *retryExtractor) Poll(ctx context.Context, jobRef string) (extraction.Re
 	}, nil
 }
 
+func retryCaptureStore(t *testing.T, status string) (*sqlite.Store, entity.Capture) {
+	t.Helper()
+
+	ctx := t.Context()
+	store, err := sqlite.New(ctx, sqlite.Config{Path: filepath.Join(t.TempDir(), "captures.db")})
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close(context.WithoutCancel(ctx)) })
+	if err = sqlite.Migrate(ctx, store.DB()); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	capture, err := store.InsertCapture(ctx, entity.Capture{
+		Kind:       constant.CaptureKindManual,
+		Status:     status,
+		DedupeKey:  uuid.New(),
+		JobRef:     "job-1",
+		ReceivedAt: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("insert capture: %v", err)
+	}
+
+	return store, capture
+}
+
+func approveDuringPoll(store *sqlite.Store, ref string) func(context.Context) error {
+	return func(ctx context.Context) error {
+		current, found, err := store.CaptureByRef(ctx, ref)
+		if err != nil || !found {
+			return errors.Join(err, entity.ErrNotFound)
+		}
+		current.Status = constant.CaptureStatusApproved
+		_, err = store.UpdateCapture(ctx, current)
+
+		return err
+	}
+}
+
+func assertRetryOutcome(t *testing.T, stored entity.Capture, found bool, err error, wantStatus string) {
+	t.Helper()
+
+	if err != nil || !found {
+		t.Fatalf("read capture: found=%v err=%v", found, err)
+	}
+	if stored.Status != wantStatus {
+		t.Fatalf("status = %q, want %q", stored.Status, wantStatus)
+	}
+	if stored.DraftJSON != "" {
+		t.Fatalf("draft_json = %q, want empty", stored.DraftJSON)
+	}
+}
+
 func TestRetryRefusesResolvedCaptures(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -100,38 +154,10 @@ func TestRetryRefusesResolvedCaptures(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
-			store, err := sqlite.New(ctx, sqlite.Config{Path: filepath.Join(t.TempDir(), "captures.db")})
-			if err != nil {
-				t.Fatalf("open store: %v", err)
-			}
-			t.Cleanup(func() { _ = store.Close(context.WithoutCancel(ctx)) })
-			if err := sqlite.Migrate(ctx, store.DB()); err != nil {
-				t.Fatalf("migrate: %v", err)
-			}
-
-			capture, err := store.InsertCapture(ctx, entity.Capture{
-				Kind:       constant.CaptureKindManual,
-				Status:     tc.status,
-				DedupeKey:  uuid.New(),
-				JobRef:     "job-1",
-				ReceivedAt: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
-			})
-			if err != nil {
-				t.Fatalf("insert capture: %v", err)
-			}
-
+			store, capture := retryCaptureStore(t, tc.status)
 			extractor := &retryExtractor{}
 			if tc.approve {
-				extractor.onPoll = func(ctx context.Context) error {
-					current, found, err := store.CaptureByRef(ctx, capture.Ref)
-					if err != nil || !found {
-						return errors.Join(err, entity.ErrNotFound)
-					}
-					current.Status = constant.CaptureStatusApproved
-					_, err = store.UpdateCapture(ctx, current)
-
-					return err
-				}
+				extractor.onPoll = approveDuringPoll(store, capture.Ref)
 			}
 
 			sealer, err := seal.New("0123456789abcdef")
@@ -149,15 +175,7 @@ func TestRetryRefusesResolvedCaptures(t *testing.T) {
 			}
 
 			stored, found, err := store.CaptureByRef(ctx, capture.Ref)
-			if err != nil || !found {
-				t.Fatalf("read capture: found=%v err=%v", found, err)
-			}
-			if stored.Status != tc.wantStatus {
-				t.Fatalf("status = %q, want %q", stored.Status, tc.wantStatus)
-			}
-			if stored.DraftJSON != "" {
-				t.Fatalf("draft_json = %q, want empty", stored.DraftJSON)
-			}
+			assertRetryOutcome(t, stored, found, err, tc.wantStatus)
 		})
 	}
 }
