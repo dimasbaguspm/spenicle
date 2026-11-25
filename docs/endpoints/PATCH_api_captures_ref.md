@@ -27,8 +27,10 @@ resolved and refuse approval.
 
 `reject` → sealed reason + `UpdateCapture`, status `rejected`.
 
-`retry` → `Repository.Snaptojson.Polling` on the `job_ref` the row already carries, then the
-report is mapped onto the row.
+`retry` → refuse `approved`, `rejected` and `duplicate` rows before polling, then
+`Repository.Snaptojson.Polling` on the `job_ref` the row already carries. The report is
+written with a conditional update that also fails when the row was resolved while the
+vendor was answering, so a read-back never reopens an approved capture.
 
 `match` → `Module.Ledger.Get` for the named entry, then `UpdateCapture` with
 `status='duplicate'` and `resolved_entry_id` — no ledger write.
@@ -59,8 +61,9 @@ with the capture. A resolved capture carries `resolved_entry_ref` (never an inte
 
 `403 forbidden` (missing action scope, before any downstream call); `400 invalid_json` (unknown field, malformed body); `404 not_found` (capture, `payee_ref`
 or `entry_ref` names nothing); `409 capture_resolved` (already approved, rejected or
-matched); `409 invalid_state` (approving a `rejected` or `duplicate` capture, `retry`
-with no `job_ref`, or no rail configured); `409 duplicate` (the built entry collides
+matched, or resolved by an approval while `retry` was polling); `409 invalid_state`
+(approving a `rejected` or `duplicate` capture, `retry` with no `job_ref`, or no rail
+configured); `409 duplicate` (the built entry collides
 with an existing ledger entry); `422 invalid_request` (`action` missing or unknown,
 `match` without `entry_ref`, bad date/amount, `postings_not_balanced` and friends from
 the ledger).
@@ -98,10 +101,11 @@ sequenceDiagram
         Q->>DB: UPDATE capture rejected
         H-->>UI: 200 capture
     else action retry
+        Q->>Q: refuse approved, rejected and duplicate
         Q->>V: poll job_ref
         V-->>Q: SnapReport
-        Q->>DB: UPDATE status/draft/job_ref
-        H-->>UI: 200 capture
+        Q->>DB: conditional UPDATE of an unresolved row
+        H-->>UI: 200 capture, or 409 capture_resolved
     else action match
         Q->>L: Get(entry_ref)
         Q->>DB: UPDATE capture duplicate, resolved_entry_id

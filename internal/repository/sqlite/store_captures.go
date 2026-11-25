@@ -164,6 +164,50 @@ func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (enti
 	return capture, nil
 }
 
+func (s *Store) UpdateCaptureIfUnresolved(
+	ctx context.Context,
+	capture entity.Capture,
+) (entity.Capture, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateCaptureIfUnresolved")
+	defer endSpan()
+
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		var status string
+		if scanErr := tx.QueryRowContext(ctx,
+			`SELECT status FROM captures WHERE id = ?`, capture.ID,
+		).Scan(&status); scanErr != nil {
+			if errors.Is(scanErr, sql.ErrNoRows) {
+				return fmt.Errorf("%w: capture %d", entity.ErrNotFound, capture.ID)
+			}
+
+			return fmt.Errorf("capture status: %w", scanErr)
+		}
+
+		switch status {
+		case constant.CaptureStatusPending, constant.CaptureStatusFailed, constant.CaptureStatusExtracting:
+		default:
+			return fmt.Errorf("%w: %s", entity.ErrCaptureResolved, status)
+		}
+
+		if err := updateCaptureRow(ctx, tx, capture); err != nil {
+			return err
+		}
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityCapture,
+			ID:     capture.ID,
+			Ref:    capture.Ref,
+			Action: auditActionOf(capture.Status),
+			To:     entity.CaptureChanged{Status: capture.Status, ResolvedEntryID: capture.ResolvedEntryID},
+		})
+	})
+	if err != nil {
+		return entity.Capture{}, err
+	}
+
+	return capture, nil
+}
+
 func (s *Store) Approve(
 	ctx context.Context,
 	capture entity.Capture,

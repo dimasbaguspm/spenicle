@@ -295,13 +295,9 @@ func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error)
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Retry")
 	defer endSpan()
 
-	capture, found, err := s.captures.CaptureByRef(ctx, ref)
+	capture, err := s.pending(ctx, ref)
 	if err != nil {
 		return entity.Capture{}, err
-	}
-
-	if !found {
-		return entity.Capture{}, fmt.Errorf("%w: capture %s", entity.ErrNotFound, ref)
 	}
 
 	if s.extractor == nil {
@@ -324,7 +320,7 @@ func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error)
 		return entity.Capture{}, err
 	}
 
-	updated, err := s.applyReport(ctx, capture, report)
+	updated, err := s.applyReport(ctx, capture, report, true)
 	if err != nil {
 		return entity.Capture{}, err
 	}
@@ -407,13 +403,14 @@ func (s *Service) extract(
 		return s.captures.UpdateCapture(ctx, capture)
 	}
 
-	return s.applyReport(ctx, capture, report)
+	return s.applyReport(ctx, capture, report, false)
 }
 
 func (s *Service) applyReport(
 	ctx context.Context,
 	capture entity.Capture,
 	report extraction.Report,
+	unresolvedOnly bool,
 ) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.ApplyReport")
 	defer endSpan()
@@ -450,6 +447,10 @@ func (s *Service) applyReport(
 	default:
 		capture.Status = constant.CaptureStatusFailed
 		capture.ExtractionError = "unknown rail status " + report.Status
+	}
+
+	if unresolvedOnly {
+		return s.captures.UpdateCaptureIfUnresolved(ctx, capture)
 	}
 
 	return s.captures.UpdateCapture(ctx, capture)

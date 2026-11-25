@@ -74,9 +74,10 @@ an integer `payee_id` is an unknown field, so it answers `400 invalid_json`.
 reclaims it after `ArtifactRetention` (720h), after which the download route answers
 `410 gone` while the row survives.
 
-`retry` re-reads the vendor job named by `job_ref` and maps the report onto the row. A capture
-that was never submitted has no `job_ref`, so it answers `409 invalid_state` rather than
-pretending to retry.
+`retry` re-reads the vendor job named by `job_ref` and maps the report onto an unresolved
+row. A capture that was never submitted has no `job_ref`, so it answers `409 invalid_state`;
+a resolved row answers `409 capture_resolved`, including when approval lands while the
+vendor is answering.
 
 The response is `{entry, capture}` for `approve` — the posted entry and the resolved
 capture in one body, so the review screen advances without a second read.
@@ -157,7 +158,8 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
    zero-sum checked before the write and rechecked inside the insert transaction.
 4. `failed` and `extracting` rows are approvable by hand through `pending`; a resolved
    row (`approved`, `rejected`, `duplicate`) stays immutable. `retry` remains the only
-   way a `failed` row with a `job_ref` moves forward through extraction.
+   way a `failed` row with a `job_ref` moves forward through extraction, and its write is
+   conditional so an approval during the vendor call wins.
 5. The receipt must be downloadable byte for byte, or answer `410 gone` after retention —
    never a silent `404` for a file the worker reclaimed.
 6. Rejecting keeps evidence: the row, the sealed reason and the artifact (until

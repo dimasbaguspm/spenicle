@@ -36,6 +36,7 @@ type Captures interface {
 	CaptureByRef(ctx context.Context, ref string) (entity.Capture, bool, error)
 	ListCaptures(ctx context.Context, filter entity.CaptureFilter) ([]entity.Capture, error)
 	UpdateCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error)
+	UpdateCaptureIfUnresolved(ctx context.Context, capture entity.Capture) (entity.Capture, error)
 	Approve(ctx context.Context, capture entity.Capture, entry entity.Entry) (entity.Entry, error)
 }
 

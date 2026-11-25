@@ -177,3 +177,45 @@ func TestApproveCaptureRollsBackAfterInsert(t *testing.T) {
 		t.Fatalf("resolved_entry_id = %v, want nil", stored.ResolvedEntryID)
 	}
 }
+
+func TestUpdateCaptureIfUnresolved(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     string
+		wantStatus string
+		wantErr    bool
+	}{
+		{name: "pending", status: constant.CaptureStatusPending, wantStatus: constant.CaptureStatusPending},
+		{name: "failed", status: constant.CaptureStatusFailed, wantStatus: constant.CaptureStatusPending},
+		{name: "extracting", status: constant.CaptureStatusExtracting, wantStatus: constant.CaptureStatusPending},
+		{name: "approved", status: constant.CaptureStatusApproved, wantStatus: constant.CaptureStatusApproved, wantErr: true},
+		{name: "rejected", status: constant.CaptureStatusRejected, wantStatus: constant.CaptureStatusRejected, wantErr: true},
+		{name: "duplicate", status: constant.CaptureStatusDuplicate, wantStatus: constant.CaptureStatusDuplicate, wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store := newStore(t)
+			capture := seedCapture(t, store, tc.status)
+			capture.JobRef = "job-1"
+			capture.Status = constant.CaptureStatusPending
+
+			_, err := store.UpdateCaptureIfUnresolved(t.Context(), capture)
+			if tc.wantErr {
+				if !errors.Is(err, entity.ErrCaptureResolved) {
+					t.Fatalf("err = %v, want capture_resolved", err)
+				}
+			} else if err != nil {
+				t.Fatalf("update: %v", err)
+			}
+
+			stored, found, err := store.CaptureByRef(t.Context(), capture.Ref)
+			if err != nil || !found {
+				t.Fatalf("read capture: found=%v err=%v", found, err)
+			}
+			if stored.Status != tc.wantStatus {
+				t.Fatalf("status = %q, want %q", stored.Status, tc.wantStatus)
+			}
+		})
+	}
+}

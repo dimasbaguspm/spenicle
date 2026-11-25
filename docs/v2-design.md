@@ -269,6 +269,10 @@ Mapping, in one place (`module/captures`):
 | `REGISTERED`, `EXECUTING` | `extracting` | `job_ref` |
 | API error | `pending` | `extraction_error` = `code: message` |
 
+A read-back never writes a resolved row: `retry` refuses resolved captures before
+polling and writes the report through a conditional update, so an approval that lands
+during the vendor call wins.
+
 A vendor outage never loses the receipt: the capture row is written before the call,
 and every failure is recorded on it. With `SNAPTOJSON_API_KEY` unset nothing leaves
 the box — the capture lands as `pending` and the fields are typed by hand.
