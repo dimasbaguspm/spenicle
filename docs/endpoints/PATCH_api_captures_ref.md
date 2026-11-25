@@ -1,6 +1,6 @@
 # PATCH /api/captures/{ref}
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
+**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying `captures:write` plus the scope for the action. `approve` also needs `entries:write` for the entry it posts, and `payees:write` when `payee_ref` enables learning; `match` also needs `entries:read` for the entry it reads. `reject` and `retry` need only `captures:write`. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a missing action scope is `403 forbidden` before the downstream call.
 
 ## Purpose
 
@@ -57,7 +57,7 @@ with the capture. A resolved capture carries `resolved_entry_ref` (never an inte
 
 ## Errors
 
-`400 invalid_json` (unknown field, malformed body); `404 not_found` (capture, `payee_ref`
+`403 forbidden` (missing action scope, before any downstream call); `400 invalid_json` (unknown field, malformed body); `404 not_found` (capture, `payee_ref`
 or `entry_ref` names nothing); `409 capture_resolved` (already approved, rejected or
 matched); `409 invalid_state` (approving a `rejected` or `duplicate` capture, `retry`
 with no `job_ref`, or no rail configured); `409 duplicate` (the built entry collides

@@ -1,6 +1,6 @@
 # POST /api/setup
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
+**Auth.** `Authorization: Bearer <credential>`: the instance password only. This route is root-only and cannot be delegated: a token is `403 forbidden` ("this route needs the root credential"), even with `admin` or `*`. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`.
 
 ## Purpose
 

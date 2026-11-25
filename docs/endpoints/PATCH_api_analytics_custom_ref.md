@@ -1,6 +1,6 @@
 # PATCH /api/analytics/custom/{ref}
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
+**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying `analytics:write`. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
 
 ## Purpose
 

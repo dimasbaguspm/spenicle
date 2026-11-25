@@ -107,16 +107,26 @@ a credential travels, and the root one is the password itself. `POST /api/passwo
 it (and clears the verification cache by construction); signing out is dropping it.
 
 Scopes: `entries:read|write`, `captures:read|write`, `accounts:read|write`, `payees:read|write`,
-`recurring:read|write`, `imports:read|write`, `exports:read|write`, `analytics:read`,
+`recurring:read|write`, `imports:read|write`, `exports:read|write`, `analytics:read|write`,
 `categorization:read|write`, `audit:read`, `dashboard:read`, `settings:read`, `rates:read`,
 `admin`, plus `*`.
 
-Each endpoint declares its scope when it is registered (`groups.scoped.route(scope, pattern, handler)` in `cmd/http/handler.go`); a subset returns
+The route scope is the floor, not the whole answer: a handler declares any extra scope the
+action needs. `PATCH /api/captures/{ref}` needs `entries:write` to approve, `entries:read` to
+match, and `payees:write` when approval learns a payee's default category;
+`PATCH /api/imports/{ref}` needs `entries:write` to commit; saved custom-query writes need
+`analytics:write`; `GET /api/meta` needs every collection scope it returns; and an export
+download needs `entries:read` because the artifact is a whole-ledger snapshot. A missing
+action scope is `403 forbidden` before the effect happens. `POST /api/setup` is root-only:
+its currency lock and opening entries are irreversible and no token can perform it.
+
+Each endpoint declares its route scope when it is registered (`groups.scoped.route(scope, pattern, handler)` in `cmd/http/handler.go`); a subset returns
 `403 forbidden`. `admin` and `*` cover every scoped route. Routes with **no** scope live in
-their own mux that only the root credential reaches — `/api/tokens*`, `/api/password`,
-`PATCH /api/settings` — so a token can never mint another token. The typical agent token is
-`captures:write` + `dashboard:read`: it can dump receipts and read safe-to-spend, but cannot
-touch the ledger.
+their own mux that only the root credential reaches — `/api/setup`, `/api/tokens*`,
+`/api/password`, `PATCH /api/settings` and the connection/intake routes — so a token can
+never mint another token or lock the currency. The typical capture agent token is
+`captures:write` + `dashboard:read`: it can dump receipts and read the dashboard, but cannot
+approve them without `entries:write`.
 
 The plaintext token is returned exactly once, by the `201` that created it. Only
 `HMAC-SHA256(APP_SECRET-derived key, "spenicle/token/v1\\x00" + token)` is stored, the same
@@ -568,9 +578,9 @@ CREATE INDEX ix_rules_account ON categorization_rules (account_id);
 
 | # | method | path | scope | purpose |
 | --- | --- | --- | --- | --- |
-| 1 | POST | `/api/setup` | none, once | wizard: base currency, accounts, seeded categories |
-| 3 | GET | `/api/meta` | `*:read` | bootstrap: settings, accounts, payees, rules, currencies |
-| 4 | PATCH | `/api/settings` | `admin` | mutable settings |
+| 1 | POST | `/api/setup` | root only | wizard: base currency, accounts, seeded categories; irreversible |
+| 3 | GET | `/api/meta` | all four read scopes | bootstrap: settings, accounts, payees, rules, currencies |
+| 4 | PATCH | `/api/settings` | root only | mutable settings |
 | 5 | POST | `/api/accounts` | `accounts:write` | create account or category |
 | 6 | PATCH | `/api/accounts/{id}` | `accounts:write` | rename, icon, reparent, archive |
 | 7 | POST | `/api/payees` | `payees:write` | create payee |
@@ -581,22 +591,22 @@ CREATE INDEX ix_rules_account ON categorization_rules (account_id);
 | — | GET | `/api/entries/{ref}` | `entries:read` | one entry by ref, postings and display names included |
 | 12 | GET | `/api/captures` | `captures:read` | the review queue, paged |
 | 13 | POST | `/api/captures` | `captures:write` | capture: share text, image, file, email, manual |
-| 14 | PATCH | `/api/captures/{id}` | `captures:write` | approve, reject, retry, match, extracted |
+| 14 | PATCH | `/api/captures/{id}` | `captures:write` + action scope | approve `entries:write`, match `entries:read`, learning `payees:write` |
 | 15 | POST | `/api/recurring` | `recurring:write` | create rule or promote an entry |
 | 16 | PATCH | `/api/recurring/{id}` | `recurring:write` | accept, pause, end, edit |
 | 17 | GET | `/api/months/{year_month}` | `dashboard:read` | derived diff report, writes nothing |
 | 18 | GET | `/api/dashboard` | `dashboard:read` | five tiles, one response |
-| 19 | POST | `/api/tokens` | `admin` | mint a scoped token, secret returned once |
-| 20 | PATCH | `/api/tokens/{id}` | `admin` | revoke |
+| 19 | GET/POST | `/api/tokens` | root only | list tokens; mint a scoped token, secret returned once |
+| 20 | POST | `/api/tokens/{ref}/revoke` | root only | revoke without deleting the row |
 | 21 | GET | `/healthz` | none | liveness + migration state |
-| — | GET | `/api/intake` | `admin` | intake settings, cursor and last outcome, redacted |
-| — | PATCH | `/api/intake` | `admin` | mailbox credentials, window and allowlist |
-| — | POST | `/api/intake/run` | `admin` | poll once now, return counts |
-| — | GET | `/api/intake/messages` | `admin` | every mail reference, newest first |
-| — | GET | `/api/intake/messages/{ref}` | `admin` | one reference and the capture it made |
-| — | POST | `/api/intake/messages/{ref}/refresh` | `admin` | latest state of that mail |
-| — | GET/POST | `/api/connections`, `/api/connections/google` | `admin` | read status, start an authorisation |
-| — | POST | `/api/connections/google/callback`, `/api/connections/{ref}/revoke` | `admin` | finish an authorisation, revoke |
+| — | GET/PATCH | `/api/intake` | root only | mailbox settings, cursor and last outcome |
+| — | POST | `/api/intake/run` | root only | poll once now, return counts |
+| — | GET | `/api/intake/messages` | root only | every mail reference, newest first |
+| — | GET | `/api/intake/messages/{ref}` | root only | one reference and the capture it made |
+| — | POST | `/api/intake/messages/{ref}/refresh` | root only | latest state of that mail |
+| — | GET/POST | `/api/connections`, `/api/connections/google` | root only | read status, start an authorisation |
+| — | GET | `/api/connections/google/callback` | capability URL | signed state finishes an authorisation |
+| — | POST | `/api/connections/{ref}/revoke` | root only | revoke a connection |
 | — | GET | `/api/categorization/rules` | `categorization:read` | the live rules, paged, optionally with the archived ones |
 | — | POST | `/api/categorization/rules` | `categorization:write` | one deterministic rule: pattern, field, match kind, category |
 | — | PATCH | `/api/categorization/rules/{ref}` | `categorization:write` | repoint, reprioritise or archive a rule |

@@ -159,6 +159,13 @@ func (s *Server) PatchCapture(w http.ResponseWriter, r *http.Request) {
 
 	switch request.Action {
 	case "approve":
+		if !requireScopes(ctx, w, constant.ScopeEntriesWrite) {
+			return
+		}
+		if request.PayeeRef != "" && (request.Learn == nil || *request.Learn) &&
+			!requireScopes(ctx, w, constant.ScopePayeesWrite) {
+			return
+		}
 		s.approveCapture(ctx, w, path.Ref, request)
 	case "reject":
 		s.rejectCapture(ctx, w, path.Ref, request)
@@ -172,6 +179,9 @@ func (s *Server) PatchCapture(w http.ResponseWriter, r *http.Request) {
 
 		httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
 	case "match":
+		if !requireScopes(ctx, w, constant.ScopeEntriesRead) {
+			return
+		}
 		s.matchCapture(ctx, w, path.Ref, request)
 	}
 }

@@ -310,6 +310,9 @@ func (s *Server) PatchImport(w http.ResponseWriter, r *http.Request) {
 	if !bindBody(w, r, s.deps.MaxBodyBytes, &request) {
 		return
 	}
+	if request.Action == "commit" && !requireScopes(ctx, w, constant.ScopeEntriesWrite) {
+		return
+	}
 
 	batch, err := s.deps.Imports.Review(ctx, ref, imports.Review{
 		Action: request.Action,

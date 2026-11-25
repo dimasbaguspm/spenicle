@@ -1,6 +1,6 @@
 # PATCH /api/imports/{ref}
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
+**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying `imports:write`. `commit` also needs `entries:write`, because it posts ledger entries; `reject` needs only `imports:write`. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a missing action scope is `403 forbidden` before the batch is loaded.
 
 ## Purpose
 
@@ -67,6 +67,7 @@ Rows that were `pending` or `skipped` are not posted and stay in the batch for a
 
 ## Errors
 
+- `403 forbidden` — a `commit` without `entries:write`; the check runs before the batch is loaded.
 - `409 import_committing` — `PATCH /api/imports/{ref}/rows/{index}` while the batch is `committing`; a commit is in flight and the row set is frozen until it finishes or is resumed.
 - `409 import_closed` — the other action on a terminal batch: `commit` on a `rejected` batch, `reject` on a `committed` one. The message names the state; the entries of a committed batch are undone with `PATCH /api/entries/{ref}` and `{"void": true}`, not here.
 - `404 not_found` — the ref names no batch.

@@ -1,6 +1,6 @@
 # GET /api/meta
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying `*:read`. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
+**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying all four scopes for the embedded collections: `settings:read`, `accounts:read`, `payees:read` and `recurring:read`. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token missing any required scope is `403 forbidden` before any collection is read.
 During the forced first-boot password change, this route remains reachable with the root credential so the client can render the shell and `password_must_change`; every other authenticated route stays blocked.
 
 ## Purpose
@@ -85,8 +85,8 @@ does not truncate this bootstrap payload.
 
 ## Errors
 
-`500 internal_error` when settings, an account page, balances, payees or recurring
-rules cannot be read.
+`403 forbidden` — a token is missing one of the four embedded-collection read scopes; no collection is read.
+`500 internal_error` — settings, an account page, balances, payees or recurring rules cannot be read.
 
 ## Limitations
 

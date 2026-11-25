@@ -73,7 +73,7 @@ func KnownScope(scope string) bool {
 		constant.ScopeRecurringRead, constant.ScopeRecurringWrite,
 		constant.ScopeImportsRead, constant.ScopeImportsWrite,
 		constant.ScopeExportsRead, constant.ScopeExportsWrite,
-		constant.ScopeAnalyticsRead, constant.ScopeAuditRead,
+		constant.ScopeAnalyticsRead, constant.ScopeAnalyticsWrite, constant.ScopeAuditRead,
 		constant.ScopeDashboardRead, constant.ScopeSettingsRead,
 		constant.ScopeRatesRead, constant.ScopeCategorizationRead,
 		constant.ScopeCategorizationWrite:

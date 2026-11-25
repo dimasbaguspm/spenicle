@@ -10,7 +10,7 @@ acceptance stub. Nothing in (B) is in the design doc yet, so each one starts wit
 
 ## What shipped since this list was written
 
-Fifteen gaps are **closed** on `main`: recorded once here, then dropped from the list in (A).
+The gaps closed on `main` are recorded once here, then dropped from the list in (A).
 The table below records them once; section (A) lists only what is still open.
 
 | gap | shipped as | commit |
@@ -30,10 +30,13 @@ The table below records them once; section (A) lists only what is still open.
 | G6 | `GET /api/entries` takes `with_balance=true` with one `account_ref` and answers `running_balance_minor` per row from one windowed query over `SUM(base_amount_minor)`; the page's postings load in one query instead of one per entry | `feat: resolve a missing rate in the ledger and carry a running balance` |
 | G1 | `POST /api/setup` accepts up to 100 `{name, kind, opening_balance_minor}` accounts and atomically creates or reuses them, posts one balanced `adjustment` per nonzero balance against `Opening balance` equity, seals settings and writes the one-shot completion marker; currency-only setup stays valid | `feat: seed opening balances during setup` |
 | G2 | `GET /api/meta` returns the shared settings flags, every account with its balance, every payee, every recurring rule and the ISO currency list; empty collections are `[]` and internal cursor pages prevent silent truncation | `feat: return the complete shell bootstrap from meta` |
+| correctness | capture approval validates the entry first and inserts the entry, postings, capture resolution and both audit rows in one transaction; `failed` and `extracting` captures normalize through `pending`, while `rejected`/`duplicate` refuse | `fix: make capture approval atomic` |
+| correctness | the route scope is the floor: handlers also require the scope for the data and side effect (`approve` → `entries:write`, payee learning → `payees:write`, `match` → `entries:read`, import `commit` → `entries:write`, `/api/meta` → four read scopes, export download → `entries:read`); `/api/setup` is root-only | `fix: enforce permissions for actual data and side effects` |
+| G5 | statement CSV headers are mapped by name (`occurred_on`, `amount_minor`, `description`, optional `currency`) and an optional fourth column keeps a row's currency instead of forcing the base currency | `feat: support column mapping by header name in statement imports` |
+| G3 | `POST /api/tokens` accepts optional `expires_at`; an expired credential is `401 unauthorized` and the listing exposes the expiry | `feat: add token expiry eligibility` |
 
-Still open: **G3** (credential hygiene), **G5** (per-row import currency and column
-mapping), the attachment and IMAP halves of **G9**, and the cross-cutting rows from
-12 onward.
+Still open: **G3** (per-token rate limit), **G13** (import payee learning), the
+attachment and IMAP halves of **G9**, and the cross-cutting rows from 12 onward.
 The next cuts in (B) that are now done are marked there as well.
 
 **G8 is excluded from the current backlog.** Polling is sufficient for the single-user
@@ -50,8 +53,8 @@ reserved for a future chat endpoint, so `ai_assistance` must never gate a screen
 
 | id | gap (verified in code) | what it costs the client | workaround today |
 | --- | --- | --- | --- |
-| G3 | tokens have no expiry, no per-token rate limit, no un-revoke | a leaked shortcut token lives until someone revokes it | revoke and re-issue; `last_used_at` is the only signal |
-| G5 | import has no per-row currency or column mapping: a 4-column statement cannot keep a USD row in USD | a USD statement cannot be imported without void + repost | use the 3-column format in base currency; per-row currency and mapping are the next import cut |
+| G3 | tokens have optional `expires_at` and revocation, but no per-token rate limit and no un-revoke | a leaked shortcut token lives until it expires or someone revokes it; there is no grace-window undo | mint an expiry up front, revoke and re-issue; `last_used_at` is the only usage signal |
+| G5 | ~~no per-row currency or column mapping~~ — headers are mapped by name and `currency` is an optional fourth column | closed | use the 3-column format in base currency, or add `currency` for a foreign row |
 | G9 | attachments still are not captured, and only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank PDF or JPEG never becomes a capture | forward the text, or use the share sheet; attachments and IMAP are separate remaining cuts |
 | G13 | an import commit does not learn a payee's default category — only a capture approval does | a CSV-first user gets no consistency for free | pick the category per row; `GET /api/categorization/suggest` still answers |
 | G15 | ~~no ceiling~~ — `POST /api/categorization/rules` refuses beyond `CategorizationRuleLimit` (200) | closed | ceiling enforced at the handler |
@@ -172,20 +175,23 @@ slice with its own acceptance criteria, in the shape
 - **Acceptance:** a queued export emits `export.ready` after the worker run; a client that
   never opens the stream behaves exactly as today; a revoked token's stream closes.
 
-### N8 — Credential hygiene *(open: G3)*
+### N8 — Credential hygiene *(open: G3 — per-token rate limit)*
 
-- **Client sees:** "this shortcut token expires in 90 days", and a revoke that can be
-  reversed within the grace window.
-- **Backend change:** `expires_at` on `POST /api/tokens`, enforced in the identity
-  middleware (`401 unauthorized` past it), plus `PATCH /api/tokens/{ref}` to un-revoke
-  inside a grace window; per-token rate limit in the same middleware.
-- **RRR:** *Requirement* — an expired token answers `401`, never `403`, and expiry is
-  visible in the listing before it happens. *Risk* — a shortcut that silently expires looks
-  like a broken app; the client must show the expiry date at mint time, and the listing
-  must sort by it. *Rollout* — `expires_at` optional; tokens minted without it never
-  expire, so nothing breaks.
-- **Acceptance:** a token past `expires_at` is `401`; the listing filters
-  `?expired=true`; un-revoke inside the window restores access and leaves two journal rows.
+`expires_at` shipped: it is optional on `POST /api/tokens`, the listing exposes it, and
+an expired credential answers `401 unauthorized`. Un-revoke is deliberately **not**
+part of this cut: revocation is final and a replacement token must be minted.
+
+- **Client sees:** "this shortcut token expires in 90 days"; after that, a sign-in with
+  the root credential and a new token.
+- **Backend change:** a per-token rate limit in the identity middleware, keeping the
+  instance-wide limits and the existing revocation path.
+- **RRR:** *Requirement* — a rate-limited token answers `429` without touching the
+  ledger, and the response says when to retry. *Risk* — a shortcut that silently expires
+  looks like a broken app; the client must show the expiry date at mint time, and the
+  listing must sort by it. *Rollout* — start with a generous ceiling and expose the
+  remaining budget in token listings before tightening it.
+- **Acceptance:** a token past `expires_at` is `401`; the listing shows `expires_at`;
+  a token over its request budget is `429` while the root credential is unaffected.
 
 ---
 

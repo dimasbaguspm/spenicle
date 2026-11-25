@@ -7,6 +7,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
@@ -38,6 +39,10 @@ type metaResponse struct {
 func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Meta.Get")
 	defer endSpan()
+	if !requireScopes(ctx, w, constant.ScopeSettingsRead, constant.ScopeAccountsRead,
+		constant.ScopePayeesRead, constant.ScopeRecurringRead) {
+		return
+	}
 
 	appSettings, err := s.deps.Settings.Load(ctx)
 	if err != nil {

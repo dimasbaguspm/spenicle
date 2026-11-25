@@ -24,8 +24,9 @@ still has a credential?" and "who voided that entry?".
 Step 1 and step 2 are separate on purpose: `/healthz` is public and answers even when
 the credential is wrong, so a client can distinguish "server down" from "server says no".
 
-Step 3 is `admin`-scoped but not root-only, so a token minted with `admin` can do it —
-the wizard normally runs in open mode, before any credential exists.
+Step 3 is root-only: `/api/setup` locks the base currency and seeds balances, so no
+token can reach it, even one minted with `admin` or `*`. The wizard normally runs in
+open mode, before any credential exists.
 
 Step 4 is the one call that invalidates every credential at once: the root credential
 is derived from the password hash, so the token in the response is the client's new
@@ -41,15 +42,22 @@ locks itself out.
 | 3 | later: `GET /api/tokens?status=active&used=used` | the listing filters on `last_used_at`, so an unused token is visible |
 | 4 | `POST /api/tokens/{ref}/revoke` | `200` with `revoked_at`; the row and its journal entry stay |
 
-A token can never mint another token: `/api/tokens*`, `/api/password`,
-`PATCH /api/settings`, `/api/intake*` and `/api/connections*` live in the root-only
-mux, so a token reaching them gets `403 forbidden` with "this route needs the root
-credential".
+A token can never mint another token or lock the ledger: `/api/setup`, `/api/tokens*`,
+`/api/password`, `PATCH /api/settings`, `/api/intake*` and `/api/connections*` live in
+the root-only mux, so a token reaching them gets `403 forbidden` with "this route needs
+the root credential".
+
+The route scope is the floor, not the whole answer. Handlers check the data and side
+effects before doing them: `approve` on a capture needs `entries:write` and, when it
+learns a payee's default category, `payees:write`; `match` needs `entries:read`;
+`commit` on an import needs `entries:write`; `/api/meta` needs all four read scopes for
+the collections it embeds; an export download needs `entries:read` for the whole-ledger
+document. A `captures:write` token therefore cannot approve a capture into the ledger.
 
 Scope vocabulary (a token carries 1–20 of these; `admin` and `*` cover every scoped
 route): `entries:read|write`, `captures:read|write`, `accounts:read|write`,
 `payees:read|write`, `recurring:read|write`, `imports:read|write`,
-`exports:read|write`, `analytics:read`, `audit:read`, `dashboard:read`,
+`exports:read|write`, `analytics:read|write`, `audit:read`, `dashboard:read`,
 `settings:read`, `rates:read`, `categorization:read|write`.
 
 ### 2.3 Authorise the mailbox (Google rail)
@@ -142,7 +150,7 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 | --- | --- | --- |
 | a client keeps the *old* password after rotation | every request starts answering `401 invalid_password` → "unauthorized" | `POST /api/password` returns the new root credential in the same body; the client must replace its header before it paints the success screen |
 | open mode reaches a public host | until a password is set, every request is root; `POST /api/setup` and `POST /api/password` are the only gates | the fresh boot prints the generated password once, `password_must_change` is in every settings payload, and the rollout checklist in the [README](./README.md) treats `true` as a blocker |
-| token sprawl | a leaked shortcut token can dump receipts | scopes are a closed set, `captures:write` alone cannot read the ledger, `last_used_at` makes an unused token visible, and revoke keeps the row so the history is intact |
+| token sprawl | a leaked shortcut token can dump receipts or post entries | scopes are a closed set, the handler checks action scopes before side effects (`approve` needs `entries:write`), `last_used_at` makes an unused token visible, and revoke keeps the row so the history is intact |
 | password is the only root credential | no "sign out other devices" | rotation kills every derived credential at once; this is the design, and the client must not present a per-device session model |
 | OAuth callback is a public route | the provider redirect carries no bearer header, so the route skips auth entirely | the `state` value is validated against the pending authorisation (`401 invalid_state` on mismatch or replay); the client must not reuse a `state` |
 | the bootstrap payload grows with every payee and rule | a cold start slows down as pickers accumulate | the server follows cursor pages and returns one complete response; the client caches it after sign-in and uses focused list routes for later refreshes |
@@ -267,12 +275,18 @@ Scenario: A token without the scope is refused by name
   And I use it to send a GET to "/api/entries"
   Then the response status is 403
   And the error message names "entries:read"
+
+Scenario: A capture token cannot approve an entry
+  When I create a token with scopes "captures:write"
+  And I use it to send a PATCH to "/api/captures/00000000000000000000000000000001" with the approve action
+  Then the response status is 403
+  And the error message names "entries:write"
 ```
 
 ## 6. What this page does not promise
 
 - No password history, no reuse check, no per-device sign-out.
-- No token expiry and no per-token rate limit (both are open questions in
-  [`../../endpoints/planned.md`](../../endpoints/planned.md)).
+- No per-token rate limit, no un-revoke and no forced expiry: `expires_at` is optional on
+  `POST /api/tokens`, and a token without it never expires.
 - No `PATCH /api/settings`: every body it receives is refused, by design.
 - No `PATCH /api/accounts/{ref}` for `kind`; reparenting and the roll-up ship in [F4](./04-accounts-and-payees.md).

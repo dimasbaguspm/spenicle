@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/dimasbaguspm/spenicle/cmd/http/handlers"
+	"github.com/dimasbaguspm/spenicle/internal/common/access"
 	"github.com/dimasbaguspm/spenicle/internal/common/actor"
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
@@ -131,12 +132,11 @@ func (s *server) routes() routeGroups {
 	// any credential carrying the scope
 	groups.scoped.route(constant.ScopeSettingsRead, "GET /api/settings", s.api.GetSettings)
 	groups.scoped.route(constant.ScopeSettingsRead, "GET /api/meta", s.api.GetMeta)
-	groups.scoped.route(constant.ScopeAdmin, "POST /api/setup", s.api.Setup)
 
 	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/months", s.api.MonthlyAnalytics)
 	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/categories", s.api.CategoryAnalytics)
-	groups.scoped.route(constant.ScopeAnalyticsRead, "POST /api/analytics/custom", s.api.CreateCustomQuery)
-	groups.scoped.route(constant.ScopeAnalyticsRead,
+	groups.scoped.route(constant.ScopeAnalyticsWrite, "POST /api/analytics/custom", s.api.CreateCustomQuery)
+	groups.scoped.route(constant.ScopeAnalyticsWrite,
 		"PATCH /api/analytics/custom/{ref}", s.api.PatchCustomQuery)
 	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/custom/{ref}", s.api.RunCustomQuery)
 	groups.scoped.route(constant.ScopeDashboardRead, "GET /api/dashboard", s.api.GetDashboard)
@@ -193,6 +193,7 @@ func (s *server) routes() routeGroups {
 // credentialRoutes mount the surface only the root credential may reach, so no token can
 // ever mint a second credential of any kind.
 func (s *server) credentialRoutes(group routeGroup) {
+	group.route("", "POST /api/setup", s.api.Setup)
 	group.route("", "POST /api/password", s.api.ChangePassword)
 	group.route("", "PATCH /api/settings", s.api.PatchSettings)
 	group.route("", "GET /api/tokens", s.api.ListTokens)
@@ -222,7 +223,9 @@ type credential struct {
 func (s *server) authenticate(groups routeGroups) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if patternOf(groups.public.mux, r) != "" {
-			groups.public.mux.ServeHTTP(w, r.WithContext(actor.With(r.Context(), userActor(""))))
+			ctx := actor.With(r.Context(), userActor(""))
+			ctx = access.With(ctx, access.From{Root: true})
+			groups.public.mux.ServeHTTP(w, r.WithContext(ctx))
 
 			return
 		}
@@ -232,7 +235,8 @@ func (s *server) authenticate(groups routeGroups) http.Handler {
 			return
 		}
 
-		r = r.WithContext(actor.With(r.Context(), who.actor))
+		accessFrom := access.From{Root: who.root, Scopes: who.token.Scopes}
+		r = r.WithContext(access.With(actor.With(r.Context(), who.actor), accessFrom))
 
 		if patternOf(groups.root.mux, r) != "" {
 			if !who.root {

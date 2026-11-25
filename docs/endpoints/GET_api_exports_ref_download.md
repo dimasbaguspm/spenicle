@@ -1,6 +1,6 @@
 # GET /api/exports/{ref}/download
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
+**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying both `exports:read` for the job and `entries:read` for the whole-ledger bytes it downloads. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a missing scope is `403 forbidden` before the blob is opened or a `downloaded` event is appended.
 
 ## Purpose
 
@@ -76,6 +76,7 @@ The `csv` job is a zip, in this fixed order: `accounts.csv`, `payees.csv`, `entr
 
 ## Errors
 
+- `403 forbidden` — a token missing `exports:read` or `entries:read`; the blob is not opened and no event is appended.
 - `404 not_found` — the ref names no job.
 - `409 export_not_ready` — the job is `queued` or `running`; wait for the worker.
 - `409 export_failed` — rendering failed; `GET /api/exports/{ref}` carries the generic `error_message`.

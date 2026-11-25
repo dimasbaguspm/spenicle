@@ -20,6 +20,7 @@ const (
 	ScopeExportsRead         = "exports:read"
 	ScopeExportsWrite        = "exports:write"
 	ScopeAnalyticsRead       = "analytics:read"
+	ScopeAnalyticsWrite      = "analytics:write"
 	ScopeAuditRead           = "audit:read"
 	ScopeDashboardRead       = "dashboard:read"
 	ScopeSettingsRead        = "settings:read"
