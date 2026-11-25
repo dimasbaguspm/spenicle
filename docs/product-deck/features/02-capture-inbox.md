@@ -62,10 +62,12 @@ exists and it is safe. Status `pending` means "a human must decide", `extracting
 
 The approve body carries a **payee**: `payee_ref` is resolved through `PayeeSource.PayeeByRef`
 and stored on the entry, while the postings carry the money. It answers `201` with
-`{entry, capture}`, stamps the capture `approved` in the same call, and the capture carries
-`resolved_entry_ref`. The `match` action links the capture to an entry that already exists
-instead — `200`, status `duplicate`, no ledger write — and an integer `payee_id` is an unknown
-field, so it answers `400 invalid_json`.
+`{entry, capture}`: the entry, capture status and resolution, and both audit rows are
+written in one transaction, so a failed step leaves no orphan ledger entry. `failed` and
+`extracting` rows are approvable by hand through `pending`; `rejected` and `duplicate`
+rows are already resolved and refuse approval. The `match` action links the capture to
+an entry that already exists instead — `200`, status `duplicate`, no ledger write — and
+an integer `payee_id` is an unknown field, so it answers `400 invalid_json`.
 
 `reject` takes `{"action":"reject","reason":"not mine"}` — the reason is sealed into
 `resolution_note` and the row becomes `rejected`; the artifact stays until the worker
@@ -113,8 +115,9 @@ POST /api/captures        Handler.Captures.Create → Module.Captures.Create
                           → Filestore.Put(bytes) → artifacts row → Captures.Extract (vendor)
 GET  /api/captures        Handler.Captures.List   → Module.Captures.List (unseals payloads)
 PATCH/api/captures/{ref}  Handler.Captures.Patch  → Module.Captures.Approve
-                          → entity.Capture.Transition → Module.Ledger.Post
-                          → Repository.Sqlite.UpdateCapture (+ audit)
+                          → entity.Capture.Transition (failed/extracting via pending)
+                          → Module.Ledger.Build → Repository.Sqlite.Approve
+                          (entry, postings, capture and audits in one transaction)
                         → Module.Captures.Reject / Retry
 GET  …/artifact           Handler.Captures.Artifact → ArtifactByCaptureRef → Filestore.Open
                           (AES-256-GCM, plaintext sha as AAD, gunzip when stored gzipped)
@@ -128,10 +131,11 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
   `pending → approved|rejected|duplicate`, `duplicate → pending`, `approved → ∅`,
   `rejected → pending`. Anything else is `409 invalid_state`; a decision on an already
   decided row is `409 capture_resolved`.
-- **Approve is a ledger write with a paper trail.** It runs `Module.Ledger.Post`
-  (the same zero-sum, FX and idempotency path as `POST /api/entries`), then stamps
-  `resolved_entry_id`, `resolved_at` and status in a second step, and appends
-  `capture/approve` to the journal with the acting token in `actor_ref`.
+- **Approve is one atomic ledger write with a paper trail.** The entry is built and
+  zero-sum checked before the write, then `Repository.Sqlite.Approve` rechecks the sum
+  and inserts the entry and postings, stamps `resolved_entry_id`, `resolved_at` and
+  status, and appends `entry/created` and `capture/approve` in one transaction. A step
+  that fails rolls the whole approval back; the acting token is in `actor_ref`.
 - **The artifact is outside the database.** Bytes live at
   `./data/artifacts/<sha[0:2]>/<sha[2:4]>/<sha256>`, gzipped when compressible, encrypted
   with a key derived from `APP_SECRET`; the `artifacts` row keeps metadata only. A
@@ -149,10 +153,11 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
    photograph or one pasted string is a complete request.
 2. The same bytes twice must produce one row. Dedupe is a UNIQUE index on a hash of
    `(kind, client_id, artifact_hash, raw_text)`, so a retried share is `200`, not a twin.
-3. No capture transition may reach `approved` except through a ledger post that passes
-   `entity.CheckZeroSum` twice (before the insert and inside the transaction).
-4. A resolved capture is immutable: `approve`/`reject` on it is `409 capture_resolved`,
-   and only `retry` (on `failed`) can move a row forward again.
+3. No capture transition may reach `approved` except through an entry built and
+   zero-sum checked before the write and rechecked inside the insert transaction.
+4. `failed` and `extracting` rows are approvable by hand through `pending`; a resolved
+   row (`approved`, `rejected`, `duplicate`) stays immutable. `retry` remains the only
+   way a `failed` row with a `job_ref` moves forward through extraction.
 5. The receipt must be downloadable byte for byte, or answer `410 gone` after retention —
    never a silent `404` for a file the worker reclaimed.
 6. Rejecting keeps evidence: the row, the sealed reason and the artifact (until
@@ -166,7 +171,7 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
 
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
-| vendor outage mid-extraction | the user's receipt sits in `extracting` or `failed` with an `extraction_error` | the row is still there and still approvable by hand: `approve` does not need the vendor, it needs the postings the user typed |
+| vendor outage mid-extraction | the user's receipt sits in `extracting` or `failed` with an `extraction_error` | the row is still there and still approvable by hand: `approve` needs only the postings the user typed, and normalization through `pending` happens inside the same transaction |
 | `retry` on a never-submitted capture | confusing "why does retry fail" for the user | it is `409 invalid_state` because there is no `job_ref`; the UI should hide retry unless `status = failed` **and** `job_ref` is non-empty |
 | an approve names a payee that does not exist | the approval is refused after the user has picked everything | it is `404 not_found`, the capture stays `pending`, and the client resolves the ref from `GET /api/payees?query=` first |
 | duplicate receipts across channels | the same email and the same photo would double-count | the dedupe key includes `kind`, so identical bytes through two channels are two rows — intentionally: they are two pieces of evidence. The ledger only ever sees the one the user approves |

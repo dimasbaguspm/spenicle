@@ -976,7 +976,7 @@ sequenceDiagram
         API->>DB: UPDATE captures SET status duplicate, resolved_entry_id
         API-->>UI: 200 capture
     else action approve
-        API->>API: validate zero sum and status approvable
+        API->>API: validate zero sum and status; failed/extracting normalize via pending
         API->>FX: resolve rate for occurred_on
         FX-->>API: rate and fx_source
         API->>DB: BEGIN IMMEDIATE

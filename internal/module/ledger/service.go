@@ -15,6 +15,25 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Post")
 	defer endSpan()
 
+	entry, created, err := s.Build(ctx, in)
+	if err != nil || !created {
+		return entry, created, err
+	}
+
+	saved, err := s.entries.InsertEntry(ctx, entry)
+	if err != nil {
+		return entity.Entry{}, false, err
+	}
+
+	telemetry.RecordLedgerPost(ctx, saved.Source, int64(len(saved.Postings)))
+
+	return saved, true, nil
+}
+
+func (s *Service) Build(ctx context.Context, in PostInput) (entity.Entry, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Build")
+	defer endSpan()
+
 	if in.ClientID != "" {
 		existing, found, err := s.entries.EntryByClientID(ctx, in.ClientID)
 		if err != nil {
@@ -57,7 +76,7 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 		return entity.Entry{}, false, err
 	}
 
-	newEntry, err := entity.NewEntry(entity.Entry{
+	entry, err := entity.NewEntry(entity.Entry{
 		ClientID:        in.ClientID,
 		OccurredOn:      in.OccurredOn,
 		PayeeID:         payeeID,
@@ -72,14 +91,7 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 		return entity.Entry{}, false, err
 	}
 
-	saved, err := s.entries.InsertEntry(ctx, newEntry)
-	if err != nil {
-		return entity.Entry{}, false, err
-	}
-
-	telemetry.RecordLedgerPost(ctx, saved.Source, int64(len(saved.Postings)))
-
-	return saved, true, nil
+	return entry, true, nil
 }
 
 func (s *Service) buildPostings(

@@ -142,34 +142,8 @@ func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (enti
 	defer endSpan()
 
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
-		res, execErr := tx.ExecContext(ctx, `
-			UPDATE captures SET
-				status = ?, draft_json = ?, extraction_error = ?, extraction_job_ref = ?,
-				extraction_rail = ?, extraction_model = ?,
-				resolved_entry_id = ?, resolution_note = ?, resolved_at = ?
-			WHERE id = ?`,
-			capture.Status,
-			nullString(capture.DraftJSON),
-			nullString(capture.ExtractionError),
-			nullString(capture.JobRef),
-			nullString(capture.ExtractionRail),
-			nullString(capture.ExtractionModel),
-			nullInt(capture.ResolvedEntryID),
-			nullString(capture.ResolutionNote),
-			nullTime(capture.ResolvedAt),
-			capture.ID,
-		)
-		if execErr != nil {
-			return fmt.Errorf("update capture: %w", execErr)
-		}
-
-		affected, rowsErr := res.RowsAffected()
-		if rowsErr != nil {
-			return fmt.Errorf("capture rows: %w", rowsErr)
-		}
-
-		if affected == 0 {
-			return fmt.Errorf("%w: capture %d", entity.ErrNotFound, capture.ID)
+		if err := updateCaptureRow(ctx, tx, capture); err != nil {
+			return err
 		}
 
 		return appendAudit(ctx, tx, auditRecord{
@@ -185,6 +159,108 @@ func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (enti
 	}
 
 	return capture, nil
+}
+
+func (s *Store) Approve(ctx context.Context, capture entity.Capture, entry entity.Entry) (entity.Entry, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ApproveCapture")
+	defer endSpan()
+
+	if err := entity.CheckZeroSum(entry.Postings); err != nil {
+		return entity.Entry{}, err
+	}
+
+	createdAt := entry.CreatedAt
+	if createdAt.IsZero() {
+		createdAt = time.Now().UTC()
+	}
+
+	entryRef := uuid.New()
+
+	var entryID int64
+
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		var status string
+		if scanErr := tx.QueryRowContext(ctx,
+			`SELECT status FROM captures WHERE id = ?`, capture.ID,
+		).Scan(&status); scanErr != nil {
+			return fmt.Errorf("capture status: %w", scanErr)
+		}
+
+		switch status {
+		case constant.CaptureStatusPending, constant.CaptureStatusFailed, constant.CaptureStatusExtracting:
+		default:
+			return fmt.Errorf("%w: %s", entity.ErrCaptureResolved, status)
+		}
+
+		capture.Status = constant.CaptureStatusApproved
+
+		id, insertErr := insertEntryRow(ctx, tx, entry, entryRef, createdAt)
+		if insertErr != nil {
+			return insertErr
+		}
+
+		entryID = id
+		capture.ResolvedEntryID = &id
+
+		if auditErr := appendEntryCreated(ctx, tx, entry, id, entryRef); auditErr != nil {
+			return auditErr
+		}
+
+		if updateErr := updateCaptureRow(ctx, tx, capture); updateErr != nil {
+			return updateErr
+		}
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityCapture,
+			ID:     capture.ID,
+			Ref:    capture.Ref,
+			Action: constant.AuditActionApprove,
+			To:     entity.CaptureChanged{Status: capture.Status, ResolvedEntryID: &id},
+		})
+	})
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	entry.ID = entryID
+	entry.Ref = entryRef
+	entry.CreatedAt = createdAt
+
+	return entry, nil
+}
+
+func updateCaptureRow(ctx context.Context, tx *sql.Tx, capture entity.Capture) error {
+	res, err := tx.ExecContext(ctx, `
+		UPDATE captures SET
+			status = ?, draft_json = ?, extraction_error = ?, extraction_job_ref = ?,
+			extraction_rail = ?, extraction_model = ?,
+			resolved_entry_id = ?, resolution_note = ?, resolved_at = ?
+		WHERE id = ?`,
+		capture.Status,
+		nullString(capture.DraftJSON),
+		nullString(capture.ExtractionError),
+		nullString(capture.JobRef),
+		nullString(capture.ExtractionRail),
+		nullString(capture.ExtractionModel),
+		nullInt(capture.ResolvedEntryID),
+		nullString(capture.ResolutionNote),
+		nullTime(capture.ResolvedAt),
+		capture.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("update capture: %w", err)
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("capture rows: %w", err)
+	}
+
+	if affected == 0 {
+		return fmt.Errorf("%w: capture %d", entity.ErrNotFound, capture.ID)
+	}
+
+	return nil
 }
 
 func (s *Store) scanCapture(ctx context.Context, row *sql.Row) (entity.Capture, bool, error) {

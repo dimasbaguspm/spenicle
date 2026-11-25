@@ -1,0 +1,146 @@
+package sqlite_test
+
+import (
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
+)
+
+func seedCapture(t *testing.T, store *sqlite.Store, status string) entity.Capture {
+	t.Helper()
+
+	capture, err := store.InsertCapture(t.Context(), entity.Capture{
+		Kind:       constant.CaptureKindManual,
+		Status:     status,
+		DedupeKey:  uuid.New(),
+		RawText:    "coffee",
+		ReceivedAt: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("insert capture: %v", err)
+	}
+
+	return capture
+}
+
+func approvalEntry(t *testing.T, asset, expense entity.Account, currency string) entity.Entry {
+	t.Helper()
+
+	entry := entity.Entry{
+		OccurredOn: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
+		Currency:   currency,
+		Source:     constant.EntrySourceManual,
+		Postings: []entity.Posting{
+			{AccountID: expense.ID, AmountMinor: 25_000, BaseAmountMinor: 25_000, FXRate: "1", FXSource: constant.FXSourceIdentity},
+			{AccountID: asset.ID, AmountMinor: -25_000, BaseAmountMinor: -25_000, FXRate: "1", FXSource: constant.FXSourceIdentity},
+		},
+	}
+	if err := entity.CheckZeroSum(entry.Postings); err != nil {
+		t.Fatalf("unbalanced test entry: %v", err)
+	}
+
+	return entry
+}
+
+func countRows(t *testing.T, store *sqlite.Store, query string, args ...any) int {
+	t.Helper()
+
+	var count int
+	if err := store.DB().QueryRowContext(t.Context(), query, args...).Scan(&count); err != nil {
+		t.Fatalf("count rows: %v", err)
+	}
+
+	return count
+}
+
+func TestApproveCaptureStatuses(t *testing.T) {
+	tests := []struct {
+		name      string
+		status    string
+		wantEntry bool
+	}{
+		{name: "pending", status: constant.CaptureStatusPending, wantEntry: true},
+		{name: "failed", status: constant.CaptureStatusFailed, wantEntry: true},
+		{name: "extracting", status: constant.CaptureStatusExtracting, wantEntry: true},
+		{name: "approved", status: constant.CaptureStatusApproved, wantEntry: false},
+		{name: "rejected", status: constant.CaptureStatusRejected, wantEntry: false},
+		{name: "duplicate", status: constant.CaptureStatusDuplicate, wantEntry: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store := newStore(t)
+			asset, expense := baseline(t, store)
+			capture := seedCapture(t, store, tc.status)
+
+			saved, err := store.Approve(t.Context(), capture, approvalEntry(t, asset, expense, "IDR"))
+			if !tc.wantEntry {
+				if !errors.Is(err, entity.ErrCaptureResolved) {
+					t.Fatalf("err = %v, want capture_resolved", err)
+				}
+				if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 0 {
+					t.Fatalf("entries = %d, want 0", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("approve: %v", err)
+			}
+			if saved.ID == 0 || saved.Ref == "" {
+				t.Fatal("the approved entry was not returned with an id and ref")
+			}
+
+			stored, found, err := store.CaptureByRef(t.Context(), capture.Ref)
+			if err != nil || !found {
+				t.Fatalf("read capture: found=%v err=%v", found, err)
+			}
+			if stored.Status != constant.CaptureStatusApproved {
+				t.Fatalf("status = %q, want approved", stored.Status)
+			}
+			if stored.ResolvedEntryID == nil || *stored.ResolvedEntryID != saved.ID {
+				t.Fatalf("resolved_entry_id = %v, want %d", stored.ResolvedEntryID, saved.ID)
+			}
+			if stored.ResolvedEntryRef != saved.Ref {
+				t.Fatalf("resolved_entry_ref = %q, want %q", stored.ResolvedEntryRef, saved.Ref)
+			}
+			if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 1 {
+				t.Fatalf("entries = %d, want 1", got)
+			}
+		})
+	}
+}
+
+func TestApproveCaptureRollsBackAfterInsert(t *testing.T) {
+	store := newStore(t)
+	asset, expense := baseline(t, store)
+	capture := seedCapture(t, store, constant.CaptureStatusFailed)
+
+	_, err := store.Approve(t.Context(), capture, approvalEntry(t, asset, expense, "NOT-A-CURRENCY"))
+	if err == nil {
+		t.Fatal("an invalid audit payload must fail the approval")
+	}
+
+	if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 0 {
+		t.Fatalf("entries = %d, want 0 after rollback", got)
+	}
+	if got := countRows(t, store,
+		`SELECT COUNT(*) FROM audit_log WHERE entity_kind = ?`, constant.AuditEntityEntry); got != 0 {
+		t.Fatalf("entry audit rows = %d, want 0 after rollback", got)
+	}
+
+	stored, found, err := store.CaptureByRef(t.Context(), capture.Ref)
+	if err != nil || !found {
+		t.Fatalf("read capture: found=%v err=%v", found, err)
+	}
+	if stored.Status != constant.CaptureStatusFailed {
+		t.Fatalf("status = %q, want failed", stored.Status)
+	}
+	if stored.ResolvedEntryID != nil {
+		t.Fatalf("resolved_entry_id = %v, want nil", stored.ResolvedEntryID)
+	}
+}

@@ -333,7 +333,7 @@ func assertMigratedRelationships(t *testing.T, db *sql.DB) {
 	}
 
 	version, err := sqlite.NewStore(db).SchemaVersion(ctx)
-	if err != nil || version != 5 {
+	if err != nil || version != 6 {
 		t.Fatalf("schema version = %d err=%v", version, err)
 	}
 }

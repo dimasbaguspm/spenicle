@@ -15,10 +15,15 @@ Review screen; the vendor reading a snap back.
 ## Downstream
 
 `approve` → `Module.Captures.Approve` → `PayeeSource.PayeeByRef` when `payee_ref` is set →
-`Module.Ledger.Post` (the same zero-sum and FX path as `POST /api/entries`, with
-`source` derived from the capture kind) → `UpdateCapture` (a `kind='recurring'` capture
-also resolves `recurring_rule_id` from its draft, so `(recurring_rule_id, occurred_on)`
-stays unique and the journal records who tapped it).
+`Module.Ledger.Build` (the same zero-sum and FX path as `POST /api/entries`, with
+`source` derived from the capture kind) → `Repository.Sqlite.Approve`. The repository
+rechecks the zero sum, then inserts the entry and its postings, stamps the capture
+`approved` with `resolved_entry_ref`, and appends the entry and capture audit rows in
+one transaction, so no failed approval leaves an orphan entry. A `kind='recurring'`
+capture also resolves `recurring_rule_id` from its draft, so
+`(recurring_rule_id, occurred_on)` stays unique. `failed` and `extracting` rows are
+normalized through `pending` before approval; `rejected` and `duplicate` rows are already
+resolved and refuse approval.
 
 `reject` → sealed reason + `UpdateCapture`, status `rejected`.
 
@@ -54,9 +59,11 @@ with the capture. A resolved capture carries `resolved_entry_ref` (never an inte
 
 `400 invalid_json` (unknown field, malformed body); `404 not_found` (capture, `payee_ref`
 or `entry_ref` names nothing); `409 capture_resolved` (already approved, rejected or
-matched); `409 invalid_state` (`retry` with no `job_ref`, or no rail configured);
-`422 invalid_request` (`action` missing or unknown, `match` without `entry_ref`, bad
-date/amount, `postings_not_balanced` and friends from the ledger).
+matched); `409 invalid_state` (approving a `rejected` or `duplicate` capture, `retry`
+with no `job_ref`, or no rail configured); `409 duplicate` (the built entry collides
+with an existing ledger entry); `422 invalid_request` (`action` missing or unknown,
+`match` without `entry_ref`, bad date/amount, `postings_not_balanced` and friends from
+the ledger).
 
 ## Limitations
 
@@ -81,10 +88,10 @@ sequenceDiagram
     UI->>H: PATCH /api/captures/{ref} {action}
     alt action approve
         H->>Q: Approve(ref, payee_ref?, postings)
-        Q->>Q: resolve payee ref, transition pending → approved
-        Q->>L: Post(entry from body, source from kind)
-        L->>DB: INSERT entry + postings + audit
-        Q->>DB: UPDATE capture approved, resolved_entry_id
+        Q->>Q: validate status; normalize failed/extracting through pending
+        Q->>L: Build(entry from body, source from kind)
+        L-->>Q: checked entry, no write yet
+        Q->>DB: BEGIN; insert entry, postings and audit; update capture and audit; COMMIT
         H-->>UI: 201 entry + capture
     else action reject
         Q->>Q: seal reason

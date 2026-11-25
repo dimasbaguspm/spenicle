@@ -155,6 +155,10 @@ func (s *Service) Approve(
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
+	if err := approvable(&capture); err != nil {
+		return entity.Entry{}, entity.Capture{}, err
+	}
+
 	ruleID, err := s.recurringRuleID(ctx, capture)
 	if err != nil {
 		return entity.Entry{}, entity.Capture{}, err
@@ -170,7 +174,7 @@ func (s *Service) Approve(
 		})
 	}
 
-	entry, _, err := s.entries.Post(ctx, ledger.PostInput{
+	entry, created, err := s.entries.Build(ctx, ledger.PostInput{
 		OccurredOn:      in.OccurredOn,
 		Note:            in.Note,
 		PayeeRef:        in.PayeeRef,
@@ -183,12 +187,60 @@ func (s *Service) Approve(
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
-	resolved, err := s.resolve(ctx, capture, constant.CaptureStatusApproved, "", &entry.ID)
+	if !created {
+		return entity.Entry{}, entity.Capture{}, fmt.Errorf("%w: the entry already exists", entity.ErrDuplicate)
+	}
+
+	now := s.clock.Now()
+
+	capture.Status = constant.CaptureStatusApproved
+	capture.ResolutionNote = ""
+	capture.ResolvedAt = &now
+
+	saved, err := s.captures.Approve(ctx, capture, entry)
 	if err != nil {
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
-	return entry, resolved, nil
+	capture.ResolvedEntryID = &saved.ID
+
+	telemetry.RecordLedgerPost(ctx, saved.Source, int64(len(saved.Postings)))
+	telemetry.RecordCaptureTransition(ctx, capture.Kind, constant.CaptureStatusApproved)
+
+	reloaded, found, err := s.captures.CaptureByRef(ctx, capture.Ref)
+	if err != nil {
+		return entity.Entry{}, entity.Capture{}, err
+	}
+
+	if !found {
+		return entity.Entry{}, entity.Capture{}, fmt.Errorf("%w: capture %s", entity.ErrNotFound, capture.Ref)
+	}
+
+	resolved, err := s.open(ctx, reloaded)
+
+	return saved, resolved, err
+}
+
+func approvable(capture *entity.Capture) error {
+	const approved = constant.CaptureStatusApproved
+	if err := capture.Transition(approved); err == nil {
+		capture.Status = approved
+
+		return nil
+	}
+
+	switch capture.Status {
+	case constant.CaptureStatusFailed, constant.CaptureStatusExtracting:
+		capture.Status = constant.CaptureStatusPending
+		if err := capture.Transition(approved); err != nil {
+			return err
+		}
+		capture.Status = approved
+
+		return nil
+	default:
+		return fmt.Errorf("%w: %s to %s", entity.ErrInvalidState, capture.Status, approved)
+	}
 }
 
 func (s *Service) Reject(ctx context.Context, ref, reason string) (entity.Capture, error) {
