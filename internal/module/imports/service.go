@@ -586,8 +586,7 @@ func (s *Service) draft(ctx context.Context, in CreateInput, now time.Time) (ent
 		Status:    constant.ImportStatusDraft,
 		RowsTotal: len(parsed),
 		Currency:  currency,
-		CreatedAt: now,
-		ExpiresAt: now.Add(draftTTL),
+		CreatedAt: now, ExpiresAt: now.Add(draftTTL),
 	}
 
 	for index, row := range parsed {
@@ -595,6 +594,7 @@ func (s *Service) draft(ctx context.Context, in CreateInput, now time.Time) (ent
 		if row.Currency != "" {
 			rowCurrency = row.Currency
 		}
+
 		built := entity.ImportRow{
 			RowIndex:    index,
 			OccurredOn:  row.OccurredOn,
@@ -879,7 +879,10 @@ func parseStatement(body []byte) ([]statementRow, error) {
 
 	header, err := reader.Read()
 	if err != nil {
-		return nil, fmt.Errorf("%w: the header must include occurred_on, amount_minor and description", entity.ErrInvalidImport)
+		return nil, fmt.Errorf(
+			"%w: the header must include occurred_on, amount_minor and description",
+			entity.ErrInvalidImport,
+		)
 	}
 
 	index := map[string]int{}
@@ -918,6 +921,7 @@ func parseRow(record []string, index map[string]int) statementRow {
 		if i, ok := index[name]; ok && i < len(record) {
 			return strings.TrimSpace(record[i])
 		}
+
 		return ""
 	}
 
@@ -945,6 +949,7 @@ func parseRow(record []string, index map[string]int) statementRow {
 	if cur := get("currency"); cur != "" {
 		row.Currency = cur
 	}
+
 	return row
 }
 
@@ -1120,5 +1125,6 @@ func batchCurrency(row entity.ImportRow, batch entity.ImportBatch) string {
 	if row.Currency != "" {
 		return row.Currency
 	}
+
 	return batch.Currency
 }

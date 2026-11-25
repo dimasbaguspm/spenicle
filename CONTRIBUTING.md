@@ -15,7 +15,8 @@ that file.
 ```bash
 cp .env.example .env          # fill APP_SECRET
 make hooks                    # git hook: build + lint + test + UAT before every commit
-make test                     # unit + UAT, must be green before and after
+make test                     # unit + integration tests, must be green before and after
+make uat                      # Gherkin suite, separate from unit tests
 make lint                     # four groups, all must stay at 0 issues
 make run                      # http://localhost:8080/healthz
 ```
@@ -75,6 +76,7 @@ The shape of the change — files, layers, trade-offs worth a reviewer's attenti
 
 ## Checks
 - [ ] `make test`
+- [ ] `make uat`
 - [ ] `make lint` (four groups, 0 issues)
 - [ ] `/healthz` smoke run if the wiring changed
 - [ ] docs updated (`AGENTS.md`, `docs/`, `.env.example`) when a rule moved

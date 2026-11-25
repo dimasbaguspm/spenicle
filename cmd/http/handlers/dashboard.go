@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -10,6 +10,7 @@ import (
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
 type topCategoryResponse struct {
@@ -20,7 +21,7 @@ type topCategoryResponse struct {
 
 type dashboardQuery struct {
 	From string `query:"from" validate:"required,datestr"`
-	To   string `query:"to" validate:"required,datestr"`
+	To   string `query:"to"   validate:"required,datestr"`
 }
 
 func dashboardWindow(query dashboardQuery) (time.Time, time.Time, error) {
@@ -35,7 +36,7 @@ func dashboardWindow(query dashboardQuery) (time.Time, time.Time, error) {
 	}
 
 	if to.Before(from) {
-		return time.Time{}, time.Time{}, fmt.Errorf("from must not be after to")
+		return time.Time{}, time.Time{}, errors.New("from must not be after to")
 	}
 
 	return from, to, nil
@@ -51,6 +52,18 @@ type dashboardResponse struct {
 	NetMinor        string               `json:"net_minor"`
 	PendingCaptures int                  `json:"pending_captures"`
 	TopCategory     *topCategoryResponse `json:"top_category,omitempty"`
+}
+
+func topCategory(categories []entity.CategoryTotal) *topCategoryResponse {
+	if len(categories) == 0 {
+		return nil
+	}
+
+	return &topCategoryResponse{
+		AccountRef:  categories[0].AccountRef,
+		AccountName: categories[0].AccountName,
+		AmountMinor: strconv.FormatInt(categories[0].AmountMinor, 10),
+	}
 }
 
 func (s *Server) GetDashboard(w http.ResponseWriter, r *http.Request) {
@@ -120,13 +133,7 @@ func (s *Server) GetDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(categories) > 0 {
-		out.TopCategory = &topCategoryResponse{
-			AccountRef:  categories[0].AccountRef,
-			AccountName: categories[0].AccountName,
-			AmountMinor: strconv.FormatInt(categories[0].AmountMinor, 10),
-		}
-	}
+	out.TopCategory = topCategory(categories)
 
 	httpx.WriteJSON(w, http.StatusOK, out)
 }

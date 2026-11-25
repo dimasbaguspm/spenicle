@@ -18,8 +18,11 @@ const captureColumns = `id, ref, kind, status, client_id, dedupe_key, batch_id, 
 	extraction_model, resolved_entry_id, resolution_note, received_at, resolved_at,
 	(SELECT e.ref FROM ledger_entries e WHERE e.id = resolved_entry_id)`
 
-const captureStatusRank = `CASE status WHEN 'extracting' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END`
-const captureStatusRankAliased = `CASE captures.status WHEN 'extracting' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END`
+const (
+	captureStatusRank        = `CASE status WHEN 'extracting' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END`
+	captureStatusRankAliased = `CASE captures.status WHEN 'extracting' THEN 0 ` +
+		`WHEN 'pending' THEN 1 ELSE 2 END`
+)
 
 func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertCapture")
@@ -161,7 +164,11 @@ func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (enti
 	return capture, nil
 }
 
-func (s *Store) Approve(ctx context.Context, capture entity.Capture, entry entity.Entry) (entity.Entry, error) {
+func (s *Store) Approve(
+	ctx context.Context,
+	capture entity.Capture,
+	entry entity.Entry,
+) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ApproveCapture")
 	defer endSpan()
 

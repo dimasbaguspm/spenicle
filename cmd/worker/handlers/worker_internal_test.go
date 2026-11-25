@@ -302,7 +302,6 @@ func (s *recordingStore) ListRecurring(
 	context.Context, entity.RecurringFilter,
 ) ([]entity.Recurring, error) {
 	return nil, nil
-
 }
 
 func (s *recordingStore) UpdateRecurring(

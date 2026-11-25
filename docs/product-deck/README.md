@@ -46,7 +46,7 @@ Three surfaces, one API:
 | [F10](./features/10-categories.md) | categories that land in the same place every time | suggest, rules, learning, per-month spend |
 
 Status of every feature page here is **live**: the route exists, the UAT suite covers
-it, `make test` and `make lint` are green. F9 lists what is *not* live and what it
+it, `make test`, `make uat` and `make lint` are green. F9 lists what is *not* live and what it
 would take.
 
 ## The client contract (applies to every page)

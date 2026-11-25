@@ -109,8 +109,8 @@ type RuleChanged struct {
 
 // SystemStarted records the build, service and start time of one supervised process.
 type SystemStarted struct {
-	Service       string `json:"service"       validate:"required,max=64"`
-	Version       string `json:"version"       validate:"required,max=64"`
+	Service       string `json:"service"        validate:"required,max=64"`
+	Version       string `json:"version"        validate:"required,max=64"`
 	SchemaVersion int    `json:"schema_version" validate:"required,min=1"`
-	StartedAt     string `json:"started_at"    validate:"required,timestamp"`
+	StartedAt     string `json:"started_at"     validate:"required,timestamp"`
 }

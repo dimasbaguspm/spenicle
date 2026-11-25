@@ -155,7 +155,8 @@ func (s *Service) Approve(
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
-	if err := approvable(&capture); err != nil {
+	err = approvable(&capture)
+	if err != nil {
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
@@ -164,15 +165,7 @@ func (s *Service) Approve(
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
-	postings := make([]ledger.PostingInput, 0, len(in.Postings))
-	for _, posting := range in.Postings {
-		postings = append(postings, ledger.PostingInput{
-			AccountRef:  posting.AccountRef,
-			AmountMinor: posting.AmountMinor,
-			FXRate:      posting.FXRate,
-			FXRateDate:  posting.FXRateDate,
-		})
-	}
+	postings := approvalPostings(in.Postings)
 
 	entry, created, err := s.entries.Build(ctx, ledger.PostInput{
 		OccurredOn:      in.OccurredOn,
@@ -188,11 +181,12 @@ func (s *Service) Approve(
 	}
 
 	if !created {
-		return entity.Entry{}, entity.Capture{}, fmt.Errorf("%w: the entry already exists", entity.ErrDuplicate)
+		return entity.Entry{}, entity.Capture{}, fmt.Errorf(
+			"%w: the entry already exists", entity.ErrDuplicate,
+		)
 	}
 
 	now := s.clock.Now()
-
 	capture.Status = constant.CaptureStatusApproved
 	capture.ResolutionNote = ""
 	capture.ResolvedAt = &now
@@ -221,6 +215,20 @@ func (s *Service) Approve(
 	return saved, resolved, err
 }
 
+func approvalPostings(postings []PostingInput) []ledger.PostingInput {
+	out := make([]ledger.PostingInput, 0, len(postings))
+	for _, posting := range postings {
+		out = append(out, ledger.PostingInput{
+			AccountRef:  posting.AccountRef,
+			AmountMinor: posting.AmountMinor,
+			FXRate:      posting.FXRate,
+			FXRateDate:  posting.FXRateDate,
+		})
+	}
+
+	return out
+}
+
 func approvable(capture *entity.Capture) error {
 	const approved = constant.CaptureStatusApproved
 	if err := capture.Transition(approved); err == nil {
@@ -235,6 +243,7 @@ func approvable(capture *entity.Capture) error {
 		if err := capture.Transition(approved); err != nil {
 			return err
 		}
+
 		capture.Status = approved
 
 		return nil

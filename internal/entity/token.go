@@ -42,9 +42,11 @@ func (t Token) Active() bool {
 	if t.RevokedAt != nil {
 		return false
 	}
+
 	if t.ExpiresAt != nil && time.Now().After(*t.ExpiresAt) {
 		return false
 	}
+
 	return true
 }
 

@@ -87,6 +87,14 @@ func Start(ctx context.Context, serviceName string) (*Process, error) {
 	return process, nil
 }
 
+func (p *Process) Close(ctx context.Context) {
+	if err := p.Store.Close(ctx); err != nil {
+		p.Logger.Error(ctx, "close database", slog.Any("error", err))
+	}
+
+	flushTelemetry(ctx, p.Logger, p.Cfg.TelemetryShutdownTimeout, p.stopTelemetry)
+}
+
 func (p *Process) recordStart(ctx context.Context, service string) error {
 	schemaVersion, err := p.Store.SchemaVersion(ctx)
 	if err != nil {
@@ -105,14 +113,6 @@ func (p *Process) recordStart(ctx context.Context, service string) error {
 	}
 
 	return nil
-}
-
-func (p *Process) Close(ctx context.Context) {
-	if err := p.Store.Close(ctx); err != nil {
-		p.Logger.Error(ctx, "close database", slog.Any("error", err))
-	}
-
-	flushTelemetry(ctx, p.Logger, p.Cfg.TelemetryShutdownTimeout, p.stopTelemetry)
 }
 
 func boot(ctx context.Context, cfg entity.AppConfig, logger *logging.Logger) (*Process, error) {

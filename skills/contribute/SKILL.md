@@ -42,7 +42,8 @@ file path or a ticket number in the subject.
 ```bash
 make hooks     # once per clone: lefthook runs build + lint + test + UAT on commit
 make fmt
-make test      # unit + UAT over the real handler and a real SQLite file
+make test      # unit and integration tests
+make uat       # Gherkin suite over the real handler and a real SQLite file
 make lint      # correctness, style, security, performance — 0 issues each
 ```
 
@@ -63,7 +64,7 @@ contract with snapshots — `the response JSON matches the snapshot "x"` and
 `the database matches the snapshot "x"` — then regenerate once:
 
 ```bash
-UAT_UPDATE_SNAPSHOTS=1 make test   # or: make uat-snapshots
+UAT_UPDATE_SNAPSHOTS=1 make uat   # or: make uat-snapshots
 ```
 
 Review the written files before committing; they are the contract now.

@@ -177,6 +177,7 @@ func (s *Server) ListExportEvents(w http.ResponseWriter, r *http.Request) {
 func (s *Server) DownloadExport(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Exports.Download")
 	defer endSpan()
+
 	if !requireScopes(ctx, w, constant.ScopeEntriesRead) {
 		return
 	}

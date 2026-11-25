@@ -159,31 +159,56 @@ func (s *Server) PatchCapture(w http.ResponseWriter, r *http.Request) {
 
 	switch request.Action {
 	case "approve":
-		if !requireScopes(ctx, w, constant.ScopeEntriesWrite) {
-			return
-		}
-		if request.PayeeRef != "" && (request.Learn == nil || *request.Learn) &&
-			!requireScopes(ctx, w, constant.ScopePayeesWrite) {
-			return
-		}
-		s.approveCapture(ctx, w, path.Ref, request)
+		s.patchApprove(ctx, w, path.Ref, request)
 	case "reject":
 		s.rejectCapture(ctx, w, path.Ref, request)
 	case "retry":
-		capture, err := s.deps.Captures.Retry(ctx, path.Ref)
-		if err != nil {
-			s.writeClassified(ctx, w, err)
-
-			return
-		}
-
-		httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
+		s.retryCapture(ctx, w, path.Ref)
 	case "match":
-		if !requireScopes(ctx, w, constant.ScopeEntriesRead) {
-			return
-		}
-		s.matchCapture(ctx, w, path.Ref, request)
+		s.patchMatch(ctx, w, path.Ref, request)
 	}
+}
+
+func (s *Server) patchApprove(
+	ctx context.Context,
+	w http.ResponseWriter,
+	ref string,
+	request capturePatchRequest,
+) {
+	if !requireScopes(ctx, w, constant.ScopeEntriesWrite) {
+		return
+	}
+
+	if request.PayeeRef != "" && (request.Learn == nil || *request.Learn) &&
+		!requireScopes(ctx, w, constant.ScopePayeesWrite) {
+		return
+	}
+
+	s.approveCapture(ctx, w, ref, request)
+}
+
+func (s *Server) retryCapture(ctx context.Context, w http.ResponseWriter, ref string) {
+	capture, err := s.deps.Captures.Retry(ctx, ref)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
+}
+
+func (s *Server) patchMatch(
+	ctx context.Context,
+	w http.ResponseWriter,
+	ref string,
+	request capturePatchRequest,
+) {
+	if !requireScopes(ctx, w, constant.ScopeEntriesRead) {
+		return
+	}
+
+	s.matchCapture(ctx, w, ref, request)
 }
 
 func (s *Server) matchCapture(

@@ -3,6 +3,7 @@
 # Lint is split into four groups because they fail for different reasons and
 # deserve different reactions: correctness blocks, security blocks, style asks,
 # performance informs. Each group has its own config in tools/lint/.
+# CI runs them as four steps in one lint job, so each report survives.
 
 GO      ?= go
 GOLANGCI := golangci-lint
@@ -23,8 +24,8 @@ build: ## compile the single binary
 run: ## run the API and the worker in one process against ./data
 	$(GO) run . all
 
-test: ## unit and integration tests
-	$(GO) test ./... -count=1
+test: ## unit and integration tests (UAT has its own target)
+	$(GO) test $$( $(GO) list ./... | grep -v '/uat' ) -count=1
 
 uat: ## the Gherkin suite plus the containerised mock services (needs Docker)
 	$(GO) test ./uat/ -count=1 -v

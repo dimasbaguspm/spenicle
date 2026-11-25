@@ -18,15 +18,15 @@ pre-commit:
       glob: "**/*.go"
       run: make lint
 
-    # Unit and adapter tests. The UAT suite has its own job so a Gherkin failure is
-    # named as such instead of hidden inside `go test ./...`.
+    # Unit and adapter tests. UAT has its own job so a Gherkin failure is named
+    # as such instead of hidden inside `make test`.
     - name: test
       glob: "**/*.go"
-      run: go test $(go list ./... | grep -v /uat) -count=1
+      run: make test
 
     - name: uat
       glob: "**/*.go"
-      run: go test ./uat/ -count=1
+      run: make uat
 
 # Pushing is the last cheap place to catch a broken tree; skip it with `git push
 # --no-verify` when you have already run the pre-commit hook.
@@ -39,4 +39,4 @@ pre-push:
 
     - name: uat
       glob: "**/*.go"
-      run: go test ./uat/ -count=1
+      run: make uat

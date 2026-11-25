@@ -130,7 +130,7 @@ Rules that keep it pluggable:
 make hooks      # install the git hook (build + lint + test + UAT before commit)
 make build      # bin/spenicle
 make run        # go run . all (listens on :8080, writes to ./data)
-make test       # go test ./... (unit + UAT)
+make test       # unit and integration tests (UAT has its own target)
 make uat        # the Gherkin suite plus the containerised mock services (needs Docker)
 make uat-snapshots   # rewrite snapshot files, then review the diff
 make cover      # coverage over the whole module
@@ -143,14 +143,15 @@ make lint-fix   # safe automatic fixes (style, then correctness)
 with `make hooks`. Agents that commit must run the checks themselves anyway — CI is
 the judge, the hook is the convenience.
 
-Run `make lint` and `make test` before you call anything done. All four lint groups
-report `0 issues` today; a new finding is yours to fix, not to silence — unless it is
-a documented false positive, in which case use the narrowest `//nolint` with a reason
-string.
+Run `make lint`, `make test` and `make uat` before you call anything done. All four
+lint groups report `0 issues` today; a new finding is yours to fix, not to silence —
+unless it is a documented false positive, in which case use the narrowest `//nolint`
+with a reason string.
 
 Lint is four configs, not one, on purpose: `tools/lint/{correctness,style,security,performance}.yml`.
-There is deliberately **no root `.golangci.yml`** (the union drifts). CI runs each group
-in its own job, so a style failure cannot hide a security failure.
+There is deliberately **no root `.golangci.yml`** (the union drifts). CI runs them as
+four steps in one `lint` job; each step uses one config and all four report, so a style
+failure cannot hide a security failure.
 
 ## Environment
 

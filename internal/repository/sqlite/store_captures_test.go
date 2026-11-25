@@ -36,8 +36,20 @@ func approvalEntry(t *testing.T, asset, expense entity.Account, currency string)
 		Currency:   currency,
 		Source:     constant.EntrySourceManual,
 		Postings: []entity.Posting{
-			{AccountID: expense.ID, AmountMinor: 25_000, BaseAmountMinor: 25_000, FXRate: "1", FXSource: constant.FXSourceIdentity},
-			{AccountID: asset.ID, AmountMinor: -25_000, BaseAmountMinor: -25_000, FXRate: "1", FXSource: constant.FXSourceIdentity},
+			{
+				AccountID:       expense.ID,
+				AmountMinor:     25_000,
+				BaseAmountMinor: 25_000,
+				FXRate:          "1",
+				FXSource:        constant.FXSourceIdentity,
+			},
+			{
+				AccountID:       asset.ID,
+				AmountMinor:     -25_000,
+				BaseAmountMinor: -25_000,
+				FXRate:          "1",
+				FXSource:        constant.FXSourceIdentity,
+			},
 		},
 	}
 	if err := entity.CheckZeroSum(entry.Postings); err != nil {
@@ -56,6 +68,51 @@ func countRows(t *testing.T, store *sqlite.Store, query string, args ...any) int
 	}
 
 	return count
+}
+
+func assertUnapproved(t *testing.T, store *sqlite.Store, err error) {
+	t.Helper()
+
+	if !errors.Is(err, entity.ErrCaptureResolved) {
+		t.Fatalf("err = %v, want capture_resolved", err)
+	}
+	if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 0 {
+		t.Fatalf("entries = %d, want 0", got)
+	}
+}
+
+func assertApproved(
+	t *testing.T,
+	store *sqlite.Store,
+	capture entity.Capture,
+	saved entity.Entry,
+	err error,
+) {
+	t.Helper()
+
+	if err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	if saved.ID == 0 || saved.Ref == "" {
+		t.Fatal("the approved entry was not returned with an id and ref")
+	}
+
+	stored, found, err := store.CaptureByRef(t.Context(), capture.Ref)
+	if err != nil || !found {
+		t.Fatalf("read capture: found=%v err=%v", found, err)
+	}
+	if stored.Status != constant.CaptureStatusApproved {
+		t.Fatalf("status = %q, want approved", stored.Status)
+	}
+	if stored.ResolvedEntryID == nil || *stored.ResolvedEntryID != saved.ID {
+		t.Fatalf("resolved_entry_id = %v, want %d", stored.ResolvedEntryID, saved.ID)
+	}
+	if stored.ResolvedEntryRef != saved.Ref {
+		t.Fatalf("resolved_entry_ref = %q, want %q", stored.ResolvedEntryRef, saved.Ref)
+	}
+	if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 1 {
+		t.Fatalf("entries = %d, want 1", got)
+	}
 }
 
 func TestApproveCaptureStatuses(t *testing.T) {
@@ -77,40 +134,16 @@ func TestApproveCaptureStatuses(t *testing.T) {
 			store := newStore(t)
 			asset, expense := baseline(t, store)
 			capture := seedCapture(t, store, tc.status)
+			entry := approvalEntry(t, asset, expense, "IDR")
 
-			saved, err := store.Approve(t.Context(), capture, approvalEntry(t, asset, expense, "IDR"))
+			saved, err := store.Approve(t.Context(), capture, entry)
 			if !tc.wantEntry {
-				if !errors.Is(err, entity.ErrCaptureResolved) {
-					t.Fatalf("err = %v, want capture_resolved", err)
-				}
-				if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 0 {
-					t.Fatalf("entries = %d, want 0", got)
-				}
+				assertUnapproved(t, store, err)
+
 				return
 			}
-			if err != nil {
-				t.Fatalf("approve: %v", err)
-			}
-			if saved.ID == 0 || saved.Ref == "" {
-				t.Fatal("the approved entry was not returned with an id and ref")
-			}
 
-			stored, found, err := store.CaptureByRef(t.Context(), capture.Ref)
-			if err != nil || !found {
-				t.Fatalf("read capture: found=%v err=%v", found, err)
-			}
-			if stored.Status != constant.CaptureStatusApproved {
-				t.Fatalf("status = %q, want approved", stored.Status)
-			}
-			if stored.ResolvedEntryID == nil || *stored.ResolvedEntryID != saved.ID {
-				t.Fatalf("resolved_entry_id = %v, want %d", stored.ResolvedEntryID, saved.ID)
-			}
-			if stored.ResolvedEntryRef != saved.Ref {
-				t.Fatalf("resolved_entry_ref = %q, want %q", stored.ResolvedEntryRef, saved.Ref)
-			}
-			if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 1 {
-				t.Fatalf("entries = %d, want 1", got)
-			}
+			assertApproved(t, store, capture, saved, err)
 		})
 	}
 }

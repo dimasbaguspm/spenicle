@@ -26,15 +26,9 @@ func TestDashboardWindowRequiresAnOrderedPairOfDays(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			from, to, err := dashboardWindow(dashboardQuery{From: testCase.from, To: testCase.to})
+			assertWindowError(t, err, testCase.wantErr)
 			if testCase.wantErr {
-				if err == nil {
-					t.Fatal("dashboardWindow() error = nil, want an error")
-				}
-
 				return
-			}
-			if err != nil {
-				t.Fatalf("dashboardWindow() error = %v", err)
 			}
 			if got := from.Format(constant.DateLayout); got != testCase.wantFrom {
 				t.Fatalf("from = %q, want %q", got, testCase.wantFrom)
@@ -46,5 +40,20 @@ func TestDashboardWindowRequiresAnOrderedPairOfDays(t *testing.T) {
 				t.Fatalf("window location = %s/%s, want UTC/UTC", from.Location(), to.Location())
 			}
 		})
+	}
+}
+
+func assertWindowError(t *testing.T, err error, wantErr bool) {
+	t.Helper()
+	if wantErr {
+		if err == nil {
+			t.Fatal("dashboardWindow() error = nil, want an error")
+		}
+
+		return
+	}
+
+	if err != nil {
+		t.Fatalf("dashboardWindow() error = %v", err)
 	}
 }

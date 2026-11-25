@@ -1,7 +1,8 @@
 name: ci
 
-# Speed of ship: two parallel jobs, nothing sequential that can run at once,
-# every cache that GitHub can hold, and a cancelled run when you push again.
+# Speed of ship: build, unit tests, UAT and lint run as four parallel jobs.
+# Lint is one runner with four steps so every config still has its own report,
+# and no finding hides another behind a failed earlier step.
 on:
   push:
     branches: [main]
@@ -15,8 +16,8 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: build and test
+  build:
+    name: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -29,18 +30,9 @@ jobs:
       - name: Build
         run: go build ./...
 
-      - name: Test
-        run: go test ./... -count=1
-
-  lint:
-    name: lint (${{ matrix.group }})
+  test:
+    name: test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # One job per group so a style nit never masks a security finding, and
-        # four runners finish in the time one would.
-        group: [correctness, style, security, performance]
     steps:
       - uses: actions/checkout@v7
 
@@ -49,7 +41,80 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - uses: golangci/golangci-lint-action@v9
+      - name: Unit and integration tests
+        run: make test
+
+  uat:
+    name: uat
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: UAT
+        run: make uat
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Correctness
+        id: lint_correctness
+        continue-on-error: true
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v2.11.4
-          args: -c tools/lint/${{ matrix.group }}.yml
+          args: -c tools/lint/correctness.yml
+
+      - name: Style
+        id: lint_style
+        continue-on-error: true
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.11.4
+          args: -c tools/lint/style.yml
+
+      - name: Security
+        id: lint_security
+        continue-on-error: true
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.11.4
+          args: -c tools/lint/security.yml
+
+      - name: Performance
+        id: lint_performance
+        continue-on-error: true
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.11.4
+          args: -c tools/lint/performance.yml
+
+      - name: Report lint findings
+        if: ${{ always() && steps.lint_performance.outcome != '' }}
+        run: |
+          failed=""
+          check() {
+            if [ "$2" != "success" ]; then
+              failed="$failed $1"
+            fi
+          }
+          check correctness "${{ steps.lint_correctness.outcome }}"
+          check style "${{ steps.lint_style.outcome }}"
+          check security "${{ steps.lint_security.outcome }}"
+          check performance "${{ steps.lint_performance.outcome }}"
+          if [ -n "$failed" ]; then
+            echo "::error::lint failed:$failed"
+            exit 1
+          fi

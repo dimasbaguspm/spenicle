@@ -6,18 +6,20 @@ the release**.
 
 ## CI
 
-`.github/workflows/ci.yml` — two jobs, run in parallel:
+`.github/workflows/ci.yml` — four parallel jobs: `build`, `test`, `uat` and `lint`.
 
 | job | what |
 |---|---|
-| `build and test` | `go build ./...` then `go test ./... -count=1` |
-| `lint (<group>)` | four parallel runners, one per lint group |
+| `build` | `go build ./...` |
+| `test` | `make test` — unit and integration tests, without UAT |
+| `uat` | `make uat` — the Gherkin suite with its containerised mocks |
+| `lint` | one runner; four steps, one per lint config |
 
 Speed comes from parallelism and caching, not from skipping things: Go module and
-build caches are restored by `setup-go`, a second push to the same ref before the
-first finishes cancels the first run, and the four lint groups never queue behind
-each other. A style failure cannot hide a security failure because they are
-separate jobs.
+build caches are restored by `setup-go`, and a second push to the same ref before the
+first finishes cancels the first run. The four lint steps each use their own config
+and report separately inside the one job, so a style failure cannot hide a security
+finding.
 
 ## Release: one command
 
@@ -114,7 +116,8 @@ Docker tags cannot contain `+`, which is why the image uses `v0.2.0` and
 ```bash
 cp .env.example .env   # APP_SECRET is required to boot
 make lint    # four groups, all must be clean
-make test    # unit + UAT
+make test    # unit and integration tests
+make uat     # Gherkin suite
 docker build -t spenicle:local .
 docker run --rm -p 8080:8080 -v spenicle-data:/data -e APP_SECRET="local-test-secret-16" spenicle:local
 curl -s localhost:8080/healthz
@@ -123,6 +126,6 @@ curl -s localhost:8080/healthz
 Step-by-step with the patch/minor/major decision table:
 [`skills/release`](../skills/release/SKILL.md).
 
-CI runs the same build and test commands on `main`; a green run on the commit you
+CI runs the same build, test, UAT and lint commands on `main`; a green run on the commit you
 are about to tag is the real precondition. Tagging a red commit publishes a red
 image under `latest`, so don't.

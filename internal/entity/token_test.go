@@ -1,9 +1,10 @@
-package entity
+package entity_test
 
 import (
 	"testing"
 
 	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
 func TestKnownScope(t *testing.T) {
@@ -22,7 +23,7 @@ func TestKnownScope(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.scope, func(t *testing.T) {
-			if got := KnownScope(tc.scope); got != tc.want {
+			if got := entity.KnownScope(tc.scope); got != tc.want {
 				t.Fatalf("KnownScope(%q) = %v, want %v", tc.scope, got, tc.want)
 			}
 		})

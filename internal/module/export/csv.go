@@ -143,9 +143,12 @@ func sheets(snap *snapshot) []sheet {
 			rows:   customQuerySheet(snap),
 		},
 		{
-			name:   "categorization_rules.csv",
-			header: []string{"ref", "pattern", "field", "match_kind", "account_ref", "priority", "archived_at", createdAtColumn},
-			rows:   categorizationRuleSheet(snap),
+			name: "categorization_rules.csv",
+			header: []string{
+				"ref", "pattern", "field", "match_kind", "account_ref",
+				"priority", "archived_at", createdAtColumn,
+			},
+			rows: categorizationRuleSheet(snap),
 		},
 	}
 }

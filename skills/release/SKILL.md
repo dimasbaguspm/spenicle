@@ -23,7 +23,8 @@ must say "migrations run on boot, forwards only". Never move or reuse a tag.
 
 ```bash
 git checkout main && git pull
-make test            # unit + UAT
+make test            # unit and integration tests
+make uat             # Gherkin suite
 make lint            # four groups, 0 issues each
 gh run list --limit 1 --branch main   # CI must be success on this commit
 ```

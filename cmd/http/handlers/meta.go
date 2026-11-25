@@ -39,6 +39,7 @@ type metaResponse struct {
 func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Meta.Get")
 	defer endSpan()
+
 	if !requireScopes(ctx, w, constant.ScopeSettingsRead, constant.ScopeAccountsRead,
 		constant.ScopePayeesRead, constant.ScopeRecurringRead) {
 		return

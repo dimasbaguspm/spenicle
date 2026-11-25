@@ -33,6 +33,12 @@ import (
 
 type faultType string
 
+type bootFoundation struct {
+	store        *sqlite.Store
+	sealer       *seal.AES
+	baseCurrency string
+}
+
 const (
 	faultNone   faultType = ""
 	faultDown   faultType = "down"
@@ -43,36 +49,21 @@ func (w *world) boot(ctx context.Context) error {
 	if w.server != nil {
 		return nil
 	}
+
 	startedAt := time.Now().UTC()
 
 	if err := w.prepare(); err != nil {
 		return err
 	}
 
-	store, err := sqlite.New(ctx, sqlite.Config{Path: w.dbPath})
+	foundation, err := w.foundation(ctx)
 	if err != nil {
-		return fmt.Errorf("open: %w", err)
+		return err
 	}
 
-	if migrateErr := sqlite.Migrate(ctx, store.DB()); migrateErr != nil {
-		_ = store.Close(ctx)
-
-		return fmt.Errorf("migrate: %w", migrateErr)
-	}
-
-	sealer, err := seal.New(appSecret)
-	if err != nil {
-		_ = store.Close(ctx)
-
-		return fmt.Errorf("sealer: %w", err)
-	}
-
-	baseCurrency, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint())
-	if err != nil {
-		_ = store.Close(ctx)
-
-		return fmt.Errorf("bootstrap: %w", err)
-	}
+	store := foundation.store
+	sealer := foundation.sealer
+	baseCurrency := foundation.baseCurrency
 
 	clockSystem := clock.System{}
 	limits := config.Defaults()
@@ -205,6 +196,36 @@ func (w *world) boot(ctx context.Context) error {
 	}))
 
 	return nil
+}
+
+func (w *world) foundation(ctx context.Context) (bootFoundation, error) {
+	store, err := sqlite.New(ctx, sqlite.Config{Path: w.dbPath})
+	if err != nil {
+		return bootFoundation{}, fmt.Errorf("open: %w", err)
+	}
+
+	err = sqlite.Migrate(ctx, store.DB())
+	if err != nil {
+		_ = store.Close(ctx)
+
+		return bootFoundation{}, fmt.Errorf("migrate: %w", err)
+	}
+
+	sealer, err := seal.New(appSecret)
+	if err != nil {
+		_ = store.Close(ctx)
+
+		return bootFoundation{}, fmt.Errorf("sealer: %w", err)
+	}
+
+	baseCurrency, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint())
+	if err != nil {
+		_ = store.Close(ctx)
+
+		return bootFoundation{}, fmt.Errorf("bootstrap: %w", err)
+	}
+
+	return bootFoundation{store: store, sealer: sealer, baseCurrency: baseCurrency}, nil
 }
 
 type settingsClock struct{ at time.Time }
