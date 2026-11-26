@@ -15,6 +15,7 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
 
@@ -214,7 +215,7 @@ func TestExportCarriesEveryRowPastOnePage(t *testing.T) {
 		Rates:         store,
 		System:        store,
 		Clock:         fixedClock{at: time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)},
-		BaseCurrency:  "IDR",
+		Settings:      settings.New(store, nil, fixedClock{at: time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)}),
 	}
 
 	t.Run("json", func(t *testing.T) {
@@ -608,7 +609,7 @@ func windowedDeps(t *testing.T) Deps {
 		Rates:         store,
 		System:        store,
 		Clock:         fixedClock{at: time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)},
-		BaseCurrency:  "IDR",
+		Settings:      settings.New(store, nil, fixedClock{at: time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)}),
 	}
 }
 

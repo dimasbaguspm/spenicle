@@ -35,9 +35,8 @@ import (
 type faultType string
 
 type bootFoundation struct {
-	store        *sqlite.Store
-	sealer       *seal.AES
-	baseCurrency string
+	store  *sqlite.Store
+	sealer *seal.AES
 }
 
 const (
@@ -64,7 +63,6 @@ func (w *world) boot(ctx context.Context) error {
 
 	store := foundation.store
 	sealer := foundation.sealer
-	baseCurrency := foundation.baseCurrency
 
 	clockSystem := clock.System{}
 	limits := config.Defaults()
@@ -129,7 +127,7 @@ func (w *world) boot(ctx context.Context) error {
 		Rates:         store,
 		System:        store,
 		Clock:         clockSystem,
-		BaseCurrency:  baseCurrency,
+		Settings:      settingsService,
 	}
 
 	w.exports = exports.New(
@@ -185,7 +183,6 @@ func (w *world) boot(ctx context.Context) error {
 		Settings:          settingsService,
 		Rates:             built.rates,
 		Sealer:            sealer,
-		BaseCurrency:      baseCurrency,
 		Timezone:          w.zone().String(),
 		Version:           "uat",
 		StartedAt:         startedAt,
@@ -221,14 +218,13 @@ func (w *world) foundation(ctx context.Context) (bootFoundation, error) {
 		return bootFoundation{}, fmt.Errorf("sealer: %w", err)
 	}
 
-	baseCurrency, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint())
-	if err != nil {
+	if _, err := store.EnsureBaseline(ctx, w.baseCurrency, sealer.Fingerprint()); err != nil {
 		_ = store.Close(ctx)
 
 		return bootFoundation{}, fmt.Errorf("bootstrap: %w", err)
 	}
 
-	return bootFoundation{store: store, sealer: sealer, baseCurrency: baseCurrency}, nil
+	return bootFoundation{store: store, sealer: sealer}, nil
 }
 
 type settingsClock struct{ at time.Time }

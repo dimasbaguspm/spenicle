@@ -2,7 +2,7 @@
 
 Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`../README.md`](../README.md).
 
-**23 tables, 48 routes** (one of them `/healthz`).
+**23 tables, 59 routes** (one of them `/healthz`).
 
 Base path `/api`. No version prefix: we are the only consumer, and an agent can adapt to a
 change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, timestamps ISO
@@ -144,6 +144,7 @@ entry stays), and the credential answers `401 unauthorized` at once.
 | month close | no lock and no snapshot: the diff is computed from the ledger on every read |
 | concurrency | SQLite `BEGIN IMMEDIATE` for writes, WAL for readers |
 | deprecated verbs | approve/reject/retry/void/detect are **body actions** on `PATCH` |
+| browser clients | `OPTIONS` preflight is answered with `204` before auth; valid `http(s)` and `null` origins are reflected with `Vary: Origin`, `GET, POST, PATCH, OPTIONS` and `Authorization, Content-Type` are allowed, `Content-Disposition` is exposed, and no cookie is set |
 
 ---
 
@@ -382,6 +383,9 @@ name, `contains`/`prefix` rule on the note, then `none` — and inside a tier it
 is the canonical DDL. It is embedded and applied verbatim on boot. There is exactly one
 migration, so `schema_version` is 1. The tables and columns highlighted above are the
 API-facing subset; when prose and SQL disagree, the SQL wins.
+An existing database whose recorded versions are not all embedded here is refused at boot
+with `unsupported schema version`; there is no upgrade path from an older build — move the
+old file aside and start fresh.
 
 ---
 

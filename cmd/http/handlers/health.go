@@ -47,6 +47,11 @@ func (s *Server) health(ctx context.Context) (healthResponse, error) {
 		return healthResponse{}, pingErr
 	}
 
+	baseCurrency, err := s.deps.Settings.BaseCurrency(ctx)
+	if err != nil {
+		return healthResponse{}, err
+	}
+
 	lastRun, _, err := s.deps.Health.Setting(ctx, constant.SettingWorkerLastRunAt)
 	if err != nil {
 		return healthResponse{}, err
@@ -58,7 +63,7 @@ func (s *Server) health(ctx context.Context) (healthResponse, error) {
 		StartedAt:       s.deps.StartedAt.UTC().Format(constant.TimestampLayout),
 		SchemaVersion:   schemaVersion,
 		AppSecret:       s.deps.Sealer.Fingerprint(),
-		BaseCurrency:    s.deps.BaseCurrency,
+		BaseCurrency:    baseCurrency,
 		Timezone:        s.deps.Timezone,
 		WorkerLastRunAt: lastRun,
 	}, nil

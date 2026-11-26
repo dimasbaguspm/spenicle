@@ -13,3 +13,9 @@ Feature: Boot
     When I boot the API
     Then the boot fails
     And the boot failure mentions "schema_migrations"
+
+  Scenario: A database from an older schema stops the boot
+    Given the database holds schema version "6"
+    When I boot the API
+    Then the boot fails
+    And the boot failure mentions "unsupported schema version 6"

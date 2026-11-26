@@ -1,7 +1,6 @@
 # POST /api/password
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`.
-
+**Auth.** **The instance password only** — this is a root-only route, so a token is `403 forbidden` ("this route needs the root credential"), even with `admin` or `*`. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`.
 ## Purpose
 
 Replace the generated password with the user's own and clear
@@ -28,7 +27,7 @@ None.
 
 ## Response
 
-`{"base_currency":"IDR","timezone":"UTC","password_must_change":false,"extraction_enabled":false,"ai_assistance":false,"token":"<the new root credential>"}`
+`{"base_currency":"IDR","timezone":"UTC","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
 
 ## Errors
 
@@ -38,8 +37,8 @@ None.
 ## Limitations
 
 No history, no reuse check, no "sign out other devices" — the root credential is derived
-from the password hash, so every existing credential dies at once. The response carries the
-new one, so the caller replaces its header instead of being locked out.
+from the password hash, so every existing credential dies at once. Send the new password
+as the Bearer credential on the next request; the response does not carry a token.
 
 
 

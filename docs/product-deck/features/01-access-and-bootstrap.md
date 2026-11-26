@@ -18,7 +18,7 @@ still has a credential?" and "who voided that entry?".
 | 1 | `GET /healthz` | proves the process booted, migrated, and which build this is |
 | 2 | `GET /api/meta` | the bootstrap exception: reachable during the forced password change, so the shell can read the `settings` block (`base_currency`, `timezone`, `password_must_change`, the capability flags: `extraction_enabled` drives SnapToJSON; `ai_assistance` is informational only and must not gate a feature ([F9](./09-gaps-and-next.md) G11)) plus accounts, payees, recurring rules and currencies |
 | 3 | `POST /api/setup {"base_currency":"IDR","accounts":[{"name":"Cash","kind":"asset","opening_balance_minor":"500000"}]}` | the wizard's only write; optional opening balances post atomically, then `200` returns the settings payload |
-| 4 | `POST /api/password {current_password, new_password}` | closes the instance; the response carries the new root credential |
+| 4 | `POST /api/password {current_password, new_password}` | closes the instance; the caller sends the new password as the Bearer credential on the next request — the response carries no token |
 | 5 | `GET /api/settings` | after the password change: `password_must_change` is now false; before it, this route answers `409 password_change_required` |
 
 Step 1 and step 2 are separate on purpose: `/healthz` is public and answers even when
@@ -157,7 +157,7 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
-| a client keeps the *old* password after rotation | every request starts answering `401 invalid_password` → "unauthorized" | `POST /api/password` returns the new root credential in the same body; the client must replace its header before it paints the success screen |
+| a client keeps the *old* password after rotation | every request starts answering `401 invalid_password` → "unauthorized" | the caller sends the new password as the Bearer credential on the next request; `POST /api/password` returns no token, so the client must update its header before it paints the success screen |
 | open mode reaches a public host | until a password is set, every request is root; `POST /api/setup` and `POST /api/password` are the only gates | the fresh boot prints the generated password once, `password_must_change` is in every settings payload, and the rollout checklist in the [README](./README.md) treats `true` as a blocker |
 | token sprawl | a leaked shortcut token can dump receipts or post entries | scopes are a closed set, the handler checks action scopes before side effects (`approve` needs `entries:write`), `last_used_at` makes an unused token visible, and revoke keeps the row so the history is intact |
 | password is the only root credential | no "sign out other devices" | rotation kills every derived credential at once; this is the design, and the client must not present a per-device session model |
@@ -247,7 +247,7 @@ Scenario: A weak password is refused and a good one rotates the root credential
     {"current_password":"generated-password","new_password":"a-longer-secret-2026"}
     """
   Then the response status is 200
-  And the response body carries a "token" I can use as the next bearer credential
+  And the response body has no "token", so the new password becomes the next bearer credential
 
 Scenario: A token is issued once and cannot mint another
   When I sign in with the instance password

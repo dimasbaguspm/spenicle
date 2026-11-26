@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,6 +75,20 @@ func theDatabaseHoldsForeignSchema(ctx context.Context) (context.Context, error)
 	}
 
 	return ctx, w.seedForeignSchema(ctx)
+}
+
+func theDatabaseHoldsSchemaVersion(ctx context.Context, version string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	number, err := strconv.Atoi(version)
+	if err != nil {
+		return ctx, fmt.Errorf("schema version %q: %w", version, err)
+	}
+
+	return ctx, w.seedUnsupportedSchema(ctx, number)
 }
 
 func iBootTheAPI(ctx context.Context) (context.Context, error) {

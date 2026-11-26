@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "has_more": true,
+    "limit": 1,
+    "next_cursor": "<ref>"
+  },
+  "tokens": [
+    {
+      "created_at": "<timestamp>",
+      "name": "second-token",
+      "preview": "<token>",
+      "ref": "<ref>",
+      "scopes": [
+        "captures:write"
+      ]
+    }
+  ]
+}

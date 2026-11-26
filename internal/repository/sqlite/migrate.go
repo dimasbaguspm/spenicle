@@ -22,6 +22,8 @@ const (
 	maxErrLineWidth = 60
 )
 
+var ErrUnsupportedSchema = errors.New("unsupported schema version")
+
 func Migrate(ctx context.Context, db *sql.DB) error {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Migrate")
 	defer endSpan()
@@ -41,6 +43,10 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 
 	names, err := migrationNames()
 	if err != nil {
+		return err
+	}
+
+	if err := rejectUnsupported(applied, names); err != nil {
 		return err
 	}
 
@@ -239,6 +245,40 @@ func migrationNames() ([]string, error) {
 	sort.Strings(names)
 
 	return names, nil
+}
+
+func rejectUnsupported(applied map[int]bool, names []string) error {
+	supported := make(map[int]bool, len(names))
+	current := 0
+
+	for _, name := range names {
+		version, err := versionOf(name)
+		if err != nil {
+			return err
+		}
+
+		supported[version] = true
+		if version > current {
+			current = version
+		}
+	}
+
+	unsupported := make([]int, 0, len(applied))
+	for version := range applied {
+		if !supported[version] {
+			unsupported = append(unsupported, version)
+		}
+	}
+
+	if len(unsupported) == 0 {
+		return nil
+	}
+
+	sort.Ints(unsupported)
+
+	return fmt.Errorf("%w %d: this build has schema version %d and does not upgrade an existing database; "+
+		"move the old database aside and start with a fresh one",
+		ErrUnsupportedSchema, unsupported[0], current)
 }
 
 func versionOf(name string) (int, error) {

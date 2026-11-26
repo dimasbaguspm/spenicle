@@ -33,3 +33,29 @@ Feature: GET /api/tokens
     And I send a GET to "/api/tokens"
     Then the response status is 403
     And the response JSON matches the snapshot "get_api_tokens__a_token_cannot_list_the_tokens"
+
+  Scenario: The listing pages through tokens
+    Given the instance password is "uat-password-1234"
+    And a running API
+    When I sign in with the instance password
+    When the request body is:
+      """json
+      {"name":"first-token","scopes":["captures:write"]}
+      """
+    And I send a POST to "/api/tokens" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 201
+    When the request body is:
+      """json
+      {"name":"second-token","scopes":["captures:write"]}
+      """
+    And I send a POST to "/api/tokens" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 201
+    When I send a GET to "/api/tokens" with headers/query:
+      | type  | key   | value |
+      | query | limit | 1     |
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_tokens__the_listing_pages_through_tokens"

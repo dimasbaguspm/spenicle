@@ -67,6 +67,7 @@ func New(deps handlers.Deps) http.Handler {
 		httpx.Recover(deps.Logger),
 		httpx.Observe(routeOf(groups.public.mux, groups.root.mux, groups.scoped.mux)),
 		httpx.Log(deps.Logger),
+		httpx.CORS(),
 	)
 }
 
@@ -422,7 +423,6 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		Connections:       connector,
 		Intake:            intaker,
 		Sealer:            process.Sealer,
-		BaseCurrency:      process.BaseCurrency,
 		Timezone:          process.Cfg.Timezone,
 		Version:           config.Version,
 		StartedAt:         process.StartedAt,

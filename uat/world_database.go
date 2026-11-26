@@ -44,6 +44,33 @@ func (w *world) seedForeignSchema(ctx context.Context) error {
 	return nil
 }
 
+func (w *world) seedUnsupportedSchema(ctx context.Context, version int) error {
+	if err := w.prepare(); err != nil {
+		return err
+	}
+
+	db, err := sqlite.Open(ctx, sqlite.Config{Path: w.dbPath})
+	if err != nil {
+		return fmt.Errorf("open: %w", err)
+	}
+
+	defer func() { _ = db.Close() }()
+
+	createTable := `CREATE TABLE schema_migrations (` +
+		`version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)`
+	if _, err := db.ExecContext(ctx, createTable); err != nil {
+		return fmt.Errorf("foreign table: %w", err)
+	}
+
+	if _, err := db.ExecContext(ctx,
+		`INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)`,
+		version, "2026-01-01T00:00:00Z"); err != nil {
+		return fmt.Errorf("foreign version: %w", err)
+	}
+
+	return nil
+}
+
 func (w *world) clearDatabase(ctx context.Context) error {
 	if w.store == nil {
 		return errors.New(`no running API: add the step "a running API" first`)

@@ -100,7 +100,8 @@ func (s *Server) ListTokens(w http.ResponseWriter, r *http.Request) {
 		rows = append(rows, toTokenResponse(token))
 	}
 
-	list.Write(w, "tokens", rows, list.Meta{Limit: limit})
+	page, meta := list.Paginate(rows, limit, func(row tokenResponse) string { return row.Ref })
+	list.Write(w, "tokens", page, meta)
 }
 
 // RevokeToken is POST /api/tokens/{ref}/revoke: a token is never deleted, it

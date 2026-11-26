@@ -17,10 +17,16 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the rates vendor breaks its contract$`, theRatesVendorBreaksItsContract)
 
 	sc.Step(`^the request body is:$`, theRequestBodyIs)
-	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)"$`, sendWithoutBody)
-	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with:$`, sendWithBody)
-	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with headers/query:$`, sendWithRequestTable)
-	sc.Step(`^I send a (GET|POST|PATCH|DELETE) to "([^"]*)" with the artifact "([^"]*)"$`, sendWithArtifact)
+	sc.Step(`^I send (?:a|an) (GET|POST|PATCH|DELETE|OPTIONS) to "([^"]*)"$`, sendWithoutBody)
+	sc.Step(`^I send (?:a|an) (GET|POST|PATCH|DELETE|OPTIONS) to "([^"]*)" with:$`, sendWithBody)
+	sc.Step(
+		`^I send (?:a|an) (GET|POST|PATCH|DELETE|OPTIONS) to "([^"]*)" with headers/query:$`,
+		sendWithRequestTable,
+	)
+	sc.Step(
+		`^I send (?:a|an) (GET|POST|PATCH|DELETE|OPTIONS) to "([^"]*)" with the artifact "([^"]*)"$`,
+		sendWithArtifact,
+	)
 	sc.Step(`^I upload the statement "([^"]*)" with the client id "([^"]*)":$`, uploadStatement)
 	sc.Step(`^I upload the statement "([^"]*)" with the client id "([^"]*)" on the account "([^"]*)":$`,
 		uploadStatementOnAccount)
@@ -47,6 +53,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the connection is broken$`, theConnectionIsBroken)
 	sc.Step(`^the database path is a directory$`, theDatabasePathIsADirectory)
 	sc.Step(`^the database file holds a foreign schema_migrations table$`, theDatabaseHoldsForeignSchema)
+	sc.Step(`^the database holds schema version "(\d+)"$`, theDatabaseHoldsSchemaVersion)
 	sc.Step(`^I boot the API$`, iBootTheAPI)
 	sc.Step(`^the boot fails$`, theBootFails)
 	sc.Step(`^the boot failure mentions "([^"]*)"$`, theBootFailureMentions)

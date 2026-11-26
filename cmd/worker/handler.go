@@ -40,7 +40,7 @@ func Serve(ctx context.Context, process *config.Process) {
 			Rates:         store,
 			System:        store,
 			Clock:         clock.System{},
-			BaseCurrency:  process.BaseCurrency,
+			Settings:      process.Settings,
 		},
 		process.Cfg.ExportStaleAfter,
 		process.Cfg.ExportDir,

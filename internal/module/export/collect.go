@@ -38,9 +38,14 @@ func collect(ctx context.Context, deps Deps, window *Window) (*snapshot, error) 
 		return nil, err
 	}
 
+	baseCurrency, err := deps.Settings.BaseCurrency(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	out := &snapshot{
 		schemaVersion: schemaVersion,
-		baseCurrency:  deps.BaseCurrency,
+		baseCurrency:  baseCurrency,
 	}
 
 	if out.accounts, err = deps.Exporter.AllAccounts(ctx); err != nil {

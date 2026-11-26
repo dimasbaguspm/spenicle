@@ -3,6 +3,7 @@ package httpx
 import (
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
 	"go.opentelemetry.io/otel/codes"
@@ -11,6 +12,44 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
+
+func CORS() Middleware {
+	const maxAge = "600"
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
+			if validOrigin(origin) {
+				w.Header().Add("Vary", "Origin")
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+				w.Header().Set("Access-Control-Expose-Headers", "Content-Disposition")
+				w.Header().Set("Access-Control-Max-Age", maxAge)
+			}
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func validOrigin(origin string) bool {
+	if origin == "null" {
+		return true
+	}
+
+	parsed, err := url.Parse(origin)
+
+	return err == nil && (parsed.Scheme == "http" || parsed.Scheme == "https") &&
+		parsed.Host != "" && parsed.User == nil && parsed.Path == "" &&
+		parsed.RawQuery == "" && parsed.Fragment == ""
+}
 
 func Recover(logger *logging.Logger) Middleware {
 	//nolint:contextcheck // the panic guard calls no downstream function to inherit a context into

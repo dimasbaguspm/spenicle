@@ -32,6 +32,10 @@ const (
 
 type TimeSource interface{ Now() time.Time }
 
+type BaseCurrencySource interface {
+	BaseCurrency(ctx context.Context) (string, error)
+}
+
 type Deps struct {
 	Ledger        repository.Ledger
 	Exporter      repository.Exporter
@@ -39,7 +43,7 @@ type Deps struct {
 	Rates         repository.RateStore
 	System        repository.System
 	Clock         TimeSource
-	BaseCurrency  string
+	Settings      BaseCurrencySource
 }
 
 type Document struct {

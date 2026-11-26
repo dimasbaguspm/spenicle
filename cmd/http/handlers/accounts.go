@@ -46,7 +46,14 @@ func (s *Server) CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 	currency := request.Currency
 	if currency == "" {
-		currency = s.deps.BaseCurrency
+		baseCurrency, err := s.deps.Settings.BaseCurrency(ctx)
+		if err != nil {
+			s.writeClassified(ctx, w, err)
+
+			return
+		}
+
+		currency = baseCurrency
 	}
 
 	if _, err := entity.CurrencyByCode(currency); err != nil {
