@@ -15,7 +15,7 @@ import (
 )
 
 const ruleColumns = `r.id, r.ref, r.pattern, r.field, r.match_kind,
-	COALESCE(a.ref, ''), r.priority, r.archived_at, r.created_at`
+	COALESCE(a.ref, ''), a.kind, r.priority, r.archived_at, r.created_at`
 
 const ruleJoins = `JOIN accounts a ON a.id = r.account_id`
 
@@ -218,7 +218,7 @@ func scanRuleRow(scanner interface{ Scan(dest ...any) error }) (entity.Categoriz
 	)
 
 	if err := scanner.Scan(&rule.ID, &rule.Ref, &rule.Pattern, &rule.Field, &rule.MatchKind,
-		&rule.AccountRef, &rule.Priority, &archivedAt, &createdRaw); err != nil {
+		&rule.AccountRef, &rule.AccountKind, &rule.Priority, &archivedAt, &createdRaw); err != nil {
 		return entity.CategorizationRule{}, err
 	}
 

@@ -8,15 +8,16 @@ import (
 )
 
 type CategorizationRule struct {
-	ID         int64
-	Ref        string
-	Pattern    string
-	Field      string
-	MatchKind  string
-	AccountRef string
-	Priority   int
-	ArchivedAt *time.Time
-	CreatedAt  time.Time
+	ID          int64
+	Ref         string
+	Pattern     string
+	Field       string
+	MatchKind   string
+	AccountRef  string
+	AccountKind string
+	Priority    int
+	ArchivedAt  *time.Time
+	CreatedAt   time.Time
 }
 
 type CategorizationFilter struct {

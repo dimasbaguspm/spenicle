@@ -51,9 +51,7 @@ func (s *Service) Resolve(ctx context.Context, in SuggestInput) (Suggestion, err
 	}
 
 	if in.Kind != "" {
-		if rules, err = s.keepKind(ctx, in.Kind, rules); err != nil {
-			return Suggestion{}, err
-		}
+		rules = keepKind(in.Kind, rules)
 	}
 
 	return s.describe(ctx, Suggest(payeeName, in.Text, defaultCategory, rules))
@@ -80,45 +78,16 @@ func (s *Service) defaultCategory(ctx context.Context, kind, ref string) (string
 	return ref, nil
 }
 
-func (s *Service) keepKind(
-	ctx context.Context,
-	kind string,
-	rules []entity.CategorizationRule,
-) ([]entity.CategorizationRule, error) {
+func keepKind(kind string, rules []entity.CategorizationRule) []entity.CategorizationRule {
 	kept := make([]entity.CategorizationRule, 0, len(rules))
-	kinds := make(map[string]bool, len(rules))
 
 	for _, rule := range rules {
-		known, seen := kinds[rule.AccountRef]
-		if !seen {
-			accountKind, err := s.accountKind(ctx, rule.AccountRef)
-			if err != nil {
-				return nil, err
-			}
-
-			known = accountKind == kind
-			kinds[rule.AccountRef] = known
-		}
-
-		if known {
+		if rule.AccountKind == kind {
 			kept = append(kept, rule)
 		}
 	}
 
-	return kept, nil
-}
-
-func (s *Service) accountKind(ctx context.Context, ref string) (string, error) {
-	account, found, err := s.store.AccountByRef(ctx, ref)
-	if err != nil {
-		return "", err
-	}
-
-	if !found {
-		return "", nil
-	}
-
-	return account.Kind, nil
+	return kept
 }
 
 func (s *Service) describe(
