@@ -23,11 +23,32 @@ func (s *Store) InsertExport(ctx context.Context, job entity.Export) (entity.Exp
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertExport")
 	defer endSpan()
 
+	return insertExport(ctx, s.db, job)
+}
+
+func (s *Store) InsertExportWithEvent(
+	ctx context.Context,
+	job entity.Export,
+	event entity.ExportEvent,
+) (entity.Export, error) {
+	writeEvent := func(ctx context.Context, exec sqlExecer, saved entity.Export) error {
+		event.ExportID = saved.ID
+		_, err := insertExportEvent(ctx, exec, event)
+
+		return err
+	}
+
+	return insertWithEvent(
+		ctx, s, "Repository.Sqlite.InsertExportWithEvent", job, entity.Export{}, insertExport, writeEvent,
+	)
+}
+
+func insertExport(ctx context.Context, exec sqlExecer, job entity.Export) (entity.Export, error) {
 	if job.Ref == "" {
 		job.Ref = uuid.New()
 	}
 
-	res, err := s.db.ExecContext(ctx, `
+	res, err := exec.ExecContext(ctx, `
 		INSERT INTO exports
 			(ref, client_id, status, format, schema_version, counts_json, file_hash, bytes,
 			 created_at, started_at, finished_at, expires_at, from_on, to_on, error_message)
@@ -274,11 +295,19 @@ func (s *Store) InsertExportEvent(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertExportEvent")
 	defer endSpan()
 
+	return insertExportEvent(ctx, s.db, event)
+}
+
+func insertExportEvent(
+	ctx context.Context,
+	exec sqlExecer,
+	event entity.ExportEvent,
+) (entity.ExportEvent, error) {
 	if event.Ref == "" {
 		event.Ref = uuid.New()
 	}
 
-	res, err := s.db.ExecContext(ctx, `
+	res, err := exec.ExecContext(ctx, `
 		INSERT INTO export_events (ref, export_id, kind, payload_json, actor, at)
 		VALUES (?, ?, ?, ?, ?, ?)`,
 		event.Ref,

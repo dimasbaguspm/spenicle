@@ -261,7 +261,7 @@ func TestCapturePayloadsFollowTheCapture(t *testing.T) {
 
 	capture.DraftJSON = `{"note":"tea"}`
 	capture.ExtractionError = "vendor timeout"
-	if _, err := store.UpdateCapture(ctx, capture); err != nil {
+	if _, err := store.UpdateCaptureIfUnresolved(ctx, capture); err != nil {
 		t.Fatalf("update capture: %v", err)
 	}
 
@@ -275,6 +275,42 @@ func TestCapturePayloadsFollowTheCapture(t *testing.T) {
 	if got := countRows(t, store, `SELECT COUNT(*) FROM capture_payloads`); got != 1 {
 		t.Fatalf("capture payload rows = %d, want 1", got)
 	}
+}
+
+func TestUpdateCaptureStatusLeavesPayloadAlone(t *testing.T) {
+	store := newStore(t)
+	ctx := t.Context()
+
+	capture, err := store.InsertCapture(ctx, entity.Capture{
+		Kind:       constant.CaptureKindShare,
+		Status:     constant.CaptureStatusExtracting,
+		ClientID:   "status-only",
+		DedupeKey:  uuid.New(),
+		RawText:    "coffee 25k",
+		DraftJSON:  `{"note":"coffee"}`,
+		ReceivedAt: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("insert capture: %v", err)
+	}
+
+	if _, err := store.DB().ExecContext(ctx,
+		`UPDATE capture_payloads SET draft_json = ? WHERE capture_id = ?`,
+		`{"note":"kept"}`, capture.ID); err != nil {
+		t.Fatalf("seed payload: %v", err)
+	}
+
+	capture.Status = constant.CaptureStatusPending
+	capture.DraftJSON = ""
+	capture.ExtractionError = ""
+	if _, err := store.UpdateCapture(ctx, capture); err != nil {
+		t.Fatalf("update capture: %v", err)
+	}
+
+	updated := requirePayloadCapture(t, func() (entity.Capture, bool, error) {
+		return store.CaptureByRef(ctx, capture.Ref)
+	})
+	assertCapturePayload(t, updated, "coffee 25k", `{"note":"kept"}`)
 }
 
 func requirePayloadCapture(t *testing.T, read func() (entity.Capture, bool, error)) entity.Capture {

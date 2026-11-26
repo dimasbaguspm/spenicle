@@ -64,21 +64,23 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Export, bo
 		return entity.Export{}, false, fmt.Errorf("schema version: %w", err)
 	}
 
-	queued, err := s.jobs.InsertExport(ctx, entity.Export{
+	now := s.clock.Now()
+
+	queued, err := s.jobs.InsertExportWithEvent(ctx, entity.Export{
 		ClientID:      in.ClientID,
 		Status:        constant.ExportStatusQueued,
 		Format:        in.Format,
 		SchemaVersion: version,
-		CreatedAt:     s.clock.Now(),
+		CreatedAt:     now,
 		FromOn:        in.FromOn,
 		ToOn:          in.ToOn,
+	}, entity.ExportEvent{
+		Kind:  constant.ExportEventQueued,
+		Actor: constant.ExportActorUser,
+		At:    now,
 	})
 	if err != nil {
 		return s.raced(ctx, in, err)
-	}
-
-	if err := s.record(ctx, queued, constant.ExportEventQueued, constant.ExportActorUser); err != nil {
-		return entity.Export{}, false, err
 	}
 
 	return queued, true, nil

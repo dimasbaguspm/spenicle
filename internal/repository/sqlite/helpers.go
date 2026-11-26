@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,9 +10,48 @@ import (
 	sqlite "modernc.org/sqlite"
 	sqlite3 "modernc.org/sqlite/lib"
 
+	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
+
+type sqlExecer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+//nolint:ireturn // T is resolved to a concrete entity at every call site
+func insertWithEvent[T any](
+	ctx context.Context,
+	store *Store,
+	span string,
+	value T,
+	empty T,
+	insert func(context.Context, sqlExecer, T) (T, error),
+	writeEvent func(context.Context, sqlExecer, T) error,
+) (T, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, span)
+	defer endSpan()
+
+	err := store.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		saved, insertErr := insert(ctx, tx, value)
+		if insertErr != nil {
+			return insertErr
+		}
+
+		if eventErr := writeEvent(ctx, tx, saved); eventErr != nil {
+			return eventErr
+		}
+
+		value = saved
+
+		return nil
+	})
+	if err != nil {
+		return empty, err
+	}
+
+	return value, nil
+}
 
 func nullString(v string) sql.NullString {
 	if v == "" {

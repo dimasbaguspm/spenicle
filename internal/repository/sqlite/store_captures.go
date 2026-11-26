@@ -219,6 +219,10 @@ func (s *Store) UpdateCaptureIfUnresolved(
 			return err
 		}
 
+		if err := updateCapturePayload(ctx, tx, capture); err != nil {
+			return err
+		}
+
 		return appendAudit(ctx, tx, auditRecord{
 			Kind:   constant.AuditEntityCapture,
 			ID:     capture.ID,
@@ -335,13 +339,19 @@ func updateCaptureRow(ctx context.Context, tx *sql.Tx, capture entity.Capture) e
 		return fmt.Errorf("%w: capture %d", entity.ErrNotFound, capture.ID)
 	}
 
+	return nil
+}
+
+func updateCapturePayload(ctx context.Context, tx *sql.Tx, capture entity.Capture) error {
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO capture_payloads
 			(ref, capture_id, raw_text, draft_json, extraction_error)
 		VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT(capture_id) DO UPDATE SET
 			draft_json = COALESCE(excluded.draft_json, capture_payloads.draft_json),
-			extraction_error = excluded.extraction_error`,
+			extraction_error = excluded.extraction_error
+		WHERE excluded.raw_text IS NOT NULL OR excluded.draft_json IS NOT NULL
+		   OR excluded.extraction_error IS NOT NULL`,
 		uuid.New(), capture.ID,
 		nullString(capture.RawText),
 		nullString(capture.DraftJSON),

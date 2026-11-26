@@ -165,3 +165,39 @@ func exportDay(year int, month time.Month, day int) *time.Time {
 
 	return &at
 }
+
+func TestInsertExportWithEventWritesTheFirstTrail(t *testing.T) {
+	store := newStore(t)
+	ctx := t.Context()
+	at := time.Date(2026, time.February, 14, 9, 0, 0, 0, time.UTC)
+
+	queued, err := store.InsertExportWithEvent(ctx, entity.Export{
+		ClientID:      "export-queued-event",
+		Status:        constant.ExportStatusQueued,
+		Format:        constant.ExportFormatJSON,
+		SchemaVersion: 4,
+		CreatedAt:     at,
+	}, entity.ExportEvent{
+		Kind:  constant.ExportEventQueued,
+		Actor: constant.ExportActorUser,
+		At:    at,
+	})
+	if err != nil {
+		t.Fatalf("insert export with event: %v", err)
+	}
+
+	events, err := store.ListExportEvents(ctx, entity.ExportEventFilter{
+		ExportID: queued.ID, Limit: 10,
+	})
+	if err != nil {
+		t.Fatalf("list events: %v", err)
+	}
+
+	if len(events) != 1 {
+		t.Fatalf("events = %d, want 1", len(events))
+	}
+
+	if events[0].Kind != constant.ExportEventQueued || events[0].Actor != constant.ExportActorUser {
+		t.Fatalf("event = %+v", events[0])
+	}
+}

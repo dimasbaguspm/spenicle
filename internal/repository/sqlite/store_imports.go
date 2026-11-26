@@ -28,49 +28,86 @@ func (s *Store) InsertImportBatch(ctx context.Context, batch entity.ImportBatch)
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertImportBatch")
 	defer endSpan()
 
-	if batch.Ref == "" {
-		batch.Ref = uuid.New()
-	}
-
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
-		res, execErr := tx.ExecContext(ctx, `
-			INSERT INTO import_batches
-				(ref, client_id, file_hash, filename, status, rows_total, currency,
-				 created_at, expires_at, committed_at, rejected_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
-			batch.Ref,
-			batch.ClientID,
-			batch.FileHash,
-			batch.Filename,
-			batch.Status,
-			batch.RowsTotal,
-			batch.Currency,
-			batch.CreatedAt.UTC().Format(constant.TimestampLayout),
-			batch.ExpiresAt.UTC().Format(constant.TimestampLayout),
-		)
-		if execErr != nil {
-			return fmt.Errorf("insert import batch: %w", execErr)
+		saved, insertErr := insertImportBatch(ctx, tx, batch)
+		if insertErr != nil {
+			return insertErr
 		}
 
-		id, idErr := res.LastInsertId()
-		if idErr != nil {
-			return fmt.Errorf("import batch id: %w", idErr)
-		}
-
-		batch.ID = id
-
-		for index := range batch.Rows {
-			batch.Rows[index].BatchID = id
-
-			if rowErr := insertImportRow(ctx, tx, &batch.Rows[index]); rowErr != nil {
-				return rowErr
-			}
-		}
+		batch = saved
 
 		return nil
 	})
 	if err != nil {
 		return entity.ImportBatch{}, err
+	}
+
+	return batch, nil
+}
+
+func (s *Store) InsertImportBatchWithEvent(
+	ctx context.Context,
+	batch entity.ImportBatch,
+	event entity.ImportEvent,
+) (entity.ImportBatch, error) {
+	writeEvent := func(ctx context.Context, exec sqlExecer, saved entity.ImportBatch) error {
+		event.BatchID = saved.ID
+		_, err := insertImportEvent(ctx, exec, event)
+
+		return err
+	}
+
+	return insertWithEvent(
+		ctx,
+		s,
+		"Repository.Sqlite.InsertImportBatchWithEvent",
+		batch,
+		entity.ImportBatch{},
+		insertImportBatch,
+		writeEvent,
+	)
+}
+
+func insertImportBatch(
+	ctx context.Context,
+	exec sqlExecer,
+	batch entity.ImportBatch,
+) (entity.ImportBatch, error) {
+	if batch.Ref == "" {
+		batch.Ref = uuid.New()
+	}
+
+	res, err := exec.ExecContext(ctx, `
+		INSERT INTO import_batches
+			(ref, client_id, file_hash, filename, status, rows_total, currency,
+			 created_at, expires_at, committed_at, rejected_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
+		batch.Ref,
+		batch.ClientID,
+		batch.FileHash,
+		batch.Filename,
+		batch.Status,
+		batch.RowsTotal,
+		batch.Currency,
+		batch.CreatedAt.UTC().Format(constant.TimestampLayout),
+		batch.ExpiresAt.UTC().Format(constant.TimestampLayout),
+	)
+	if err != nil {
+		return entity.ImportBatch{}, fmt.Errorf("insert import batch: %w", err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return entity.ImportBatch{}, fmt.Errorf("import batch id: %w", err)
+	}
+
+	batch.ID = id
+
+	for index := range batch.Rows {
+		batch.Rows[index].BatchID = id
+		if rowErr := insertImportRow(ctx, exec, &batch.Rows[index]); rowErr != nil {
+			return entity.ImportBatch{}, rowErr
+		}
 	}
 
 	return batch, nil
@@ -150,7 +187,7 @@ func (s *Store) CloseImportBatch(
 		}
 
 		if event.Kind != "" {
-			if insertErr := insertImportEvent(ctx, tx, event, ref); insertErr != nil {
+			if insertErr := insertImportEventByRef(ctx, tx, event, ref); insertErr != nil {
 				return insertErr
 			}
 		}
@@ -234,7 +271,7 @@ func (s *Store) EditImportRow(
 		}
 
 		for _, event := range events {
-			if insertErr := insertImportEvent(ctx, tx, event, ref); insertErr != nil {
+			if insertErr := insertImportEventByRef(ctx, tx, event, ref); insertErr != nil {
 				return insertErr
 			}
 		}
@@ -382,7 +419,7 @@ func (s *Store) DropImportBatch(ctx context.Context, ref string, event entity.Im
 
 		dropped = int(count)
 
-		if insertErr := insertImportEvent(ctx, tx, event, ref); insertErr != nil {
+		if insertErr := insertImportEventByRef(ctx, tx, event, ref); insertErr != nil {
 			return insertErr
 		}
 
@@ -407,7 +444,15 @@ func (s *Store) InsertImportEvent(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertImportEvent")
 	defer endSpan()
 
-	res, err := s.db.ExecContext(ctx, `
+	return insertImportEvent(ctx, s.db, event)
+}
+
+func insertImportEvent(
+	ctx context.Context,
+	exec sqlExecer,
+	event entity.ImportEvent,
+) (entity.ImportEvent, error) {
+	res, err := exec.ExecContext(ctx, `
 		INSERT INTO import_events (ref, batch_id, kind, row_index, payload_json, actor, at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		refOf(event),
@@ -447,12 +492,12 @@ func (s *Store) ListImportEvents(
 	return pageScan(ctx, s.db, "import events", builder, clampLimit(filter.Limit), scanImportEventRow)
 }
 
-func insertImportRow(ctx context.Context, tx *sql.Tx, row *entity.ImportRow) error {
+func insertImportRow(ctx context.Context, exec sqlExecer, row *entity.ImportRow) error {
 	if row.Ref == "" {
 		row.Ref = uuid.New()
 	}
 
-	res, err := tx.ExecContext(ctx, `
+	res, err := exec.ExecContext(ctx, `
 		INSERT INTO import_rows
 			(ref, batch_id, row_index, occurred_on, amount_minor, currency, description, account_ref,
 			 category_ref, payee_ref, status, clash_kind, clash_entry_ref, edited_at, edited_fields,
@@ -616,7 +661,12 @@ func timestampOf(field, raw string) (*time.Time, error) {
 	return &parsed, nil
 }
 
-func insertImportEvent(ctx context.Context, tx *sql.Tx, event entity.ImportEvent, batchRef string) error {
+func insertImportEventByRef(
+	ctx context.Context,
+	tx *sql.Tx,
+	event entity.ImportEvent,
+	batchRef string,
+) error {
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO import_events (ref, batch_id, kind, row_index, payload_json, actor, at)
 		VALUES (?, (SELECT id FROM import_batches WHERE ref = ?), ?, ?, ?, ?, ?)`,

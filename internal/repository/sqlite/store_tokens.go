@@ -197,9 +197,11 @@ func (s *Store) TouchToken(ctx context.Context, ref string, at time.Time) error 
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.TouchToken")
 	defer endSpan()
 
+	stamp := at.Format(constant.TimestampLayout)
 	if _, err := s.db.ExecContext(ctx,
-		`UPDATE api_tokens SET last_used_at = ? WHERE ref = ?`,
-		at.Format(constant.TimestampLayout), ref,
+		`UPDATE api_tokens SET last_used_at = ?
+		WHERE ref = ? AND (last_used_at IS NULL OR last_used_at < ?)`,
+		stamp, ref, stamp,
 	); err != nil {
 		return fmt.Errorf("touch token %q: %w", ref, err)
 	}

@@ -115,7 +115,9 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.ImportBatc
 		return s.resume(ctx, existing, in.FileHash)
 	}
 
-	draft, err := s.draft(ctx, in, s.clock.Now())
+	now := s.clock.Now()
+
+	draft, err := s.draft(ctx, in, now)
 	if err != nil {
 		return entity.ImportBatch{}, false, err
 	}
@@ -124,13 +126,11 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.ImportBatc
 		return entity.ImportBatch{}, false, storeErr
 	}
 
-	saved, err := s.batches.InsertImportBatch(ctx, draft)
+	saved, err := s.batches.InsertImportBatchWithEvent(ctx, draft, s.makeEvent(
+		draft, constant.ImportEventUploaded, nil, "",
+	))
 	if err != nil {
 		return s.raced(ctx, in, err)
-	}
-
-	if err := s.record(ctx, saved, constant.ImportEventUploaded, ""); err != nil {
-		return entity.ImportBatch{}, false, err
 	}
 
 	return saved, true, nil

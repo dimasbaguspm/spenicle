@@ -150,6 +150,11 @@ type Recurring interface {
 //nolint:interfacebloat // one SQLite adapter owns the import tables; splitting it renames the same dep
 type Imports interface {
 	InsertImportBatch(ctx context.Context, batch entity.ImportBatch) (entity.ImportBatch, error)
+	InsertImportBatchWithEvent(
+		ctx context.Context,
+		batch entity.ImportBatch,
+		event entity.ImportEvent,
+	) (entity.ImportBatch, error)
 	ImportBatchByRef(ctx context.Context, ref string) (entity.ImportBatch, bool, error)
 	ImportBatchByClientID(ctx context.Context, clientID string) (entity.ImportBatch, bool, error)
 	ListImportBatches(ctx context.Context, filter entity.ImportFilter) ([]entity.ImportBatch, error)
@@ -214,6 +219,11 @@ type RateStore interface {
 
 type Exports interface {
 	InsertExport(ctx context.Context, job entity.Export) (entity.Export, error)
+	InsertExportWithEvent(
+		ctx context.Context,
+		job entity.Export,
+		event entity.ExportEvent,
+	) (entity.Export, error)
 	ExportByRef(ctx context.Context, ref string) (entity.Export, bool, error)
 	ExportByClientID(ctx context.Context, clientID string) (entity.Export, bool, error)
 	ListExports(ctx context.Context, filter entity.ExportFilter) ([]entity.Export, error)

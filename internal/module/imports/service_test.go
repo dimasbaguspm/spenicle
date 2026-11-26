@@ -691,3 +691,31 @@ func countImportEvents(t *testing.T, h harness, kind string) int {
 
 	return count
 }
+
+func TestCreateWritesOneUploadedEvent(t *testing.T) {
+	tests := []struct {
+		name string
+		rows int
+		want int
+	}{
+		{name: "one row", rows: 1, want: 1},
+		{name: "two rows", rows: 2, want: 1},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h := newHarness(t, imports.Options{MaxRows: 10, CommitChunk: 2})
+			_, created, err := h.service.Create(t.Context(), imports.CreateInput{
+				ClientID: "uploaded-event", Filename: "march.csv", FileHash: "abc",
+				Statement: statement(test.rows),
+			})
+			if err != nil || !created {
+				t.Fatalf("create: created=%v err=%v", created, err)
+			}
+
+			if got := countImportEvents(t, h, constant.ImportEventUploaded); got != test.want {
+				t.Fatalf("uploaded events = %d, want %d", got, test.want)
+			}
+		})
+	}
+}
