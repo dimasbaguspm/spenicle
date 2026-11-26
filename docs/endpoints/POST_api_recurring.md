@@ -31,7 +31,7 @@ None.
 | `category_ref` | string | no | the `expense`/`income` account it lands in |
 | `amount_minor` | string | yes | integer minor units, signed |
 | `currency` | string | yes | ISO 4217 |
-| `cadence` | string | yes | `weekly`, `monthly`, `yearly` |
+| `cadence` | string | yes | `daily`, `weekly`, `monthly`, `yearly` |
 | `interval_n` | int | no | every N cadences, default 1 |
 | `day_of_month` | int | no | 1–31, for monthly rules |
 | `business_day_shift` | string | no | `none` (default), `next`, `prev` |

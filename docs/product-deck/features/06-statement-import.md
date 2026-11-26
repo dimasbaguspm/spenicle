@@ -14,13 +14,16 @@ action closes it. Nothing reaches the ledger before that action.
 
 ### 2.1 Upload
 
-The statement contract is fixed and tiny (a header row is required):
+The statement contract is small: a header row is required, and its columns are matched
+by trimmed name in any order. `occurred_on`, `amount_minor` and `description` are
+required; `currency` is optional.
 
 ```csv
 occurred_on,amount_minor,description
 2026-02-01,-18000,KOPI KENANGAN
 2026-02-03,2500000,SALARY
 ```
+The order above is illustrative: the same names in a different column order parse the same.
 
 | # | call | notes |
 | --- | --- | --- |
@@ -87,7 +90,7 @@ retry and why the client can show progress from the event log.
 ```
 POST /api/imports              Handler.Imports.Create → Module.Imports.Create
                                → sha256(bytes) → Repository.Filestore.Put (hash-addressed, no artifacts row)
-                               → parse CSV (exact header check) → resolve batch account + currency
+                               → parse CSV (header columns mapped by trimmed name, any order) → resolve batch account + currency
                                → clash probes (already_imported / duplicate / possible_duplicate / invalid_row)
                                → one TX: import_batches + every import_rows + `uploaded` event
 GET  /api/imports              → ListImportBatches (status, ref cursor, id DESC)
@@ -135,8 +138,9 @@ Worker (per run)               → collectImports: drop drafts past expires_at (
    one `expired` event, 50 per run). A `committed` or `rejected` batch is kept forever.
 7. Every state change on a batch is in `import_events`, with an actor; the log is readable
    and append-only.
-8. Nothing about the file is guessed: the header must be exactly
-   `occurred_on,amount_minor,description` (or with an extra `currency` column), or the upload is refused with no batch.
+8. Nothing about the file is guessed: the header must include `occurred_on`,
+   `amount_minor` and `description`, matched by trimmed name in any column order, with
+   optional `currency`; a missing required column is refused with no batch.
 
 ### Risks
 
@@ -247,8 +251,8 @@ Scenario: Chunked uploads resume and assemble
 
 ## 6. What this page does not promise
 
-- Allowed header names are fixed: `occurred_on`, `amount_minor`, `description`, optional `currency`.
-  No arbitrary column mapping, delimiter/encoding detection, PDF or XLSX.
+- Allowed header names are fixed: `occurred_on`, `amount_minor`, `description`, optional `currency`,
+  matched by trimmed name in any column order. No arbitrary column mapping, delimiter/encoding detection, PDF or XLSX.
 - A row without `currency` uses the batch's base currency.
 - No partial-failure report in the commit response — the event log is the report.
 - No reopen of a rejected batch; no bulk row patch.

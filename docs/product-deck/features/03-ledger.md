@@ -62,17 +62,17 @@ Filters, all optional: `from`, `to`, `account_ref` (list), `payee_ref` (list), `
 `cursor`, `limit`. `amount_min`/`amount_max` compare `ABS(base_amount_minor)`, so the
 bounds are base-currency and an income of 18 000 matches the same window as a spend.
 
-### 2.3 Correct it — two ways, never a third
+### 2.3 Correct it — three actions, one at a time
 
 | intent | call | result |
 | --- | --- | --- |
 | the merchant was wrong | `PATCH /api/entries/{ref}` `{"payee_ref":"<ref>"}` | `200`, the same entry now carrying the new payee; `""` clears it |
 | it should never have counted | `PATCH /api/entries/{ref}` `{"void":true,"reason":"duplicate"}` | `200` the **reversal** entry; the original carries `voided_at` |
-| anything else (amount, date, note) | void, then post again | two entries, both visible, the audit trail intact |
+| anything else (amount, date, note) | `PATCH /api/entries/{ref}` `{"occurred_on":"2026-02-15","note":"coffee and a bun"}` or `postings` | `200` the **replacement** entry (source `adjustment`); the original carries `voided_at` |
 
-`{"void":false}` is `422 unsupported_patch`, and a body with both actions is
-`422 invalid_request`: the two corrections never travel together. A second void is
-`409 invalid_state`.
+`{"void":false}` is `422 unsupported_patch`. Each action travels alone: a body with a void
+and anything else is `422 invalid_request`, and so is a body mixing `payee_ref` with a
+correction. A second void is `409 invalid_state`.
 
 The reversal is a real entry: negated postings, `reverses_entry_id`, `source:
 "adjustment"`. Every derived number (balance, dashboard, month spend, category pie)
@@ -146,7 +146,7 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
 
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
-| a client sends a wrong `fx_rate` | the base amount is wrong forever, and every report inherits it | an explicit rate still wins and is stored per posting with `fx_rate_date`/`fx_source`; omit it to let the ledger resolve and show that date on the confirm screen |
+| a client sends a wrong `fx_rate` | the base amount is wrong forever, and every report inherits it | an explicit rate still wins and is stored per posting with `fx_rate`/`fx_source`; `fx_rate_date` is request-only. Omit an explicit rate to let the ledger resolve from the sheet day and read `fx_source` from the response |
 | a day has no ECB sheet | `?on=today` misses on weekends and holidays | the ledger and `GET /api/rates` walk back to the nearest earlier business day, then cross through EUR; a miss is `invalid_rate`, never an identity fallback |
 | voiding does not touch the capture that produced the entry | the review queue shows `approved` for an entry that no longer counts | void is the ledger's verb; the capture keeps `resolved_entry_id` as evidence. The UI must read the entry, not the capture, when it says "this receipt was filed" |
 | voiding a recurring-posted entry | the rule already advanced, so that due date is not re-queued | correct answer for the user: the month is genuinely skipped, and reversing it is a new manual entry |
@@ -222,7 +222,7 @@ Scenario: A second void is refused
   Then the response status is 409
   And the error code is "invalid_state"
 
-Scenario: The payee is the only editable field
+Scenario: The payee is patched; a correction replaces
   Given an entry "coffee"
   When I send a PATCH to "/api/entries/{{ref}}" with:
     """json
@@ -242,7 +242,8 @@ Scenario: The payee is the only editable field
 
 - No running balance unless `with_balance=true` and exactly one `account_ref` are sent.
 - No sort order other than newest first, no filter on an entry's own currency amount.
-- No in-place edit. A correction voids the original and posts a replacement in one write.
+- No in-place edit of the amount, date or postings: a correction voids the original and
+  posts a replacement in one write. Only the payee patch mutates the original entry.
 - No guessed FX: an explicit `fx_rate` wins; without one the ledger resolves from ECB data
   or refuses with `invalid_rate`.
-- No hidden rate: every foreign posting carries `fx_source` and `fx_rate_date`.
+- No hidden rate: `fx_rate_date` is request-only; every foreign posting in a response carries `fx_rate` and `fx_source`.

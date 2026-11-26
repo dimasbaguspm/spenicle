@@ -16,13 +16,18 @@ still has a credential?" and "who voided that entry?".
 | # | call | why it cannot be skipped |
 | --- | --- | --- |
 | 1 | `GET /healthz` | proves the process booted, migrated, and which build this is |
-| 2 | `GET /api/settings` | `base_currency`, `timezone`, `password_must_change`, and the capability flags: `extraction_enabled` drives SnapToJSON; `ai_assistance` is informational only and must not gate a feature ([F9](./09-gaps-and-next.md) G11) |
+| 2 | `GET /api/meta` | the bootstrap exception: reachable during the forced password change, so the shell can read the `settings` block (`base_currency`, `timezone`, `password_must_change`, the capability flags: `extraction_enabled` drives SnapToJSON; `ai_assistance` is informational only and must not gate a feature ([F9](./09-gaps-and-next.md) G11)) plus accounts, payees, recurring rules and currencies |
 | 3 | `POST /api/setup {"base_currency":"IDR","accounts":[{"name":"Cash","kind":"asset","opening_balance_minor":"500000"}]}` | the wizard's only write; optional opening balances post atomically, then `200` returns the settings payload |
 | 4 | `POST /api/password {current_password, new_password}` | closes the instance; the response carries the new root credential |
-| 5 | `GET /api/meta` | one round trip fills the shell: shared settings, every account with its balance, every payee, every recurring rule and the ISO currency list |
+| 5 | `GET /api/settings` | after the password change: `password_must_change` is now false; before it, this route answers `409 password_change_required` |
 
 Step 1 and step 2 are separate on purpose: `/healthz` is public and answers even when
 the credential is wrong, so a client can distinguish "server down" from "server says no".
+
+While `password_must_change` is true, `/api/meta` and `/api/password` are the only
+authenticated routes that still answer: every other one answers `409
+password_change_required`. That is why step 2 comes before step 4 and step 5 comes after
+it.
 
 Step 3 is root-only: `/api/setup` locks the base currency and seeds balances, so no
 token can reach it, even one minted with `admin` or `*`. The wizard normally runs in
@@ -39,8 +44,8 @@ locks itself out.
 | --- | --- | --- |
 | 1 | `GET /api/tokens` | root-only; shows `preview` (`spl_ab12…9f3c`), `scopes`, `last_used_at`, `revoked_at` |
 | 2 | `POST /api/tokens {"name":"iphone-shortcut","scopes":["captures:write","dashboard:read"]}` | `201` with `token` — the plaintext exists in this response and nowhere else |
-| 3 | later: `GET /api/tokens?status=active&used=used` | the listing filters on `last_used_at`, so an unused token is visible |
-| 4 | `POST /api/tokens/{ref}/revoke` | `200` with `revoked_at`; the row and its journal entry stay |
+| 3 | later: `GET /api/tokens?status=active&used=used` | `used=used` lists tokens with `last_used_at` set; `used=never` lists those with it unset |
+| 4 | `POST /api/tokens/{ref}/revoke` | `200` with `revoked_at`; the row and its journal entry stay, and a second revoke is `404 not_found` |
 
 A token can never mint another token or lock the ledger: `/api/setup`, `/api/tokens*`,
 `/api/password`, `PATCH /api/settings`, `/api/intake*` and `/api/connections*` live in
@@ -160,7 +165,7 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 
 ### Rollout
 
-1. **Ship the wizard first.** `healthz` → `settings` → `setup` → `password` is the
+1. **Ship the wizard first.** `healthz` → `meta` → `setup` → `password` → `settings` is the
    smallest client that is safe to expose; it needs no other route.
 2. **Then the token screen.** It is root-only, so it can ship after the wizard without
    touching agent tokens that do not exist yet.

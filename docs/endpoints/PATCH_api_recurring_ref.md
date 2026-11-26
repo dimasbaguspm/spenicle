@@ -27,10 +27,10 @@ The recurring screen ("pause", "correct amount"), the review queue for a suggest
 | field | type | required | notes |
 | --- | --- | --- | --- |
 | `amount_minor` | string | no | integer minor units |
-| `cadence` | string | no | `weekly`, `monthly`, `yearly` |
+| `cadence` | string | no | `daily`, `weekly`, `monthly`, `yearly` |
+| `next_due_on` | string | no | `YYYY-MM-DD`; may push or rewind an explicit schedule |
 | `interval_n` | int | no | 1–52 |
 | `day_of_month` | int | no | 1–31 |
-| `next_due_on` | string | no | `YYYY-MM-DD` |
 | `ends_on` | string | no | `YYYY-MM-DD` |
 | `state` | string | no | `suggested`, `active`, `paused`, `ended` |
 

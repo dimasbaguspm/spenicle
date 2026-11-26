@@ -23,8 +23,9 @@ Approval does. A capture is evidence plus a draft; the ledger is a decision.
 
 `202` when the row is new, `200` when the dedupe key already knew it — both carry the
 capture, so a retry after a network drop is safe by returning the same thing instead of
-a second row. The dedupe key is `sha256(kind | client_id | artifact_hash | raw_text)` and
-it is `UNIQUE` in the table: the uniqueness is the guard, not a client check.
+The dedupe key is `sha256` of `kind`, `client_id`, `artifact_hash` and `raw_text` joined
+with a NUL byte (`\x00`); it is `UNIQUE` in the table, so the uniqueness is the guard,
+not a client check.
 
 `kind` is `share`, `image`, `email`, `statement`, `recurring` or `manual`. `raw_text` is
 capped at 8000 characters. Two things happen after the insert, and both are invisible to
@@ -49,7 +50,7 @@ exists and it is safe. Status `pending` means "a human must decide", `extracting
 | 1 | `GET /api/captures?status=pending` | `extracting` first, then `pending` oldest-first, then the resolved tail |
 | 2 | `GET /api/captures?refs=<ref>` | refresh exactly the rows on screen after a decision |
 | 3 | `GET /api/captures/{ref}/artifact` | the receipt bytes, `Content-Disposition: attachment`, `Cache-Control: private, no-store` |
-| 4 | `PATCH /api/captures/{ref}` | one action: `approve`, `reject` or `retry` |
+| 4 | `PATCH /api/captures/{ref}` | one action: `approve`, `reject`, `match` or `retry` |
 
 `approve` needs the fields a ledger entry needs, because that is what it will write:
 
@@ -202,7 +203,7 @@ Scenario: A share becomes one capture, and a replay does not duplicate it
     """json
     {"client_id":"cap-1","kind":"share","raw_text":"KOPI 18.000"}
     """
-  Then the response status is 201
+  Then the response status is 202
   And the response body has status "pending"
   When I send the same POST to "/api/captures" again
   Then the response status is 200

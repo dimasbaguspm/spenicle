@@ -25,9 +25,9 @@ POST /api/recurring
 `day_of_month`, `business_day_shift`, `next_due_on`, optional `ends_on`, `origin: "user"`,
 `state: "active"`, `created_at`.
 
-`cadence` is `weekly`, `monthly` or `yearly`; `interval_n` is "every N cadences" (`1` is
-default, `1–52` on `PATCH`); `day_of_month` (`1–31`) is what keeps a monthly rule on the
-1st even across short months; `business_day_shift` (`none`, `next`, `prev`) moves the
+`cadence` is `daily`, `weekly`, `monthly` or `yearly`; `interval_n` is "every N cadences"
+(`1` is default, `1–52` on `PATCH`); `day_of_month` (`1–31`) is what keeps a monthly rule on
+the 1st even across short months; `business_day_shift` (`none`, `next`, `prev`) moves the
 materialised date off a weekend without moving the schedule.
 
 "Make this recurring" from an entry is the same call with the entry's payee, account,
@@ -105,8 +105,9 @@ Worker.Recurring.Run    every WorkerInterval (1h):
 1. A rule never posts. Only an approval does, on a capture the rule queued.
 2. One occurrence queues at most one capture, and one occurrence posts at most one entry —
    both enforced by unique keys, not by client behaviour.
-3. `next_due_on` only moves forward, and only after the occurrence it names was queued
-   (compare-and-swap on the stored value).
+3. The worker advances `next_due_on` only forward and only after the occurrence it names
+   was queued (compare-and-swap on the stored value). A client `PATCH` may set any day to
+   push or rewind the schedule; that explicit write is journaled as a rule update.
 4. A rule past `ends_on` queues nothing more, and the states `paused`/`ended` stop
    generation without deleting history.
 5. Every due occurrence in the backlog is eventually queued: the catch-up cap (60 per rule

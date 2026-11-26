@@ -53,9 +53,9 @@ rewritten as it is). `archived: true` stamps `archived_at`; every historical pos
 pointing at the account, and the balance stays visible wherever the client does not filter
 archived rows out.
 
-What cannot change: `kind` (it would break the double-entry references) and `parent`
-(moving an account under another rewrites the meaning of past balances). Archive and
-create instead.
+`kind` cannot change (it would break the double-entry references). `parent_ref` can
+move an account within the same `kind`, up to three levels; a cycle or a deeper move is
+refused. Archive and create instead for a real taxonomy change.
 
 ### 2.4 A payee with defaults
 
@@ -93,8 +93,8 @@ PATCH/api/payees     Handler.Payees.Patch   → PayeeByRef → UpdatePayee → a
 - **A category is not a table.** `expense` and `income` accounts are the categories; the
   chart is one collection with one shape, so a picker never needs two code paths.
 - **`UNIQUE (name, kind)`** is the identity of an account. `payees.name` is unique on its
-  own. Both are database constraints, and today a duplicate answers `500 internal_error`
-  rather than a friendly `409` — the client must not rely on a name being free.
+  own. Both are database constraints, and a duplicate answers `409 duplicate` on create
+  and patch — the client must not rely on a name being free.
 - **Defaults are resolved before the insert.** `POST /api/payees` turns
   `default_account_ref`/`default_category_ref` into ids first, so an unknown ref is
   `422 unknown_reference` and never a dangling foreign key.

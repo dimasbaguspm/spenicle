@@ -8,15 +8,18 @@ Turn one uploaded CSV statement into a durable **draft**: rows the user reviews 
 
 The upload is also the first row of the batch's event log (`uploaded`, or `resumed` when the same `client_id` and bytes come back); the whole trail is read at [`GET /api/imports/{ref}/events`](./GET_api_imports_ref_events.md).
 
-The statement contract is fixed and small:
+The statement contract is small: a header row is required, and its columns are matched
+by trimmed name in any order. `occurred_on`, `amount_minor` and `description` are required;
+`currency` is optional.
 
 | column | meaning |
 | --- | --- |
 | `occurred_on` | `YYYY-MM-DD` |
 | `amount_minor` | signed integer of minor units, negative = money out |
 | `description` | free text, at most 500 characters |
+| `currency` | optional ISO 4217 code for the row, overriding the batch currency |
 
-The header row is required and may read `occurred_on,amount_minor,description` or `occurred_on,amount_minor,description,currency`. Anything else is `422 invalid_request` and no batch is written. A well-formed header with a bad row does **not** fail the upload: the row is stored with `status: "skipped"` and `clash_kind: "invalid_row"`.
+A missing required column is `422 invalid_request` and no batch is written. A well-formed header with a bad row does **not** fail the upload: the row is stored with `status: "skipped"` and `clash_kind: "invalid_row"`.
 
 ## Upstream
 
@@ -113,13 +116,13 @@ Idempotency is enforced by the unique index on `import_batches.client_id`: the l
 - `422 invalid_request` — `chunk_index`/`chunk_total` alone, out of range, not numbers, too many rows, or a body above `ImportMaxBytes`.
 
 - `409 import_conflict` — the `client_id` exists with different bytes; use a new client id for a new file.
-- `422 invalid_request` — the header is not the fixed three columns (the message names it), the file part is missing, `client_id` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `ArtifactMaxBytes`.
+- `422 invalid_request` — the header is missing `occurred_on`, `amount_minor` or `description` (the message names it), the file part is missing, `client_id` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `ArtifactMaxBytes`.
 - `404 not_found` — `account_ref` names no account.
 - `500 internal_error` — the store refused the write; nothing was committed.
 
 ## Limitations
 
-A row may override the batch currency with an optional `currency` column; the batch currency defaults to the locked base currency. No column mapping beyond that, no delimiter or encoding detection. The draft expires 24 hours after the last edit unless it is committed; the worker drops it — rows, blob and an `expired` event — while a committed or rejected batch is kept forever.
+The named columns may appear in any order; a row may override the batch currency with an optional `currency` column, and the batch currency defaults to the locked base currency. No arbitrary aliases, no delimiter or encoding detection. The draft expires 24 hours after the last edit unless it is committed; the worker drops it — rows, blob and an `expired` event — while a committed or rejected batch is kept forever.
 
 ## Sequence
 

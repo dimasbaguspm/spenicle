@@ -528,8 +528,8 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
-  `0001_init.sql` through `0004_equity_accounts.sql` are the current schema, so
-  `schema_version` is 4. The `v0.0.x` tags are the v1 tree (`apps/backend/`), so no v2
+  `0001_init.sql` through `0006_token_expiry.sql` are the current schema, so
+  `schema_version` is 6. The `v0.0.x` tags are the v1 tree (`apps/backend/`), so no v2
   release exists yet. Once a v2 release exists, forwards only — never edit an applied
   migration, add the next number. The splitter is naive: no `;` inside a migration
   comment.
