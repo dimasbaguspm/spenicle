@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
@@ -23,6 +24,16 @@ const importRowColumns = `id, ref, batch_id, row_index, occurred_on, amount_mino
 	edited_fields, created_at, updated_at`
 
 const importEventColumns = `id, ref, batch_id, kind, row_index, payload_json, actor, at`
+
+const (
+	importRowChunkSize   = 200
+	importRowColumnCount = 18
+	importRowInsertHead  = `INSERT INTO import_rows
+		(id, ref, batch_id, row_index, occurred_on, amount_minor, currency, description, account_ref,
+		 category_ref, payee_ref, status, clash_kind, clash_entry_ref, edited_at, edited_fields,
+		 created_at, updated_at) VALUES `
+	importRowInsertValues = `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+)
 
 func (s *Store) InsertImportBatch(ctx context.Context, batch entity.ImportBatch) (entity.ImportBatch, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertImportBatch")
@@ -105,9 +116,10 @@ func insertImportBatch(
 
 	for index := range batch.Rows {
 		batch.Rows[index].BatchID = id
-		if rowErr := insertImportRow(ctx, exec, &batch.Rows[index]); rowErr != nil {
-			return entity.ImportBatch{}, rowErr
-		}
+	}
+
+	if rowErr := insertImportRows(ctx, exec, batch.Rows); rowErr != nil {
+		return entity.ImportBatch{}, rowErr
 	}
 
 	return batch, nil
@@ -492,45 +504,68 @@ func (s *Store) ListImportEvents(
 	return pageScan(ctx, s.db, "import events", builder, clampLimit(filter.Limit), scanImportEventRow)
 }
 
-func insertImportRow(ctx context.Context, exec sqlExecer, row *entity.ImportRow) error {
-	if row.Ref == "" {
-		row.Ref = uuid.New()
+func insertImportRows(ctx context.Context, exec sqlExecer, rows []entity.ImportRow) error {
+	lastIDQuery := `SELECT COALESCE(MAX(id), 0) FROM import_rows`
+
+	var lastID int64
+	if err := exec.QueryRowContext(ctx, lastIDQuery).Scan(&lastID); err != nil {
+		return fmt.Errorf("import row id high water: %w", err)
 	}
 
-	res, err := exec.ExecContext(ctx, `
-		INSERT INTO import_rows
-			(ref, batch_id, row_index, occurred_on, amount_minor, currency, description, account_ref,
-			 category_ref, payee_ref, status, clash_kind, clash_entry_ref, edited_at, edited_fields,
-			 created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		row.Ref,
-		row.BatchID,
-		row.RowIndex,
-		row.OccurredOn.Format(constant.DateLayout),
-		row.AmountMinor,
-		row.Currency,
-		row.Description,
-		row.AccountRef,
-		nullString(row.CategoryRef),
-		nullString(row.PayeeRef),
-		row.Status,
-		nullString(row.ClashKind),
-		nullString(row.ClashEntryRef),
-		nullTime(row.EditedAt),
-		nullString(row.EditedFields),
-		row.CreatedAt.UTC().Format(constant.TimestampLayout),
-		row.UpdatedAt.UTC().Format(constant.TimestampLayout),
-	)
-	if err != nil {
-		return fmt.Errorf("insert import row: %w", err)
-	}
+	nextID := lastID + 1
 
-	id, err := res.LastInsertId()
-	if err != nil {
-		return fmt.Errorf("import row id: %w", err)
-	}
+	for start := 0; start < len(rows); start += importRowChunkSize {
+		end := min(start+importRowChunkSize, len(rows))
+		chunk := rows[start:end]
 
-	row.ID = id
+		var query strings.Builder
+
+		query.WriteString(importRowInsertHead)
+
+		args := make([]any, 0, len(chunk)*importRowColumnCount)
+
+		for index := range chunk {
+			row := &chunk[index]
+			if row.Ref == "" {
+				row.Ref = uuid.New()
+			}
+
+			row.ID = nextID
+
+			nextID++
+
+			if index > 0 {
+				query.WriteByte(',')
+			}
+
+			query.WriteString(importRowInsertValues)
+
+			args = append(args,
+				row.ID,
+				row.Ref,
+				row.BatchID,
+				row.RowIndex,
+				row.OccurredOn.Format(constant.DateLayout),
+				row.AmountMinor,
+				row.Currency,
+				row.Description,
+				row.AccountRef,
+				nullString(row.CategoryRef),
+				nullString(row.PayeeRef),
+				row.Status,
+				nullString(row.ClashKind),
+				nullString(row.ClashEntryRef),
+				nullTime(row.EditedAt),
+				nullString(row.EditedFields),
+				row.CreatedAt.UTC().Format(constant.TimestampLayout),
+				row.UpdatedAt.UTC().Format(constant.TimestampLayout),
+			)
+		}
+
+		if _, err := exec.ExecContext(ctx, query.String(), args...); err != nil {
+			return fmt.Errorf("insert import rows: %w", err)
+		}
+	}
 
 	return nil
 }

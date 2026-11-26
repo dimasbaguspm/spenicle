@@ -17,6 +17,7 @@ import (
 
 type sqlExecer interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 //nolint:ireturn // T is resolved to a concrete entity at every call site
