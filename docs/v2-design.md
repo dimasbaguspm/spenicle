@@ -1,6 +1,7 @@
 # Spenicle v2 — Design
 
-Status: decisions locked, not yet implemented. Operational docs: [`../README.md`](../README.md).
+Status: decisions locked and implemented in the current tree. Items marked planned or
+not shipped below are design decisions, not live behaviour. Operational docs: [`../README.md`](../README.md).
 Schema and API: [`v2-api.md`](./v2-api.md). v1 is frozen on branch `v1`, tag `v1.0.0-locked`.
 
 ## Goal
@@ -18,20 +19,20 @@ place to defer a decision. v2 fixes all three.
 | deployment | one `docker run` / one compose file, port 8080 |
 | auth | optional password for the browser; scoped API tokens for agents and scripts |
 | sealing | `APP_SECRET` is mandatory; it encrypts captures and artifacts and keys the root credential and the token digests, and the ledger stays readable plaintext |
-| capture | PWA share target + offline IndexedDB outbox |
+| capture | one `captures` queue for every channel; PWA share target + offline IndexedDB outbox are planned, not shipped |
 | review | single `captures` queue for every channel |
 | ledger | double-entry: `ledger_entries` + `ledger_postings`, zero-sum per entry |
 | categories | implemented as `accounts` rows with `kind IN ('expense','income')` |
 | base currency | in-app setting (default IDR), locked when `POST /api/setup` completes |
 | currencies | embedded ISO 4217 list, not a table |
-| FX rates | ECB daily EUR reference rates (XML feed), persisted and cached in memory |
+| FX rates | ECB daily EUR reference rates (XML feed), persisted and cached in memory, warmed at boot; scheduled refresh and HTML fallback are planned, not shipped |
 | foreign amounts | a property of the transaction, not of the account |
-| extraction | optional: needs a provider API key, otherwise captures stay raw for manual entry |
+| extraction | optional SnapToJSON rail, called inline; without `SNAPTOJSON_API_KEY` captures stay raw for manual entry. The OpenAI adapter is unwired |
 | recurring | rules generate `captures`; **always** require a tap |
-| month close | none: no lock, no snapshot; the month report is derived from the ledger |
-| history | fresh start; statement import can backfill via extraction when enabled |
-| deletions | none, ever. Void and reject instead; `audit_log` records everything |
-| configuration | env vars only, every default in `common/config`, no viper, no config file |
+| month close | none: no lock and no snapshot; monthly totals are derived from the ledger. The four-way month report is planned, not shipped |
+| history | fresh start; statement import commits accepted CSV rows, and extraction is not part of import |
+| deletions | no row deletes. Void and reject instead; `audit_log` records state changes. File reclamation is allowed |
+| configuration | eight environment variables; every other default lives in `internal/common/config/config.go`, no viper, no config file |
 | first boot | adapter seeds `Cash` and `Unsorted`; `POST /api/setup` locks the currency and optional opening balances in one transaction |
 
 ## Layout
@@ -41,15 +42,15 @@ main.go               cobra root: signal wiring, mounts http, worker and the hid
 cmd/http/             httpcmd: the API composition root, the route table and the serve loop
 cmd/http/handlers/    one file per endpoint group; no route table, no middleware
 cmd/worker/           workercmd: the worker composition root and the recurring loop
-cmd/worker/handlers/  the recurring rules the worker posts
+cmd/worker/handlers/  the recurring loop and the six maintenance jobs it drives
 config/runit/         the two runit services the image supervises
 internal/common/httpx/ recovery, tracing, request logging
 uat/                  Gherkin suite: uat.go (entry point), steps_*.go, world_*.go, snapshot*.go, features/
 internal/common/      utilities with no business logic: config, clock, seal, otel, httpx
 internal/constant/    every fixed value shared by more than one package
 internal/entity/      shared structs and the invariants that must hold forever
-internal/module/      business logic: ledger
-internal/repository/  third-party comms: the contracts, plus sqlite and snaptojson
+internal/module/      business logic: ledger, captures, categorization, connections, exports, exports rendering, imports, intake, rates, settings and tokens
+internal/repository/  contracts plus sqlite, ecb, filestore, extraction, mailbox and oauth adapters
 ```
 
 Two rules keep it pluggable:
@@ -97,11 +98,11 @@ internally instead of exposing the normal 200-row page cap, and an empty collect
 leaves the database. Queue counts are deliberately not part of this payload.
 
 
-Configuration is one file: `internal/common/config/config.go` holds every environment
-variable, **every default** (DB path, HTTP timeouts, shutdown budgets, body cap, pool
-sizes, service and tracer names) and the validation; the resolved value is
-`entity.AppConfig`. No config file, no viper: seven variables do not need a
-precedence chain, and one struct with defaults is testable without a framework.
+Configuration is one file: `internal/common/config/config.go` holds the eight environment
+variables, **every other default** (DB path, HTTP timeouts, shutdown budgets, body cap,
+pool sizes, service and tracer names) and the validation; the resolved value is
+`entity.AppConfig`. No config file, no viper: eight variables do not need a precedence
+chain, and one struct with defaults is testable without a framework.
 
 ### Contexts and spans
 
@@ -133,25 +134,40 @@ context and opens no span: there is no boundary to trace.
 Multi-user, tags, geo/map, TUI, envelope budgets, cross-currency account transfers,
 multi-currency account ledgers, auto-posting recurring rules, bank API integrations.
 
-## Schema (12 tables)
+## Schema (25 domain tables plus `schema_migrations`)
 
 Canonical DDL with every column lives in [`v2-api.md`](./v2-api.md). Summary:
 
 | table | purpose |
 | --- | --- |
-| `settings` | key/value config |
+| `settings` | sealed app settings and key/value worker stamps |
 | `api_tokens` | hashed tokens with scopes, for agents and scripts |
 | `fx_rates` | ECB EUR pairs per business day |
 | `accounts` | assets, liabilities, and — as `expense`/`income` rows — categories |
 | `payees` | counterparties, with capture defaults |
-| `recurring_rules` | scheduled expectations, user-confirmed or detected |
+| `categorization_rules` | deterministic payee → category rules |
+| `recurring_rules` | scheduled expectations; no detection path is shipped |
 | `ledger_entries` | what a human says happened |
 | `ledger_postings` | where money moved, zero-sum per entry |
+| `balance_state` | dirty flag for balance rebuilds |
+| `running_balances` | derived per-account checkpoints |
 | `captures` | everything unconfirmed, the single review queue |
-| — | (no month table: the report is derived from the ledger) |
+| `capture_payloads` | sealed raw text and draft JSON, one per capture |
+| `artifacts` | metadata for content-addressed files under `./data/artifacts` |
+| `import_batches` | statement import drafts and terminal batches |
+| `import_rows` | parsed or edited rows of a batch |
+| `import_events` | append-only import lifecycle |
+| `import_uploads` | chunked upload state |
+| `import_upload_chunks` | idempotent chunk records |
+| `exports` | queued export jobs and their artifacts |
+| `export_events` | append-only export lifecycle |
+| `custom_queries` | saved analytics queries |
 | `audit_log` | append-only record of every state change |
 | `connections` | one sealed credential per provider, shared by every service that needs it |
 | `mail_messages` | the reference a mailbox poll leaves behind: handle, revision, outcome |
+
+`schema_migrations` is managed by the Go migrator and is not a domain table. There is no
+month table: monthly totals are derived from `ledger_postings`.
 
 Rates are exact decimal `TEXT`, money is signed `INTEGER` minor units, enums are `CHECK`
 constraints. Currencies are **not** a table: the ISO 4217 list (code, minor units, symbol) is
@@ -166,15 +182,16 @@ instead of recomputing a window over every posting.
 ## Invariants
 
 1. `SUM(amount_minor) = 0` and `SUM(base_amount_minor) = 0` per `entry_id`.
-   Enforced in the write transaction (SQLite cannot defer a cross-row CHECK),
-   verified by an integrity job that runs on boot and after imports. A split-conversion
-   rounding residual is assigned once to the largest absolute posting.
+   `entity.CheckZeroSum` runs before the insert and again inside the write transaction
+   (SQLite cannot defer a cross-row CHECK). There is no production integrity job. A
+   split-conversion rounding residual is assigned once to the largest absolute posting.
 2. Money is always `(integer minor units, ISO code)`. Never float. Conversions and
    reversals use checked `int64` arithmetic; the int64 floor is rejected because it
    cannot be negated.
 3. A posting's base amount is computed once, at write time, and never recomputed.
    This is why a past month's numbers cannot drift when rates change.
-4. No `DELETE` on ledger, inbox, or rules. Void, reject, archive.
+4. No row `DELETE` on ledger, captures, rules or tokens. Void, reject, archive or revoke.
+   Reclaiming artifact, import and export files is allowed.
 5. Every state change on an account, payee, rule, entry, capture, setting or token appends
    one `audit_log` row inside the same transaction, naming the actor (see *Audit journal*).
 
@@ -203,27 +220,31 @@ Every channel lands in `captures`. Nothing touches the ledger until approved.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant M as Mail poller
-    participant ST as Local storage
-    participant X as Extractor
+    participant C as Capture channel
+    participant API as Module.Captures
+    participant FS as Artifact store
+    participant X as Extraction rail
     participant DB as SQLite
     participant U as User
-    M->>DB: INSERT captures status extracting
-    M->>ST: save raw MIME by sha256
-    M->>X: POST body or image with schema v1
-    X-->>M: fixed JSON plus per field confidence
-    alt schema valid
-        M->>DB: UPDATE capture_payloads SET draft_json, captures SET status pending
-    else invalid or timeout
-        M->>DB: UPDATE item status failed, raw kept
+    C->>API: Create with raw text and optional artifact
+    API->>DB: find dedupe key, INSERT capture pending and sealed payload
+    opt artifact present
+        API->>FS: write encrypted content-addressed bytes
     end
-    U->>DB: approve with fields, or reject with reason
+    opt rail configured
+        API->>X: submit artifact inline
+        X-->>API: report with data, confidence or job ref
+        API->>DB: update draft_json, status and job_ref
+    end
+    U->>DB: approve, reject, match or retry
     DB->>DB: append audit_log row
     U->>DB: approve writes entry plus postings
 ```
 
 Lifecycle: `extracting → pending → (approved | rejected | duplicate | failed)`.
-Nothing leaves the table. Rejected items keep their reason and can be reopened.
+`failed` and `extracting` are normalised back to `pending` on read. Nothing leaves the
+table; rejected items keep their reason, but every resolved capture refuses further
+actions and cannot be reopened.
 
 ## Extraction contract
 
@@ -292,15 +313,14 @@ file. `GET /api/captures/{ref}/artifact` streams the plaintext back; the worker 
 the file of a `rejected` capture once it outlives the retention (`720h`), which is what
 turns that route into `410 gone`.
 
-### Completeness gate
+### Completeness gate (planned, not shipped)
 
-At ingest, compare the extractor's output against the statement's own header:
-
-1. parsed rows vs `statement_meta.row_count`
-2. sum of parsed amounts vs `closing_balance − opening_balance`
-
-Mismatch shows a banner in review instead of failing silently. This is the same
-number that later becomes the close diff's "unlogged spend" bucket.
+There is no `statement_meta` table and no ingest comparison in the current code. Statement
+upload parses CSV rows, records deterministic clashes and writes a draft; review commits
+accepted rows. The proposed check would compare parsed rows with `statement_meta.row_count`
+and the sum of parsed amounts with `closing_balance − opening_balance`, showing a banner
+instead of failing silently. Neither the banner nor a close-diff "unlogged spend" bucket
+exists today.
 
 ## Recurring
 
@@ -310,7 +330,7 @@ queues a `captures` row and waits for a tap.
 ```
 rule.next_due_on <= today
   → INSERT captures(kind='recurring',
-                    dedupe_key=sha256("recurring|" + rule_ref + "|" + due_on),
+                    dedupe_key=sha256(strings.Join(["recurring", rule_ref, due_on], "\x00")),
                     draft_json=<payee, account, category, amount, currency, due_on>,
                     status='pending')
   → rule.next_due_on = next occurrence, last_posted_on = due date
@@ -324,43 +344,29 @@ cycle and leaves a reason. The worker holds no ledger contract at all (`captures
 is its half of the module), which is what makes the rule mechanical instead of a promise.
 
 Because recurring bills enter the same queue, "review all untracked payments" covers
-rent and Netflix as well as stray card taps. Expected spend for the month is computed
-from the rules due, independent of approval, which is what makes the close diff
-meaningful.
-
-Detection writes `origin='detected', state='suggested'` and never posts. Heuristic:
-same payee, ≥3 occurrences, amount within ±5%, spacing within ±3 days of the median
-interval. Runs weekly.
+rent and Netflix as well as stray card taps. Expected spend for the month, independent of
+approval, is **planned, not shipped**. Detection is also **planned, not shipped**: there is
+no `origin='detected'` path and no detection worker. Rules are created directly through
+`POST /api/recurring`; `PATCH /api/recurring/{ref}` appends an `update` audit row.
 
 `business_day_shift` handles a bill due Saturday but paid Monday.
 
 ## Month report (derived)
 
-There is no close table and no lock. A month is a range of `occurred_on`; the report is computed
-when you look at it.
+There is no close table and no lock. The shipped report is `GET /api/analytics/months`:
+an optional inclusive `from`/`to` window (default: trailing 12 months ending today in UTC)
+and `{from,to,months:[{month,spend_minor,income_minor,net_minor}]}`. `GET /api/dashboard`
+adds the base currency, newest month with data, pending capture count and top expense
+category for a required 366-day-or-shorter window.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as User
-    participant API as Month report handler
-    participant DB as SQLite
-    U->>API: GET /months/2025-09
-    API->>DB: count pending captures in month
-    API->>DB: SUM(base_amount_minor) per account
-    API->>DB: statement closing vs ledger balance
-    API->>API: split diff into unlogged, fx_movement, price_change, rounding
-    API-->>U: expected, tracked, 4-way diff and an adjustment body
-```
+No month is ever locked: logging a September expense in November is normal, and backdated
+writes are allowed. `base_amount_minor` is materialized per posting, so historical rates
+do not change past months.
 
-1. **Read-only.** The report writes nothing. If the unlogged bucket is non-zero it hands back an
-   `adjustment_body` you may POST to `/api/entries`; that is your decision, not the system's.
-2. **No month is ever locked.** Logging a September expense in November is the normal use case,
-   so no request is refused for being "late". There is nothing to reopen either.
-3. **Recomputation is cheap.** Four aggregates over `ledger_postings` for one month. That is the
-   whole argument against caching it.
-4. It stays correct for the same reason the ledger does: `base_amount_minor` is materialized per
-   posting, so historical rates never change and a past month's numbers cannot drift.
+**Planned, not shipped:** a derived four-way month report with `expected`, `tracked`,
+`unlogged`, `fx_movement`, `price_change`, `rounding`, statement-balance input and an
+`adjustment_body` you could POST to `/api/entries`. There is no `GET /months/{year_month}`
+route and no close-diff calculation today.
 
 ## Sealing (`APP_SECRET`)
 
@@ -371,7 +377,7 @@ encryption — a promise that a stolen `spenicle.db` is not a stolen mailbox.
 | --- | --- |
 | the root credential | HMAC-SHA256 over the password hash; changing the password invalidates it |
 | `capture_payloads.raw_text`, `capture_payloads.draft_json`, `captures.resolution_note` | AES-256-GCM per row |
-| `raw/<sha256>` receipts and statements | AES-256-GCM, key = HKDF(secret, file hash) |
+| `./data/artifacts`, `./data/exports` and `./data/imports` files | AES-256-GCM under the artifact HKDF key; plaintext sha is the additional authenticated data |
 | `api_tokens.token_hash` | HMAC-SHA256 instead of bare sha256 |
 | **not** sealed, on purpose | ledger, postings, accounts, amounts |
 
@@ -389,9 +395,10 @@ re-encryption path and no in-place reset. The process refuses to boot on a
 fingerprint mismatch, and there are exactly two honest options:
 
 1. **Restore the original `APP_SECRET`.** Nothing is lost, the boot proceeds.
-2. **Start over.** Stop the container, delete `./data/spenicle.db` (and `raw/` if it
-   exists), boot again: the next boot migrates and seeds a fresh database with the
-   current secret. The ledger you keep is the one you backed up.
+2. **Start over.** Stop the container, delete `./data/spenicle.db` and the old
+   `artifacts`, `exports` and `imports` directories under `./data`, then boot again:
+   the next boot migrates and seeds a fresh database with the current secret. The
+   ledger you keep is the one you backed up.
 
 Neither path touches the design that matters: the ledger is plaintext, so `sqlite3`
 still answers "what did I spend" from a backup of the old file.
@@ -438,80 +445,81 @@ What is deliberately **not** journaled twice:
 
 ## FX
 
-- Worker fetches `https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml` on boot
-  when stale and daily after 16:30 CET. HTML page is fallback only.
+- `config.Start` warms the rate source at boot through `ecb.New` and `rates.New`.
+  There is no daily rate worker job. The ECB adapter performs one XML GET; the HTML
+  fallback is planned, not shipped.
 - EUR-based only: `rate(A→B) = eurToB / eurToA`.
-- No TARGET quote on weekends/holidays → carry the last known rate, labelled `cached`.
-- Resolve order: in-memory map → `fx_rates` row for that date → manual prompt.
+- No TARGET quote on weekends/holidays → a stored earlier rate is labelled `cached`.
+- Resolve order: in-memory map → `fx_rates` row on or before that date → not found.
+  There is no manual prompt.
 - Conversion: one expression, one rounding, `big.Rat`, never `float64`:
   `base_minor = round(native_minor × eurToBase / eurToNative × minorRatio)`.
 
-## Offline PWA
+## Offline PWA (planned, not shipped)
 
-1. Precached app shell, hashed assets, versioned service worker. Reading always works.
-2. Writes queue in IndexedDB with client-generated UUIDv7 ids; the server upserts on
-   that id, so retries never duplicate.
-3. Optimistic UI with a pending badge until the server acknowledges.
-4. The share target queues locally, so a capture at the till with no signal is not lost.
-5. iOS Safari has no share target and no background sync. Fallback: a Shortcut that
-   POSTs to the inbox, plus paste-into-inbox.
+No frontend assets, service worker, IndexedDB outbox or share target exist in this repo.
+The proposed design is a precached app shell with hashed assets and a versioned service
+worker, writes queued in IndexedDB with client-generated UUIDv7 ids, an optimistic pending
+badge, a local share-target queue, and a Shortcut/paste fallback for iOS Safari.
+Today captures arrive only through the API and the worker's mailbox poll.
 
 ## Dashboard
 
-No tiles table. Tiles are aggregate queries over postings; a cached tile that disagrees
-with the ledger destroys trust faster than a slow query.
+No tiles table. `GET /api/dashboard` requires `from` and `to` (ordered, at most 366 days)
+and returns `{from,to,base_currency,month,spend_minor,income_minor,net_minor,months,
+pending_captures,top_category?}`. `top_category` carries `account_ref`, `account_name`
+and `amount_minor` when the window has an expense category.
 
-1. safe-to-spend: asset balances − recurring due to month end − avg variable × days left
-2. 30/60/90 forecast: rules projected on a timeline, at today's rates
-3. month pace: tracked vs expected, where expected is computed from the rules due
-4. top payees: `GROUP BY payee_id`, this month vs last
-5. unreviewed count: `captures WHERE status IN ('pending','extracting')`
+**Planned, not shipped:** safe-to-spend, 30/60/90 forecast, month pace and top-payee
+tiles. They are not fields on the live response.
 
-## Build order
+## Build order (historical)
 
 1. Skeleton: static Go binary, embedded React, SQLite migrations, compose. ~4h
 2. Accounts, payees, quick add, postings, zero-sum integrity. ~1.5d
-3. FX worker + rate resolver + base materialization. ~0.5d
-4. Inbox, review UI, extraction client, schema v1 + completeness gate. ~1.5d
-5. Recurring rules + generation into inbox + detection suggestions. ~1d
-6. Dashboard tiles + derived month report. ~1d
-7. Offline PWA hardening, share target, outbox replay. ~1d
+3. Rate resolver + base materialization (boot warming, not an FX worker). ~0.5d
+4. Inbox, review UI, extraction client, schema v1. ~1.5d
+5. Recurring rules and generation into captures (no detection). ~1d
+6. Dashboard aggregates + derived monthly totals. ~1d
+7. Offline PWA hardening, share target, outbox replay. **Not shipped.**
 
-~1.5 weeks of focused work to a usable v2.0.
+The completeness gate, detection suggestions and the derived four-way month report from
+the original plan are also not shipped.
 
 ## Email intake and provider connections
 
-Beyond v2.0, and not a bank API integration (still a non-goal): it reads a mailbox the user
-already controls and turns a message into a capture.
+Live in the current tree, and not a bank API integration (still a non-goal). It reads a
+Gmail mailbox the user controls and turns a message into a capture.
 
 1. **Intake is a transport, not a pipeline.** A poll produces a `captures` row through
    `Module.Captures.Create`; approval still posts the ledger, so nothing here can write an
    entry.
-2. **The worker owns the poll** — one tick on its own interval, bounded to the last 72h
-   (`IntakeWindow`) and capped per run. `http` never dials a mailbox, and a dead mailbox can
-   never stall the recurring tick.
-3. **One contract, one adapter per provider:** `repository/mailbox` with an `imap` adapter
-   first and a `gmail` adapter when a Workspace account wants the API's filtering. The MIME
-   parser is shared; an adapter owns only its wire format, its cursor and its credentials.
+2. **Both processes can poll.** The worker runs `Module.Intake.Poll` on each tick, and
+   `POST /api/intake/run` calls the same path on demand; both use the stored connection
+   and are capped per run.
+3. **Gmail is the shipped adapter.** `internal/repository/mailbox/gmail` is the only
+   mailbox implementation; a generic IMAP adapter remains planned. A shared Google OAuth
+   connector owns the wire format and credentials.
 4. **Credentials belong to a connection, not to intake.** `connections` holds one row per
    provider (`UNIQUE (provider)`), tokens sealed with `APP_SECRET`, scopes kept as a union —
    so Calendar later re-authorises the same row instead of minting a second credential.
 5. **A reference per message, and no content.** `mail_messages` records the re-fetch handle,
    the provider revision and when it was seen; never a subject, a sender or a body. Content
-   stays sealed in the capture, exactly like an artifact. There is no payload hash: message
-   content is immutable at the provider, and what changes — labels, flags, deletion — is what
-   a refresh reports.
-6. **Refresh creates, never mutates.** Re-reading a message answers `unchanged`, or marks the
-   old row `superseded_by` and links a new capture. No ledger mutation, no delete.
-7. **Only the worker refreshes a token.** One writer means no compare-and-swap column; if a
-   second process ever needs a Google token, it reads the stored access token instead.
+   stays sealed in the capture, exactly like an artifact.
+6. **Refresh creates a new reference when the provider revision changes.** Re-reading a
+   message can answer `unchanged`, or mark the old row `superseded_by` and link a new
+   capture. No ledger mutation, no row delete.
+7. **The stored connection is shared.** The API and worker both read the stored access
+   token through the same connector; re-authorisation replaces that row's sealed grant.
 8. **Personal Gmail is the awkward case.** The consent screen must be in `In production`
    (unverified) or refresh tokens expire weekly; `invalid_grant` is persisted as
    `status = reauth_required` so the UI asks for one re-authorisation instead of retrying
    forever.
 
-Planned routes: `GET/PATCH /api/intake`, `POST /api/intake/run`,
-`GET /api/intake/messages`, `GET /api/intake/messages/{ref}`,
-`POST /api/intake/messages/{ref}/refresh`, plus the root-only connections surface
-`GET /api/connections`, `POST /api/connections/google`,
-`POST /api/connections/google/callback` and `POST /api/connections/{ref}/revoke`.
+Live routes: `GET/PATCH /api/intake`, `POST /api/intake/run`,
+`GET /api/intake/messages`, `GET /api/intake/messages/{ref}` and
+`POST /api/intake/messages/{ref}/refresh` are root-only; the root-only connections
+surface is `GET /api/connections`, `POST /api/connections/google` and
+`POST /api/connections/{ref}/revoke`. `GET /api/connections/google/callback` is the
+public provider redirect. The earlier `POST /api/connections/google/callback` route was
+superseded by `GET`.

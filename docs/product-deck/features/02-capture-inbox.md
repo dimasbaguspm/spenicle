@@ -1,6 +1,6 @@
 # F2 — Capture now, decide later
 
-**Status** live · **Client** share sheet, paste box, camera upload, review queue, receipt viewer, mail intake panel
+**Status** partial (capture and approval live; OpenAI is UAT-only and production-inert; malformed POST JSON is `400 invalid_request`; retry and unbalanced approval are covered by UAT) · **Client** share sheet, paste box, camera upload, review queue, receipt viewer, mail intake panel
 **Routes** `POST /api/captures` · `GET /api/captures` · `PATCH /api/captures/{ref}` · `GET /api/captures/{ref}/artifact` · `GET /api/intake` · `PATCH /api/intake` · `POST /api/intake/run` · `GET /api/intake/messages` · `GET /api/intake/messages/{ref}` · `POST /api/intake/messages/{ref}/refresh`
 
 ## 1. The job the user has
@@ -22,7 +22,7 @@ Approval does. A capture is evidence plus a draft; the ledger is a decision.
 | 2 | `POST /api/captures` (multipart) | one `file` part — the receipt photo, up to `ArtifactMaxBytes` (10 MiB) |
 
 `202` when the row is new, `200` when the dedupe key already knew it — both carry the
-capture, so a retry after a network drop is safe by returning the same thing instead of
+capture, so a retry after a network drop returns the same row instead of creating a twin.
 The dedupe key is `sha256` of `kind`, `client_id`, `artifact_hash` and `raw_text` joined
 with a NUL byte (`\x00`); it is `UNIQUE` in the table, so the uniqueness is the guard,
 not a client check.
@@ -36,8 +36,11 @@ the caller:
    text as a `capture.txt` — and the row becomes `extracting` with a `job_ref`;
    `retry` polls that job, the vendor's report lands in the sealed `draft_json` and the
    row moves to `pending` (or `failed` with `extraction_error` when the submit or the
-   report was refused). SnapToJSON is the only rail: OpenAI is not a fallback, so an
-   instance without `SNAPTOJSON_API_KEY` keeps every capture manual.
+   report was refused). SnapToJSON is the only production rail; OpenAI is wired only in
+   the UAT graph, so an instance without `SNAPTOJSON_API_KEY` keeps every capture manual.
+
+Malformed JSON on `POST /api/captures` maps to `400 invalid_request`; unknown fields on
+`PATCH /api/captures/{ref}` map to `400 invalid_json`.
 
 So the first response is the whole story from the shortcut's point of view: the capture
 exists and it is safe. Status `pending` means "a human must decide", `extracting` means
@@ -61,11 +64,11 @@ exists and it is safe. Status `pending` means "a human must decide", `extracting
  "note":"coffee"}
 ```
 
-The approve body carries a **payee**: `payee_ref` is resolved through `PayeeSource.PayeeByRef`
-and stored on the entry, while the postings carry the money. It answers `201` with
-`{entry, capture}`: the entry, capture status and resolution, and both audit rows are
-written in one transaction, so a failed step leaves no orphan ledger entry. `failed` and
-`extracting` rows are approvable by hand through `pending`; `rejected` and `duplicate`
+The approve body may carry a **payee**: optional `payee_ref` is resolved through
+`PayeeSource.PayeeByRef` and stored on the entry, while the postings carry the money. It
+answers `201` with `{entry, capture}`: the entry, capture status and resolution, and both
+audit rows are written in one transaction, so a failed step leaves no orphan ledger entry.
+`failed` and `extracting` rows are approvable by hand through `pending`; `rejected` and `duplicate`
 rows are already resolved and refuse approval. The `match` action links the capture to
 an entry that already exists instead — `200`, status `duplicate`, no ledger write — and
 an integer `payee_id` is an unknown field, so it answers `400 invalid_json`.
@@ -79,6 +82,7 @@ reclaims it after `ArtifactRetention` (720h), after which the download route ans
 row. A capture that was never submitted has no `job_ref`, so it answers `409 invalid_state`;
 a resolved row answers `409 capture_resolved`, including when approval lands while the
 vendor is answering.
+UAT covers retry polling a SnapToJSON job, retry refusal with no rail, and an unbalanced approval.
 
 The response is `{entry, capture}` for `approve` — the posted entry and the resolved
 capture in one body, so the review screen advances without a second read.
@@ -106,8 +110,8 @@ Approving it posts with `recurring_rule_id` set, and the unique index
 A run is bounded on purpose: the window is the last 72h and one run handles at most 50
 messages, so a backlog drains over ticks instead of hammering the mailbox. `skipped`
 means an allowlist miss, an empty body or a dedupe hit; `409 intake_disabled` means
-polling is off. Only a `text/plain` body becomes `raw_text` today — attachments are not
-captured yet.
+polling is off. Only a `text/plain` body becomes `raw_text`; mail attachments are not
+captured. Multipart receipt uploads are shipped in §2.1; IMAP attachments are a separate gap.
 
 ## 3. Backend, end to end
 
@@ -157,10 +161,11 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
    `(kind, client_id, artifact_hash, raw_text)`, so a retried share is `200`, not a twin.
 3. No capture transition may reach `approved` except through an entry built and
    zero-sum checked before the write and rechecked inside the insert transaction.
-4. `failed` and `extracting` rows are approvable by hand through `pending`; a resolved
-   row (`approved`, `rejected`, `duplicate`) stays immutable. `retry` remains the only
-   way a `failed` row with a `job_ref` moves forward through extraction, and its write is
-   conditional so an approval during the vendor call wins.
+4. `failed` and `extracting` rows are approvable by hand through `pending`; no
+   user-facing action unmatches a resolved row. Internal transitions exist for
+   `duplicate → pending` and `rejected → pending`, but there is no unmatch route. `retry`
+   needs a pending row with a `job_ref` and polls the vendor job; its write is conditional
+   so an approval during the vendor call wins.
 5. The receipt must be downloadable byte for byte, or answer `410 gone` after retention —
    never a silent `404` for a file the worker reclaimed.
 6. Rejecting keeps evidence: the row, the sealed reason and the artifact (until
@@ -272,7 +277,8 @@ Scenario: Intake is off until it is configured
 ## 6. What this page does not promise
 
 - No `batch_id` filter on the queue, no unread counts, no push.
-- `extracted` (a provider pushing a draft) is not implemented. A capture is resolved by
-  `approve`, `reject` or `match`; there is no action that edits the entry it produced.
+  `extracted` (a provider pushing a draft) is not implemented. A capture is resolved by
+  `approve`, `reject` or `match`; a correction to the entry it produced is
+  `PATCH /api/entries/{ref}` ([F3](./03-ledger.md)), not a capture action.
 - No PDF parsing, no vendor-side draft push (`extracted`), no completeness gate.
-- Mail attachments are not captured; only a `text/plain` body becomes `raw_text`.
+- Mail attachments are not captured; only a `text/plain` body becomes `raw_text`. Multipart receipt uploads are shipped in §2.1.

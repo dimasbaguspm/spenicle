@@ -1,6 +1,6 @@
 # GET /api/intake/messages
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`. This route lives in the root-only group, so only the instance password reaches it.
+**Auth.** Instance password only. This route lives in the root-only group: a scoped Bearer credential is refused with `403 forbidden` before the handler runs; with no password seeded, open mode passes the request through.
 
 ## Purpose
 
@@ -20,7 +20,7 @@ The settings screen's intake panel, and an agent auditing why a mail did not bec
 | name | type | default | notes |
 | --- | --- | --- | --- |
 | `status` | string | — | `captured`, `skipped`, `failed`, `gone` |
-| `source` | string | — | `imap`, `gmail` |
+| `source` | string | — | `gmail`; `imap` validates but no IMAP adapter is shipped |
 | `cursor` | ref | — | return references older than the one with that ref |
 | `limit` | int | 50 | clamped to 200 |
 

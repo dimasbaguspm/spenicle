@@ -61,7 +61,7 @@ One artifact: **the container image**, and a GitHub release whose notes are link
 
 A tarball plus a checksum file is a second distribution channel that has to be
 built, named, uploaded and trusted separately from the thing people actually run.
-The image already contains the binary, is signed by the same workflow, and is the
+The image already contains the binary, is published by the same workflow, and is the
 only thing this project ever asks a user to deploy. Keeping one artifact means one
 place to look, one digest to pin, and no "Linux binary is 0.2.0 but the image is
 0.2.1" drift.
@@ -89,8 +89,9 @@ The version compiled into the binary is `<tag>+<sha7>`:
 v0.2.0+ef11104
 ```
 
-- `-ldflags "-X main.version=..."` in the Dockerfile; the release passes the tag
-  and short hash as build args.
+- `-ldflags "-X github.com/dimasbaguspm/spenicle/internal/common/config.Version=..."` in the
+  Dockerfile; the release passes the full `<tag>+<sha7>` string as the `VERSION` build
+  arg.
 - `/healthz` returns it, plus this process's UTC `started_at`:
   `{"status":"ok","version":"v0.2.0+ef11104","started_at":"2026-04-15T08:00:00Z", ...}`.
 - an authenticated operator can read every boot from

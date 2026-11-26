@@ -45,9 +45,10 @@ Three surfaces, one API:
 | [F9](./features/09-gaps-and-next.md) | what we cannot ship yet | — (the honest list) |
 | [F10](./features/10-categories.md) | categories that land in the same place every time | suggest, rules, learning, per-month spend |
 
-Status of every feature page here is **live**: the route exists, the UAT suite covers
-it, `make test`, `make uat` and `make lint` are green. F9 lists what is *not* live and what it
-would take.
+Status is not uniform: F3 and F5 are closest to live; F1, F2, F4, F6, F7, F8 and F10 are
+partial; F9 is the honest list with stale text corrected. The [feature table](./features/README.md)
+names the exact gap on each page. Green `make test`, `make uat` and `make lint` runs do not
+make every page live, and UAT coverage is uneven.
 
 ## The client contract (applies to every page)
 
@@ -191,8 +192,8 @@ orders that matter are:
 
 1. **Server first, client later (always safe).** New routes and new optional fields are
    additive. A client on the previous version ignores them.
-2. **Client first (only for features the server already has).** Every feature page
-   below is live on `main`, so a client can ship against it today.
+2. **Client first (only for features the server already has).** Check each page's status
+   before shipping a client against it; several features are partial.
 
 Before a client ships a feature that touches money, the readiness checklist is:
 
@@ -217,7 +218,7 @@ this deck writes a destructive migration.
 
 | path | what |
 | --- | --- |
-| [`./features/`](./features/README.md) | one page per **shipped** feature, the same six sections each; the contract a client codes against |
+| [`./features/`](./features/README.md) | one page per feature, the same six sections each; page status names the exact gaps |
 | [`./plan/`](./plan/README.md) | brainstorms: budget, account groups, category detection — job, options, decision, open questions, exit criteria |
 
 The rule between them: a `plan/` page is allowed to be wrong, a `features/` page is not.

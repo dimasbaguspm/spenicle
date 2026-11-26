@@ -14,7 +14,9 @@ The recurring screen ("pause", "correct amount"), the review queue for a suggest
 ## Downstream
 
 `RecurringByRef` (joins payees and accounts so refs come back intact), then
-`UpdateRecurring`: one `UPDATE` of the schedule columns and `state`.
+`RecurringByRef` (joins payees and accounts so refs come back intact), then
+`UpdateRecurring`: one transaction that `UPDATE`s the schedule columns and `state` and
+appends an `audit_log` `update` row.
 
 ## Path / query params
 
@@ -45,9 +47,9 @@ state, an out-of-range interval/day, or a malformed date.
 
 ## Limitations
 
-State changes are not guarded: `ended` back to `active` is accepted, and no audit row is
-written yet. Payee, account and category are immutable after creation — a rule that
-moved to a different account is a new rule.
+State changes are not guarded: `ended` back to `active` is accepted. The update and its
+`audit_log` `update` row are written in one transaction. Payee, account and category are
+immutable after creation — a rule that moved to a different account is a new rule.
 
 ## Sequence
 
@@ -62,7 +64,7 @@ sequenceDiagram
     alt no row
         H-->>C: 404 not_found
     else row
-        H->>DB: UPDATE recurring_rules SET schedule, state WHERE ref = ?
+        H->>DB: UPDATE recurring_rules SET schedule, state; INSERT audit update; COMMIT
         H-->>C: 200 rule
     end
 ```

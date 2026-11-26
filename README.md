@@ -1,12 +1,13 @@
 # Spenicle v2 — README
 
 A self-hosted expense tracker for one person who does not want to keep a spreadsheet.
-One container, one file, one command. Built so that a missed week does not become a quit.
+One container, one SQLite file, one binary with two supervised processes. Built so that
+a missed week does not become a quit.
 
-Partly built: the ledger (post, list, void), the capture queue (create, list,
-approve, reject), bootstrap meta and health are live and covered by UAT. Auth, settings,
-accounts/payees CRUD, recurring, reports, dashboard and tokens are designed but not yet
-written — see the status table in [`docs/v2-api.md`](./docs/v2-api.md).
+Built and covered by UAT: setup and settings, auth (instance password, scoped tokens,
+Google connections), accounts, payees, recurring rules, entries, captures with
+artifacts, categorization rules, statement imports, exports, rates, audit, dashboard,
+analytics, intake and health — see [`docs/endpoints/`](./docs/endpoints/README.md).
 Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and target API: [`docs/v2-api.md`](./docs/v2-api.md). Implemented endpoints: [`docs/endpoints/`](./docs/endpoints/README.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md). Working on the code: [`AGENTS.md`](./AGENTS.md) and [`skills/`](./skills/README.md). Sending a change: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 Licence: source-available, not open source — personal use of an unmodified copy,
@@ -20,7 +21,8 @@ put a decision you did not feel like making. v2 changes three things:
 1. **Capture is separate from organizing.** Logging takes 2 seconds and one number. Categorizing
    happens later, in a queue you clear in five minutes.
 2. **Setup is one command.** SQLite, no Postgres, no Redis, no JWT.
-3. **Nothing is ever deleted.** Void and reject instead, with an audit trail.
+3. **User records are never deleted.** Void and reject instead, with an audit trail;
+   derived balances and expired imports are pruned.
 
 ## Install
 
@@ -77,7 +79,7 @@ sudo chown -R 10001:10001 ./data
 | var | default | meaning |
 | --- | --- | --- |
 | `APP_TIMEZONE` | `UTC` | IANA timezone for every calendar decision; set once, at the first boot |
-| `APP_SECRET` | **required** | ≥ 16 bytes; seals capture payloads, artifacts and cookies |
+| `APP_SECRET` | **required** | ≥ 16 bytes; seals the settings row and encrypts stored blobs; identifies the database |
 | `SNAPTOJSON_API_KEY` | unset | enables receipt/statement extraction through SnapToJSON |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | OTLP/HTTP collector; HTTPS assumed, `http://` for plaintext |
 
@@ -121,16 +123,17 @@ Recurring bills (rent, subscriptions) also land in the queue as cards. Nothing p
 
 ## Backups
 
-Back up three things, together:
+Back up four things, together:
 
 ```bash
 docker stop spenicle
-tar czf spenicle-$(date +%F).tar.gz -C ./data spenicle.db raw/
+tar czf spenicle-$(date +%F).tar.gz -C ./data spenicle.db artifacts/ exports/ imports/
 docker start spenicle
 ```
 
-The database, the `raw/` directory, and **the `APP_SECRET` value**. Without the secret,
-receipt images and raw bank text are unrecoverable; your ledger and balances still open normally
+The database, the `artifacts/`, `exports/` and `imports/` directories, and **the
+`APP_SECRET` value**. Without the secret, sealed settings, receipt images, raw bank
+text and exports are unrecoverable; your ledger and balances still open normally
 with `sqlite3`. That asymmetry is deliberate.
 
 ## Agents and scripts
@@ -141,7 +144,7 @@ agent needs:
 ```bash
 curl -s http://localhost:8080/api/tokens \
   -H 'Content-Type: application/json' \
-  -b cookies.txt \
+  -H 'Authorization: Bearer <instance-password>' \
   -d '{"name":"laptop-agent","scopes":["captures:write","dashboard:read"]}'
 ```
 
@@ -161,7 +164,8 @@ That agent can add captures and read the dashboard. It cannot touch the ledger. 
 ## What it is not
 
 - Not multi-user. One person, one ledger.
-- Not a bank integration. No credentials, no scraping, no OAuth.
+- Not a bank integration. No bank credentials, no scraping. Google OAuth connects a
+  mail inbox for receipt intake; it is not a bank link.
 - Not multi-currency accounts. Foreign currency is a property of a transaction; accounts settle in
   your base currency.
 - Not a budgeting app with envelopes. It answers "can I spend this today", not "you have Rp 400k
@@ -173,7 +177,7 @@ That agent can add captures and read the dashboard. It cannot touch the ledger. 
 | --- | --- |
 | `SNAPTOJSON_API_KEY` env is unset | extraction stays off; captures are typed by hand — set it to enable the vendor |
 | container exits with `app secret mismatch` | `APP_SECRET` differs from the one that sealed this database. Restore the original secret. If it is gone for good, start over: stop the container, delete `spenicle.db`, boot again — the ledger you keep is the one you backed up |
-| `/healthz` returns 503 | database not writable, or secret fingerprint mismatch |
+| `/healthz` returns 503 | schema query, database ping or settings read failed; a secret mismatch stops boot before the API serves |
 | captures stay `pending` with no draft | extraction is disabled (no API key); typing the fields works fine |
 | no share target on iPhone | iOS Safari has none; use a Shortcut that POSTs to `/api/captures` |
 | month report shows a large `unlogged` bucket | spending not yet captured; the response includes an adjustment body you can post |

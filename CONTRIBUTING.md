@@ -32,11 +32,14 @@ manager.
 ## What a change must respect
 
 1. **Double-entry.** ≥ 2 postings, native and base sums both zero.
-2. **No deletes.** Void or reject; every mutation appends to `audit_log`.
+2. **No user-record deletes.** Void or reject; every state change appends to
+   `audit_log`, except token usage stamps, worker heartbeats and boot seeds.
+   Derived balances and expired imports are pruned.
 3. **Money is integers.** Minor units + ISO code, rates as `TEXT` + `big.Rat`, one
    rounding step, never `float64`.
 4. **Capture ≠ ledger.** A capture never posts on its own.
-5. **One process, one file.** No Postgres, Redis, queue or sidecar.
+5. **Two supervised processes, one SQLite file.** No Postgres, Redis, queue or
+   sidecar.
 6. **Boundaries take `ctx` first and open one span**, named for the layer:
    `Repository.Sqlite.InsertEntry`, `Module.Ledger.Post`, `Handler.Entries.Post`.
 7. **Every knob** goes in `internal/common/config/config.go` with a default and a
@@ -58,7 +61,7 @@ fix: flush telemetry after the signal cancels the context
 docs: link every commit in the release notes
 ```
 
-A breaking change gets `!` (`refactor!: rename EXTRACTION_API_KEY …`) plus one line
+A breaking change gets `!` (`refactor!: rename SNAPTOJSON_API_KEY to EXTRACTION_API_KEY …`) plus one line
 saying what an operator must do.
 
 ## The merge request

@@ -30,7 +30,7 @@ None.
 
 ## Response
 
-`{"base":"EUR","quote":"USD","on_date":"2026-11-20","rate":"1.0990","source":"ecb","fetched_at":"…"}`
+`{"ref":"<32 hex>","base":"EUR","quote":"USD","on_date":"2026-11-20","rate":"1.0990","source":"ecb","fetched_at":"…"}`
 
 `on_date` is the day the answer actually comes from. `source` is `ecb` when that is the day
 requested and `cached` when the sheet had no row for it and the nearest earlier business day

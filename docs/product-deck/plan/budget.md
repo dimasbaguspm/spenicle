@@ -94,7 +94,7 @@ Wire shapes follow the deck: money as minor-unit strings, `account_ref` in, `ref
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
 | budget on `Unsorted` | the catch-all becomes a number nobody trusts | the UI refuses to budget `Unsorted` and says why |
-| rollover semantics | a carried deficit silently multiplies next month's budget | v1 ships `rollover: false` only; the flag exists but stays `false` until the open question closes |
+| rollover semantics | a carried deficit silently multiplies next month's budget | not shipped: there is no `budgets` table or `rollover` behavior yet; the decision stays open |
 | a category renamed mid-month | the budget ref stays valid (it points at the account), so only the label moves | the response carries `account_name` at read time |
 | the "left" number becomes a spending licence | a user spends because the app said it was safe | label it "left of budget", never "safe to spend", until income is part of the same number |
 

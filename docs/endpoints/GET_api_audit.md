@@ -39,7 +39,7 @@ objects (omitted when the change had no payload) and `at`.
 ## Errors
 
 `422 invalid_request` for a malformed date, an unknown kind, action or actor kind (the
-filter table is a closed set), `400 invalid_request` for a non-ref cursor.
+filter table is a closed set), or a non-ref cursor.
 
 ## Limitations
 

@@ -1,6 +1,6 @@
 # PATCH /api/intake
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`. This route lives in the root-only group, so only the instance password reaches it.
+**Auth.** Instance password only. This route lives in the root-only group: a scoped Bearer credential is refused with `403 forbidden` before the handler runs; with no password seeded, open mode passes the request through.
 
 ## Purpose
 
@@ -23,7 +23,7 @@ None.
 
 | field | type | notes |
 | --- | --- | --- |
-| `enabled` | bool | required, so the caller always states the intent |
+| `enabled` | bool | no | defaults to false when omitted; send it explicitly to turn polling on |
 | `allowlist` | string list | ≤ 50 entries, each ≤ 200 characters; matched against the lowercased `From` |
 
 An entry is a **substring** of the sender, so `bank.example` accepts

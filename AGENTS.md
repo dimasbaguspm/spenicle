@@ -23,14 +23,17 @@ the document wins until you change the document too.
    Requests send `account_ref`, responses carry `ref` — an integer id never leaves the
    database.
 2. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
-   zero. `entity.CheckZeroSum` runs before the insert and again inside the write
-   transaction.
-3. **No deletes.** Void (`voided_at`) or reject. Every state change on `accounts`,
-   `payees`, `recurring_rules`, `ledger_entries`, `captures`, `settings`, `api_tokens` and
-   `categorization_rules`
-   appends one `audit_log` row inside the same transaction, through
-   `sqlite.appendAudit`, which opens its own span and validates the typed payload
-   (`entity.EntryCreated` and friends, same `validate` tags as the API). Import and export jobs keep their own append-only
+   zero. `entity.CheckZeroSum` runs before the store opens the write transaction, on
+   both direct entry inserts and capture approvals.
+3. **No deletes of user records.** Void (`voided_at`) or reject. Every state change on
+   `accounts`, `payees`, `recurring_rules`, `ledger_entries`, `captures`, `settings`,
+   `api_tokens` and `categorization_rules` appends one `audit_log` row inside the same
+   transaction, through `sqlite.appendAudit`, which opens its own span and validates the
+   typed payload (`entity.EntryCreated` and friends, same `validate` tags as the API).
+   Usage stamps (`TouchToken`), the worker heartbeat and first-boot seed accounts are
+   exceptions. Derived `running_balances` are rebuilt, and expired import drafts and
+   uploads are deleted with their own event trail; committed and rejected batches keep
+   their evidence. Import and export jobs keep their own append-only
    `import_events`/`export_events` instead of being journaled twice; artifact rows are
    metadata of a capture and are not journaled at all.
 4. **Money is integers.** Minor units + ISO 4217 code. No `float64` anywhere, ever.
@@ -42,17 +45,19 @@ the document wins until you change the document too.
    never of an account.
 6. **Capture ≠ ledger.** A capture never writes a ledger entry on its own. Approval does.
    This includes the recurring rules: the worker queues a `captures` row
-   (`kind='recurring'`, `dedupe_key = sha256(rule|due)`) and never posts an entry, so the
-   worker process holds no ledger contract at all.
+   (`kind='recurring'`, `dedupe_key = sha256(rule|due)`) and never posts an entry while
+   doing so; its process still receives ledger and export dependencies for intake and
+   export rendering.
 7. **One container, two supervised processes, one SQLite file.** `spenicle http` is
-   the only listener, `spenicle worker` only queues captures and renders exports, and
-   runit in the image supervises both. No Postgres, no Redis, no queue, no sidecar:
-   adding infrastructure needs a design-doc change first.
+   the only listener; `spenicle worker` stages recurring captures, runs retention and
+   import GC, renders exports and polls the mailbox, and opens no port. runit in the
+   image supervises both. No Postgres, no Redis, no queue, no sidecar: adding
+   infrastructure needs a design-doc change first.
 
 ## Layout
 
 ```
-main.go                the cobra root: signal wiring and the hidden `all` command
+cmd/root.go              the cobra root: signal wiring and the hidden `all` command
 cmd/http/              package httpcmd: `spenicle http`, the handler graph, the route
                        table, the middleware chain and the serve loop
 cmd/http/handlers/     `Server`: one file per endpoint group, no route, no middleware
@@ -61,26 +66,25 @@ cmd/worker/handlers/   `Runner`: the recurring rules, the catch-up cap and the h
 config/runit/          the two runit services the image supervises: run + finish each
 uat/                   godog suite: uat.go, steps_*.go, world_*.go, snapshot*.go, features/
 internal/common/       no business logic: config (also the process graph), clock, seal,
-                       otel, httpx, uuid, binding, validating, list, actor (who the
-                       current change belongs to, for the journal)
+                       otel, logging, httpx, uuid, binding, validating, list, access,
+                       actor (who the current change belongs to, for the journal)
 internal/constant/     every fixed value shared by more than one package: enums, the
                        audit kinds/actions/actors, the token scopes
 internal/entity/       shared structs + invariants; imports stdlib + constant only
-internal/module/       business logic: ledger, captures, imports, exports, export,
-                       rates, settings, tokens
+internal/module/       business logic: ledger, captures, imports, exports, export, rates,
+                       settings, tokens, connections, intake, categorization
 internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore,
                        extraction/{snaptojson,openai}
 ```
 
-The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` queues the
-due recurring rules and opens no port, and the hidden
-`spenicle all` runs both in one process for local development. Each command owns its
-composition root: `cmd/http/http.go` and `cmd/worker/worker.go` mount the command,
-`handler.go` next to each one builds `handlers.Deps` / `handlers.Runner` from the
-graph, and the graph they share (config, logger, telemetry identity, store + migrate,
-sealer, settings, ledger, rates) is `config.Start`/`config.Process` in
-`internal/common/config/process.go`. An
-unknown subcommand is cobra's usage error and exit code 1.
+The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` stages
+recurring captures, runs retention/GC and intake, renders exports and opens no port, and
+the hidden `spenicle all` runs both in one process for local development. Each command
+owns its composition root: `cmd/http/http.go` and `cmd/worker/worker.go` mount the
+command and call `telemetry.SetIdentity` before `config.Start`; `handler.go` next to each
+one builds `handlers.Deps` / `handlers.Runner` from the shared graph (config, logger,
+store + migrate, sealer, settings, ledger, rates) in `internal/common/config/process.go`.
+An unknown subcommand is cobra's usage error and exit code 1.
 
 ### Two processes, one SQLite file
 
@@ -120,7 +124,7 @@ Rules that keep it pluggable:
 - Every method that crosses a boundary takes `ctx context.Context` first and opens one
   span named after the layer: `Repository.Sqlite.InsertEntry`, `Module.Ledger.Post`,
   `Handler.Entries.Post`, `Common.Seal.Seal`. There is exactly one
-  `context.Background()`, in the root `main.go`, wrapped in `signal.NotifyContext`;
+  `context.Background()`, in `cmd/root.go`, wrapped in `signal.NotifyContext`;
   everything derives from it. Pure value code (`entity` validation, `clock`) takes no
   context and opens no span.
 
@@ -283,9 +287,9 @@ wants without recomputing them. `export_events` mirrors `import_events`: `queued
 `format` is `409 export_conflict`. A `running` job older than `ExportStaleAfter` is
 failed (`swept`), and a `ready` job past `ExportRetention` (default `720h`, a month)
 loses its blob **from the export store** and answers `410 gone` — 20 of each per run, and
-a blob that is already gone is not an error. Import is the other half and is not built.
+a blob that is already gone is not an error.
 
-The same route takes a **chunked** upload: send `chunk_index` + `chunk_total` and the
+`POST /api/imports` also takes a **chunked** upload: send `chunk_index` + `chunk_total` and the
 handler appends to `./data/imports/<client_id>.part`, records the chunk in
 `import_uploads`/`import_upload_chunks` idempotently, answers `202` with the progress and
 assembles the draft on the last chunk (`409 import_conflict` when the total disagrees,
@@ -296,7 +300,7 @@ a replayed commit resumes from the rows whose ledger `client_id` is still missin
 edit while `committing` is `409 import_committing`.
 
 The worker does six things per run, in this order: queue a capture for each due recurring
-rule (never an entry — the worker holds no ledger contract), reclaim
+rule (never an entry), reclaim
 the artifacts of rejected captures, drop expired import drafts and `open` uploads older than
 24h, then claim up to 5 export jobs and sweep the queue, and finally poll the configured mailbox
 (`Module.Intake.Poll`), which queues captures and never posts an entry. Every calendar decision it makes
@@ -338,9 +342,9 @@ Rules that bind every change:
   in attributes, never in the span name.
 - **`http` and `worker` are separate processes**, so they cannot share a trace by accident:
   they share the attribute vocabulary, the same panels, and each opens its own root span
-  (`Worker.Recurring.Run` per tick). A job that crosses the boundary (`exports`, `imports`) carries the
-  caller's W3C `traceparent` on its row, and the worker resumes the trace as a remote parent —
-  that is the only honest end-to-end story across processes.
+  (`Worker.Recurring.Run` per tick). Jobs do not carry a caller's `traceparent` today, so
+  join a cross-process job by ref and time window until the propagation column and
+  remote-parent resume land.
 - **Metrics are prefixed `spenicle.`**, dotted lowercase, units in the instrument option and
   never in the name (`_seconds`, `By`, `1`): `spenicle.http.server.requests|duration|in_flight`,
   `spenicle.worker.runs|items|run.duration`, `spenicle.ledger.entries|postings`,
@@ -357,13 +361,13 @@ Rules that bind every change:
 
 ## Dependencies
 
-Five direct ones, each earning its place: `spf13/cobra` for the CLI (a root command,
-`http`, `worker` and the hidden `all`), `go-playground/validator` for the declarative
-`validate` tags, `modernc.org/sqlite` as the cgo-free driver, `openai/openai-go` for
-the second extraction rail and the `opentelemetry-go` modules for traces, metrics and
-their instrumentation (`otelhttp` on every vendor client, `runtime` for the Go
-collector). `cucumber/godog` and `testcontainers-go` are test-only. A new dependency needs a
-reason in the MR, not a `go get`.
+The direct requirements in `go.mod` earn their place: `spf13/cobra` for the CLI (a root
+command, `http`, `worker` and the hidden `all`), `go-playground/validator` for the
+declarative `validate` tags, `modernc.org/sqlite` as the cgo-free driver,
+`openai/openai-go` for the adapter wired by tests, the OpenTelemetry modules for traces,
+metrics and their instrumentation (`otelhttp` on every vendor client, `runtime` for the Go
+collector), and `cucumber/godog` and `testcontainers-go` for UAT. `config.SelectRail` uses
+SnapToJSON only today. A new dependency needs a reason in the MR, not a `go get`.
 
 ## Testing
 

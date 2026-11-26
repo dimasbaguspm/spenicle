@@ -1,6 +1,6 @@
 # F6 — A bank CSV becomes a reviewable draft
 
-**Status** live · **Client** import list, upload wizard, row editor, commit confirmation, history drawer
+**Status** partial — upload/review/commit are live; reordered headers and `conflict_refused` are covered by UAT, and the final chunk response has no category suggestion · **Client** import list, upload wizard, row editor, commit confirmation, history drawer
 **Routes** `POST /api/imports` · `GET /api/imports` · `GET /api/imports/{ref}` · `PATCH /api/imports/{ref}/rows/{index}` · `PATCH /api/imports/{ref}` · `GET /api/imports/{ref}/events`
 
 ## 1. The job the user has
@@ -23,16 +23,16 @@ occurred_on,amount_minor,description
 2026-02-01,-18000,KOPI KENANGAN
 2026-02-03,2500000,SALARY
 ```
-The order above is illustrative: the same names in a different column order parse the same.
+The order above is illustrative: the same names in a different column order parse the same. UAT covers a reordered header.
 
 | # | call | notes |
 | --- | --- | --- |
 | 1 | `GET /api/accounts?kind=asset` | pick the account the statement belongs to (defaults to `Unsorted`) |
 | 2 | `POST /api/imports` (multipart) | `file`, `client_id` (≤ 64, the idempotency key), optional `account_ref` |
-| 3 | same call, chunked | add `chunk_index` + `chunk_total`; each chunk answers `202` with `{received_chunks, chunk_total, received_bytes}`, the last one assembles the draft and answers `201` |
+| 3 | same call, chunked | add `chunk_index` + `chunk_total`; each chunk answers `202` with `{received_chunks, chunk_total, received_bytes}`, the last one assembles the draft and answers `201` with the full batch — no progress fields, no `suggested_category_ref` |
 | 4 | `POST /api/imports` again with the same `client_id` and bytes | `200` with the same batch — the resume path after a restart |
 
-Caps: `ImportMaxBytes` 32 MiB per file, `ImportMaxRows` 50 000 rows. A well-formed header
+Caps: `ImportMaxBytes` is a 32 MiB outer body cap, but multipart parsing and the file read use `maxFormBytes = 11 << 20`, so the effective multipart file cap is 11 MiB; `ImportMaxRows` is 50 000 rows. A conflicting replay writes `conflict_refused` before answering `409 import_conflict`; UAT asserts that event.
 with a bad line does not fail the upload: that row is stored `skipped` with
 `clash_kind: "invalid_row"`, so the user sees the line instead of losing the file.
 
@@ -65,8 +65,8 @@ body is a no-op: that is the retry-after-a-network-drop path. The row's `account
 fixed at upload (it is the batch's account), and `pending` is server-assigned, never
 settable.
 
-Every successful patch pushes `expires_at` another 24 hours and appends `row_edited` (with
-the field list in request order) plus `row_accepted`/`row_skipped` when the status moved.
+Every successful patch pushes `expires_at` another 24 hours and appends `row_edited` with fields in the fixed order
+`occurred_on`, `amount_minor`, `description`, `category_ref`, `payee_ref`, `status`, plus `row_accepted`/`row_skipped` when the status moved.
 
 ### 2.3 Commit
 
@@ -101,7 +101,7 @@ PATCH /api/imports/{ref}       → Review: CAS draft→committing → Module.Led
                                → CloseImportBatch (committed_at | rejected_at) + terminal event
 GET  …/events                  → ListImportEvents (id DESC, ref cursor)
 
-Worker (per run)               → collectImports: drop drafts past expires_at (50/run) + `expired` event
+Worker (per run)               → collectImports: drop drafts past expires_at (50/run) + `expired` event (the event stays in `import_events`, but the batch row is gone)
                                → collectUploads: drop `open` uploads idle 24h (rows + .part file)
 ```
 
@@ -149,10 +149,10 @@ Worker (per run)               → collectImports: drop drafts past expires_at (
 | a commit is not one transaction | a failure halfway leaves a half-posted draft | deliberate: each row is its own entry with its own `client_id`, and replaying `commit` resumes from the rows the ledger already holds. The client must show "committed N of M" from the event log, not an all-or-nothing spinner |
 | a long commit outlives a proxy timeout | the request dies at chunk 40 of 100 | the batch stays `committing`; the retry resumes. The client should poll `GET /api/imports/{ref}` until `committed` instead of holding one request open |
 | row edits during a commit | a row set changing under a running commit | `409 import_committing` on the row patch — the set is frozen from `committing` to terminal |
-| the batch currency is the base currency only | a USD statement cannot be imported with its own rates | upload it as base-currency entries and fix rates per entry, or wait for an FX column (see [F9](./09-gaps-and-next.md)) |
+| the batch currency is the base currency only | a USD statement needs its own currency | a row's optional `currency` column overrides the batch currency; there is no import-side `fx_rate`, so the ledger applies its own rate resolution |
 | the account was archived after upload | the commit posts to an archived account (archive does not block posting) | accepted by design: the balance history must stay writable; the UI should warn if the batch account is archived |
 | a rejected batch cannot be reopened | the user who rejected by accident re-uploads | the re-upload with a **new** `client_id` recomputes the clashes and gives a fresh draft; the old batch remains as evidence |
-| drafts expire quietly | a user opens the review screen two days later and the batch is gone | the client must show `expires_at` and refresh it on every patch; a dropped draft answers `404 not_found` (no tombstone) |
+| drafts expire quietly | a user opens the review screen two days later and the batch is gone | the client must show `expires_at` and refresh it on every patch; a dropped draft answers `404 not_found`, and `GET /api/imports/{ref}/events` is `404` even though the raw `expired` event survives |
 
 ### Rollout
 
@@ -253,7 +253,8 @@ Scenario: Chunked uploads resume and assemble
 
 - Allowed header names are fixed: `occurred_on`, `amount_minor`, `description`, optional `currency`,
   matched by trimmed name in any column order. No arbitrary column mapping, delimiter/encoding detection, PDF or XLSX.
-- A row without `currency` uses the batch's base currency.
+- A row without `currency` uses the batch's base currency; a row with `currency` overrides it.
+- Committed UAT covers the canonical header order, not reordered columns.
 - No partial-failure report in the commit response — the event log is the report.
 - No reopen of a rejected batch; no bulk row patch.
 - A reclaimed draft is gone, not tombstoned.

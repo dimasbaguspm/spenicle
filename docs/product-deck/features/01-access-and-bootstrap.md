@@ -1,6 +1,6 @@
 # F1 — Open the instance, then keep it closed
 
-**Status** live · **Client** first-run wizard, sign-in screen, token screen, audit drawer
+**Status** partial (bootstrap and tokens live; password change returns settings, not a token; OAuth state is stateless HMAC+TTL with no replay guard) · **Client** first-run wizard, sign-in screen, token screen, audit drawer
 **Routes** `GET /healthz` · `POST /api/setup` · `GET /api/settings` · `GET /api/meta` · `POST /api/password` · `POST /api/tokens` · `GET /api/tokens` · `POST /api/tokens/{ref}/revoke` · `GET /api/audit` · `GET /api/connections` · `POST /api/connections/google` · `GET /api/connections/google/callback` · `POST /api/connections/{ref}/revoke`
 
 ## 1. The job the user has
@@ -34,9 +34,9 @@ token can reach it, even one minted with `admin` or `*`. The wizard normally run
 open mode, before any credential exists.
 
 Step 4 is the one call that invalidates every credential at once: the root credential
-is derived from the password hash, so the token in the response is the client's new
-header value. Store it only after the response arrived; a client that pre-writes it
-locks itself out.
+is derived from the password hash, so the new password is the client's next header
+value. `POST /api/password` returns settings only — no token — so a client that keeps
+the old header locks itself out.
 
 ### 2.2 Issue a credential for an agent
 
@@ -109,6 +109,10 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 - **A token is a digest.** Only `HMAC-SHA256(APP_SECRET-derived key, "spenicle/token/v1\0"+token)`
   is stored, plus the masked preview. The identity middleware stamps `last_used_at`
   on every authenticated request, which is why the listing can filter `used|never`.
+- **OAuth state is stateless.** `state` is a Unix stamp plus an `APP_SECRET`-derived HMAC;
+  the callback checks the signature and a ±10-minute TTL (`stateTTL`). There is no
+  pending-authorisation row, nonce store or replay guard; a valid `state` can be
+  replayed inside the TTL.
 - **Journal in the same transaction.** Every account/payee/rule/entry/capture/token/
   setting change appends its `audit_log` row inside the write transaction
   (`sqlite.appendAudit`), and every boot appends one `system`/`start` row with the
@@ -161,7 +165,7 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 | open mode reaches a public host | until a password is set, every request is root; `POST /api/setup` and `POST /api/password` are the only gates | the fresh boot prints the generated password once, `password_must_change` is in every settings payload, and the rollout checklist in the [README](./README.md) treats `true` as a blocker |
 | token sprawl | a leaked shortcut token can dump receipts or post entries | scopes are a closed set, the handler checks action scopes before side effects (`approve` needs `entries:write`), `last_used_at` makes an unused token visible, and revoke keeps the row so the history is intact |
 | password is the only root credential | no "sign out other devices" | rotation kills every derived credential at once; this is the design, and the client must not present a per-device session model |
-| OAuth callback is a public route | the provider redirect carries no bearer header, so the route skips auth entirely | the `state` value is validated against the pending authorisation (`401 invalid_state` on mismatch or replay); the client must not reuse a `state` |
+| OAuth callback is a public route | the provider redirect carries no bearer header, so the route skips auth entirely | `state` is a Unix stamp with an `APP_SECRET`-derived HMAC; the callback checks the signature and ±10-minute TTL and answers `401 invalid_state` on a bad or expired stamp. There is no pending-authorisation or nonce store and no one-time replay guard; a valid `state` can be replayed inside the TTL |
 | the bootstrap payload grows with every payee and rule | a cold start slows down as pickers accumulate | the server follows cursor pages and returns one complete response; the client caches it after sign-in and uses focused list routes for later refreshes |
 
 ### Rollout

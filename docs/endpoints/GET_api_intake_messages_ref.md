@@ -1,6 +1,6 @@
 # GET /api/intake/messages/{ref}
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying this route's scope. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token without the scope is `403 forbidden`. This route lives in the root-only group, so only the instance password reaches it.
+**Auth.** Instance password only. This route lives in the root-only group: a scoped Bearer credential is refused with `403 forbidden` before the handler runs; with no password seeded, open mode passes the request through.
 
 ## Purpose
 
@@ -47,10 +47,9 @@ reference that replaced this one after a refresh.
 
 ## Limitations
 
-- There is no list route yet: a reference has to be known by ref, which the client gets from a
-  poll result or the log.
-- `capture_id` is not exposed as a ref: the capture is reached through `GET /api/captures` by
-  its own ref once the list route returns it.
+- Use `GET /api/intake/messages` for the list; this route addresses one known ref.
+- `capture_ref` is not exposed by this handler: the capture is reached through
+  `GET /api/captures` by its own ref.
 
 ## Sequence
 

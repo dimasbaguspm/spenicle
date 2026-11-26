@@ -1,7 +1,6 @@
 # POST /api/tokens
 
-**Auth.** **The instance password only.** A token can never mint another token: this route has no
-root-only mux, so a Bearer credential answers `403 forbidden`.
+**Auth.** Instance password only. This route lives in the root-only group: a scoped Bearer credential is refused with `403 forbidden` before the handler runs; with no password seeded, open mode passes the request through.
 
 ## Purpose
 

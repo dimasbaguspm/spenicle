@@ -1,6 +1,6 @@
 # F5 — Predictable money arrives on its own
 
-**Status** live · **Client** recurring screen, rule sheet, "make this recurring" action
+**Status** partial (60-capture catch-up cap is implemented and covered by UAT; the active-rule archive guard is client-side only) · **Client** recurring screen, rule sheet, "make this recurring" action
 **Routes** `GET /api/recurring` · `POST /api/recurring` · `PATCH /api/recurring/{ref}` · plus the capture queue it fills (`GET /api/captures`, `PATCH /api/captures/{ref}`)
 
 ## 1. The job the user has
@@ -122,7 +122,7 @@ Worker.Recurring.Run    every WorkerInterval (1h):
 | --- | --- | --- |
 | the worker process is not running | nothing is ever queued and the user blames the app ("my rent never showed up") | `worker_last_run_at` is empty or stale on `/healthz`; it is stamped only after a whole run finishes, so it never claims a tick that failed halfway. runit supervises both services in the image, so this is an operator error, not a code path |
 | up to one hour of latency | a bill due at 00:01 appears at the next tick | acceptable and stated: the queue is a review queue, not an alarm clock. A client must not promise "at midnight" |
-| rule points at an archived account or a category that no longer exists | `enqueue` fails every run; the rule never produces anything and the log carries the error | the rules screen should show the referenced names (it does: `account_ref`, `category_ref` plus the joined names) and refuse to archive an account that has active rules |
+| rule points at an archived account or a category that no longer exists | `enqueue` fails every run; the rule never produces anything and the log carries the error | the rules screen should show the referenced names (it does: `account_ref`, `category_ref` plus the joined names) and the client must refuse to archive an account with active rules — `PATCH /api/accounts/{ref}` has no such backend guard |
 | `Unsorted` missing | a rule without `category_ref` falls back to `Unsorted` by name and fails with `404 not_found` | same guard as [F4](./04-accounts-and-payees.md): do not archive or rename `Unsorted` |
 | a long-paused rule floods the queue | 5 years of a monthly rule is 60 captures in one run, then more next run | the cap is deliberate; the review screen should sort by `due_on` and offer reject-per-row, which is exactly what it already does |
 | approve requires postings | the draft is a suggestion, not a valid entry | the client must build the postings from `draft_json`; a raw `{"action":"approve"}` without postings is `422 invalid_request` |

@@ -70,8 +70,8 @@ the ledger).
 
 ## Limitations
 
-No PDF parsing, no vendor-side draft push (`extracted`), no completeness gate. A `retry`
-needs a `job_ref`, so a capture that was never submitted answers `409 invalid_state`. A
+No PDF parsing and no completeness gate. The `extracted` action is **planned, not shipped**;
+a `retry` needs a `job_ref`, so a capture that was never submitted answers `409 invalid_state`. A
 match records the link and never changes the entry it points at; approvals still require
 the postings, because the draft is a suggestion, not a valid entry.
 

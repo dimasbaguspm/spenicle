@@ -32,14 +32,14 @@ None.
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
-| `client_id` | string | no | UUIDv7; a replay returns the stored entry |
+| `client_id` | string | no | caller-supplied id, ≤ 64 chars; a replay returns the stored entry |
+| `postings[].account_ref` | ref | yes | 32 lowercase hex account ref |
 | `occurred_on` | date | yes | any month, past or future |
 | `payee_ref` | ref | no | the payee this entry is for; an unknown ref answers `404 not_found` |
 | `note` | string | no | |
 | `currency` | string | yes | ISO 4217 of the postings |
 | `source` | string | no | defaults to `manual` |
 | `postings` | array | yes | ≥ 2, sums to zero |
-| `postings[].account_ref` | int | yes | |
 | `postings[].amount_minor` | string | yes | signed integer string |
 | `postings[].fx_rate` | string | no | an explicit rate always wins; absent, a foreign posting takes the resolved rate and a base posting is `identity` |
 | `postings[].fx_rate_date` | string | no | the day the caller used; a resolved posting is stamped with the day the sheet actually carried |

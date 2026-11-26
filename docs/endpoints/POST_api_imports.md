@@ -116,7 +116,7 @@ Idempotency is enforced by the unique index on `import_batches.client_id`: the l
 - `422 invalid_request` — `chunk_index`/`chunk_total` alone, out of range, not numbers, too many rows, or a body above `ImportMaxBytes`.
 
 - `409 import_conflict` — the `client_id` exists with different bytes; use a new client id for a new file.
-- `422 invalid_request` — the header is missing `occurred_on`, `amount_minor` or `description` (the message names it), the file part is missing, `client_id` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `ArtifactMaxBytes`.
+- `422 invalid_request` — the header is missing `occurred_on`, `amount_minor` or `description` (the message names it), the file part is missing, `client_id` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `ImportMaxBytes`.
 - `404 not_found` — `account_ref` names no account.
 - `500 internal_error` — the store refused the write; nothing was committed.
 

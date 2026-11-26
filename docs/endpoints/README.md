@@ -5,10 +5,13 @@ One file per route. Every file answers the same questions in the same order:
 `Auth` · `Purpose` · `Upstream` · `Downstream` · `Path / query params` · `Body` ·
 `Response` · `Errors` · `Limitations` · `Sequence` (mermaid).
 
-Nothing is planned-but-unbuilt right now; the decisions that shaped the routes are in [`planned.md`](./planned.md).
-
+Planned and deliberately unshipped decisions are in [`planned.md`](./planned.md); the live routes are all listed below.
 | method | path | purpose | file |
 | --- | --- | --- | --- |
+| `GET` | `/api/connections` | current Google mailbox connection, or `disconnected` | [`GET_api_connections.md`](./GET_api_connections.md) |
+| `GET` | `/api/connections/google/callback` | finish the Google grant from the browser redirect (public) | [`GET_api_connections_google_callback.md`](./GET_api_connections_google_callback.md) |
+| `POST` | `/api/connections/google` | store OAuth client credentials and start authorisation | [`POST_api_connections_google.md`](./POST_api_connections_google.md) |
+| `POST` | `/api/connections/{ref}/revoke` | disconnect the stored grant, keep the row | [`POST_api_connections_ref_revoke.md`](./POST_api_connections_ref_revoke.md) |
 | `GET` | `/healthz` | liveness, build and schema fingerprint | [`GET_healthz.md`](./GET_healthz.md) |
 | `POST` | `/api/password` | replace the generated password | [`POST_api_password.md`](./POST_api_password.md) |
 | `GET` | `/api/settings` | the in-app settings the shell reads | [`GET_api_settings.md`](./GET_api_settings.md) |

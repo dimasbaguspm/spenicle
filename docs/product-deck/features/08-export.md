@@ -1,6 +1,6 @@
 # F8 — The door out
 
-**Status** live · **Client** export panel, progress polling, download, history drawer
+**Status** partial — queue/render/download are live; UAT proves restart resume, while the stale-sweep failure path is normally pre-empted by it · **Client** export panel, progress polling, download, history drawer
 **Routes** `POST /api/exports` · `GET /api/exports` · `GET /api/exports/{ref}` · `GET /api/exports/{ref}/events` · `GET /api/exports/{ref}/download`
 
 ## 1. The job the user has
@@ -48,7 +48,7 @@ GET /api/exports/{ref}/download
 
 | job status | answer |
 | --- | --- |
-| `ready` | `200` with the bytes, `Content-Disposition: attachment; filename="spenicle-<YYYY-MM-DD>.<json\|zip>"`, `Cache-Control: private, no-store` |
+| `ready` | `200` with the bytes, `Content-Disposition: attachment; filename="spenicle-<from>_<to>.<json\|zip>"` for a windowed job or `spenicle-<YYYY-MM-DD>.<json\|zip>` otherwise, `Cache-Control: private, no-store` |
 | `queued`, `running` | `409 export_not_ready` |
 | `failed` | `409 export_failed` |
 | `expired` | `410 gone` |
@@ -89,13 +89,14 @@ GET  …/events              Handler.Exports.Events → ExportByRef + ListExport
 GET  …/download            Handler.Exports.Download → Module.Exports.Download
                            → status gate → append `downloaded` → Filestore(export store).Open
 
-Worker (per run)           resume `running` jobs left by a restart (`resumed`, back to `queued`)
+Worker (per run)           resume `running` jobs left by a restart (`resumed`, back to `queued`) before claiming anything
                            claim up to 5 `queued` jobs (compare-and-swap) → `started`
                            encode via module/export into a temp file in ExportDir (JSON | zip of CSVs)
                            read the file, store its bytes in the export store,
                            stamp counts/bytes/expires_at → `ready`, then remove the temp file
                            sweep: `running` older than ExportStaleAfter (15m) → failed (`swept`)
                            drop blobs past ExportRetention (720h) → `expired` (20 per run)
+                           note: resume requeues every `running` job with `started_at < now+1s`, so the stale sweep normally finds no candidate; UAT proves the resume path
 ```
 
 - **The job is the promise; the file is data-only.** `started_at`/`finished_at` on the job
@@ -141,7 +142,7 @@ Worker (per run)           resume `running` jobs left by a restart (`resumed`, b
 | the download is recorded before the first byte | a failed or aborted download still shows as downloaded | correct as an audit record; the UI must not treat it as "the user has the file" |
 | `APP_SECRET` rotation | every stored export becomes unreadable | boot refuses a changed secret; back the secret up next to the database |
 | a wide window | a huge ledger is one big document | `from`/`to` are both-or-neither and echo on the job; rendering is a job, so a large ledger costs a wait, never a timeout |
-| no cancel and no re-queue | a stuck job cannot be stopped | a `running` job older than 15 minutes is failed by the sweep; otherwise queue a new job with a new `client_id` |
+| no cancel and no re-queue | a stuck job cannot be stopped | a restart normally resumes the job and renders it again; the stale sweep exists but UAT proves restart resume instead. Otherwise queue a new job with a new `client_id` |
 
 ### Rollout
 
@@ -230,3 +231,4 @@ Scenario: The CSV format is a zip with a manifest
 - No re-import: the document is re-importable in shape, but no route reads an export back
   in (statement import is CSV in, [F6](./06-statement-import.md)).
 - No range requests: one blob, decrypted and streamed whole.
+- No UAT for a stale-sweep failure; UAT proves restart resume instead.

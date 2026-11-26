@@ -1,6 +1,6 @@
 # F4 — Accounts, categories and merchants
 
-**Status** live · **Client** chart of accounts, account sheet, payee picker, payee sheet
+**Status** partial (create response omits `base_amount_minor`; no backend refusal to archive an account with active rules) · **Client** chart of accounts, account sheet, payee picker, payee sheet
 **Routes** `GET /api/accounts` · `POST /api/accounts` · `PATCH /api/accounts/{ref}` · `GET /api/payees` · `POST /api/payees` · `PATCH /api/payees/{ref}`
 
 ## 1. The job the user has
@@ -36,10 +36,11 @@ POST /api/accounts
 {"name":"Groceries","kind":"expense","currency":"IDR"}
 ```
 
-`201` with `{ref, name, kind, currency, archived:false}`. `currency` is optional and
-defaults to the base currency; `kind` is one of `asset`, `liability`, `equity`,
-`expense`, `income`. **No ledger entry is written** — an account with a zero balance is
-a normal state. Opening balances belong to `POST /api/setup`.
+`201` with `{ref, name, kind, currency, archived:false}` and no `base_amount_minor`;
+read the balance from `GET /api/accounts`. `currency` is optional and defaults to the base
+currency; `kind` is one of `asset`, `liability`, `equity`, `expense`, `income`. **No ledger
+entry is written** — an account with a zero balance is a normal state.
+Opening balances belong to `POST /api/setup`.
 
 ### 2.3 Change what it says about itself
 
@@ -52,6 +53,7 @@ PATCH /api/accounts/{ref}
 rewritten as it is). `archived: true` stamps `archived_at`; every historical posting keeps
 pointing at the account, and the balance stays visible wherever the client does not filter
 archived rows out.
+The backend does not refuse an archive when active recurring rules point at the account; the client must check `GET /api/recurring` first.
 
 `kind` cannot change (it would break the double-entry references). `parent_ref` can
 move an account within the same `kind`, up to three levels; a cycle or a deeper move is
@@ -123,7 +125,7 @@ PATCH/api/payees     Handler.Payees.Patch   → PayeeByRef → UpdatePayee → a
 
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
-| `Unsorted` archived or renamed by the user | capture approve and import commit fall back to it by name (`constant.SeedExpenseAccount`) and then answer `404 not_found` | the client should refuse to archive `Unsorted` and say why; the backend keeps it findable by name, so a rename is worse than an archive |
+| `Unsorted` archived or renamed by the user | capture approve and import commit fall back to it by name (`constant.SeedExpenseAccount`) and then answer `404 not_found` | the client should refuse to archive `Unsorted` and say why; the same client-side guard is the only check for an account with active recurring rules; the backend keeps `Unsorted` findable by name, so a rename is worse than an archive |
 | duplicate `name`+`kind` | the user sees a conflict for a typo | create and patch answer `409 duplicate`; validate against the loaded list for a friendlier message |
 | per-pair balances are base-only | a USD account reports IDR, which reads wrong on an account screen | label the column "in <base currency>"; the native amount lives on the postings, not on the account |
 | reparenting changes history | moving a category re-labels past reports | same `kind`, cycle guard and three-level cap; prefer archive + create for a real taxonomy change |
@@ -157,7 +159,7 @@ Scenario: A category is created as an expense account with a zero balance
     """
   Then the response status is 201
   And the response body has kind "expense"
-  And the response body has base_amount_minor "0"
+  And the response body has no base_amount_minor
   And the store holds 0 "ledger_entries" rows
 
 Scenario: A balance is derived from postings

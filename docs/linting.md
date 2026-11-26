@@ -76,7 +76,7 @@ The two patterns that exist:
 1. **`_test.go`** loosens `errcheck`, `wrapcheck`, `funlen`, `dupl`, `goconst`, `gosec`,
    and the opinion linters. Tests assert; they do not defend.
 2. **Named paths** — `internal/common/config` may read the environment, `cmd/` may log to
-   stdout and return interfaces (`main` is the composition root), `uat` may
+   stdout and return interfaces (each command owns its composition root), `uat` may
    ignore `contextcheck` because godog dictates its callback signatures.
 
 ## Adding a linter

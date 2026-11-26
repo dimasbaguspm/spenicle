@@ -1,6 +1,6 @@
 # F3 — The ledger is the truth
 
-**Status** live · **Client** entry form, ledger list, entry detail, void sheet, rate lookup
+**Status** live on core paths · **Client** entry form, ledger list, entry detail, void sheet, rate lookup
 **Routes** `POST /api/entries` · `GET /api/entries` · `GET /api/entries/{ref}` · `PATCH /api/entries/{ref}` · `GET /api/rates`
 
 ## 1. The job the user has
@@ -93,6 +93,7 @@ GET  /api/entries/{r}  Handler.Entries.Get  → Module.Ledger.Get → EntryByRef
 PATCH/api/entries/{r}  Handler.Entries.Patch → Module.Ledger.Void → VoidEntry
                        (UPDATE voided_at WHERE NULL, INSERT reversal + negated postings + audit, one TX)
                        → Module.Ledger.UpdatePayee → UpdateEntryPayee + audit
+                       → Module.Ledger.Correct → void + replacement, one TX
 GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → fx_rates on a miss)
 ```
 
@@ -128,8 +129,9 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
 1. Both sums — native and base — are zero for every stored entry. Enforced twice, never
    by the client.
 2. A replay of a `client_id` returns the stored entry with `200` and writes nothing.
-3. No route edits a row in place. `PATCH /api/entries/{ref}` corrects with void + repost
-   in one transaction, and the reversal is visible.
+3. Only the payee patch edits a row in place. Amount, date, note and postings are
+   corrected by `Module.Ledger.Correct` (void + replacement in one transaction), and the
+   reversal is visible.
 4. Void is idempotent in effect, not in status: the second attempt is `409 invalid_state`,
    and a voided entry's `voided_at` can never be cleared by an API call.
 5. Backdating is always allowed: no month gate, no period lock, no "you cannot edit a
@@ -232,10 +234,13 @@ Scenario: The payee is patched; a correction replaces
   And the entry carries the payee name "Kopi"
   When I send a PATCH to "/api/entries/{{ref}}" with:
     """json
-    {"amount_minor":"-1"}
+    {"occurred_on":"2026-02-15","note":"coffee and a bun",
+     "postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-18000"},
+                 {"account_ref":"{{account:Unsorted}}","amount_minor":"18000"}]}
     """
-  Then the response status is 400
-  And the error code is "invalid_json"
+  Then the response status is 200
+  And the replacement carries source "adjustment"
+  And the original carries voided_at
 ```
 
 ## 6. What this page does not promise

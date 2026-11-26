@@ -16,10 +16,10 @@ The table below records them once; section (A) lists only what is still open.
 | gap | shipped as | commit |
 | --- | --- | --- |
 | 1 | `PATCH /api/captures/{ref}` takes `payee_ref`, resolves it through `PayeeSource.PayeeByRef`, and every capture answers `resolved_entry_ref`; an integer `payee_id` is now `400 invalid_json` | `feat: resolve a capture with refs, never integer ids` |
-| 2 | `PATCH /api/entries/{ref}` takes `occurred_on`, `note` and `postings` and replaces the entry in one write (void + replacement, one transaction) | `feat: correct an entry's amount, date or note in one write` |
+| 2 | `PATCH /api/entries/{ref}` accepts `occurred_on`, `note`, `reason` and `postings`; the backend voids the original and inserts a reversal plus a replacement in one transaction | `feat: correct an entry's amount, date or note in one write` |
 | 4 | `POST`/`PATCH /api/accounts` take `parent_ref` (same kind, no cycle, three levels) and `GET /api/analytics/categories?rollup=parent` sums a child into its root | `feat: nest a category under a parent and roll it up` |
 | 6 | a duplicate `name`+`kind`, `payees.name` or `custom_queries.name` answers `409 duplicate` | `fix: answer 409 for a duplicate name` |
-| 8 | `PATCH /api/captures/{ref}` accepts `{"action":"match","entry_ref":"…"}`, moving the capture to `duplicate` without touching the ledger | `feat: resolve a capture with refs, never integer ids` |
+| 8 | `PATCH /api/captures/{ref}` accepts `{"action":"match","entry_ref":"…"}`, moving the capture to `duplicate` without touching the ledger; there is no user-facing unmatch action | `feat: resolve a capture with refs, never integer ids` |
 | G7 | `POST /api/exports` takes `from`/`to` (`YYYY-MM-DD`, both or neither), keeps them on the job as `exports.from_on`/`to_on`, drops every entry outside the window with its postings, and echoes the window on the listing, the job, the events and the download name; reading an export back in is still open, this ships the window only | `feat: render an export for a date window` |
 | G10 | `PATCH /api/settings` refusing every body is the design, not a defect: base currency is locked once setup completes and timezone after first boot | [v2-design.md](../../v2-design.md) |
 | G11 | verified: `config.SelectRail` builds SnapToJSON only; the OpenAI adapter is reserved for the future chat rail and `ai_assistance` is informational, never a capability gate | `docs: reserve the OpenAI adapter for the chat rail` |
@@ -38,10 +38,13 @@ The table below records them once; section (A) lists only what is still open.
 | correctness | `/api/dashboard` takes one explicit `from`/`to` window for every tile; the server never derives a different period from the clock | `fix: give dashboard tiles one explicit window` |
 | correctness | `/healthz` reports this process's UTC `started_at`; every boot appends a `system`/`start` audit row with service, build, schema version and start time, and the worker heartbeat is stamped only after the whole run finishes | `fix: make recovery and release evidence durable` |
 
-Still open: **G3** (per-token rate limit), **G13** (import payee learning), the
-attachment and IMAP halves of **G9**, and cross-process trace propagation for export and
-import jobs. The other cross-cutting rows above are shipped. The next cuts in (B) that
-are now done are marked there as well.
+Still open: **G3** (per-token rate limit), **G13** (import payee learning), the IMAP half
+of **G9**, the saved-view `income` kind, `field: "note"` with `match_kind: "exact"`, and
+cross-process trace propagation for export and import jobs. Multipart capture attachments
+and `{"action":"match"}` are shipped; retry needs a `pending` capture with a submitted
+extractor job that supports polling. UAT covers retry and an unbalanced approval now. The
+other cross-cutting rows above are shipped. The next cuts in (B) that are now done are
+marked there as well.
 
 **G8 is excluded from the current backlog.** Polling is sufficient for the single-user
 workload, while live updates need a durable cross-process change feed, replay cursor and
@@ -59,10 +62,15 @@ reserved for a future chat endpoint, so `ai_assistance` must never gate a screen
 | --- | --- | --- | --- |
 | G3 | tokens have optional `expires_at` and revocation, but no per-token rate limit and no un-revoke | a leaked shortcut token lives until it expires or someone revokes it; there is no grace-window undo | mint an expiry up front, revoke and re-issue; `last_used_at` is the only usage signal |
 | G5 | ~~no per-row currency or column mapping~~ — headers are mapped by name and `currency` is an optional fourth column | closed | use the 3-column format in base currency, or add `currency` for a foreign row |
-| G9 | attachments still are not captured, and only a Gmail adapter exists (`MailSourceIMAP` is a constant with no adapter) | a bank PDF or JPEG never becomes a capture | forward the text, or use the share sheet; attachments and IMAP are separate remaining cuts |
+| G9 | IMAP is still absent (`MailSourceIMAP` is a constant with no adapter); attachments are shipped as multipart files on `POST /api/captures` | a bank PDF or JPEG must be uploaded explicitly; it is never fetched from IMAP | forward the text or upload the file; IMAP is the remaining cut |
 | G13 | an import commit does not learn a payee's default category — only a capture approval does | a CSV-first user gets no consistency for free | pick the category per row; `GET /api/categorization/suggest` still answers |
 | G15 | ~~no ceiling~~ — `POST /api/categorization/rules` refuses beyond `CategorizationRuleLimit` (200) | closed | ceiling enforced at the handler |
 | cross-cutting | export and import jobs do not carry the caller's `traceparent`; the worker starts a new root span | an end-to-end trace stops at the job row | join by job ref and time window in logs until propagation lands |
+
+`PATCH /api/captures/{ref}` also has `{"action":"retry"}`: it needs a `pending` capture,
+a configured extractor and an existing `job_ref`, and it polls that job. `match` is live
+but has no user-facing reverse action. Retry and an unbalanced approve are implemented
+without committed-UAT coverage.
 
 ---
 
@@ -97,29 +105,29 @@ slice with its own acceptance criteria, in the shape
 ### N2 — Match a capture to an existing entry *(shipped: `{"action":"match","entry_ref":"…"}`)*
 
 - **Client sees:** "you already logged this" — approve becomes approve-or-link.
-- **Backend change:** `{"action":"match","entry_ref":"…"}` in `Module.Captures`, moving the
-  capture `pending → duplicate` with `resolved_entry_id` set (the status and the transition
-  already exist; the action does not).
-- **RRR:** *Requirement* — linking writes no ledger row and is reversible
-  (`duplicate → pending`). *Risk* — a wrong link hides a real spend; the review screen must
-  show the linked entry inline. *Rollout* — additive body action, no migration.
+- **Backend change:** `{"action":"match","entry_ref":"…"}` in `Module.Captures` moves the
+  capture `pending → duplicate` with `resolved_entry_id` set; the status and the transition
+  already exist.
+- **RRR:** *Requirement* — linking writes no ledger row. *Risk* — a wrong link hides a real
+  spend; the review screen must show the linked entry inline, and there is no user-facing
+  unmatch action today. *Rollout* — additive body action, no migration.
 - **Acceptance:** match resolves the capture to `duplicate`; the ledger row count is
   unchanged; approving a matched capture is `409 capture_resolved`.
 
-### N3 — A correction route for entries *(shipped: `PATCH` with `occurred_on`/`note`/`postings`)*
+### N3 — A correction route for entries *(shipped: `PATCH /api/entries/{ref}`)*
 
 - **Client sees:** "edit this entry" with a required reason, showing both the original and
   the correction.
-- **Backend change:** `POST /api/entries/{ref}/corrections` (or a body action on the
-  existing PATCH) that voids the original and posts the corrected entry in **one**
-  transaction, `source: "adjustment"`, `reverses_entry_id` set — a single call instead of
-  the two the client does today.
+- **Backend change:** `PATCH /api/entries/{ref}` takes `occurred_on`, `note`, `reason` and
+  `postings`; `Module.Ledger.Correct` voids the original and inserts a reversal plus a
+  replacement in one transaction, so the client makes one call instead of two.
 - **RRR:** *Requirement* — the ledger still never deletes, and the pair is atomic so no
   read can see a ledger with the old entry and without the new one. *Risk* — a taxonomy of
-  "why" that nobody uses; keep one free-text reason. *Rollout* — additive route; the
-  two-call sequence keeps working.
-- **Acceptance:** one call yields two entries and one `void` audit row; the account balance
-  is unchanged when the correction equals the original; a replayed call is `409`.
+  "why" that nobody uses; keep one free-text reason. *Rollout* — additive fields on the
+  existing PATCH; the two-call sequence keeps working.
+- **Acceptance:** one `PATCH` voids the original and inserts a reversal plus a replacement;
+  the account balance is unchanged when the correction equals the original; replaying the
+  call on the voided ref is `409 invalid_state`.
 
 ### N4 — Opening balances in the setup wizard *(shipped: G1)*
 

@@ -13,7 +13,8 @@ development needs no collector. A bare host is **HTTPS**; write `http://` on pur
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 ./spenicle http
 ```
 
-Each command names itself before the graph is built, in `internal/common/config/process.go`:
+Each command names itself in its own entry point before the graph is built:
+`cmd/http/http.go`, `cmd/worker/worker.go`, and `cmd/root.go` for the hidden `all`.
 
 | command | `service.name` | `spenicle.component` |
 | --- | --- | --- |
@@ -21,9 +22,10 @@ Each command names itself before the graph is built, in `internal/common/config/
 | `spenicle worker` | `spenicle-worker` | `worker` |
 | `spenicle all` (local only) | `spenicle` | `http` |
 
-The command calls `telemetry.SetIdentity(serviceName, version, component)` before
-`config.Start`; that is what makes `service.name` the tracer name and what `StartSpan` stamps on
-every span as `spenicle.version` + `spenicle.component`, so no call site repeats them.
+Each command calls `telemetry.SetIdentity(serviceName, version, component)` before
+`config.Start`; that is what makes `service.name` the tracer name and what
+`StartSpan` stamps on every span as `spenicle.version` + `spenicle.component`, so no
+call site repeats them. `config.Start` receives the name but does not set the identity.
 
 `telemetry.Setup` then builds one `TracerProvider` and one `MeterProvider` over OTLP/HTTP,
 installs both globally, starts the Go runtime instruments (`otelruntime`) and returns the
@@ -89,7 +91,9 @@ branch outcomes and lifecycle, `Warn` degraded-but-recovered, `Error` only when 
 returns 5xx or work is dropped.
 
 ```go
-logger := logging.New(telemetry.ComponentHTTP)   // or logging.From(handler, component)
+logger := logging.New(telemetry.ComponentHTTP)
+// or wrap an existing *slog.Logger:
+logger = logging.From(myLogger, telemetry.ComponentHTTP)
 
 logger.Info(ctx, "listening", slog.String("addr", addr))
 ```

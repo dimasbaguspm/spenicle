@@ -1,6 +1,6 @@
 # F10 — Categories that land in the same place every time
 
-**Status** live · **Client** capture review, entry form, rules screen, category chart
+**Status** partial (suggest/rules and approve-learning live; recurring drafts and import learning are not) · **Client** capture review, entry form, rules screen, category chart
 **Routes** `GET /api/categorization/suggest` · `GET|POST /api/categorization/rules` · `PATCH /api/categorization/rules/{ref}` · `PATCH /api/captures/{ref}` (learning) · `GET /api/analytics/categories` (`first_occurred_on`, `last_occurred_on`, `bucket=month`)
 
 ## 1. The job the user has
@@ -45,8 +45,10 @@ is what a share sheet or an import row has. Nothing is written.
 | 2 | `GET /api/categorization/rules?account_ref=<cat>` | the rules of one category, `meta` paged like every list |
 | 3 | `PATCH /api/categorization/rules/{ref}` | `{"pattern"?, "category_ref"?, "priority"?, "archived"?}` |
 
-Patterns are trimmed, lowercased, 2–80 characters, `exact` / `contains` / `prefix`. A
-duplicate live rule is `409 duplicate`; a category that is not `expense`/`income` is
+Patterns are trimmed, lowercased, 2–80 characters; `field` is `payee` or `note`, and note
+rules accept only `contains`/`prefix` (`exact` is `422 invalid_request`: "a note rule matches
+contains or prefix, never exact"). `exact`, `contains` and `prefix` apply to payee rules.
+A duplicate live rule is `409 duplicate`; a category that is not `expense`/`income` is
 `422 invalid_request`; an unknown `category_ref` is `404 not_found`.
 
 ### 2.4 How big, since when, per month
@@ -72,18 +74,19 @@ PATCH/api/captures/{ref} approve  → Handler.rememberCategory → Payees.PayeeB
 GET  /api/analytics/categories    → CategoryTotals | CategoryTotalsByRoot | CategoryTotalsByMonth
 ```
 
-- **One ladder, not configurable.** payee default → exact rule on the payee name →
-  `contains`/`prefix` on the payee name → `contains`/`prefix` on the note → `none`. Inside a
-  tier: `priority DESC`, pattern length `DESC`, `created_at ASC`. The same function answers
-  every `GET /api/categorization/suggest`, so one merchant cannot resolve two ways. Capture
-  and import create responses also carry `suggested_category_ref` (per row for imports)
-  when resolution succeeds, so the client can prefill the form; the suggest route still
-  explains the match with `tier` and `why`.
+- **One ladder on the suggest and create paths, not configurable.** payee default →
+  `exact` rule on the payee name → `contains`/`prefix` on the payee name or note → `none`.
+  Inside a tier: `priority DESC`, pattern length `DESC`, `created_at ASC`. `GET
+  /api/categorization/suggest` explains the match with `tier` and `why`; `POST /api/captures`
+  and `POST /api/imports` carry `suggested_category_ref` when resolution succeeds. `GET
+  /api/captures` rows do not, and recurring drafts bypass the resolver: the worker uses
+  `rule.CategoryRef` or `Unsorted` directly.
 - **Rules are refs + rows.** `categorization_rules` points at an account (`expense`/
   `income` only) with a partial unique index over live rules; every write appends
   `categorization_rule/create|update`. A rule whose category was archived is skipped.
-- **Learning is not a write on the suggestion path.** Only an approval, with the category a
-  human actually posted, can fill `payees.default_category_ref` — and only when it is empty.
+- **Learning is not a write on the suggestion path.** Only a capture approval, with the
+  category a human actually posted, fills `payees.default_category_ref` — and only when it
+  is empty. Import commits do not learn.
 - **The chart stays derived.** `first_occurred_on` is `MIN(occurred_on)` over the same
   void-excluding join; `bucket=month` groups by `substr(occurred_on,1,7)`. No counters, no
   rollup table, so a correction moves every number on the next read.
@@ -92,8 +95,9 @@ GET  /api/analytics/categories    → CategoryTotals | CategoryTotalsByRoot | Ca
 
 ### Requirements
 
-1. The same merchant resolves to the same category on the suggest route, a capture, an
-   import row and a recurring draft — one pure resolver, table-tested with the golden cases.
+1. The same merchant resolves the same category on the suggest route and the capture/import
+   create prefill — one pure resolver, table-tested with the golden cases. Recurring drafts
+   use `rule.CategoryRef` and are outside this path.
 2. A suggestion never writes the ledger. `approve` and `commit` remain the only writes.
 3. Learning fills an **empty** payee default only, is journaled, and can be skipped per
    approval with `{"learn": false}`.
@@ -109,17 +113,17 @@ GET  /api/analytics/categories    → CategoryTotals | CategoryTotalsByRoot | Ca
 | --- | --- | --- |
 | a wrong default is sticky | every future `KOPI` inherits it | first-wins is visible on the payee sheet and one `PATCH /api/payees/{ref}` away |
 | two categories both fit | ambiguity is real, not a bug | the suggestion is always editable, `why` names the source, and `rule_ref` makes a bad rule identifiable |
-| a broad pattern swallows the ledger | `pattern: "a"` | 2–80 characters, live-rule cap by usage, tie-break prefers the longer pattern |
+| a broad pattern swallows the ledger | `pattern: "a"` | 2–80 characters, a 200-rule live cap, tie-break prefers the longer pattern |
 | note rules misfire on free text | the note is prose | payee rules always outrank note rules, and the tier says which one fired |
 | learning on import | a bulk commit could write 200 defaults *suggested* by nobody | import learning is **not** wired in this version — only an approval learns |
 
 ### Rollout
 
-1. **Learning on approve** (shipped). No schema, no client change: the field already existed.
-2. **Rules + suggest** (shipped, migration `0002`). Additive routes and two scopes.
+1. **Learning on approve** (shipped, no schema change).
+2. **Rules + suggest** (shipped, migration `0001`). Additive routes and two scopes.
 3. **Per-month bucket and first/last** (shipped). Additive fields on an existing route.
-4. **Next, deliberately not shipped**: import-row learning, `field: note` exact matching,
-   and a dry-run "these 40 entries would move" report.
+4. **Not shipped**: import-row learning, `field: note` with `match_kind: exact`, a dry-run
+   "these 40 entries would move" report, and resolver-based recurring drafts.
 
 ## 5. Acceptance criteria
 
@@ -175,6 +179,7 @@ Scenario: A bucket and a roll-up cannot be asked for together
 - No regex, no fuzzy matching, no learning from amounts, dates or frequencies.
 - No auto-posting: a suggestion is a read; a category is applied only by `approve` or
   `commit`.
+- Recurring drafts use `rule.CategoryRef` (or `Unsorted`) directly, not this resolver.
 - No learning from import commits yet, and no bulk re-file of history.
 - A `field: "note"` rule with `match_kind: "exact"` is refused (`422 invalid_request`): a note is
   prose, so only `contains`/`prefix` make sense there.

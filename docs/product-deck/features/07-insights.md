@@ -1,6 +1,6 @@
 # F7 — How did the month go
 
-**Status** live · **Client** home screen, month bars, category pie, saved views
+**Status** partial — duplicate saved-view `409` is covered by UAT; default windows use UTC, not `APP_TIMEZONE` · **Client** home screen, month bars, category pie, saved views
 **Routes** `GET /api/dashboard` · `GET /api/analytics/months` · `GET /api/analytics/categories` · `POST /api/analytics/custom` · `GET /api/analytics/custom/{ref}` · `PATCH /api/analytics/custom/{ref}`
 
 ## 1. The job the user has
@@ -38,7 +38,7 @@ echoes `from` and `to`, so the client never has to guess which window it rendere
 
 | # | call | notes |
 | --- | --- | --- |
-| 1 | `GET /api/analytics/months` | default window: first day of the month 11 months ago → today |
+| 1 | `GET /api/analytics/months` | default window: first day of the month 11 months ago → today, both derived from `time.Now().UTC()` (not `APP_TIMEZONE`) |
 | 2 | `GET /api/analytics/months?from=2026-01-01&to=2026-12-31` | any range, unbounded allowed |
 | 3 | `GET /api/analytics/categories?from=&to=&kind=expense` | default `kind=expense`; `income` flips the pie |
 | 4 | tap a bar → `GET /api/entries?from=<month start>&to=<month end>` | the drill-down is the ledger, which already filters by date |
@@ -103,7 +103,7 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 2. Every money field is a minor-unit **string**; the client formats, the API never does.
 3. The dashboard client supplies one explicit, ordered `from`/`to` window; every tile
    uses it and the response echoes both dates. Months and categories keep their
-   twelve-month defaults when the client omits a window.
+   twelve-month **UTC** defaults when the client omits a window.
 4. An empty ledger answers zeroes and an omitted `top_category`, never a `404`.
 5. `month` on the dashboard is the newest month **with data**; the client must label the
    tile from that field, not from its own clock.
@@ -119,7 +119,7 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 | --- | --- | --- |
 | the dashboard month is not "this month" | a tile labelled "February" that shows January's numbers reads as a bug | render the month name from `month`; when `month` is earlier than the client's current month, say "last month with activity" |
 | category totals depend on `kind` | an expense posted against an `asset` account (a cash purchase logged as a transfer) shows in no category and as no spend, though the balance is right | the entry form should push the two-leg shape (asset → expense); the pie is not the place to reconcile |
-| one bad custom name | `custom_queries.name` is unique | create and patch answer `409 duplicate`; check the loaded list before saving |
+| one bad custom name | `custom_queries.name` is unique | create and patch answer `409 duplicate`; committed custom-query UAT covers create, namespace and unknown namespace, not the collision |
 | an unbounded range is allowed | `?from=1970-01-01` is a full scan | the client should always send an explicit window; the default is already the useful one |
 | `categories` views cannot be income | a user saving an income pie gets expenses | `GET /api/analytics/categories?kind=income` works; the **saved** view cannot carry `kind` yet ([F9](./09-gaps-and-next.md)) |
 | parent roll-up can double-count | a parent with its own postings plus children | `?rollup=parent` is opt-in on `categories`; the flat view still reports each account alone |
@@ -194,7 +194,7 @@ Scenario: A report window is validated
 
 ## 6. What this page does not promise
 
-- No fiscal-month offset, no timezone-shifted months (entries carry a date, not a time).
+- No fiscal-month offset, no timezone-shifted months: entries carry a date, not a time, and default windows use UTC, not `APP_TIMEZONE`.
 - No parent roll-up on `months`, no per-account split, no currency breakdown.
   `categories` has opt-in `rollup=parent`.
 - No caching, no materialised rollups, no incremental refresh.

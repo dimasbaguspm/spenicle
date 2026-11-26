@@ -2,7 +2,7 @@
 
 Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`../README.md`](../README.md).
 
-**23 tables, 59 routes** (one of them `/healthz`).
+**25 tables plus `schema_migrations`, 59 routes** (one of them `/healthz`).
 
 Base path `/api`. No version prefix: we are the only consumer, and an agent can adapt to a
 change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, timestamps ISO
@@ -25,10 +25,10 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 9 | `GET /api/entries` | live (filters, cursor, limit) |
 | 9 | `GET /api/entries/{ref}` | live: one entry with its postings, `404` for an unknown ref |
 | 10 | `POST /api/entries` | live |
-| 11 | `PATCH /api/entries/{id}` | live: `void` (writes the reversal) and `payee_ref` |
+| 11 | `PATCH /api/entries/{ref}` | live: `void` (writes the reversal) and `payee_ref` |
 | 12 | `GET /api/captures` | live (status filter, cursor, limit) |
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
-| 14 | `PATCH /api/captures/{id}` | live: `approve`, `reject`, `retry`; a recurring approval resolves `recurring_rule_id` from the draft |
+| 14 | `PATCH /api/captures/{ref}` | live: `approve`, `reject`, `retry`, `match`; an approved recurring capture resolves its rule from the sealed draft |
 | 21 | `GET /healthz` | live |
 | 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `client_id` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `client_id` |
@@ -38,7 +38,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 5, 6 | accounts create/patch | live |
 | 7, 8 | payees | live |
 | 15, 16 | recurring | live: a due rule queues a `captures` row and never posts the ledger; the approval posts it |
-| 17, 18 | months report, dashboard | live |
+| 17, 18 | `GET /api/analytics/months`, dashboard | live |
 | 19, 20 | `POST/GET /api/tokens`, `POST /api/tokens/{ref}/revoke` | live: root credential only, scoped Bearer credential, digest stored, masked preview, `last_used_at`, revoke never deletes |
 | — | `GET /api/audit` | live: the journal, filtered by kind, ref, action, actor and a day range |
 | — | `GET/PATCH /api/intake`, `POST /api/intake/run`, `GET /api/intake/messages`, `GET /api/intake/messages/{ref}`, `POST /api/intake/messages/{ref}/refresh` | live: a mailbox poll queues captures, a reference records what became of each mail |
@@ -53,7 +53,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | `extractions` table | `capture_payloads`, one sealed child row per capture | the capture keeps its state, the vendor payload stays 1:1 and never widens the queue row |
 | `currencies` table | embedded ISO 4217 list | static data belongs in the binary |
 | `periods`, `closed_periods`, `month_closes` | none | each attempt at a lock or snapshot got deleted; the ledger is the truth |
-| 28 endpoints | 21 | actions moved into the body |
+| 28 endpoints | 59 live routes | actions moved into the body, and more surfaces were added |
 | session-only auth | one `Authorization: Bearer` header, root credential **or** scoped API token | no cookie, no second transport |
 | plaintext captures and artifacts | sealed with `APP_SECRET` | bank emails and receipts are the sensitive part |
 | `/api/v2/...` | `/api/...` | no version prefix |
@@ -62,14 +62,20 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 
 | env | default | effect |
 | --- | --- | --- |
-| `APP_SECRET` | **required** | keys the root credential and the token digests; seals artifacts and capture payloads |
+| `APP_SECRET` | **required** | seals capture payloads and artifacts; keys the root credential and the token digests |
 | `APP_TIMEZONE` | `UTC` | the calendar every date decision uses; set once, at the first boot |
-| `SNAPTOJSON_API_KEY` | unset | enables the SnapToJSON extraction worker |
+| `SNAPTOJSON_API_KEY` | unset | enables the SnapToJSON extraction rail |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override the partner URL (proxy, staging) |
+| `OPENAI_API_KEY` | unset | reserved for the chat rail; `config.SelectRail` never builds the OpenAI rail |
+| `OPENAI_MODEL` | `gpt-4o-mini` | model the reserved OpenAI adapter asks for |
+| `OPENAI_HOST` | unset | base URL for the reserved OpenAI adapter; empty keeps the SDK default |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | OTLP/HTTP collector; empty makes tracing and metrics no-ops |
 
-The listen address (`:8080`) and the data directory (`./data`) are **not** environment
-variables: they are constants in `internal/common/config/config.go`, and the container
-works in `/data`, which is the volume.
+The listen address (`:8080`), the data directory (`./data`), the DB path, artifact/export/import
+stores, retention and size caps, HTTP timeouts, shutdown budgets, health timeout, body and row
+caps, pool sizes and the worker interval are **not** environment variables: they are constants
+in `internal/common/config/config.go`, resolved into `entity.AppConfig`. The container works
+in `/data`, which is the volume.
 
 Names carry no prefix on purpose. If several self-hosted services share one `env_file`, qualify
 them yourself — `spenicle.env` is the cheapest separator.
@@ -99,7 +105,7 @@ Consequences, stated plainly:
 
 | credential | used by | transport |
 | --- | --- | --- |
-| the instance password (root) | the PWA, `curl`, whoever holds it | **every** request sends `Authorization: Bearer <password>`; skipped while no password is set (open mode); a verified password is cached in memory so PBKDF2 runs once per process |
+| the instance password (root) | a client, `curl`, whoever holds it | **every** request sends `Authorization: Bearer <password>`; skipped while no password is set (open mode); a verified password is cached in memory so PBKDF2 runs once per process |
 | API token | agents, scripts, cron | the same header; the token store decides its scopes |
 
 There is no cookie, no exchange route and no second transport: the header is the only place
@@ -137,7 +143,7 @@ entry stays), and the credential answers `401 unauthorized` at once.
 
 | concern | rule |
 | --- | --- |
-| idempotency | `client_id` (UUIDv7) in the body for creates |
+| idempotency | caller-supplied `client_id` (≤ 64 chars) on creates; UUIDv7 is a client convention, not a server rule |
 | pagination | `?cursor=&limit=` (default 50, max 200), response carries `next_cursor` |
 | soft delete | never. `archived_at`, `voided_at`, `status='rejected'` |
 | backdated writes | **always allowed**, any month, past or future |
@@ -157,16 +163,14 @@ entry stays), and the credential answers `401 unauthorized` at once.
 | `k` | TEXT PK | |
 | `v` | TEXT | raw; JSON when structured |
 
-Keys: `base_currency`, `setup_completed_at`, `secret_fingerprint`, `timezone`,
-`extraction_enabled`, `ai_assistance`, `extraction_api_url`, `ecb_last_fetch_at`,
-`last_used_account_id`, `last_used_payee_id`. `setup_completed_at` is the authoritative
-one-shot marker: once set, the base currency is locked even when the ledger is empty.
-A legacy database with ledger entries but no marker is also locked. `timezone` is always
-present (UTC when `APP_TIMEZONE` is unset) and is pinned at the first boot;
-`extraction_enabled` means the SnapToJSON rail is configured (`SNAPTOJSON_API_KEY`) and
-`ai_assistance` only records whether `OPENAI_HOST` + `OPENAI_API_KEY` + `OPENAI_MODEL`
-are all set. The two flags are independent: the OpenAI adapter is reserved for the
-future chat rail and does not run extraction today.
+Keys: `app_settings` (a sealed JSON row with `base_currency`, `timezone`,
+`password_hash`, `password_must_change` and `extraction_enabled`), `secret_fingerprint`,
+`setup_completed_at`, `worker_last_run_at` and `google_client`. `setup_completed_at` is
+the authoritative one-shot marker: once set, the base currency is locked even when the
+ledger is empty. A legacy database with ledger entries but no marker is also locked.
+`timezone` is pinned from `APP_TIMEZONE` at the first boot, and `extraction_enabled`
+records that the SnapToJSON rail is configured (`SNAPTOJSON_API_KEY`). The OpenAI
+adapter is reserved for a future chat rail and does not run extraction today.
 
 
 ## 1.2 `api_tokens`
@@ -181,6 +185,7 @@ future chat rail and does not run extraction today.
 | `created_at` | TEXT | |
 | `last_used_at` | TEXT NULL | |
 | `revoked_at` | TEXT NULL | revoked, never deleted |
+| `expires_at` | TEXT NULL | optional expiry, checked on authentication |
 
 ## 1.3 `fx_rates`
 
@@ -200,6 +205,9 @@ the worker prunes `artifacts/` instead: a rejected capture loses its document af
 
 ## 1.4 `accounts`
 
+Every table also has `id INTEGER PRIMARY KEY` (the graph) and `ref TEXT NOT NULL UNIQUE`
+(a dashless UUID). The API speaks `ref` only: `account_ref`, `ref`, and never a number.
+
 | column | type | notes |
 | --- | --- | --- |
 | `id` | INTEGER PK | |
@@ -207,9 +215,6 @@ the worker prunes `artifacts/` instead: a rejected capture loses its document af
 | `kind` | TEXT | `asset` \| `liability` \| `equity` \| `expense` \| `income` |
 | `parent_id` | INTEGER NULL | self-FK, category hierarchy |
 | `currency` | TEXT | ISO code, validated in code against the embedded list |
-
-Every table also has `id INTEGER PRIMARY KEY` (the graph) and `ref TEXT NOT NULL UNIQUE`
-(a dashless UUID). The API speaks `ref` only: `account_ref`, `ref`, and never a number.
 | `icon` | TEXT NULL | |
 | `archived_at` | TEXT NULL | |
 | `created_at` | TEXT | |
@@ -237,7 +242,7 @@ Every table also has `id INTEGER PRIMARY KEY` (the graph) and `ref TEXT NOT NULL
 | `category_id` | INTEGER NULL | FK |
 | `amount_minor` | INTEGER | signed |
 | `currency` | TEXT | ISO code |
-| `cadence` | TEXT | `weekly` \| `monthly` \| `yearly` |
+| `cadence` | TEXT | `daily` \| `weekly` \| `monthly` \| `yearly` |
 | `interval_n` | INTEGER | default 1 |
 | `day_of_month` | INTEGER NULL | 1–31 |
 | `business_day_shift` | TEXT | `none` \| `next` \| `prev` |
@@ -259,7 +264,7 @@ Every table also has `id INTEGER PRIMARY KEY` (the graph) and `ref TEXT NOT NULL
 | `currency` | TEXT | ISO code of the postings |
 | `source` | TEXT | `manual` \| `share` \| `email` \| `statement` \| `recurring` \| `adjustment` |
 | `recurring_rule_id` | INTEGER NULL | FK, `UNIQUE(rule, occurred_on)` |
-| `client_id` | TEXT NULL | UUIDv7, `UNIQUE` when set |
+| `client_id` | TEXT NULL | caller-supplied, ≤ 64 chars, `UNIQUE` when set |
 | `reverses_entry_id` | INTEGER NULL | self-FK, set on the reversal |
 | `voided_at` | TEXT NULL | set on the original |
 | `created_at` | TEXT | |
@@ -286,7 +291,7 @@ The single review queue. One row per thing captured, from any channel.
 | `id` | INTEGER PK | |
 | `kind` | TEXT | `share` \| `image` \| `email` \| `statement` \| `recurring` \| `manual` |
 | `status` | TEXT | `extracting` \| `pending` \| `duplicate` \| `approved` \| `rejected` \| `failed` |
-| `client_id` | TEXT NULL | UUIDv7, `UNIQUE` when set |
+| `client_id` | TEXT NULL | caller-supplied, ≤ 64 chars, `UNIQUE` when set |
 | `dedupe_key` | TEXT UNIQUE | cross-channel duplicate guard |
 | `batch_id` | TEXT NULL | artifact hash shared by all rows of one statement |
 | `artifact_hash` | TEXT NULL | `sha256`, the document lives at `artifacts/<hash[0:2]>/<hash[2:4]>/<hash>` |
@@ -379,10 +384,12 @@ name, `contains`/`prefix` rule on the note, then `none` — and inside a tier it
 
 ## 1.14 Canonical DDL
 
-[`internal/repository/sqlite/migrations/0001_init.sql`](../internal/repository/sqlite/migrations/0001_init.sql)
-is the canonical DDL. It is embedded and applied verbatim on boot. There is exactly one
-migration, so `schema_version` is 1. The tables and columns highlighted above are the
-API-facing subset; when prose and SQL disagree, the SQL wins.
+is the canonical DDL. It is embedded and applied verbatim on boot. There are 25 domain tables
+plus `schema_migrations`, managed in Go; `schema_version` is 1. The tables and columns
+highlighted above are the API-facing subset: `balance_state`, `running_balances`,
+`capture_payloads`, `artifacts`, `import_batches`, `import_rows`, `import_events`,
+`import_uploads`, `import_upload_chunks`, `exports`, `export_events`, `custom_queries` and
+`schema_migrations` are not expanded here. When prose and SQL disagree, the SQL wins.
 An existing database whose recorded versions are not all embedded here is refused at boot
 with `unsupported schema version`; there is no upgrade path from an older build — move the
 old file aside and start fresh.
@@ -391,56 +398,92 @@ old file aside and start fresh.
 
 # 2. Endpoint map
 
-| # | method | path | scope | purpose |
-| --- | --- | --- | --- | --- |
-| 1 | POST | `/api/setup` | root only | wizard: base currency, accounts, seeded categories; irreversible |
-| 3 | GET | `/api/meta` | all four read scopes | bootstrap: settings, accounts, payees, rules, currencies |
-| 4 | PATCH | `/api/settings` | root only | mutable settings |
-| 5 | POST | `/api/accounts` | `accounts:write` | create account or category |
-| 6 | PATCH | `/api/accounts/{id}` | `accounts:write` | rename, icon, reparent, archive |
-| 7 | POST | `/api/payees` | `payees:write` | create payee |
-| 8 | PATCH | `/api/payees/{id}` | `payees:write` | rename, defaults, archive |
-| 9 | GET | `/api/entries` | `entries:read` | list, filter, optional running balance |
-| 10 | POST | `/api/entries` | `entries:write` | write entry + postings |
-| 11 | PATCH | `/api/entries/{id}` | `entries:write` | edit, void |
-| — | GET | `/api/entries/{ref}` | `entries:read` | one entry by ref, postings and display names included |
-| 12 | GET | `/api/captures` | `captures:read` | the review queue, paged |
-| 13 | POST | `/api/captures` | `captures:write` | capture: share text, image, file, email, manual |
-| 14 | PATCH | `/api/captures/{id}` | `captures:write` + action scope | approve `entries:write`, match `entries:read`, learning `payees:write` |
-| 15 | POST | `/api/recurring` | `recurring:write` | create rule or promote an entry |
-| 16 | PATCH | `/api/recurring/{id}` | `recurring:write` | accept, pause, end, edit |
-| 17 | GET | `/api/months/{year_month}` | `dashboard:read` | derived diff report, writes nothing |
-| 18 | GET | `/api/dashboard` | `dashboard:read` | five tiles for an explicit `from`/`to` window |
-| 19 | GET/POST | `/api/tokens` | root only | list tokens; mint a scoped token, secret returned once |
-| 20 | POST | `/api/tokens/{ref}/revoke` | root only | revoke without deleting the row |
-| 21 | GET | `/healthz` | none | liveness + migration state |
-| — | GET/PATCH | `/api/intake` | root only | mailbox settings, cursor and last outcome |
-| — | POST | `/api/intake/run` | root only | poll once now, return counts |
-| — | GET | `/api/intake/messages` | root only | every mail reference, newest first |
-| — | GET | `/api/intake/messages/{ref}` | root only | one reference and the capture it made |
-| — | POST | `/api/intake/messages/{ref}/refresh` | root only | latest state of that mail |
-| — | GET/POST | `/api/connections`, `/api/connections/google` | root only | read status, start an authorisation |
-| — | GET | `/api/connections/google/callback` | capability URL | signed state finishes an authorisation |
-| — | POST | `/api/connections/{ref}/revoke` | root only | revoke a connection |
-| — | GET | `/api/categorization/rules` | `categorization:read` | the live rules, paged, optionally with the archived ones |
-| — | POST | `/api/categorization/rules` | `categorization:write` | one deterministic rule: pattern, field, match kind, category |
-| — | PATCH | `/api/categorization/rules/{ref}` | `categorization:write` | repoint, reprioritise or archive a rule |
-| — | GET | `/api/categorization/suggest` | `categorization:read` | the category a payee or text would get, with its tier and reason |
+Public routes first; the rest are root-only or require the route scope shown. A token with
+`admin` or `*` reaches every scoped route. `GET /api/connections/google/callback` is public
+because the provider redirects a browser there; the signed `state` is its capability check.
 
-## Removed, and where it went
+| method | path | credential | purpose |
+| --- | --- | --- | --- |
+| GET | `/healthz` | public | liveness, build, schema and worker heartbeat |
+| GET | `/api/connections/google/callback` | public, signed `state` | finish a Google authorisation |
+| POST | `/api/setup` | root only | one-shot base currency and optional opening balances |
+| POST | `/api/password` | root only | rotate the instance password |
+| PATCH | `/api/settings` | root only | no field is accepted yet |
+| GET | `/api/tokens` | root only | list issued tokens |
+| POST | `/api/tokens` | root only | mint a scoped token, plaintext once |
+| POST | `/api/tokens/{ref}/revoke` | root only | revoke without deleting |
+| GET | `/api/connections` | root only | provider connection status |
+| POST | `/api/connections/google` | root only | start the Google authorisation flow |
+| POST | `/api/connections/{ref}/revoke` | root only | revoke a connection |
+| GET | `/api/intake` | root only | intake configuration |
+| PATCH | `/api/intake` | root only | set `enabled` and sender allowlist |
+| POST | `/api/intake/run` | root only | poll the mailbox once |
+| GET | `/api/intake/messages` | root only | mail references |
+| GET | `/api/intake/messages/{ref}` | root only | one mail reference |
+| POST | `/api/intake/messages/{ref}/refresh` | root only | refresh one mail reference |
+| GET | `/api/settings` | `settings:read` | the in-app settings |
+| GET | `/api/meta` | `settings:read` + collection reads | shell bootstrap |
+| GET | `/api/analytics/months` | `analytics:read` | spend and income per month |
+| GET | `/api/analytics/categories` | `analytics:read` | spend per category |
+| POST | `/api/analytics/custom` | `analytics:write` | save a named query |
+| PATCH | `/api/analytics/custom/{ref}` | `analytics:write` | edit a saved query |
+| GET | `/api/analytics/custom/{ref}` | `analytics:read` | run a saved query |
+| GET | `/api/dashboard` | `dashboard:read` | dashboard aggregates |
+| GET | `/api/categorization/rules` | `categorization:read` | list deterministic rules |
+| POST | `/api/categorization/rules` | `categorization:write` | create a rule |
+| PATCH | `/api/categorization/rules/{ref}` | `categorization:write` | edit a rule |
+| GET | `/api/categorization/suggest` | `categorization:read` | explain a category suggestion |
+| GET | `/api/accounts` | `accounts:read` | accounts with derived balances |
+| POST | `/api/accounts` | `accounts:write` | create an account or category |
+| PATCH | `/api/accounts/{ref}` | `accounts:write` | rename, reparent, archive |
+| GET | `/api/payees` | `payees:read` | payees with defaults |
+| POST | `/api/payees` | `payees:write` | create a payee |
+| PATCH | `/api/payees/{ref}` | `payees:write` | edit a payee |
+| GET | `/api/recurring` | `recurring:read` | rules, soonest due first |
+| POST | `/api/recurring` | `recurring:write` | create a rule |
+| PATCH | `/api/recurring/{ref}` | `recurring:write` | edit a rule |
+| GET | `/api/entries` | `entries:read` | list entries and postings |
+| GET | `/api/entries/{ref}` | `entries:read` | one entry with postings |
+| POST | `/api/entries` | `entries:write` | post a balanced entry |
+| PATCH | `/api/entries/{ref}` | `entries:write` | correct or void an entry |
+| GET | `/api/captures` | `captures:read` | review queue |
+| POST | `/api/captures` | `captures:write` | park an unconfirmed item |
+| PATCH | `/api/captures/{ref}` | `captures:write` + action scope | approve, reject, retry, match |
+| GET | `/api/captures/{ref}/artifact` | `captures:read` | stream a capture's document |
+| GET | `/api/imports` | `imports:read` | statement batches |
+| POST | `/api/imports` | `imports:write` | upload a CSV or one chunk |
+| GET | `/api/imports/{ref}` | `imports:read` | one batch with rows |
+| PATCH | `/api/imports/{ref}` | `imports:write` + `entries:write` on commit | commit or reject |
+| GET | `/api/imports/{ref}/events` | `imports:read` | batch event log |
+| PATCH | `/api/imports/{ref}/rows/{index}` | `imports:write` | edit, accept or skip a row |
+| GET | `/api/exports` | `exports:read` | export jobs |
+| POST | `/api/exports` | `exports:write` | queue an export |
+| GET | `/api/exports/{ref}` | `exports:read` | one job |
+| GET | `/api/exports/{ref}/events` | `exports:read` | job event log |
+| GET | `/api/exports/{ref}/download` | `exports:read` + `entries:read` | stream the rendered document |
+| GET | `/api/rates` | `rates:read` | one reference rate |
+| GET | `/api/audit` | `audit:read` | the append-only journal |
 
-| removed | replacement |
+## Removed, superseded and planned
+
+| removed or superseded | what exists now |
 | --- | --- |
-| `GET/PATCH /settings` split | `GET /meta` reads, `PATCH /settings` writes |
-| `GET /accounts`, `GET /payees`, `GET /recurring` | one `GET /meta` bootstrap call |
-| `GET /accounts/{id}/register` | `GET /entries?account_id=&running_balance=true` |
-| `GET /entries/{id}` | `GET /entries/{ref}`, or `GET /entries?refs=` for a batch |
-| `POST /entries/{id}/void` | `PATCH /entries/{id}` `{"void":true,"reason":"..."}` |
-| approve / reject / retry endpoints | `PATCH /captures/{id}` `{"action":"approve"}` etc. |
-| `POST /recurring/detect` | weekly worker, no HTTP surface |
-| `POST /internal/extractions/{id}/callback` | provider calls `PATCH /captures/{id}` with a `captures:write` token |
-| `GET /periods`, `month_closes`, `closed_periods` | none. The month report is computed from the ledger on every read |
-| `/api/v2` prefix | none |
+| `PATCH /api/settings` with a currency field | no patchable field; `POST /api/setup` locks the currency once |
+| `GET /accounts`, `/payees`, `/recurring` as the only bootstrap | those list routes still exist; `GET /api/meta` adds a complete bootstrap payload |
+| `GET /accounts/{id}/register` | `GET /api/entries?account_ref=&with_balance=true` |
+| integer `{id}` paths | `{ref}` everywhere on the wire |
+| `POST /entries/{id}/void` | `PATCH /api/entries/{ref}` with `{"void":true,"reason":"..."}` |
+| separate approve/reject/retry endpoints | `PATCH /api/captures/{ref}` with a body `action` |
+| `POST /recurring/detect` | no HTTP detection route and no detection worker; create rules with `POST /api/recurring` |
+| `POST /internal/extractions/{id}/callback` | no extraction-provider callback; `PATCH /api/captures/{ref}` with `action:"retry"` polls the SnapToJSON `job_ref` |
+| `PATCH /api/tokens/{id}` | `POST /api/tokens/{ref}/revoke` |
+| `GET /api/months/{year_month}` | `GET /api/analytics/months` returns monthly totals only |
+| `raw/<sha256>` | `artifacts/`, `imports/` and `exports/` under `./data` |
+| capture action `extracted` | not accepted; vendor output reaches a capture through `retry` |
+
+Design ideas that are **not shipped** — a completeness gate, scheduled FX refresh with an HTML
+fallback, detected recurring rules, a derived four-way month diff, a PWA/offline outbox and a
+production integrity job — are listed in [`endpoints/planned.md`](./endpoints/planned.md).
 
 ---
 
@@ -551,7 +594,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as PWA
+    participant UI as Client
     participant API as Accounts handler
     participant DB as SQLite
     UI->>API: POST account with name, kind and optional parent_ref
@@ -565,15 +608,15 @@ sequenceDiagram
 Opening balances are written only by `POST /api/setup`; account creation never posts
 to the ledger.
 
-## 3.5 `PATCH /api/accounts/{id}`
+## 3.5 `PATCH /api/accounts/{ref}`
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as PWA
+    participant UI as Client
     participant API as Accounts handler
     participant DB as SQLite
-    UI->>API: PATCH account id
+    UI->>API: PATCH account ref
     API->>DB: SELECT account
     alt kind change requested
         API-->>UI: 409 kind_immutable
@@ -591,7 +634,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as PWA
+    participant UI as Client
     participant API as Payees handler
     participant DB as SQLite
     UI->>API: POST payee
@@ -604,15 +647,15 @@ sequenceDiagram
     end
 ```
 
-## 3.7 `PATCH /api/payees/{id}`
+## 3.7 `PATCH /api/payees/{ref}`
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as PWA
+    participant UI as Client
     participant API as Payees handler
     participant DB as SQLite
-    UI->>API: PATCH payee id
+    UI->>API: PATCH payee ref
     API->>DB: BEGIN IMMEDIATE
     API->>DB: UPDATE payees SET name, defaults or archived_at
     API->>DB: INSERT audit_log and COMMIT
@@ -634,7 +677,7 @@ single balance to walk and the field is omitted.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as PWA
+    participant UI as Client
     participant API as Entries handler
     participant DB as SQLite
     UI->>API: GET entries with filters
@@ -647,10 +690,11 @@ sequenceDiagram
 
 ```json
 { "client_id":"01924f7c-8f3a-7c11-9d0e-2b7f5a1c9e42",
-  "occurred_on":"2025-09-14", "payee_id":12, "note":"flat white",
+  "occurred_on":"2025-09-14",
+  "payee_ref":"0000000000000000000000000000000c", "note":"flat white",
   "currency":"IDR",
-  "postings":[{ "account_id":21, "amount_minor":"25000" },
-              { "account_id":3,  "amount_minor":"-25000" }] }
+  "postings":[{ "account_ref":"00000000000000000000000000000015", "amount_minor":"25000" },
+              { "account_ref":"00000000000000000000000000000003", "amount_minor":"-25000" }] }
 ```
 
 Note the date: three months back. Any month is writable, because the ledger is the only truth.
@@ -658,15 +702,15 @@ Note the date: three months back. Any month is writable, because the ledger is t
 ```mermaid
 sequenceDiagram
     autonumber
-    participant PWA as PWA outbox
+    participant C as Client
     participant API as Entries handler
     participant FX as Rate resolver
     participant DB as SQLite
-    PWA->>API: POST entry with client_id and postings
+    C->>API: POST entry with client_id and postings
     API->>API: require scope entries:write
     API->>DB: SELECT ledger_entries WHERE client_id equals
     alt replay
-        API-->>PWA: 200 existing entry
+        API-->>C: 200 existing entry
     else new
         API->>API: validate zero sum
         API->>FX: rate native to base for occurred_on
@@ -680,21 +724,21 @@ sequenceDiagram
         API->>DB: INSERT audit_log
         API->>DB: COMMIT
         API->>API: no lock to consult, any month is writable
-        API-->>PWA: 201 entry
+        API-->>C: 201 entry
     end
 ```
 
-## 3.10 `PATCH /api/entries/{id}`
+## 3.10 `PATCH /api/entries/{ref}`
 
 ```json
-{ "note":"flat white, large", "payee_id":13 }
+{ "note":"flat white, large", "payee_ref":"0000000000000000000000000000000d" }
 { "void": true, "reason": "duplicate of 811" }
 ```
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as PWA
+    participant UI as Client
     participant API as Entry handler
     participant DB as SQLite
     UI->>API: PATCH entry with fields or void flag
@@ -719,7 +763,8 @@ sequenceDiagram
 
 ## 3.11 `GET /api/captures`
 
-`?status=pending&batch_id=&cursor=&limit=20`. Extracting first, then oldest pending.
+`?status=&refs=&cursor=&limit=`. Extracting first, then oldest pending. `batch_id` is a
+`POST` body field, not a list filter.
 
 ```mermaid
 sequenceDiagram
@@ -727,7 +772,7 @@ sequenceDiagram
     participant UI as Review screen
     participant API as Captures handler
     participant DB as SQLite
-    UI->>API: GET captures with status filter
+    UI->>API: GET captures with status and ref filters
     API->>DB: SELECT captures with resolved_entry_id and batch info
     API->>API: decrypt sealed columns with APP_SECRET
     API->>API: order extracting first, then pending by received_at
@@ -741,59 +786,67 @@ sequenceDiagram
   "raw_text":"BCA: Transaksi Rp25.000 di KOPI KENANGAN 14/02 08:12" }
 ```
 
-`multipart/form-data` with `file` for images and statements. Always `202`. With extraction
-disabled the row stays `pending` with an empty draft and you type the fields.
+`multipart/form-data` with `file` for images and statements. A new capture answers `202`;
+a replayed `client_id` or the same `dedupe_key` answers `200` with the existing row. With
+extraction disabled the row stays `pending` with an empty draft and you type the fields.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant PWA as PWA outbox or agent
+    participant C as Agent or share client
     participant API as Captures handler
-    participant ST as Local storage
-    participant W as Extraction worker
+    participant M as Captures module
+    participant ST as Artifact store
+    participant X as Extraction rail
     participant DB as SQLite
-    PWA->>API: POST capture with client_id and payload
+    C->>API: POST capture with client_id and payload
     API->>API: require scope captures:write
-    API->>DB: SELECT captures WHERE client_id equals
-    alt replay
-        API-->>PWA: 200 existing capture
-    else new
-        API->>API: compute dedupe_key, seal raw_text into capture_payloads
-        API->>DB: SELECT captures WHERE dedupe_key equals
-        alt duplicate
-            API-->>PWA: 200 existing capture
-        else unique
-            API->>ST: encrypt blob with AES-GCM into raw/<sha256>
-            API->>DB: INSERT captures status extracting when extraction enabled else pending
-            API->>W: enqueue only when extraction enabled
-            API-->>PWA: 202 accepted
+    API->>M: Create input
+    M->>DB: SELECT captures WHERE dedupe_key equals
+    alt duplicate
+        M-->>API: existing capture
+        API-->>C: 200 existing capture
+    else unique
+        M->>DB: INSERT captures, seal raw_text into capture_payloads
+        M->>ST: encrypt blob into artifacts/<sha[0:2]>/<sha[2:4]>/<sha>
+        opt extraction configured
+            M->>X: submit or poll the job
+            X-->>M: report
+            M->>DB: update draft and status through an unresolved-only write
         end
+        API-->>C: 202 accepted
     end
 ```
 
-## 3.13 `PATCH /api/captures/{id}`
+## 3.13 `PATCH /api/captures/{ref}`
 
 ```json
-{ "action": "approve", "payee_id": 12, "occurred_on": "2025-09-14", "currency": "IDR",
-  "postings": [{ "account_id": 21, "amount_minor": "25000" },
-               { "account_id": 3,  "amount_minor": "-25000" }] }
+{ "action": "approve", "payee_ref":"0000000000000000000000000000000c",
+  "occurred_on": "2025-09-14", "currency": "IDR",
+  "postings": [{ "account_ref":"00000000000000000000000000000015", "amount_minor": "25000" },
+               { "account_ref":"00000000000000000000000000000003", "amount_minor": "-25000" }] }
 { "action": "reject", "reason": "not my card" }
 { "action": "retry" }
-{ "action": "match", "entry_id": 811 }
-{ "action": "extracted", "draft": { "...": "provider output, schema owned by provider" } }
+{ "action": "match", "entry_ref":"00000000000000000000000000000329" }
 ```
+
+`extracted` is **not** an accepted action: vendor output reaches a capture through
+`retry`; an extraction-provider callback is not shipped. Resolved captures cannot be reopened.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as Review screen or provider
+    participant UI as Review screen
     participant API as Capture handler
+    participant X as Extraction rail
     participant FX as Rate resolver
     participant DB as SQLite
     UI->>API: PATCH capture with action and fields
-    API->>DB: SELECT capture
-    alt action extracted
-        API->>DB: UPDATE capture_payloads draft_json sealed and unresolved captures
+    API->>DB: SELECT capture and refuse a resolved one
+    alt action retry
+        API->>X: poll the stored job_ref
+        X-->>API: report
+        API->>DB: update draft and status through an unresolved-only write
         API-->>UI: 200 capture
     else action reject
         API->>DB: UPDATE captures SET status rejected, resolution_note sealed, resolved_at
@@ -817,69 +870,57 @@ sequenceDiagram
 
 ## 3.14 `POST /api/recurring`
 
-Create directly, or promote an entry: `?from_entry_id=812`.
+Create a rule directly. There is no `from_entry_id` promotion route and no detection route.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as PWA
+    participant UI as Client
     participant API as Recurring handler
     participant DB as SQLite
-    UI->>API: POST recurring with cadence or from_entry_id
-    opt from_entry_id present
-        API->>DB: SELECT entry and postings, derive payee and amount
-    end
-    API->>API: validate cadence, day_of_month, compute first due with business_day_shift
+    UI->>API: POST recurring with refs, amount and cadence
+    API->>API: validate cadence, day_of_month and next_due_on
     API->>DB: BEGIN IMMEDIATE
     API->>DB: INSERT recurring_rules origin user state active
     API->>DB: INSERT audit_log and COMMIT
     API-->>UI: 201 rule
 ```
 
-## 3.15 `PATCH /api/recurring/{id}`
+## 3.15 `PATCH /api/recurring/{ref}`
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as PWA
+    participant UI as Client
     participant API as Recurring handler
     participant DB as SQLite
     UI->>API: PATCH rule state or fields
     API->>DB: SELECT rule
-    alt already ended
-        API-->>UI: 409 already_ended
-    else allowed transition
-        API->>DB: BEGIN IMMEDIATE
-        API->>DB: UPDATE recurring_rules
-        API->>DB: INSERT audit_log from_json to_json and COMMIT
-        API-->>UI: 200 rule
-    end
+    API->>DB: BEGIN IMMEDIATE
+    API->>DB: UPDATE recurring_rules
+    API->>DB: INSERT audit_log from_json to_json and COMMIT
+    API-->>UI: 200 rule
 ```
 
-## 3.16 `GET /api/months/{year_month}`
+## 3.16 `GET /api/analytics/months`
 
-Derived, never stored. Optional `?statement_balance[3]=9540000` per account.
-
-The ledger is the only truth: no close table, no snapshot, no lock. A month is just a range of
-`occurred_on`, and this recomputes the diff every time you look.
+Derived, never stored: `{ "from":"YYYY-MM-DD", "to":"YYYY-MM-DD",
+"months":[{"month":"YYYY-MM","spend_minor":"...","income_minor":"...","net_minor":"..."}] }`.
+`from` and `to` are optional; the default is the trailing 12 months ending today in UTC.
+There is no statement-balance input, four-way diff or adjustment body: those belong to a
+planned month report, not to this route.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant UI as Month screen
-    participant API as Month report handler
+    participant UI as Client
+    participant API as Analytics handler
     participant DB as SQLite
-    UI->>API: GET month report with optional statement balances
-    API->>API: require scope dashboard:read
-    API->>DB: SELECT count captures pending or extracting in month
-    API->>DB: SELECT SUM base_amount_minor per account for month
-    API->>DB: SELECT recurring rules due in month
-    API->>API: split diff into unlogged, fx_movement, price_change, rounding
-    API-->>UI: 200 expected, tracked, 4-way diff and a ready adjustment body
+    UI->>API: GET analytics months with optional from and to
+    API->>API: require scope analytics:read and resolve the window
+    API->>DB: SUM postings per month in the window
+    API-->>UI: 200 from, to and months
 ```
-
-The response carries `adjustment_body`, a ready-to-POST `POST /api/entries` payload for the
-unlogged bucket. Posting it is your decision; the report itself writes nothing.
 
 ## 3.17 `GET /api/dashboard`
 
@@ -895,18 +936,22 @@ sequenceDiagram
     API->>DB: SELECT monthly totals in the window
     API->>DB: SELECT pending captures received in the window
     API->>DB: SELECT top expense category in the window
-    API-->>UI: 200 {from, to, base_currency, month, months, money tiles, pending, top_category}
+    API-->>UI: 200 {from, to, base_currency, month, spend_minor, income_minor, net_minor, months, pending_captures, top_category?}
 ```
 
 `from` and `to` are required, inclusive, and echoed in the response. The inclusive window
 must not span more than 366 days. The month tile describes the newest month with data in
 that window; an empty window uses the month of `to`. `months` carries every month in the
-window that has data, oldest first. There is no server-side default.
+window that has data, oldest first. `top_category` is omitted when the window has no
+expense category; when present it carries `account_ref`, `account_name` and `amount_minor`.
+There is no server-side default and no safe-to-spend, forecast or month-pace field.
 
 ## 3.18 `POST /api/tokens`
 
-`{ "name":"laptop-agent", "scopes":["captures:write","dashboard:read"] }`
-Returns `{ "id":2, "token":"spn_...", "scopes":[...] }` — plaintext shown once.
+Root-only. `{ "name":"laptop-agent", "scopes":["captures:write","dashboard:read"],
+"expires_at":"2026-12-31T00:00:00Z" }`; `expires_at` is optional. Returns the token row
+with `ref`, `name`, `preview`, `scopes`, `created_at`, optional `last_used_at`,
+`revoked_at` and `expires_at`, plus `token` once. There is no integer `id` on the wire.
 
 ```mermaid
 sequenceDiagram
@@ -914,17 +959,20 @@ sequenceDiagram
     participant U as User
     participant API as Tokens handler
     participant DB as SQLite
-    U->>API: POST token with name and scopes
-    API->>API: require the credential, require APP_SECRET for hashing
+    U->>API: POST token with name, scopes and optional expiration
+    API->>API: require the root credential and APP_SECRET for hashing
     API->>API: validate scopes, generate 32 byte secret
     API->>DB: BEGIN IMMEDIATE
-    API->>DB: INSERT api_tokens with HMAC of secret
+    API->>DB: INSERT api_tokens with HMAC of secret and masked preview
     API->>DB: INSERT audit_log action create
     API->>DB: COMMIT
-    API-->>U: 201 token secret shown once
+    API-->>U: 201 token row and plaintext secret shown once
 ```
 
-## 3.19 `PATCH /api/tokens/{id}`
+## 3.19 `POST /api/tokens/{ref}/revoke`
+
+Root-only. Revocation stamps `revoked_at`; the row and its journal entries remain and the
+credential stops authenticating. The `200` response is the token row, never the secret.
 
 ```mermaid
 sequenceDiagram
@@ -932,7 +980,7 @@ sequenceDiagram
     participant U as User
     participant API as Tokens handler
     participant DB as SQLite
-    U->>API: PATCH token revoked
+    U->>API: POST token ref revoke
     API->>DB: BEGIN IMMEDIATE
     API->>DB: UPDATE api_tokens SET revoked_at
     API->>DB: INSERT audit_log action revoke
@@ -942,7 +990,8 @@ sequenceDiagram
 
 ## 3.20 `GET /healthz`
 
-`200 {"status":"ok","version":"v0.1.1+e0d15ce","started_at":"2026-04-15T08:00:00Z","schema_version":1,"app_secret":"sealed","base_currency":"IDR","timezone":"UTC","worker_last_run_at":"2026-04-15T09:00:00Z"}`
+Public.
+`200 {"status":"ok","version":"v0.1.1+e0d15ce","started_at":"2026-04-15T08:00:00Z","schema_version":1,"app_secret":"<fingerprint>","base_currency":"IDR","timezone":"UTC","worker_last_run_at":"2026-04-15T09:00:00Z"}`
 
 ```mermaid
 sequenceDiagram
@@ -952,14 +1001,17 @@ sequenceDiagram
     participant DB as SQLite
     M->>API: GET healthz
     API->>DB: SELECT version FROM schema_migrations
-    API->>DB: probe WAL writability with SELECT 1
+    API->>DB: ping the database
     API->>DB: SELECT v FROM settings WHERE k = worker_last_run_at
     alt db ok
-        API-->>M: 200 status ok, version, started_at, schema_version, fingerprint
-    else db failing
-        API-->>M: 503 status degraded with reason
+        API-->>M: 200 status, version, started_at, schema_version, fingerprint, currency, timezone and heartbeat
+    else db failing or timed out
+        API-->>M: 503 degraded with reason
     end
 ```
+
+`app_secret` is the sealer fingerprint, never the secret or a sealed envelope. An empty
+`worker_last_run_at` means the worker has not finished a run.
 
 `config.Start` also appends one `audit_log` row (`entity_kind=system`, `action=start`,
 `actor_kind=system`) with the service name, build version, schema version and UTC start
@@ -969,13 +1021,20 @@ time, so a restarted process's release evidence remains in the database.
 
 # 4. Workers
 
-| worker | trigger | writes |
-| --- | --- | --- |
-| `ExtractionWorker` | queue, only when extraction enabled | `capture_payloads.draft_json`, `captures.status` |
-| `RecurringWorker` | hourly (`spenicle worker` or `all`) | queues `captures` rows with `kind='recurring'`; never posts a ledger entry |
-| `DetectionWorker` | weekly | `recurring_rules` `origin='detected'` |
-| `RateWorker` | boot + 16:30 CET | `fx_rates`, memory cache |
-| `IntegrityWorker` | boot + after import | zero-sum verification, reports to `audit_log` |
-| `ArtifactPruner` | hourly with the recurring run | deletes the file of a `rejected` capture older than `ArtifactRetention`, stamps `artifacts.deleted_at`, ledger untouched |
-| `ExportWorker` | every worker run, 5 jobs per pass | renders a `queued` export into the artifact store, stamps `exports.file_hash`, `bytes`, `counts_json`, `finished_at` and `expires_at = now + ExportRetention` |
-| `ExportSweeper` | every worker run, after the claims | fails a `running` export older than `ExportStaleAfter`, drops the blob of a `ready` export past `expires_at` and marks it `expired`, 20 per run |
+`spenicle worker` runs one `Runner.Run` per tick, in this order:
+
+1. Find due recurring rules (at most 100) and queue a capture for each, with a catch-up
+   cap of 60. The worker never posts a ledger entry.
+2. Reclaim artifacts of rejected captures older than `ArtifactRetention` and stamp
+   `artifacts.deleted_at`.
+3. Drop expired import drafts, then open import uploads older than 24 hours.
+4. Resume interrupted export jobs, claim up to 5 queued exports, render them and sweep
+   stale `running` and expired `ready` jobs.
+5. Poll the configured mailbox, queueing captures and never posting a ledger entry.
+6. Write `settings.worker_last_run_at` as the heartbeat.
+
+Rate refresh is not a worker job: `config.Start` warms the ECB-backed rate source at boot.
+The ECB adapter performs one XML GET and has no HTML fallback. Extraction is performed
+inline by `Module.Captures` during capture creation/retry; there is no extraction worker.
+Detection of recurring rules, the periodic integrity job and an extraction-provider callback are
+not implemented.

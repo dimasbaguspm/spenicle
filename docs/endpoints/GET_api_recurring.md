@@ -8,7 +8,7 @@ List the recurring rules: what repeats, how often and when it is next due, soone
 
 ## Upstream
 
-Recurring screen, the dashboard's "next bills" tile, an agent checking what is already planned before proposing a rule.
+Recurring screen, and an agent checking what is already planned before proposing a rule.
 
 ## Downstream
 
@@ -19,7 +19,7 @@ Recurring screen, the dashboard's "next bills" tile, an agent checking what is a
 | name | type | default | notes |
 | --- | --- | --- | --- |
 | `state` | string | all | `suggested`, `active`, `paused`, `ended` |
-| `cadence` | string | all | `weekly`, `monthly`, `yearly` |
+| `cadence` | string | all | `daily`, `weekly`, `monthly`, `yearly` |
 | `query` | string | — | case-insensitive prefix of the payee name |
 | `refs` | string | — | comma-separated rule refs |
 | `cursor` | ref | — | rules after the one with that ref, in `next_due_on` order |
@@ -43,7 +43,10 @@ None.
 
 ## Limitations
 
-Rules are read-only here: steering one (pausing, ending, moving the due date) is `PATCH /api/recurring/{ref}`, and nothing materialises a due rule into an entry yet — `next_due_on` is data, not a scheduler. `query` matches the payee name only, as a case-insensitive prefix.
+Rules are read-only here: steering one (pausing, ending, moving the due date) is
+`PATCH /api/recurring/{ref}`. The worker turns a due rule into a queued `captures` row;
+it never posts an entry. Detection and suggested-rule promotion are **planned, not shipped**.
+`query` matches the payee name only, as a case-insensitive prefix.
 
 ## Sequence
 
