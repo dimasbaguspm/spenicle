@@ -94,7 +94,7 @@ func openWithRetry(ctx context.Context, dsn string, cfg Config) (*sql.DB, error)
 			return nil, err
 		}
 
-		telemetry.RecordSQLiteLocked(ctx)
+		telemetry.RecordSQLiteLocked(ctx, telemetry.OperationOpen)
 
 		locked = err
 	}

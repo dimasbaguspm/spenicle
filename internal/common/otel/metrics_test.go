@@ -57,6 +57,11 @@ func TestAttributeMappings(t *testing.T) {
 			attrs: telemetry.ImportClashAttributes("duplicate"),
 			want:  map[string]string{"spenicle.clash.kind": "duplicate"},
 		},
+		{
+			name:  "sqlite lock names the bounded operation",
+			attrs: telemetry.SQLiteAttributes(telemetry.OperationCommit),
+			want:  map[string]string{"spenicle.operation": "commit"},
+		},
 	}
 
 	for _, test := range tests {

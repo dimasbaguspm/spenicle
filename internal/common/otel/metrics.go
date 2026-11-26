@@ -18,6 +18,7 @@ const (
 	AttrJob       = "spenicle.job"
 	AttrRows      = "spenicle.rows"
 	AttrOutcome   = "spenicle.outcome"
+	AttrOperation = "spenicle.operation"
 	AttrSource    = "spenicle.entry.source"
 	AttrKind      = "spenicle.capture.kind"
 	AttrClashKind = "spenicle.clash.kind"
@@ -46,6 +47,13 @@ const (
 	OutcomeOK      = "ok"
 	OutcomeFailed  = "failed"
 	OutcomeSkipped = "skipped"
+)
+
+const (
+	OperationOpen   = "open"
+	OperationBegin  = "begin"
+	OperationWrite  = "write"
+	OperationCommit = "commit"
 )
 
 const meterName = "spenicle"
@@ -121,7 +129,7 @@ func newInstruments() *instrumentSet {
 		exportBytes: mustIntHistogram(meter, "spenicle.exports.bytes", unitByte,
 			"Size of a rendered export document"),
 		sqliteLocked: mustCounter(meter, "spenicle.sqlite.locked", unitRetry,
-			"SQLite open attempts that lost the write lock and retried"),
+			"SQLite operations that lost the write lock, by operation"),
 	}
 }
 
@@ -214,6 +222,10 @@ func ImportClashAttributes(kind string) []attribute.KeyValue {
 	return []attribute.KeyValue{attribute.String(AttrClashKind, kind)}
 }
 
+func SQLiteAttributes(operation string) []attribute.KeyValue {
+	return []attribute.KeyValue{attribute.String(AttrOperation, operation)}
+}
+
 func RecordHTTPRequest(
 	ctx context.Context,
 	method, route string,
@@ -270,6 +282,8 @@ func RecordExportBytes(ctx context.Context, size int64) {
 	instruments().exportBytes.Record(ctx, size)
 }
 
-func RecordSQLiteLocked(ctx context.Context) {
-	instruments().sqliteLocked.Add(ctx, 1)
+func RecordSQLiteLocked(ctx context.Context, operation string) {
+	attrs := metric.WithAttributes(SQLiteAttributes(operation)...)
+
+	instruments().sqliteLocked.Add(ctx, 1, attrs)
 }

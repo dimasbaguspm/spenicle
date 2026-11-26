@@ -20,16 +20,28 @@ func (s *Store) WithTx(ctx context.Context, fn func(context.Context, *sql.Tx) er
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
+		if isLocked(err) {
+			telemetry.RecordSQLiteLocked(ctx, telemetry.OperationBegin)
+		}
+
 		return fmt.Errorf("begin: %w", err)
 	}
 
 	defer func() { _ = tx.Rollback() }()
 
 	if err := fn(context.WithValue(ctx, txKey{}, tx), tx); err != nil {
+		if isLocked(err) {
+			telemetry.RecordSQLiteLocked(ctx, telemetry.OperationWrite)
+		}
+
 		return err
 	}
 
 	if err := tx.Commit(); err != nil {
+		if isLocked(err) {
+			telemetry.RecordSQLiteLocked(ctx, telemetry.OperationCommit)
+		}
+
 		return fmt.Errorf("commit: %w", err)
 	}
 

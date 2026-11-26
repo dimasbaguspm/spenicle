@@ -1,0 +1,21 @@
+groups:
+  - name: spenicle-sqlite
+    rules:
+      - alert: SpenicleSQLiteLockContention
+        expr: sum by (spenicle_operation) (rate(spenicle_sqlite_locked_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          service: spenicle
+        annotations:
+          summary: SQLite {{ $labels.spenicle_operation }} is contended on {{ $labels.instance }}
+          description: The {{ $labels.spenicle_operation }} step lost the write lock more than once every 20 seconds for 10 minutes. Check the other process sharing the SQLite file.
+      - alert: SpenicleSQLiteLockContentionHigh
+        expr: sum by (spenicle_operation) (rate(spenicle_sqlite_locked_total[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+          service: spenicle
+        annotations:
+          summary: SQLite {{ $labels.spenicle_operation }} is heavily contended on {{ $labels.instance }}
+          description: The {{ $labels.spenicle_operation }} step lost the write lock more than twice a second for 5 minutes. Requests are waiting on the one SQLite writer.

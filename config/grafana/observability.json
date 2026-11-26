@@ -462,12 +462,12 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Open attempts that lost the SQLite write lock and retried. A steady rate means two processes are contending for the one writer.",
+      "description": "Operations that lost the SQLite write lock, by open|begin|write|commit. A steady rate means two processes are contending for the one writer.",
       "fieldConfig": {
         "defaults": {
           "noValue": "No data",
           "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
-          "unit": "short"
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -482,8 +482,8 @@
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "sum(rate(spenicle_sqlite_locked_total[5m]))",
-          "legendFormat": "lock retries",
+          "expr": "sum by (spenicle_operation) (rate(spenicle_sqlite_locked_total[5m]))",
+          "legendFormat": "{{spenicle_operation}}",
           "range": true,
           "refId": "A"
         }
@@ -832,5 +832,5 @@
   "timezone": "browser",
   "title": "Spenicle observability",
   "uid": "spenicle-observability",
-  "version": 2
+  "version": 3
 }

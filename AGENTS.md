@@ -329,8 +329,9 @@ Rules that bind every change:
   HTTP clients (ECB, SnapToJSON, OpenAI) go through `otelhttp.NewTransport`, so a vendor call is
   a child span with its real status.
 - **Attributes come from one constant set** in `internal/common/otel` (`telemetry.AttrVersion`,
-  `AttrComponent`, `AttrRef`, `AttrJob`, `AttrRows`, `AttrOutcome`, `AttrSource`, `AttrKind`,
-  `AttrClashKind`) plus the semantic conventions where they exist (`http.request.method`,
+  `AttrComponent`, `AttrRef`, `AttrJob`, `AttrRows`, `AttrOutcome`, `AttrOperation`,
+  `AttrSource`, `AttrKind`, `AttrClashKind`) plus the semantic conventions where they exist
+  (`http.request.method`,
   `http.route` as the *template*, `http.response.status_code`, `db.system=sqlite`,
   `db.operation`). `telemetry.StartSpan` stamps `spenicle.version` + `spenicle.component` on
   every span, so no call site repeats them; `telemetry.Ref` tags the current span. Kinds belong
@@ -345,12 +346,14 @@ Rules that bind every change:
   `spenicle.worker.runs|items|run.duration`, `spenicle.ledger.entries|postings`,
   `spenicle.captures.transitions`, `spenicle.imports.rows|clashes`, `spenicle.exports.bytes`,
   `spenicle.sqlite.locked`, plus `otelruntime`. Attributes are bounded enums only (`job`,
-  `outcome`, `source`, `clash.kind`, `http.route`); a ref, a name or an amount in an attribute
-  is a defect.
-- **The dashboard is code**: [`config/grafana/observability.json`](./config/grafana/observability.json)
-  holds the provisioned JSON and [`docs/observability.md`](./docs/observability.md) explains the
-  OTLP wiring, the metric table and how a `trace_id` joins a log line to its span, so a panel
-  change is reviewed like any other diff.
+  `outcome`, `operation`, `source`, `clash.kind`, `http.route`); a ref, a name or an amount in
+  an attribute is a defect. Lock losses are recorded on `open`, `begin`, `write` and `commit`.
+- **The dashboard and its alerts are code**:
+  [`config/grafana/observability.json`](./config/grafana/observability.json) holds the
+  provisioned JSON, [`config/prometheus/alerts.yml`](./config/prometheus/alerts.yml) holds the
+  SQLite contention rules, and [`docs/observability.md`](./docs/observability.md) explains the
+  OTLP wiring, the metric table and how a `trace_id` joins a log line to its span, so a panel or
+  an alert changes like any other diff.
 
 ## Dependencies
 

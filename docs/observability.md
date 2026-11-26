@@ -70,11 +70,12 @@ defect.
 | `spenicle.imports.rows` | counter | `{row}` | — |
 | `spenicle.imports.clashes` | counter | `{clash}` | `spenicle.clash.kind` |
 | `spenicle.exports.bytes` | histogram | `By` | — |
-| `spenicle.sqlite.locked` | counter | `{retry}` | — |
+| `spenicle.sqlite.locked` | counter | `{retry}` | `spenicle.operation` |
 
 `spenicle.job` is one of `recurring|artifacts|imports|exports|sweep`;
 `spenicle.outcome` is `ok|failed|skipped` for a worker step and the resulting status for a
-capture transition. Plus `otelruntime`, which publishes the Go runtime metrics under its own
+capture transition. `spenicle.operation` is `open|begin|write|commit`: the SQLite step that
+lost the write lock. Plus `otelruntime`, which publishes the Go runtime metrics under its own
 `runtime.` namespace.
 
 The instrument set is created once, lazily, against the provider `Setup` installed
@@ -128,7 +129,7 @@ curl -s http://localhost:3000/api/dashboards/db \
 | | Average latency by route (`s`) | `sum by (http_route) (rate(spenicle_http_server_duration_seconds_sum[5m])) / sum by (http_route) (rate(spenicle_http_server_duration_seconds_count[5m]))` |
 | Every route in one glance | Routes: rate, errors, latency (table) | four instant queries: the rate, the 5xx ratio, the average and the p95 above, then `merge` → `organize` (rename `Value #A…D`, `http_route` → `route`) → `sortBy` `error %` descending |
 | Saturation | In-flight requests | `sum by (http_route) (spenicle_http_server_in_flight)` |
-| | SQLite lock retries | `sum(rate(spenicle_sqlite_locked_total[5m]))` |
+| | SQLite lock retries | `sum by (spenicle_operation) (rate(spenicle_sqlite_locked_total[5m]))` |
 | Worker | Runs by job and outcome | `sum by (spenicle_job, spenicle_outcome) (rate(spenicle_worker_runs_total[5m]))` |
 | | Items by job | `sum by (spenicle_job) (rate(spenicle_worker_items_total[5m]))` |
 | | Run duration p95 (`s`) | `histogram_quantile(0.95, sum by (le, spenicle_job) (rate(spenicle_worker_run_duration_seconds_bucket[5m])))` |
@@ -150,6 +151,23 @@ appended once — `spenicle.http.server.duration` with unit `s` is
 `spenicle_http_server_duration_seconds_bucket`, and `spenicle.exports.bytes` with unit `By`
 is `spenicle_exports_bytes_bucket` (the `_bytes` suffix is not doubled). Labels follow the
 same rule: `spenicle.job` is `spenicle_job`.
+
+### Alert rules
+
+[`config/prometheus/alerts.yml`](../config/prometheus/alerts.yml) is a Prometheus rule file for
+the one-writer model. Load it with `rule_files:` in the collector that scrapes the app. The
+counter moves only when SQLite reports `SQLITE_BUSY` or `SQLITE_LOCKED` after `busy_timeout`,
+so short waits absorbed by the driver do not page anyone.
+
+| alert | expression | for | severity |
+| --- | --- | --- | --- |
+| `SpenicleSQLiteLockContention` | `sum by (spenicle_operation) (rate(spenicle_sqlite_locked_total[5m])) > 0.05` | `10m` | warning |
+| `SpenicleSQLiteLockContentionHigh` | same with `> 0.5` | `5m` | critical |
+
+`spenicle_operation` is bounded to `open|begin|write|commit`, so an alert names the step that
+lost the write lock without carrying a ref or an unbounded label. Both alerts are per
+operation; sustained contention means the `http` and `worker` processes are competing for the
+one SQLite writer.
 
 The heartbeat panel reads `spenicle_worker_last_run_timestamp_seconds`, which nothing exports
 today. The durable source is `worker_last_run_at` in `settings`, written by the worker only
