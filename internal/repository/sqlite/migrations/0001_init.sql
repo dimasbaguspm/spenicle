@@ -56,6 +56,8 @@ CREATE TABLE payees (
   archived_at         TEXT,
   created_at          TEXT NOT NULL
 );
+CREATE INDEX ix_accounts_name_prefix ON accounts (lower(name));
+CREATE INDEX ix_payees_name_prefix ON payees (lower(name));
 
 CREATE TABLE categorization_rules (
   id          INTEGER PRIMARY KEY,
@@ -96,6 +98,7 @@ CREATE TABLE recurring_rules (
 );
 
 CREATE INDEX ix_recurring_due ON recurring_rules (state, next_due_on, id);
+CREATE INDEX ix_recurring_payee ON recurring_rules (payee_id, next_due_on, id);
 
 CREATE TABLE ledger_entries (
   id                INTEGER PRIMARY KEY,

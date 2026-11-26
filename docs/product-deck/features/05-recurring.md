@@ -38,7 +38,7 @@ category, amount and currency — there is no separate promote route, and the cl
 
 | # | call | notes |
 | --- | --- | --- |
-| 1 | `GET /api/recurring` | soonest due first; `state`, `cadence`, `query` (payee name), `refs` filters |
+| 1 | `GET /api/recurring` | soonest due first; `state`, `cadence`, `query` (case-insensitive prefix of the payee name), `refs` filters |
 | 2 | `PATCH /api/recurring/{ref}` `{"state":"paused"}` | pause without losing the schedule |
 | 3 | `PATCH /api/recurring/{ref}` `{"amount_minor":"-2750000"}` | the rent went up: correct the rule, not the history |
 | 4 | `PATCH /api/recurring/{ref}` `{"next_due_on":"2026-04-01"}` | push one occurrence |

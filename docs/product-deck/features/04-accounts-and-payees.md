@@ -69,10 +69,10 @@ The two defaults are what make the second coffee a two-tap entry: the form reads
 the picker row and pre-fills both legs. `PATCH /api/payees/{ref}` renames, re-points the
 defaults, or archives; `""` is not accepted for a default here (omit the field instead).
 
-`GET /api/payees` filters: `archived` (`true`/`false`/absent), `query` (substring of the
-name, case-insensitive), `refs`, `cursor`, `limit`. `GET /api/accounts` filters: `kind`,
-`currency`, `parent_ref`, `archived`, `query`, `refs`, `cursor`, `limit`, ordered
-`kind, name`.
+`GET /api/payees` filters: `archived` (`true`/`false`/absent), `query` (case-insensitive
+prefix of the name), `refs`, `cursor`, `limit`. `GET /api/accounts` filters: `kind`,
+`currency`, `parent_ref`, `archived`, `query` (case-insensitive prefix of the name),
+`refs`, `cursor`, `limit`, ordered `kind, name`.
 
 ## 3. Backend, end to end
 

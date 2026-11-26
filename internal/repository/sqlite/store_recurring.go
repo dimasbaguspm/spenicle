@@ -165,7 +165,7 @@ func (s *Store) ListRecurring(
 	builder.join(recurringJoins)
 	builder.eq("r.state", filter.State)
 	builder.eq("r.cadence", filter.Cadence)
-	builder.like("p.name", filter.Query)
+	builder.prefixInSubquery("r.payee_id", "payees", "id", "name", filter.Query)
 	builder.inList("r.ref", filter.Refs)
 	builder.after("r.next_due_on, r.id", "next_due_on, id", "recurring_rules", filter.Cursor)
 	builder.orderBy("r.next_due_on, r.id")

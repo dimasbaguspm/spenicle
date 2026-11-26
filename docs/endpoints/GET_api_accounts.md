@@ -22,7 +22,7 @@ Account picker on the entry form, balances panel, the ledger screen's account fi
 | `currency` | string | all | ISO 4217 of the account |
 | `parent_ref` | ref | all | children of that account |
 | `archived` | bool | all | `true` only archived, `false` only live |
-| `query` | string | — | substring of the account name |
+| `query` | string | — | case-insensitive prefix of the account name |
 | `refs` | string | — | comma-separated account refs |
 | `cursor` | ref | — | accounts after the one with that ref, in `kind, name` order |
 | `limit` | int | 50 | clamped to 200 |
@@ -43,7 +43,7 @@ None.
 
 ## Limitations
 
-Paged like every list, but a personal ledger never needs the second page: the default 50 covers it. Per-pair balances (native currency) are not exposed yet — only the base amount, and it is the account's own postings, not its subtree: roll a tree up through `GET /api/analytics/categories?rollup=parent`. `query` matches the name only.
+Paged like every list, but a personal ledger never needs the second page: the default 50 covers it. Per-pair balances (native currency) are not exposed yet — only the base amount, and it is the account's own postings, not its subtree: roll a tree up through `GET /api/analytics/categories?rollup=parent`. `query` matches the name only, as a case-insensitive prefix.
 
 ## Sequence
 

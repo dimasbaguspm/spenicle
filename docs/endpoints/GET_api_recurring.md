@@ -20,7 +20,7 @@ Recurring screen, the dashboard's "next bills" tile, an agent checking what is a
 | --- | --- | --- | --- |
 | `state` | string | all | `suggested`, `active`, `paused`, `ended` |
 | `cadence` | string | all | `weekly`, `monthly`, `yearly` |
-| `query` | string | — | substring of the payee name, case-insensitive |
+| `query` | string | — | case-insensitive prefix of the payee name |
 | `refs` | string | — | comma-separated rule refs |
 | `cursor` | ref | — | rules after the one with that ref, in `next_due_on` order |
 | `limit` | int | 50 | clamped to 200 |
@@ -43,7 +43,7 @@ None.
 
 ## Limitations
 
-Rules are read-only here: steering one (pausing, ending, moving the due date) is `PATCH /api/recurring/{ref}`, and nothing materialises a due rule into an entry yet — `next_due_on` is data, not a scheduler. `query` matches the payee name only.
+Rules are read-only here: steering one (pausing, ending, moving the due date) is `PATCH /api/recurring/{ref}`, and nothing materialises a due rule into an entry yet — `next_due_on` is data, not a scheduler. `query` matches the payee name only, as a case-insensitive prefix.
 
 ## Sequence
 

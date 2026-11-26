@@ -1,7 +1,9 @@
 package sqlite
 
 import (
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -182,6 +184,142 @@ func TestListQuery(t *testing.T) {
 
 			if !reflect.DeepEqual(args, testCase.args) {
 				t.Fatalf("args = %v, want %v", args, testCase.args)
+			}
+		})
+	}
+}
+
+func TestListQueryPrefix(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		value string
+		want  string
+		args  []any
+	}{
+		{
+			name:  "empty filter adds no clause",
+			value: "",
+			want:  `SELECT id FROM accounts WHERE 1 = 1 LIMIT 51`,
+			args:  nil,
+		},
+		{
+			name:  "ascii values become a lower bounded range",
+			value: "Gro",
+			want:  `SELECT id FROM accounts WHERE 1 = 1 AND lower(name) >= ? AND lower(name) < ? LIMIT 51`,
+			args:  []any{"gro", "grp"},
+		},
+		{
+			name:  "uppercase matches SQLite lower",
+			value: "KOPI",
+			want:  `SELECT id FROM accounts WHERE 1 = 1 AND lower(name) >= ? AND lower(name) < ? LIMIT 51`,
+			args:  []any{"kopi", "kopj"},
+		},
+		{
+			name:  "unicode bytes are not lowercased beyond SQLite",
+			value: "Élan",
+			want:  `SELECT id FROM accounts WHERE 1 = 1 AND lower(name) >= ? AND lower(name) < ? LIMIT 51`,
+			args:  []any{"Élan", "Élao"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			query := newList("accounts", "id")
+			query.prefix("name", tc.value)
+			statement, args := query.page(50)
+
+			if statement != tc.want {
+				t.Fatalf("statement = %q, want %q", statement, tc.want)
+			}
+			if !reflect.DeepEqual(args, tc.args) {
+				t.Fatalf("args = %v, want %v", args, tc.args)
+			}
+		})
+	}
+}
+
+func TestPrefixSearchUsesExpressionIndex(t *testing.T) {
+	db, err := Open(t.Context(), Config{Path: filepath.Join(t.TempDir(), "test.db")})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	ctx := t.Context()
+	if err := Migrate(ctx, db); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	tests := []struct {
+		name  string
+		build func() *listQuery
+		want  string
+	}{
+		{
+			name: "accounts",
+			build: func() *listQuery {
+				query := newList("accounts", "id")
+				query.prefix("name", "Gro")
+				query.orderBy("name, id")
+
+				return query
+			},
+			want: "SEARCH accounts USING INDEX ix_accounts_name_prefix",
+		},
+		{
+			name: "payees",
+			build: func() *listQuery {
+				query := newList("payees p", "p.id")
+				query.prefix("p.name", "Gro")
+				query.orderBy("p.name, p.id")
+
+				return query
+			},
+			want: "SEARCH p USING INDEX ix_payees_name_prefix",
+		},
+		{
+			name: "recurring",
+			build: func() *listQuery {
+				query := newList("recurring_rules r", "r.id")
+				query.join(recurringJoins)
+				query.prefixInSubquery("r.payee_id", "payees", "id", "name", "Gro")
+				query.orderBy("r.next_due_on, r.id")
+
+				return query
+			},
+			want: "SEARCH r USING INDEX ix_recurring_payee",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			statement, args := tc.build().page(50)
+			rows, err := db.QueryContext(ctx, "EXPLAIN QUERY PLAN "+statement, args...)
+			if err != nil {
+				t.Fatalf("explain: %v", err)
+			}
+			defer func() { _ = rows.Close() }()
+
+			var plan strings.Builder
+			for rows.Next() {
+				var selectID, parent, unused int
+				var detail string
+				if err := rows.Scan(&selectID, &parent, &unused, &detail); err != nil {
+					t.Fatalf("scan plan: %v", err)
+				}
+				plan.WriteString(detail)
+				plan.WriteString("\n")
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatalf("iterate plan: %v", err)
+			}
+
+			if !strings.Contains(plan.String(), tc.want) {
+				t.Fatalf("plan = %q, want it to contain %q", plan.String(), tc.want)
 			}
 		})
 	}

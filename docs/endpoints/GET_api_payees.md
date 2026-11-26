@@ -19,7 +19,7 @@ Payee picker, autofill on the entry form, merchant filters.
 | name | type | default | notes |
 | --- | --- | --- | --- |
 | `archived` | bool | all | `true` only archived, `false` only live |
-| `query` | string | — | substring of the payee name, case-insensitive |
+| `query` | string | — | case-insensitive prefix of the payee name |
 | `refs` | string | — | comma-separated payee refs |
 | `cursor` | ref | — | payees after the one with that ref, in name order |
 | `limit` | int | 50 | clamped to 200 |
@@ -42,7 +42,7 @@ None.
 
 ## Limitations
 
-`query` is a `LIKE` on the name only; there is no fuzzy match and no ranking. Payees are not created implicitly by an entry — `POST /api/payees` owns that.
+`query` is a case-insensitive prefix on the name only; there is no fuzzy match and no ranking. Payees are not created implicitly by an entry — `POST /api/payees` owns that.
 
 ## Sequence
 

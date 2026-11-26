@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 type listQuery struct {
@@ -47,6 +48,69 @@ func (q *listQuery) like(column, value string) {
 	}
 
 	q.and(column+` LIKE ? ESCAPE '\'`, "%"+escapeLike(value)+"%")
+}
+
+func (q *listQuery) prefix(column, value string) {
+	if value == "" {
+		return
+	}
+
+	lower, upper, hasUpper := prefixBounds(value)
+	expression := `lower(` + column + `)`
+	if hasUpper {
+		q.and(expression+` >= ? AND `+expression+` < ?`, lower, upper)
+		return
+	}
+
+	q.and(expression+` >= ?`, lower)
+}
+
+func (q *listQuery) prefixInSubquery(column, table, keyColumn, nameColumn, value string) {
+	if value == "" {
+		return
+	}
+
+	lower, upper, hasUpper := prefixBounds(value)
+	expression := `lower(` + nameColumn + `)`
+	predicate := expression + ` >= ?`
+	args := []any{lower}
+	if hasUpper {
+		predicate += ` AND ` + expression + ` < ?`
+		args = append(args, upper)
+	}
+
+	q.and(column+` IN (SELECT `+keyColumn+` FROM `+table+` WHERE `+predicate+`)`, args...)
+}
+
+func prefixBounds(value string) (string, string, bool) {
+	lower := asciiLower(value)
+	upper, ok := prefixUpper(lower)
+
+	return lower, upper, ok
+}
+
+func asciiLower(value string) string {
+	bytes := []byte(value)
+	for index, char := range bytes {
+		if char >= 'A' && char <= 'Z' {
+			bytes[index] = char + ('a' - 'A')
+		}
+	}
+
+	return string(bytes)
+}
+
+func prefixUpper(value string) (string, bool) {
+	runes := []rune(value)
+	for index := len(runes) - 1; index >= 0; index-- {
+		if runes[index] < unicode.MaxRune {
+			runes[index]++
+
+			return string(runes[:index+1]), true
+		}
+	}
+
+	return "", false
 }
 
 func (q *listQuery) inList(column string, values []string) {

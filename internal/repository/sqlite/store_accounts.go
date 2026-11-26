@@ -308,7 +308,7 @@ func (s *Store) ListAccounts(ctx context.Context, filter entity.AccountFilter) (
 	builder := newList("accounts", accountColumns)
 	builder.eq("kind", filter.Kind)
 	builder.eq("currency", filter.Currency)
-	builder.like("name", filter.Query)
+	builder.prefix("name", filter.Query)
 	builder.parentRef("parent_id", "accounts", filter.ParentRef)
 	builder.inList("ref", filter.Refs)
 	builder.nullFlag("archived_at", filter.Archived)

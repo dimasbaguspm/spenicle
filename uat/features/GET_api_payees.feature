@@ -40,3 +40,6 @@ Feature: GET /api/payees
     And I send a GET to "/api/payees?query=kopi"
     Then the response status is 200
     And the response JSON matches the snapshot "get_api_payees__the_query_filter_narrows_the_listing"
+    When I send a GET to "/api/payees?query=kenangan"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_payees__the_query_filter_matches_only_a_prefix"
