@@ -103,11 +103,24 @@ func (s *Service) buildPostings(
 	defer endSpan()
 
 	postings := make([]entity.Posting, 0, len(in.Postings))
+	known := make(map[string]entity.Account, len(in.Postings))
+	missing := make(map[string]bool, len(in.Postings))
 
 	for index, input := range in.Postings {
-		account, found, err := s.accounts.AccountByRef(ctx, input.AccountRef)
-		if err != nil {
-			return nil, err
+		account, found := known[input.AccountRef]
+		if !found && !missing[input.AccountRef] {
+			loaded, loadedFound, err := s.accounts.AccountByRef(ctx, input.AccountRef)
+			if err != nil {
+				return nil, err
+			}
+
+			found = loadedFound
+			if found {
+				known[input.AccountRef] = loaded
+				account = loaded
+			} else {
+				missing[input.AccountRef] = true
+			}
 		}
 
 		if !found {

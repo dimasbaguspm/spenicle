@@ -282,10 +282,6 @@ func (s *Store) ListEntries(
 		out[i].Postings = postings[out[i].ID]
 	}
 
-	for i := range out {
-		out[i].Postings = postings[out[i].ID]
-	}
-
 	if err := s.attachBalances(ctx, filter, ids, out); err != nil {
 		return nil, err
 	}
