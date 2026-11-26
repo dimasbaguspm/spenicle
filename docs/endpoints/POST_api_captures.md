@@ -43,7 +43,7 @@ rail accepted the submit — and `200` on a dedupe replay of the same bytes.
 
 `422 unknown_capture_kind`; `400 invalid_json` (malformed or unknown field); `422
 invalid_request` (multipart body without a `file` part, or a `raw_text` too long). Vendor
-failures are recorded on the row as `extraction_error`, not raised.
+failures are recorded on its payload row as `extraction_error`, not raised.
 
 ## Limitations
 

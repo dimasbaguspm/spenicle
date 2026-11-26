@@ -46,7 +46,7 @@ The first form is an unwindowed job and the date is the day it finished; the sec
 
 ```json
 {
-  "schema_version": 6,
+  "schema_version": 1,
   "exported_at": "2026-02-14T09:00:00Z",
   "base_currency": "IDR",
   "summary": {

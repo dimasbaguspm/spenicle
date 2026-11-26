@@ -210,7 +210,7 @@ sequenceDiagram
     M->>X: POST body or image with schema v1
     X-->>M: fixed JSON plus per field confidence
     alt schema valid
-        M->>DB: UPDATE captures SET draft_json, status pending
+        M->>DB: UPDATE capture_payloads SET draft_json, captures SET status pending
     else invalid or timeout
         M->>DB: UPDATE item status failed, raw kept
     end
@@ -367,7 +367,7 @@ encryption — a promise that a stolen `spenicle.db` is not a stolen mailbox.
 | sealed | how |
 | --- | --- |
 | the root credential | HMAC-SHA256 over the password hash; changing the password invalidates it |
-| `captures.raw_text`, `draft_json`, `resolution_note` | AES-256-GCM per row |
+| `capture_payloads.raw_text`, `capture_payloads.draft_json`, `captures.resolution_note` | AES-256-GCM per row |
 | `raw/<sha256>` receipts and statements | AES-256-GCM, key = HKDF(secret, file hash) |
 | `api_tokens.token_hash` | HMAC-SHA256 instead of bare sha256 |
 | **not** sealed, on purpose | ledger, postings, accounts, amounts |

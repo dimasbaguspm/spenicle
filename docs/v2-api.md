@@ -2,7 +2,7 @@
 
 Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`../README.md`](../README.md).
 
-**20 tables, 48 routes** (one of them `/healthz`).
+**23 tables, 48 routes** (one of them `/healthz`).
 
 Base path `/api`. No version prefix: we are the only consumer, and an agent can adapt to a
 change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, timestamps ISO
@@ -50,7 +50,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | was | now | why |
 | --- | --- | --- |
 | `inbox_items` | `captures` | names the thing, not the container |
-| `extractions` table | columns on `captures` | provider owns the schema, we only need its output |
+| `extractions` table | `capture_payloads`, one sealed child row per capture | the capture keeps its state, the vendor payload stays 1:1 and never widens the queue row |
 | `currencies` table | embedded ISO 4217 list | static data belongs in the binary |
 | `periods`, `closed_periods`, `month_closes` | none | each attempt at a lock or snapshot got deleted; the ledger is the truth |
 | 28 endpoints | 21 | actions moved into the body |
@@ -78,7 +78,7 @@ them yourself — `spenicle.env` is the cheapest separator.
 | sealed | how |
 | --- | --- |
 | the root credential | HMAC-SHA256 over the password hash; changing the password invalidates it |
-| `captures.raw_text`, `draft_json`, `resolution_note` | AES-256-GCM per row, `v1:` + base64 envelope |
+| `capture_payloads.raw_text`, `capture_payloads.draft_json`, `captures.resolution_note` | AES-256-GCM per row, `v1:` + base64 envelope |
 | `artifacts/<sha256>` files | AES-256-GCM, key = HKDF-SHA256(secret, info `spenicle/artifact/v1`), sha256 as AAD |
 | `api_tokens.token_hash` | HMAC-SHA256(secret, token), not bare sha256 |
 
@@ -289,13 +289,24 @@ The single review queue. One row per thing captured, from any channel.
 | `dedupe_key` | TEXT UNIQUE | cross-channel duplicate guard |
 | `batch_id` | TEXT NULL | artifact hash shared by all rows of one statement |
 | `artifact_hash` | TEXT NULL | `sha256`, the document lives at `artifacts/<hash[0:2]>/<hash[2:4]>/<hash>` |
-| `raw_text` | TEXT NULL | sealed |
-| `draft_json` | TEXT NULL | sealed, per-field value + confidence |
-| `extraction_error` | TEXT NULL | |
+| `extraction_job_ref` | TEXT NULL | SnapToJSON job ref |
+| `extraction_rail` | TEXT NULL | `snaptojson` when extraction ran |
+| `extraction_model` | TEXT NULL | model reported by the rail |
 | `resolved_entry_id` | INTEGER NULL | the entry produced, or the entry it matched |
 | `resolution_note` | TEXT NULL | sealed |
 | `received_at` | TEXT | |
 | `resolved_at` | TEXT NULL | |
+
+### `capture_payloads`
+
+The sealed half of a capture lives in a 1:1 child table. `capture_id` is `UNIQUE` and
+references `captures(id)`, so a payload can be replaced without rewriting queue state.
+
+| column | type | notes |
+| --- | --- | --- |
+| `raw_text` | TEXT NULL | sealed |
+| `draft_json` | TEXT NULL | sealed, per-field value + confidence |
+| `extraction_error` | TEXT NULL | vendor failure, not a client error |
 
 ## 1.10 `audit_log`
 
@@ -334,7 +345,7 @@ credential instead of minting another.
 ## 1.12 `mail_messages`
 
 The reference a mailbox poll leaves behind. No content: the body is sealed in
-`captures.raw_text`, the same rule artifacts follow.
+`capture_payloads.raw_text`, the same rule artifacts follow.
 
 - `source` / `message_ref` — `imap` \| `gmail` and the re-fetch handle, unique together
 - `thread_ref`, `message_id_header`, `provider_revision` — thread, RFC 5322 identity, provider
@@ -367,210 +378,10 @@ name, `contains`/`prefix` rule on the note, then `none` — and inside a tier it
 
 ## 1.14 Canonical DDL
 
-```sql
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
-
-CREATE TABLE settings (
-  k TEXT PRIMARY KEY,
-  v TEXT NOT NULL
-);
-
-CREATE TABLE api_tokens (
-  id           INTEGER PRIMARY KEY,
-  name         TEXT NOT NULL,
-  token_preview TEXT NOT NULL,
-  token_hash   TEXT NOT NULL UNIQUE,
-  scopes       TEXT NOT NULL,
-  created_at   TEXT NOT NULL,
-  last_used_at TEXT,
-  revoked_at   TEXT
-);
-
-CREATE TABLE fx_rates (
-  base       TEXT NOT NULL DEFAULT 'EUR',
-  quote      TEXT NOT NULL,
-  on_date    TEXT NOT NULL,
-  rate       TEXT NOT NULL,
-  source     TEXT NOT NULL CHECK (source IN ('ecb','manual')),
-  fetched_at TEXT NOT NULL,
-  PRIMARY KEY (base, quote, on_date)
-);
-
-CREATE TABLE accounts (
-  id          INTEGER PRIMARY KEY,
-  name        TEXT NOT NULL,
-  kind        TEXT NOT NULL CHECK (kind IN ('asset','liability','equity','expense','income')),
-  parent_id   INTEGER REFERENCES accounts(id),
-  currency    TEXT NOT NULL,
-  icon        TEXT,
-  archived_at TEXT,
-  created_at  TEXT NOT NULL,
-  UNIQUE (name, kind)
-);
-
-CREATE TABLE payees (
-  id                  INTEGER PRIMARY KEY,
-  name                TEXT NOT NULL UNIQUE,
-  default_account_id  INTEGER REFERENCES accounts(id),
-  default_category_id INTEGER REFERENCES accounts(id),
-  archived_at         TEXT,
-  created_at          TEXT NOT NULL
-);
-
-CREATE TABLE recurring_rules (
-  id                 INTEGER PRIMARY KEY,
-  payee_id           INTEGER NOT NULL REFERENCES payees(id),
-  account_id         INTEGER NOT NULL REFERENCES accounts(id),
-  category_id        INTEGER REFERENCES accounts(id),
-  amount_minor       INTEGER NOT NULL,
-  currency           TEXT NOT NULL,
-  cadence            TEXT NOT NULL CHECK (cadence IN ('weekly','monthly','yearly')),
-  interval_n         INTEGER NOT NULL DEFAULT 1,
-  day_of_month       INTEGER CHECK (day_of_month BETWEEN 1 AND 31),
-  business_day_shift TEXT NOT NULL DEFAULT 'none'
-                     CHECK (business_day_shift IN ('none','next','prev')),
-  next_due_on        TEXT NOT NULL,
-  ends_on            TEXT,
-  origin             TEXT NOT NULL CHECK (origin IN ('user','detected')),
-  state              TEXT NOT NULL CHECK (state IN ('suggested','active','paused','ended')),
-  last_posted_on     TEXT,
-  created_at         TEXT NOT NULL
-);
-
-CREATE TABLE ledger_entries (
-  id                INTEGER PRIMARY KEY,
-  occurred_on       TEXT NOT NULL,
-  payee_id          INTEGER REFERENCES payees(id),
-  note              TEXT,
-  currency          TEXT NOT NULL,
-  source            TEXT NOT NULL CHECK (source IN
-                    ('manual','share','email','statement','recurring','adjustment')),
-  recurring_rule_id INTEGER REFERENCES recurring_rules(id),
-  client_id         TEXT,
-  reverses_entry_id INTEGER REFERENCES ledger_entries(id),
-  voided_at         TEXT,
-  created_at        TEXT NOT NULL
-);
-
-CREATE UNIQUE INDEX ux_entries_rule_due ON ledger_entries (recurring_rule_id, occurred_on)
-  WHERE recurring_rule_id IS NOT NULL;
-CREATE UNIQUE INDEX ux_entries_client ON ledger_entries (client_id)
-  WHERE client_id IS NOT NULL;
-CREATE INDEX ix_entries_occurred ON ledger_entries (occurred_on);
-
-CREATE TABLE ledger_postings (
-  id                INTEGER PRIMARY KEY,
-  entry_id          INTEGER NOT NULL REFERENCES ledger_entries(id) ON DELETE RESTRICT,
-  account_id        INTEGER NOT NULL REFERENCES accounts(id),
-  amount_minor      INTEGER NOT NULL,
-  base_amount_minor INTEGER NOT NULL,
-  fx_rate           TEXT NOT NULL DEFAULT '1',
-  fx_rate_date      TEXT,
-  fx_source         TEXT NOT NULL CHECK (fx_source IN ('ecb','cached','manual','identity'))
-);
-
-CREATE INDEX ix_postings_account ON ledger_postings (account_id, entry_id);
-CREATE INDEX ix_postings_entry ON ledger_postings (entry_id);
-
-CREATE TABLE captures (
-  id                INTEGER PRIMARY KEY,
-  kind              TEXT NOT NULL CHECK (kind IN
-                    ('share','image','email','statement','recurring','manual')),
-  status            TEXT NOT NULL CHECK (status IN
-                    ('extracting','pending','duplicate','approved','rejected','failed')),
-  client_id         TEXT,
-  dedupe_key        TEXT NOT NULL UNIQUE,
-  batch_id          TEXT,
-  artifact_hash     TEXT,
-  raw_text          TEXT,
-  draft_json        TEXT,
-  extraction_error  TEXT,
-  resolved_entry_id INTEGER REFERENCES ledger_entries(id),
-  resolution_note   TEXT,
-  received_at       TEXT NOT NULL,
-  resolved_at       TEXT
-);
-
-CREATE UNIQUE INDEX ux_captures_client ON captures (client_id) WHERE client_id IS NOT NULL;
-CREATE INDEX ix_captures_queue ON captures (status, received_at);
-CREATE INDEX ix_captures_batch ON captures (batch_id);
-
-CREATE TABLE audit_log (
-  id          INTEGER PRIMARY KEY,
-  ref TEXT NOT NULL UNIQUE,
-  entity_kind TEXT NOT NULL,
-  entity_id   INTEGER,
-  entity_ref  TEXT,
-  action      TEXT NOT NULL,
-  actor_kind  TEXT NOT NULL
-              CHECK (actor_kind IN ('user','worker','system')),
-  actor_ref   TEXT,
-  from_json   TEXT,
-  to_json     TEXT,
-  at          TEXT NOT NULL
-);
-
-CREATE INDEX ix_audit_entity ON audit_log (entity_kind, entity_ref, id);
-CREATE INDEX ix_audit_actor ON audit_log (actor_kind, at);
-CREATE INDEX ix_audit_action ON audit_log (action, at);
-
-CREATE TABLE connections (
-  id                INTEGER PRIMARY KEY,
-  ref TEXT NOT NULL UNIQUE,
-  provider          TEXT NOT NULL UNIQUE CHECK (provider IN ('google')),
-  account           TEXT NOT NULL,
-  external_sub      TEXT,
-  scopes            TEXT NOT NULL,
-  refresh_token     TEXT NOT NULL,
-  access_token      TEXT,
-  access_expires_at TEXT,
-  status            TEXT NOT NULL CHECK (status IN ('active','reauth_required')),
-  last_refreshed_at TEXT,
-  revoked_at        TEXT,
-  created_at        TEXT NOT NULL,
-  updated_at        TEXT NOT NULL
-);
-
-CREATE TABLE mail_messages (
-  id                INTEGER PRIMARY KEY,
-  ref               TEXT NOT NULL UNIQUE,
-  source            TEXT NOT NULL CHECK (source IN ('imap','gmail')),
-  message_ref       TEXT NOT NULL,
-  thread_ref        TEXT,
-  message_id_header TEXT,
-  provider_revision TEXT,
-  received_at       TEXT NOT NULL,
-  observed_at       TEXT NOT NULL,
-  capture_id        INTEGER REFERENCES captures(id),
-  status            TEXT NOT NULL CHECK (status IN ('captured','skipped','failed','gone')),
-  skip_reason       TEXT,
-  attempts          INTEGER NOT NULL DEFAULT 0,
-  last_error        TEXT,
-  last_synced_at    TEXT,
-  superseded_by     TEXT
-);
-
-CREATE UNIQUE INDEX ux_mail_messages_source ON mail_messages (source, message_ref);
-CREATE INDEX ix_mail_messages_observed ON mail_messages (observed_at);
-CREATE INDEX ix_mail_messages_capture ON mail_messages (capture_id);
-
-CREATE TABLE categorization_rules (
-  id          INTEGER PRIMARY KEY,
-  ref         TEXT NOT NULL UNIQUE,
-  pattern     TEXT NOT NULL,
-  field       TEXT NOT NULL CHECK (field IN ('payee','note')),
-  match_kind  TEXT NOT NULL CHECK (match_kind IN ('exact','contains','prefix')),
-  account_id  INTEGER NOT NULL REFERENCES accounts(id),
-  priority    INTEGER NOT NULL DEFAULT 0,
-  archived_at TEXT,
-  created_at  TEXT NOT NULL
-);
-
-CREATE UNIQUE INDEX ux_rules_live ON categorization_rules (pattern, field, match_kind)
-  WHERE archived_at IS NULL;
-CREATE INDEX ix_rules_account ON categorization_rules (account_id);
-```
+[`internal/repository/sqlite/migrations/0001_init.sql`](../internal/repository/sqlite/migrations/0001_init.sql)
+is the canonical DDL. It is embedded and applied verbatim on boot. There is exactly one
+migration, so `schema_version` is 1. The tables and columns highlighted above are the
+API-facing subset; when prose and SQL disagree, the SQL wins.
 
 ---
 
@@ -943,7 +754,7 @@ sequenceDiagram
     alt replay
         API-->>PWA: 200 existing capture
     else new
-        API->>API: compute dedupe_key, seal raw_text with APP_SECRET
+        API->>API: compute dedupe_key, seal raw_text into capture_payloads
         API->>DB: SELECT captures WHERE dedupe_key equals
         alt duplicate
             API-->>PWA: 200 existing capture
@@ -978,7 +789,7 @@ sequenceDiagram
     UI->>API: PATCH capture with action and fields
     API->>DB: SELECT capture
     alt action extracted
-        API->>DB: UPDATE captures SET draft_json sealed, status pending or failed
+        API->>DB: UPDATE capture_payloads draft_json sealed and unresolved captures
         API-->>UI: 200 capture
     else action reject
         API->>DB: UPDATE captures SET status rejected, resolution_note sealed, resolved_at
@@ -1126,7 +937,7 @@ sequenceDiagram
 
 ## 3.20 `GET /healthz`
 
-`200 {"status":"ok","version":"v0.1.1+e0d15ce","started_at":"2026-04-15T08:00:00Z","schema_version":6,"app_secret":"sealed","base_currency":"IDR","timezone":"UTC","worker_last_run_at":"2026-04-15T09:00:00Z"}`
+`200 {"status":"ok","version":"v0.1.1+e0d15ce","started_at":"2026-04-15T08:00:00Z","schema_version":1,"app_secret":"sealed","base_currency":"IDR","timezone":"UTC","worker_last_run_at":"2026-04-15T09:00:00Z"}`
 
 ```mermaid
 sequenceDiagram
@@ -1155,8 +966,8 @@ time, so a restarted process's release evidence remains in the database.
 
 | worker | trigger | writes |
 | --- | --- | --- |
-| `ExtractionWorker` | queue, only when extraction enabled | `captures.draft_json`, `captures.status` |
-| `RecurringWorker` | hourly (`spenicle worker` or `all`) | `ledger_entries` with `source='recurring'`, advances `next_due_on` |
+| `ExtractionWorker` | queue, only when extraction enabled | `capture_payloads.draft_json`, `captures.status` |
+| `RecurringWorker` | hourly (`spenicle worker` or `all`) | queues `captures` rows with `kind='recurring'`; never posts a ledger entry |
 | `DetectionWorker` | weekly | `recurring_rules` `origin='detected'` |
 | `RateWorker` | boot + 16:30 CET | `fx_rates`, memory cache |
 | `IntegrityWorker` | boot + after import | zero-sum verification, reports to `audit_log` |

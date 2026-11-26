@@ -36,7 +36,7 @@ None.
   "format": "json",
   "from": "2025-01-01",
   "to": "2025-12-31",
-  "schema_version": 6,
+  "schema_version": 1,
   "counts": {"accounts": 3, "entries": 42, "postings": 84},
   "bytes": 1908,
   "created_at": "2026-02-14T09:00:00Z",

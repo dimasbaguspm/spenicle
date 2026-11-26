@@ -144,7 +144,7 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
   deleted file is a missing document, never a broken capture — the route answers `404`
   (gone from disk) or `410` (`deleted_at` stamped by the worker).
 - **The mail reference is content-free.** `mail_messages` stores the provider handle,
-  thread, revision and outcome; the body stays sealed in `captures.raw_text`. That is why
+  thread, revision and outcome; the body stays sealed in `capture_payloads.raw_text`. That is why
   a listing never leaks an email and `refresh` can be honest about what changed.
 
 ## 4. RRR
