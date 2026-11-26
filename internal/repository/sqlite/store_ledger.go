@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
@@ -20,6 +21,8 @@ const entryAccountSubquery = `SELECT p.entry_id FROM ledger_postings p
 	JOIN accounts a ON a.id = p.account_id WHERE a.ref`
 
 const payeeSubquery = `SELECT id FROM payees WHERE ref`
+
+const postingColumns = 8
 
 func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertEntry")
@@ -156,20 +159,125 @@ func insertPostings(
 	ctx context.Context,
 	tx *sql.Tx,
 	entryID int64,
+	occurredOn string,
 	postings []entity.Posting,
 ) error {
-	for _, p := range postings {
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO ledger_postings
-				(ref, entry_id, account_id, amount_minor, base_amount_minor,
-				 fx_rate, fx_rate_date, fx_source)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+	if len(postings) == 0 {
+		return nil
+	}
+
+	var statement strings.Builder
+
+	statement.WriteString(`INSERT INTO ledger_postings
+		(ref, entry_id, account_id, amount_minor, base_amount_minor,
+		 fx_rate, fx_rate_date, fx_source) VALUES `)
+
+	args := make([]any, 0, len(postings)*postingColumns)
+
+	for index, p := range postings {
+		if index > 0 {
+			statement.WriteString(`, `)
+		}
+
+		statement.WriteString(`(` + placeholders(postingColumns) + `)`)
+
+		args = append(args,
 			uuid.New(), entryID, p.AccountID, p.AmountMinor, p.BaseAmountMinor,
 			orDefault(p.FXRate, "1"), nullString(p.FXRateDate),
-			orDefault(p.FXSource, constant.FXSourceIdentity),
-		); err != nil {
-			return fmt.Errorf("insert postings: %w", err)
+			orDefault(p.FXSource, constant.FXSourceIdentity))
+	}
+
+	if _, err := tx.ExecContext(ctx, statement.String(), args...); err != nil {
+		return fmt.Errorf("insert postings: %w", err)
+	}
+
+	return updateRunningBalances(ctx, tx, entryID, occurredOn, postings)
+}
+
+func updateRunningBalances(
+	ctx context.Context,
+	tx *sql.Tx,
+	entryID int64,
+	occurredOn string,
+	postings []entity.Posting,
+) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.updateRunningBalances")
+	defer endSpan()
+
+	deltas := make(map[int64]int64, len(postings))
+	accounts := make([]int64, 0, len(postings))
+
+	for _, posting := range postings {
+		if _, seen := deltas[posting.AccountID]; !seen {
+			accounts = append(accounts, posting.AccountID)
 		}
+
+		deltas[posting.AccountID] += posting.BaseAmountMinor
+	}
+
+	for _, accountID := range accounts {
+		state := tx.QueryRowContext(ctx,
+			`SELECT dirty FROM balance_state WHERE account_id = ?`, accountID)
+
+		var dirty bool
+
+		err := state.Scan(&dirty)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("select balance state: %w", err)
+		}
+
+		if errors.Is(err, sql.ErrNoRows) || dirty {
+			if err := rebuildRunningBalancesInTx(ctx, tx, accountID); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		if err := shiftRunningBalances(
+			ctx, tx, accountID, entryID, occurredOn, deltas[accountID],
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func shiftRunningBalances(
+	ctx context.Context,
+	tx *sql.Tx,
+	accountID, entryID int64,
+	occurredOn string,
+	delta int64,
+) error {
+	var prior int64
+
+	err := tx.QueryRowContext(ctx, `
+		SELECT COALESCE((
+			SELECT balance_minor FROM running_balances
+			WHERE account_id = ? AND
+			      (occurred_on < ? OR (occurred_on = ? AND entry_id < ?))
+			ORDER BY occurred_on DESC, entry_id DESC LIMIT 1
+		), 0)`, accountID, occurredOn, occurredOn, entryID).Scan(&prior)
+	if err != nil {
+		return fmt.Errorf("prior running balance: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		UPDATE running_balances SET balance_minor = balance_minor + ?
+		WHERE account_id = ? AND
+		      (occurred_on > ? OR (occurred_on = ? AND entry_id > ?))
+	`, delta, accountID, occurredOn, occurredOn, entryID)
+	if err != nil {
+		return fmt.Errorf("shift running balances: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO running_balances (ref, account_id, entry_id, occurred_on, balance_minor)
+		VALUES (?, ?, ?, ?, ?)`, uuid.New(), accountID, entryID, occurredOn, prior+delta)
+	if err != nil {
+		return fmt.Errorf("insert running balance: %w", err)
 	}
 
 	return nil
@@ -335,8 +443,29 @@ func (s *Store) RunningBalances(
 		return balances, nil
 	}
 
-	args := make([]any, 0, len(entryIDs)+1)
-	args = append(args, accountRef)
+	var accountID int64
+
+	var dirty bool
+
+	err := s.db.QueryRowContext(ctx, `
+		SELECT a.id, COALESCE(b.dirty, 1) FROM accounts a
+		LEFT JOIN balance_state b ON b.account_id = a.id
+		WHERE a.ref = ?`, accountRef).Scan(&accountID, &dirty)
+	if errors.Is(err, sql.ErrNoRows) {
+		return balances, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("select balance state: %w", err)
+	}
+
+	if dirty {
+		if rebuildErr := s.rebuildRunningBalances(ctx, accountID); rebuildErr != nil {
+			return nil, rebuildErr
+		}
+	}
+
+	args := []any{accountID}
 
 	for _, id := range entryIDs {
 		args = append(args, id)
@@ -344,18 +473,8 @@ func (s *Store) RunningBalances(
 
 	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
 	query := `
-		SELECT running.id, running.balance_minor FROM (
-			SELECT e.id AS id,
-			       SUM(SUM(p.base_amount_minor)) OVER (
-			           ORDER BY e.occurred_on, e.id
-			           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balance_minor
-			FROM ledger_postings p
-			JOIN ledger_entries e ON e.id = p.entry_id
-			JOIN accounts a ON a.id = p.account_id
-			WHERE a.ref = ?
-			GROUP BY e.id
-		) running
-		WHERE running.id IN (` + placeholders(len(entryIDs)) + `)`
+		SELECT entry_id, balance_minor FROM running_balances
+		WHERE account_id = ? AND entry_id IN (` + placeholders(len(entryIDs)) + `)`
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -382,6 +501,59 @@ func (s *Store) RunningBalances(
 	}
 
 	return balances, nil
+}
+
+func (s *Store) rebuildRunningBalances(ctx context.Context, accountID int64) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.rebuildRunningBalances")
+	defer endSpan()
+
+	return s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		return rebuildRunningBalancesInTx(ctx, tx, accountID)
+	})
+}
+
+func rebuildRunningBalancesInTx(ctx context.Context, tx *sql.Tx, accountID int64) error {
+	var dirty bool
+
+	err := tx.QueryRowContext(ctx,
+		`SELECT dirty FROM balance_state WHERE account_id = ?`, accountID).Scan(&dirty)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("select balance state: %w", err)
+	}
+
+	if !errors.Is(err, sql.ErrNoRows) && !dirty {
+		return nil
+	}
+
+	if _, err = tx.ExecContext(ctx,
+		`DELETE FROM running_balances WHERE account_id = ?`, accountID); err != nil {
+		return fmt.Errorf("clear running balances: %w", err)
+	}
+
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO running_balances (ref, account_id, entry_id, occurred_on, balance_minor)
+		SELECT lower(hex(randomblob(16))), ?, running.id, running.occurred_on, running.balance_minor FROM (
+			SELECT e.id AS id, e.occurred_on AS occurred_on,
+			       SUM(SUM(p.base_amount_minor)) OVER (
+			           ORDER BY e.occurred_on, e.id
+			           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balance_minor
+			FROM ledger_postings p
+			JOIN ledger_entries e ON e.id = p.entry_id
+			JOIN accounts a ON a.id = p.account_id
+			WHERE a.id = ?
+			GROUP BY e.id, e.occurred_on
+		) running`, accountID, accountID); err != nil {
+		return fmt.Errorf("rebuild running balances: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO balance_state (ref, account_id, dirty) VALUES (?, ?, 0)
+		ON CONFLICT (account_id) DO UPDATE SET dirty = 0`, uuid.New(), accountID)
+	if err != nil {
+		return fmt.Errorf("clear balance state: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Store) postingsByEntryIDs(
@@ -571,7 +743,8 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 		return fmt.Errorf("reversal id: %w", err)
 	}
 
-	if err := insertPostings(ctx, tx, reversalID, reversal.Postings); err != nil {
+	if err := insertPostings(ctx, tx, reversalID,
+		reversal.OccurredOn.Format(constant.DateLayout), reversal.Postings); err != nil {
 		return err
 	}
 
@@ -729,7 +902,8 @@ func insertEntryRow(
 		return 0, fmt.Errorf("entry id: %w", err)
 	}
 
-	if err := insertPostings(ctx, tx, id, e.Postings); err != nil {
+	if err := insertPostings(ctx, tx, id,
+		e.OccurredOn.Format(constant.DateLayout), e.Postings); err != nil {
 		return 0, err
 	}
 

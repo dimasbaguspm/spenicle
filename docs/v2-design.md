@@ -157,8 +157,11 @@ Rates are exact decimal `TEXT`, money is signed `INTEGER` minor units, enums are
 constraints. Currencies are **not** a table: the ISO 4217 list (code, minor units, symbol) is
 embedded in the binary and validated at the API boundary.
 
-Optional, only when a query gets slow: `balance_snapshots(account_id, on_date,
-base_balance_minor)`, written when you review a month (12 rows/account/year).
+Running balances are checkpoints in `running_balances`, one per account and entry, with
+`occurred_on` copied from the entry so an ordered index can find the prior checkpoint and
+shift later ones inside the entry transaction. `balance_state.dirty` forces a rebuild after
+a backdated void or reversal. Listing an account reads one checkpoint per returned entry
+instead of recomputing a window over every posting.
 
 ## Invariants
 

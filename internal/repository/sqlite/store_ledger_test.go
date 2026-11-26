@@ -184,3 +184,113 @@ func TestListEntriesRunningBalanceContinuesAcrossPages(t *testing.T) {
 		t.Fatalf("second page = %v", got)
 	}
 }
+
+func TestRunningBalanceCheckpointShiftsBackdatedEntry(t *testing.T) {
+	t.Parallel()
+
+	store := newStore(t)
+	asset, expense := baseline(t, store)
+
+	first := time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC)
+	postCashEntry(t, store, first, 100, asset, expense)
+	postCashEntry(t, store, first.AddDate(0, 0, 2), 200, asset, expense)
+	postCashEntry(t, store, first.AddDate(0, 0, 1), 50, asset, expense)
+
+	entries, err := store.ListEntries(t.Context(), entity.EntryFilter{
+		AccountRefs: []string{asset.Ref},
+		WithBalance: true,
+		Limit:       10,
+	})
+	if err != nil {
+		t.Fatalf("list entries: %v", err)
+	}
+
+	want := []string{"2026-02-02=-150", "2026-02-03=-350", "2026-02-01=-100"}
+	if got := labelsOf(entries); !slices.Equal(got, want) {
+		t.Fatalf("entries = %v, want %v", got, want)
+	}
+
+	var dirty bool
+	if err := store.DB().QueryRowContext(t.Context(),
+		`SELECT dirty FROM balance_state WHERE account_id = ?`, asset.ID).Scan(&dirty); err != nil {
+		t.Fatalf("balance state: %v", err)
+	}
+	if dirty {
+		t.Fatal("the checkpoint was left dirty after a normal insert")
+	}
+}
+
+func TestRunningBalanceCheckpointIncludesVoidReversal(t *testing.T) {
+	t.Parallel()
+
+	store := newStore(t)
+	asset, expense := baseline(t, store)
+
+	first := time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC)
+	original := postCashEntry(t, store, first, 100, asset, expense)
+	postCashEntry(t, store, first.AddDate(0, 0, 1), 200, asset, expense)
+
+	if _, err := store.VoidEntry(t.Context(), original.Ref, "corrected",
+		first.AddDate(0, 0, 3)); err != nil {
+		t.Fatalf("void entry: %v", err)
+	}
+
+	entries, err := store.ListEntries(t.Context(), entity.EntryFilter{
+		AccountRefs: []string{asset.Ref},
+		WithBalance: true,
+		Limit:       10,
+	})
+	if err != nil {
+		t.Fatalf("list entries: %v", err)
+	}
+
+	want := []string{
+		"2026-02-01=0",
+		"2026-02-02=-200",
+		"2026-02-01=-100",
+	}
+	if got := labelsOf(entries); !slices.Equal(got, want) {
+		t.Fatalf("entries = %v, want %v", got, want)
+	}
+}
+
+func TestRunningBalanceRebuildGivesEachCheckpointARef(t *testing.T) {
+	t.Parallel()
+
+	store := newStore(t)
+	asset, expense := baseline(t, store)
+
+	first := time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC)
+	postCashEntry(t, store, first, 100, asset, expense)
+	postCashEntry(t, store, first.AddDate(0, 0, 2), 200, asset, expense)
+	postCashEntry(t, store, first.AddDate(0, 0, 1), 50, asset, expense)
+
+	if _, err := store.DB().ExecContext(t.Context(),
+		`UPDATE balance_state SET dirty = 1 WHERE account_id = ?`, asset.ID); err != nil {
+		t.Fatalf("mark dirty: %v", err)
+	}
+
+	entries, err := store.ListEntries(t.Context(), entity.EntryFilter{
+		AccountRefs: []string{asset.Ref},
+		WithBalance: true,
+		Limit:       10,
+	})
+	if err != nil {
+		t.Fatalf("list entries: %v", err)
+	}
+
+	want := []string{"2026-02-02=-150", "2026-02-03=-350", "2026-02-01=-100"}
+	if got := labelsOf(entries); !slices.Equal(got, want) {
+		t.Fatalf("entries = %v, want %v", got, want)
+	}
+
+	var rows, refs int
+	if err := store.DB().QueryRowContext(t.Context(),
+		`SELECT COUNT(*), COUNT(DISTINCT ref) FROM running_balances WHERE account_id = ?`,
+		asset.ID).Scan(&rows, &refs); err != nil {
+		t.Fatalf("checkpoint refs: %v", err)
+	}
+	if rows != 3 || refs != 3 {
+		t.Fatalf("checkpoints = %d rows with %d refs, want 3 and 3", rows, refs)
+	}
+}

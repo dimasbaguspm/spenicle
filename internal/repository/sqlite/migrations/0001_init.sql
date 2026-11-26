@@ -138,6 +138,25 @@ CREATE TABLE ledger_postings (
 CREATE INDEX ix_postings_account ON ledger_postings (account_id, entry_id);
 CREATE INDEX ix_postings_entry ON ledger_postings (entry_id);
 
+CREATE TABLE balance_state (
+  id         INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  account_id INTEGER NOT NULL UNIQUE REFERENCES accounts(id),
+  dirty      INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE running_balances (
+  id            INTEGER PRIMARY KEY,
+  ref TEXT NOT NULL UNIQUE,
+  account_id    INTEGER NOT NULL REFERENCES accounts(id),
+  entry_id      INTEGER NOT NULL REFERENCES ledger_entries(id),
+  occurred_on   TEXT NOT NULL,
+  balance_minor INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX ux_running_balances_entry ON running_balances (account_id, entry_id);
+CREATE INDEX ix_running_balances_order ON running_balances (account_id, occurred_on, entry_id);
+
 CREATE TABLE captures (
   id                 INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
