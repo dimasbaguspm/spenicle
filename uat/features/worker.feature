@@ -157,3 +157,62 @@ Feature: Worker
     And the store holds:
       | table          | count |
       | ledger_entries | 1     |
+  Scenario: A catch-up run queues at most sixty captures
+    Given the recurring worker clock is "2026-04-15"
+    And a running API
+    When I send a POST to "/api/payees" with:
+      """json
+      {"name":"Kopi Kenangan"}
+      """
+    Then the response status is 201
+    When the request body is:
+      """json
+      {"payee_ref":"{{ref}}","account_ref":"{{account:Cash}}","category_ref":"{{account:Unsorted}}","amount_minor":"25000","currency":"IDR","cadence":"daily","interval_n":1,"next_due_on":"2026-01-01"}
+      """
+    And I send a POST to "/api/recurring" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 201
+    When the recurring worker runs
+    Then the recurring worker reports "60" queued
+    And the store holds:
+      | table          | count |
+      | captures       | 60    |
+      | ledger_entries | 0     |
+    When the recurring worker runs
+    Then the recurring worker reports "45" queued
+    And the store holds:
+      | table          | count |
+      | captures       | 105   |
+      | ledger_entries | 0     |
+
+  Scenario: A recurring draft carries the rule's category, not a suggested one
+    Given the recurring worker clock is "2026-04-15"
+    And a running API
+    And the account "Coffee" exists as "expense"
+    When I send a POST to "/api/payees" with:
+      """json
+      {"name":"Kopi Kenangan"}
+      """
+    Then the response status is 201
+    And the last ref is remembered as "payee"
+    When I send a POST to "/api/categorization/rules" with:
+      """json
+      {"pattern":"Kopi Kenangan","field":"payee","match_kind":"exact","category_ref":"{{account:Unsorted}}"}
+      """
+    Then the response status is 201
+    When the request body is:
+      """json
+      {"payee_ref":"{{ref:payee}}","account_ref":"{{account:Cash}}","category_ref":"{{account:Coffee}}","amount_minor":"25000","currency":"IDR","cadence":"weekly","interval_n":1,"next_due_on":"2026-04-14"}
+      """
+    And I send a POST to "/api/recurring" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 201
+    When the recurring worker runs
+    Then the recurring worker reports "1" queued
+    And the recurring draft field "category_ref" is "{{account:Coffee}}"
+    And the store holds:
+      | table          | count |
+      | captures       | 1     |
+      | ledger_entries | 0     |

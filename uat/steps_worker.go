@@ -107,6 +107,37 @@ func theExportJobPredatesTheRetention(ctx context.Context) (context.Context, err
 	return ctx, w.ageExport(ctx)
 }
 
+func theRunningExportPredatesTheStaleWindow(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.store == nil {
+		return ctx, errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	at := time.Now().UTC().Add(-w.limits.ExportStaleAfter - time.Hour)
+
+	result, err := w.store.DB().ExecContext(ctx,
+		`UPDATE exports SET started_at = ? WHERE status = 'running'`,
+		at.Format(constant.TimestampLayout))
+	if err != nil {
+		return ctx, fmt.Errorf("age the running export: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return ctx, fmt.Errorf("count aged running exports: %w", err)
+	}
+
+	if affected == 0 {
+		return ctx, errors.New("no running export job was aged")
+	}
+
+	return ctx, nil
+}
+
 func theImportDraftIsExpired(ctx context.Context) (context.Context, error) {
 	w, err := worldFrom(ctx)
 	if err != nil {
@@ -211,6 +242,48 @@ func theFirstCaptureRefIsRemembered(ctx context.Context) (context.Context, error
 	}
 
 	w.lastRef = page.Captures[0].Ref
+
+	return ctx, nil
+}
+
+func theRecurringDraftFieldIs(ctx context.Context, field, want string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if w.store == nil || w.sealer == nil {
+		return ctx, errors.New(`no running API: add the step "a running API" first`)
+	}
+
+	var sealed string
+	if queryErr := w.store.DB().QueryRowContext(ctx,
+		`SELECT p.draft_json FROM captures
+		 JOIN capture_payloads p ON p.capture_id = captures.id
+		 WHERE captures.kind = 'recurring' ORDER BY captures.id LIMIT 1`,
+	).Scan(&sealed); queryErr != nil {
+		return ctx, fmt.Errorf("read the recurring draft: %w", queryErr)
+	}
+
+	plain, err := w.sealer.Open(ctx, sealed)
+	if err != nil {
+		return ctx, fmt.Errorf("open the recurring draft: %w", err)
+	}
+
+	var draft map[string]string
+	if unmarshalErr := json.Unmarshal(plain, &draft); unmarshalErr != nil {
+		return ctx, fmt.Errorf(
+			"the recurring draft is not JSON (%q): %w", preview(string(plain)), unmarshalErr)
+	}
+
+	expanded, err := w.expand(want)
+	if err != nil {
+		return ctx, err
+	}
+
+	if got := draft[field]; got != expanded {
+		return ctx, fmt.Errorf("the recurring draft field %q is %q, want %q", field, got, expanded)
+	}
 
 	return ctx, nil
 }

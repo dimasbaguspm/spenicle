@@ -116,6 +116,17 @@ func theRootCredentialOnly(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
 
+func theBearerCredentialIs(ctx context.Context, credential string) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	w.credential = credential
+
+	return ctx, nil
+}
+
 func theAccountExists(ctx context.Context, name, kind string) (context.Context, error) {
 	w, err := worldFrom(ctx)
 	if err != nil {

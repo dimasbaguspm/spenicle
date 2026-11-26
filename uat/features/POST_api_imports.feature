@@ -62,6 +62,7 @@ Feature: POST /api/imports
       """
     Then the response status is 409
     And the response JSON matches the snapshot "post_api_imports__re_uploading_different_bytes_under_the_same_client_id_is_refused"
+    And the import event log holds 1 event of kind "conflict_refused"
 
   Scenario: A statement without the expected header is refused
     Given a running API
@@ -150,3 +151,17 @@ Feature: POST /api/imports
       """
     Then the response status is 409
     And the response JSON matches the snapshot "post_api_imports__a_chunk_with_another_total_is_refused"
+
+  Scenario: A statement header may arrive in any order
+    Given a running API
+    When I upload the statement "reordered.csv" with the client id "statement-reordered":
+      """csv
+      description,amount_minor,occurred_on
+      COFFEE,-20000,2025-02-10
+      """
+    Then the response status is 201
+    And the response JSON matches the snapshot "post_api_imports__a_statement_header_may_arrive_in_any_order"
+    And the store holds:
+      | table          | count |
+      | import_batches | 1     |
+      | import_rows    | 1     |

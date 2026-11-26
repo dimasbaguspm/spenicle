@@ -1,0 +1,9 @@
+{
+  "draft_json": "{\"data\":{\"merchant\":\"KOPI KENANGAN\",\"total\":\"25000\"},\"valid\":true}",
+  "extraction_rail": "snaptojson",
+  "job_ref": "snap_container_1",
+  "kind": "image",
+  "received_at": "<timestamp>",
+  "ref": "<ref>",
+  "status": "pending"
+}

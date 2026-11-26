@@ -64,11 +64,14 @@ Feature: POST /api/entries
       """json
       {"client_id":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
+    Then the response status is 201
+    And the last ref is remembered as "entry"
     And I send a POST to "/api/entries" with:
       """json
       {"client_id":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     Then the response status is 200
+    And the last ref is still "entry"
     And the store holds:
       | table           | count |
       | ledger_entries  | 1     |

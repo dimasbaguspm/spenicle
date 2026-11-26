@@ -18,3 +18,17 @@ Feature: POST /api/analytics/custom
       """
     Then the response status is 422
     And the response JSON matches the snapshot "post_api_analytics_custom__an_unknown_namespace_is_refused"
+
+  Scenario: A saved query name is unique
+    Given a running API
+    When I send a POST to "/api/analytics/custom" with:
+      """json
+      {"name":"Spend per month","namespace":"months","chart":"bar"}
+      """
+    Then the response status is 201
+    When I send a POST to "/api/analytics/custom" with:
+      """json
+      {"name":"Spend per month","namespace":"categories","chart":"pie"}
+      """
+    Then the response status is 409
+    And the response JSON matches the snapshot "post_api_analytics_custom__a_saved_query_name_is_unique"

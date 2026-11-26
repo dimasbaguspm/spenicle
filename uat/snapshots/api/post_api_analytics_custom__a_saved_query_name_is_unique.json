@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "duplicate",
+    "message": "create custom query \"Spend per month\": duplicate name: constraint failed: UNIQUE constraint failed: custom_queries.name (2067)"
+  }
+}

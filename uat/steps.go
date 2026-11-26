@@ -61,6 +61,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the API clock is "([^"]*)"$`, theAPIClockIs)
 	sc.Step(`^the recurring worker clock is "([^"]*)"$`, theRecurringWorkerClockIs)
 	sc.Step(`^the recurring worker reports "(\d+)" (queued|skipped|failed)$`, theRecurringWorkerReports)
+	sc.Step(`^the recurring draft field "([^"]*)" is "([^"]*)"$`, theRecurringDraftFieldIs)
 	sc.Step(`^the first capture ref is remembered$`, theFirstCaptureRefIsRemembered)
 	sc.Step(`^the recurring worker runs$`, theRecurringWorkerRuns)
 	sc.Step(`^the store holds:$`, theStoreHolds)
@@ -73,6 +74,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the issued token is the bearer credential$`, theIssuedTokenIsTheBearer)
 	sc.Step(`^the same token is the bearer credential again$`, theSameTokenIsTheBearerAgain)
 	sc.Step(`^only the root credential is used$`, theRootCredentialOnly)
+	sc.Step(`^the bearer credential is "([^"]*)"$`, theBearerCredentialIs)
 	sc.Step(`^the last ref is remembered as "([^"]*)"$`, theLastRefIsRemembered)
 	sc.Step(`^the last ref is still "([^"]*)"$`, theLastRefIsStill)
 	sc.Step(`^the response JSON matches the snapshot "([^"]*)"$`, responseMatchesSnapshot)
@@ -85,6 +87,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 	sc.Step(`^the export worker claims the job and dies$`, theExportWorkerClaimsAndDies)
 	sc.Step(`^the export job predates the retention$`, theExportJobPredatesTheRetention)
 	sc.Step(`^the export event log holds (\d+) events? of kind "([a-z_]+)"$`, theExportEventLogHolds)
+	sc.Step(`^the running export job predates the stale window$`, theRunningExportPredatesTheStaleWindow)
 	sc.Step(`^the export events are "([^"]*)"$`, theExportEventsAre)
 	sc.Step(`^the export blob is gone from the exports directory$`, theExportBlobIsGone)
 }

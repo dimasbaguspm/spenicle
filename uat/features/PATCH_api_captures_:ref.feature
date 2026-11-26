@@ -165,3 +165,56 @@ Feature: PATCH /api/captures/{{ref}}
     Then the response status is 201
     When I send a GET to "/api/payees?refs={{ref:warung}}"
     Then the response JSON matches the snapshot "patch_api_captures_:ref__learning_can_be_turned_off_for_one_approval"
+
+  Scenario: A retry without an extraction rail is refused
+    Given a running API
+    When I send a POST to "/api/captures" with:
+      """json
+      {"kind":"manual","raw_text":"typed by hand"}
+      """
+    Then the response status is 202
+    When I send a PATCH to "/api/captures/{{ref}}" with:
+      """json
+      {"action":"retry"}
+      """
+    Then the response status is 409
+    And the response JSON matches the snapshot "patch_api_captures_:ref__a_retry_without_an_extraction_rail_is_refused"
+    And the store holds:
+      | table          | count |
+      | captures       | 1     |
+      | ledger_entries | 0     |
+
+  @vendors
+  Scenario: Retrying polls the SnapToJSON job
+    Given the extraction rail is "snaptojson"
+    And a running API
+    When I send a POST to "/api/captures" with the artifact "receipt.jpg"
+    Then the response status is 202
+    When I send a PATCH to "/api/captures/{{ref}}" with:
+      """json
+      {"action":"retry"}
+      """
+    Then the response status is 200
+    And the response JSON matches the snapshot "patch_api_captures_:ref__retrying_polls_the_snaptojson_job"
+    And the store holds:
+      | table          | count |
+      | captures       | 1     |
+      | ledger_entries | 0     |
+
+  Scenario: An unbalanced approval is refused
+    Given a running API
+    When I send a POST to "/api/captures" with:
+      """json
+      {"kind":"manual","raw_text":"typed by hand"}
+      """
+    Then the response status is 202
+    When I send a PATCH to "/api/captures/{{ref}}" with:
+      """json
+      {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-24000"}]}
+      """
+    Then the response status is 422
+    And the response JSON matches the snapshot "patch_api_captures_:ref__an_unbalanced_approval_is_refused"
+    And the store holds:
+      | table          | count |
+      | captures       | 1     |
+      | ledger_entries | 0     |

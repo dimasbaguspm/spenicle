@@ -45,3 +45,17 @@ Feature: Worker export jobs
     When I send a GET to "/api/exports/{{ref}}/events"
     Then the response status is 200
     And the export events are "queued,started,resumed,started,completed"
+  Scenario: A stale running job is resumed rather than swept
+    Given a running API
+    When I send a POST to "/api/exports" with:
+      """json
+      {"client_id":"export-stale","format":"json"}
+      """
+    Then the response status is 201
+    When the export worker claims the job and dies
+    And the running export job predates the stale window
+    And the export worker runs
+    When I send a GET to "/api/exports/{{ref}}/events"
+    Then the response status is 200
+    And the export events are "queued,started,resumed,started,completed"
+    And the export event log holds 0 events of kind "swept"
