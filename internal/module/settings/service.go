@@ -32,7 +32,8 @@ const (
 	hashKeyBytes   = 32
 	hashFields     = 4
 
-	verifiedLimit = 8
+	verifiedLimit    = 8
+	settingsCacheTTL = time.Hour
 )
 
 var validate = validator.New() //nolint:gochecknoglobals // one registry, built once
@@ -42,6 +43,11 @@ type passwordChange struct {
 	Next    string `validate:"required,min=12,max=200"`
 }
 
+type cachedSettings struct {
+	value     entity.Settings
+	expiresAt time.Time
+}
+
 type Service struct {
 	store  repository.System
 	sealer seal.Sealer
@@ -49,6 +55,9 @@ type Service struct {
 
 	mu       sync.Mutex
 	verified map[string]bool
+
+	cacheMu sync.RWMutex
+	cache   cachedSettings
 }
 
 type TimeSource interface{ Now() time.Time }
@@ -66,7 +75,7 @@ func (s *Service) Load(ctx context.Context) (entity.Settings, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.Load")
 	defer endSpan()
 
-	settings, _, err := s.load(ctx)
+	settings, _, err := s.cachedLoad(ctx)
 
 	return settings, err
 }
@@ -90,7 +99,7 @@ func (s *Service) EnsureInitial(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.EnsureInitial")
 	defer endSpan()
 
-	settings, exists, err := s.load(ctx)
+	settings, exists, err := s.cachedLoad(ctx)
 	if err != nil {
 		return entity.Settings{}, false, err
 	}
@@ -121,7 +130,7 @@ func (s *Service) EnsureInitial(
 	}
 
 	if !created {
-		stored, _, loadErr := s.load(ctx)
+		stored, _, loadErr := s.cachedLoad(ctx)
 		if loadErr != nil {
 			return entity.Settings{}, false, loadErr
 		}
@@ -236,6 +245,8 @@ func (s *Service) Setup(
 		return entity.Settings{}, err
 	}
 
+	s.InvalidateCache()
+
 	return settings, nil
 }
 
@@ -259,14 +270,14 @@ func (s *Service) EnsureTimezone(ctx context.Context, name string) (entity.Setti
 }
 
 // Root answers whether a presented credential is the instance password. PBKDF2 is
-// deliberately slow, so a verified credential is remembered as a digest for the
-// life of the process: the key includes the stored hash, so a password change
-// invalidates every remembered one, and nothing outlives the process.
+// deliberately slow, so a verified credential is remembered as a digest until the
+// one-hour settings cache expires or a password change invalidates it: the key
+// includes the stored hash, so a password change cannot leave an old credential usable.
 func (s *Service) Root(ctx context.Context, presented string) (bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.Root")
 	defer endSpan()
 
-	settings, found, err := s.load(ctx)
+	settings, found, err := s.cachedLoad(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -287,6 +298,16 @@ func (s *Service) RootWithSettings(
 	defer endSpan()
 
 	return s.root(current, presented), nil
+}
+
+func (s *Service) InvalidateCache() {
+	s.cacheMu.Lock()
+	s.cache = cachedSettings{}
+	s.cacheMu.Unlock()
+
+	s.mu.Lock()
+	s.verified = make(map[string]bool, verifiedLimit)
+	s.mu.Unlock()
 }
 
 func (s *Service) root(settings entity.Settings, presented string) bool {
@@ -383,6 +404,29 @@ func verifyPassword(encoded, password string) error {
 	return nil
 }
 
+func (s *Service) cachedLoad(ctx context.Context) (entity.Settings, bool, error) {
+	now := s.clock.Now()
+
+	s.cacheMu.RLock()
+	cached, fresh := s.cache.value, now.Before(s.cache.expiresAt)
+	s.cacheMu.RUnlock()
+
+	if fresh {
+		return cached, true, nil
+	}
+
+	settings, found, err := s.load(ctx)
+	if err != nil || !found {
+		return settings, found, err
+	}
+
+	s.cacheMu.Lock()
+	s.cache = cachedSettings{value: settings, expiresAt: now.Add(settingsCacheTTL)}
+	s.cacheMu.Unlock()
+
+	return settings, true, nil
+}
+
 func (s *Service) load(ctx context.Context) (entity.Settings, bool, error) {
 	raw, found, err := s.store.Setting(ctx, constant.SettingAppSettings)
 	if err != nil {
@@ -416,6 +460,8 @@ func (s *Service) save(ctx context.Context, settings entity.Settings) error {
 		return fmt.Errorf("store settings: %w", err)
 	}
 
+	s.InvalidateCache()
+
 	return nil
 }
 
@@ -428,6 +474,10 @@ func (s *Service) create(ctx context.Context, settings entity.Settings) (bool, e
 	created, err := s.store.CreateSetting(ctx, constant.SettingAppSettings, sealed)
 	if err != nil {
 		return false, fmt.Errorf("store settings: %w", err)
+	}
+
+	if created {
+		s.InvalidateCache()
 	}
 
 	return created, nil

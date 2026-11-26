@@ -1,6 +1,7 @@
 package settings_test
 
 import (
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -458,5 +459,107 @@ func TestSetupDatesOpeningEntriesInTheConfiguredTimezone(t *testing.T) {
 	got := entries[0].OccurredOn.Format(constant.DateLayout)
 	if got != before && got != after {
 		t.Fatalf("opening date = %q, want %q or %q", got, before, after)
+	}
+}
+
+type movingClock struct{ at time.Time }
+
+func (c *movingClock) Now() time.Time { return c.at }
+
+func newServiceWithClock(t *testing.T, source settings.TimeSource) (*settings.Service, *sqlite.Store) {
+	t.Helper()
+
+	db, err := sqlite.Open(t.Context(), sqlite.Config{Path: filepath.Join(t.TempDir(), "settings.db")})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if migrateErr := sqlite.Migrate(t.Context(), db); migrateErr != nil {
+		t.Fatalf("migrate: %v", migrateErr)
+	}
+	sealer, err := seal.New("0123456789abcdef")
+	if err != nil {
+		t.Fatalf("sealer: %v", err)
+	}
+
+	store := sqlite.NewStore(db)
+
+	return settings.New(store, sealer, source), store
+}
+
+func rewriteStoredBaseCurrency(t *testing.T, service *settings.Service, store *sqlite.Store) {
+	t.Helper()
+
+	ctx := t.Context()
+	sealer, err := seal.New("0123456789abcdef")
+	if err != nil {
+		t.Fatalf("sealer: %v", err)
+	}
+
+	current, err := service.Load(ctx)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+
+	current.BaseCurrency = "EUR"
+	plain, err := json.Marshal(current)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	sealed, err := sealer.Seal(ctx, plain)
+	if err != nil {
+		t.Fatalf("seal: %v", err)
+	}
+
+	if err := store.SetSetting(ctx, constant.SettingAppSettings, sealed); err != nil {
+		t.Fatalf("write setting: %v", err)
+	}
+}
+
+func TestLoadCachesForOneHourAndInvalidatesOnRequest(t *testing.T) {
+	tests := []struct {
+		name       string
+		advance    time.Duration
+		invalidate bool
+		want       string
+	}{
+		{name: "a fresh cache serves the stored value", want: "IDR"},
+		{name: "a fresh cache hides a direct store write", want: "IDR"},
+		{name: "an expired cache reads the store again", advance: time.Hour, want: "EUR"},
+		{name: "invalidating reads the store again", invalidate: true, want: "EUR"},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx := t.Context()
+			source := &movingClock{at: time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC)}
+			service, store := newServiceWithClock(t, source)
+
+			if _, _, err := service.EnsureInitial(ctx, "", ""); err != nil {
+				t.Fatalf("ensure: %v", err)
+			}
+
+			if _, err := service.Load(ctx); err != nil {
+				t.Fatalf("prime cache: %v", err)
+			}
+
+			rewriteStoredBaseCurrency(t, service, store)
+
+			source.at = source.at.Add(testCase.advance)
+
+			if testCase.invalidate {
+				service.InvalidateCache()
+			}
+
+			got, err := service.Load(ctx)
+			if err != nil {
+				t.Fatalf("load after change: %v", err)
+			}
+
+			if got.BaseCurrency != testCase.want {
+				t.Fatalf("base currency = %q, want %q", got.BaseCurrency, testCase.want)
+			}
+		})
 	}
 }

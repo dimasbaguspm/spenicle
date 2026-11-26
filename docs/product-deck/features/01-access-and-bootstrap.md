@@ -102,9 +102,10 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
   worker heartbeat (`worker_last_run_at`) is here — `/healthz` reads them, it does not
   cache them.
 - **The password is the root credential.** `module/settings.Root` verifies the PBKDF2
-  hash (600k rounds) and caches the digest in memory keyed by the stored hash, so a
-  rotation invalidates the cache by construction and the first verify after a restart
-  is the slow one.
+  hash (600k rounds). The decoded settings row and the verified digest are cached in
+  this process for one hour, and setup or password rotation invalidates both at once;
+  the digest key includes the stored hash, so the old credential cannot survive a
+  rotation, and the first verify after a restart is the slow one.
 - **A token is a digest.** Only `HMAC-SHA256(APP_SECRET-derived key, "spenicle/token/v1\0"+token)`
   is stored, plus the masked preview. The identity middleware stamps `last_used_at`
   on every authenticated request, which is why the listing can filter `used|never`.

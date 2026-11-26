@@ -108,6 +108,7 @@ func (w *world) boot(ctx context.Context) error {
 
 	w.store = store
 	w.ledger = ledgerService
+	w.settings = settingsService
 	w.sealer = sealer
 
 	for _, account := range accounts {

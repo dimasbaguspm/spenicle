@@ -83,6 +83,10 @@ func (w *world) clearDatabase(ctx context.Context) error {
 		}
 	}
 
+	if w.settings != nil {
+		w.settings.InvalidateCache()
+	}
+
 	return nil
 }
 

@@ -22,6 +22,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/exports"
 	"github.com/dimasbaguspm/spenicle/internal/module/ledger"
 	"github.com/dimasbaguspm/spenicle/internal/module/rates"
+	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 	"github.com/dimasbaguspm/spenicle/internal/repository/sqlite"
 )
@@ -99,6 +100,7 @@ type world struct {
 	refs        map[string]string
 
 	ledger             ledger.Contract
+	settings           *settings.Service
 	artifacts          *filestore.Store
 	exportFiles        *filestore.Store
 	parts              *filestore.Parts

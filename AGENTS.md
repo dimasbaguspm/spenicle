@@ -192,9 +192,9 @@ request carries no opening accounts; a legacy database with entries is already l
 **One credential header, two kinds.** There is no cookie and no exchange route: every
 request carries `Authorization: Bearer <credential>`, and the **instance password** *is*
 the root credential. `module/settings.Root` verifies it against the stored PBKDF2 hash —
-600k rounds, so the first verification is the slow one and a verified credential is
-remembered as an in-memory digest for the life of the process (the key includes the stored
-hash, so changing the password invalidates it, and the cache never touches disk).
+600k rounds, so the first verification is the slow one. The decoded settings row and a
+verified credential digest are process-local with a one-hour TTL; setup and password changes
+invalidate both immediately (the key includes the stored hash), and nothing touches disk.
 
 Everything else is a token — a named, scoped, non-root credential (`module/tokens`).
 Only the HMAC digest of the plaintext under `APP_SECRET` (`sealer.Digest`) is stored,
