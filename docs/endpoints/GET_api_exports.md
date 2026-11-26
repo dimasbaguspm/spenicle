@@ -41,7 +41,7 @@ None.
       "format": "json",
       "from": "2025-01-01",
       "to": "2025-12-31",
-      "schema_version": 4,
+      "schema_version": 6,
       "counts": {"accounts": 3, "entries": 42, "postings": 84},
       "bytes": 1908,
       "created_at": "2026-02-14T09:00:00Z",
@@ -55,6 +55,9 @@ None.
 ```
 
 `counts` is omitted until the job is rendered; `error_message` only when it failed. `from` and `to` echo the window the job was queued for, and are omitted for an unwindowed job. `next_cursor` in `meta` is the ref to send back when `has_more` is true.
+`schema_version` is the value the job captured when it was queued: `MAX(schema_migrations)`,
+the same source `/healthz` reads. A replay keeps the original value; a new job reads the
+current one.
 
 ## Errors
 

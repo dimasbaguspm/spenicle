@@ -36,7 +36,7 @@ None.
   "format": "json",
   "from": "2025-01-01",
   "to": "2025-12-31",
-  "schema_version": 4,
+  "schema_version": 6,
   "counts": {"accounts": 3, "entries": 42, "postings": 84},
   "bytes": 1908,
   "created_at": "2026-02-14T09:00:00Z",
@@ -47,6 +47,9 @@ None.
 ```
 
 The status is one of `queued`, `running`, `ready`, `failed` or `expired`. `counts` is omitted until the job finished, `error_message` only when it failed, and the three timestamps as they happen. `from` and `to` echo the window the job renders and are omitted for an unwindowed job; they are part of the job's identity, so a `client_id` cannot be replayed with another window.
+`schema_version` was captured when the job was queued, from the same `MAX(schema_migrations)`
+source `/healthz` reads. The rendered file records its own schema version at render time;
+the two differ only if a migration lands between queue and claim.
 
 ## Errors
 

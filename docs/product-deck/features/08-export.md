@@ -61,10 +61,10 @@ disconnects mid-stream still leaves the record, which is deliberate (the audit t
 ### 2.4 What is in the file
 
 ```json
-{"schema_version":4,"exported_at":"…","base_currency":"IDR",
+{"schema_version":6,"exported_at":"…","base_currency":"IDR",
  "summary":{"accounts":[…],"months":[…],"categories":[…],"counts":{…}},
  "data":{"accounts":[…],"payees":[…],"entries":[…],"captures":[…],
-         "recurring":[…],"rates":[…],"custom_queries":[…]}}
+         "recurring":[…],"rates":[…],"custom_queries":[…],"categorization_rules":[…]}}
 ```
 
 `data` is the canonical half: minor-unit strings, RFC3339 timestamps, `YYYY-MM-DD` dates,
@@ -74,7 +74,7 @@ expense category, a row count per table) and is **not** re-importable.
 
 The `csv` format is a zip in a fixed order: `accounts.csv`, `payees.csv`, `entries.csv`,
 `postings.csv`, `captures.csv`, `rates.csv`, `recurring.csv`, `custom_queries.csv`,
-`summary.json`, `manifest.json` (`{schema_version, exported_at, files:[{name, rows, sha256}]}`).
+`categorization_rules.csv`, `summary.json`, `manifest.json` (`{schema_version, exported_at, files:[{name, rows, sha256}]}`).
 `postings.csv` is the money sheet: one row per posting.
 
 ## 3. Backend, end to end
@@ -97,17 +97,19 @@ Worker (per run)           resume `running` jobs left by a restart (`resumed`, b
                            drop blobs past ExportRetention (720h) → `expired` (20 per run)
 ```
 
-- **The job is the promise; the document is rendered when claimed.** That is stated in the
-  payload: `exported_at` inside the file, `started_at`/`finished_at` on the row. A ledger
-  change after the render is not in the document — queue another export.
-- **Byte-identical for the same data.** The renderer sorts deterministically, so two jobs
-  over an unchanged ledger produce the same bytes; that is what makes `manifest.json`'s
+- **The job is the promise; the file is data-only.** `started_at`/`finished_at` on the job
+  are render times. `exported_at` in the file is a data watermark: the latest timestamp
+  among the exported rows, not the worker clock.
+- **Byte-identical for the same data.** The renderer sorts deterministically and derives
+  `exported_at` from the exported rows, so two jobs over an unchanged ledger produce the
+  same bytes even when the worker runs later. That is what makes `manifest.json`'s
   per-file `sha256` useful.
 - **The bytes are sealed.** They live in a second `filestore.Store` (`./data/exports`)
   encrypted under `APP_SECRET`, exactly like capture artifacts: a changed secret makes
   every stored export unreadable and the boot does not notice.
-- **Every step is an event with an actor** — `user` for queued/resumed/downloaded,
-  `worker` for started/completed/failed/expired/swept. A refused create writes nothing.
+- **Every step is an event with an actor** — `user` for `queued`, `downloaded` and a
+  replay's `resumed`; `worker` for a restart's `resumed`, `started`, `completed`, `failed`,
+  `expired` and `swept`. A refused create writes nothing.
 
 ## 4. RRR
 
@@ -132,7 +134,7 @@ Worker (per run)           resume `running` jobs left by a restart (`resumed`, b
 
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
-| the file is rendered at claim time, not request time | a user who queues at 09:00 and downloads at 11:00 gets 11:00 data | the payload carries `exported_at`, `started_at`, `finished_at`; the UI should show the render time next to the download |
+| the file is rendered at claim time, not request time | a user who queues at 09:00 and downloads at 11:00 gets 11:00 data | the job carries `started_at`/`finished_at`; the file's `exported_at` is a data watermark. Show the job's render time next to the download |
 | an hour of latency by default | "export" feels broken on a fresh job | poll with backoff, label the wait as a scheduled job, and show `worker_last_run_at`. A stale heartbeat means "the worker is not running", which is the real answer |
 | blobs expire after 720h | a month-old link answers `410` | the row stays `expired` and the list keeps it, so the client can explain and offer "queue it again" (a new `client_id`) |
 | the download is recorded before the first byte | a failed or aborted download still shows as downloaded | correct as an audit record; the UI must not treat it as "the user has the file" |

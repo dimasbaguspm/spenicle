@@ -50,6 +50,48 @@ func TestEncodedExportIsByteIdenticalForTheSameData(t *testing.T) {
 	}
 }
 
+func TestCollectIgnoresTheClockWhenStampingTheDocument(t *testing.T) {
+	t.Parallel()
+
+	base := windowedDeps(t)
+
+	tests := []struct {
+		name   string
+		render func(*testing.T, Deps) []byte
+	}{
+		{
+			name: "json",
+			render: func(t *testing.T, deps Deps) []byte {
+				t.Helper()
+
+				return exportedJSON(t, deps, nil)
+			},
+		},
+		{
+			name: "zip",
+			render: func(t *testing.T, deps Deps) []byte {
+				t.Helper()
+
+				return exportedArchive(t, deps, nil)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			first := base
+			first.Clock = fixedClock{at: time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)}
+
+			second := base
+			second.Clock = fixedClock{at: time.Date(2030, time.June, 7, 8, 9, 10, 0, time.UTC)}
+
+			if got, want := tc.render(t, first), tc.render(t, second); !bytes.Equal(got, want) {
+				t.Fatalf("the two documents differ when only the clock changes")
+			}
+		})
+	}
+}
+
 func TestJSONEnvelopeKeepsItsKeyOrder(t *testing.T) {
 	t.Parallel()
 

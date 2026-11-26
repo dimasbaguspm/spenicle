@@ -40,7 +40,6 @@ func collect(ctx context.Context, deps Deps, window *Window) (*snapshot, error) 
 
 	out := &snapshot{
 		schemaVersion: schemaVersion,
-		exportedAt:    deps.Clock.Now().UTC(),
 		baseCurrency:  deps.BaseCurrency,
 	}
 
@@ -52,7 +51,7 @@ func collect(ctx context.Context, deps Deps, window *Window) (*snapshot, error) 
 		return nil, err
 	}
 
-	if out.entries, err = listEntries(ctx, deps.Ledger); err != nil {
+	if out.entries, err = listEntries(ctx, deps.Ledger, window); err != nil {
 		return nil, err
 	}
 
@@ -78,8 +77,70 @@ func collect(ctx context.Context, deps Deps, window *Window) (*snapshot, error) 
 
 	out.sort()
 	out.keep(window)
+	out.exportedAt = out.dataWatermark()
 
 	return out, nil
+}
+
+func (s *snapshot) dataWatermark() time.Time {
+	var latest time.Time
+
+	note := func(at time.Time) {
+		if at.After(latest) {
+			latest = at
+		}
+	}
+
+	noteOptional := func(at *time.Time) {
+		if at != nil {
+			note(*at)
+		}
+	}
+
+	for _, account := range s.accounts {
+		note(account.CreatedAt)
+		noteOptional(account.ArchivedAt)
+	}
+
+	for _, payee := range s.payees {
+		note(payee.CreatedAt)
+		noteOptional(payee.ArchivedAt)
+	}
+
+	for _, entry := range s.entries {
+		note(entry.OccurredOn)
+		note(entry.CreatedAt)
+		noteOptional(entry.VoidedAt)
+	}
+
+	for _, capture := range s.captures {
+		note(capture.ReceivedAt)
+		noteOptional(capture.ResolvedAt)
+	}
+
+	for _, rule := range s.recurring {
+		note(rule.CreatedAt)
+		note(rule.NextDueOn)
+		noteOptional(rule.EndsOn)
+		noteOptional(rule.LastPostedOn)
+	}
+
+	for _, rate := range s.rates {
+		note(rate.OnDate)
+		note(rate.FetchedAt)
+	}
+
+	for _, query := range s.customQueries {
+		note(query.CreatedAt)
+		note(query.UpdatedAt)
+	}
+
+	for _, rule := range s.categorizationRules {
+		note(rule.CreatedAt)
+		noteOptional(rule.ArchivedAt)
+	}
+
+	return latest.UTC()
 }
 
 func (s *snapshot) keep(window *Window) {
@@ -188,8 +249,16 @@ func paginate[T any](
 	}
 }
 
-func listEntries(ctx context.Context, store repository.Ledger) ([]entity.Entry, error) {
+func listEntries(ctx context.Context, store repository.Ledger, window *Window) ([]entity.Entry, error) {
+	filter := entity.EntryFilter{Limit: pageLimit}
+	if window != nil {
+		filter.From = window.From
+		filter.To = window.To
+	}
+
 	return paginate(func(cursor string) ([]entity.Entry, error) {
-		return store.ListEntries(ctx, entity.EntryFilter{Cursor: cursor, Limit: pageLimit})
+		filter.Cursor = cursor
+
+		return store.ListEntries(ctx, filter)
 	}, func(entry entity.Entry) string { return entry.Ref })
 }

@@ -12,7 +12,7 @@ A finished export in the panel, or a script called after it read `ready`.
 
 ## Downstream
 
-`Module.Exports.Download` decides whether the job may be served (and appends the `downloaded` event), then `ArtifactFiles.Open` decrypts the blob the worker stored under `file_hash`. Nothing is rendered here.
+`Module.Exports.Download` decides whether the job may be served (and appends the `downloaded` event), then `Filestore(export store).Open` decrypts the blob the worker stored under `file_hash`. Nothing is rendered here.
 
 | job status | answer |
 | --- | --- |
@@ -46,7 +46,7 @@ The first form is an unwindowed job and the date is the day it finished; the sec
 
 ```json
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "exported_at": "2026-02-14T09:00:00Z",
   "base_currency": "IDR",
   "summary": {
@@ -56,23 +56,28 @@ The first form is an unwindowed job and the date is the day it finished; the sec
     "months": [{"month": "2026-02", "spend_minor": "25000", "income_minor": "0"}],
     "categories": [{"account_ref": "…", "name": "Unsorted", "spend_minor": "25000"}],
     "counts": {"accounts": 2, "payees": 0, "entries": 1, "postings": 2, "captures": 0,
-               "recurring": 0, "rates": 3, "custom_queries": 0},
+               "recurring": 0, "rates": 3, "custom_queries": 0, "categorization_rules": 0},
     "window": {"from": "2025-01-01", "to": "2025-12-31"}
   },
   "data": {
     "accounts": […], "payees": […], "entries": […], "captures": […],
-    "recurring": […], "rates": […], "custom_queries": […]
+    "recurring": […], "rates": […], "custom_queries": […], "categorization_rules": […]
   }
 }
 ```
 
 `data` is the canonical, re-importable half: money is a string of minor units, timestamps are RFC3339, dates are `YYYY-MM-DD`, every reference is a 32-hex ref, and no integer id or sealed value appears. `summary` is display sugar computed from the same rows: one balance per account (base currency), spend and income per month, spend per expense category, and the row count per table — it is not re-importable and never replaces `data`.
+`exported_at` is a data watermark: the latest timestamp among the rows in this document (or
+the zero time for an empty export), not the worker's clock. `started_at`/`finished_at` on the
+job are the render times. The file's `schema_version` is read at render time from the same
+`MAX(schema_migrations)` source `/healthz` uses. An unchanged ledger therefore renders
+byte-identical bytes even if the worker runs later.
 
-`summary.window` appears only when the job was queued with `from`/`to`, and repeats the window the document covers. A window narrows the entries: an entry whose `occurred_on` falls outside is excluded, its postings with it, and `summary.months`, `summary.categories`, the per-account balances and the `entries`/`postings` counts are computed from what is left. `accounts`, `payees`, `captures`, `recurring`, `rates` and `custom_queries` are exported whole, so a year can still be read against the full account tree. A window that matches nothing is a valid document with empty `entries`, empty `months` and zero counts, never an error.
+`summary.window` appears only when the job was queued with `from`/`to`, and repeats the window the document covers. A window narrows the entries: an entry whose `occurred_on` falls outside is excluded, its postings with it, and `summary.months`, `summary.categories`, the per-account balances and the `entries`/`postings` counts are computed from what is left. `accounts`, `payees`, `captures`, `recurring`, `rates`, `custom_queries` and `categorization_rules` are exported whole, so a year can still be read against the full account tree. A window that matches nothing is a valid document with empty `entries`, empty `months` and zero counts, never an error.
 
 The `csv` job follows the same rule: `entries.csv` and `postings.csv` carry the window, `summary.json` carries the same `summary` object (window included), and the other sheets are whole.
 
-The `csv` job is a zip, in this fixed order: `accounts.csv`, `payees.csv`, `entries.csv`, `postings.csv`, `captures.csv`, `rates.csv`, `recurring.csv`, `custom_queries.csv`, `summary.json` (the same `summary` object), `manifest.json` (`{"schema_version":…,"exported_at":"…","files":[{"name":"entries.csv","rows":42,"sha256":"<hex>"}]}`). Each sheet is a header row plus one row per record; `postings.csv` is the money sheet, one row per posting.
+The `csv` job is a zip, in this fixed order: `accounts.csv`, `payees.csv`, `entries.csv`, `postings.csv`, `captures.csv`, `rates.csv`, `recurring.csv`, `custom_queries.csv`, `categorization_rules.csv`, `summary.json` (the same `summary` object), `manifest.json` (`{"schema_version":…,"exported_at":"…","files":[{"name":"entries.csv","rows":42,"sha256":"<hex>"}]}`). Each sheet is a header row plus one row per record; `postings.csv` is the money sheet, one row per posting.
 
 ## Errors
 

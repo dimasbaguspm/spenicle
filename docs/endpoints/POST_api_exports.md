@@ -45,13 +45,16 @@ A window is both ends or neither: one date alone is `422 invalid_request`. The w
   "format": "json",
   "from": "2025-01-01",
   "to": "2025-12-31",
-  "schema_version": 4,
+  "schema_version": 6,
   "bytes": 0,
   "created_at": "2026-02-14T09:00:00Z"
 }
 ```
 
 `from` and `to` are omitted for an unwindowed job. `counts` (per table), `started_at`, `finished_at`, `expires_at` and `error_message` appear once the worker has claimed or finished the job.
+The job records `schema_version` at creation from `MAX(schema_migrations)`, the same source
+`/healthz` reads. A replay keeps that value; the rendered file records the schema at render
+time.
 
 ## Errors
 
