@@ -32,7 +32,7 @@
       "entity_kind": "system",
       "ref": "<ref>",
       "to": {
-        "schema_version": 6,
+        "schema_version": 1,
         "service": "spenicle-http",
         "started_at": "<timestamp>",
         "version": "<version>"

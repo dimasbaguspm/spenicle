@@ -62,7 +62,7 @@
       "from_json": null,
       "id": 3,
       "ref": "<ref>",
-      "to_json": "{\"service\":\"spenicle-http\",\"version\":\"uat\",\"schema_version\":6,\"started_at\":\"<timestamp>\"}"
+      "to_json": "{\"service\":\"spenicle-http\",\"version\":\"uat\",\"schema_version\":1,\"started_at\":\"<timestamp>\"}"
     },
     {
       "action": "create",
@@ -78,20 +78,27 @@
       "to_json": "{\"kind\":\"share\",\"status\":\"pending\"}"
     }
   ],
+  "capture_payloads": [
+    {
+      "capture_id": 1,
+      "draft_json": null,
+      "extraction_error": null,
+      "id": 1,
+      "raw_text": "<sealed>",
+      "ref": "<ref>"
+    }
+  ],
   "captures": [
     {
       "artifact_hash": null,
       "batch_id": null,
       "client_id": null,
       "dedupe_key": "75763d11383a141939d2115e2965c5a2804e4e84094a86e1ffc5d7f0c4174fdd",
-      "draft_json": null,
-      "extraction_error": null,
       "extraction_job_ref": null,
       "extraction_model": null,
       "extraction_rail": null,
       "id": 1,
       "kind": "share",
-      "raw_text": "<sealed>",
       "received_at": "<timestamp>",
       "ref": "<ref>",
       "resolution_note": null,
@@ -134,6 +141,8 @@
   ],
   "import_batches": [],
   "import_rows": [],
+  "import_upload_chunks": [],
+  "import_uploads": [],
   "ledger_entries": [],
   "ledger_postings": [],
   "settings": [

@@ -62,7 +62,7 @@
       "from_json": null,
       "id": 3,
       "ref": "<ref>",
-      "to_json": "{\"service\":\"spenicle-http\",\"version\":\"uat\",\"schema_version\":6,\"started_at\":\"<timestamp>\"}"
+      "to_json": "{\"service\":\"spenicle-http\",\"version\":\"uat\",\"schema_version\":1,\"started_at\":\"<timestamp>\"}"
     },
     {
       "action": "create",
@@ -78,6 +78,7 @@
       "to_json": "{\"occurred_on\":\"2026-02-14\",\"currency\":\"IDR\",\"source\":\"manual\",\"postings\":2}"
     }
   ],
+  "capture_payloads": [],
   "captures": [],
   "fx_rates": [
     {
@@ -113,6 +114,8 @@
   ],
   "import_batches": [],
   "import_rows": [],
+  "import_upload_chunks": [],
+  "import_uploads": [],
   "ledger_entries": [
     {
       "client_id": null,

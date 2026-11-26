@@ -75,7 +75,7 @@
       "from_json": null,
       "id": 3,
       "ref": "<ref>",
-      "to_json": "{\"service\":\"spenicle-http\",\"version\":\"uat\",\"schema_version\":6,\"started_at\":\"<timestamp>\"}"
+      "to_json": "{\"service\":\"spenicle-http\",\"version\":\"uat\",\"schema_version\":1,\"started_at\":\"<timestamp>\"}"
     },
     {
       "action": "create",
@@ -104,20 +104,27 @@
       "to_json": "{\"status\":\"pending\"}"
     }
   ],
+  "capture_payloads": [
+    {
+      "capture_id": 1,
+      "draft_json": null,
+      "extraction_error": "snaptojson: 503 vendor_unavailable: the partner is down",
+      "id": 1,
+      "raw_text": null,
+      "ref": "<ref>"
+    }
+  ],
   "captures": [
     {
       "artifact_hash": "b3be5f5a9d30ee36242604380bd4ce604ee24fa17095cc02b062086e09983819",
       "batch_id": null,
       "client_id": null,
       "dedupe_key": "b3d404a8a768d93686079ceda9c5f0d5c37956db7d4dbce0d0a8d189d4da027c",
-      "draft_json": null,
-      "extraction_error": "snaptojson: 503 vendor_unavailable: the partner is down",
       "extraction_job_ref": null,
       "extraction_model": null,
       "extraction_rail": "snaptojson",
       "id": 1,
       "kind": "image",
-      "raw_text": null,
       "received_at": "<timestamp>",
       "ref": "<ref>",
       "resolution_note": null,
@@ -160,6 +167,8 @@
   ],
   "import_batches": [],
   "import_rows": [],
+  "import_upload_chunks": [],
+  "import_uploads": [],
   "ledger_entries": [],
   "ledger_postings": [],
   "settings": [
