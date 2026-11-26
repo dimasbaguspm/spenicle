@@ -33,6 +33,7 @@ type Ledger interface {
 type Captures interface {
 	InsertCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error)
 	CaptureByDedupeKey(ctx context.Context, key string) (entity.Capture, bool, error)
+	CaptureByClientID(ctx context.Context, clientID string) (entity.Capture, bool, error)
 	CaptureByRef(ctx context.Context, ref string) (entity.Capture, bool, error)
 	ListCaptures(ctx context.Context, filter entity.CaptureFilter) ([]entity.Capture, error)
 	UpdateCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error)
@@ -152,17 +153,33 @@ type Imports interface {
 	ImportBatchByRef(ctx context.Context, ref string) (entity.ImportBatch, bool, error)
 	ImportBatchByClientID(ctx context.Context, clientID string) (entity.ImportBatch, bool, error)
 	ListImportBatches(ctx context.Context, filter entity.ImportFilter) ([]entity.ImportBatch, error)
-	CloseImportBatch(ctx context.Context, ref, status string, at time.Time) (entity.ImportBatch, error)
-	ExtendImportBatch(ctx context.Context, ref string, expiresAt time.Time) error
+	CloseImportBatch(
+		ctx context.Context,
+		ref, status, expected string,
+		at time.Time,
+		event entity.ImportEvent,
+	) (entity.ImportBatch, error)
 	ImportRows(ctx context.Context, batchID int64) ([]entity.ImportRow, error)
-	UpdateImportRow(ctx context.Context, row entity.ImportRow) (entity.ImportRow, error)
+	EditImportRow(
+		ctx context.Context,
+		row entity.ImportRow,
+		expiresAt time.Time,
+		events []entity.ImportEvent,
+	) (entity.ImportRow, error)
 	ExpiredImportBatches(ctx context.Context, now time.Time, limit int) ([]entity.ImportBatch, error)
 	DropImportBatch(ctx context.Context, ref string, event entity.ImportEvent) (int, error)
 	BeginImportCommit(ctx context.Context, ref string) (bool, error)
 	InsertImportUpload(ctx context.Context, upload entity.ImportUpload) (entity.ImportUpload, error)
 	ImportUploadByClientID(ctx context.Context, clientID string) (entity.ImportUpload, bool, error)
 	ImportUploadByRef(ctx context.Context, ref string) (entity.ImportUpload, bool, error)
-	AppendImportChunk(ctx context.Context, ref string, index int, bytes int64, at time.Time) (bool, error)
+	AppendImportChunk(
+		ctx context.Context,
+		ref string,
+		index int,
+		bytes int64,
+		chunkHash string,
+		at time.Time,
+	) (bool, error)
 	CompleteImportUpload(ctx context.Context, ref, fileHash string, at time.Time) (bool, error)
 	ExpiredImportUploads(ctx context.Context, before time.Time, limit int) ([]entity.ImportUpload, error)
 	DropImportUpload(ctx context.Context, ref string) (int, error)

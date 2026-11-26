@@ -4,7 +4,7 @@ import "time"
 
 // MailMessage is the reference a mailbox poll leaves behind: which mail became which
 // capture, and how to ask the provider for it again. It carries no content — the body
-// lives sealed in captures.raw_text, the same rule artifacts follow.
+// lives sealed in capture_payloads.raw_text, the same rule artifacts follow.
 type MailMessage struct {
 	ID               int64
 	Ref              string

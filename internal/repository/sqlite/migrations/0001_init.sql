@@ -18,7 +18,8 @@ CREATE TABLE api_tokens (
   scopes       TEXT NOT NULL,
   created_at   TEXT NOT NULL,
   last_used_at TEXT,
-  revoked_at   TEXT
+  revoked_at   TEXT,
+  expires_at   TEXT
 );
 
 CREATE TABLE fx_rates (
@@ -37,7 +38,7 @@ CREATE TABLE accounts (
   id          INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
   name        TEXT NOT NULL,
-  kind        TEXT NOT NULL CHECK (kind IN ('asset','liability','expense','income')),
+  kind        TEXT NOT NULL CHECK (kind IN ('asset','liability','equity','expense','income')),
   parent_id   INTEGER REFERENCES accounts(id),
   currency    TEXT NOT NULL,
   icon        TEXT,
@@ -55,6 +56,23 @@ CREATE TABLE payees (
   archived_at         TEXT,
   created_at          TEXT NOT NULL
 );
+
+CREATE TABLE categorization_rules (
+  id          INTEGER PRIMARY KEY,
+  ref         TEXT NOT NULL UNIQUE,
+  pattern     TEXT NOT NULL,
+  field       TEXT NOT NULL CHECK (field IN ('payee','note')),
+  match_kind  TEXT NOT NULL CHECK (match_kind IN ('exact','contains','prefix')),
+  account_id  INTEGER NOT NULL REFERENCES accounts(id),
+  priority    INTEGER NOT NULL DEFAULT 0,
+  archived_at TEXT,
+  created_at  TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX ux_rules_live ON categorization_rules (pattern, field, match_kind)
+  WHERE archived_at IS NULL;
+
+CREATE INDEX ix_rules_account ON categorization_rules (account_id);
 
 CREATE TABLE recurring_rules (
   id                 INTEGER PRIMARY KEY,
@@ -76,6 +94,8 @@ CREATE TABLE recurring_rules (
   last_posted_on     TEXT,
   created_at         TEXT NOT NULL
 );
+
+CREATE INDEX ix_recurring_due ON recurring_rules (state, next_due_on, id);
 
 CREATE TABLE ledger_entries (
   id                INTEGER PRIMARY KEY,
@@ -100,6 +120,8 @@ CREATE UNIQUE INDEX ux_entries_client ON ledger_entries (client_id)
   WHERE client_id IS NOT NULL;
 
 CREATE INDEX ix_entries_occurred ON ledger_entries (occurred_on);
+CREATE INDEX ix_entries_reversal ON ledger_entries (reverses_entry_id)
+  WHERE reverses_entry_id IS NOT NULL;
 
 CREATE TABLE ledger_postings (
   id                INTEGER PRIMARY KEY,
@@ -117,31 +139,37 @@ CREATE INDEX ix_postings_account ON ledger_postings (account_id, entry_id);
 CREATE INDEX ix_postings_entry ON ledger_postings (entry_id);
 
 CREATE TABLE captures (
-  id                INTEGER PRIMARY KEY,
+  id                 INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  kind              TEXT NOT NULL CHECK (kind IN
-                    ('share','image','email','statement','recurring','manual')),
-  status            TEXT NOT NULL CHECK (status IN
-                    ('extracting','pending','duplicate','approved','rejected','failed')),
-  client_id         TEXT,
-  dedupe_key        TEXT NOT NULL UNIQUE,
-  batch_id          TEXT,
-  artifact_hash     TEXT,
-  raw_text          TEXT,
-  draft_json        TEXT,
-  extraction_error  TEXT,
+  kind               TEXT NOT NULL CHECK (kind IN
+                     ('share','image','email','statement','recurring','manual')),
+  status             TEXT NOT NULL CHECK (status IN
+                     ('extracting','pending','duplicate','approved','rejected','failed')),
+  client_id          TEXT,
+  dedupe_key         TEXT NOT NULL UNIQUE,
+  batch_id           TEXT,
+  artifact_hash      TEXT,
   extraction_job_ref TEXT,
-  extraction_rail   TEXT,
-  extraction_model  TEXT,
-  resolved_entry_id INTEGER REFERENCES ledger_entries(id),
-  resolution_note   TEXT,
-  received_at       TEXT NOT NULL,
-  resolved_at       TEXT
+  extraction_rail    TEXT,
+  extraction_model   TEXT,
+  resolved_entry_id  INTEGER REFERENCES ledger_entries(id),
+  resolution_note    TEXT,
+  received_at        TEXT NOT NULL,
+  resolved_at        TEXT
 );
 
 CREATE UNIQUE INDEX ux_captures_client ON captures (client_id) WHERE client_id IS NOT NULL;
 CREATE INDEX ix_captures_queue ON captures (status, received_at);
 CREATE INDEX ix_captures_batch ON captures (batch_id);
+
+CREATE TABLE capture_payloads (
+  id              INTEGER PRIMARY KEY,
+  ref             TEXT NOT NULL UNIQUE,
+  capture_id      INTEGER NOT NULL UNIQUE REFERENCES captures(id),
+  raw_text        TEXT,
+  draft_json      TEXT,
+  extraction_error TEXT
+);
 
 CREATE TABLE artifacts (
   id           INTEGER PRIMARY KEY,
@@ -183,6 +211,7 @@ CREATE TABLE import_rows (
   row_index       INTEGER NOT NULL,
   occurred_on     TEXT NOT NULL,
   amount_minor    INTEGER NOT NULL,
+  currency        TEXT NOT NULL DEFAULT '',
   description     TEXT NOT NULL,
   account_ref     TEXT NOT NULL,
   category_ref    TEXT,
@@ -228,11 +257,12 @@ CREATE TABLE import_uploads (
 CREATE INDEX ix_import_uploads_status ON import_uploads (status, updated_at);
 
 CREATE TABLE import_upload_chunks (
-  id          INTEGER PRIMARY KEY,
-  upload_id   INTEGER NOT NULL REFERENCES import_uploads(id),
-  chunk_index INTEGER NOT NULL,
-  bytes       INTEGER NOT NULL,
-  created_at  TEXT NOT NULL,
+  id           INTEGER PRIMARY KEY,
+  upload_id    INTEGER NOT NULL REFERENCES import_uploads(id),
+  chunk_index  INTEGER NOT NULL,
+  bytes        INTEGER NOT NULL,
+  chunk_sha256 TEXT NOT NULL,
+  created_at   TEXT NOT NULL,
   UNIQUE (upload_id, chunk_index)
 );
 
@@ -246,6 +276,8 @@ CREATE TABLE exports (
   counts_json    TEXT,
   file_hash      TEXT,
   bytes          INTEGER NOT NULL DEFAULT 0,
+  from_on        TEXT,
+  to_on          TEXT,
   created_at     TEXT NOT NULL,
   started_at     TEXT,
   finished_at    TEXT,
@@ -254,10 +286,11 @@ CREATE TABLE exports (
 );
 
 CREATE INDEX ix_exports_status ON exports (status, id);
+CREATE INDEX ix_exports_expiry ON exports (status, expires_at);
 
 CREATE TABLE export_events (
   id           INTEGER PRIMARY KEY,
-  ref TEXT NOT NULL UNIQUE,
+  ref          TEXT NOT NULL UNIQUE,
   export_id    INTEGER NOT NULL,
   kind         TEXT NOT NULL,
   payload_json TEXT,

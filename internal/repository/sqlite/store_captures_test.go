@@ -219,3 +219,122 @@ func TestUpdateCaptureIfUnresolved(t *testing.T) {
 		})
 	}
 }
+
+func TestCapturePayloadsFollowTheCapture(t *testing.T) {
+	store := newStore(t)
+	ctx := t.Context()
+
+	capture, insertErr := store.InsertCapture(ctx, entity.Capture{
+		Kind:       constant.CaptureKindManual,
+		Status:     constant.CaptureStatusPending,
+		ClientID:   "client-1",
+		DedupeKey:  uuid.New(),
+		RawText:    "coffee 25k",
+		DraftJSON:  `{"note":"coffee"}`,
+		ReceivedAt: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
+	})
+	if insertErr != nil {
+		t.Fatalf("insert capture: %v", insertErr)
+	}
+
+	reads := []struct {
+		name string
+		read func() (entity.Capture, bool, error)
+	}{
+		{name: "by ref", read: func() (entity.Capture, bool, error) {
+			return store.CaptureByRef(ctx, capture.Ref)
+		}},
+		{name: "by client id", read: func() (entity.Capture, bool, error) {
+			return store.CaptureByClientID(ctx, capture.ClientID)
+		}},
+		{name: "by dedupe key", read: func() (entity.Capture, bool, error) {
+			return store.CaptureByDedupeKey(ctx, capture.DedupeKey)
+		}},
+	}
+
+	for _, read := range reads {
+		t.Run(read.name, func(t *testing.T) {
+			stored := requirePayloadCapture(t, read.read)
+			assertCapturePayload(t, stored, "coffee 25k", `{"note":"coffee"}`)
+		})
+	}
+
+	capture.DraftJSON = `{"note":"tea"}`
+	capture.ExtractionError = "vendor timeout"
+	if _, err := store.UpdateCapture(ctx, capture); err != nil {
+		t.Fatalf("update capture: %v", err)
+	}
+
+	updated := requirePayloadCapture(t, func() (entity.Capture, bool, error) {
+		return store.CaptureByRef(ctx, capture.Ref)
+	})
+	assertCapturePayload(t, updated, "coffee 25k", `{"note":"tea"}`)
+	if updated.ExtractionError != "vendor timeout" {
+		t.Fatalf("extraction_error = %q, want vendor timeout", updated.ExtractionError)
+	}
+	if got := countRows(t, store, `SELECT COUNT(*) FROM capture_payloads`); got != 1 {
+		t.Fatalf("capture payload rows = %d, want 1", got)
+	}
+}
+
+func requirePayloadCapture(t *testing.T, read func() (entity.Capture, bool, error)) entity.Capture {
+	t.Helper()
+
+	stored, found, err := read()
+	if err != nil || !found {
+		t.Fatalf("read capture: found=%v err=%v", found, err)
+	}
+	return stored
+}
+
+func assertCapturePayload(t *testing.T, stored entity.Capture, rawText, draftJSON string) {
+	t.Helper()
+
+	if stored.RawText != rawText || stored.DraftJSON != draftJSON {
+		t.Fatalf("payload = %q / %q, want %q / %q", stored.RawText, stored.DraftJSON, rawText, draftJSON)
+	}
+}
+
+func TestInsertCaptureMapsUniquenessToDuplicate(t *testing.T) {
+	tests := []struct {
+		name     string
+		conflict func(*entity.Capture)
+	}{
+		{name: "client id", conflict: func(*entity.Capture) {}},
+		{name: "dedupe key", conflict: func(second *entity.Capture) {
+			second.ClientID = "client-2"
+		}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store := newStore(t)
+			ctx := t.Context()
+
+			first := entity.Capture{
+				Kind:       constant.CaptureKindManual,
+				Status:     constant.CaptureStatusPending,
+				ClientID:   "client-1",
+				DedupeKey:  uuid.New(),
+				ReceivedAt: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
+			}
+			if _, err := store.InsertCapture(ctx, first); err != nil {
+				t.Fatalf("first insert: %v", err)
+			}
+
+			second := first
+			second.Ref = ""
+			tc.conflict(&second)
+			if _, err := store.InsertCapture(ctx, second); !errors.Is(err, entity.ErrDuplicate) {
+				t.Fatalf("error = %v, want duplicate", err)
+			}
+
+			if got := countRows(t, store, `SELECT COUNT(*) FROM captures`); got != 1 {
+				t.Fatalf("captures = %d, want 1", got)
+			}
+			if got := countRows(t, store, `SELECT COUNT(*) FROM capture_payloads`); got != 1 {
+				t.Fatalf("capture payloads = %d, want 1", got)
+			}
+		})
+	}
+}

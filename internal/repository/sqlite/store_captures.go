@@ -13,13 +13,18 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const captureColumns = `id, ref, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
-	raw_text, draft_json, extraction_error, extraction_job_ref, extraction_rail,
-	extraction_model, resolved_entry_id, resolution_note, received_at, resolved_at,
-	(SELECT e.ref FROM ledger_entries e WHERE e.id = resolved_entry_id)`
+const captureColumns = `captures.id, captures.ref, captures.kind, captures.status,
+	captures.client_id, captures.dedupe_key, captures.batch_id, captures.artifact_hash,
+	p.raw_text, p.draft_json, p.extraction_error, captures.extraction_job_ref,
+	captures.extraction_rail, captures.extraction_model, captures.resolved_entry_id,
+	captures.resolution_note, captures.received_at, captures.resolved_at,
+	(SELECT e.ref FROM ledger_entries e WHERE e.id = captures.resolved_entry_id)`
+
+const captureJoin = `LEFT JOIN capture_payloads p ON p.capture_id = captures.id`
 
 const (
-	captureStatusRank        = `CASE status WHEN 'extracting' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END`
+	captureStatusRank = `CASE captures.status ` +
+		`WHEN 'extracting' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END`
 	captureStatusRankAliased = `CASE captures.status WHEN 'extracting' THEN 0 ` +
 		`WHEN 'pending' THEN 1 ELSE 2 END`
 )
@@ -36,10 +41,9 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 		res, execErr := tx.ExecContext(ctx, `
 			INSERT INTO captures
 				(ref, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
-				 raw_text, draft_json, extraction_error, extraction_job_ref,
-				 extraction_rail, extraction_model, resolved_entry_id, resolution_note,
-				 received_at, resolved_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				 extraction_job_ref, extraction_rail, extraction_model,
+				 resolved_entry_id, resolution_note, received_at, resolved_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			capture.Ref,
 			capture.Kind,
 			capture.Status,
@@ -47,9 +51,6 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 			capture.DedupeKey,
 			nullString(capture.BatchID),
 			nullString(capture.ArtifactHash),
-			nullString(capture.RawText),
-			nullString(capture.DraftJSON),
-			nullString(capture.ExtractionError),
 			nullString(capture.JobRef),
 			nullString(capture.ExtractionRail),
 			nullString(capture.ExtractionModel),
@@ -59,7 +60,7 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 			nullTime(capture.ResolvedAt),
 		)
 		if execErr != nil {
-			return fmt.Errorf("insert capture: %w", execErr)
+			return fmt.Errorf("insert capture: %w", uniqueViolation(execErr))
 		}
 
 		id, idErr := res.LastInsertId()
@@ -68,6 +69,18 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 		}
 
 		capture.ID = id
+
+		if _, payloadErr := tx.ExecContext(ctx, `
+			INSERT INTO capture_payloads
+				(ref, capture_id, raw_text, draft_json, extraction_error)
+			VALUES (?, ?, ?, ?, ?)`,
+			uuid.New(), id,
+			nullString(capture.RawText),
+			nullString(capture.DraftJSON),
+			nullString(capture.ExtractionError),
+		); payloadErr != nil {
+			return fmt.Errorf("insert capture payload: %w", payloadErr)
+		}
 
 		return appendAudit(ctx, tx, auditRecord{
 			Kind:   constant.AuditEntityCapture,
@@ -89,7 +102,19 @@ func (s *Store) CaptureByDedupeKey(ctx context.Context, key string) (entity.Capt
 	defer endSpan()
 
 	return s.scanCapture(ctx, s.db.QueryRowContext(ctx,
-		`SELECT `+captureColumns+` FROM captures WHERE dedupe_key = ?`, key))
+		`SELECT `+captureColumns+` FROM captures `+captureJoin+` WHERE captures.dedupe_key = ?`, key))
+}
+
+func (s *Store) CaptureByClientID(ctx context.Context, clientID string) (entity.Capture, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CaptureByClientID")
+	defer endSpan()
+
+	if clientID == "" {
+		return entity.Capture{}, false, nil
+	}
+
+	return s.scanCapture(ctx, s.db.QueryRowContext(ctx,
+		`SELECT `+captureColumns+` FROM captures `+captureJoin+` WHERE captures.client_id = ?`, clientID))
 }
 
 func (s *Store) CaptureByRef(ctx context.Context, ref string) (entity.Capture, bool, error) {
@@ -97,7 +122,7 @@ func (s *Store) CaptureByRef(ctx context.Context, ref string) (entity.Capture, b
 	defer endSpan()
 
 	return s.scanCapture(ctx, s.db.QueryRowContext(ctx,
-		`SELECT `+captureColumns+` FROM captures WHERE ref = ?`, ref))
+		`SELECT `+captureColumns+` FROM captures `+captureJoin+` WHERE captures.ref = ?`, ref))
 }
 
 func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) ([]entity.Capture, error) {
@@ -107,11 +132,12 @@ func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) (
 	limit := clampLimit(filter.Limit)
 
 	builder := newList("captures", captureColumns)
-	builder.eq("status", filter.Status)
-	builder.inList("ref", filter.Refs)
+	builder.join(captureJoin)
+	builder.eq("captures.status", filter.Status)
+	builder.inList("captures.ref", filter.Refs)
 	builder.after(captureStatusRankAliased+`, captures.received_at, captures.id`,
 		captureStatusRank+`, received_at, id`, "captures", filter.Cursor)
-	builder.orderBy(captureStatusRank + `, received_at ASC, id ASC`)
+	builder.orderBy(captureStatusRank + `, captures.received_at ASC, captures.id ASC`)
 
 	query, args := builder.page(limit)
 
@@ -283,13 +309,11 @@ func (s *Store) Approve(
 func updateCaptureRow(ctx context.Context, tx *sql.Tx, capture entity.Capture) error {
 	res, err := tx.ExecContext(ctx, `
 		UPDATE captures SET
-			status = ?, draft_json = ?, extraction_error = ?, extraction_job_ref = ?,
-			extraction_rail = ?, extraction_model = ?,
-			resolved_entry_id = ?, resolution_note = ?, resolved_at = ?
+			status = ?, extraction_job_ref = ?, extraction_rail = ?,
+			extraction_model = ?, resolved_entry_id = ?, resolution_note = ?,
+			resolved_at = ?
 		WHERE id = ?`,
 		capture.Status,
-		nullString(capture.DraftJSON),
-		nullString(capture.ExtractionError),
 		nullString(capture.JobRef),
 		nullString(capture.ExtractionRail),
 		nullString(capture.ExtractionModel),
@@ -309,6 +333,21 @@ func updateCaptureRow(ctx context.Context, tx *sql.Tx, capture entity.Capture) e
 
 	if affected == 0 {
 		return fmt.Errorf("%w: capture %d", entity.ErrNotFound, capture.ID)
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO capture_payloads
+			(ref, capture_id, raw_text, draft_json, extraction_error)
+		VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT(capture_id) DO UPDATE SET
+			draft_json = COALESCE(excluded.draft_json, capture_payloads.draft_json),
+			extraction_error = excluded.extraction_error`,
+		uuid.New(), capture.ID,
+		nullString(capture.RawText),
+		nullString(capture.DraftJSON),
+		nullString(capture.ExtractionError),
+	); err != nil {
+		return fmt.Errorf("update capture payload: %w", err)
 	}
 
 	return nil

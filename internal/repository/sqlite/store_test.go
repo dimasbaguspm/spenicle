@@ -2,6 +2,7 @@ package sqlite_test
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -53,8 +54,95 @@ func TestMigrateIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("schema version: %v", err)
 	}
-	if v != 6 {
-		t.Fatalf("schema version = %d, want 6", v)
+	if v != 1 {
+		t.Fatalf("schema version = %d, want 1", v)
+	}
+}
+
+func TestConsolidatedSchemaCarriesEveryMergedChange(t *testing.T) {
+	store := newStore(t)
+	ctx := t.Context()
+
+	columns := []struct {
+		table  string
+		column string
+	}{
+		{table: "api_tokens", column: "expires_at"},
+		{table: "exports", column: "from_on"},
+		{table: "exports", column: "to_on"},
+		{table: "import_rows", column: "currency"},
+		{table: "capture_payloads", column: "capture_id"},
+		{table: "import_upload_chunks", column: "chunk_sha256"},
+		{table: "categorization_rules", column: "account_id"},
+	}
+
+	for _, column := range columns {
+		t.Run(column.table+"."+column.column, func(t *testing.T) {
+			var found int
+			err := store.DB().QueryRowContext(ctx,
+				fmt.Sprintf(`SELECT COUNT(*) FROM pragma_table_info('%s') WHERE name = ?`, column.table),
+				column.column,
+			).Scan(&found)
+			if err != nil {
+				t.Fatalf("inspect %s.%s: %v", column.table, column.column, err)
+			}
+			if found != 1 {
+				t.Fatalf("%s.%s is missing from the consolidated schema", column.table, column.column)
+			}
+		})
+	}
+
+	for _, index := range []string{
+		"ux_rules_live", "ix_rules_account", "ix_recurring_due",
+		"ix_entries_reversal", "ix_exports_expiry",
+	} {
+		t.Run(index, func(t *testing.T) {
+			var found int
+			err := store.DB().QueryRowContext(ctx,
+				`SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = ?`, index,
+			).Scan(&found)
+			if err != nil {
+				t.Fatalf("inspect index %s: %v", index, err)
+			}
+			if found != 1 {
+				t.Fatalf("index %s is missing from the consolidated schema", index)
+			}
+		})
+	}
+
+	if _, err := store.CreateAccount(ctx, "Opening balance", constant.AccountKindEquity, "IDR"); err != nil {
+		t.Fatalf("equity account: %v", err)
+	}
+}
+
+func TestInsertEntryMapsClientIDConflictToDuplicate(t *testing.T) {
+	store := newStore(t)
+	asset, expense := baseline(t, store)
+	ctx := t.Context()
+
+	entry, err := entity.NewEntry(entity.Entry{
+		ClientID:   "01924f7c-0000-7000-8000-000000000002",
+		OccurredOn: time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+		Currency:   "IDR",
+		Source:     constant.EntrySourceManual,
+		Postings: []entity.Posting{
+			{AccountID: expense.ID, AmountMinor: 25_000, BaseAmountMinor: 25_000},
+			{AccountID: asset.ID, AmountMinor: -25_000, BaseAmountMinor: -25_000},
+		},
+	})
+	if err != nil {
+		t.Fatalf("new entry: %v", err)
+	}
+
+	if _, err := store.InsertEntry(ctx, entry); err != nil {
+		t.Fatalf("first insert: %v", err)
+	}
+
+	replay := entry
+	replay.ID = 0
+	replay.Ref = ""
+	if _, err := store.InsertEntry(ctx, replay); !errors.Is(err, entity.ErrDuplicate) {
+		t.Fatalf("error = %v, want duplicate", err)
 	}
 }
 

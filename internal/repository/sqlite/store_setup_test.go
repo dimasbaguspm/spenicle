@@ -1,11 +1,7 @@
 package sqlite_test
 
 import (
-	"database/sql"
 	"errors"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -69,14 +65,6 @@ func TestCompleteSetupRollsBackOnConflict(t *testing.T) {
 			assertSetupConflict(t, store, setup, test.expected, test.wantErr)
 		})
 	}
-}
-
-func TestEquityMigrationPreservesPopulatedRelationships(t *testing.T) {
-	db := openV3Database(t)
-	applyV3Schema(t, db)
-	seedV3Relationships(t, db)
-
-	assertEquityMigration(t, db)
 }
 
 func newOpeningSetup(t *testing.T, accounts []entity.OpeningAccount) entity.Setup {
@@ -220,120 +208,5 @@ func assertSetupRolledBack(t *testing.T, store *sqlite.Store) {
 
 	if value, found, err := store.Setting(ctx, constant.SettingAppSettings); err != nil || !found || value != "old-settings" {
 		t.Fatalf("settings after rollback: found=%v value=%q err=%v", found, value, err)
-	}
-}
-
-func openV3Database(t *testing.T) *sql.DB {
-	t.Helper()
-
-	path := filepath.Join(t.TempDir(), "v3.db")
-	db, err := sqlite.Open(t.Context(), sqlite.Config{Path: path})
-	if err != nil {
-		t.Fatalf("open: %v", err)
-	}
-
-	t.Cleanup(func() { _ = db.Close() })
-
-	return db
-}
-
-func applyV3Schema(t *testing.T, db *sql.DB) {
-	t.Helper()
-
-	for _, name := range []string{"0001_init.sql", "0002_categorization_rules.sql", "0003_export_window.sql"} {
-		applyV3MigrationFile(t, db, name)
-	}
-}
-
-func applyV3MigrationFile(t *testing.T, db *sql.DB, name string) {
-	t.Helper()
-
-	ctx := t.Context()
-	body, err := os.ReadFile(filepath.Join("migrations", name))
-	if err != nil {
-		t.Fatalf("read %s: %v", name, err)
-	}
-
-	for _, statement := range strings.Split(string(body), ";") {
-		if strings.TrimSpace(statement) != "" {
-			if _, err := db.ExecContext(ctx, statement); err != nil {
-				t.Fatalf("apply %s: %v", name, err)
-			}
-		}
-	}
-}
-
-func seedV3Relationships(t *testing.T, db *sql.DB) {
-	t.Helper()
-
-	statements := []string{
-		`CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)`,
-		`INSERT INTO schema_migrations (version, applied_at) VALUES (1, '2026-01-01T00:00:00Z'), (2, '2026-01-01T00:00:00Z'), (3, '2026-01-01T00:00:00Z')`,
-		`INSERT INTO accounts (ref, name, kind, currency, created_at) VALUES ('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'Cash', 'asset', 'USD', '2026-01-01T00:00:00Z')`,
-		`INSERT INTO accounts (ref, name, kind, parent_id, currency, created_at) VALUES ('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'Wallet', 'asset', 1, 'USD', '2026-01-01T00:00:00Z')`,
-		`INSERT INTO payees (ref, name, default_account_id, created_at) VALUES ('cccccccccccccccccccccccccccccccc', 'Shop', 2, '2026-01-01T00:00:00Z')`,
-		`INSERT INTO ledger_entries (ref, occurred_on, payee_id, currency, source, created_at) VALUES ('dddddddddddddddddddddddddddddddd', '2026-01-02', 1, 'USD', 'manual', '2026-01-02T00:00:00Z')`,
-		`INSERT INTO ledger_postings (ref, entry_id, account_id, amount_minor, base_amount_minor, fx_source) VALUES ('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 1, 2, 100, 100, 'identity'), ('ffffffffffffffffffffffffffffffff', 1, 1, -100, -100, 'identity')`,
-	}
-
-	for _, statement := range statements {
-		if _, err := db.ExecContext(t.Context(), statement); err != nil {
-			t.Fatalf("seed v3: %v", err)
-		}
-	}
-}
-
-func assertEquityMigration(t *testing.T, db *sql.DB) {
-	t.Helper()
-
-	if err := sqlite.Migrate(t.Context(), db); err != nil {
-		t.Fatalf("migrate v3: %v", err)
-	}
-
-	assertNoForeignKeyViolations(t, db)
-	assertMigratedRelationships(t, db)
-}
-
-func assertNoForeignKeyViolations(t *testing.T, db *sql.DB) {
-	t.Helper()
-
-	rows, err := db.QueryContext(t.Context(), `PRAGMA foreign_key_check`)
-	if err != nil {
-		t.Fatalf("foreign key check: %v", err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	if rows.Next() {
-		t.Fatal("the migrated database has a foreign key violation")
-	}
-
-	if err := rows.Err(); err != nil {
-		t.Fatalf("iterate foreign key check: %v", err)
-	}
-}
-
-func assertMigratedRelationships(t *testing.T, db *sql.DB) {
-	t.Helper()
-
-	ctx := t.Context()
-	var parentID int
-	if err := db.QueryRowContext(ctx, `SELECT parent_id FROM accounts WHERE name = 'Wallet'`).Scan(&parentID); err != nil || parentID != 1 {
-		t.Fatalf("parent id = %d err=%v", parentID, err)
-	}
-
-	if _, err := db.ExecContext(ctx,
-		`INSERT INTO accounts (ref, name, kind, currency, created_at) VALUES ('11111111111111111111111111111111', 'Opening balance', 'equity', 'USD', '2026-01-01T00:00:00Z')`); err != nil {
-		t.Fatalf("insert equity account: %v", err)
-	}
-
-	var foreignKeys int
-	if err := db.QueryRowContext(ctx, `PRAGMA foreign_keys`).Scan(&foreignKeys); err != nil || foreignKeys != 1 {
-		t.Fatalf("foreign keys = %d err=%v", foreignKeys, err)
-	}
-
-	version, err := sqlite.NewStore(db).SchemaVersion(ctx)
-	if err != nil || version != 6 {
-		t.Fatalf("schema version = %d err=%v", version, err)
 	}
 }

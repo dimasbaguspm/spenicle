@@ -1,1 +1,0 @@
-ALTER TABLE import_rows ADD COLUMN currency TEXT NOT NULL DEFAULT '';

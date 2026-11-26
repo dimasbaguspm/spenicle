@@ -57,7 +57,7 @@ func seedUnrepresentableEntry(t *testing.T, store *Store) (string, entity.Accoun
 		_, err := store.db.ExecContext(ctx, `
 			INSERT INTO ledger_postings
 				(ref, entry_id, account_id, amount_minor, base_amount_minor, fx_rate, fx_source)
-			VALUES (?, ?, ?, ?, ?, '1', 'identity')`,
+		VALUES (?, ?, ?, ?, ?, '1', 'identity')`,
 			uuid.New(), entryID, amount.accountID, amount.amount, amount.amount)
 		if err != nil {
 			t.Fatalf("seed posting: %v", err)

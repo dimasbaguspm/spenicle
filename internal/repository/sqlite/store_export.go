@@ -30,7 +30,7 @@ func (s *Store) AllCaptures(ctx context.Context) ([]entity.Capture, error) {
 	defer endSpan()
 
 	return scanAll(ctx, s.db, "select all captures",
-		`SELECT `+captureColumns+` FROM captures ORDER BY id`, scanCaptureRow)
+		`SELECT `+captureColumns+` FROM captures `+captureJoin+` ORDER BY captures.id`, scanCaptureRow)
 }
 
 func (s *Store) AllRecurring(ctx context.Context) ([]entity.Recurring, error) {

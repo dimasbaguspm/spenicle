@@ -35,6 +35,7 @@ type harness struct {
 	service *imports.Service
 	store   *sqlite.Store
 	post    ledger.Contract
+	parts   *filestore.Parts
 }
 
 func newHarness(t *testing.T, options imports.Options) harness {
@@ -78,6 +79,7 @@ func newHarness(t *testing.T, options imports.Options) harness {
 	return harness{
 		store: store,
 		post:  postings,
+		parts: parts,
 		service: imports.New(
 			store, store, store, store, postings, blobs, parts, baseStub{}, source, options,
 		),
@@ -104,6 +106,7 @@ func TestAppendChunk(t *testing.T) {
 		{name: "the first chunk is accepted with progress", run: firstChunkIsAccepted},
 		{name: "the last chunk assembles the draft", run: lastChunkAssemblesTheDraft},
 		{name: "a replayed chunk is a no-op", run: replayedChunkIsANoOp},
+		{name: "a conflicting chunk is rolled back", run: conflictingChunkIsRolledBack},
 		{name: "a different chunk total is a conflict", run: anotherChunkTotalIsAConflict},
 		{name: "a chunk for a closed upload is refused", run: aClosedUploadRefusesChunks},
 		{name: "a statement above the row limit is refused", run: tooManyRowsIsRefused},
@@ -205,6 +208,52 @@ func replayedChunkIsANoOp(t *testing.T, h harness) {
 	if replay.Upload.ReceivedChunks != first.Upload.ReceivedChunks ||
 		replay.Upload.ReceivedBytes != first.Upload.ReceivedBytes {
 		t.Fatalf("replay moved the counters: %+v vs %+v", replay.Upload, first.Upload)
+	}
+
+	body, err := h.parts.Read(t.Context(), chunk.ClientID)
+	if err != nil {
+		t.Fatalf("read part: %v", err)
+	}
+	if !bytes.Equal(body, chunk.Bytes) {
+		t.Fatalf("part bytes = %q, want %q", body, chunk.Bytes)
+	}
+}
+
+func conflictingChunkIsRolledBack(t *testing.T, h harness) {
+	t.Helper()
+
+	ctx := t.Context()
+	original := statement(1)[:40]
+	first, err := h.service.AppendChunk(ctx, imports.ChunkInput{
+		ClientID: "chunked-1", Filename: "march.csv",
+		ChunkIndex: 0, ChunkTotal: 2, Bytes: original,
+	})
+	if err != nil {
+		t.Fatalf("first chunk: %v", err)
+	}
+
+	_, err = h.service.AppendChunk(ctx, imports.ChunkInput{
+		ClientID: "chunked-1", Filename: "march.csv",
+		ChunkIndex: 0, ChunkTotal: 2, Bytes: []byte("different bytes"),
+	})
+	if !errors.Is(err, entity.ErrImportChunkConflict) {
+		t.Fatalf("error = %v, want ErrImportChunkConflict", err)
+	}
+
+	body, err := h.parts.Read(ctx, "chunked-1")
+	if err != nil {
+		t.Fatalf("read part: %v", err)
+	}
+	if !bytes.Equal(body, original) {
+		t.Fatalf("part bytes = %q, want %q", body, original)
+	}
+
+	upload, found, err := h.store.ImportUploadByRef(ctx, first.Upload.Ref)
+	if err != nil || !found {
+		t.Fatalf("read upload: found=%v err=%v", found, err)
+	}
+	if upload.ReceivedChunks != 1 || upload.ReceivedBytes != int64(len(original)) {
+		t.Fatalf("upload = %+v, want one chunk of %d bytes", upload, len(original))
 	}
 }
 
@@ -461,4 +510,184 @@ func commitProgressEvents(t *testing.T, h harness, total int) []int {
 	}
 
 	return out
+}
+
+func TestImportRowsKeepTheirCurrency(t *testing.T) {
+	h := newHarness(t, imports.Options{MaxRows: 10, CommitChunk: 2})
+	ctx := t.Context()
+
+	statement := []byte("occurred_on,amount_minor,description,currency\n" +
+		"2025-02-01,-1000,Coffee,USD\n" +
+		"2025-02-02,-2000,Tea,\n")
+
+	batch, created, err := h.service.Create(ctx, imports.CreateInput{
+		ClientID: "currency-1", Filename: "march.csv", FileHash: "abc",
+		Statement: statement,
+	})
+	if err != nil || !created {
+		t.Fatalf("create: created=%v err=%v", created, err)
+	}
+
+	loaded, err := h.service.Get(ctx, batch.Ref)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+
+	got := make([]string, 0, len(loaded.Rows))
+	for _, row := range loaded.Rows {
+		got = append(got, row.Currency)
+	}
+
+	want := []string{"USD", "IDR"}
+	if len(got) != len(want) {
+		t.Fatalf("row currencies = %v, want %v", got, want)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("row currencies = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestTerminalReviewReplayDoesNotAppendEvents(t *testing.T) {
+	tests := []struct {
+		name   string
+		action string
+		status string
+		event  string
+	}{
+		{
+			name: "commit", action: constant.ImportActionCommit,
+			status: constant.ImportStatusCommitted, event: constant.ImportEventCommitted,
+		},
+		{
+			name: "reject", action: constant.ImportActionReject,
+			status: constant.ImportStatusRejected, event: constant.ImportEventRejected,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newHarness(t, imports.Options{MaxRows: 10, CommitChunk: 2})
+			ctx := t.Context()
+
+			batch, _, err := h.service.Create(ctx, imports.CreateInput{
+				ClientID: "terminal-1", Filename: "march.csv", FileHash: "abc",
+				Statement: statement(1),
+			})
+			if err != nil {
+				t.Fatalf("create: %v", err)
+			}
+
+			first, err := h.service.Review(ctx, batch.Ref, imports.Review{Action: tc.action})
+			if err != nil {
+				t.Fatalf("first review: %v", err)
+			}
+			if first.Status != tc.status {
+				t.Fatalf("status = %q, want %q", first.Status, tc.status)
+			}
+
+			before := countImportEvents(t, h, tc.event)
+			replay, err := h.service.Review(ctx, batch.Ref, imports.Review{Action: tc.action})
+			if err != nil {
+				t.Fatalf("replayed review: %v", err)
+			}
+			if replay.Status != tc.status || replay.Ref != first.Ref {
+				t.Fatalf("replay = %+v, want %+v", replay, first)
+			}
+			if after := countImportEvents(t, h, tc.event); after != before {
+				t.Fatalf("event count = %d, want %d", after, before)
+			}
+		})
+	}
+}
+
+func TestEditImportRowRefusesAClosedBatchAtomically(t *testing.T) {
+	h := newHarness(t, imports.Options{MaxRows: 10, CommitChunk: 2})
+	ctx := t.Context()
+
+	batch, _, err := h.service.Create(ctx, imports.CreateInput{
+		ClientID: "closed-edit-1", Filename: "march.csv", FileHash: "abc",
+		Statement: statement(1),
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	before := requireImportBatch(t, h, batch.Ref)
+	if _, err = h.store.DB().ExecContext(ctx,
+		`UPDATE import_batches SET status = ? WHERE ref = ?`,
+		constant.ImportStatusCommitted, batch.Ref,
+	); err != nil {
+		t.Fatalf("close batch: %v", err)
+	}
+
+	rows := requireImportRows(t, h, batch.ID, 1)
+	row := rows[0]
+	row.Description = "must not be written"
+	index := row.RowIndex
+	events := []entity.ImportEvent{{
+		BatchID:  batch.ID,
+		Kind:     constant.ImportEventRowEdited,
+		RowIndex: &index,
+		Actor:    constant.ImportActorUser,
+		At:       time.Date(2025, 2, 10, 10, 0, 0, 0, time.UTC),
+	}}
+
+	_, err = h.store.EditImportRow(ctx, row, before.ExpiresAt.Add(time.Hour), events)
+	if !errors.Is(err, entity.ErrImportClosed) {
+		t.Fatalf("error = %v, want ErrImportClosed", err)
+	}
+
+	after := requireImportBatch(t, h, batch.Ref)
+	if !after.ExpiresAt.Equal(before.ExpiresAt) {
+		t.Fatalf("expires_at = %v, want %v", after.ExpiresAt, before.ExpiresAt)
+	}
+
+	afterRows := requireImportRows(t, h, batch.ID, 1)
+	assertImportRowUnchanged(t, afterRows[0], batch.Rows[0])
+	if got := countImportEvents(t, h, constant.ImportEventRowEdited); got != 0 {
+		t.Fatalf("row_edited events = %d, want 0", got)
+	}
+}
+
+func requireImportBatch(t *testing.T, h harness, ref string) entity.ImportBatch {
+	t.Helper()
+
+	batch, found, err := h.store.ImportBatchByRef(t.Context(), ref)
+	if err != nil || !found {
+		t.Fatalf("read batch %q: found=%v err=%v", ref, found, err)
+	}
+	return batch
+}
+
+func requireImportRows(t *testing.T, h harness, batchID int64, want int) []entity.ImportRow {
+	t.Helper()
+
+	rows, err := h.store.ImportRows(t.Context(), batchID)
+	if err != nil || len(rows) != want {
+		t.Fatalf("read rows: rows=%d want=%d err=%v", len(rows), want, err)
+	}
+	return rows
+}
+
+func assertImportRowUnchanged(t *testing.T, got, want entity.ImportRow) {
+	t.Helper()
+
+	if got.Description != want.Description || got.EditedAt != nil || got.EditedFields != "" {
+		t.Fatalf("row changed despite closed batch: %+v", got)
+	}
+}
+
+func countImportEvents(t *testing.T, h harness, kind string) int {
+	t.Helper()
+
+	var count int
+	if err := h.store.DB().QueryRowContext(t.Context(),
+		`SELECT COUNT(*) FROM import_events WHERE kind = ?`, kind,
+	).Scan(&count); err != nil {
+		t.Fatalf("count import events: %v", err)
+	}
+
+	return count
 }

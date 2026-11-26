@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
@@ -35,16 +36,17 @@ const (
 )
 
 type Service struct {
-	batches  repository.Imports
-	events   repository.ImportEvents
-	entries  repository.Ledger
-	accounts repository.Accounts
-	postings ledger.Contract
-	blobs    ArtifactStore
-	parts    PartFiles
-	base     BaseCurrencySource
-	clock    TimeSource
-	options  Options
+	batches    repository.Imports
+	events     repository.ImportEvents
+	entries    repository.Ledger
+	accounts   repository.Accounts
+	postings   ledger.Contract
+	blobs      ArtifactStore
+	parts      PartFiles
+	base       BaseCurrencySource
+	clock      TimeSource
+	options    Options
+	chunkLocks sync.Map
 }
 
 type (
@@ -127,7 +129,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.ImportBatc
 		return s.raced(ctx, in, err)
 	}
 
-	if err := s.record(ctx, saved, constant.ImportEventUploaded, nil, ""); err != nil {
+	if err := s.record(ctx, saved, constant.ImportEventUploaded, ""); err != nil {
 		return entity.ImportBatch{}, false, err
 	}
 
@@ -137,6 +139,11 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.ImportBatc
 func (s *Service) AppendChunk(ctx context.Context, in ChunkInput) (ChunkResult, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.AppendChunk")
 	defer endSpan()
+
+	lockValue, _ := s.chunkLocks.LoadOrStore(in.ClientID, &sync.Mutex{})
+	lock, _ := lockValue.(*sync.Mutex)
+	lock.Lock()
+	defer lock.Unlock()
 
 	existing, found, err := s.batches.ImportBatchByClientID(ctx, in.ClientID)
 	if err != nil {
@@ -252,24 +259,18 @@ func (s *Service) PatchRow(
 	row.EditedAt = firstEdit(row.EditedAt, now)
 	row.EditedFields = mergeFields(row.EditedFields, fields)
 
-	if _, err := s.batches.UpdateImportRow(ctx, row); err != nil {
-		return entity.ImportBatch{}, err
-	}
-
-	batch.ExpiresAt = now.Add(draftTTL)
-	if err := s.batches.ExtendImportBatch(ctx, ref, batch.ExpiresAt); err != nil {
-		return entity.ImportBatch{}, err
-	}
-
-	payload := jsonPayload(eventFields{Fields: fields})
-	if err := s.record(ctx, batch, constant.ImportEventRowEdited, &rowIndex, payload); err != nil {
-		return entity.ImportBatch{}, err
+	events := []entity.ImportEvent{
+		s.makeEvent(batch, constant.ImportEventRowEdited, &rowIndex,
+			jsonPayload(eventFields{Fields: fields})),
 	}
 
 	if kind := statusEvent(previous, row.Status); kind != "" {
-		if err := s.record(ctx, batch, kind, &rowIndex, ""); err != nil {
-			return entity.ImportBatch{}, err
-		}
+		events = append(events, s.makeEvent(batch, kind, &rowIndex, ""))
+	}
+
+	batch.ExpiresAt = now.Add(draftTTL)
+	if _, err := s.batches.EditImportRow(ctx, row, batch.ExpiresAt, events); err != nil {
+		return entity.ImportBatch{}, err
 	}
 
 	return s.load(ctx, batch)
@@ -418,13 +419,10 @@ func (s *Service) postChunks(
 	}
 
 	closed, err := s.batches.CloseImportBatch(
-		ctx, batch.Ref, constant.ImportStatusCommitted, s.clock.Now(),
+		ctx, batch.Ref, constant.ImportStatusCommitted, constant.ImportStatusCommitting,
+		s.clock.Now(), s.makeEvent(batch, constant.ImportEventCommitted, nil, ""),
 	)
 	if err != nil {
-		return entity.ImportBatch{}, err
-	}
-
-	if err := s.record(ctx, closed, constant.ImportEventCommitted, nil, ""); err != nil {
 		return entity.ImportBatch{}, err
 	}
 
@@ -456,7 +454,7 @@ func (s *Service) postPending(
 		done += end - start
 
 		payload := jsonPayload(commitProgress{RowsDone: done, RowsTotal: total})
-		if err := s.record(ctx, batch, constant.ImportEventCommitting, nil, payload); err != nil {
+		if err := s.record(ctx, batch, constant.ImportEventCommitting, payload); err != nil {
 			return err
 		}
 	}
@@ -504,17 +502,16 @@ func (s *Service) reject(
 		return entity.ImportBatch{}, closedError(batch)
 	}
 
-	closed, err := s.batches.CloseImportBatch(ctx, batch.Ref, constant.ImportStatusRejected, s.clock.Now())
-	if err != nil {
-		return entity.ImportBatch{}, err
-	}
-
 	payload := ""
 	if review.Reason != "" {
 		payload = jsonPayload(eventReason{review.Reason})
 	}
 
-	if err := s.record(ctx, closed, constant.ImportEventRejected, nil, payload); err != nil {
+	closed, err := s.batches.CloseImportBatch(
+		ctx, batch.Ref, constant.ImportStatusRejected, constant.ImportStatusDraft,
+		s.clock.Now(), s.makeEvent(batch, constant.ImportEventRejected, nil, payload),
+	)
+	if err != nil {
 		return entity.ImportBatch{}, err
 	}
 
@@ -719,14 +716,14 @@ func (s *Service) resume(
 	fileHash string,
 ) (entity.ImportBatch, bool, error) {
 	if fileHash != "" && batch.FileHash != fileHash {
-		if err := s.record(ctx, batch, constant.ImportEventConflictRefused, nil, ""); err != nil {
+		if err := s.record(ctx, batch, constant.ImportEventConflictRefused, ""); err != nil {
 			return entity.ImportBatch{}, false, err
 		}
 
 		return entity.ImportBatch{}, false, fmt.Errorf("%w: %s", entity.ErrImportConflict, batch.ClientID)
 	}
 
-	if err := s.record(ctx, batch, constant.ImportEventResumed, nil, ""); err != nil {
+	if err := s.record(ctx, batch, constant.ImportEventResumed, ""); err != nil {
 		return entity.ImportBatch{}, false, err
 	}
 
@@ -788,24 +785,32 @@ func applyUpdate(row *entity.ImportRow, update RowUpdate) {
 	}
 }
 
-func (s *Service) record(
-	ctx context.Context,
+func (s *Service) makeEvent(
 	batch entity.ImportBatch,
 	kind string,
 	rowIndex *int,
 	payload string,
-) error {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Record")
-	defer endSpan()
-
-	_, err := s.events.InsertImportEvent(ctx, entity.ImportEvent{
+) entity.ImportEvent {
+	return entity.ImportEvent{
 		BatchID:  batch.ID,
 		Kind:     kind,
 		RowIndex: rowIndex,
 		Payload:  payload,
 		Actor:    constant.ImportActorUser,
 		At:       s.clock.Now(),
-	})
+	}
+}
+
+func (s *Service) record(
+	ctx context.Context,
+	batch entity.ImportBatch,
+	kind string,
+	payload string,
+) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Record")
+	defer endSpan()
+
+	_, err := s.events.InsertImportEvent(ctx, s.makeEvent(batch, kind, nil, payload))
 	if err != nil {
 		return fmt.Errorf("record %s event: %w", kind, err)
 	}
@@ -1058,16 +1063,19 @@ func (s *Service) storeChunk(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.StoreChunk")
 	defer endSpan()
 
+	sum := sha256.Sum256(in.Bytes)
+	chunkHash := hex.EncodeToString(sum[:])
+
 	size, err := s.parts.Append(ctx, in.ClientID, in.Bytes)
 	if err != nil {
 		return false, err
 	}
 
 	inserted, err := s.batches.AppendImportChunk(
-		ctx, upload.Ref, in.ChunkIndex, int64(len(in.Bytes)), s.clock.Now(),
+		ctx, upload.Ref, in.ChunkIndex, int64(len(in.Bytes)), chunkHash, s.clock.Now(),
 	)
 	if err != nil {
-		return false, err
+		return false, errors.Join(err, s.parts.Truncate(ctx, in.ClientID, size-int64(len(in.Bytes))))
 	}
 
 	if inserted {

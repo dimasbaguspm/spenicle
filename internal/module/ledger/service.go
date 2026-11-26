@@ -2,6 +2,7 @@ package ledger
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -22,6 +23,19 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 
 	saved, err := s.entries.InsertEntry(ctx, entry)
 	if err != nil {
+		if !errors.Is(err, entity.ErrDuplicate) || in.ClientID == "" {
+			return entity.Entry{}, false, err
+		}
+
+		existing, found, readErr := s.entries.EntryByClientID(ctx, in.ClientID)
+		if readErr != nil {
+			return entity.Entry{}, false, readErr
+		}
+
+		if found {
+			return existing, false, nil
+		}
+
 		return entity.Entry{}, false, err
 	}
 

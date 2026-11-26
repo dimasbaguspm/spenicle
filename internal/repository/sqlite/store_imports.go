@@ -112,8 +112,9 @@ func (s *Store) ListImportBatches(
 
 func (s *Store) CloseImportBatch(
 	ctx context.Context,
-	ref, status string,
+	ref, status, expected string,
 	at time.Time,
+	event entity.ImportEvent,
 ) (entity.ImportBatch, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CloseImportBatch")
 	defer endSpan()
@@ -123,45 +124,56 @@ func (s *Store) CloseImportBatch(
 		column = "rejected_at"
 	}
 
-	res, err := s.db.ExecContext(ctx,
-		`UPDATE import_batches SET status = ?, `+column+` = ? WHERE ref = ?`,
-		status, at.UTC().Format(constant.TimestampLayout), ref)
-	if err != nil {
-		return entity.ImportBatch{}, fmt.Errorf("close import batch: %w", err)
-	}
+	var batch entity.ImportBatch
 
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return entity.ImportBatch{}, fmt.Errorf("import batch rows: %w", err)
-	}
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		var current string
+		if scanErr := tx.QueryRowContext(ctx,
+			`SELECT status FROM import_batches WHERE ref = ?`, ref,
+		).Scan(&current); scanErr != nil {
+			if errors.Is(scanErr, sql.ErrNoRows) {
+				return fmt.Errorf("%w: import batch %s", entity.ErrNotFound, ref)
+			}
 
-	if affected == 0 {
-		return entity.ImportBatch{}, fmt.Errorf("%w: import batch %s", entity.ErrNotFound, ref)
-	}
+			return fmt.Errorf("import batch status: %w", scanErr)
+		}
 
-	batch, found, err := s.ImportBatchByRef(ctx, ref)
+		if current != expected {
+			return fmt.Errorf("%w: %s is %s", entity.ErrImportClosed, ref, current)
+		}
+
+		if _, execErr := tx.ExecContext(ctx,
+			`UPDATE import_batches SET status = ?, `+column+` = ? WHERE ref = ? AND status = ?`,
+			status, at.UTC().Format(constant.TimestampLayout), ref, expected,
+		); execErr != nil {
+			return fmt.Errorf("close import batch: %w", execErr)
+		}
+
+		if event.Kind != "" {
+			if insertErr := insertImportEvent(ctx, tx, event, ref); insertErr != nil {
+				return insertErr
+			}
+		}
+
+		loaded, found, scanErr := scanImportBatch(tx.QueryRowContext(ctx,
+			`SELECT `+importBatchColumns+` FROM import_batches WHERE ref = ?`, ref))
+		if scanErr != nil {
+			return scanErr
+		}
+
+		if !found {
+			return fmt.Errorf("%w: import batch %s", entity.ErrNotFound, ref)
+		}
+
+		batch = loaded
+
+		return nil
+	})
 	if err != nil {
 		return entity.ImportBatch{}, err
 	}
 
-	if !found {
-		return entity.ImportBatch{}, fmt.Errorf("%w: import batch %s", entity.ErrNotFound, ref)
-	}
-
 	return batch, nil
-}
-
-func (s *Store) ExtendImportBatch(ctx context.Context, ref string, expiresAt time.Time) error {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ExtendImportBatch")
-	defer endSpan()
-
-	if _, err := s.db.ExecContext(ctx,
-		`UPDATE import_batches SET expires_at = ? WHERE ref = ? AND status = ?`,
-		expiresAt.UTC().Format(constant.TimestampLayout), ref, constant.ImportStatusDraft); err != nil {
-		return fmt.Errorf("extend import batch: %w", err)
-	}
-
-	return nil
 }
 
 func (s *Store) ImportRows(ctx context.Context, batchID int64) ([]entity.ImportRow, error) {
@@ -194,18 +206,72 @@ func (s *Store) ImportRows(ctx context.Context, batchID int64) ([]entity.ImportR
 	return out, nil
 }
 
-func (s *Store) UpdateImportRow(
+func (s *Store) EditImportRow(
 	ctx context.Context,
 	row entity.ImportRow,
+	expiresAt time.Time,
+	events []entity.ImportEvent,
 ) (entity.ImportRow, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateImportRow")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EditImportRow")
 	defer endSpan()
 
-	res, err := s.db.ExecContext(ctx, `
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		ref, status, err := importRowBatchState(ctx, tx, row.ID)
+		if err != nil {
+			return err
+		}
+
+		if status != constant.ImportStatusDraft {
+			return fmt.Errorf("%w: %s is %s", entity.ErrImportClosed, ref, status)
+		}
+
+		if err := updateImportRowDraft(ctx, tx, row); err != nil {
+			return err
+		}
+
+		if err := extendImportBatchDraft(ctx, tx, row.BatchID, expiresAt); err != nil {
+			return err
+		}
+
+		for _, event := range events {
+			if insertErr := insertImportEvent(ctx, tx, event, ref); insertErr != nil {
+				return insertErr
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return entity.ImportRow{}, err
+	}
+
+	return row, nil
+}
+
+func importRowBatchState(ctx context.Context, tx *sql.Tx, rowID int64) (string, string, error) {
+	var ref, status string
+
+	err := tx.QueryRowContext(ctx, `
+		SELECT b.ref, b.status FROM import_rows r
+		JOIN import_batches b ON b.id = r.batch_id WHERE r.id = ?`, rowID,
+	).Scan(&ref, &status)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", "", fmt.Errorf("%w: import row %d", entity.ErrNotFound, rowID)
+	}
+
+	if err != nil {
+		return "", "", fmt.Errorf("import row batch: %w", err)
+	}
+
+	return ref, status, nil
+}
+
+func updateImportRowDraft(ctx context.Context, tx *sql.Tx, row entity.ImportRow) error {
+	res, err := tx.ExecContext(ctx, `
 		UPDATE import_rows SET
 			occurred_on = ?, amount_minor = ?, currency = ?, description = ?, category_ref = ?,
 			payee_ref = ?, status = ?, edited_at = ?, edited_fields = ?, updated_at = ?
-		WHERE id = ?`,
+		WHERE id = ? AND batch_id = ?`,
 		row.OccurredOn.Format(constant.DateLayout),
 		row.AmountMinor,
 		row.Currency,
@@ -217,21 +283,40 @@ func (s *Store) UpdateImportRow(
 		nullString(row.EditedFields),
 		row.UpdatedAt.UTC().Format(constant.TimestampLayout),
 		row.ID,
+		row.BatchID,
 	)
 	if err != nil {
-		return entity.ImportRow{}, fmt.Errorf("update import row: %w", err)
+		return fmt.Errorf("update import row: %w", err)
 	}
 
 	affected, err := res.RowsAffected()
 	if err != nil {
-		return entity.ImportRow{}, fmt.Errorf("import row rows: %w", err)
+		return fmt.Errorf("import row rows: %w", err)
 	}
 
 	if affected == 0 {
-		return entity.ImportRow{}, fmt.Errorf("%w: import row %d", entity.ErrNotFound, row.ID)
+		return fmt.Errorf("%w: import row %d", entity.ErrNotFound, row.ID)
 	}
 
-	return row, nil
+	return nil
+}
+
+func extendImportBatchDraft(
+	ctx context.Context,
+	tx *sql.Tx,
+	batchID int64,
+	expiresAt time.Time,
+) error {
+	_, err := tx.ExecContext(ctx, `
+		UPDATE import_batches SET expires_at = ?
+		WHERE id = ? AND status = ?`,
+		expiresAt.UTC().Format(constant.TimestampLayout), batchID, constant.ImportStatusDraft,
+	)
+	if err != nil {
+		return fmt.Errorf("extend import batch: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Store) ExpiredImportBatches(
@@ -369,15 +454,16 @@ func insertImportRow(ctx context.Context, tx *sql.Tx, row *entity.ImportRow) err
 
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO import_rows
-			(ref, batch_id, row_index, occurred_on, amount_minor, description, account_ref,
+			(ref, batch_id, row_index, occurred_on, amount_minor, currency, description, account_ref,
 			 category_ref, payee_ref, status, clash_kind, clash_entry_ref, edited_at, edited_fields,
 			 created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		row.Ref,
 		row.BatchID,
 		row.RowIndex,
 		row.OccurredOn.Format(constant.DateLayout),
 		row.AmountMinor,
+		row.Currency,
 		row.Description,
 		row.AccountRef,
 		nullString(row.CategoryRef),
@@ -664,6 +750,7 @@ func (s *Store) AppendImportChunk(
 	ref string,
 	index int,
 	bytes int64,
+	chunkHash string,
 	at time.Time,
 ) (bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.AppendImportChunk")
@@ -673,28 +760,36 @@ func (s *Store) AppendImportChunk(
 
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		var id int64
-
 		if scanErr := tx.QueryRowContext(ctx,
-			`SELECT id FROM import_uploads WHERE ref = ?`, ref).Scan(&id); scanErr != nil {
+			`SELECT id FROM import_uploads WHERE ref = ?`, ref,
+		).Scan(&id); scanErr != nil {
 			return fmt.Errorf("%w: import upload %s", entity.ErrNotFound, ref)
 		}
 
-		res, execErr := tx.ExecContext(ctx, `
-			INSERT OR IGNORE INTO import_upload_chunks (upload_id, chunk_index, bytes, created_at)
-			VALUES (?, ?, ?, ?)`,
-			id, index, bytes, at.UTC().Format(constant.TimestampLayout),
-		)
-		if execErr != nil {
-			return fmt.Errorf("insert import chunk: %w", execErr)
+		var existing sql.NullString
+
+		queryErr := tx.QueryRowContext(ctx, `
+			SELECT chunk_sha256 FROM import_upload_chunks
+			WHERE upload_id = ? AND chunk_index = ?`, id, index).Scan(&existing)
+		if queryErr != nil && !errors.Is(queryErr, sql.ErrNoRows) {
+			return fmt.Errorf("read import chunk: %w", queryErr)
 		}
 
-		affected, countErr := res.RowsAffected()
-		if countErr != nil {
-			return fmt.Errorf("import chunk rows: %w", countErr)
-		}
+		if queryErr == nil {
+			if existing.String != chunkHash {
+				return fmt.Errorf("%w: chunk %d", entity.ErrImportChunkConflict, index)
+			}
 
-		if affected == 0 {
 			return nil
+		}
+
+		if _, execErr := tx.ExecContext(ctx, `
+			INSERT INTO import_upload_chunks
+				(upload_id, chunk_index, bytes, chunk_sha256, created_at)
+			VALUES (?, ?, ?, ?, ?)`,
+			id, index, bytes, chunkHash, at.UTC().Format(constant.TimestampLayout),
+		); execErr != nil {
+			return fmt.Errorf("insert import chunk: %w", execErr)
 		}
 
 		if _, updateErr := tx.ExecContext(ctx, `
@@ -703,7 +798,8 @@ func (s *Store) AppendImportChunk(
 				received_bytes = received_bytes + ?,
 				updated_at = ?
 			WHERE id = ?`,
-			bytes, at.UTC().Format(constant.TimestampLayout), id); updateErr != nil {
+			bytes, at.UTC().Format(constant.TimestampLayout), id,
+		); updateErr != nil {
 			return fmt.Errorf("advance import upload: %w", updateErr)
 		}
 
@@ -727,7 +823,8 @@ func (s *Store) CompleteImportUpload(
 	defer endSpan()
 
 	res, err := s.db.ExecContext(ctx, `
-		UPDATE import_uploads SET status = ?, file_hash = ?, completed_at = ?, updated_at = ?
+		UPDATE import_uploads SET
+			status = ?, file_hash = ?, completed_at = ?, updated_at = ?
 		WHERE ref = ? AND status = ?`,
 		constant.ImportUploadStatusComplete,
 		fileHash,

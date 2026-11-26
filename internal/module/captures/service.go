@@ -87,18 +87,13 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Capture, b
 		receivedAt = s.clock.Now()
 	}
 
-	stored, err := s.captures.InsertCapture(ctx, entity.Capture{
-		Kind:         in.Kind,
-		Status:       constant.CaptureStatusPending,
-		ClientID:     in.ClientID,
-		DedupeKey:    key,
-		BatchID:      in.BatchID,
-		ArtifactHash: in.ArtifactHash,
-		RawText:      rawText,
-		ReceivedAt:   receivedAt,
-	})
+	stored, created, err := s.insertCapture(ctx, in, key, rawText, receivedAt)
 	if err != nil {
 		return entity.Capture{}, false, err
+	}
+
+	if !created {
+		return stored, false, nil
 	}
 
 	stored, err = s.storeArtifact(ctx, stored, in.Artifact)
@@ -108,6 +103,12 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Capture, b
 
 	stored, err = s.extract(ctx, stored, artifactOf(in))
 	if err != nil {
+		if errors.Is(err, entity.ErrCaptureResolved) {
+			current, currentErr := s.captureAfterRace(ctx, stored.Ref)
+
+			return current, true, currentErr
+		}
+
 		return entity.Capture{}, false, err
 	}
 
@@ -320,7 +321,7 @@ func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error)
 		return entity.Capture{}, err
 	}
 
-	updated, err := s.applyReport(ctx, capture, report, true)
+	updated, err := s.applyReport(ctx, capture, report)
 	if err != nil {
 		return entity.Capture{}, err
 	}
@@ -330,6 +331,64 @@ func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error)
 
 func (s *Service) Enqueue(ctx context.Context, in EnqueueInput) (entity.Capture, bool, error) {
 	return enqueue(ctx, s.captures, s.sealer, s.clock, in)
+}
+
+func (s *Service) insertCapture(
+	ctx context.Context,
+	in CreateInput,
+	key, rawText string,
+	receivedAt time.Time,
+) (entity.Capture, bool, error) {
+	stored, err := s.captures.InsertCapture(ctx, entity.Capture{
+		Kind:         in.Kind,
+		Status:       constant.CaptureStatusPending,
+		ClientID:     in.ClientID,
+		DedupeKey:    key,
+		BatchID:      in.BatchID,
+		ArtifactHash: in.ArtifactHash,
+		RawText:      rawText,
+		ReceivedAt:   receivedAt,
+	})
+	if err == nil {
+		return stored, true, nil
+	}
+
+	if !errors.Is(err, entity.ErrDuplicate) {
+		return entity.Capture{}, false, err
+	}
+
+	existing, found, readErr := s.captures.CaptureByClientID(ctx, in.ClientID)
+	if readErr != nil {
+		return entity.Capture{}, false, readErr
+	}
+
+	if !found {
+		existing, found, readErr = s.captures.CaptureByDedupeKey(ctx, key)
+		if readErr != nil {
+			return entity.Capture{}, false, readErr
+		}
+	}
+
+	if !found {
+		return entity.Capture{}, false, err
+	}
+
+	opened, openErr := s.open(ctx, existing)
+
+	return opened, false, openErr
+}
+
+func (s *Service) captureAfterRace(ctx context.Context, ref string) (entity.Capture, error) {
+	current, found, err := s.captures.CaptureByRef(ctx, ref)
+	if err != nil {
+		return entity.Capture{}, err
+	}
+
+	if !found {
+		return entity.Capture{}, fmt.Errorf("%w: capture %s", entity.ErrNotFound, ref)
+	}
+
+	return s.open(ctx, current)
 }
 
 func (s *Service) storeArtifact(
@@ -400,17 +459,16 @@ func (s *Service) extract(
 		capture.ExtractionModel = s.extractor.Model()
 		capture.ExtractionError = err.Error()
 
-		return s.captures.UpdateCapture(ctx, capture)
+		return s.captures.UpdateCaptureIfUnresolved(ctx, capture)
 	}
 
-	return s.applyReport(ctx, capture, report, false)
+	return s.applyReport(ctx, capture, report)
 }
 
 func (s *Service) applyReport(
 	ctx context.Context,
 	capture entity.Capture,
 	report extraction.Report,
-	unresolvedOnly bool,
 ) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.ApplyReport")
 	defer endSpan()
@@ -449,11 +507,7 @@ func (s *Service) applyReport(
 		capture.ExtractionError = "unknown rail status " + report.Status
 	}
 
-	if unresolvedOnly {
-		return s.captures.UpdateCaptureIfUnresolved(ctx, capture)
-	}
-
-	return s.captures.UpdateCapture(ctx, capture)
+	return s.captures.UpdateCaptureIfUnresolved(ctx, capture)
 }
 
 func (s *Service) pending(ctx context.Context, ref string) (entity.Capture, error) {

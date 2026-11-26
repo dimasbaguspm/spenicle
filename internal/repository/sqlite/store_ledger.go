@@ -152,7 +152,12 @@ func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.
 	return postings, nil
 }
 
-func insertPostings(ctx context.Context, tx *sql.Tx, entryID int64, postings []entity.Posting) error {
+func insertPostings(
+	ctx context.Context,
+	tx *sql.Tx,
+	entryID int64,
+	postings []entity.Posting,
+) error {
 	for _, p := range postings {
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO ledger_postings
@@ -716,7 +721,7 @@ func insertEntryRow(
 		createdAt.Format(constant.TimestampLayout),
 	)
 	if err != nil {
-		return 0, fmt.Errorf("insert entry: %w", err)
+		return 0, fmt.Errorf("insert entry: %w", uniqueViolation(err))
 	}
 
 	id, err := res.LastInsertId()
