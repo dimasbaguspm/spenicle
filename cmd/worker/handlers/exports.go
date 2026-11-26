@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
@@ -100,23 +101,30 @@ func (r *Runner) renderExport(ctx context.Context, job entity.Export) error {
 
 	telemetry.Ref(ctx, job.Ref)
 
-	document, err := export.Render(ctx, r.documents, job.Format, exportWindow(job))
+	document, err := export.RenderFile(ctx, r.documents, job.Format, exportWindow(job), r.renderDir)
 	if err != nil {
 		return fmt.Errorf("render %s export: %w", job.Format, err)
+	}
+
+	defer func() { _ = os.Remove(document.Path) }()
+
+	body, err := os.ReadFile(document.Path)
+	if err != nil {
+		return fmt.Errorf("read %s export: %w", job.Format, err)
 	}
 
 	record, err := r.exportFiles.Put(ctx, extraction.Artifact{
 		Filename:    "spenicle." + document.Extension,
 		ContentType: document.ContentType,
-		Bytes:       document.Bytes,
+		Bytes:       body,
 	})
 	if err != nil {
 		return fmt.Errorf("store export: %w", err)
 	}
 
-	telemetry.RecordExportBytes(ctx, int64(len(document.Bytes)))
+	telemetry.RecordExportBytes(ctx, int64(len(body)))
 
-	_, err = r.jobs.Complete(ctx, job.Ref, record.SHA256, int64(len(document.Bytes)), document.Counts)
+	_, err = r.jobs.Complete(ctx, job.Ref, record.SHA256, int64(len(body)), document.Counts)
 
 	return err
 }

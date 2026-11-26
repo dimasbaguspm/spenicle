@@ -2,12 +2,12 @@ package export
 
 import (
 	"archive/zip"
-	"bytes"
 	"crypto/sha256"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 
 	"github.com/dimasbaguspm/spenicle/internal/constant"
@@ -37,50 +37,44 @@ type manifestDocument struct {
 	Files         []manifestEntry `json:"files"`
 }
 
-func encodeZIP(snap *snapshot) ([]byte, error) {
-	var archive bytes.Buffer
-
-	writer := zip.NewWriter(&archive)
+func encodeZIP(snap *snapshot, out io.Writer) error {
+	writer := zip.NewWriter(out)
 	manifest := manifestDocument{SchemaVersion: snap.schemaVersion, ExportedAt: stamp(snap.exportedAt)}
 
 	for _, current := range sheets(snap) {
-		body, digest, err := renderSheet(current)
+		digest, err := writeSheet(writer, current)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		manifest.Files = append(manifest.Files, manifestEntry{
 			Name: current.name, Rows: len(current.rows), SHA256: digest,
 		})
-
-		if err := writeEntry(writer, current.name, body); err != nil {
-			return nil, err
-		}
 	}
 
 	summaryBody, summaryErr := json.Marshal(snap.summarise())
 	if summaryErr != nil {
-		return nil, fmt.Errorf("summary: %w", summaryErr)
+		return fmt.Errorf("summary: %w", summaryErr)
 	}
 
 	if err := writeEntry(writer, summaryName, summaryBody); err != nil {
-		return nil, err
+		return err
 	}
 
 	manifestBody, err := json.Marshal(manifest)
 	if err != nil {
-		return nil, fmt.Errorf("manifest: %w", err)
+		return fmt.Errorf("manifest: %w", err)
 	}
 
 	if err := writeEntry(writer, manifestName, manifestBody); err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("close archive: %w", err)
+		return fmt.Errorf("close archive: %w", err)
 	}
 
-	return archive.Bytes(), nil
+	return nil
 }
 
 func sheets(snap *snapshot) []sheet {
@@ -311,28 +305,30 @@ func customQuerySheet(snap *snapshot) [][]string {
 	return out
 }
 
-func renderSheet(current sheet) ([]byte, string, error) {
-	var body bytes.Buffer
-
-	writer := csv.NewWriter(&body)
-
-	if err := writer.Write(current.header); err != nil {
-		return nil, "", fmt.Errorf("%s header: %w", current.name, err)
+func writeSheet(writer *zip.Writer, current sheet) (string, error) {
+	entry, err := writer.CreateHeader(&zip.FileHeader{Name: current.name, Method: zip.Deflate})
+	if err != nil {
+		return "", fmt.Errorf("zip entry %s: %w", current.name, err)
 	}
 
-	if err := writer.WriteAll(current.rows); err != nil {
-		return nil, "", fmt.Errorf("%s rows: %w", current.name, err)
+	digest := sha256.New()
+	csvWriter := csv.NewWriter(io.MultiWriter(entry, digest))
+
+	if err := csvWriter.Write(current.header); err != nil {
+		return "", fmt.Errorf("%s header: %w", current.name, err)
 	}
 
-	writer.Flush()
-
-	if err := writer.Error(); err != nil {
-		return nil, "", fmt.Errorf("%s: %w", current.name, err)
+	if err := csvWriter.WriteAll(current.rows); err != nil {
+		return "", fmt.Errorf("%s rows: %w", current.name, err)
 	}
 
-	sum := sha256.Sum256(body.Bytes())
+	csvWriter.Flush()
 
-	return body.Bytes(), hex.EncodeToString(sum[:]), nil
+	if err := csvWriter.Error(); err != nil {
+		return "", fmt.Errorf("%s: %w", current.name, err)
+	}
+
+	return hex.EncodeToString(digest.Sum(nil)), nil
 }
 
 func writeEntry(writer *zip.Writer, name string, body []byte) error {

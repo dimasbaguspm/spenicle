@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
+	"os"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -28,25 +30,100 @@ func TestEncodedExportIsByteIdenticalForTheSameData(t *testing.T) {
 	second.accounts[0], second.accounts[1] = second.accounts[1], second.accounts[0]
 	second.sort()
 
-	firstJSON := encodeDocument(t, first)
-	secondJSON := encodeDocument(t, second)
+	firstJSON := encodedJSON(t, first)
+	secondJSON := encodedJSON(t, second)
 
 	if !bytes.Equal(firstJSON, secondJSON) {
 		t.Fatalf("JSON document differs\n--- first\n%s\n--- second\n%s", firstJSON, secondJSON)
 	}
 
-	firstZIP, err := encodeZIP(first)
-	if err != nil {
-		t.Fatalf("encode zip: %v", err)
-	}
-
-	secondZIP, err := encodeZIP(second)
-	if err != nil {
-		t.Fatalf("encode zip: %v", err)
-	}
+	firstZIP := encodedZIP(t, first)
+	secondZIP := encodedZIP(t, second)
 
 	if !bytes.Equal(firstZIP, secondZIP) {
 		t.Fatal("the two archives differ for the same data")
+	}
+
+}
+
+func TestRenderFileMatchesTheInMemoryDocument(t *testing.T) {
+	t.Parallel()
+
+	deps := windowedDeps(t)
+
+	tests := []struct {
+		name        string
+		format      string
+		contentType string
+		extension   string
+	}{
+		{
+			name: "json", format: constant.ExportFormatJSON,
+			contentType: "application/json", extension: "json",
+		},
+		{
+			name: "csv", format: constant.ExportFormatCSV,
+			contentType: "application/zip", extension: "zip",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			document, err := Render(t.Context(), deps, tc.format, nil)
+			if err != nil {
+				t.Fatalf("render in memory: %v", err)
+			}
+
+			file, err := RenderFile(t.Context(), deps, tc.format, nil, dir)
+			if err != nil {
+				t.Fatalf("render to file: %v", err)
+			}
+
+			body, err := os.ReadFile(file.Path)
+			if err != nil {
+				t.Fatalf("read rendered file: %v", err)
+			}
+
+			if !bytes.Equal(body, document.Bytes) {
+				t.Fatalf("the file and in-memory documents differ for %s", tc.format)
+			}
+
+			if file.ContentType != tc.contentType || file.Extension != tc.extension {
+				t.Fatalf("metadata = %q/%q, want %q/%q",
+					file.ContentType, file.Extension, tc.contentType, tc.extension)
+			}
+
+			if !maps.Equal(file.Counts, document.Counts) {
+				t.Fatalf("counts = %v, want %v", file.Counts, document.Counts)
+			}
+
+			if got := filepath.Dir(file.Path); got != dir {
+				t.Fatalf("temporary file is in %q, want %q", got, dir)
+			}
+
+			if err := os.Remove(file.Path); err != nil {
+				t.Fatalf("remove temporary file: %v", err)
+			}
+		})
+	}
+}
+
+func TestRenderFileRefusesAnUnknownFormatWithoutWritingAFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if _, err := RenderFile(t.Context(), windowedDeps(t), "xml", nil, dir); err == nil {
+		t.Fatal("an unknown format rendered a file")
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read temp dir: %v", err)
+	}
+
+	if len(entries) != 0 {
+		t.Fatalf("an unknown format left %d files behind", len(entries))
 	}
 }
 
@@ -98,7 +175,7 @@ func TestJSONEnvelopeKeepsItsKeyOrder(t *testing.T) {
 	snap := fixedSnapshot(time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC))
 	snap.sort()
 
-	document := encodeDocument(t, snap)
+	document := encodedJSON(t, snap)
 
 	envelope := `{"schema_version":2,"exported_at":"2026-01-02T03:04:05Z","base_currency":"IDR",`
 	if !bytes.HasPrefix(document, []byte(envelope)) {
@@ -327,13 +404,25 @@ type fixedClock struct{ at time.Time }
 
 func (c fixedClock) Now() time.Time { return c.at }
 
-func encodeDocument(t *testing.T, snap *snapshot) []byte {
+func encodedJSON(t *testing.T, snap *snapshot) []byte {
 	t.Helper()
 
 	var out bytes.Buffer
 
 	if err := encodeJSON(snap, &out); err != nil {
 		t.Fatalf("encode json: %v", err)
+	}
+
+	return out.Bytes()
+}
+
+func encodedZIP(t *testing.T, snap *snapshot) []byte {
+	t.Helper()
+
+	var out bytes.Buffer
+
+	if err := encodeZIP(snap, &out); err != nil {
+		t.Fatalf("encode zip: %v", err)
 	}
 
 	return out.Bytes()

@@ -62,6 +62,7 @@ type Runner struct {
 	jobs        exports.Contract
 	documents   export.Deps
 	staleAfter  time.Duration
+	renderDir   string
 	clock       TimeSource
 	loc         *time.Location
 	logger      *logging.Logger
@@ -80,6 +81,7 @@ func New(
 	jobs exports.Contract,
 	documents export.Deps,
 	staleAfter time.Duration,
+	renderDir string,
 	clock TimeSource,
 	loc *time.Location,
 	logger *logging.Logger,
@@ -96,7 +98,7 @@ func New(
 		rules: rules, store: store, queue: queue, artifacts: artifacts,
 		imports: imports, files: files, exportFiles: exportFiles, parts: parts,
 		retention: retention,
-		jobs:      jobs, documents: documents, staleAfter: staleAfter,
+		jobs:      jobs, documents: documents, staleAfter: staleAfter, renderDir: renderDir,
 		clock: clock, loc: loc, logger: logger,
 	}
 }

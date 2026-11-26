@@ -35,6 +35,7 @@ func (w *world) runRecurring(ctx context.Context) error {
 		w.store, w.store, w.artifacts, w.exportFiles, w.parts,
 		w.limits.ArtifactRetention,
 		w.exports, w.exportDeps, w.limits.ExportStaleAfter,
+		w.limits.ExportDir,
 		clockSource, w.zone(), logging.From(slog.New(w.logs), telemetry.ComponentWorker),
 	)
 

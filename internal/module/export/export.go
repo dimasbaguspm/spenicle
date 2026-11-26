@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"time"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
@@ -24,6 +26,8 @@ const (
 
 	extensionJSON = "json"
 	extensionZIP  = "zip"
+
+	tempPattern = "spenicle-export-*."
 )
 
 type TimeSource interface{ Now() time.Time }
@@ -45,6 +49,13 @@ type Document struct {
 	Counts      map[string]int
 }
 
+type FileDocument struct {
+	Path        string
+	ContentType string
+	Extension   string
+	Counts      map[string]int
+}
+
 type Window struct {
 	From time.Time
 	To   time.Time
@@ -54,46 +65,95 @@ func Render(ctx context.Context, deps Deps, format string, window *Window) (Docu
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Export.Render")
 	defer endSpan()
 
+	contentType, extension, err := formatMetadata(format)
+	if err != nil {
+		return Document{}, err
+	}
+
 	snapshot, err := collect(ctx, deps, window)
 	if err != nil {
 		return Document{}, err
 	}
 
-	switch format {
-	case constant.ExportFormatJSON:
-		return renderJSON(snapshot)
-	case constant.ExportFormatCSV:
-		return renderZIP(snapshot)
-	default:
-		return Document{}, fmt.Errorf("unknown export format %q", format)
-	}
-}
-
-func renderJSON(snapshot *snapshot) (Document, error) {
 	var body bytes.Buffer
-
-	if err := encodeJSON(snapshot, &body); err != nil {
+	if err := encodeDocument(snapshot, format, &body); err != nil {
 		return Document{}, err
 	}
 
 	return Document{
 		Bytes:       body.Bytes(),
-		ContentType: contentTypeJSON,
-		Extension:   extensionJSON,
+		ContentType: contentType,
+		Extension:   extension,
 		Counts:      snapshot.counts(),
 	}, nil
 }
 
-func renderZIP(snapshot *snapshot) (Document, error) {
-	archive, err := encodeZIP(snapshot)
+func RenderFile(
+	ctx context.Context,
+	deps Deps,
+	format string,
+	window *Window,
+	dir string,
+) (FileDocument, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Export.RenderFile")
+	defer endSpan()
+
+	contentType, extension, err := formatMetadata(format)
 	if err != nil {
-		return Document{}, err
+		return FileDocument{}, err
 	}
 
-	return Document{
-		Bytes:       archive,
-		ContentType: contentTypeZIP,
-		Extension:   extensionZIP,
+	snapshot, err := collect(ctx, deps, window)
+	if err != nil {
+		return FileDocument{}, err
+	}
+
+	file, err := os.CreateTemp(dir, tempPattern+extension)
+	if err != nil {
+		return FileDocument{}, fmt.Errorf("export temp file: %w", err)
+	}
+
+	name := file.Name()
+
+	if err := encodeDocument(snapshot, format, file); err != nil {
+		_ = file.Close()
+		_ = os.Remove(name)
+
+		return FileDocument{}, err
+	}
+
+	if err := file.Close(); err != nil {
+		_ = os.Remove(name)
+
+		return FileDocument{}, fmt.Errorf("close export file: %w", err)
+	}
+
+	return FileDocument{
+		Path:        name,
+		ContentType: contentType,
+		Extension:   extension,
 		Counts:      snapshot.counts(),
 	}, nil
+}
+
+func formatMetadata(format string) (string, string, error) {
+	switch format {
+	case constant.ExportFormatJSON:
+		return contentTypeJSON, extensionJSON, nil
+	case constant.ExportFormatCSV:
+		return contentTypeZIP, extensionZIP, nil
+	default:
+		return "", "", fmt.Errorf("unknown export format %q", format)
+	}
+}
+
+func encodeDocument(snapshot *snapshot, format string, out io.Writer) error {
+	switch format {
+	case constant.ExportFormatJSON:
+		return encodeJSON(snapshot, out)
+	case constant.ExportFormatCSV:
+		return encodeZIP(snapshot, out)
+	default:
+		return fmt.Errorf("unknown export format %q", format)
+	}
 }

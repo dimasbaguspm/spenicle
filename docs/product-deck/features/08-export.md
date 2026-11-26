@@ -91,8 +91,9 @@ GET  …/download            Handler.Exports.Download → Module.Exports.Downloa
 
 Worker (per run)           resume `running` jobs left by a restart (`resumed`, back to `queued`)
                            claim up to 5 `queued` jobs (compare-and-swap) → `started`
-                           render via module/export (JSON document | zip of CSVs)
-                           store bytes in the export store, stamp counts/bytes/expires_at → `ready`
+                           encode via module/export into a temp file in ExportDir (JSON | zip of CSVs)
+                           read the file, store its bytes in the export store,
+                           stamp counts/bytes/expires_at → `ready`, then remove the temp file
                            sweep: `running` older than ExportStaleAfter (15m) → failed (`swept`)
                            drop blobs past ExportRetention (720h) → `expired` (20 per run)
 ```

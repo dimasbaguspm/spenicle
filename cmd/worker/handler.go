@@ -43,6 +43,7 @@ func Serve(ctx context.Context, process *config.Process) {
 			BaseCurrency:  process.BaseCurrency,
 		},
 		process.Cfg.ExportStaleAfter,
+		process.Cfg.ExportDir,
 		clock.Zoned{Loc: process.Location}, process.Location, process.Logger,
 	)
 

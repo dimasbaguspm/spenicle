@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http/httptest"
+	"path/filepath"
 	"time"
 
 	httpcmd "github.com/dimasbaguspm/spenicle/cmd/http"
@@ -67,6 +68,7 @@ func (w *world) boot(ctx context.Context) error {
 
 	clockSystem := clock.System{}
 	limits := config.Defaults()
+	limits.ExportDir = filepath.Join(w.dir, config.DefaultExportDirName)
 
 	if storeErr := w.openFiles(); storeErr != nil {
 		_ = store.Close(ctx)
