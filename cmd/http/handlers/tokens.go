@@ -143,6 +143,10 @@ func toTokenResponse(token entity.Token) tokenResponse {
 		out.RevokedAt = token.RevokedAt.Format(constant.TimestampLayout)
 	}
 
+	if token.ExpiresAt != nil {
+		out.ExpiresAt = token.ExpiresAt.Format(constant.TimestampLayout)
+	}
+
 	return out
 }
 

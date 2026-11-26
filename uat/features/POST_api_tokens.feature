@@ -17,6 +17,24 @@ Feature: POST /api/tokens
     And the response JSON matches the snapshot "post_api_tokens__the_root_session_mints_a_capture_only_token"
     And the journal holds 1 "api_token" rows
 
+  Scenario: An expired token is refused and its expiry is exposed
+    Given the API clock is "2026-03-01"
+    And the instance password is "uat-password-1234"
+    And a running API
+    When I sign in with the instance password
+    When the request body is:
+      """json
+      {"name":"expired-agent","scopes":["entries:read"],"expires_at":"2026-02-28T00:00:00Z"}
+      """
+    And I send a POST to "/api/tokens" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 201
+    And the response JSON matches the snapshot "post_api_tokens__an_expired_token_is_minted"
+    When the issued token is the bearer credential
+    And I send a GET to "/api/entries"
+    Then the response status is 401
+    And the response JSON matches the snapshot "post_api_tokens__an_expired_token_is_refused"
   Scenario: A token stays inside its scopes and cannot mint another token
     Given the instance password is "uat-password-1234"
     And a running API

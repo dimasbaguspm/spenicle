@@ -28,11 +28,12 @@ None.
 | --- | --- | --- | --- |
 | `name` | string | yes | 1–100 characters, `iphone-shortcut` |
 | `scopes` | string[] | yes | 1–20 entries from the documented scope table; `admin` and `*` cover every scoped route |
+| `expires_at` | date-time | no | RFC3339 timestamp; a token past it answers `401 unauthorized` |
 
 ## Response
 
-`201` with `ref`, `name`, `preview` (`spl_ab12…9f3c`), `scopes`, `created_at` and
-**`token`** — the plaintext, returned here and nowhere else, ever.
+`201` with `ref`, `name`, `preview` (`spl_ab12…9f3c`), `scopes`, `created_at`, `expires_at`
+when set, and **`token`** — the plaintext, returned here and nowhere else, ever.
 
 ## Errors
 
@@ -42,8 +43,9 @@ token tries it.
 
 ## Limitations
 
-No expiry: a token lives until `POST /api/tokens/{ref}/revoke`. `last_used_at` is stamped by
-the identity middleware on every authenticated request, not here.
+`expires_at` is optional: without it a token lives until `POST /api/tokens/{ref}/revoke`; past
+it the credential answers `401 unauthorized`. `last_used_at` is stamped by the identity
+middleware on every authenticated request, not here.
 
 ## Sequence
 
@@ -54,11 +56,11 @@ sequenceDiagram
     participant H as Tokens handler
     participant T as Tokens module
     participant DB as SQLite
-    C->>H: POST /api/tokens {name, scopes}
+    C->>H: POST /api/tokens {name, scopes, expires_at?}
     H->>H: bindBody (unknown fields refused) + validate scopes
-    H->>T: Create({name, scopes})
+    H->>T: Create({name, scopes, expires_at})
     T->>T: 32 random bytes, plaintext = "spl_…"
-    T->>DB: BEGIN; INSERT api_tokens(token_hash = HMAC(secret, plain), scopes); journal; COMMIT
+    T->>DB: BEGIN; INSERT api_tokens(token_hash = HMAC(secret, plain), scopes, expires_at); journal; COMMIT
     T-->>H: token, plaintext
-    H-->>C: 201 {ref, name, scopes, created_at, token}
+    H-->>C: 201 {ref, name, scopes, created_at, expires_at?, token}
 ```

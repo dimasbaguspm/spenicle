@@ -175,7 +175,7 @@ func (w *world) boot(ctx context.Context) error {
 		ExportFiles:    w.exportFiles,
 		Health:         store,
 		Audit:          store,
-		Tokens:         tokens.New(store, sealer, clockSystem),
+		Tokens:         tokens.New(store, sealer, settingsClock{at: w.apiAsOf}),
 		Connections: connections.New(store, store, sealer,
 			google.New(nil, "", w.options.GoogleTokenEndpoint,
 				w.options.GoogleRevokeEndpoint), clockSystem),
@@ -232,7 +232,7 @@ type settingsClock struct{ at time.Time }
 
 func (c settingsClock) Now() time.Time {
 	if c.at.IsZero() {
-		return time.Now()
+		return time.Now().UTC()
 	}
 
 	return c.at

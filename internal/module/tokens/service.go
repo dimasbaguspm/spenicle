@@ -101,7 +101,7 @@ func (s *Service) Verify(ctx context.Context, plain string) (entity.Token, bool,
 		return entity.Token{}, false, err
 	}
 
-	if !token.Active() {
+	if !token.Active(s.clock.Now()) {
 		return entity.Token{}, false, nil
 	}
 

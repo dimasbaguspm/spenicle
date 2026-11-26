@@ -1,0 +1,11 @@
+{
+  "created_at": "<timestamp>",
+  "expires_at": "<timestamp>",
+  "name": "expired-agent",
+  "preview": "<token>",
+  "ref": "<ref>",
+  "scopes": [
+    "entries:read"
+  ],
+  "token": "<token>"
+}

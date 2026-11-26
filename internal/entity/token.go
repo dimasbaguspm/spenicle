@@ -16,7 +16,7 @@ var (
 
 // Token is the non-root credential: the API answers it with exactly the scopes
 // it was created with, and it can never mint another token. The root password
-// (the session cookie) is not a token and carries every scope.
+// travels in the same Authorization header and carries every scope.
 type Token struct {
 	ID         int64
 	Ref        string
@@ -38,12 +38,12 @@ type TokenFilter struct {
 	Limit  int
 }
 
-func (t Token) Active() bool {
+func (t Token) Active(now time.Time) bool {
 	if t.RevokedAt != nil {
 		return false
 	}
 
-	if t.ExpiresAt != nil && time.Now().After(*t.ExpiresAt) {
+	if t.ExpiresAt != nil && now.After(*t.ExpiresAt) {
 		return false
 	}
 

@@ -30,9 +30,9 @@ None.
 ## Response
 
 `200` with `{"tokens": [...], "meta": {...}}`; each row is `ref`, `name`, `preview`
-(`spl_ab12…9f3c`), `scopes`, `created_at`, and `last_used_at` / `revoked_at` when set.
-There is no `token` field: the plaintext exists only in the `201` that created it, and the
-preview is four characters at each edge of it.
+(`spl_ab12…9f3c`), `scopes`, `created_at`, and `last_used_at` / `revoked_at` / `expires_at`
+when set. There is no `token` field: the plaintext exists only in the `201` that created it,
+and the preview is four characters at each edge of it.
 
 ## Errors
 
@@ -52,7 +52,7 @@ sequenceDiagram
     participant H as Tokens handler
     participant DB as SQLite
     C->>H: GET /api/tokens?status=active&used=never
-    H->>DB: SELECT ref, name, scopes, created_at, last_used_at, revoked_at ORDER BY id DESC LIMIT 200
+    H->>DB: SELECT ref, name, scopes, created_at, last_used_at, revoked_at, expires_at ORDER BY id DESC LIMIT 200
     DB-->>H: rows (no token_hash, no plaintext)
     H-->>C: 200 {tokens: [...], meta}
 ```

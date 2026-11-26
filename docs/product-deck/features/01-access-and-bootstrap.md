@@ -289,7 +289,7 @@ Scenario: A capture token cannot approve an entry
 ## 6. What this page does not promise
 
 - No password history, no reuse check, no per-device sign-out.
-- No per-token rate limit, no un-revoke and no forced expiry: `expires_at` is optional on
-  `POST /api/tokens`, and a token without it never expires.
+- No per-token rate limit and no un-revoke: `expires_at` is optional on `POST /api/tokens`,
+  a token without it never expires, and a token past it answers `401 unauthorized`.
 - No `PATCH /api/settings`: every body it receives is refused, by design.
 - No `PATCH /api/accounts/{ref}` for `kind`; reparenting and the roll-up ship in [F4](./04-accounts-and-payees.md).
