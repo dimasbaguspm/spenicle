@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -12,6 +13,8 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
+
+const dashboardMaxWindowDays = 366
 
 type topCategoryResponse struct {
 	AccountRef  string `json:"account_ref"`
@@ -38,6 +41,9 @@ func dashboardWindow(query dashboardQuery) (time.Time, time.Time, error) {
 	if to.Before(from) {
 		return time.Time{}, time.Time{}, errors.New("from must not be after to")
 	}
+	if days := int(to.Sub(from).Hours()/24) + 1; days > dashboardMaxWindowDays {
+		return time.Time{}, time.Time{}, fmt.Errorf("window must not exceed %d days", dashboardMaxWindowDays)
+	}
 
 	return from, to, nil
 }
@@ -50,8 +56,23 @@ type dashboardResponse struct {
 	SpendMinor      string               `json:"spend_minor"`
 	IncomeMinor     string               `json:"income_minor"`
 	NetMinor        string               `json:"net_minor"`
+	Months          []monthTotalResponse `json:"months"`
 	PendingCaptures int                  `json:"pending_captures"`
 	TopCategory     *topCategoryResponse `json:"top_category,omitempty"`
+}
+
+func monthTotals(months []entity.MonthTotal) []monthTotalResponse {
+	out := make([]monthTotalResponse, 0, len(months))
+	for _, month := range months {
+		out = append(out, monthTotalResponse{
+			Month:       month.Month,
+			SpendMinor:  strconv.FormatInt(month.SpendMinor, 10),
+			IncomeMinor: strconv.FormatInt(month.IncomeMinor, 10),
+			NetMinor:    strconv.FormatInt(month.NetMinor, 10),
+		})
+	}
+
+	return out
 }
 
 func topCategory(categories []entity.CategoryTotal) *topCategoryResponse {
@@ -105,6 +126,7 @@ func (s *Server) GetDashboard(w http.ResponseWriter, r *http.Request) {
 		SpendMinor:   "0",
 		IncomeMinor:  "0",
 		NetMinor:     "0",
+		Months:       monthTotals(months),
 	}
 
 	if len(months) > 0 {

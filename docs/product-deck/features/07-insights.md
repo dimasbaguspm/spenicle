@@ -16,20 +16,23 @@ never needs a recalculation job.
 
 | # | call | notes |
 | --- | --- | --- |
-| 1 | `GET /api/dashboard?from=2026-02-01&to=2026-02-28` | one request, five tiles, explicit window |
+| 1 | `GET /api/dashboard?from=2026-02-01&to=2026-02-28` | one request, explicit window capped at 366 days |
 
 ```json
 {"from":"2026-02-01","to":"2026-02-28","base_currency":"IDR","month":"2026-02",
- "spend_minor":"10000","income_minor":"0","net_minor":"-10000","pending_captures":0,
+ "spend_minor":"10000","income_minor":"0","net_minor":"-10000",
+ "months":[{"month":"2026-02","spend_minor":"10000","income_minor":"0","net_minor":"-10000"}],
+ "pending_captures":0,
  "top_category":{"account_ref":"…","account_name":"Unsorted","amount_minor":"10000"}}
 ```
 
 `month` is the **newest month with data inside the requested window**, not necessarily
 the current calendar month: an empty February shows January. An empty window answers
-zeroes and omits `top_category` — never an error. `top_category` is the biggest expense
-category in that window; `pending_captures` counts pending captures received in the same
-window. The response echoes `from` and `to`, so the client never has to guess which window
-it rendered.
+zeroes and omits `top_category` — never an error. `months` carries every month in the
+window that has data, oldest first, so the landing screen does not need a second call for
+the trend. `top_category` is the biggest expense category in that window;
+`pending_captures` counts pending captures received in the same window. The response
+echoes `from` and `to`, so the client never has to guess which window it rendered.
 
 ### 2.2 Drill into months and categories
 

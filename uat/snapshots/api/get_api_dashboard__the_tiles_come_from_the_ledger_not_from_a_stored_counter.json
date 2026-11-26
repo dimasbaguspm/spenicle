@@ -3,6 +3,14 @@
   "from": "2026-02-01",
   "income_minor": "0",
   "month": "2026-02",
+  "months": [
+    {
+      "income_minor": "0",
+      "month": "2026-02",
+      "net_minor": "-10000",
+      "spend_minor": "10000"
+    }
+  ],
   "net_minor": "-10000",
   "pending_captures": 0,
   "spend_minor": "10000",

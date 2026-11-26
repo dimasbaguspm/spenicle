@@ -31,3 +31,12 @@ Feature: GET /api/dashboard
     When I send a GET to "/api/dashboard"
     Then the response status is 422
     And the response JSON matches the snapshot "get_api_dashboard__the_window_is_required"
+
+  Scenario: The window is capped
+    Given a running API
+    When I send a GET to "/api/dashboard" with headers/query:
+      | type  | key  | value      |
+      | query | from | 2025-02-01 |
+      | query | to   | 2026-02-02 |
+    Then the response status is 422
+    And the response JSON matches the snapshot "get_api_dashboard__the_window_is_capped"

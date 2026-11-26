@@ -886,17 +886,18 @@ sequenceDiagram
     participant API as Dashboard handler
     participant DB as SQLite
     UI->>API: GET dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD
-    API->>API: require scope dashboard:read, validate ordered window
+    API->>API: require scope dashboard:read, validate ordered window within 366 days
     API->>DB: SELECT settings
     API->>DB: SELECT monthly totals in the window
     API->>DB: SELECT pending captures received in the window
     API->>DB: SELECT top expense category in the window
-    API-->>UI: 200 {from, to, base_currency, month, money tiles, pending, top_category}
+    API-->>UI: 200 {from, to, base_currency, month, months, money tiles, pending, top_category}
 ```
 
-`from` and `to` are required, inclusive, and echoed in the response. The month tile
-describes the newest month with data in that window; an empty window uses the month of
-`to`. There is no server-side default.
+`from` and `to` are required, inclusive, and echoed in the response. The inclusive window
+must not span more than 366 days. The month tile describes the newest month with data in
+that window; an empty window uses the month of `to`. `months` carries every month in the
+window that has data, oldest first. There is no server-side default.
 
 ## 3.18 `POST /api/tokens`
 
