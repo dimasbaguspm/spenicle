@@ -43,7 +43,43 @@ func TestEncodedExportIsByteIdenticalForTheSameData(t *testing.T) {
 	if !bytes.Equal(firstZIP, secondZIP) {
 		t.Fatal("the two archives differ for the same data")
 	}
+}
 
+type renderedFileCase struct {
+	name        string
+	format      string
+	contentType string
+	extension   string
+}
+
+func assertRenderedFile(t *testing.T, want renderedFileCase, dir string, document Document, file FileDocument) {
+	t.Helper()
+
+	body, err := os.ReadFile(file.Path)
+	if err != nil {
+		t.Fatalf("read rendered file: %v", err)
+	}
+
+	if !bytes.Equal(body, document.Bytes) {
+		t.Fatalf("the file and in-memory documents differ for %s", want.format)
+	}
+
+	if file.ContentType != want.contentType || file.Extension != want.extension {
+		t.Fatalf("metadata = %q/%q, want %q/%q",
+			file.ContentType, file.Extension, want.contentType, want.extension)
+	}
+
+	if !maps.Equal(file.Counts, document.Counts) {
+		t.Fatalf("counts = %v, want %v", file.Counts, document.Counts)
+	}
+
+	if got := filepath.Dir(file.Path); got != dir {
+		t.Fatalf("temporary file is in %q, want %q", got, dir)
+	}
+
+	if err := os.Remove(file.Path); err != nil {
+		t.Fatalf("remove temporary file: %v", err)
+	}
 }
 
 func TestRenderFileMatchesTheInMemoryDocument(t *testing.T) {
@@ -51,19 +87,18 @@ func TestRenderFileMatchesTheInMemoryDocument(t *testing.T) {
 
 	deps := windowedDeps(t)
 
-	tests := []struct {
-		name        string
-		format      string
-		contentType string
-		extension   string
-	}{
+	tests := []renderedFileCase{
 		{
-			name: "json", format: constant.ExportFormatJSON,
-			contentType: "application/json", extension: "json",
+			name:        "json",
+			format:      constant.ExportFormatJSON,
+			contentType: "application/json",
+			extension:   "json",
 		},
 		{
-			name: "csv", format: constant.ExportFormatCSV,
-			contentType: "application/zip", extension: "zip",
+			name:        "csv",
+			format:      constant.ExportFormatCSV,
+			contentType: "application/zip",
+			extension:   "zip",
 		},
 	}
 
@@ -80,31 +115,7 @@ func TestRenderFileMatchesTheInMemoryDocument(t *testing.T) {
 				t.Fatalf("render to file: %v", err)
 			}
 
-			body, err := os.ReadFile(file.Path)
-			if err != nil {
-				t.Fatalf("read rendered file: %v", err)
-			}
-
-			if !bytes.Equal(body, document.Bytes) {
-				t.Fatalf("the file and in-memory documents differ for %s", tc.format)
-			}
-
-			if file.ContentType != tc.contentType || file.Extension != tc.extension {
-				t.Fatalf("metadata = %q/%q, want %q/%q",
-					file.ContentType, file.Extension, tc.contentType, tc.extension)
-			}
-
-			if !maps.Equal(file.Counts, document.Counts) {
-				t.Fatalf("counts = %v, want %v", file.Counts, document.Counts)
-			}
-
-			if got := filepath.Dir(file.Path); got != dir {
-				t.Fatalf("temporary file is in %q, want %q", got, dir)
-			}
-
-			if err := os.Remove(file.Path); err != nil {
-				t.Fatalf("remove temporary file: %v", err)
-			}
+			assertRenderedFile(t, tc, dir, document, file)
 		})
 	}
 }

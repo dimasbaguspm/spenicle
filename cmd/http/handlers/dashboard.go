@@ -14,7 +14,10 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const dashboardMaxWindowDays = 366
+const (
+	dashboardMaxWindowDays = 366
+	dashboardHoursPerDay   = 24
+)
 
 type topCategoryResponse struct {
 	AccountRef  string `json:"account_ref"`
@@ -41,7 +44,8 @@ func dashboardWindow(query dashboardQuery) (time.Time, time.Time, error) {
 	if to.Before(from) {
 		return time.Time{}, time.Time{}, errors.New("from must not be after to")
 	}
-	if days := int(to.Sub(from).Hours()/24) + 1; days > dashboardMaxWindowDays {
+
+	if days := int(to.Sub(from).Hours()/dashboardHoursPerDay) + 1; days > dashboardMaxWindowDays {
 		return time.Time{}, time.Time{}, fmt.Errorf("window must not exceed %d days", dashboardMaxWindowDays)
 	}
 

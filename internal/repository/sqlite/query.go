@@ -56,6 +56,7 @@ func (q *listQuery) prefix(column, value string) {
 	}
 
 	lower, upper, hasUpper := prefixBounds(value)
+
 	expression := `lower(` + column + `)`
 	if hasUpper {
 		q.and(expression+` >= ? AND `+expression+` < ?`, lower, upper)
@@ -74,8 +75,10 @@ func (q *listQuery) prefixInSubquery(column, table, keyColumn, nameColumn, value
 	expression := `lower(` + nameColumn + `)`
 	predicate := expression + ` >= ?`
 	args := []any{lower}
+
 	if hasUpper {
 		predicate += ` AND ` + expression + ` < ?`
+
 		args = append(args, upper)
 	}
 
