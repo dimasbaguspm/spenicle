@@ -3,6 +3,7 @@ package entity
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 
@@ -110,7 +111,11 @@ func CheckZeroSum(postings []Posting) error {
 	native := new(big.Int)
 	base := new(big.Int)
 
-	for _, posting := range postings {
+	for index, posting := range postings {
+		if posting.AmountMinor == math.MinInt64 || posting.BaseAmountMinor == math.MinInt64 {
+			return fmt.Errorf("%w: posting %d has an unrepresentable amount", ErrInvalidPostings, index)
+		}
+
 		native.Add(native, big.NewInt(posting.AmountMinor))
 		base.Add(base, big.NewInt(posting.BaseAmountMinor))
 	}

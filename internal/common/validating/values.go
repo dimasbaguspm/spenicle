@@ -2,6 +2,7 @@ package validating
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,10 @@ func Money(raw, name string) (int64, error) {
 	parsed, err := strconv.ParseInt(trimmed, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %q is not a minor-unit integer", name, trimmed)
+	}
+
+	if parsed == math.MinInt64 {
+		return 0, fmt.Errorf("%s: %q is not a representable minor-unit integer", name, trimmed)
 	}
 
 	return parsed, nil

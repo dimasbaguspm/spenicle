@@ -2,6 +2,7 @@ package entity_test
 
 import (
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -110,5 +111,38 @@ func TestCaptureTransitions(t *testing.T) {
 	rejected := entity.Capture{Status: constant.CaptureStatusRejected}
 	if err := rejected.Transition(constant.CaptureStatusPending); err != nil {
 		t.Fatalf("rejected may be reopened: %v", err)
+	}
+}
+
+func TestCheckZeroSumRejectsUnrepresentableAmounts(t *testing.T) {
+	tests := []struct {
+		name     string
+		postings []entity.Posting
+	}{
+		{
+			name: "a balanced native trio containing the floor",
+			postings: []entity.Posting{
+				{AmountMinor: math.MinInt64, BaseAmountMinor: math.MinInt64},
+				{AmountMinor: math.MaxInt64, BaseAmountMinor: math.MaxInt64},
+				{AmountMinor: 1, BaseAmountMinor: 1},
+			},
+		},
+		{
+			name: "a balanced base trio containing the floor",
+			postings: []entity.Posting{
+				{AmountMinor: 1, BaseAmountMinor: math.MinInt64},
+				{AmountMinor: -1, BaseAmountMinor: math.MaxInt64},
+				{AmountMinor: 0, BaseAmountMinor: 1},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := entity.CheckZeroSum(test.postings)
+			if !errors.Is(err, entity.ErrInvalidPostings) {
+				t.Fatalf("err = %v, want invalid postings", err)
+			}
+		})
 	}
 }

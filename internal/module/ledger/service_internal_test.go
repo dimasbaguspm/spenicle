@@ -3,6 +3,7 @@ package ledger
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -158,6 +159,87 @@ func TestResolveRate(t *testing.T) {
 
 			if !sameDay(rate.OnDate, tc.wantDate) {
 				t.Fatalf("rate date = %s, want %s", rate.OnDate, tc.wantDate)
+			}
+		})
+	}
+}
+
+func TestBalanceBaseAllocatesRoundingResidual(t *testing.T) {
+	usd, _ := entity.CurrencyByCode("USD")
+	idr, _ := entity.CurrencyByCode("IDR")
+
+	tests := []struct {
+		name     string
+		from     entity.Currency
+		to       entity.Currency
+		postings []entity.Posting
+		want     []int64
+		wantErr  error
+	}{
+		{
+			name: "a balanced base is unchanged",
+			from: usd, to: idr,
+			postings: []entity.Posting{
+				{AmountMinor: 1, BaseAmountMinor: 163},
+				{AmountMinor: -1, BaseAmountMinor: -163},
+			},
+			want: []int64{163, -163},
+		},
+		{
+			name: "a split residual lands on the largest posting",
+			from: usd, to: idr,
+			postings: []entity.Posting{
+				{AmountMinor: 1, BaseAmountMinor: 163},
+				{AmountMinor: 1, BaseAmountMinor: 163},
+				{AmountMinor: -2, BaseAmountMinor: -325},
+			},
+			want: []int64{163, 163, -326},
+		},
+		{
+			name: "an unbalanced native entry is refused",
+			from: usd, to: idr,
+			postings: []entity.Posting{
+				{AmountMinor: 1, BaseAmountMinor: 163},
+			},
+			wantErr: entity.ErrZeroSum,
+		},
+		{
+			name: "a base residual without a conversion is refused",
+			from: usd, to: usd,
+			postings: []entity.Posting{
+				{AmountMinor: 1, BaseAmountMinor: 1},
+				{AmountMinor: -1, BaseAmountMinor: 0},
+			},
+			wantErr: entity.ErrInvalidPostings,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := balanceBase(test.postings, test.from, test.to)
+			if test.wantErr != nil {
+				if !errors.Is(err, test.wantErr) {
+					t.Fatalf("err = %v, want %v", err, test.wantErr)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("balance base: %v", err)
+			}
+
+			base := make([]int64, 0, len(got))
+			for _, posting := range got {
+				base = append(base, posting.BaseAmountMinor)
+			}
+
+			if !slices.Equal(base, test.want) {
+				t.Fatalf("base amounts = %v, want %v", base, test.want)
+			}
+
+			if err := entity.CheckZeroSum(got); err != nil {
+				t.Fatalf("balanced postings still fail: %v", err)
 			}
 		})
 	}

@@ -129,6 +129,48 @@ func (s *Service) buildPostings(
 		postings = append(postings, posting)
 	}
 
+	return balanceBase(postings, nativeCurrency, baseCurrency)
+}
+
+func balanceBase(postings []entity.Posting, native, base entity.Currency) ([]entity.Posting, error) {
+	nativeSum := new(big.Int)
+	baseSum := new(big.Int)
+	largest := -1
+	largestAmount := new(big.Int)
+
+	for index, posting := range postings {
+		amount := big.NewInt(posting.AmountMinor)
+		nativeSum.Add(nativeSum, amount)
+		baseSum.Add(baseSum, big.NewInt(posting.BaseAmountMinor))
+
+		magnitude := new(big.Int).Abs(amount)
+		if largest < 0 || magnitude.Cmp(largestAmount) > 0 {
+			largest = index
+			largestAmount = magnitude
+		}
+	}
+
+	if nativeSum.Sign() != 0 {
+		return nil, fmt.Errorf("%w: native sum %s", entity.ErrZeroSum, nativeSum.String())
+	}
+
+	if baseSum.Sign() == 0 {
+		return postings, nil
+	}
+
+	if largest < 0 || native.Code == base.Code {
+		return nil, fmt.Errorf("%w: cannot balance base rounding", entity.ErrInvalidPostings)
+	}
+
+	adjusted := new(big.Int).Sub(big.NewInt(postings[largest].BaseAmountMinor), baseSum)
+
+	value, err := entity.CheckedMinor(adjusted)
+	if err != nil {
+		return nil, fmt.Errorf("posting %d: %w", largest, err)
+	}
+
+	postings[largest].BaseAmountMinor = value
+
 	return postings, nil
 }
 

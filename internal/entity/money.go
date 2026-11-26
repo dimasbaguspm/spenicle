@@ -3,6 +3,7 @@ package entity
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
 )
@@ -43,11 +44,7 @@ func ConvertBase(native int64, from, to Currency, rate *big.Rat) (int64, error) 
 
 	rat.Mul(rat, rate)
 
-	if !rat.Num().IsInt64() && rat.Num().BitLen() > 62 {
-		return 0, fmt.Errorf("%w: overflow", ErrInvalidAmount)
-	}
-
-	return roundHalfAwayFromZero(rat), nil
+	return roundHalfAwayFromZero(rat)
 }
 
 func ParseRate(raw string) (*big.Rat, error) {
@@ -59,7 +56,7 @@ func ParseRate(raw string) (*big.Rat, error) {
 	return parsed, nil
 }
 
-func roundHalfAwayFromZero(rat *big.Rat) int64 {
+func roundHalfAwayFromZero(rat *big.Rat) (int64, error) {
 	numerator := new(big.Int).Set(rat.Num())
 	denominator := new(big.Int).Set(rat.Denom())
 
@@ -76,5 +73,26 @@ func roundHalfAwayFromZero(rat *big.Rat) int64 {
 		}
 	}
 
-	return quotient.Int64()
+	return CheckedMinor(quotient)
+}
+
+func CheckedMinor(value *big.Int) (int64, error) {
+	if value == nil || !value.IsInt64() {
+		return 0, fmt.Errorf("%w: outside int64", ErrInvalidAmount)
+	}
+
+	amount := value.Int64()
+	if amount == math.MinInt64 {
+		return 0, fmt.Errorf("%w: %d cannot be negated", ErrInvalidAmount, amount)
+	}
+
+	return amount, nil
+}
+
+func NegateMinor(amount int64) (int64, error) {
+	if amount == math.MinInt64 {
+		return 0, fmt.Errorf("%w: %d cannot be negated", ErrInvalidAmount, amount)
+	}
+
+	return -amount, nil
 }

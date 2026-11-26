@@ -22,6 +22,7 @@ func TestMoney(t *testing.T) {
 		{name: "a thousands separator is refused", raw: "1,500", wantErr: true},
 		{name: "an empty value is refused", raw: "", wantErr: true},
 		{name: "a value past the int64 ceiling is refused", raw: "9223372036854775808", wantErr: true},
+		{name: "the int64 floor is refused", raw: "-9223372036854775808", wantErr: true},
 	}
 
 	for _, test := range tests {

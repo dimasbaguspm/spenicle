@@ -508,7 +508,10 @@ func (s *Store) VoidEntry(
 		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
 	}
 
-	reversal := reversalOf(original, reason, at)
+	reversal, err := reversalOf(original, reason, at)
+	if err != nil {
+		return entity.Entry{}, err
+	}
 
 	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
@@ -538,6 +541,10 @@ func (s *Store) VoidEntry(
 }
 
 func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal entity.Entry) error {
+	if err := entity.CheckZeroSum(reversal.Postings); err != nil {
+		return err
+	}
+
 	reversalRef := uuid.New()
 
 	res, err := tx.ExecContext(ctx, `
@@ -728,7 +735,11 @@ func insertEntryRow(
 	return id, nil
 }
 
-func reversalOf(original entity.Entry, reason string, at time.Time) entity.Entry {
+func reversalOf(original entity.Entry, reason string, at time.Time) (entity.Entry, error) {
+	if err := entity.CheckZeroSum(original.Postings); err != nil {
+		return entity.Entry{}, err
+	}
+
 	reversal := entity.Entry{
 		OccurredOn: original.OccurredOn,
 		PayeeID:    original.PayeeID,
@@ -739,13 +750,29 @@ func reversalOf(original entity.Entry, reason string, at time.Time) entity.Entry
 		CreatedAt:  at,
 	}
 
-	for _, posting := range original.Postings {
-		posting.AmountMinor = -posting.AmountMinor
-		posting.BaseAmountMinor = -posting.BaseAmountMinor
+	for index, posting := range original.Postings {
+		amount, err := entity.NegateMinor(posting.AmountMinor)
+		if err != nil {
+			return entity.Entry{}, fmt.Errorf("%w: posting %d cannot be reversed: %w",
+				entity.ErrInvalidPostings, index, err)
+		}
+
+		baseAmount, err := entity.NegateMinor(posting.BaseAmountMinor)
+		if err != nil {
+			return entity.Entry{}, fmt.Errorf("%w: posting %d cannot be reversed: %w",
+				entity.ErrInvalidPostings, index, err)
+		}
+
+		posting.AmountMinor = amount
+		posting.BaseAmountMinor = baseAmount
 		reversal.Postings = append(reversal.Postings, posting)
 	}
 
-	return reversal
+	if err := entity.CheckZeroSum(reversal.Postings); err != nil {
+		return entity.Entry{}, err
+	}
+
+	return reversal, nil
 }
 
 func (s *Store) ReplaceEntry(
@@ -763,7 +790,11 @@ func (s *Store) ReplaceEntry(
 		return entity.Entry{}, err
 	}
 
-	reversal := reversalOf(original, reason, at)
+	reversal, err := reversalOf(original, reason, at)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
 	replacement.Ref = uuid.New()
 	replacement.Source = constant.EntrySourceAdjustment
 	replacement.CreatedAt = at

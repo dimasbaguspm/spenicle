@@ -164,8 +164,11 @@ base_balance_minor)`, written when you review a month (12 rows/account/year).
 
 1. `SUM(amount_minor) = 0` and `SUM(base_amount_minor) = 0` per `entry_id`.
    Enforced in the write transaction (SQLite cannot defer a cross-row CHECK),
-   verified by an integrity job that runs on boot and after imports.
-2. Money is always `(integer minor units, ISO code)`. Never float.
+   verified by an integrity job that runs on boot and after imports. A split-conversion
+   rounding residual is assigned once to the largest absolute posting.
+2. Money is always `(integer minor units, ISO code)`. Never float. Conversions and
+   reversals use checked `int64` arithmetic; the int64 floor is rejected because it
+   cannot be negated.
 3. A posting's base amount is computed once, at write time, and never recomputed.
    This is why a past month's numbers cannot drift when rates change.
 4. No `DELETE` on ledger, inbox, or rules. Void, reject, archive.

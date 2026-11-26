@@ -858,6 +858,7 @@ sequenceDiagram
         FX->>DB: SELECT fx_rates for that date or earlier
         FX-->>API: rate and fx_source, cached when carried forward
         API->>API: compute base_amount_minor with one rounding
+        API->>API: assign rounding residual to largest posting, check both sums
         API->>DB: BEGIN IMMEDIATE
         API->>DB: INSERT ledger_entries
         API->>DB: INSERT ledger_postings
@@ -886,6 +887,7 @@ sequenceDiagram
     alt void requested and already voided
         API-->>UI: 409 already_voided
     else void requested
+        API->>API: build and zero-sum-check the reversal before writing
         API->>DB: BEGIN IMMEDIATE
         API->>DB: INSERT reversal entry with reverses_entry_id set
         API->>DB: INSERT postings with negated amounts and same fx_rate

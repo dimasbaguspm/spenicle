@@ -102,16 +102,20 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
   insert.
 - **Money is integers end to end.** `amount_minor` and `base_amount_minor` are signed
   int64s; `fx_rate` is exact decimal `TEXT` handled with `math/big.Rat`; the conversion
-  from native to base rounds **once**, half away from zero. There is no `float64` on the
-  path, and `fx_source` records which of `ecb|cached|manual|identity` produced the rate.
+  from native to base rounds **once**, half away from zero. A split conversion's rounding
+  residual is assigned once to the largest posting so both sums stay zero; a result
+  outside checked int64 (including the floor, which cannot be negated) is refused. There
+  is no `float64` on the path, and `fx_source` records which of
+  `ecb|cached|manual|identity` produced the rate.
 - **The base currency comes from settings, per request.** A posting in the base currency
   gets `fx_rate: "1"` and `fx_source: "identity"`; anything else takes an explicit rate or
   resolves from `fx_rates` through exact day, nearest earlier business day, then a EUR
   cross rate. The stored posting carries the rate, the day used and `ecb|cached|manual|identity`.
-- **Voiding is a write, not an undo.** The store updates the original's `voided_at` with
-  `WHERE voided_at IS NULL` (that predicate is the concurrency guard: the loser gets
+- **Voiding is a write, not an undo.** The store builds and zero-sum-checks the full
+  reversal before opening the write transaction, then updates the original's `voided_at`
+  with `WHERE voided_at IS NULL` (that predicate is the concurrency guard: the loser gets
   `409`), inserts the reversal and its negated postings, and appends the `void` audit row
-  — all in one transaction.
+  — all in one transaction. An unrepresentable original writes nothing.
 - **Reads stay dumb.** `ListEntries` is one query for the page plus one for all its
   postings; `with_balance=true` with one `account_ref` adds one windowed sum. The handler
   joins account and payee display names once per request from `ListAccounts`/`ListPayees`,

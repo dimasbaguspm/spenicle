@@ -17,7 +17,10 @@ Manual entry screen, agents, approvals from captures.
 rate resolution for a posting that carries no `fx_rate` (`RateSource.Rate`, the
 `module/rates` service: the in-memory cache, then `fx_rates` for the exact day, then the
 nearest **earlier** day, then a cross rate through EUR), per-posting FX conversion
-(`big.Rat`, one rounding), `entity.NewEntry` (`CheckZeroSum`), then one transaction in
+(`big.Rat`, one rounding; a result outside `int64`, including the int64 floor, is refused),
+base-sum balancing (a split-conversion rounding residual goes once to the largest
+absolute posting), `entity.NewEntry` (`CheckZeroSum`, which rejects native imbalance and
+unrepresentable amounts), then one transaction in
 `Repository.Sqlite.InsertEntry` (entry + postings + `audit_log`). Zero-sum is checked again
 inside the transaction.
 

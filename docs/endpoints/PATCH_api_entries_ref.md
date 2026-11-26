@@ -16,7 +16,9 @@ Ledger screen ("I logged this twice", "this was Kopi Kenangan, not the supermark
 ## Downstream
 
 `{"void": true}` → `Module.Ledger.Void` → `Repository.Sqlite.VoidEntry`: read the
-original, negate every posting, insert the reversal with `reverses_entry_id`, `UPDATE …
+original, build and validate its full reversal before opening the write transaction
+(an original containing the int64 floor is `422 invalid_postings` and writes nothing),
+then negate every posting, insert the reversal with `reverses_entry_id`, `UPDATE …
 voided_at WHERE voided_at IS NULL`, insert `audit_log` action `void`.
 
 `{"payee_ref": "…"}` → `Module.Ledger.UpdatePayee` → `Repository.Sqlite.UpdateEntryPayee`:
