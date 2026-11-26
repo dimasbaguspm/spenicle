@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"time"
 
-	sqlite3 "modernc.org/sqlite"
-
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 )
 
@@ -123,12 +121,14 @@ func connect(ctx context.Context, dsn string, cfg Config) (*sql.DB, error) {
 	return db, nil
 }
 
-func isLocked(err error) bool {
-	var driverErr *sqlite3.Error
+type sqliteCoder interface{ Code() int }
 
-	if !errors.As(err, &driverErr) {
+func isLocked(err error) bool {
+	var coder sqliteCoder
+
+	if !errors.As(err, &coder) {
 		return false
 	}
 
-	return driverErr.Code() == sqliteBusy || driverErr.Code() == sqliteLocked
+	return coder.Code() == sqliteBusy || coder.Code() == sqliteLocked
 }
