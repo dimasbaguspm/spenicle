@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
@@ -101,12 +102,16 @@ func (s *Service) Verify(ctx context.Context, plain string) (entity.Token, bool,
 		return entity.Token{}, false, err
 	}
 
-	if !token.Active(s.clock.Now()) {
+	now := s.clock.Now()
+	if !token.Active(now) {
 		return entity.Token{}, false, nil
 	}
 
-	if err := s.store.TouchToken(ctx, token.Ref, s.clock.Now()); err != nil {
-		return entity.Token{}, false, err
+	stamp := now.Format(constant.TimestampLayout)
+	if token.LastUsedAt == nil || token.LastUsedAt.Format(constant.TimestampLayout) != stamp {
+		if err := s.store.TouchToken(ctx, token.Ref, now); err != nil {
+			return entity.Token{}, false, err
+		}
 	}
 
 	return token, true, nil

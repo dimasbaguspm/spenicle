@@ -19,4 +19,5 @@ type Contract interface {
 	ChangePassword(ctx context.Context, current, next string) (entity.Settings, error)
 	Setup(ctx context.Context, code string, accounts []entity.OpeningAccount) (entity.Settings, error)
 	Root(ctx context.Context, presented string) (bool, error)
+	RootWithSettings(ctx context.Context, current entity.Settings, presented string) (bool, error)
 }

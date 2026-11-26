@@ -266,18 +266,33 @@ func (s *Service) Root(ctx context.Context, presented string) (bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.Root")
 	defer endSpan()
 
-	trimmed := strings.TrimSpace(presented)
-	if trimmed == "" {
-		return false, nil
-	}
-
 	settings, found, err := s.load(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	if !found || !settings.HasPassword() {
+	if !found {
 		return false, nil
+	}
+
+	return s.root(settings, presented), nil
+}
+
+func (s *Service) RootWithSettings(
+	ctx context.Context,
+	current entity.Settings,
+	presented string,
+) (bool, error) {
+	_, endSpan := telemetry.StartSpan(ctx, "Module.Settings.RootWithSettings")
+	defer endSpan()
+
+	return s.root(current, presented), nil
+}
+
+func (s *Service) root(settings entity.Settings, presented string) bool {
+	trimmed := strings.TrimSpace(presented)
+	if trimmed == "" || !settings.HasPassword() {
+		return false
 	}
 
 	key := credentialDigest(settings.PasswordHash, trimmed)
@@ -287,16 +302,16 @@ func (s *Service) Root(ctx context.Context, presented string) (bool, error) {
 	s.mu.Unlock()
 
 	if remembered {
-		return true, nil
+		return true
 	}
 
 	if verifyErr := verifyPassword(settings.PasswordHash, trimmed); verifyErr != nil {
-		return false, nil
+		return false
 	}
 
 	s.remember(key)
 
-	return true, nil
+	return true
 }
 
 func (s *Service) remember(key string) {

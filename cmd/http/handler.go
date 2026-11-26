@@ -286,7 +286,7 @@ func (s *server) identify(w http.ResponseWriter, r *http.Request) (credential, b
 		return credential{root: true, actor: userActor("")}, true
 	}
 
-	if current.PasswordMustChange && r.URL.Path != "/api/password" && r.URL.Path != "/api/meta" {
+	if passwordChangeRequired(current, r.URL.Path) {
 		httpx.WriteError(w, http.StatusConflict, "password_change_required",
 			"sign in with the generated password, then set your own at /api/password")
 
@@ -301,7 +301,20 @@ func (s *server) identify(w http.ResponseWriter, r *http.Request) (credential, b
 		return credential{}, false
 	}
 
-	root, err := s.settings.Root(ctx, presented)
+	if s.tokens != nil {
+		token, found, verifyErr := s.tokens.Verify(ctx, presented)
+		if verifyErr != nil {
+			s.writeInternal(ctx, w, verifyErr)
+
+			return credential{}, false
+		}
+
+		if found {
+			return credential{token: token, actor: userActor(token.Ref)}, true
+		}
+	}
+
+	root, err := s.settings.RootWithSettings(ctx, current, presented)
 	if err != nil {
 		s.writeInternal(ctx, w, err)
 
@@ -318,20 +331,13 @@ func (s *server) identify(w http.ResponseWriter, r *http.Request) (credential, b
 		return credential{}, false
 	}
 
-	token, found, err := s.tokens.Verify(ctx, presented)
-	if err != nil {
-		s.writeInternal(ctx, w, err)
+	httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", "unknown or revoked credential")
 
-		return credential{}, false
-	}
+	return credential{}, false
+}
 
-	if !found {
-		httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", "unknown or revoked credential")
-
-		return credential{}, false
-	}
-
-	return credential{token: token, actor: userActor(token.Ref)}, true
+func passwordChangeRequired(current entity.Settings, path string) bool {
+	return current.PasswordMustChange && path != "/api/password" && path != "/api/meta"
 }
 
 func (who credential) mayReach(group routeGroup, pattern string) bool {
