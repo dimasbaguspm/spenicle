@@ -37,13 +37,13 @@ Behaviour, by what the provider answers:
 | same revision | the stored row, only `last_synced_at` moves |
 | newer revision | a **new** row whose ref is returned; the old row gets `superseded_by` |
 | message gone | the stored row, `status: gone` |
-| call failed | the stored row, `attempts` incremented and the row's error recorded |
+| call failed | the row is still updated (`attempts` incremented, the error recorded, `last_synced_at` moved), then the failure is returned: the route answers `500 internal_error`, not the row |
 
 ## Errors
 
 - `404 not_found` — no reference with that ref.
 - `422 invalid_request` — the ref is not 32 lowercase hex.
-- `500 internal_error` — the provider call failed in a way the row could not record.
+- `500 internal_error` — the provider call failed. The stored row is updated first, but the response is the error; only `message gone` answers `200` with the stored row.
 
 ## Limitations
 

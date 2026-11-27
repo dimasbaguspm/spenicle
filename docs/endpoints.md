@@ -5,4 +5,4 @@ The endpoint reference moved: every route has its own page under
 auth, purpose, upstream, downstream, params, body, response, errors, limitations and a
 sequence diagram.
 
-[`docs/endpoints/planned.md`](./endpoints/planned.md) records planned, not-shipped and superseded decisions; it no longer claims the roadmap is empty. The live route table is in [`docs/endpoints/README.md`](./endpoints/README.md). Product-level gaps live in [`docs/product-deck/features/09-gaps-and-next.md`](./product-deck/features/09-gaps-and-next.md).
+[`docs/endpoints/planned.md`](./endpoints/planned.md) records planned, not-shipped and superseded decisions; it no longer claims the roadmap is empty. The live route table is in [`docs/endpoints/README.md`](./endpoints/README.md). Every page here is verified against the code; [`alignment.md`](./alignment.md) records the commit, the date, who checked and whether the docs were a GO for the release. Product-level gaps live in [`docs/product-deck/features/09-gaps-and-next.md`](./product-deck/features/09-gaps-and-next.md).

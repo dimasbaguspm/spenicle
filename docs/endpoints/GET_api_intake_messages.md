@@ -22,7 +22,7 @@ The settings screen's intake panel, and an agent auditing why a mail did not bec
 | `status` | string | — | `captured`, `skipped`, `failed`, `gone` |
 | `source` | string | — | `gmail`; `imap` validates but no IMAP adapter is shipped |
 | `cursor` | ref | — | return references older than the one with that ref |
-| `limit` | int | 50 | clamped to 200 |
+| `limit` | int | 50 | max 200 — a larger value is `422 invalid_request`, never clamped |
 
 ## Body
 
@@ -33,8 +33,8 @@ None.
 **200**
 
 ```json
-{"messages":[{"ref":"<32 hex>","source":"gmail","handle":"18c…","status":"captured",
-  "received_at":"2026-02-14T09:00:00Z","observed_at":"2026-02-14T09:05:00Z",
+{"messages":[{"ref":"<32 hex>","source":"gmail","handle":"18c…","thread_ref":"18c…",
+  "status":"captured","received_at":"2026-02-14T09:00:00Z","observed_at":"2026-02-14T09:05:00Z",
   "last_synced_at":"2026-02-14T09:05:00Z"}],
  "meta":{"limit":50,"has_more":false}}
 ```

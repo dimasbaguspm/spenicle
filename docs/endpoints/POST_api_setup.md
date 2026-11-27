@@ -44,8 +44,8 @@ Opening entries are dated today in `APP_TIMEZONE`; the client cannot backdate th
 
 ## Errors
 
-`422 empty_setup` when `base_currency` is absent; `422 unknown_currency` for a code
-this build does not know; `422 invalid_request` for an invalid account, duplicate
+`422 empty_setup` when `base_currency` is absent; `422 invalid_request` for a currency
+code this build does not know (binding rejects it before the module runs), for an invalid account, duplicate
 `name` + `kind`, zero balance or the reserved account name; `409 base_currency_locked`
 once setup has completed or a legacy database already has entries; `409 invalid_state`
 when a matching account is archived; `409 setup_conflict` when settings changed while

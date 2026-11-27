@@ -14,16 +14,18 @@ Review screen; the vendor reading a snap back.
 
 ## Downstream
 
-`approve` → `Module.Captures.Approve` → `PayeeSource.PayeeByRef` when `payee_ref` is set →
-`Module.Ledger.Build` (the same zero-sum and FX path as `POST /api/entries`, with
-`source` derived from the capture kind) → `Repository.Sqlite.Approve`. The repository
-rechecks the zero sum, then inserts the entry and its postings, stamps the capture
-`approved` with `resolved_entry_ref`, and appends the entry and capture audit rows in
-one transaction, so no failed approval leaves an orphan entry. A `kind='recurring'`
+`approve` → `Module.Captures.Approve` → `Module.Ledger.Build` (the same zero-sum and FX
+path as `POST /api/entries`, with `source` derived from the capture kind; `Approve` only
+passes `payee_ref` through, and the ledger resolves it as it builds) →
+`Repository.Sqlite.Approve`. The repository rechecks the zero sum, then inserts the entry
+and its postings, stamps the capture `approved` with `resolved_entry_ref`, and appends
+the entry and capture audit rows in one transaction, so no failed approval leaves an
+orphan entry. `PayeeSource.PayeeByRef` runs in the handler *after* a successful approval,
+only to learn the categorisation default it remembers. A `kind='recurring'`
 capture also resolves `recurring_rule_id` from its draft, so
 `(recurring_rule_id, occurred_on)` stays unique. `failed` and `extracting` rows are
-normalized through `pending` before approval; `rejected` and `duplicate` rows are already
-resolved and refuse approval.
+normalized through `pending` before approval; an `approved`, `rejected` or `duplicate`
+row is already resolved and refuses approval with `409 capture_resolved`.
 
 `reject` → sealed reason + `UpdateCapture`, status `rejected`.
 
@@ -60,10 +62,10 @@ with the capture. A resolved capture carries `resolved_entry_ref` (never an inte
 ## Errors
 
 `403 forbidden` (missing action scope, before any downstream call); `400 invalid_json` (unknown field, malformed body); `404 not_found` (capture, `payee_ref`
-or `entry_ref` names nothing); `409 capture_resolved` (already approved, rejected or
-matched, or resolved by an approval while `retry` was polling); `409 invalid_state`
-(approving a `rejected` or `duplicate` capture, `retry` with no `job_ref`, or no rail
-configured); `409 duplicate` (the built entry collides
+or `entry_ref` names nothing); `409 capture_resolved` (approving a capture that is
+already `approved`, `rejected` or `duplicate` — `entity.Capture.IsResolved` — or resolved
+by an approval while `retry` was polling); `409 invalid_state`
+(`retry` with no `job_ref`, or no rail configured); `409 duplicate` (the built entry collides
 with an existing ledger entry); `422 invalid_request` (`action` missing or unknown,
 `match` without `entry_ref`, bad date/amount, `postings_not_balanced` and friends from
 the ledger).
@@ -91,10 +93,12 @@ sequenceDiagram
     UI->>H: PATCH /api/captures/{ref} {action}
     alt action approve
         H->>Q: Approve(ref, payee_ref?, postings)
-        Q->>Q: validate status; normalize failed/extracting through pending
-        Q->>L: Build(entry from body, source from kind)
+        Q->>Q: validate status, refuse a resolved one; normalize failed/extracting through pending
+        Q->>L: Build(entry from body, source from kind, payee_ref passed through)
+        L->>L: resolve payee_ref, check the zero sum and FX
         L-->>Q: checked entry, no write yet
         Q->>DB: BEGIN; insert entry, postings and audit; update capture and audit; COMMIT
+        H->>H: PayeeByRef(payee_ref) after success, only to remember the category
         H-->>UI: 201 entry + capture
     else action reject
         Q->>Q: seal reason

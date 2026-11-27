@@ -14,8 +14,9 @@ Container healthcheck, `skills/release`, an agent's first call.
 ## Downstream
 
 `Repository.Sqlite.SchemaVersion` (`SELECT MAX(version)`),
-`Repository.Sqlite.Ping` (`SELECT 1`) and `Repository.Sqlite.Setting`
-(`worker_last_run_at`). It makes no vendor call.
+`Repository.Sqlite.Ping` (`SELECT 1`), `Module.Settings.BaseCurrency` (the sealed
+settings row, read on every call) and `Repository.Sqlite.Setting` (`worker_last_run_at`).
+It makes no vendor call.
 
 ## Path / query params
 
@@ -38,9 +39,9 @@ None.
 ## Limitations
 
 No deep checks (no FX fetch, no vendor ping); `app_secret` is a
-fingerprint, never the secret. `base_currency` and `timezone` are the values
-captured at boot; `timezone` is the IANA name the instance was pinned to
-(`APP_TIMEZONE`, default `UTC`) and it is read-only.
+fingerprint, never the secret. `timezone` is the value captured at boot: the IANA name the
+instance was pinned to (`APP_TIMEZONE`, default `UTC`), read-only. `base_currency` is read
+live from the settings row on every call, so it is the current value, not a boot snapshot.
 `started_at` is the UTC RFC3339 time this process booted. It changes on every restart;
 the durable history of earlier boots is in `/api/audit`
 (`entity_kind=system`, `action=start`).
@@ -63,6 +64,7 @@ sequenceDiagram
     M->>H: GET /healthz
     H->>DB: SELECT MAX(version) FROM schema_migrations
     H->>DB: SELECT 1
+    H->>DB: SELECT the sealed settings row (base_currency)
     H->>DB: SELECT v FROM settings WHERE k = worker_last_run_at
     alt reachable
         H-->>M: 200 status ok, version, started_at, schema_version, fingerprint

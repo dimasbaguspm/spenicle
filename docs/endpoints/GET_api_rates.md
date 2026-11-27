@@ -39,9 +39,10 @@ sheet has never carried answers `404`.
 
 ## Errors
 
-`404 not_found` when the sheet has no row for that day or any earlier day of that pair,
-with `not found: no EUR/USD rate on or before <day>`; `422 invalid_request` for a malformed
-date or an unknown currency code.
+`404 not_found` when the sheet has no row for that day or any earlier day of that pair, with
+`not found: no EUR/USD rate on or before <day>` when `on` was sent and
+`not found: no EUR/USD rate today` when it was not; `422 unknown_currency` for a code this
+build does not know; `422 invalid_request` for a malformed date.
 
 ## Limitations
 

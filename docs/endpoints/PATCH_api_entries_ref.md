@@ -70,8 +70,8 @@ correction answers the replacement (`source: "adjustment"`).
 
 `404 not_found` (unknown entry or unknown `payee_ref`); `409 invalid_state` (already
 voided, for both a second void and a correction); `422 invalid_request` (no action, more
-than one action, a `{ref}` or `payee_ref` that is not 32 hex, an unbalanced posting set);
-`422 postings_not_balanced`, `422 invalid_postings`, `422 unknown_currency`,
+than one action, a `{ref}` or `payee_ref` that is not 32 hex); `422 postings_not_balanced`
+when the posting set does not sum to zero, `422 invalid_postings`, `422 unknown_currency`,
 `422 invalid_rate` from the ledger; `422 unsupported_patch` for `{"void": false}`;
 `400 invalid_json`.
 

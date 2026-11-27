@@ -165,7 +165,7 @@ Scenario: A queued export answers at once and renders later
     """
   Then the response status is 201
   And the response body has status "queued"
-  And the response body has bytes "0"
+  And the response body has bytes 0 (a JSON number, not a string)
   And the response body carries "ref"
   When I send a GET to "/api/exports/{{ref}}"
   Then the status is still "queued"

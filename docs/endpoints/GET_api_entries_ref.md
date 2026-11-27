@@ -44,7 +44,6 @@ None.
 
 Every posting carries its account's `name` and `kind` next to the ref, and an entry with a
 payee carries its `name`, so one call renders the whole screen. `note` is omitted when
-payee carries its `name`, so one call renders the whole screen. `note` is omitted when
 empty, `payee` when the entry has none, and `voided_at` (RFC3339) appears once the entry
 is voided. There is no `meta`: the page envelope belongs to the list route.
 

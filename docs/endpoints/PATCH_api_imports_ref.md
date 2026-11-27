@@ -9,7 +9,7 @@ Close a draft, with one action in the body:
 - `commit` posts every row the user accepted to the ledger and turns the batch `committed`;
 - `reject` throws the draft away, turns the batch `rejected` and keeps the rows and the file for audit.
 
-The same action twice is a no-op (`200` with the current batch, no second posting, no second event); the other action on a closed batch is `409 import_closed`.
+The same action twice on a terminal batch is a no-op (`200` with the current batch, no second posting, no second event); the other action on a closed batch is `409 import_closed`.
 
 ## Upstream
 
@@ -68,15 +68,14 @@ Rows that were `pending` or `skipped` are not posted and stay in the batch for a
 ## Errors
 
 - `403 forbidden` — a `commit` without `entries:write`; the check runs before the batch is loaded.
-- `409 import_committing` — `PATCH /api/imports/{ref}/rows/{index}` while the batch is `committing`; a commit is in flight and the row set is frozen until it finishes or is resumed.
 - `409 import_closed` — the other action on a terminal batch: `commit` on a `rejected` batch, `reject` on a `committed` one. The message names the state; the entries of a committed batch are undone with `PATCH /api/entries/{ref}` and `{"void": true}`, not here.
 - `404 not_found` — the ref names no batch.
 - `422 invalid_request` — `action` missing or not one of the two, `reason` too long.
-- `422 invalid_postings`, `422 unknown_currency`, `422 invalid_rate` — a row could not become a balanced entry (a deleted account, a category that is not an account); nothing after it is posted and the batch stays `draft`, so the fix is a `PATCH` on the row and a retry.
+- `422 invalid_postings`, `422 unknown_currency`, `422 invalid_rate` — a row could not become a balanced entry (a deleted account, a category that is not an account); nothing after it is posted and the batch stays `committing`, so the fix is a `PATCH` on the row and a commit replay, which resumes.
 
 ## Limitations
 
-Not one transaction: the ledger writes are per-row entries, so a failure halfway leaves the rows already posted behind. That is deliberate — each row is its own `client_id`, so retrying the commit resumes instead of duplicating, and a partial commit is visible as a draft that is half posted. No partial-failure report in the response yet.
+Not one transaction: the ledger writes are per-row entries, so a failure halfway leaves the rows already posted behind. That is deliberate — each row is its own `client_id`, so retrying the commit resumes instead of duplicating. A partial failure does not put the batch back to `draft`: it stays `committing` (only a full success or a `reject` closes it), and a replay resumes from the rows whose ledger `client_id` is still missing — never a half-posted draft. No partial-failure report in the response yet.
 
 A rejected batch cannot be reopened: upload the file again under a new `client_id` (a fresh draft recomputes the clashes). A committed or rejected batch is kept forever — rows, blob and events — while an abandoned `draft` is reclaimed by the worker 24 hours after its last edit.
 

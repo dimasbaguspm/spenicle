@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The audit trail of one statement batch, newest first: what was uploaded, resumed or refused, which row was edited and with which fields, which rows were accepted or skipped, and how the review ended. The log is append-only — nothing rewrites or deletes an event, and a rejected batch keeps its events forever.
+The audit trail of one statement batch, newest first: what was uploaded, resumed or refused, which row was edited and with which fields, which rows were accepted or skipped, how far each commit chunk got, and how the review ended. The log is append-only — nothing rewrites or deletes an event, and a rejected batch keeps its events forever.
 
 ## Upstream
 
@@ -21,9 +21,10 @@ The kinds written by the API paths (`actor = user`):
 | `uploaded` | a new draft was stored | — | — |
 | `resumed` | the same `client_id` + bytes came back to an existing batch | — | — |
 | `conflict_refused` | the same `client_id` arrived with different bytes (`409 import_conflict`) | — | — |
-| `row_edited` | a row patch applied | the row | `{"fields": ["occurred_on", "amount_minor"]}`, in request order |
+| `row_edited` | a row patch applied | the row | `{"fields": ["amount_minor", "occurred_on"]}`, the request struct's order and sorted before it is recorded |
 | `row_accepted` | a row patch moved the row to `accepted` | the row | — |
 | `row_skipped` | a row patch moved the row to `skipped` | the row | — |
+| `committing` | one commit chunk finished posting | — | `{"rows_done": 500, "rows_total": 1200}`, one event per chunk |
 | `committed` | `PATCH /api/imports/{ref}` with `action = commit` | — | — |
 | `rejected` | `PATCH /api/imports/{ref}` with `action = reject` | — | `{"reason": "..."}` when one was sent |
 
@@ -33,7 +34,7 @@ The worker writes one more kind, with `actor = worker`:
 | --- | --- | --- | --- |
 | `expired` | an abandoned `draft` passed `expires_at` and the GC dropped its rows and blob | — | — |
 
-A replayed action writes no event: the second `commit` or `reject` returns the batch without touching the log.
+A replayed action writes no event when the batch is already terminal: the second `commit` or `reject` returns the batch without touching the log. A `commit` replay on a batch left `committing` is the exception — it resumes and appends one `committing` event per chunk.
 
 ## Path / query params
 

@@ -39,8 +39,8 @@ None.
 ## Limitations
 
 The saved view stores *what* to ask, not the SQL: namespaces are fixed, so a new
-grouping means a new namespace in the code. A duplicate name is refused by the unique
-index (`500`, not `409`).
+grouping means a new namespace in the code. A duplicate name hits the unique index and
+answers `409 duplicate`.
 
 ## Sequence
 

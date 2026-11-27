@@ -13,8 +13,8 @@ Ledger screen, agents auditing spend, `skills/ai-integration`.
 ## Downstream
 
 `Module.Ledger.List` → `Repository.Sqlite.ListEntries` (one page query for the entries,
-one query for the whole page's postings, and — with `with_balance` — one windowed query for
-the running balance).
+one query for the whole page's postings, and — with `with_balance` — one
+`Repository.Sqlite.RunningBalances` lookup on the derived `running_balances` table for the page's entries).
 
 ## Path / query params
 
@@ -33,7 +33,7 @@ the running balance).
 | `amount_max` | money | — | largest absolute posting amount to match |
 | `cursor` | ref | — | return entries older than the entry with that ref |
 | `with_balance` | bool | — | `true` (with exactly one `account_ref`) adds each entry's `running_balance_minor` |
-| `limit` | int | 50 | clamped to 200 |
+| `limit` | int | 50 | max 200 — a larger value is `422 invalid_request`, never clamped |
 
 Every `* list` parameter takes one value or many, separated by commas, and a repeated
 member is harmless. The lists widen: `payee_ref=a,b` is "either payee", never "both".
@@ -54,9 +54,9 @@ None.
 
 `meta.limit` is the clamped page size the store was asked for, `meta.has_more` is exact
 (the store fetches `limit + 1` rows and the handler trims the extra one) and
-`meta.next_cursor` is the `ref` of the last returned entry, omitted when the page is
-empty. Send it back as `cursor` for the next page: the cursor is always a ref, never an
-integer id.
+`meta.next_cursor` is the `ref` of the last returned entry, omitted whenever there is no
+next page (`has_more` false), including a short non-empty page. Send it back as `cursor`
+for the next page: the cursor is always a ref, never an integer id.
 
 Each posting carries the account's `name` and `kind` next to its `ref`, and an entry with a
 payee carries its `name` too, so a screen renders a row without a second call. `voided_at`
@@ -65,28 +65,34 @@ appears on a voided entry or its reversal. The handler joins these from
 pure data adapter, the HTTP layer owns presentation.
 
 `running_balance_minor` is the balance of the account the request named, in base-currency
-minor units, **after** that entry: `SUM(base_amount_minor)` over that account's postings at
-or before the entry's `(occurred_on, id)`. Send `with_balance=true` together with exactly
-one `account_ref` and every row carries it, so a register screen renders newest-first pages
-without accumulating anything itself. The window opens at the start of the ledger, not at
-the page: page two's numbers already include everything above it. Without `account_ref`,
-or with several, the field is omitted and the request is the one it was before.
+minor units, **after** that entry: the `balance_minor` of the derived `running_balances`
+row kept for that `(account, entry)` pair, not a `SUM` computed per request. When the
+account's `balance_state.dirty` is set, the table is rebuilt from the whole history before
+the page is answered, so the numbers are the ledger's and not the page's: page two already
+includes everything above it. Send `with_balance=true` together with exactly one
+`account_ref` and every row carries it, so a register screen renders newest-first pages
+without accumulating anything itself. Without `account_ref`, or with several, the field is
+omitted and the request is the one it was before.
 
 ## Errors
 
-`422 invalid_request` for a malformed date, a `currency` outside ISO 4217, an
-`amount_min`/`amount_max` that is not an integer, a `source` outside the enum, a list
-member that is not a 32-hex ref, a `cursor` that is not a ref, a `voided` or `with_balance`
-value other than `true`/`false`, or a `limit` over 200.
+`422 invalid_request` for a malformed date, an `amount_min`/`amount_max` that is not an
+integer, a `source` outside the enum, a list member that is not a 32-hex ref, a `cursor`
+that is not a ref, a `voided` or `with_balance` value other than `true`/`false`, or a
+`limit` over 200; `422 unknown_currency` for a `currency` outside ISO 4217;
+`400 invalid_request` for a `limit` that is not a number, which the binder rejects before
+validation runs.
 
 ## Limitations
 
 Keyset paging by entry ref only. The `running_balance_minor` column needs exactly one
 `account_ref`: with none, or with several, there is no single balance to walk. It is
-base-currency only, like every other amount on the wire, and the windowed query reads the
-account's whole history on every page instead of a precomputed rollup — one query per page,
-never one per row. Filters deliberately absent: an amount in the entry's own currency (the
-range is base-currency), a sort order (always newest first), and a posting-level match —
+base-currency only, like every other amount on the wire, and it is a lookup on the derived
+`running_balances` table — one query per page, never one per row — so a dirty
+`balance_state` pays for a rebuild of that account's whole history once, on the next read,
+instead of every request summing the history. Filters deliberately absent: an amount in
+the entry's own currency (the range is base-currency), a sort order (always newest first),
+and a posting-level match —
 `account_ref` and `amount_min` are separate `EXISTS` clauses, so an entry can satisfy them
 through two different postings. One entry by ref is
 [`GET /api/entries/{ref}`](./GET_api_entries_ref.md); `refs` stays the way to fetch a batch
@@ -110,7 +116,8 @@ sequenceDiagram
     L->>DB: SELECT entries WHERE … ORDER BY id DESC LIMIT ? (limit + 1)
     L->>DB: SELECT postings WHERE entry_id IN (page ids) — one query for the page
     opt with_balance and exactly one account_ref
-        L->>DB: windowed SUM(base_amount_minor) over that account, filtered to the page ids
+        L->>DB: SELECT running_balances WHERE account_id = ? AND entry_id IN (page ids)
+        DB-->>L: one balance per entry (a dirty balance_state rebuilds from the whole account history first)
     end
     L-->>H: entries
     H->>H: trim to limit, meta{limit, has_more, next_cursor}

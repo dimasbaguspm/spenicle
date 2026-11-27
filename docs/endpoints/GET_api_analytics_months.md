@@ -22,7 +22,7 @@ excluded, so a void leaves no trace.
 
 | name | type | required | notes |
 | --- | --- | --- | --- |
-| `from` | string | no | `YYYY-MM-DD`; defaults to the first day of the month 11 months ago |
+| `from` | string | no | `YYYY-MM-DD`; defaults to the first day of the month that is 11 months before today's day-of-month — Go's date arithmetic means a 29th–31st can roll that start one month forward |
 | `to` | string | no | `YYYY-MM-DD`; defaults to today |
 
 ## Body

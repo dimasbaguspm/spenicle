@@ -19,9 +19,10 @@ the document wins until you change the document too.
 ## Invariants you must not break
 
 1. **Identity.** Every table carries a bigint `id` for the foreign keys and a `ref`:
-   a dashless UUID (32 lowercase hex) that is the only identifier the API speaks.
-   Requests send `account_ref`, responses carry `ref` — an integer id never leaves the
-   database.
+   a dashless UUID (32 lowercase hex) that is the only identifier the API speaks. One
+   table is the exception — `import_upload_chunks` is internal bookkeeping with an `id`
+   and no `ref`, never addressed on the wire. Requests send `account_ref`, responses
+   carry `ref` — an integer id never leaves the database.
 2. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
    zero. `entity.CheckZeroSum` runs before the store opens the write transaction, on
    both direct entry inserts and capture approvals.
@@ -73,8 +74,8 @@ internal/constant/     every fixed value shared by more than one package: enums,
 internal/entity/       shared structs + invariants; imports stdlib + constant only
 internal/module/       business logic: ledger, captures, imports, exports, export, rates,
                        settings, tokens, connections, intake, categorization
-internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore,
-                       extraction/{snaptojson,openai}
+internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore, mailbox/gmail,
+                       oauth/google, extraction/{snaptojson,openai}
 ```
 
 The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` stages
@@ -147,9 +148,10 @@ make lint-fix   # safe automatic fixes (style, then correctness)
 and `lefthook` for the hooks. Run `mise install` once per clone; `make` stays the
 entry point.
 
-`lefthook.yml` wires the same four checks into `pre-commit` and `pre-push`; install it
-with `make hooks`. Agents that commit must run the checks themselves anyway — CI is
-the judge, the hook is the convenience.
+`lefthook.yml` wires the checks into two hooks: `pre-commit` runs lint, build, test and
+UAT in that order, `pre-push` runs build and UAT only; install it with `make hooks`.
+Agents that commit must run the checks themselves anyway — CI is the judge, the hook is
+the convenience.
 
 Run `make lint`, `make test` and `make uat` before you call anything done. All four
 lint groups report `0 issues` today; a new finding is yours to fix, not to silence —
@@ -173,7 +175,7 @@ stores and every timeout are constants in `internal/common/config/config.go`.
 | `APP_TIMEZONE` | `UTC` | IANA name for every calendar decision (the worker's "today"); set once, at the first boot |
 | `SNAPTOJSON_API_KEY` | — | enables the SnapToJSON extraction vendor; unset = manual entry |
 | `SNAPTOJSON_ENDPOINT` | vendor route | override for a proxy or a staging account |
-| `OPENAI_API_KEY` | — | **reserved**: the OpenAI adapter exists but `config.SelectRail` never builds it, so extraction is SnapToJSON only and `ai_assistance` is inert until the chat rail lands |
+| `OPENAI_API_KEY` | — | **reserved**: the OpenAI adapter exists but `config.SelectRail` never builds it, so extraction is SnapToJSON only; `ai_assistance` is still computed (`OpenAIKey && OpenAIHost && model set`) and served by `GET /api/settings` and `GET /api/meta` — what is inert is the chat rail, so no assistance is ever produced |
 | `OPENAI_MODEL` | `gpt-4o-mini` (`DefaultOpenAIModel`) | model the OpenAI adapter asks for; wired by tests only today |
 | `OPENAI_HOST` | — | base URL for the OpenAI adapter; empty keeps the SDK default (`DefaultOpenAIHost` documents it) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP/HTTP collector; empty = tracing/metrics are no-ops |
@@ -264,8 +266,8 @@ has its default in `internal/common/config/config.go`**, and the resulting value
 chain nobody can predict. A new knob means a new constant and field in those two files,
 nothing else; removing one means deleting the constant, the read and the field.
 
-`/healthz` returns `status`, `version` (`<tag>+<sha7>`), `schema_version`,
-`app_secret` fingerprint, `base_currency` and `worker_last_run_at` (RFC3339, empty
+`/healthz` returns `status`, `version` (`<tag>+<sha7>`), `started_at`, `schema_version`,
+`app_secret` fingerprint, `base_currency`, `timezone` and `worker_last_run_at` (RFC3339, empty
 until the worker finishes a run). The heartbeat is the `worker_last_run_at` row the
 worker writes into `settings`, so the `http` process reports it even though it never
 runs the worker itself. Use it to prove a running container is the build you think it
@@ -302,8 +304,9 @@ edit while `committing` is `409 import_committing`.
 The worker does six things per run, in this order: queue a capture for each due recurring
 rule (never an entry), reclaim
 the artifacts of rejected captures, drop expired import drafts and `open` uploads older than
-24h, then claim up to 5 export jobs and sweep the queue, and finally poll the configured mailbox
-(`Module.Intake.Poll`), which queues captures and never posts an entry. Every calendar decision it makes
+24h, claim up to 5 export jobs and sweep the queue, poll the configured mailbox
+(`Module.Intake.Poll`), which queues captures and never posts an entry, and finally stamp the
+heartbeat it reports as `worker_last_run_at`. Every calendar decision it makes
 ("today", the due comparison, the business-day shift) runs in `APP_TIMEZONE`, not UTC.
 
 ## Observability
@@ -460,6 +463,7 @@ SnapToJSON only today. A new dependency needs a reason in the MR, not a `go get`
 | [`skills/`](./skills/README.md) | task recipes: release, observability, updates, contribute, ai-integration |
 | [`docs/endpoints/`](./docs/endpoints/README.md) | one page per route; same sections everywhere, including the sequence diagram |
 | [`docs/product-deck/`](./docs/product-deck/README.md) | one page per user-facing feature, client POV: journeys, backend path end to end, RRR, acceptance criteria |
+| [`docs/alignment.md`](./docs/alignment.md) | the check log: which commit the docs were verified against, by whom, and the release verdict |
 | [`.env.example`](./.env.example) | every variable with its default, copy to `.env` |
 | [`LICENSE`](./LICENSE) | source-available: personal unmodified use only, no commercial use |
 

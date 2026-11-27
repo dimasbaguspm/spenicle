@@ -26,7 +26,7 @@ which model) and `job_ref` (the vendor's handle on that run).
 | `status` | string | all | `extracting`, `pending`, `duplicate`, `approved`, `rejected`, `failed` |
 | `refs` | string | — | comma-separated capture refs |
 | `cursor` | ref | — | captures after the one with that ref, in the order below |
-| `limit` | int | 50 | clamped to 200 |
+| `limit` | int | 50 | ≤ 200, validated not clamped: over 200 is `422 invalid_request` |
 
 Ordering: `extracting` first, then `pending` oldest-first, then the resolved tail.
 
@@ -38,10 +38,12 @@ None.
 
 `{"captures":[{"ref":"<32 hex>","kind":"share","status":"pending","raw_text":"…","received_at":"…"}],"meta":{"limit":50,"has_more":false,"next_cursor":"<32 hex>"}}`
 
-`meta` is the same block every list route answers: `limit` is the clamped page size,
+`meta` is the same block every list route answers: `limit` is the page size asked for
+(`ClampLimit` only maps `≤ 0` to the default 50, it never trims an oversized value),
 `has_more` is exact (the store fetches `limit + 1` rows, the handler trims) and
-`next_cursor` is the `ref` of the last returned capture, omitted on an empty page. The
-cursor is a ref, never an integer id.
+`next_cursor` is the `ref` of the last returned capture, omitted whenever there is no
+next page (`has_more` false), not only on an empty page. The cursor is a ref, never an
+integer id.
 
 ## Errors
 

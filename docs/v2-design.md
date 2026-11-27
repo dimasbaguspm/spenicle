@@ -17,7 +17,7 @@ place to defer a decision. v2 fixes all three.
 | --- | --- |
 | storage | SQLite, single binary, no Redis |
 | deployment | one `docker run` / one compose file, port 8080 |
-| auth | optional password for the browser; scoped API tokens for agents and scripts |
+| auth | the instance password is the root bearer credential on every request; scoped API tokens for agents and scripts — no cookie, no browser session |
 | sealing | `APP_SECRET` is mandatory; it encrypts captures and artifacts and keys the root credential and the token digests, and the ledger stays readable plaintext |
 | capture | one `captures` queue for every channel; PWA share target + offline IndexedDB outbox are planned, not shipped |
 | review | single `captures` queue for every channel |
@@ -38,7 +38,7 @@ place to defer a decision. v2 fixes all three.
 ## Layout
 
 ```
-main.go               cobra root: signal wiring, mounts http, worker and the hidden all
+cmd/root.go           cobra root: signal wiring, mounts http, worker and the hidden all
 cmd/http/             httpcmd: the API composition root, the route table and the serve loop
 cmd/http/handlers/    one file per endpoint group; no route table, no middleware
 cmd/worker/           workercmd: the worker composition root and the recurring loop
@@ -123,7 +123,7 @@ context plus the end function — the span interface never leaks into a caller.
 name, so a span can never be filtered by one name while the service is labelled with
 another. `OTEL_EXPORTER_OTLP_ENDPOINT` is OTLP/HTTP; a bare host means HTTPS on port
 4318, and `http://` must be written on purpose.
-Each process has exactly one `context.Background()`: the root in `main.go`
+Each process has exactly one `context.Background()`: the root in `cmd/root.go`
 wrapped in `signal.NotifyContext`. Everything below derives from it, including
 the shutdown timeout (`context.WithoutCancel`) so the last batch of spans still
 flushes. Pure value code (`entity` validation, currency lookup, `clock`) takes no
@@ -340,8 +340,10 @@ rule.next_due_on <= today
 however often the worker ticks. Approving the capture posts the entry with
 `source='recurring'` and `recurring_rule_id` resolved from the draft, so the unique index
 `(recurring_rule_id, occurred_on)` still refuses a double post; rejecting it skips that
-cycle and leaves a reason. The worker holds no ledger contract at all (`captures.Queue`
-is its half of the module), which is what makes the rule mechanical instead of a promise.
+cycle and leaves a reason. The worker still receives the ledger — `cmd/worker/handler.go`
+passes it into the captures module for intake and into the export renderer's deps — but it
+posts no entry on its own: `captures.Queue` is its half of the module, which is what makes
+the rule mechanical instead of a promise.
 
 Because recurring bills enter the same queue, "review all untracked payments" covers
 rent and Netflix as well as stray card taps. Expected spend for the month, independent of

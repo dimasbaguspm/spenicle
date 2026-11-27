@@ -15,12 +15,13 @@ a chart of accounts becomes unusable. So the plan starts with a **separation of 
 
 | concept | scope | shape | who reads it |
 | --- | --- | --- | --- |
-| **parent** (shipped) | categories (`expense`/`income`) only | one parent, three levels, no cycles | reporting roll-up, budget |
+| **parent** (shipped) | any kind whose parent shares the child's `kind`; the shipped UI uses it for categories (`expense`/`income`) only | one parent, three levels, no cycles | reporting roll-up, budget |
 | **group** (this plan) | assets and liabilities | many-to-many, flat | home screen, pickers, filters |
 
 A rule that follows: **an account may be in any number of groups, but its `kind` decides
-which concept applies.** Categories never appear in a group; assets and liabilities never
-get a parent.
+which concept applies.** Categories never appear in a group. A parent is constrained only
+by the child's `kind` — an `asset` under an `asset` is legal — while the shipped UI and this
+plan use parents for categories only.
 
 ## 2. Options considered
 

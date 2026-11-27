@@ -84,7 +84,7 @@ structured log, joined to the request by `trace_id`. Codes a client must handle:
 
 | status | codes |
 | --- | --- |
-| `400` | `invalid_json` (unknown or malformed field) |
+| `400` | `invalid_json` (unknown or malformed field), `invalid_request` (a body that fails to decode on a route without the shared binder, e.g. `POST /api/captures`) |
 | `401` | `unauthorized` (no/mismatched credential), `invalid_password`, `invalid_state` (OAuth callback) |
 | `403` | `forbidden` (token without the scope, or a root-only route) |
 | `404` | `not_found` |

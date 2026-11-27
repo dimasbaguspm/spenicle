@@ -160,7 +160,9 @@ entry stays), and the credential answers `401 unauthorized` at once.
 
 | column | type | notes |
 | --- | --- | --- |
-| `k` | TEXT PK | |
+| `id` | INTEGER PK | |
+| `ref` | TEXT UNIQUE | dashless UUID |
+| `k` | TEXT UNIQUE | |
 | `v` | TEXT | raw; JSON when structured |
 
 Keys: `app_settings` (a sealed JSON row with `base_currency`, `timezone`,
@@ -191,12 +193,16 @@ adapter is reserved for a future chat rail and does not run extraction today.
 
 | column | type | notes |
 | --- | --- | --- |
-| `base` | TEXT | always `EUR`, PK part |
-| `quote` | TEXT | PK part, ISO code |
-| `on_date` | TEXT | PK part, TARGET business day |
+| `id` | INTEGER PK | |
+| `ref` | TEXT UNIQUE | dashless UUID |
+| `base` | TEXT | always `EUR` |
+| `quote` | TEXT | ISO code |
+| `on_date` | TEXT | TARGET business day |
 | `rate` | TEXT | exact decimal, `big.Rat`, never REAL |
 | `source` | TEXT | `ecb` \| `manual` |
 | `fetched_at` | TEXT | |
+
+`UNIQUE (base, quote, on_date)` is the natural key; the primary key is `id`.
 
 No retention needed: ~30 pairs × ~250 business days ≈ 7,500 rows/year, under 1 MB/year. An
 optional prune keeps only month-ends older than 5 years. Artifacts are the real disk cost, so
@@ -206,7 +212,8 @@ the worker prunes `artifacts/` instead: a rejected capture loses its document af
 ## 1.4 `accounts`
 
 Every table also has `id INTEGER PRIMARY KEY` (the graph) and `ref TEXT NOT NULL UNIQUE`
-(a dashless UUID). The API speaks `ref` only: `account_ref`, `ref`, and never a number.
+(a dashless UUID), except `import_upload_chunks`, which is internal bookkeeping with an
+`id` and no `ref`. The API speaks `ref` only: `account_ref`, `ref`, and never a number.
 
 | column | type | notes |
 | --- | --- | --- |
@@ -384,9 +391,10 @@ name, `contains`/`prefix` rule on the note, then `none` — and inside a tier it
 
 ## 1.14 Canonical DDL
 
-is the canonical DDL. It is embedded and applied verbatim on boot. There are 25 domain tables
-plus `schema_migrations`, managed in Go; `schema_version` is 1. The tables and columns
-highlighted above are the API-facing subset: `balance_state`, `running_balances`,
+`internal/repository/sqlite/migrations/0001_init.sql` (`//go:embed migrations/*.sql` in
+`migrate.go`) is the canonical DDL. It is embedded and applied verbatim on boot. There are
+25 domain tables plus `schema_migrations`, managed in Go; `schema_version` is 1. The tables
+and columns highlighted above are the API-facing subset: `balance_state`, `running_balances`,
 `capture_payloads`, `artifacts`, `import_batches`, `import_rows`, `import_events`,
 `import_uploads`, `import_upload_chunks`, `exports`, `export_events`, `custom_queries` and
 `schema_migrations` are not expanded here. When prose and SQL disagree, the SQL wins.

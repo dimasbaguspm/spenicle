@@ -10,7 +10,11 @@ Store Google OAuth client credentials and return the URL the user follows to gra
 
 The settings screen's "connect Google" form.
 
-`Module.Connections.Start` seals the client record under the `google_client` setting, signs a timestamped state with `sealer.Digest`, and asks the Gmail authorizer for the authorize URL.
+## Downstream
+
+`Module.Connections.Start` seals the client record under the `google_client` setting,
+signs a timestamped state with `sealer.Digest`, and asks the Gmail authorizer for the
+authorize URL.
 
 ## Path / query params
 
@@ -22,7 +26,7 @@ None.
 | --- | --- | --- | --- |
 | `client_id` | string | yes | 8–200 characters after trimming |
 | `client_secret` | string | yes | 8–200 characters after trimming |
-| `redirect_url` | string | yes | URL, ≤ 500 characters; must point at `GET /api/connections/google/callback` |
+| `redirect_url` | string | yes | URL, ≤ 500 characters; trimmed and stored as sent — nothing verifies that it is the callback, so point it at `GET /api/connections/google/callback` |
 
 ## Response
 

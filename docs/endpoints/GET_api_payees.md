@@ -22,7 +22,7 @@ Payee picker, autofill on the entry form, merchant filters.
 | `query` | string | — | case-insensitive prefix of the payee name |
 | `refs` | string | — | comma-separated payee refs |
 | `cursor` | ref | — | payees after the one with that ref, in name order |
-| `limit` | int | 50 | clamped to 200 |
+| `limit` | int | 50 | max 200 — a larger value is `422 invalid_request`, never clamped |
 
 Archived payees are included by default and flagged, so the client can hide them.
 
@@ -34,11 +34,11 @@ None.
 
 `{"payees":[{"ref":"<32 hex>","name":"KOPI KENANGAN","default_account_ref":"<32 hex>","default_category_ref":"<32 hex>","archived":false,"created_at":"<iso 8601>"}],"meta":{"limit":50,"has_more":false,"next_cursor":"<32 hex>"}}`
 
-`default_account_ref` and `default_category_ref` are omitted when unset. `meta` is the block every list route answers: `limit` is the clamped page size, `has_more` is exact (the store fetches `limit + 1`, the handler trims) and `next_cursor` is the `ref` of the last returned payee, omitted on an empty page.
+`default_account_ref` and `default_category_ref` are omitted when unset. `meta` is the block every list route answers: `limit` is the clamped page size, `has_more` is exact (the store fetches `limit + 1`, the handler trims) and `next_cursor` is the `ref` of the last returned payee, omitted whenever there is no next page (`has_more` false), including a short non-empty page.
 
 ## Errors
 
-`500 internal_error` with the generic message `internal error`; the cause is logged, never returned.
+`422 invalid_request` for a malformed list parameter — a `cursor` or `refs` member that is not a 32-hex ref, an `archived` that is not `true`/`false`, a `limit` over 200 — and `422 unknown_currency` for a `currency` this build does not know: the shared list params are validated even where they do not filter. `500 internal_error` with the generic message `internal error`; the cause is logged, never returned.
 
 ## Limitations
 

@@ -31,7 +31,9 @@ None.
 ## Response
 
 **200** `{"query":{…same shape as POST…},"from":"…","to":"…","months":[…]}` for a
-`months` view, or `…,"categories":[…]` for a `categories` view.
+`months` view, or `…,"categories":[…]` for a `categories` view. Both lists carry
+`omitempty`: a view whose window holds no rows omits the key entirely instead of sending
+`[]`.
 
 ## Errors
 

@@ -11,7 +11,7 @@ Closed on the way in, so nobody re-opens them:
 
 | question | decision |
 | --- | --- |
-| first-wins or last-wins on a learned default? | **first-wins**: the approve path fills an *empty* `payees.default_category_ref` and never overwrites one; changing it is an explicit `PATCH /api/payees/{ref}` |
+| first-wins or last-wins on a learned default? | **first-wins**: the approve path fills an *empty* `payees.default_category_id` and never overwrites one; changing it is an explicit `PATCH /api/payees/{ref}` |
 | which fields can a rule match? | `payee` and `note` exist; note rules accept only `contains`/`prefix` (`exact` is `422 invalid_request`), and payee rules outrank them |
 | regex? | no. `exact`, `contains`, `prefix` only — deterministic and explainable |
 | who may write the ledger? | nobody new: a suggestion is a read; `approve` and `commit` stay the only writes |
@@ -31,7 +31,7 @@ the right category on every capture, entry and imported row.
 
 What exists today:
 
-- `payees.default_category_ref` — a per-payee default; since `feat: remember the category a
+- `payees.default_category_id` — a per-payee default; since `feat: remember the category a
   capture approval chose` an approval fills it when it is empty, first-wins.
 - `categorization_rules` — explicit `pattern → category` rules (migration `0001`), applied
   after the payee default.
@@ -115,7 +115,7 @@ No `regex` in v1: a substring covers the real cases, and a regex column is a foo
 single-user app (catastrophic backtracking is a support ticket, not a feature). Live caps:
 ≤ 200 rules, `pattern` 2–80 characters.
 
-Phase 1 needs no column at all: `payees.default_category_ref` already exists.
+Phase 1 needs no column at all: `payees.default_category_id` already exists.
 
 ## 6. API sketch
 

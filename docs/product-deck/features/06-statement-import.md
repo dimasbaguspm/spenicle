@@ -33,7 +33,7 @@ The order above is illustrative: the same names in a different column order pars
 | 4 | `POST /api/imports` again with the same `client_id` and bytes | `200` with the same batch — the resume path after a restart |
 
 Caps: `ImportMaxBytes` is a 32 MiB outer body cap, but multipart parsing and the file read use `maxFormBytes = 11 << 20`, so the effective multipart file cap is 11 MiB; `ImportMaxRows` is 50 000 rows. A conflicting replay writes `conflict_refused` before answering `409 import_conflict`; UAT asserts that event.
-with a bad line does not fail the upload: that row is stored `skipped` with
+A CSV with a bad line does not fail the upload: that row is stored `skipped` with
 `clash_kind: "invalid_row"`, so the user sees the line instead of losing the file.
 
 Clashes are computed **once, at upload**, and they are deterministic:

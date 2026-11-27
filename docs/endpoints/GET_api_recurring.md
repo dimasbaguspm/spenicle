@@ -23,9 +23,9 @@ Recurring screen, and an agent checking what is already planned before proposing
 | `query` | string | — | case-insensitive prefix of the payee name |
 | `refs` | string | — | comma-separated rule refs |
 | `cursor` | ref | — | rules after the one with that ref, in `next_due_on` order |
-| `limit` | int | 50 | clamped to 200 |
+| `limit` | int | 50 | max 200 — a larger value is `422 invalid_request`, never clamped |
 
-Every other list parameter (`kind`, `status`, `source`, `from`, …) is accepted by the shared binder and ignored here.
+The shared binder validates every other list parameter too, even the ones this route does not filter on: `kind`, `status`, `source`, `from` and `archived` must parse, and `currency` must be one this build knows.
 
 ## Body
 
@@ -35,11 +35,11 @@ None.
 
 `{"recurring":[{"ref":"<32 hex>","payee_ref":"<32 hex>","account_ref":"<32 hex>","category_ref":"<32 hex>","amount_minor":"25000","currency":"IDR","cadence":"monthly","interval_n":1,"day_of_month":20,"business_day_shift":"none","next_due_on":"2026-12-20","origin":"user","state":"active","created_at":"<iso 8601>"}],"meta":{"limit":50,"has_more":false,"next_cursor":"<32 hex>"}}`
 
-`amount_minor` is a string of minor units; `category_ref` and `ends_on` are omitted when unset. `meta` is the block every list route answers: `limit` is the clamped page size, `has_more` is exact (the store fetches `limit + 1` rows and the handler trims the extra one) and `next_cursor` is the `ref` of the last returned rule, omitted when the page is empty. Send it back as `cursor` for the next page: the cursor is always a ref, never an integer id.
+`amount_minor` is a string of minor units; `category_ref` and `ends_on` are omitted when unset. `meta` is the block every list route answers: `limit` is the clamped page size, `has_more` is exact (the store fetches `limit + 1` rows and the handler trims the extra one) and `next_cursor` is the `ref` of the last returned rule, omitted whenever there is no next page (`has_more` false), including a short non-empty page. Send it back as `cursor` for the next page: the cursor is always a ref, never an integer id.
 
 ## Errors
 
-`422 invalid_request` for an unknown `state` or `cadence`, a `refs` entry or `cursor` that is not a 32-hex ref, or a `limit` over 200.
+`422 invalid_request` for an unknown `state`, `cadence` or `kind`, a `from` that is not a date, an `archived` that is not `true`/`false`, a `refs` entry or `cursor` that is not a 32-hex ref, or a `limit` over 200; `422 unknown_currency` for a `currency` this build does not know.
 
 ## Limitations
 

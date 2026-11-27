@@ -41,9 +41,11 @@ rail accepted the submit — and `200` on a dedupe replay of the same bytes.
 
 ## Errors
 
-`422 unknown_capture_kind`; `400 invalid_json` (malformed or unknown field); `422
-invalid_request` (multipart body without a `file` part, or a `raw_text` too long). Vendor
-failures are recorded on its payload row as `extraction_error`, not raised.
+`422 unknown_capture_kind`; `400 invalid_request` (a body that does not parse — this
+route decodes with a plain decoder, so an unknown field is ignored rather than refused —
+or a multipart body without a `file` part, which is refused before validation runs);
+`422 invalid_request` for a `raw_text` over its limit.
+Vendor failures are recorded on its payload row as `extraction_error`, not raised.
 
 ## Limitations
 

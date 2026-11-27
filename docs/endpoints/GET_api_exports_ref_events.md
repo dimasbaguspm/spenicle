@@ -17,7 +17,7 @@ The export panel's history drawer, and a script proving that a job was rendered 
 | kind | actor | when |
 | --- | --- | --- |
 | `queued` | `user` | `POST /api/exports` stored a new job |
-| `resumed` | `user` | the same `client_id` and `format` came back |
+| `resumed` | `user` / `worker` | the same `client_id` and `format` came back (`user`), or the worker requeued a job a restart left `running` (`worker`) |
 | `started` | `worker` | the worker won the compare-and-swap on the row |
 | `completed` | `worker` | the document was rendered, stored and the job marked `ready` |
 | `failed` | `worker` | rendering failed; `error_message` on the job says so generically |
@@ -25,7 +25,7 @@ The export panel's history drawer, and a script proving that a job was rendered 
 | `expired` | `worker` | the sweep dropped a blob past `ExportRetention` |
 | `swept` | `worker` | the sweep failed a `running` job older than `ExportStaleAfter` |
 
-A refused create (`409 export_conflict`) writes nothing: the existing job is left alone.
+A refused create (`409 export_conflict`) writes nothing: the existing job is left alone. A requeue after a restart is the other `resumed`, and it carries `actor = worker` because the worker writes it before claiming the job.
 
 ## Path / query params
 

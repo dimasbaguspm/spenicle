@@ -119,7 +119,7 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 | --- | --- | --- |
 | the dashboard month is not "this month" | a tile labelled "February" that shows January's numbers reads as a bug | render the month name from `month`; when `month` is earlier than the client's current month, say "last month with activity" |
 | category totals depend on `kind` | an expense posted against an `asset` account (a cash purchase logged as a transfer) shows in no category and as no spend, though the balance is right | the entry form should push the two-leg shape (asset → expense); the pie is not the place to reconcile |
-| one bad custom name | `custom_queries.name` is unique | create and patch answer `409 duplicate`; committed custom-query UAT covers create, namespace and unknown namespace, not the collision |
+| one bad custom name | `custom_queries.name` is unique | create and patch answer `409 duplicate`; committed custom-query UAT covers create, namespace, unknown namespace and the collision (`POST_api_analytics_custom.feature` asserts `409 duplicate`) |
 | an unbounded range is allowed | `?from=1970-01-01` is a full scan | the client should always send an explicit window; the default is already the useful one |
 | `categories` views cannot be income | a user saving an income pie gets expenses | `GET /api/analytics/categories?kind=income` works; the **saved** view cannot carry `kind` yet ([F9](./09-gaps-and-next.md)) |
 | parent roll-up can double-count | a parent with its own postings plus children | `?rollup=parent` is opt-in on `categories`; the flat view still reports each account alone |

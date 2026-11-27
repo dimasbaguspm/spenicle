@@ -18,14 +18,14 @@ Account picker on the entry form, balances panel, the ledger screen's account fi
 
 | name | type | default | notes |
 | --- | --- | --- | --- |
-| `kind` | string | all | `asset`, `liability`, `expense`, `income` |
+| `kind` | string | all | `asset`, `liability`, `equity`, `expense`, `income` |
 | `currency` | string | all | ISO 4217 of the account |
 | `parent_ref` | ref | all | children of that account |
 | `archived` | bool | all | `true` only archived, `false` only live |
 | `query` | string | — | case-insensitive prefix of the account name |
 | `refs` | string | — | comma-separated account refs |
 | `cursor` | ref | — | accounts after the one with that ref, in `kind, name` order |
-| `limit` | int | 50 | clamped to 200 |
+| `limit` | int | 50 | max 200 — a larger value is `422 invalid_request`, never clamped |
 
 ## Body
 
@@ -33,13 +33,13 @@ None.
 
 ## Response
 
-`{"accounts":[{"ref":"<32 hex>","name":"Cash","kind":"asset","currency":"IDR","base_amount_minor":"-1500","parent_ref":"<32 hex>","archived":false}],"meta":{"limit":50,"has_more":false,"next_cursor":"<32 hex>"}}`
+`{"accounts":[{"ref":"<32 hex>","name":"Cash","kind":"asset","currency":"IDR","base_amount_minor":"-1500","parent_ref":"<32 hex>","icon":"<string>","archived":false}],"meta":{"limit":50,"has_more":false,"next_cursor":"<32 hex>"}}`
 
-`base_amount_minor` is a signed string of minor units in the base currency; negative means the account owes. `parent_ref` is the account this one rolls up into, omitted at the top of the tree. `meta` is the block every list route answers: `limit` is the clamped page size, `has_more` is exact (the store fetches `limit + 1`, the handler trims) and `next_cursor` is the `ref` of the last returned account, omitted on an empty page.
+`base_amount_minor` is a signed string of minor units in the base currency; negative means the account owes. `parent_ref` is the account this one rolls up into, omitted at the top of the tree. `icon` is the account's glyph, opaque to the API and omitted when unset. `meta` is the block every list route answers: `limit` is the clamped page size, `has_more` is exact (the store fetches `limit + 1`, the handler trims) and `next_cursor` is the `ref` of the last returned account, omitted whenever there is no next page (`has_more` false), including a short non-empty page.
 
 ## Errors
 
-`500 internal_error` with the generic message `internal error`; the cause is logged, never returned.
+`422 invalid_request` for a `kind` outside the enum, an `archived` that is not `true`/`false`, a `refs` member or `cursor` that is not a 32-hex ref, or a `limit` over 200 — the list params are validated, not clamped; `422 unknown_currency` for a `currency` this build does not know. `500 internal_error` with the generic message `internal error`; the cause is logged, never returned.
 
 ## Limitations
 
@@ -58,5 +58,5 @@ sequenceDiagram
   Handler->>Store: BalancesByAccount
   Store-->>Handler: accounts + map[id]minor
   Handler->>Handler: trim to limit, meta{limit, has_more, next_cursor}
-  Handler-->>UI: 200 {accounts:[{ref,name,kind,currency,base_amount_minor}], meta}
+  Handler-->>UI: 200 {accounts:[{ref,name,kind,currency,base_amount_minor,icon}], meta}
 ```

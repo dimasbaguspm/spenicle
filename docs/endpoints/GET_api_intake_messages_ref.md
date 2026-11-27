@@ -30,14 +30,16 @@ None.
 **200**
 
 ```json
-{"ref":"<32 hex>","source":"gmail","handle":"18c…","message_id_header":"<abc@bank.example>",
+{"ref":"<32 hex>","source":"gmail","handle":"18c…","thread_ref":"18c…","message_id_header":"<abc@bank.example>",
  "provider_revision":"1042","received_at":"2026-02-14T09:00:00Z","observed_at":"2026-02-14T09:05:00Z",
  "status":"captured","last_synced_at":"2026-02-14T09:05:00Z"}
 ```
 
 `status` is `captured`, `skipped`, `failed` or `gone`; `skip_reason` names why a skip happened
-(`sender_not_allowed`, `no_body`, `duplicate`, `too_large`), and `superseded_by` points at the
-reference that replaced this one after a refresh.
+(`sender_not_allowed`, `no_body`, `duplicate` — `too_large` is defined in the enum but no
+code path writes it), and `superseded_by` points at the reference that replaced this one
+after a refresh. `thread_ref` is the provider's thread handle and is omitted when the
+adapter reports none.
 
 ## Errors
 

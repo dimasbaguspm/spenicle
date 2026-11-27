@@ -14,7 +14,6 @@ The recurring screen ("pause", "correct amount"), the review queue for a suggest
 ## Downstream
 
 `RecurringByRef` (joins payees and accounts so refs come back intact), then
-`RecurringByRef` (joins payees and accounts so refs come back intact), then
 `UpdateRecurring`: one transaction that `UPDATE`s the schedule columns and `state` and
 appends an `audit_log` `update` row.
 

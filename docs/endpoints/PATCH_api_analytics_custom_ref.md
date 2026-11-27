@@ -36,7 +36,7 @@ months to categories is a different question, so it is a new view.
 ## Errors
 
 `404 not_found` for an unknown ref; `422 invalid_request` for an unknown chart or a name
-over the limit.
+over the limit; `409 duplicate` when the new name is already taken by another view.
 
 ## Limitations
 

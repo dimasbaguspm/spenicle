@@ -36,7 +36,8 @@ None.
 
 `422 invalid_request` for a missing name, and for a `default_category_ref` that names an
 `asset`/`liability` account (a category must be `expense` or `income`); `422 unknown_reference`
-when a default points at an account nobody owns.
+when a default points at an account nobody owns; `409 duplicate` when that `name` already
+exists (`payees.name` is unique).
 
 ## Limitations
 

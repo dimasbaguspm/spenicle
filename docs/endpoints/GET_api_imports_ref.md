@@ -24,7 +24,7 @@ None.
 
 ## Response
 
-`200` with the batch document described in [`POST /api/imports`](./POST_api_imports.md): `status` is `draft`, `committed` or `rejected`, `rows` carries every row with its `status` (`pending`, `accepted`, `skipped`), `clash_kind` and `clash_entry_ref` when there was a clash.
+`200` with the batch document described in [`POST /api/imports`](./POST_api_imports.md): `status` is `draft`, `committing`, `committed` or `rejected`, `rows` carries every row with its `status` (`pending`, `accepted`, `skipped`), `clash_kind` and `clash_entry_ref` when there was a clash. A commit flips the batch `draft → committing` before any chunk posts, and this route echoes it.
 
 ## Errors
 

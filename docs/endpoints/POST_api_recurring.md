@@ -47,13 +47,17 @@ None.
 ## Errors
 
 `422 invalid_request` for an unknown cadence, shift, a `day_of_month` outside 1–31 or a
-malformed date; `404 not_found` when `payee_ref` or an account ref does not exist.
+malformed date; `422 unknown_currency` for a `currency` this build does not know;
+`404 not_found` when `payee_ref` or an account ref does not exist.
 
 ## Limitations
 
-No automatic posting yet: `state` and `next_due_on` are data, and the scheduler that
-would turn a due rule into an entry is not implemented. No `detected` origin either —
-that is the promotion path from a capture.
+Nothing posts to the ledger by itself, but the schedule does run: `spenicle worker` queues
+a `captures` row for every occurrence whose `next_due_on` has arrived — the dedupe key is
+the rule plus the due date, so a rerun never double-queues — then `UPDATE`s
+`next_due_on`/`last_posted_on` and appends an `advance` journal row, up to `catchUpCap`
+occurrences per rule per run. Approving the capture is still what writes the entry. No
+`detected` origin either — that is the promotion path from a capture.
 
 ## Sequence
 

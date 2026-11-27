@@ -31,6 +31,10 @@ Either `payee_ref` or `text` is required. With `payee_ref`, the payee's stored n
 rules see and `text` is the note; without it, `text` is treated as both the payee name and the
 note, which is what makes a raw statement line classifiable.
 
+## Body
+
+None.
+
 ## Response
 
 ```json

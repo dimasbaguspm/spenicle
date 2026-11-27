@@ -17,7 +17,7 @@ The table below records them once; section (A) lists only what is still open.
 | --- | --- | --- |
 | 1 | `PATCH /api/captures/{ref}` takes `payee_ref`, resolves it through `PayeeSource.PayeeByRef`, and every capture answers `resolved_entry_ref`; an integer `payee_id` is now `400 invalid_json` | `feat: resolve a capture with refs, never integer ids` |
 | 2 | `PATCH /api/entries/{ref}` accepts `occurred_on`, `note`, `reason` and `postings`; the backend voids the original and inserts a reversal plus a replacement in one transaction | `feat: correct an entry's amount, date or note in one write` |
-| 4 | `POST`/`PATCH /api/accounts` take `parent_ref` (same kind, no cycle, three levels) and `GET /api/analytics/categories?rollup=parent` sums a child into its root | `feat: nest a category under a parent and roll it up` |
+| 4 | `POST /api/accounts` and `PATCH /api/accounts/{ref}` take `parent_ref` (same kind, no cycle, three levels) and `GET /api/analytics/categories?rollup=parent` sums a child into its root | `feat: nest a category under a parent and roll it up` |
 | 6 | a duplicate `name`+`kind`, `payees.name` or `custom_queries.name` answers `409 duplicate` | `fix: answer 409 for a duplicate name` |
 | 8 | `PATCH /api/captures/{ref}` accepts `{"action":"match","entry_ref":"…"}`, moving the capture to `duplicate` without touching the ledger; there is no user-facing unmatch action | `feat: resolve a capture with refs, never integer ids` |
 | G7 | `POST /api/exports` takes `from`/`to` (`YYYY-MM-DD`, both or neither), keeps them on the job as `exports.from_on`/`to_on`, drops every entry outside the window with its postings, and echoes the window on the listing, the job, the events and the download name; reading an export back in is still open, this ships the window only | `feat: render an export for a date window` |
@@ -88,7 +88,7 @@ slice with its own acceptance criteria, in the shape
   on `capturePatchRequest`, carry it on `captures.ApproveInput` (the module already has a
   `PayeeRef` field on `EnqueueInput`, so the shape exists), resolve it with
   `PayeeSource.PayeeByRef` in `Module.Captures.Approve`, and pass the id into
-  `ledger.PostInput` — the same path `PATCH /api/entries` already takes. Struct, input,
+  `ledger.PostInput` — the same path `PATCH /api/entries/{ref}` already takes. Struct, input,
   one resolve: no new query type, no schema change.
 - **RRR:** *Requirement* — a client can set every field of the entry it approves, and no
   route accepts or returns an integer id. *Risk* — removing `payee_id` breaks a body no
@@ -163,7 +163,7 @@ slice with its own acceptance criteria, in the shape
 ### N6 — Category hierarchy with roll-up *(shipped: `parent_ref` + `?rollup=parent`)*
 
 - **Client sees:** Food → Groceries/Coffee, with one parent number.
-- **Backend change:** `parent_ref` on `POST/PATCH /api/accounts` with a cycle guard and a
+- **Backend change:** `parent_ref` on `POST /api/accounts` and `PATCH /api/accounts/{ref}` with a cycle guard and a
   "same `kind`" rule, plus a `CategoryTotals` roll-up (`?rollup=parent`).
 - **RRR:** *Requirement* — a parent may not be its own descendant, and a parent's roll-up
   equals the sum of its children plus its own postings. *Risk* — reparenting an account

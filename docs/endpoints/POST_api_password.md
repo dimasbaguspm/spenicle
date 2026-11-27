@@ -31,8 +31,9 @@ None.
 
 ## Errors
 
-`401 invalid_password` (wrong current, or no password set);
-`422 weak_password`; `400 invalid_json`.
+`401 invalid_password` (wrong current, or no password set); `422 invalid_request` for a
+`new_password` under 12 or over 200 characters (binding); `422 weak_password` when the raw
+value passes but trims below 12; `400 invalid_json`.
 
 ## Limitations
 

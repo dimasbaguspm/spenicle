@@ -20,9 +20,9 @@ nearest **earlier** day, then a cross rate through EUR), per-posting FX conversi
 (`big.Rat`, one rounding; a result outside `int64`, including the int64 floor, is refused),
 base-sum balancing (a split-conversion rounding residual goes once to the largest
 absolute posting), `entity.NewEntry` (`CheckZeroSum`, which rejects native imbalance and
-unrepresentable amounts), then one transaction in
-`Repository.Sqlite.InsertEntry` (entry + postings + `audit_log`). Zero-sum is checked again
-inside the transaction.
+unrepresentable amounts), then `Repository.Sqlite.InsertEntry`, which runs
+`CheckZeroSum` once more **before** it opens the write transaction and only then writes
+the entry, its postings and its `audit_log` row.
 
 ## Path / query params
 
@@ -36,7 +36,7 @@ None.
 | `postings[].account_ref` | ref | yes | 32 lowercase hex account ref |
 | `occurred_on` | date | yes | any month, past or future |
 | `payee_ref` | ref | no | the payee this entry is for; an unknown ref answers `404 not_found` |
-| `note` | string | no | |
+| `note` | string | no | ≤ 2000 characters; longer is `422 invalid_request` |
 | `currency` | string | yes | ISO 4217 of the postings |
 | `source` | string | no | defaults to `manual` |
 | `postings` | array | yes | ≥ 2, sums to zero |
@@ -106,7 +106,7 @@ sequenceDiagram
     end
     L->>L: convert each posting (big.Rat, one rounding)
     L->>L: CheckZeroSum(native, base)
-    L->>DB: BEGIN; INSERT entry; INSERT postings; INSERT audit; COMMIT
+    L->>DB: CheckZeroSum, then BEGIN; INSERT entry; INSERT postings; INSERT audit; COMMIT
     L-->>H: entry, created=true
     H-->>C: 201 entry
 ```

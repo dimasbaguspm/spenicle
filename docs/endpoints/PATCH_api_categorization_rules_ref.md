@@ -27,7 +27,8 @@ that aged badly.
 
 ## Body
 
-At least one field; the ones left out keep their stored value.
+Every field is optional and the ones left out keep their stored value. An empty body `{}`
+is accepted: nothing changes, but the write and its journal row still happen.
 
 | field | type | required | notes |
 | --- | --- | --- | --- |

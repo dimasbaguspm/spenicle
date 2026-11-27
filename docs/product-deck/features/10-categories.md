@@ -56,7 +56,7 @@ A duplicate live rule is `409 duplicate`; a category that is not `expense`/`inco
 | # | call | answers |
 | --- | --- | --- |
 | 1 | `GET /api/analytics/categories?from=&to=` | spend per category, plus `first_occurred_on` and `last_occurred_on` |
-| 2 | `GET /api/analytics/categories?from=&to=&bucket=month` | `[{account_ref, account_name, months:[{month, spend_minor}]}]` |
+| 2 | `GET /api/analytics/categories?from=&to=&bucket=month` | `{"from":"…","to":"…","kind":"…","bucket":"month","categories":[{account_ref, account_name, months:[{month, spend_minor}]}]}` |
 | 3 | `GET /api/analytics/categories?rollup=parent` | a parent sums its children (F4) |
 
 `bucket` and `rollup` cannot be combined (`422 invalid_request`, the message names both).

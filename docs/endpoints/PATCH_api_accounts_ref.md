@@ -35,19 +35,23 @@ transaction, which refuses a parent of another `kind`, a chain deeper than three
 | `parent_ref` | ref | no | an account of the same `kind`; `""` clears the parent, an omitted field keeps it |
 | `archived` | bool | no | `true` stamps `archived_at`, `false` clears it |
 
-An empty body is accepted and changes nothing — unlike `PATCH /api/settings`, there is
-no "nothing to change" refusal, because the row is re-written as it is.
+An empty object `{}` is accepted and changes nothing — unlike `PATCH /api/settings`,
+there is no "nothing to change" refusal, because the row is re-written as it is. A
+zero-byte body decodes to nothing, so it is `400 invalid_json` instead: the body must
+parse.
 
 ## Response
 
-**200** the account, same shape as `POST /api/accounts`.
+**200** the account detail: the row `POST /api/accounts` answers, plus `icon` (omitted
+when unset).
 
 ## Errors
 
 `404 not_found` when no account carries that `ref`; `422 invalid_request` for a name or
 icon over the limit, a parent of another `kind`, a move that would close a cycle, and a
 move that would push the subtree below the third level; `422 unknown_reference` when
-`parent_ref` names no account.
+`parent_ref` names no account; `409 duplicate` when a rename lands on an existing
+`name` + `kind`.
 
 ## Limitations
 

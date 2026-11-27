@@ -51,11 +51,15 @@ None.
 
 | field | required | notes |
 | --- | --- | --- |
-| `file` | yes | the CSV bytes, at most `ImportMaxBytes` (default 32 MiB) |
+| `file` | yes | the CSV bytes; the real ceiling is the handler's `maxFormBytes` (`11 << 20` ≈ 11 MiB), not `ImportMaxBytes` |
 | `client_id` | yes | ≤ 64 characters, the idempotency key |
 | `account_ref` | no | the account the rows move through; unknown is `404`, omitted resolves to `Unsorted` |
 | `chunk_index` | no | zero-based index; send it together with `chunk_total` |
 | `chunk_total` | no | how many chunks the statement was split into (≥ 1) |
+
+`ImportMaxBytes` (default 32 MiB) never binds for a real upload: the multipart body is
+capped at `maxFormBytes` (`11 << 20`) before parsing, so a larger file fails while the
+form is read and answers `422 invalid_request` with a `multipart:` message.
 
 ### Chunked, resumable upload
 
@@ -98,14 +102,15 @@ A statement above `ImportMaxRows` (default 50 000 rows) is refused with
      "description": "COFFEE", "account_ref": "...", "status": "skipped",
      "clash_kind": "duplicate", "clash_entry_ref": "..."},
     {"ref": "...", "row_index": 1, "occurred_on": "2025-02-10", "amount_minor": "-20000",
-     "description": "GROCERIES", "account_ref": "...", "status": "pending"}
+     "description": "GROCERIES", "account_ref": "...", "status": "pending",
+     "suggested_category_ref": "..."}
   ],
   "created_at": "...",
   "expires_at": "..."
 }
 ```
 
-`200` with the same document when `client_id` already exists **and** `file_hash` matches: that is the resume path after a restart, and no second batch is written. Money is a minor-unit string, refs only, no integer id.
+`200` with the same document when `client_id` already exists **and** `file_hash` matches: that is the resume path after a restart, and no second batch is written. Money is a minor-unit string, refs only, no integer id. Every row also carries `suggested_category_ref` — the category the categorisation rules suggest for its description — omitted when nothing suggests one; this upload response is what fills it.
 
 Idempotency is enforced by the unique index on `import_batches.client_id`: the lookup runs first, and a losing racer re-reads the winner's row.
 
@@ -113,10 +118,10 @@ Idempotency is enforced by the unique index on `import_batches.client_id`: the l
 
 - `409 import_conflict` — a chunk whose `chunk_total` disagrees with the open upload for that `client_id`.
 - `409 import_closed` — a chunk for a `complete` or `abandoned` upload.
-- `422 invalid_request` — `chunk_index`/`chunk_total` alone, out of range, not numbers, too many rows, or a body above `ImportMaxBytes`.
+- `422 invalid_request` — `chunk_index`/`chunk_total` alone, out of range, not numbers, too many rows, or a body above `maxFormBytes` (11 MiB).
 
 - `409 import_conflict` — the `client_id` exists with different bytes; use a new client id for a new file.
-- `422 invalid_request` — the header is missing `occurred_on`, `amount_minor` or `description` (the message names it), the file part is missing, `client_id` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `ImportMaxBytes`.
+- `422 invalid_request` — the header is missing `occurred_on`, `amount_minor` or `description` (the message names it), the file part is missing, `client_id` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `maxFormBytes` (a `multipart:` message).
 - `404 not_found` — `account_ref` names no account.
 - `500 internal_error` — the store refused the write; nothing was committed.
 

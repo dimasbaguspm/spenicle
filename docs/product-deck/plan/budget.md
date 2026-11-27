@@ -25,7 +25,7 @@ into a root. Budgets are the first feature that mostly **reads** the ledger.
 | **D. explicit `budget_periods` rows** | the worker materialises a row per month | rejected for v1: a new job that can fail, stale rows, and the same math computed twice |
 | **E. tag the entry** | `ledger_entries.budget_ref` | rejected: an entry belongs to one category and possibly several budgets; a tag would double-count on a correction |
 
-## 3. Data sketch (18th table)
+## 3. Data sketch (26th table)
 
 ```
 budgets

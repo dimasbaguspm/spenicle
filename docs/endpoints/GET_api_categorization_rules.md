@@ -25,7 +25,7 @@ builder every list route shares.
 | `include_archived` | bool | absent | `true` lists archived rules too, `false` or absent lists only live ones |
 | `account_ref` | ref | — | only the rules that point at this category |
 | `cursor` | ref | — | rules after the one with that ref, in creation order |
-| `limit` | int | 50 | clamped to 200 |
+| `limit` | int | 50 | max 200 — a larger value is refused as `422 invalid_request`, never clamped |
 
 ## Body
 
@@ -40,7 +40,7 @@ None.
 `pattern` is always the stored form: trimmed and lowercased, so the caller never has to fold
 case to compare two rules. `meta` is the block every list route answers — `limit` is the
 clamped page size, `has_more` is exact, `next_cursor` is the `ref` of the last returned rule
-and is omitted on an empty page.
+and is omitted whenever there is no next page.
 
 ## Errors
 

@@ -38,7 +38,7 @@ one `UPDATE` of `name`, both default ids and `archived_at`.
 
 `404 not_found` for an unknown payee; `422 invalid_request` when a new `default_category_ref`
 names an `asset`/`liability` account; `422 unknown_reference` when a new default points at an
-account nobody owns.
+account nobody owns; `409 duplicate` when a rename lands on an existing name.
 
 ## Limitations
 

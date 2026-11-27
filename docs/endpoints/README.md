@@ -46,7 +46,7 @@ Planned and deliberately unshipped decisions are in [`planned.md`](./planned.md)
 | `PATCH` | `/api/analytics/custom/{ref}` | rename or re-chart a saved view | [`PATCH_api_analytics_custom_ref.md`](./PATCH_api_analytics_custom_ref.md) |
 | `GET` | `/api/analytics/custom/{ref}` | run a saved view over a window | [`GET_api_analytics_custom_ref.md`](./GET_api_analytics_custom_ref.md) |
 | `GET` | `/api/dashboard` | the landing tiles in one response | [`GET_api_dashboard.md`](./GET_api_dashboard.md) |
-| `GET` | `/api/categorization/rules` | the deterministic category rules, newest first | [`GET_api_categorization_rules.md`](./GET_api_categorization_rules.md) |
+| `GET` | `/api/categorization/rules` | the deterministic category rules, oldest first | [`GET_api_categorization_rules.md`](./GET_api_categorization_rules.md) |
 | `POST` | `/api/categorization/rules` | teach one rule: a pattern, a field and a category | [`POST_api_categorization_rules.md`](./POST_api_categorization_rules.md) |
 | `PATCH` | `/api/categorization/rules/{ref}` | repoint, reprioritise or archive a rule | [`PATCH_api_categorization_rules_ref.md`](./PATCH_api_categorization_rules_ref.md) |
 | `GET` | `/api/categorization/suggest` | the category this payee or text would get, and why | [`GET_api_categorization_suggest.md`](./GET_api_categorization_suggest.md) |
@@ -67,6 +67,24 @@ Planned and deliberately unshipped decisions are in [`planned.md`](./planned.md)
 | `GET` | `/api/exports/{ref}` | one export job and its status | [`GET_api_exports_ref.md`](./GET_api_exports_ref.md) |
 | `GET` | `/api/exports/{ref}/events` | the append-only log of one job | [`GET_api_exports_ref_events.md`](./GET_api_exports_ref_events.md) |
 | `GET` | `/api/exports/{ref}/download` | the rendered document or zip | [`GET_api_exports_ref_download.md`](./GET_api_exports_ref_download.md) |
+
+## Credentials, in one place
+
+Every route sits in one of three groups, and no page repeats the shared answers. `public`
+needs no credential. `root` needs the instance password as `Authorization: Bearer
+<password>`; a token never reaches it. `scoped` needs a token carrying the scope declared
+on that route's own line in `cmd/http/handler.go` — a root credential may reach it too,
+a token without the scope is `403 forbidden`.
+
+- **Open mode.** Until a password is seeded the instance is unprotected: every request is
+  the root credential and every scope check passes.
+- **Password change gate.** While `password_must_change` is true — the generated first
+  password nobody has replaced yet — every route except `POST /api/password` and
+  `GET /api/meta` answers `409 password_change_required` before the handler runs.
+  `/healthz` and `GET /api/connections/google/callback` sit outside it: they need no
+  credential at all.
+- **Two refusals, in order.** No header at all is `401 unauthorized`; a credential that
+  exists but lacks the group or the scope is `403 forbidden`.
 
 Every route answers as a span named `Handler.<Group>.<Action>` under the request's
 `<method> <route pattern>` span; [`../observability.md`](../observability.md) is what that span,

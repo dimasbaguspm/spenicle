@@ -8,7 +8,7 @@ Built and covered by UAT: setup and settings, auth (instance password, scoped to
 Google connections), accounts, payees, recurring rules, entries, captures with
 artifacts, categorization rules, statement imports, exports, rates, audit, dashboard,
 analytics, intake and health — see [`docs/endpoints/`](./docs/endpoints/README.md).
-Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and target API: [`docs/v2-api.md`](./docs/v2-api.md). Implemented endpoints: [`docs/endpoints/`](./docs/endpoints/README.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md). Working on the code: [`AGENTS.md`](./AGENTS.md) and [`skills/`](./skills/README.md). Sending a change: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Design: [`docs/v2-design.md`](./docs/v2-design.md). Schema and target API: [`docs/v2-api.md`](./docs/v2-api.md). Implemented endpoints: [`docs/endpoints/`](./docs/endpoints/README.md). Lint groups: [`docs/linting.md`](./docs/linting.md). Releasing: [`docs/releasing.md`](./docs/releasing.md). Working on the code: [`AGENTS.md`](./AGENTS.md) and [`skills/`](./skills/README.md). Sending a change: [`CONTRIBUTING.md`](./CONTRIBUTING.md). Docs checked against the code, with the commit and the release verdict: [`docs/alignment.md`](./docs/alignment.md).
 
 Licence: source-available, not open source — personal use of an unmodified copy,
 no redistribution, no commercial use. See [`LICENSE`](./LICENSE).
@@ -38,8 +38,10 @@ Then open `http://localhost:8080`. Migrations run on boot, and the container log
 the generated first password once — sign in with it and pick your own.
 
 The image runs two supervised processes from the same environment: `spenicle http`
-(the API, the only listener, on `:8080`) and `spenicle worker` (the due recurring
-rules, no port). Neither the listen address nor the data directory is configurable — the
+(the API, the only listener, on `:8080`) and `spenicle worker` (recurring capture
+staging, reclaiming the artifacts of rejected captures, expired import draft and stale
+upload GC, export claim/render/sweep, the mailbox intake poll and the heartbeat stamp,
+no port). Neither the listen address nor the data directory is configurable — the
 container works in `/data`, which is the volume. Inside the container `sv status
 /etc/service/spenicle-worker` reports either one, `sv restart spenicle-worker` restarts
 it alone and a `down` file next to its `run` script keeps it stopped. A
@@ -81,6 +83,10 @@ sudo chown -R 10001:10001 ./data
 | `APP_TIMEZONE` | `UTC` | IANA timezone for every calendar decision; set once, at the first boot |
 | `APP_SECRET` | **required** | ≥ 16 bytes; seals the settings row and encrypts stored blobs; identifies the database |
 | `SNAPTOJSON_API_KEY` | unset | enables receipt/statement extraction through SnapToJSON |
+| `SNAPTOJSON_ENDPOINT` | vendor route | overrides the SnapToJSON partner route for a proxy or a staging account |
+| `OPENAI_API_KEY` | unset | **reserved**: extraction never uses it, because `config.SelectRail` never builds the OpenAI adapter |
+| `OPENAI_MODEL` | `gpt-4o-mini` | model the reserved OpenAI adapter asks for |
+| `OPENAI_HOST` | unset | base URL for the reserved OpenAI adapter; empty keeps the SDK default |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | OTLP/HTTP collector; HTTPS assumed, `http://` for plaintext |
 
 `APP_SECRET` is required: the process refuses to boot without it, and refuses to
@@ -115,9 +121,10 @@ history, and history is the only thing worth protecting here.
    button. Amount only. Nothing else is required, and nothing is lost if you are offline.
 2. **Review** — once a week, open the queue. Each card arrives prefilled with the extracted
    amount, payee and category. Approve with one tap, or reject with a reason.
-3. **Look** — the dashboard answers one question: how much can I spend today without breaking
-   the month. The month report shows what you expected, what you tracked, and the gap between
-   them, already split into unlogged spend, FX movement, price changes and rounding.
+3. **Look** — the dashboard returns the window totals, the month series, the pending
+   capture count and the top category; `GET /api/analytics/months` returns spend, income and
+   net per month. The month report — expected against tracked, split into unlogged spend, FX
+   movement, price changes and rounding — is planned, not shipped.
 
 Recurring bills (rent, subscriptions) also land in the queue as cards. Nothing posts itself.
 
@@ -151,11 +158,11 @@ curl -s http://localhost:8080/api/tokens \
 ```bash
 # an agent dumping a receipt
 curl -X POST http://localhost:8080/api/captures \
-  -H "Authorization: Bearer spn_..." \
+  -H "Authorization: Bearer spl_..." \
   -F kind=image -F file=@receipt.jpg
 
 # and reading what it may spend
-curl 'http://localhost:8080/api/dashboard?from=2026-02-01&to=2026-02-28' -H "Authorization: Bearer spn_..."
+curl 'http://localhost:8080/api/dashboard?from=2026-02-01&to=2026-02-28' -H "Authorization: Bearer spl_..."
 ```
 
 That agent can add captures and read the dashboard. It cannot touch the ledger. Give it
@@ -180,4 +187,4 @@ That agent can add captures and read the dashboard. It cannot touch the ledger. 
 | `/healthz` returns 503 | schema query, database ping or settings read failed; a secret mismatch stops boot before the API serves |
 | captures stay `pending` with no draft | extraction is disabled (no API key); typing the fields works fine |
 | no share target on iPhone | iOS Safari has none; use a Shortcut that POSTs to `/api/captures` |
-| month report shows a large `unlogged` bucket | spending not yet captured; the response includes an adjustment body you can post |
+| a month looks short of what you spent | nothing derives the gap yet: the month report (unlogged spend, FX movement, price changes, rounding) is planned, and `GET /api/analytics/months` returns ledger totals only — capture the missing spend |
