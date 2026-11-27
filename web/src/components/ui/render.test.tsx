@@ -15,6 +15,7 @@ import { DateInput } from '@/components/ui/date-input'
 import { DatePicker } from '@/components/ui/date-picker'
 import { DateTimeInput } from '@/components/ui/date-time-input'
 import { Dialog } from '@/components/ui/dialog'
+import { DownloadTrigger } from '@/components/ui/download-trigger'
 import { Drawer } from '@/components/ui/drawer'
 import { Editable } from '@/components/ui/editable'
 import { EmailInput } from '@/components/ui/email-input'
@@ -29,6 +30,7 @@ import { JsonTreeView } from '@/components/ui/json-tree-view'
 import { Listbox } from '@/components/ui/listbox'
 import { Marquee } from '@/components/ui/marquee'
 import { Menu } from '@/components/ui/menu'
+import { NavigationMenu } from '@/components/ui/navigation-menu'
 import { NumberInput } from '@/components/ui/number-input'
 import { Pagination } from '@/components/ui/pagination'
 import { PasswordInput } from '@/components/ui/password-input'
@@ -45,6 +47,7 @@ import { SignaturePad } from '@/components/ui/signature-pad'
 import { Slider } from '@/components/ui/slider'
 import { Splitter } from '@/components/ui/splitter'
 import { Steps } from '@/components/ui/steps'
+import { Swap } from '@/components/ui/swap'
 import { SwitchInput } from '@/components/ui/switch-input'
 import { Tabs } from '@/components/ui/tabs'
 import { TagsInput } from '@/components/ui/tags-input'
@@ -211,6 +214,27 @@ const cases: { name: string; element: ReactElement }[] = [
     ),
   },
   { name: 'TreeView', element: <TreeView items={[{ value: 'a', label: 'A' }]} /> },
+  {
+    name: 'DownloadTrigger',
+    element: (
+      <DownloadTrigger data="occurred_on,amount_minor" fileName="rows.csv">
+        Save
+      </DownloadTrigger>
+    ),
+  },
+  {
+    name: 'NavigationMenu',
+    element: <NavigationMenu items={[{ label: 'Ledger', href: '/ledger' }]} />,
+  },
+  {
+    name: 'Swap',
+    element: (
+      <Swap swap={false}>
+        <span>on</span>
+        <span>off</span>
+      </Swap>
+    ),
+  },
 ]
 
 describe('components/ui', () => {

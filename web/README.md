@@ -29,16 +29,16 @@ blocks `@ark-ui/*` outside this directory, so the boundary is enforced, not docu
 carries wiring and theme only: a screen decides what a value means, the component decides how a
 value is chosen and shown.
 
-56 components, by the job a screen hires them for:
+59 components, by the job a screen hires them for:
 
 | group                | components                                                                                                                                                                                                                           |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | text and scaffolding | `Text` (h1–h6, p, span, label, pre, code, …), `Field`, `Fieldset`, `Button`                                                                                                                                                          |
 | text entry           | `TextInput`, `EmailInput`, `PasswordInput`, `TextAreaInput`, `NumberInput`, `DateInput`, `DateTimeInput`, `DatePicker`, `Editable`                                                                                                   |
 | choice               | `Checkbox`, `RadioGroup`, `SwitchInput`, `Toggle`, `ToggleGroup`, `SegmentGroup`, `SelectInput`, `Combobox`, `Listbox`, `PinInput`, `TagsInput`, `Slider`, `AngleSlider`, `RatingGroup`, `ColorPicker`, `FileUpload`, `SignaturePad` |
-| overlay              | `Dialog`, `Drawer`, `Popover`, `HoverCard`, `Tooltip`, `Menu`, `Toaster`                                                                                                                                                             |
-| status               | `Progress` (linear and circle), `Timer`, `QrCode`, `Clipboard`, `Highlight`, `Marquee`                                                                                                                                               |
+| overlay              | `Dialog`, `Drawer`, `Popover`, `HoverCard`, `Tooltip`, `Menu`, `NavigationMenu`, `Toaster`                                                                                                                                           |
 | structure            | `Accordion`, `Collapsible`, `Tabs`, `Steps`, `ScrollArea`, `Splitter`, `Carousel`, `Avatar`, `Pagination`, `TreeView`, `JsonTreeView`, `Toc`, `FloatingPanel`, `ImageCropper`                                                        |
+| status               | `Progress` (linear and circle), `Timer`, `QrCode`, `Clipboard`, `Highlight`, `Marquee`, `Swap`, `DownloadTrigger`                                                                                                                    |
 
 Ark owns the behaviour — field association, listbox and typeahead, focus trap, roving focus,
 page-range math, dropzone, calendar — and we own the props, the markup and every token.
@@ -48,6 +48,9 @@ the type scale lives in one file instead of in twenty `className` strings.
 
 Two files break "one component per export" on purpose: `control.ts` is the shared cva every
 input wears, and `toaster.ts` is the imperative `toast` store `Toaster` reads.
+
+`render.test.tsx` mounts every component once, so a wrapper that reaches for a browser API jsdom
+does not have fails here instead of in a screen.
 
 cva variants are merged by `tailwind-merge` through `lib/cn.ts`, so a caller's `className` wins
 on conflict. `TextInput` and not `NumberInput` represents an amount: an amount is a string of
