@@ -155,7 +155,7 @@ make run        # go run . all (listens on :8080, writes to ./data)
 make test       # unit and integration tests (UAT has its own target)
 make uat        # the Gherkin suite plus the containerised mock services (needs Docker)
 make uat-snapshots   # rewrite snapshot files, then review the diff
-make cover      # coverage over the whole module
+make cover      # coverage over the whole module; -coverpkg makes the UAT count
 make fmt        # gofmt the tree
 make lint       # all four groups; every one must stay at 0 issues
 make lint-fix   # safe automatic fixes (style, then correctness)

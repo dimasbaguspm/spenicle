@@ -33,8 +33,8 @@ uat: ## the Gherkin suite plus the containerised mock services (needs Docker)
 uat-snapshots: ## rewrite the UAT golden files, then review the diff
 	UAT_UPDATE_SNAPSHOTS=1 $(GO) test ./uat/ -count=1
 
-cover: ## coverage report over the whole module
-	$(GO) test ./... -count=1 -coverprofile=coverage.out
+cover: ## coverage over the whole module, UAT and mocks included
+	$(GO) test ./... -count=1 -coverpkg=./... -coverprofile=coverage.out
 	$(GO) tool cover -func=coverage.out | tail -1
 
 fmt: ## gofmt the tree
