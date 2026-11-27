@@ -2,7 +2,9 @@ import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
-import { api, errorMessage } from '@/api/client'
+import { api } from '@/api/client'
+import { apiError, isApiError } from '@/api/error'
+import { changePassword } from '@/api/settings'
 import { setToken } from '@/api/token'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
@@ -16,6 +18,7 @@ import { Text } from '@/components/primitives/text'
 export function LoginPage() {
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
+  const [next, setNext] = useState('')
 
   const signIn = useMutation({
     mutationFn: async (secret: string) => {
@@ -25,7 +28,7 @@ export function LoginPage() {
       })
 
       if (error !== undefined) {
-        throw new Error(errorMessage(error, response.status))
+        throw apiError(response.status, error)
       }
 
       return data
@@ -39,6 +42,59 @@ export function LoginPage() {
       void navigate({ to: '/ledger' })
     },
   })
+
+  const swap = useMutation({
+    mutationFn: async (values: { current: string; next: string }) =>
+      changePassword(values.current, values.next),
+    onSuccess: () => {
+      signIn.mutate(next)
+    },
+  })
+
+  // a fresh instance refuses every credential until its generated password is replaced: that is
+  // not a failed sign-in, it is the first thing this screen has to ask for
+  if (isApiError(signIn.error) && signIn.error.code === 'password_change_required') {
+    return (
+      <form
+        className="border-border bg-surface-raised mx-auto mt-20 max-w-sm space-y-5 rounded-lg border p-8 shadow-[0_1px_0_0_var(--color-brass-800)]"
+        onSubmit={(event) => {
+          event.preventDefault()
+          swap.mutate({ current: password, next })
+        }}
+      >
+        <div className="space-y-2">
+          <Text as="h1" tone="display">
+            Set a password
+          </Text>
+          <Text as="p" tone="muted" className="leading-relaxed">
+            This instance still uses the password it generated on first boot. Replace it to continue
+            — at least 12 characters.
+          </Text>
+        </div>
+        <Field label="Generated password" hint="It is in the first boot log line.">
+          <PasswordInput
+            value={password}
+            autoComplete="current-password"
+            onChange={(event) => {
+              setPassword(event.target.value)
+            }}
+          />
+        </Field>
+        <Field label="New password" error={swap.error?.message}>
+          <PasswordInput
+            value={next}
+            autoComplete="new-password"
+            onChange={(event) => {
+              setNext(event.target.value)
+            }}
+          />
+        </Field>
+        <Button type="submit" block disabled={swap.isPending || next.length < 12}>
+          {swap.isPending ? 'Saving…' : 'Save and sign in'}
+        </Button>
+      </form>
+    )
+  }
 
   return (
     <form
