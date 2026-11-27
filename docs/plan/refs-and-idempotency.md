@@ -100,7 +100,12 @@ identical request with the returned key answers `200` and writes one batch and o
   chunk, or it is `422 invalid_request`. A key the caller sends is still honoured as sent, so
   existing clients and their tests keep working. The UAT harness normalises a minted key to
   `<client_id>`, so the snapshots stay stable.
-- **§1, relations by `ref`: the schema is done, the queries are not.** There is one
+- **§1, relations by `ref`: the ledger group is converted.** Accounts, payees,
+  categorization rules, recurring rules, entries, postings, `balance_state`,
+  `running_balances`, the journal payloads and the analytics roll-ups relate by `ref`, and
+  the ledger tables no longer carry a `*_id` column at all. Next: captures + artifacts +
+  mail, then imports + exports, then the retired columns those two still hold.
+- **§1 (history), relations by `ref`: the schema is done, the queries are not.** There is one
   migration again (`0001_init.sql`), and it now carries a `<relation>_ref` column beside
   every retired `<relation>_id`, with the indexes on the ref. The store still writes the
   id, so the new columns are empty for a row created today. What is left is the convert
