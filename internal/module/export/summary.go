@@ -48,27 +48,27 @@ type monthAccrual struct {
 }
 
 func (s *snapshot) summarise() summary {
-	kinds := make(map[int64]string, len(s.accounts))
-	names := make(map[int64]string, len(s.accounts))
-	balances := make(map[int64]int64, len(s.accounts))
+	kinds := make(map[string]string, len(s.accounts))
+	names := make(map[string]string, len(s.accounts))
+	balances := make(map[string]int64, len(s.accounts))
 
 	for _, account := range s.accounts {
-		kinds[account.ID] = account.Kind
-		names[account.ID] = account.Name
+		kinds[account.Ref] = account.Kind
+		names[account.Ref] = account.Name
 	}
 
 	months := make(map[string]*monthAccrual)
-	categories := make(map[int64]int64)
+	categories := make(map[string]int64)
 
 	for _, entry := range s.entries {
-		if entry.VoidedAt != nil || entry.ReversesID != nil {
+		if entry.VoidedAt != nil || entry.ReversesEntryRef != "" {
 			continue
 		}
 
 		month := entry.OccurredOn.UTC().Format(monthLayout)
 
 		for _, posting := range entry.Postings {
-			balances[posting.AccountID] += posting.BaseAmountMinor
+			balances[posting.AccountRef] += posting.BaseAmountMinor
 
 			accrual, seen := months[month]
 			if !seen {
@@ -76,10 +76,10 @@ func (s *snapshot) summarise() summary {
 				months[month] = accrual
 			}
 
-			switch kinds[posting.AccountID] {
+			switch kinds[posting.AccountRef] {
 			case constant.AccountKindExpense:
 				accrual.spend += posting.BaseAmountMinor
-				categories[posting.AccountID] += posting.BaseAmountMinor
+				categories[posting.AccountRef] += posting.BaseAmountMinor
 			case constant.AccountKindIncome:
 				accrual.income -= posting.BaseAmountMinor
 			}
@@ -103,7 +103,7 @@ func (s *snapshot) summarise() summary {
 	return out
 }
 
-func (s *snapshot) summaryAccounts(balances map[int64]int64) []summaryAccount {
+func (s *snapshot) summaryAccounts(balances map[string]int64) []summaryAccount {
 	out := make([]summaryAccount, 0, len(s.accounts))
 
 	for _, account := range s.accounts {
@@ -112,7 +112,7 @@ func (s *snapshot) summaryAccounts(balances map[int64]int64) []summaryAccount {
 			Name:         account.Name,
 			Kind:         account.Kind,
 			Currency:     account.Currency,
-			BalanceMinor: strconv.FormatInt(balances[account.ID], 10),
+			BalanceMinor: strconv.FormatInt(balances[account.Ref], 10),
 		})
 	}
 
@@ -137,17 +137,17 @@ func (s *snapshot) summaryMonths(months map[string]*monthAccrual) []summaryMonth
 	return out
 }
 
-func (s *snapshot) summaryCategories(totals map[int64]int64, names map[int64]string) []summaryCategory {
+func (s *snapshot) summaryCategories(totals map[string]int64, names map[string]string) []summaryCategory {
 	out := make([]summaryCategory, 0, len(totals))
 
-	for accountID, spend := range totals {
+	for accountRef, spend := range totals {
 		if spend == 0 {
 			continue
 		}
 
 		out = append(out, summaryCategory{
-			AccountRef: s.accountRefs[accountID],
-			Name:       names[accountID],
+			AccountRef: accountRef,
+			Name:       names[accountRef],
 			SpendMinor: strconv.FormatInt(spend, 10),
 		})
 	}

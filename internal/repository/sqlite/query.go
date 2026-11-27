@@ -138,12 +138,12 @@ func (q *listQuery) inSubquery(column, subquery string, values ...string) {
 	q.and(column+` IN (`+subquery+` IN (`+placeholders(len(values))+`))`, toAny(values)...)
 }
 
-func (q *listQuery) parentRef(column, table, ref string) {
+func (q *listQuery) parentRef(column, ref string) {
 	if ref == "" {
 		return
 	}
 
-	q.and(column+` = (SELECT id FROM `+table+` WHERE ref = ?)`, ref)
+	q.and(column+` = ?`, ref)
 }
 
 // nullFlag keeps or drops the rows where a nullable column is set: an absent value

@@ -39,7 +39,7 @@ func TestCheckParent(t *testing.T) {
 		{
 			name: "a node cannot descend from itself",
 			candidate: entity.AccountParent{
-				ChildID: child.ID, ChildKind: "expense", Ancestors: []entity.Account{child, root},
+				ChildRef: child.Ref, ChildKind: "expense", Ancestors: []entity.Account{child, root},
 			},
 			wantErr: true,
 		},

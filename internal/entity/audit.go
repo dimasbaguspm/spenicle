@@ -44,7 +44,7 @@ type EntryCreated struct {
 
 // EntryPayee records the payee an entry was pointed at.
 type EntryPayee struct {
-	PayeeID *int64 `json:"payee_id,omitempty" validate:"omitempty,gt=0"`
+	PayeeRef string `json:"payee_ref,omitempty" validate:"omitempty,ref"`
 }
 
 // EntryVoided records a void: the original and the reversal it produced.

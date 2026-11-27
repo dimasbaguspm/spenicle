@@ -74,7 +74,7 @@ func (s *Store) seedAccounts(ctx context.Context, baseCurrency string) error {
 	return s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		for _, seed := range seeds {
 			if _, err := tx.ExecContext(ctx, `
-				INSERT INTO accounts (ref, name, kind, parent_id, currency, icon, archived_at, created_at)
+				INSERT INTO accounts (ref, name, kind, parent_ref, currency, icon, archived_at, created_at)
 				VALUES (?, ?, ?, NULL, ?, NULL, NULL, ?)
 				ON CONFLICT (name, kind) DO NOTHING`,
 				uuid.New(),

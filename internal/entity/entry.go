@@ -27,7 +27,6 @@ var validSources = map[string]bool{
 }
 
 type Posting struct {
-	AccountID       int64
 	AccountRef      string
 	AmountMinor     int64
 	BaseAmountMinor int64
@@ -41,15 +40,15 @@ type Entry struct {
 	Ref                 string
 	ClientID            string
 	OccurredOn          time.Time
-	PayeeID             *int64
+	PayeeRef            string
 	Note                string
 	Currency            string
 	Source              string
 	Postings            []Posting
 	VoidedAt            *time.Time
 	CreatedAt           time.Time
-	ReversesID          *int64
-	RecurringRuleID     *int64
+	ReversesEntryRef    string
+	RecurringRuleRef    string
 	RunningBalanceMinor *int64
 }
 
@@ -76,7 +75,7 @@ func NewEntry(entry Entry) (Entry, error) {
 
 	for index := range entry.Postings {
 		posting := &entry.Postings[index]
-		if posting.AccountID == 0 {
+		if posting.AccountRef == "" {
 			return Entry{}, fmt.Errorf("%w: posting %d has no account", ErrInvalidPostings, index)
 		}
 

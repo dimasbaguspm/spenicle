@@ -281,7 +281,7 @@ func insertPostedEntry(
 
 	for _, posting := range spend {
 		postings = append(postings, entity.Posting{
-			AccountID:       accounts[posting.account].ID,
+			AccountRef:      accounts[posting.account].Ref,
 			AmountMinor:     posting.amount,
 			BaseAmountMinor: posting.amount,
 		})
@@ -290,7 +290,7 @@ func insertPostedEntry(
 	}
 
 	postings = append(postings, entity.Posting{
-		AccountID:       accounts["cash"].ID,
+		AccountRef:      accounts["cash"].Ref,
 		AmountMinor:     -total,
 		BaseAmountMinor: -total,
 	})
@@ -349,10 +349,6 @@ func requireParent(t *testing.T, store *sqlite.Store, child entity.Account, want
 
 	if stored.ParentRef != want {
 		t.Fatalf("stored parent ref = %q, want %q", stored.ParentRef, want)
-	}
-
-	if want != "" && stored.ParentID == nil {
-		t.Fatal("stored parent id is null, want a parent")
 	}
 }
 

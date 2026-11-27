@@ -25,8 +25,8 @@ func postCashEntry(
 		Currency:   "IDR",
 		Source:     constant.EntrySourceManual,
 		Postings: []entity.Posting{
-			{AccountID: asset.ID, AmountMinor: -amount, BaseAmountMinor: -amount},
-			{AccountID: expense.ID, AmountMinor: amount, BaseAmountMinor: amount},
+			{AccountRef: asset.Ref, AmountMinor: -amount, BaseAmountMinor: -amount},
+			{AccountRef: expense.Ref, AmountMinor: amount, BaseAmountMinor: amount},
 		},
 	})
 	if err != nil {
@@ -212,7 +212,7 @@ func TestRunningBalanceCheckpointShiftsBackdatedEntry(t *testing.T) {
 
 	var dirty bool
 	if err := store.DB().QueryRowContext(t.Context(),
-		`SELECT dirty FROM balance_state WHERE account_id = ?`, asset.ID).Scan(&dirty); err != nil {
+		`SELECT dirty FROM balance_state WHERE account_ref = ?`, asset.Ref).Scan(&dirty); err != nil {
 		t.Fatalf("balance state: %v", err)
 	}
 	if dirty {
@@ -266,7 +266,7 @@ func TestRunningBalanceRebuildGivesEachCheckpointARef(t *testing.T) {
 	postCashEntry(t, store, first.AddDate(0, 0, 1), 50, asset, expense)
 
 	if _, err := store.DB().ExecContext(t.Context(),
-		`UPDATE balance_state SET dirty = 1 WHERE account_id = ?`, asset.ID); err != nil {
+		`UPDATE balance_state SET dirty = 1 WHERE account_ref = ?`, asset.Ref); err != nil {
 		t.Fatalf("mark dirty: %v", err)
 	}
 
@@ -286,8 +286,8 @@ func TestRunningBalanceRebuildGivesEachCheckpointARef(t *testing.T) {
 
 	var rows, refs int
 	if err := store.DB().QueryRowContext(t.Context(),
-		`SELECT COUNT(*), COUNT(DISTINCT ref) FROM running_balances WHERE account_id = ?`,
-		asset.ID).Scan(&rows, &refs); err != nil {
+		`SELECT COUNT(*), COUNT(DISTINCT ref) FROM running_balances WHERE account_ref = ?`,
+		asset.Ref).Scan(&rows, &refs); err != nil {
 		t.Fatalf("checkpoint refs: %v", err)
 	}
 	if rows != 3 || refs != 3 {

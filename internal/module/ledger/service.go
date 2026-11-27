@@ -59,15 +59,10 @@ func (s *Service) Build(ctx context.Context, in PostInput) (entity.Entry, bool, 
 		}
 	}
 
-	var payeeID *int64
-
 	if in.PayeeRef != "" {
-		id, err := s.resolvePayee(ctx, in.PayeeRef)
-		if err != nil {
+		if err := s.requirePayee(ctx, in.PayeeRef); err != nil {
 			return entity.Entry{}, false, err
 		}
-
-		payeeID = &id
 	}
 
 	baseCode, err := s.base.BaseCurrency(ctx)
@@ -91,15 +86,15 @@ func (s *Service) Build(ctx context.Context, in PostInput) (entity.Entry, bool, 
 	}
 
 	entry, err := entity.NewEntry(entity.Entry{
-		ClientID:        in.ClientID,
-		OccurredOn:      in.OccurredOn,
-		PayeeID:         payeeID,
-		Note:            in.Note,
-		Currency:        nativeCurrency.Code,
-		Source:          in.Source,
-		Postings:        postings,
-		RecurringRuleID: in.RecurringRuleID,
-		CreatedAt:       s.clock.Now(),
+		ClientID:         in.ClientID,
+		OccurredOn:       in.OccurredOn,
+		PayeeRef:         in.PayeeRef,
+		Note:             in.Note,
+		Currency:         nativeCurrency.Code,
+		Source:           in.Source,
+		Postings:         postings,
+		RecurringRuleRef: in.RecurringRuleRef,
+		CreatedAt:        s.clock.Now(),
 	})
 	if err != nil {
 		return entity.Entry{}, false, err
@@ -143,7 +138,6 @@ func (s *Service) buildPostings(
 		}
 
 		posting := entity.Posting{
-			AccountID:   account.ID,
 			AccountRef:  account.Ref,
 			AmountMinor: input.AmountMinor,
 			FXRateDate:  input.FXRateDate,
@@ -407,18 +401,13 @@ func (s *Service) UpdatePayee(ctx context.Context, ref, payeeRef string) (entity
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.UpdatePayee")
 	defer endSpan()
 
-	var payeeID *int64
-
 	if payeeRef != "" {
-		id, err := s.resolvePayee(ctx, payeeRef)
-		if err != nil {
+		if err := s.requirePayee(ctx, payeeRef); err != nil {
 			return entity.Entry{}, err
 		}
-
-		payeeID = &id
 	}
 
-	updated, found, err := s.entries.UpdateEntryPayee(ctx, ref, payeeID)
+	updated, found, err := s.entries.UpdateEntryPayee(ctx, ref, payeeRef)
 	if err != nil {
 		return entity.Entry{}, err
 	}
@@ -469,7 +458,7 @@ func (s *Service) Correct(ctx context.Context, ref string, in CorrectInput) (ent
 
 	replacement, err := entity.NewEntry(entity.Entry{
 		OccurredOn: occurredOn,
-		PayeeID:    original.PayeeID,
+		PayeeRef:   original.PayeeRef,
 		Note:       note,
 		Currency:   original.Currency,
 		Source:     constant.EntrySourceAdjustment,
@@ -531,18 +520,18 @@ func correctionReason(reason, ref string) string {
 	return "corrected " + ref
 }
 
-func (s *Service) resolvePayee(ctx context.Context, ref string) (int64, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.ResolvePayee")
+func (s *Service) requirePayee(ctx context.Context, ref string) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.RequirePayee")
 	defer endSpan()
 
-	payee, found, err := s.payees.PayeeByRef(ctx, ref)
+	_, found, err := s.payees.PayeeByRef(ctx, ref)
 	if err != nil {
-		return 0, fmt.Errorf("payee: %w", err)
+		return fmt.Errorf("payee: %w", err)
 	}
 
 	if !found {
-		return 0, fmt.Errorf("%w: payee %s", entity.ErrNotFound, ref)
+		return fmt.Errorf("%w: payee %s", entity.ErrNotFound, ref)
 	}
 
-	return payee.ID, nil
+	return nil
 }

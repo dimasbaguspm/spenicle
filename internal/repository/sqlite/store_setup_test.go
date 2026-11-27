@@ -145,7 +145,7 @@ func assertOpeningBalances(t *testing.T, store *sqlite.Store, accounts openingAc
 		t.Fatalf("balances: %v", err)
 	}
 
-	if balances[accounts.cash.ID] != 125_000 || balances[accounts.card.ID] != -50_000 || balances[accounts.opening.ID] != -75_000 {
+	if balances[accounts.cash.Ref] != 125_000 || balances[accounts.card.Ref] != -50_000 || balances[accounts.opening.Ref] != -75_000 {
 		t.Fatalf("opening balances = %v", balances)
 	}
 }

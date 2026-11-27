@@ -280,7 +280,7 @@ func toPostInput(ctx context.Context, request postEntryRequest) (ledger.PostInpu
 
 type displayNames struct {
 	accounts map[string]entity.Account
-	payees   map[int64]entity.Payee
+	payees   map[string]entity.Payee
 }
 
 func (s *Server) displayNames(ctx context.Context) (displayNames, error) {
@@ -304,7 +304,7 @@ func (s *Server) displayNames(ctx context.Context) (displayNames, error) {
 
 	names := displayNames{
 		accounts: make(map[string]entity.Account, len(accounts)),
-		payees:   make(map[int64]entity.Payee, len(payees)),
+		payees:   make(map[string]entity.Payee, len(payees)),
 	}
 
 	for _, account := range accounts {
@@ -312,7 +312,7 @@ func (s *Server) displayNames(ctx context.Context) (displayNames, error) {
 	}
 
 	for _, payee := range payees {
-		names.payees[payee.ID] = payee
+		names.payees[payee.Ref] = payee
 	}
 
 	return names, nil
@@ -345,8 +345,8 @@ func toEntryResponse(entry entity.Entry, names displayNames) entryResponse {
 		out.VoidedAt = entry.VoidedAt.Format(constant.TimestampLayout)
 	}
 
-	if entry.PayeeID != nil {
-		if payee, ok := names.payees[*entry.PayeeID]; ok {
+	if entry.PayeeRef != "" {
+		if payee, ok := names.payees[entry.PayeeRef]; ok {
 			out.Payee = &payeeSummary{Ref: payee.Ref, Name: payee.Name}
 		}
 	}

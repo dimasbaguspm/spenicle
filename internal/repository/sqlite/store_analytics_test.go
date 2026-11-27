@@ -164,12 +164,12 @@ func insertDatedSpending(
 			Currency:   "IDR",
 			Postings: []entity.Posting{
 				{
-					AccountID:       accounts[spend.account].ID,
+					AccountRef:      accounts[spend.account].Ref,
 					AmountMinor:     amount,
 					BaseAmountMinor: amount,
 				},
 				{
-					AccountID:       accounts["cash"].ID,
+					AccountRef:      accounts["cash"].Ref,
 					AmountMinor:     -amount,
 					BaseAmountMinor: -amount,
 				},

@@ -41,8 +41,7 @@ CREATE TABLE accounts (
   ref TEXT NOT NULL UNIQUE,
   name        TEXT NOT NULL,
   kind        TEXT NOT NULL CHECK (kind IN ('asset','liability','equity','expense','income')),
-  parent_id   INTEGER REFERENCES accounts(id),  -- retired: parent_ref is the relation
-  parent_ref  TEXT,
+  parent_ref  TEXT REFERENCES accounts(ref),
   currency    TEXT NOT NULL,
   icon        TEXT,
   archived_at TEXT,
@@ -54,10 +53,8 @@ CREATE TABLE payees (
   id                  INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
   name                TEXT NOT NULL UNIQUE,
-  default_account_id  INTEGER REFERENCES accounts(id),   -- retired: the refs are the relations
-  default_category_id INTEGER REFERENCES accounts(id),   -- retired
-  default_account_ref  TEXT,
-  default_category_ref TEXT,
+  default_account_ref  TEXT REFERENCES accounts(ref),
+  default_category_ref TEXT REFERENCES accounts(ref),
   archived_at         TEXT,
   created_at          TEXT NOT NULL
 );
@@ -70,8 +67,7 @@ CREATE TABLE categorization_rules (
   pattern     TEXT NOT NULL,
   field       TEXT NOT NULL CHECK (field IN ('payee','note')),
   match_kind  TEXT NOT NULL CHECK (match_kind IN ('exact','contains','prefix')),
-  account_id  INTEGER NOT NULL REFERENCES accounts(id),  -- retired: account_ref is the relation
-  account_ref TEXT NOT NULL DEFAULT '',
+  account_ref TEXT NOT NULL REFERENCES accounts(ref),
   priority    INTEGER NOT NULL DEFAULT 0,
   archived_at TEXT,
   created_at  TEXT NOT NULL
@@ -80,17 +76,13 @@ CREATE TABLE categorization_rules (
 CREATE UNIQUE INDEX ux_rules_live ON categorization_rules (pattern, field, match_kind)
   WHERE archived_at IS NULL;
 
-CREATE INDEX ix_rules_account ON categorization_rules (account_id);
 
 CREATE TABLE recurring_rules (
   id                 INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  payee_id           INTEGER NOT NULL REFERENCES payees(id),    -- retired
-  account_id         INTEGER NOT NULL REFERENCES accounts(id),  -- retired
-  category_id        INTEGER REFERENCES accounts(id),           -- retired
-  payee_ref          TEXT NOT NULL DEFAULT '',
-  account_ref        TEXT NOT NULL DEFAULT '',
-  category_ref       TEXT,
+  payee_ref          TEXT NOT NULL REFERENCES payees(ref),
+  account_ref        TEXT NOT NULL REFERENCES accounts(ref),
+  category_ref       TEXT REFERENCES accounts(ref),
   amount_minor       INTEGER NOT NULL,
   currency           TEXT NOT NULL,
   cadence            TEXT NOT NULL CHECK (cadence IN ('daily','weekly','monthly','yearly')),
@@ -107,44 +99,34 @@ CREATE TABLE recurring_rules (
 );
 
 CREATE INDEX ix_recurring_due ON recurring_rules (state, next_due_on, id);
-CREATE INDEX ix_recurring_payee ON recurring_rules (payee_id, next_due_on, id);
 
 CREATE TABLE ledger_entries (
   id                INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
   occurred_on       TEXT NOT NULL,
-  payee_id          INTEGER REFERENCES payees(id),  -- retired: payee_ref is the relation
-  payee_ref         TEXT,
+  payee_ref         TEXT REFERENCES payees(ref),
   note              TEXT,
   currency          TEXT NOT NULL,
   source            TEXT NOT NULL CHECK (source IN
                     ('manual','share','email','statement','recurring','adjustment')),
-  recurring_rule_id INTEGER REFERENCES recurring_rules(id),  -- retired
-  recurring_rule_ref TEXT,
+  recurring_rule_ref TEXT REFERENCES recurring_rules(ref),
   client_id         TEXT,
-  reverses_entry_id INTEGER REFERENCES ledger_entries(id),  -- retired
-  reverses_entry_ref TEXT,
+  reverses_entry_ref TEXT REFERENCES ledger_entries(ref),
   voided_at         TEXT,
   created_at        TEXT NOT NULL
 );
 
-CREATE UNIQUE INDEX ux_entries_rule_due ON ledger_entries (recurring_rule_id, occurred_on)
-  WHERE recurring_rule_id IS NOT NULL;
 
 CREATE UNIQUE INDEX ux_entries_client ON ledger_entries (client_id)
   WHERE client_id IS NOT NULL;
 
 CREATE INDEX ix_entries_occurred ON ledger_entries (occurred_on);
-CREATE INDEX ix_entries_reversal ON ledger_entries (reverses_entry_id)
-  WHERE reverses_entry_id IS NOT NULL;
 
 CREATE TABLE ledger_postings (
   id                INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  entry_id          INTEGER NOT NULL REFERENCES ledger_entries(id) ON DELETE RESTRICT,  -- retired
-  account_id        INTEGER NOT NULL REFERENCES accounts(id),                            -- retired
-  entry_ref         TEXT NOT NULL DEFAULT '',
-  account_ref       TEXT NOT NULL DEFAULT '',
+  entry_ref         TEXT NOT NULL REFERENCES ledger_entries(ref) ON DELETE RESTRICT,
+  account_ref       TEXT NOT NULL REFERENCES accounts(ref),
   amount_minor      INTEGER NOT NULL,
   base_amount_minor INTEGER NOT NULL,
   fx_rate           TEXT NOT NULL DEFAULT '1',
@@ -152,30 +134,23 @@ CREATE TABLE ledger_postings (
   fx_source         TEXT NOT NULL CHECK (fx_source IN ('ecb','cached','manual','identity'))
 );
 
-CREATE INDEX ix_postings_account ON ledger_postings (account_id, entry_id);
-CREATE INDEX ix_postings_entry ON ledger_postings (entry_id);
 
 CREATE TABLE balance_state (
   id         INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  account_id INTEGER NOT NULL UNIQUE REFERENCES accounts(id),  -- retired
-  account_ref TEXT NOT NULL DEFAULT '',
+  account_ref TEXT NOT NULL UNIQUE REFERENCES accounts(ref),
   dirty      INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE running_balances (
   id            INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  account_id    INTEGER NOT NULL REFERENCES accounts(id),           -- retired
-  entry_id      INTEGER NOT NULL REFERENCES ledger_entries(id),     -- retired
-  account_ref   TEXT NOT NULL DEFAULT '',
-  entry_ref     TEXT NOT NULL DEFAULT '',
+  account_ref   TEXT NOT NULL REFERENCES accounts(ref),
+  entry_ref     TEXT NOT NULL REFERENCES ledger_entries(ref),
   occurred_on   TEXT NOT NULL,
   balance_minor INTEGER NOT NULL
 );
 
-CREATE UNIQUE INDEX ux_running_balances_entry ON running_balances (account_id, entry_id);
-CREATE INDEX ix_running_balances_order ON running_balances (account_id, occurred_on, entry_id);
 
 CREATE TABLE captures (
   id                 INTEGER PRIMARY KEY,
@@ -359,8 +334,8 @@ CREATE INDEX ix_postings_account_ref ON ledger_postings (account_ref, entry_ref)
 CREATE INDEX ix_rules_account_ref ON categorization_rules (account_ref);
 CREATE UNIQUE INDEX ux_entries_rule_due_ref ON ledger_entries (recurring_rule_ref, occurred_on)
   WHERE recurring_rule_ref IS NOT NULL;
-CREATE UNIQUE INDEX ux_running_balances_entry_ref ON running_balances (account_ref, entry_ref)
-  WHERE account_ref <> '' AND entry_ref <> '';
+CREATE UNIQUE INDEX ux_running_balances_entry_ref ON running_balances (account_ref, entry_ref);
+CREATE INDEX ix_running_balances_order ON running_balances (account_ref, occurred_on, entry_ref);
 CREATE INDEX ix_accounts_parent_ref ON accounts (parent_ref) WHERE parent_ref IS NOT NULL;
 CREATE INDEX ix_recurring_payee_ref ON recurring_rules (payee_ref, next_due_on);
 

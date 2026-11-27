@@ -23,9 +23,9 @@ func (s *Store) MonthlyTotals(
 		       SUM(CASE WHEN a.kind = 'expense' THEN p.base_amount_minor ELSE 0 END),
 		       SUM(CASE WHEN a.kind = 'income' THEN -p.base_amount_minor ELSE 0 END)
 		FROM ledger_postings p
-		JOIN ledger_entries e ON e.id = p.entry_id
-		JOIN accounts a ON a.id = p.account_id
-		WHERE e.voided_at IS NULL AND e.reverses_entry_id IS NULL
+		JOIN ledger_entries e ON e.ref = p.entry_ref
+		JOIN accounts a ON a.ref = p.account_ref
+		WHERE e.voided_at IS NULL AND e.reverses_entry_ref IS NULL
 		  AND e.occurred_on BETWEEN ? AND ?
 		GROUP BY month
 		ORDER BY month`, from.Format(constant.DateLayout), to.Format(constant.DateLayout))
@@ -60,43 +60,43 @@ const categoryTotalsQuery = `
 	SELECT a.ref, a.name, a.kind, SUM(p.base_amount_minor),
 	       MIN(e.occurred_on), MAX(e.occurred_on)
 	FROM ledger_postings p
-	JOIN ledger_entries e ON e.id = p.entry_id
-	JOIN accounts a ON a.id = p.account_id
-	WHERE e.voided_at IS NULL AND e.reverses_entry_id IS NULL
+	JOIN ledger_entries e ON e.ref = p.entry_ref
+	JOIN accounts a ON a.ref = p.account_ref
+	WHERE e.voided_at IS NULL AND e.reverses_entry_ref IS NULL
 	  AND e.occurred_on BETWEEN ? AND ?
 	  AND a.kind = ?
-	GROUP BY a.id
+	GROUP BY a.ref
 	HAVING SUM(p.base_amount_minor) <> 0
 	ORDER BY SUM(p.base_amount_minor) DESC`
 
 const categoryTotalsByRootQuery = `
-	WITH RECURSIVE tree(id, root_id) AS (
-		SELECT id, id FROM accounts WHERE parent_id IS NULL
+	WITH RECURSIVE tree(ref, root_ref) AS (
+		SELECT ref, ref FROM accounts WHERE parent_ref IS NULL
 		UNION ALL
-		SELECT a.id, tree.root_id FROM accounts a JOIN tree ON a.parent_id = tree.id
+		SELECT a.ref, tree.root_ref FROM accounts a JOIN tree ON a.parent_ref = tree.ref
 	)
 	SELECT root.ref, root.name, root.kind, SUM(p.base_amount_minor),
 	       MIN(e.occurred_on), MAX(e.occurred_on)
 	FROM ledger_postings p
-	JOIN ledger_entries e ON e.id = p.entry_id
-	JOIN tree ON tree.id = p.account_id
-	JOIN accounts root ON root.id = tree.root_id
-	WHERE e.voided_at IS NULL AND e.reverses_entry_id IS NULL
+	JOIN ledger_entries e ON e.ref = p.entry_ref
+	JOIN tree ON tree.ref = p.account_ref
+	JOIN accounts root ON root.ref = tree.root_ref
+	WHERE e.voided_at IS NULL AND e.reverses_entry_ref IS NULL
 	  AND e.occurred_on BETWEEN ? AND ?
 	  AND root.kind = ?
-	GROUP BY root.id
+	GROUP BY root.ref
 	HAVING SUM(p.base_amount_minor) <> 0
 	ORDER BY SUM(p.base_amount_minor) DESC`
 
 const categoryTotalsByMonthQuery = `
 	SELECT a.ref, a.name, substr(e.occurred_on, 1, 7), SUM(p.base_amount_minor)
 	FROM ledger_postings p
-	JOIN ledger_entries e ON e.id = p.entry_id
-	JOIN accounts a ON a.id = p.account_id
-	WHERE e.voided_at IS NULL AND e.reverses_entry_id IS NULL
+	JOIN ledger_entries e ON e.ref = p.entry_ref
+	JOIN accounts a ON a.ref = p.account_ref
+	WHERE e.voided_at IS NULL AND e.reverses_entry_ref IS NULL
 	  AND e.occurred_on BETWEEN ? AND ?
 	  AND a.kind = ?
-	GROUP BY a.id, substr(e.occurred_on, 1, 7)
+	GROUP BY a.ref, substr(e.occurred_on, 1, 7)
 	HAVING SUM(p.base_amount_minor) <> 0
 	ORDER BY a.name, substr(e.occurred_on, 1, 7)`
 

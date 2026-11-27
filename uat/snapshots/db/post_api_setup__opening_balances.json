@@ -8,7 +8,6 @@
       "id": 1,
       "kind": "asset",
       "name": "Cash",
-      "parent_id": null,
       "parent_ref": null,
       "ref": "<ref>"
     },
@@ -20,7 +19,6 @@
       "id": 2,
       "kind": "expense",
       "name": "Unsorted",
-      "parent_id": null,
       "parent_ref": null,
       "ref": "<ref>"
     },
@@ -32,7 +30,6 @@
       "id": 3,
       "kind": "equity",
       "name": "Opening balance",
-      "parent_id": null,
       "parent_ref": null,
       "ref": "<ref>"
     },
@@ -44,7 +41,6 @@
       "id": 4,
       "kind": "liability",
       "name": "Card",
-      "parent_id": null,
       "parent_ref": null,
       "ref": "<ref>"
     }
@@ -228,12 +224,9 @@
       "id": 1,
       "note": "Opening balance",
       "occurred_on": "2026-02-14",
-      "payee_id": null,
       "payee_ref": null,
-      "recurring_rule_id": null,
       "recurring_rule_ref": null,
       "ref": "<ref>",
-      "reverses_entry_id": null,
       "reverses_entry_ref": null,
       "source": "adjustment",
       "voided_at": null
@@ -245,12 +238,9 @@
       "id": 2,
       "note": "Opening balance",
       "occurred_on": "2026-02-14",
-      "payee_id": null,
       "payee_ref": null,
-      "recurring_rule_id": null,
       "recurring_rule_ref": null,
       "ref": "<ref>",
-      "reverses_entry_id": null,
       "reverses_entry_ref": null,
       "source": "adjustment",
       "voided_at": null
@@ -258,12 +248,10 @@
   ],
   "ledger_postings": [
     {
-      "account_id": 1,
-      "account_ref": "",
+      "account_ref": "<ref>",
       "amount_minor": 125000,
       "base_amount_minor": 125000,
-      "entry_id": 1,
-      "entry_ref": "",
+      "entry_ref": "<ref>",
       "fx_rate": "1",
       "fx_rate_date": null,
       "fx_source": "identity",
@@ -271,12 +259,10 @@
       "ref": "<ref>"
     },
     {
-      "account_id": 3,
-      "account_ref": "",
+      "account_ref": "<ref>",
       "amount_minor": -125000,
       "base_amount_minor": -125000,
-      "entry_id": 1,
-      "entry_ref": "",
+      "entry_ref": "<ref>",
       "fx_rate": "1",
       "fx_rate_date": null,
       "fx_source": "identity",
@@ -284,12 +270,10 @@
       "ref": "<ref>"
     },
     {
-      "account_id": 4,
-      "account_ref": "",
+      "account_ref": "<ref>",
       "amount_minor": -50000,
       "base_amount_minor": -50000,
-      "entry_id": 2,
-      "entry_ref": "",
+      "entry_ref": "<ref>",
       "fx_rate": "1",
       "fx_rate_date": null,
       "fx_source": "identity",
@@ -297,12 +281,10 @@
       "ref": "<ref>"
     },
     {
-      "account_id": 3,
-      "account_ref": "",
+      "account_ref": "<ref>",
       "amount_minor": 50000,
       "base_amount_minor": 50000,
-      "entry_id": 2,
-      "entry_ref": "",
+      "entry_ref": "<ref>",
       "fx_rate": "1",
       "fx_rate_date": null,
       "fx_source": "identity",

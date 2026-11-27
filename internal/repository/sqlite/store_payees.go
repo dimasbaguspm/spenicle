@@ -14,38 +14,31 @@ import (
 )
 
 const payeeColumns = `p.id, p.ref, p.name,
-	COALESCE(da.ref, ''), COALESCE(dc.ref, ''), p.archived_at, p.created_at`
+	COALESCE(p.default_account_ref, ''), COALESCE(p.default_category_ref, ''),
+	p.archived_at, p.created_at`
 
-const payeeJoins = `LEFT JOIN accounts da ON da.id = p.default_account_id
-	LEFT JOIN accounts dc ON dc.id = p.default_category_id`
-
-const payeeFrom = `FROM payees p ` + payeeJoins
+const payeeFrom = `FROM payees p`
 
 func (s *Store) CreatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreatePayee")
 	defer endSpan()
 
-	accountID, err := s.accountID(ctx, payee.DefaultAccountRef)
-	if err != nil {
-		return entity.Payee{}, err
-	}
-
-	categoryID, err := s.accountID(ctx, payee.DefaultCategoryRef)
-	if err != nil {
+	if err := requireAccounts(ctx, s.db, payee.DefaultAccountRef, payee.DefaultCategoryRef); err != nil {
 		return entity.Payee{}, err
 	}
 
 	payee.Ref = uuid.New()
 	payee.CreatedAt = time.Now().UTC()
 
-	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
-			INSERT INTO payees (ref, name, default_account_id, default_category_id, archived_at, created_at)
+			INSERT INTO payees
+				(ref, name, default_account_ref, default_category_ref, archived_at, created_at)
 			VALUES (?, ?, ?, ?, NULL, ?)`,
 			payee.Ref,
 			payee.Name,
-			accountID,
-			categoryID,
+			nullString(payee.DefaultAccountRef),
+			nullString(payee.DefaultCategoryRef),
 			payee.CreatedAt.Format(constant.TimestampLayout),
 		)
 		if execErr != nil {
@@ -100,7 +93,6 @@ func (s *Store) ListPayees(ctx context.Context, filter entity.PayeeFilter) ([]en
 	limit := clampLimit(filter.Limit)
 
 	builder := newList("payees p", payeeColumns)
-	builder.join(payeeJoins)
 	builder.prefix("p.name", filter.Query)
 	builder.inList("p.ref", filter.Refs)
 	builder.nullFlag("p.archived_at", filter.Archived)
@@ -138,24 +130,18 @@ func (s *Store) UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Pay
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdatePayee")
 	defer endSpan()
 
-	accountID, err := s.accountID(ctx, payee.DefaultAccountRef)
-	if err != nil {
+	if err := requireAccounts(ctx, s.db, payee.DefaultAccountRef, payee.DefaultCategoryRef); err != nil {
 		return entity.Payee{}, err
 	}
 
-	categoryID, err := s.accountID(ctx, payee.DefaultCategoryRef)
-	if err != nil {
-		return entity.Payee{}, err
-	}
-
-	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		if _, execErr := tx.ExecContext(ctx, `
-			UPDATE payees SET name = ?, default_account_id = ?, default_category_id = ?,
+			UPDATE payees SET name = ?, default_account_ref = ?, default_category_ref = ?,
 				archived_at = ?
 			WHERE ref = ?`,
 			payee.Name,
-			accountID,
-			categoryID,
+			nullString(payee.DefaultAccountRef),
+			nullString(payee.DefaultCategoryRef),
 			nullTime(payee.ArchivedAt),
 			payee.Ref,
 		); execErr != nil {
@@ -175,23 +161,6 @@ func (s *Store) UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Pay
 	}
 
 	return payee, nil
-}
-
-func (s *Store) accountID(ctx context.Context, ref string) (sql.NullInt64, error) {
-	if ref == "" {
-		return sql.NullInt64{}, nil
-	}
-
-	account, found, err := s.AccountByRef(ctx, ref)
-	if err != nil {
-		return sql.NullInt64{}, err
-	}
-
-	if !found {
-		return sql.NullInt64{}, fmt.Errorf("%w: account %s", entity.ErrNotFound, ref)
-	}
-
-	return sql.NullInt64{Int64: account.ID, Valid: true}, nil
 }
 
 func scanPayeeRow(scanner interface{ Scan(dest ...any) error }) (entity.Payee, error) {

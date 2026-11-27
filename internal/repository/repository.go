@@ -18,9 +18,9 @@ type Ledger interface {
 	EntryByRef(ctx context.Context, ref string) (entity.Entry, bool, error)
 	ListEntries(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
 	VoidEntry(ctx context.Context, ref, reason string, at time.Time) (entity.Entry, error)
-	UpdateEntryPayee(ctx context.Context, ref string, payeeID *int64) (entity.Entry, bool, error)
+	UpdateEntryPayee(ctx context.Context, ref, payeeRef string) (entity.Entry, bool, error)
 	MatchingEntryRef(ctx context.Context, probe entity.EntryProbe) (string, bool, error)
-	RunningBalances(ctx context.Context, accountRef string, entryIDs []int64) (map[int64]int64, error)
+	RunningBalances(ctx context.Context, accountRef string, entryRefs []string) (map[string]int64, error)
 	ReplaceEntry(
 		ctx context.Context,
 		ref string,
@@ -51,7 +51,7 @@ type Accounts interface {
 	AccountByRef(ctx context.Context, ref string) (entity.Account, bool, error)
 	UpdateAccount(ctx context.Context, account entity.Account) (entity.Account, error)
 	ListAccounts(ctx context.Context, filter entity.AccountFilter) ([]entity.Account, error)
-	BalancesByAccount(ctx context.Context) (map[int64]int64, error)
+	BalancesByAccount(ctx context.Context) (map[string]int64, error)
 }
 
 type Artifacts interface {

@@ -31,7 +31,7 @@ func seedUnrepresentableEntry(t *testing.T, store *Store) (string, entity.Accoun
 	ref := uuid.New()
 	at := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	result, err := store.db.ExecContext(ctx, `
+	_, err = store.db.ExecContext(ctx, `
 		INSERT INTO ledger_entries (ref, occurred_on, currency, source, created_at)
 		VALUES (?, ?, 'IDR', ?, ?)`,
 		ref, at.Format(constant.DateLayout), constant.EntrySourceManual, at.Format(constant.TimestampLayout))
@@ -39,26 +39,21 @@ func seedUnrepresentableEntry(t *testing.T, store *Store) (string, entity.Accoun
 		t.Fatalf("seed entry: %v", err)
 	}
 
-	entryID, err := result.LastInsertId()
-	if err != nil {
-		t.Fatalf("seed entry id: %v", err)
-	}
-
 	amounts := []struct {
-		accountID int64
-		amount    int64
+		account entity.Account
+		amount  int64
 	}{
-		{asset.ID, math.MinInt64},
-		{expense.ID, math.MaxInt64},
-		{asset.ID, 1},
+		{asset, math.MinInt64},
+		{expense, math.MaxInt64},
+		{asset, 1},
 	}
 
 	for _, amount := range amounts {
 		_, err := store.db.ExecContext(ctx, `
 			INSERT INTO ledger_postings
-				(ref, entry_id, account_id, amount_minor, base_amount_minor, fx_rate, fx_source)
-		VALUES (?, ?, ?, ?, ?, '1', 'identity')`,
-			uuid.New(), entryID, amount.accountID, amount.amount, amount.amount)
+				(ref, entry_ref, account_ref, amount_minor, base_amount_minor, fx_rate, fx_source)
+			VALUES (?, ?, ?, ?, ?, '1', 'identity')`,
+			uuid.New(), ref, amount.account.Ref, amount.amount, amount.amount)
 		if err != nil {
 			t.Fatalf("seed posting: %v", err)
 		}
@@ -118,8 +113,8 @@ func TestUnrepresentableReversalIsNotCommitted(t *testing.T) {
 					OccurredOn: time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 					Currency:   "IDR",
 					Postings: []entity.Posting{
-						{AccountID: asset.ID, AmountMinor: 100, BaseAmountMinor: 100},
-						{AccountID: expense.ID, AmountMinor: -100, BaseAmountMinor: -100},
+						{AccountRef: asset.Ref, AmountMinor: 100, BaseAmountMinor: 100},
+						{AccountRef: expense.Ref, AmountMinor: -100, BaseAmountMinor: -100},
 					},
 				}, "why", time.Now().UTC())
 				return err

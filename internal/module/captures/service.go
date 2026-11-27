@@ -161,7 +161,7 @@ func (s *Service) Approve(
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
-	ruleID, err := s.recurringRuleID(ctx, capture)
+	ruleRef, err := s.recurringRuleRef(ctx, capture)
 	if err != nil {
 		return entity.Entry{}, entity.Capture{}, err
 	}
@@ -169,13 +169,13 @@ func (s *Service) Approve(
 	postings := approvalPostings(in.Postings)
 
 	entry, created, err := s.entries.Build(ctx, ledger.PostInput{
-		OccurredOn:      in.OccurredOn,
-		Note:            in.Note,
-		PayeeRef:        in.PayeeRef,
-		Currency:        in.Currency,
-		Source:          sourceOf(capture.Kind),
-		RecurringRuleID: ruleID,
-		Postings:        postings,
+		OccurredOn:       in.OccurredOn,
+		Note:             in.Note,
+		PayeeRef:         in.PayeeRef,
+		Currency:         in.Currency,
+		Source:           sourceOf(capture.Kind),
+		RecurringRuleRef: ruleRef,
+		Postings:         postings,
 	})
 	if err != nil {
 		return entity.Entry{}, entity.Capture{}, err
@@ -619,28 +619,6 @@ func sourceOf(kind string) string {
 
 // recurringRuleID links an approval back to the rule that queued it, so
 // (recurring_rule_id, occurred_on) stays unique and a replay cannot double-post.
-func (s *Service) recurringRuleID(ctx context.Context, capture entity.Capture) (*int64, error) {
-	ruleRef, err := s.recurringRuleRef(ctx, capture)
-	if err != nil {
-		return nil, err
-	}
-
-	if ruleRef == "" || s.recurring == nil {
-		return nil, nil //nolint:nilnil // a capture that names no rule needs no link
-	}
-
-	rule, found, err := s.recurring.RecurringByRef(ctx, ruleRef)
-	if err != nil {
-		return nil, err
-	}
-
-	if !found {
-		return nil, nil //nolint:nilnil // the rule is gone, the approval still stands
-	}
-
-	return &rule.ID, nil
-}
-
 func (s *Service) recurringRuleRef(ctx context.Context, capture entity.Capture) (string, error) {
 	if capture.Kind != constant.CaptureKindRecurring {
 		return "", nil

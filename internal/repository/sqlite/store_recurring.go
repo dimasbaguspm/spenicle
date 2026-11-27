@@ -17,9 +17,9 @@ const recurringColumns = `r.id, r.ref, p.ref, a.ref, COALESCE(c.ref, ''), r.amou
 	r.currency, r.cadence, r.interval_n, COALESCE(r.day_of_month, 0), r.business_day_shift,
 	r.next_due_on, r.ends_on, r.origin, r.state, r.last_posted_on, r.created_at`
 
-const recurringJoins = `JOIN payees p ON p.id = r.payee_id
-	JOIN accounts a ON a.id = r.account_id
-	LEFT JOIN accounts c ON c.id = r.category_id`
+const recurringJoins = `JOIN payees p ON p.ref = r.payee_ref
+	JOIN accounts a ON a.ref = r.account_ref
+	LEFT JOIN accounts c ON c.ref = r.category_ref`
 
 const recurringFrom = `FROM recurring_rules r ` + recurringJoins
 
@@ -27,7 +27,7 @@ func (s *Store) CreateRecurring(ctx context.Context, rule entity.Recurring) (ent
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreateRecurring")
 	defer endSpan()
 
-	payee, found, err := s.PayeeByRef(ctx, rule.PayeeRef)
+	_, found, err := s.PayeeByRef(ctx, rule.PayeeRef)
 	if err != nil {
 		return entity.Recurring{}, err
 	}
@@ -36,14 +36,8 @@ func (s *Store) CreateRecurring(ctx context.Context, rule entity.Recurring) (ent
 		return entity.Recurring{}, fmt.Errorf("%w: payee %s", entity.ErrNotFound, rule.PayeeRef)
 	}
 
-	accountID, err := s.accountID(ctx, rule.AccountRef)
-	if err != nil {
-		return entity.Recurring{}, err
-	}
-
-	categoryID, err := s.accountID(ctx, rule.CategoryRef)
-	if err != nil {
-		return entity.Recurring{}, err
+	if requireErr := requireAccounts(ctx, s.db, rule.AccountRef, rule.CategoryRef); requireErr != nil {
+		return entity.Recurring{}, requireErr
 	}
 
 	rule.Ref = uuid.New()
@@ -53,14 +47,14 @@ func (s *Store) CreateRecurring(ctx context.Context, rule entity.Recurring) (ent
 	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
 			INSERT INTO recurring_rules
-				(ref, payee_id, account_id, category_id, amount_minor, currency, cadence,
-				 interval_n, day_of_month, business_day_shift, next_due_on, ends_on,
-				 origin, state, created_at)
+				(ref, payee_ref, account_ref, category_ref,
+				 amount_minor, currency, cadence, interval_n, day_of_month, business_day_shift,
+				 next_due_on, ends_on, origin, state, created_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			rule.Ref,
-			payee.ID,
-			accountID.Int64,
-			categoryID,
+			rule.PayeeRef,
+			rule.AccountRef,
+			nullString(rule.CategoryRef),
 			rule.AmountMinor,
 			rule.Currency,
 			rule.Cadence,
@@ -165,7 +159,7 @@ func (s *Store) ListRecurring(
 	builder.join(recurringJoins)
 	builder.eq("r.state", filter.State)
 	builder.eq("r.cadence", filter.Cadence)
-	builder.prefixInSubquery("r.payee_id", "payees", "id", "name", filter.Query)
+	builder.prefixInSubquery("r.payee_ref", "payees", "ref", "name", filter.Query)
 	builder.inList("r.ref", filter.Refs)
 	builder.after("r.next_due_on, r.id", "next_due_on, id", "recurring_rules", filter.Cursor)
 	builder.orderBy("r.next_due_on, r.id")

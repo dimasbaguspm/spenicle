@@ -462,14 +462,14 @@ func fixedSnapshot(at time.Time) *snapshot {
 		entries: []entity.Entry{
 			{
 				ID: 1, Ref: refC, OccurredOn: at, Currency: "IDR", Source: "manual",
-				PayeeID: ptr(int64(1)), CreatedAt: at,
+				CreatedAt: at,
 				Postings: []entity.Posting{
 					{
-						AccountID: 2, AccountRef: refB, AmountMinor: 25000, BaseAmountMinor: 25000,
+						AccountRef: refB, AmountMinor: 25000, BaseAmountMinor: 25000,
 						FXRate: "1", FXSource: "identity",
 					},
 					{
-						AccountID: 1, AccountRef: refA, AmountMinor: -25000, BaseAmountMinor: -25000,
+						AccountRef: refA, AmountMinor: -25000, BaseAmountMinor: -25000,
 						FXRate: "1", FXSource: "identity",
 					},
 				},
@@ -477,10 +477,6 @@ func fixedSnapshot(at time.Time) *snapshot {
 		},
 		payees: []entity.Payee{{ID: 1, Ref: refD, Name: "Kopi", CreatedAt: at}},
 	}
-}
-
-func ptr(value int64) *int64 {
-	return &value
 }
 
 func TestWindowedExportFollowsTheWindow(t *testing.T) {
@@ -589,8 +585,8 @@ func windowedDeps(t *testing.T) Deps {
 			OccurredOn: spend.day,
 			Currency:   "IDR",
 			Postings: []entity.Posting{
-				{AccountID: expense.ID, AmountMinor: spend.amount, BaseAmountMinor: spend.amount},
-				{AccountID: cash.ID, AmountMinor: -spend.amount, BaseAmountMinor: -spend.amount},
+				{AccountRef: expense.Ref, AmountMinor: spend.amount, BaseAmountMinor: spend.amount},
+				{AccountRef: cash.Ref, AmountMinor: -spend.amount, BaseAmountMinor: -spend.amount},
 			},
 		})
 		if entryErr != nil {

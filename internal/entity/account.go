@@ -15,7 +15,6 @@ type Account struct {
 	Ref        string
 	Name       string
 	Kind       string
-	ParentID   *int64
 	ParentRef  string
 	Currency   string
 	Icon       string
@@ -24,7 +23,7 @@ type Account struct {
 }
 
 type AccountParent struct {
-	ChildID     int64
+	ChildRef    string
 	ChildKind   string
 	Ancestors   []Account
 	Descendants int
@@ -38,7 +37,7 @@ func CheckParent(candidate AccountParent) error {
 			)
 		}
 
-		if candidate.ChildID != 0 && ancestor.ID == candidate.ChildID {
+		if candidate.ChildRef != "" && ancestor.Ref == candidate.ChildRef {
 			return fmt.Errorf("%w: an account cannot descend from itself", ErrInvalidParent)
 		}
 	}

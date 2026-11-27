@@ -22,7 +22,7 @@ then negate every posting, insert the reversal with `reverses_entry_id`, `UPDATE
 voided_at WHERE voided_at IS NULL`, insert `audit_log` action `void`.
 
 `{"payee_ref": "…"}` → `Module.Ledger.UpdatePayee` → `Repository.Sqlite.UpdateEntryPayee`:
-resolve the payee through `PayeeSource.PayeeByRef`, `UPDATE ledger_entries SET payee_id`,
+resolve the payee through `PayeeSource.PayeeByRef`, `UPDATE ledger_entries SET payee_ref`,
 insert `audit_log` action `update` on `ledger_entries`, then reload the entry with its
 postings.
 
@@ -100,7 +100,7 @@ sequenceDiagram
         H-->>C: 200 reversal
     else payee
         H->>L: UpdatePayee(ref, payee_ref)
-        L->>DB: BEGIN; UPDATE payee_id; INSERT audit; COMMIT
+        L->>DB: BEGIN; UPDATE payee_ref; INSERT audit; COMMIT
         H-->>C: 200 entry
     else correction
         H->>L: Correct(ref, occurred_on?, note?, postings?)

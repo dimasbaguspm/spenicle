@@ -152,8 +152,8 @@ func setupAccount(
 		return account, nil
 	}
 
-	if _, err := tx.ExecContext(ctx, `UPDATE accounts SET currency = ? WHERE id = ?`,
-		currency, account.ID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE accounts SET currency = ? WHERE ref = ?`,
+		currency, account.Ref); err != nil {
 		return entity.Account{}, fmt.Errorf("update setup account currency: %w", err)
 	}
 
@@ -189,7 +189,7 @@ func createSetupAccount(
 	account.CreatedAt = now
 
 	result, err := tx.ExecContext(ctx, `
-		INSERT INTO accounts (ref, name, kind, parent_id, currency, icon, archived_at, created_at)
+		INSERT INTO accounts (ref, name, kind, parent_ref, currency, icon, archived_at, created_at)
 		VALUES (?, ?, ?, NULL, ?, NULL, NULL, ?)`,
 		account.Ref, account.Name, account.Kind, currency, now.Format(constant.TimestampLayout))
 	if err != nil {
@@ -232,12 +232,12 @@ func insertOpeningEntry(
 		CreatedAt:  now,
 		Postings: []entity.Posting{
 			{
-				AccountID: account.ID, AccountRef: account.Ref,
+				AccountRef:  account.Ref,
 				AmountMinor: amount, BaseAmountMinor: amount,
 				FXRate: "1", FXSource: constant.FXSourceIdentity,
 			},
 			{
-				AccountID: contra.ID, AccountRef: contra.Ref,
+				AccountRef:  contra.Ref,
 				AmountMinor: -amount, BaseAmountMinor: -amount,
 				FXRate: "1", FXSource: constant.FXSourceIdentity,
 			},

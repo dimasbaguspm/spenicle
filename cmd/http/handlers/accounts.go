@@ -215,13 +215,13 @@ func (s *Server) accountResponses(
 	return out, nil
 }
 
-func accountRow(account entity.Account, balances map[int64]int64) accountResponse {
+func accountRow(account entity.Account, balances map[string]int64) accountResponse {
 	return accountResponse{
 		Ref:             account.Ref,
 		Name:            account.Name,
 		Kind:            account.Kind,
 		Currency:        account.Currency,
-		BaseAmountMinor: strconv.FormatInt(balances[account.ID], 10),
+		BaseAmountMinor: strconv.FormatInt(balances[account.Ref], 10),
 		ParentRef:       account.ParentRef,
 		Icon:            account.Icon,
 		Archived:        account.ArchivedAt != nil,

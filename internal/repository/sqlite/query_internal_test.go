@@ -59,13 +59,13 @@ func TestListQuery(t *testing.T) {
 			name: "before fetches one row more than the page",
 			build: func() *listQuery {
 				query := newList("payees p", "id")
-				query.join(`LEFT JOIN accounts da ON da.id = p.default_account_id`)
+				query.join(`LEFT JOIN accounts da ON da.ref = p.default_account_ref`)
 				query.before("p.id", "payees", "abd")
 
 				return query
 			},
 			limit: 50,
-			want: `SELECT id FROM payees p LEFT JOIN accounts da ON da.id = p.default_account_id` +
+			want: `SELECT id FROM payees p LEFT JOIN accounts da ON da.ref = p.default_account_ref` +
 				` WHERE 1 = 1 AND p.id < (SELECT id FROM payees WHERE ref = ?) LIMIT 51`,
 			args: []any{"abd"},
 		},
@@ -112,18 +112,18 @@ func TestListQuery(t *testing.T) {
 				query := newList("ledger_entries", "id")
 				query.gte("occurred_on", "2024-01-01")
 				query.lte("occurred_on", "2024-01-31")
-				query.inSubquery("id", `SELECT entry_id WHERE a.ref`, "ace", "ade")
+				query.inSubquery("id", `SELECT entry_ref WHERE a.ref`, "ace", "ade")
 				query.eq("source", "manual")
 				query.inList("ref", []string{"aaa"})
-				query.parentRef("parent_id", "accounts", "aba")
+				query.parentRef("parent_ref", "aba")
 				query.orderBy("id DESC")
 
 				return query
 			},
 			limit: 10,
 			want: `SELECT id FROM ledger_entries WHERE 1 = 1 AND occurred_on >= ? AND occurred_on <= ?` +
-				` AND id IN (SELECT entry_id WHERE a.ref IN (?, ?)) AND source = ? AND ref IN (?)` +
-				` AND parent_id = (SELECT id FROM accounts WHERE ref = ?) ORDER BY id DESC LIMIT 11`,
+				` AND id IN (SELECT entry_ref WHERE a.ref IN (?, ?)) AND source = ? AND ref IN (?)` +
+				` AND parent_ref = ? ORDER BY id DESC LIMIT 11`,
 			args: []any{"2024-01-01", "2024-01-31", "ace", "ade", "manual", "aaa", "aba"},
 		},
 		{
@@ -139,7 +139,7 @@ func TestListQuery(t *testing.T) {
 			},
 			limit: 50,
 			want: `SELECT id FROM ledger_entries WHERE 1 = 1 AND EXISTS (SELECT 1 FROM ledger_postings p` +
-				"\n\t\t" + `WHERE p.entry_id = ledger_entries.id AND ABS(p.base_amount_minor) BETWEEN ? AND ?)` +
+				"\n\t\t" + `WHERE p.entry_ref = ledger_entries.ref AND ABS(p.base_amount_minor) BETWEEN ? AND ?)` +
 				` LIMIT 51`,
 			args: []any{int64(1500), int64(20000)},
 		},
@@ -155,7 +155,7 @@ func TestListQuery(t *testing.T) {
 			},
 			limit: 50,
 			want: `SELECT id FROM ledger_entries WHERE 1 = 1 AND EXISTS (SELECT 1 FROM ledger_postings p` +
-				"\n\t\t" + `WHERE p.entry_id = ledger_entries.id AND ABS(p.base_amount_minor) >= ?)` +
+				"\n\t\t" + `WHERE p.entry_ref = ledger_entries.ref AND ABS(p.base_amount_minor) >= ?)` +
 				` LIMIT 51`,
 			args: []any{int64(1500)},
 		},
@@ -286,12 +286,12 @@ func TestPrefixSearchUsesExpressionIndex(t *testing.T) {
 			build: func() *listQuery {
 				query := newList("recurring_rules r", "r.id")
 				query.join(recurringJoins)
-				query.prefixInSubquery("r.payee_id", "payees", "id", "name", "Gro")
+				query.prefixInSubquery("r.payee_ref", "payees", "ref", "name", "Gro")
 				query.orderBy("r.next_due_on, r.id")
 
 				return query
 			},
-			want: "SEARCH r USING INDEX ix_recurring_payee",
+			want: "SEARCH r USING INDEX ix_recurring_payee_ref",
 		},
 	}
 

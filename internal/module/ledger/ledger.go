@@ -76,14 +76,14 @@ type CorrectInput struct {
 	Reason     string
 }
 type PostInput struct {
-	ClientID        string
-	OccurredOn      time.Time
-	PayeeRef        string
-	Note            string
-	Currency        string
-	Source          string
-	RecurringRuleID *int64
-	Postings        []PostingInput
+	ClientID         string
+	OccurredOn       time.Time
+	PayeeRef         string
+	Note             string
+	Currency         string
+	Source           string
+	RecurringRuleRef string
+	Postings         []PostingInput
 }
 
 type PostingInput struct {

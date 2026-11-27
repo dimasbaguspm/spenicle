@@ -419,7 +419,7 @@ behind and a committed one cannot be forgotten.
 | column | what it answers |
 | --- | --- |
 | `entity_kind` | which table, as a bounded name: `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `categorization_rule`, `setting`, `api_token`, `system` |
-| `entity_id` / `entity_ref` | the row, by integer for joins and by ref for filtering without one |
+| `entity_ref` | the row, by `ref` — the same identifier every other relation uses |
 | `action` | `create`, `update`, `void`, `approve`, `reject`, `advance`, `revoke`, `generate`, `retry`, `start` |
 | `actor_kind` / `actor_ref` | `user`, `worker`, `system` — and, for a token, its ref in `actor_ref` (the kind stays `user`) |
 | `from_json` / `to_json` | what the change touched, as typed payload structs (`entity.EntryCreated`, …) validated with the same tags the API uses |

@@ -71,9 +71,9 @@ func TestConsolidatedSchemaCarriesEveryMergedChange(t *testing.T) {
 		{table: "exports", column: "from_on"},
 		{table: "exports", column: "to_on"},
 		{table: "import_rows", column: "currency"},
-		{table: "capture_payloads", column: "capture_id"},
+		{table: "capture_payloads", column: "capture_ref"},
 		{table: "import_upload_chunks", column: "chunk_sha256"},
-		{table: "categorization_rules", column: "account_id"},
+		{table: "categorization_rules", column: "account_ref"},
 	}
 
 	for _, column := range columns {
@@ -93,8 +93,8 @@ func TestConsolidatedSchemaCarriesEveryMergedChange(t *testing.T) {
 	}
 
 	for _, index := range []string{
-		"ux_rules_live", "ix_rules_account", "ix_recurring_due",
-		"ix_entries_reversal", "ix_exports_expiry",
+		"ux_rules_live", "ix_rules_account_ref", "ix_recurring_due",
+		"ix_entries_reversal_ref", "ix_exports_expiry",
 	} {
 		t.Run(index, func(t *testing.T) {
 			var found int
@@ -126,8 +126,8 @@ func TestInsertEntryMapsClientIDConflictToDuplicate(t *testing.T) {
 		Currency:   "IDR",
 		Source:     constant.EntrySourceManual,
 		Postings: []entity.Posting{
-			{AccountID: expense.ID, AmountMinor: 25_000, BaseAmountMinor: 25_000},
-			{AccountID: asset.ID, AmountMinor: -25_000, BaseAmountMinor: -25_000},
+			{AccountRef: expense.Ref, AmountMinor: 25_000, BaseAmountMinor: 25_000},
+			{AccountRef: asset.Ref, AmountMinor: -25_000, BaseAmountMinor: -25_000},
 		},
 	})
 	if err != nil {
@@ -157,8 +157,8 @@ func TestInsertEntryRoundTrip(t *testing.T) {
 		Currency:   "IDR",
 		Source:     constant.EntrySourceShare,
 		Postings: []entity.Posting{
-			{AccountID: expense.ID, AmountMinor: 25_000, BaseAmountMinor: 25_000},
-			{AccountID: asset.ID, AmountMinor: -25_000, BaseAmountMinor: -25_000},
+			{AccountRef: expense.Ref, AmountMinor: 25_000, BaseAmountMinor: 25_000},
+			{AccountRef: asset.Ref, AmountMinor: -25_000, BaseAmountMinor: -25_000},
 		},
 	})
 	if err != nil {
@@ -201,8 +201,8 @@ func TestInsertEntryRejectsUnbalanced(t *testing.T) {
 		Currency:   "IDR",
 		Source:     constant.EntrySourceManual,
 		Postings: []entity.Posting{
-			{AccountID: expense.ID, AmountMinor: 25_000, BaseAmountMinor: 25_000},
-			{AccountID: asset.ID, AmountMinor: -24_000, BaseAmountMinor: -24_000},
+			{AccountRef: expense.Ref, AmountMinor: 25_000, BaseAmountMinor: 25_000},
+			{AccountRef: asset.Ref, AmountMinor: -24_000, BaseAmountMinor: -24_000},
 		},
 	})
 	if !errors.Is(err, entity.ErrZeroSum) {
@@ -220,8 +220,8 @@ func TestInsertEntryRequiresExistingAccount(t *testing.T) {
 		Currency:   "IDR",
 		Source:     constant.EntrySourceManual,
 		Postings: []entity.Posting{
-			{AccountID: 999, AmountMinor: 100, BaseAmountMinor: 100},
-			{AccountID: 998, AmountMinor: -100, BaseAmountMinor: -100},
+			{AccountRef: "00000000000000000000000000000000", AmountMinor: 100, BaseAmountMinor: 100},
+			{AccountRef: "00000000000000000000000000000001", AmountMinor: -100, BaseAmountMinor: -100},
 		},
 	})
 	if err == nil {

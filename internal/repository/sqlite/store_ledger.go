@@ -14,15 +14,14 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const entryColumns = `id, ref, occurred_on, payee_id, note, currency, source, client_id,
-	reverses_entry_id, voided_at, created_at`
+const entryColumns = `id, ref, occurred_on, payee_ref, note, currency, source, client_id,
+	reverses_entry_ref, voided_at, created_at`
 
-const entryAccountSubquery = `SELECT p.entry_id FROM ledger_postings p
-	JOIN accounts a ON a.id = p.account_id WHERE a.ref`
+const entryAccountSubquery = `SELECT p.entry_ref FROM ledger_postings p WHERE p.account_ref`
 
-const payeeSubquery = `SELECT id FROM payees WHERE ref`
+const payeeSubquery = `SELECT ref FROM payees WHERE ref`
 
-const postingColumns = 8
+const postingColumns = 10
 
 func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertEntry")
@@ -73,15 +72,15 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 	var (
 		e          entity.Entry
 		occurred   string
-		payeeID    sql.NullInt64
+		payeeRef   sql.NullString
 		note       sql.NullString
 		createdRaw string
 	)
 
 	err := s.db.QueryRowContext(ctx, `
-		SELECT id, ref, occurred_on, payee_id, note, currency, source, created_at
+		SELECT id, ref, occurred_on, payee_ref, note, currency, source, created_at
 		FROM ledger_entries WHERE client_id = ?`, clientID).
-		Scan(&e.ID, &e.Ref, &occurred, &payeeID, &note, &e.Currency, &e.Source, &createdRaw)
+		Scan(&e.ID, &e.Ref, &occurred, &payeeRef, &note, &e.Currency, &e.Source, &createdRaw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Entry{}, false, nil
 	}
@@ -99,14 +98,10 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 		return entity.Entry{}, false, fmt.Errorf("created_at %q: %w", createdRaw, err)
 	}
 
-	if payeeID.Valid {
-		v := payeeID.Int64
-		e.PayeeID = &v
-	}
-
+	e.PayeeRef = payeeRef.String
 	e.Note = note.String
 
-	postings, err := s.postingsByEntryID(ctx, e.ID)
+	postings, err := s.postingsByEntryID(ctx, e.Ref)
 	if err != nil {
 		return entity.Entry{}, false, err
 	}
@@ -116,16 +111,16 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 	return e, true, nil
 }
 
-func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.Posting, error) {
+func (s *Store) postingsByEntryID(ctx context.Context, entryRef string) ([]entity.Posting, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.postingsByEntryID")
 	defer endSpan()
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT p.account_id, a.ref, p.amount_minor, p.base_amount_minor,
+		SELECT p.account_ref, p.amount_minor, p.base_amount_minor,
 		       p.fx_rate, p.fx_rate_date, p.fx_source
 		FROM ledger_postings p
-		JOIN accounts a ON a.id = p.account_id
-		WHERE p.entry_id = ? ORDER BY p.id`, entryID)
+		JOIN accounts a ON a.ref = p.account_ref
+		WHERE p.entry_ref = ? ORDER BY p.id`, entryRef)
 	if err != nil {
 		return nil, fmt.Errorf("select postings: %w", err)
 	}
@@ -139,7 +134,7 @@ func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.
 			p       entity.Posting
 			rateDay sql.NullString
 		)
-		if err := rows.Scan(&p.AccountID, &p.AccountRef, &p.AmountMinor, &p.BaseAmountMinor,
+		if err := rows.Scan(&p.AccountRef, &p.AmountMinor, &p.BaseAmountMinor,
 			&p.FXRate, &rateDay, &p.FXSource); err != nil {
 			return nil, fmt.Errorf("scan posting: %w", err)
 		}
@@ -158,7 +153,7 @@ func (s *Store) postingsByEntryID(ctx context.Context, entryID int64) ([]entity.
 func insertPostings(
 	ctx context.Context,
 	tx *sql.Tx,
-	entryID int64,
+	entryRef string,
 	occurredOn string,
 	postings []entity.Posting,
 ) error {
@@ -169,7 +164,7 @@ func insertPostings(
 	var statement strings.Builder
 
 	statement.WriteString(`INSERT INTO ledger_postings
-		(ref, entry_id, account_id, amount_minor, base_amount_minor,
+		(ref, entry_ref, account_ref, amount_minor, base_amount_minor,
 		 fx_rate, fx_rate_date, fx_source) VALUES `)
 
 	args := make([]any, 0, len(postings)*postingColumns)
@@ -179,10 +174,11 @@ func insertPostings(
 			statement.WriteString(`, `)
 		}
 
-		statement.WriteString(`(` + placeholders(postingColumns) + `)`)
+		statement.WriteString(`(?, ?, ?, ?, ?, ?, ?, ?)`)
 
 		args = append(args,
-			uuid.New(), entryID, p.AccountID, p.AmountMinor, p.BaseAmountMinor,
+			uuid.New(), entryRef, p.AccountRef,
+			p.AmountMinor, p.BaseAmountMinor,
 			orDefault(p.FXRate, "1"), nullString(p.FXRateDate),
 			orDefault(p.FXSource, constant.FXSourceIdentity))
 	}
@@ -191,33 +187,33 @@ func insertPostings(
 		return fmt.Errorf("insert postings: %w", err)
 	}
 
-	return updateRunningBalances(ctx, tx, entryID, occurredOn, postings)
+	return updateRunningBalances(ctx, tx, entryRef, occurredOn, postings)
 }
 
 func updateRunningBalances(
 	ctx context.Context,
 	tx *sql.Tx,
-	entryID int64,
+	entryRef string,
 	occurredOn string,
 	postings []entity.Posting,
 ) error {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.updateRunningBalances")
 	defer endSpan()
 
-	deltas := make(map[int64]int64, len(postings))
-	accounts := make([]int64, 0, len(postings))
+	deltas := make(map[string]int64, len(postings))
+	accounts := make([]string, 0, len(postings))
 
 	for _, posting := range postings {
-		if _, seen := deltas[posting.AccountID]; !seen {
-			accounts = append(accounts, posting.AccountID)
+		if _, seen := deltas[posting.AccountRef]; !seen {
+			accounts = append(accounts, posting.AccountRef)
 		}
 
-		deltas[posting.AccountID] += posting.BaseAmountMinor
+		deltas[posting.AccountRef] += posting.BaseAmountMinor
 	}
 
-	for _, accountID := range accounts {
+	for _, accountRef := range accounts {
 		state := tx.QueryRowContext(ctx,
-			`SELECT dirty FROM balance_state WHERE account_id = ?`, accountID)
+			`SELECT dirty FROM balance_state WHERE account_ref = ?`, accountRef)
 
 		var dirty bool
 
@@ -227,7 +223,7 @@ func updateRunningBalances(
 		}
 
 		if errors.Is(err, sql.ErrNoRows) || dirty {
-			if err := rebuildRunningBalancesInTx(ctx, tx, accountID); err != nil {
+			if err := rebuildRunningBalancesInTx(ctx, tx, accountRef); err != nil {
 				return err
 			}
 
@@ -235,7 +231,7 @@ func updateRunningBalances(
 		}
 
 		if err := shiftRunningBalances(
-			ctx, tx, accountID, entryID, occurredOn, deltas[accountID],
+			ctx, tx, accountRef, entryRef, occurredOn, deltas[accountRef],
 		); err != nil {
 			return err
 		}
@@ -247,35 +243,49 @@ func updateRunningBalances(
 func shiftRunningBalances(
 	ctx context.Context,
 	tx *sql.Tx,
-	accountID, entryID int64,
+	accountRef, entryRef string,
 	occurredOn string,
 	delta int64,
 ) error {
+	var entryID int64
+
+	if err := tx.QueryRowContext(ctx,
+		`SELECT id FROM ledger_entries WHERE ref = ?`, entryRef).Scan(&entryID); err != nil {
+		return fmt.Errorf("entry id: %w", err)
+	}
+
 	var prior int64
 
 	err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE((
-			SELECT balance_minor FROM running_balances
-			WHERE account_id = ? AND
-			      (occurred_on < ? OR (occurred_on = ? AND entry_id < ?))
-			ORDER BY occurred_on DESC, entry_id DESC LIMIT 1
-		), 0)`, accountID, occurredOn, occurredOn, entryID).Scan(&prior)
+			SELECT rb.balance_minor FROM running_balances rb
+			JOIN ledger_entries e ON e.ref = rb.entry_ref
+			WHERE rb.account_ref = ? AND
+			      (e.occurred_on < ? OR (e.occurred_on = ? AND e.id < ?))
+			ORDER BY e.occurred_on DESC, e.id DESC LIMIT 1
+		), 0)`, accountRef, occurredOn, occurredOn, entryID).Scan(&prior)
 	if err != nil {
 		return fmt.Errorf("prior running balance: %w", err)
 	}
 
 	_, err = tx.ExecContext(ctx, `
 		UPDATE running_balances SET balance_minor = balance_minor + ?
-		WHERE account_id = ? AND
-		      (occurred_on > ? OR (occurred_on = ? AND entry_id > ?))
-	`, delta, accountID, occurredOn, occurredOn, entryID)
+		WHERE account_ref = ? AND ref IN (
+			SELECT rb.ref FROM running_balances rb
+			JOIN ledger_entries e ON e.ref = rb.entry_ref
+			WHERE rb.account_ref = ? AND
+			      (e.occurred_on > ? OR (e.occurred_on = ? AND e.id > ?))
+		)
+	`, delta, accountRef, accountRef, occurredOn, occurredOn, entryID)
 	if err != nil {
 		return fmt.Errorf("shift running balances: %w", err)
 	}
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO running_balances (ref, account_id, entry_id, occurred_on, balance_minor)
-		VALUES (?, ?, ?, ?, ?)`, uuid.New(), accountID, entryID, occurredOn, prior+delta)
+		INSERT INTO running_balances
+			(ref, account_ref, entry_ref, occurred_on, balance_minor)
+		VALUES (?, ?, ?, ?, ?)`,
+		uuid.New(), accountRef, entryRef, occurredOn, prior+delta)
 	if err != nil {
 		return fmt.Errorf("insert running balance: %w", err)
 	}
@@ -288,8 +298,8 @@ func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool,
 	defer endSpan()
 
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
-		SELECT id, ref, occurred_on, payee_id, note, currency, source, client_id,
-		       reverses_entry_id, voided_at, created_at
+		SELECT id, ref, occurred_on, payee_ref, note, currency, source, client_id,
+		       reverses_entry_ref, voided_at, created_at
 		FROM ledger_entries WHERE ref = ?`, ref))
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Entry{}, false, nil
@@ -299,7 +309,7 @@ func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool,
 		return entity.Entry{}, false, err
 	}
 
-	if entry.Postings, err = s.postingsByEntryID(ctx, entry.ID); err != nil {
+	if entry.Postings, err = s.postingsByEntryID(ctx, entry.Ref); err != nil {
 		return entity.Entry{}, false, err
 	}
 
@@ -309,7 +319,7 @@ func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool,
 func (s *Store) UpdateEntryPayee(
 	ctx context.Context,
 	ref string,
-	payeeID *int64,
+	payeeRef string,
 ) (entity.Entry, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateEntryPayee")
 	defer endSpan()
@@ -325,8 +335,8 @@ func (s *Store) UpdateEntryPayee(
 
 	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		if _, execErr := tx.ExecContext(ctx,
-			`UPDATE ledger_entries SET payee_id = ? WHERE id = ?`,
-			nullInt(payeeID), original.ID,
+			`UPDATE ledger_entries SET payee_ref = ? WHERE ref = ?`,
+			nullString(payeeRef), original.Ref,
 		); execErr != nil {
 			return fmt.Errorf("update payee: %w", execErr)
 		}
@@ -336,8 +346,8 @@ func (s *Store) UpdateEntryPayee(
 			ID:     original.ID,
 			Ref:    original.Ref,
 			Action: constant.AuditActionUpdate,
-			From:   entity.EntryPayee{PayeeID: original.PayeeID},
-			To:     entity.EntryPayee{PayeeID: payeeID},
+			From:   entity.EntryPayee{PayeeRef: original.PayeeRef},
+			To:     entity.EntryPayee{PayeeRef: payeeRef},
 		})
 	})
 	if err != nil {
@@ -370,7 +380,7 @@ func (s *Store) ListEntries(
 
 	var out []entity.Entry
 
-	ids := make([]int64, 0, clampLimit(filter.Limit))
+	refs := make([]string, 0, clampLimit(filter.Limit))
 
 	for rows.Next() {
 		entry, scanErr := scanEntryRow(rows)
@@ -379,23 +389,23 @@ func (s *Store) ListEntries(
 		}
 
 		out = append(out, entry)
-		ids = append(ids, entry.ID)
+		refs = append(refs, entry.Ref)
 	}
 
 	if rowsErr := rows.Err(); rowsErr != nil {
 		return nil, fmt.Errorf("iterate entries: %w", rowsErr)
 	}
 
-	postings, err := s.postingsByEntryIDs(ctx, ids)
+	postings, err := s.postingsByEntryIDs(ctx, refs)
 	if err != nil {
 		return nil, err
 	}
 
 	for i := range out {
-		out[i].Postings = postings[out[i].ID]
+		out[i].Postings = postings[out[i].Ref]
 	}
 
-	if err := s.attachBalances(ctx, filter, ids, out); err != nil {
+	if err := s.attachBalances(ctx, filter, refs, out); err != nil {
 		return nil, err
 	}
 
@@ -405,20 +415,20 @@ func (s *Store) ListEntries(
 func (s *Store) attachBalances(
 	ctx context.Context,
 	filter entity.EntryFilter,
-	ids []int64,
+	refs []string,
 	entries []entity.Entry,
 ) error {
 	if !filter.WithBalance || len(filter.AccountRefs) != 1 {
 		return nil
 	}
 
-	balances, err := s.RunningBalances(ctx, filter.AccountRefs[0], ids)
+	balances, err := s.RunningBalances(ctx, filter.AccountRefs[0], refs)
 	if err != nil {
 		return err
 	}
 
 	for index := range entries {
-		balance, found := balances[entries[index].ID]
+		balance, found := balances[entries[index].Ref]
 		if !found {
 			continue
 		}
@@ -432,25 +442,23 @@ func (s *Store) attachBalances(
 func (s *Store) RunningBalances(
 	ctx context.Context,
 	accountRef string,
-	entryIDs []int64,
-) (map[int64]int64, error) {
+	entryRefs []string,
+) (map[string]int64, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.RunningBalances")
 	defer endSpan()
 
-	balances := make(map[int64]int64, len(entryIDs))
+	balances := make(map[string]int64, len(entryRefs))
 
-	if accountRef == "" || len(entryIDs) == 0 {
+	if accountRef == "" || len(entryRefs) == 0 {
 		return balances, nil
 	}
-
-	var accountID int64
 
 	var dirty bool
 
 	err := s.db.QueryRowContext(ctx, `
-		SELECT a.id, COALESCE(b.dirty, 1) FROM accounts a
-		LEFT JOIN balance_state b ON b.account_id = a.id
-		WHERE a.ref = ?`, accountRef).Scan(&accountID, &dirty)
+		SELECT COALESCE(b.dirty, 1) FROM accounts a
+		LEFT JOIN balance_state b ON b.account_ref = a.ref
+		WHERE a.ref = ?`, accountRef).Scan(&dirty)
 	if errors.Is(err, sql.ErrNoRows) {
 		return balances, nil
 	}
@@ -460,21 +468,21 @@ func (s *Store) RunningBalances(
 	}
 
 	if dirty {
-		if rebuildErr := s.rebuildRunningBalances(ctx, accountID); rebuildErr != nil {
+		if rebuildErr := s.rebuildRunningBalances(ctx, accountRef); rebuildErr != nil {
 			return nil, rebuildErr
 		}
 	}
 
-	args := []any{accountID}
+	args := []any{accountRef}
 
-	for _, id := range entryIDs {
-		args = append(args, id)
+	for _, ref := range entryRefs {
+		args = append(args, ref)
 	}
 
 	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
 	query := `
-		SELECT entry_id, balance_minor FROM running_balances
-		WHERE account_id = ? AND entry_id IN (` + placeholders(len(entryIDs)) + `)`
+		SELECT entry_ref, balance_minor FROM running_balances
+		WHERE account_ref = ? AND entry_ref IN (` + placeholders(len(entryRefs)) + `)`
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -485,15 +493,15 @@ func (s *Store) RunningBalances(
 
 	for rows.Next() {
 		var (
-			entryID int64
-			balance int64
+			entryRef string
+			balance  int64
 		)
 
-		if scanErr := rows.Scan(&entryID, &balance); scanErr != nil {
+		if scanErr := rows.Scan(&entryRef, &balance); scanErr != nil {
 			return nil, fmt.Errorf("scan running balance: %w", scanErr)
 		}
 
-		balances[entryID] = balance
+		balances[entryRef] = balance
 	}
 
 	if err := rows.Err(); err != nil {
@@ -503,20 +511,20 @@ func (s *Store) RunningBalances(
 	return balances, nil
 }
 
-func (s *Store) rebuildRunningBalances(ctx context.Context, accountID int64) error {
+func (s *Store) rebuildRunningBalances(ctx context.Context, accountRef string) error {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.rebuildRunningBalances")
 	defer endSpan()
 
 	return s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
-		return rebuildRunningBalancesInTx(ctx, tx, accountID)
+		return rebuildRunningBalancesInTx(ctx, tx, accountRef)
 	})
 }
 
-func rebuildRunningBalancesInTx(ctx context.Context, tx *sql.Tx, accountID int64) error {
+func rebuildRunningBalancesInTx(ctx context.Context, tx *sql.Tx, accountRef string) error {
 	var dirty bool
 
 	err := tx.QueryRowContext(ctx,
-		`SELECT dirty FROM balance_state WHERE account_id = ?`, accountID).Scan(&dirty)
+		`SELECT dirty FROM balance_state WHERE account_ref = ?`, accountRef).Scan(&dirty)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("select balance state: %w", err)
 	}
@@ -526,29 +534,34 @@ func rebuildRunningBalancesInTx(ctx context.Context, tx *sql.Tx, accountID int64
 	}
 
 	if _, err = tx.ExecContext(ctx,
-		`DELETE FROM running_balances WHERE account_id = ?`, accountID); err != nil {
+		`DELETE FROM running_balances WHERE account_ref = ?`, accountRef); err != nil {
 		return fmt.Errorf("clear running balances: %w", err)
 	}
 
 	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO running_balances (ref, account_id, entry_id, occurred_on, balance_minor)
-		SELECT lower(hex(randomblob(16))), ?, running.id, running.occurred_on, running.balance_minor FROM (
-			SELECT e.id AS id, e.occurred_on AS occurred_on,
+		INSERT INTO running_balances
+			(ref, account_ref, entry_ref, occurred_on, balance_minor)
+		SELECT lower(hex(randomblob(16))), a.ref, running.entry_ref,
+		       running.occurred_on, running.balance_minor
+		FROM (
+			SELECT e.id AS entry_id, e.ref AS entry_ref, e.occurred_on AS occurred_on,
 			       SUM(SUM(p.base_amount_minor)) OVER (
 			           ORDER BY e.occurred_on, e.id
 			           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balance_minor
 			FROM ledger_postings p
-			JOIN ledger_entries e ON e.id = p.entry_id
-			JOIN accounts a ON a.id = p.account_id
-			WHERE a.id = ?
-			GROUP BY e.id, e.occurred_on
-		) running`, accountID, accountID); err != nil {
+			JOIN ledger_entries e ON e.ref = p.entry_ref
+			JOIN accounts a ON a.ref = p.account_ref
+			WHERE a.ref = ?
+			GROUP BY e.id, e.ref, e.occurred_on
+		) running
+		JOIN accounts a ON a.ref = ?`, accountRef, accountRef); err != nil {
 		return fmt.Errorf("rebuild running balances: %w", err)
 	}
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO balance_state (ref, account_id, dirty) VALUES (?, ?, 0)
-		ON CONFLICT (account_id) DO UPDATE SET dirty = 0`, uuid.New(), accountID)
+		INSERT INTO balance_state (ref, account_ref, dirty)
+		VALUES (?, ?, 0)
+		ON CONFLICT (account_ref) DO UPDATE SET dirty = 0`, uuid.New(), accountRef)
 	if err != nil {
 		return fmt.Errorf("clear balance state: %w", err)
 	}
@@ -558,30 +571,30 @@ func rebuildRunningBalancesInTx(ctx context.Context, tx *sql.Tx, accountID int64
 
 func (s *Store) postingsByEntryIDs(
 	ctx context.Context,
-	ids []int64,
-) (map[int64][]entity.Posting, error) {
+	refs []string,
+) (map[string][]entity.Posting, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.postingsByEntryIDs")
 	defer endSpan()
 
-	byEntry := make(map[int64][]entity.Posting, len(ids))
+	byEntry := make(map[string][]entity.Posting, len(refs))
 
-	if len(ids) == 0 {
+	if len(refs) == 0 {
 		return byEntry, nil
 	}
 
-	args := make([]any, 0, len(ids))
-	for _, id := range ids {
-		args = append(args, id)
+	args := make([]any, 0, len(refs))
+	for _, ref := range refs {
+		args = append(args, ref)
 	}
 
 	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
 	query := `
-		SELECT p.entry_id, p.account_id, a.ref, p.amount_minor, p.base_amount_minor,
+		SELECT p.entry_ref, p.account_ref, p.amount_minor, p.base_amount_minor,
 		       p.fx_rate, p.fx_rate_date, p.fx_source
 		FROM ledger_postings p
-		JOIN accounts a ON a.id = p.account_id
-		WHERE p.entry_id IN (` + placeholders(len(ids)) + `)
-		ORDER BY p.entry_id, p.id`
+		JOIN accounts a ON a.ref = p.account_ref
+		WHERE p.entry_ref IN (` + placeholders(len(refs)) + `)
+		ORDER BY p.entry_ref, p.id`
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -592,18 +605,18 @@ func (s *Store) postingsByEntryIDs(
 
 	for rows.Next() {
 		var (
-			entryID int64
-			p       entity.Posting
-			rateDay sql.NullString
+			entryRef string
+			p        entity.Posting
+			rateDay  sql.NullString
 		)
 
-		if err := rows.Scan(&entryID, &p.AccountID, &p.AccountRef, &p.AmountMinor,
+		if err := rows.Scan(&entryRef, &p.AccountRef, &p.AmountMinor,
 			&p.BaseAmountMinor, &p.FXRate, &rateDay, &p.FXSource); err != nil {
 			return nil, fmt.Errorf("scan posting: %w", err)
 		}
 
 		p.FXRateDate = rateDay.String
-		byEntry[entryID] = append(byEntry[entryID], p)
+		byEntry[entryRef] = append(byEntry[entryRef], p)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -624,12 +637,12 @@ func entryQuery(filter entity.EntryFilter) (string, []any) {
 		builder.lte("occurred_on", filter.To.Format(constant.DateLayout))
 	}
 
-	builder.inSubquery("id", entryAccountSubquery, filter.AccountRefs...)
+	builder.inSubquery("ref", entryAccountSubquery, filter.AccountRefs...)
 	builder.inList("source", filter.Sources)
 	builder.eq("currency", filter.Currency)
 	entrySearch(builder, filter.Query)
 	builder.inList("ref", filter.Refs)
-	builder.inSubquery("payee_id", payeeSubquery, filter.PayeeRefs...)
+	builder.inSubquery("payee_ref", payeeSubquery, filter.PayeeRefs...)
 	entryAmountRange(builder, filter.AmountMin, filter.AmountMax)
 	builder.nullFlag("voided_at", filter.Voided)
 	builder.before("ledger_entries.id", "ledger_entries", filter.Cursor)
@@ -646,13 +659,14 @@ func entrySearch(builder *listQuery, term string) {
 	pattern := "%" + escapeLike(term) + "%"
 
 	builder.and(`(note LIKE ? ESCAPE '\' OR EXISTS (
-		SELECT 1 FROM payees p WHERE p.id = payee_id AND p.name LIKE ? ESCAPE '\'))`,
+		SELECT 1 FROM payees p WHERE p.ref = ledger_entries.payee_ref
+		  AND p.name LIKE ? ESCAPE '\'))`,
 		pattern, pattern)
 }
 
 func entryAmountRange(builder *listQuery, low, high *int64) {
 	const match = `EXISTS (SELECT 1 FROM ledger_postings p
-		WHERE p.entry_id = ledger_entries.id AND ABS(p.base_amount_minor) `
+		WHERE p.entry_ref = ledger_entries.ref AND ABS(p.base_amount_minor) `
 
 	switch {
 	case low != nil && high != nil:
@@ -689,8 +703,8 @@ func (s *Store) VoidEntry(
 	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
 			UPDATE ledger_entries SET voided_at = ?
-			WHERE id = ? AND voided_at IS NULL`,
-			at.Format(constant.TimestampLayout), original.ID)
+			WHERE ref = ? AND voided_at IS NULL`,
+			at.Format(constant.TimestampLayout), original.Ref)
 		if execErr != nil {
 			return fmt.Errorf("mark voided: %w", execErr)
 		}
@@ -710,7 +724,7 @@ func (s *Store) VoidEntry(
 		return entity.Entry{}, err
 	}
 
-	return s.reversalByReversesID(ctx, original.ID)
+	return s.reversalByReversesRef(ctx, original.Ref)
 }
 
 func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal entity.Entry) error {
@@ -722,16 +736,16 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO ledger_entries
-			(ref, occurred_on, payee_id, note, currency, source, recurring_rule_id,
-			 client_id, reverses_entry_id, voided_at, created_at)
+			(ref, occurred_on, payee_ref, note, currency, source, recurring_rule_ref,
+			 client_id, reverses_entry_ref, voided_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL, ?)`,
 		reversalRef,
 		reversal.OccurredOn.Format(constant.DateLayout),
-		nullInt(reversal.PayeeID),
+		nullString(reversal.PayeeRef),
 		nullString(reversal.Note),
 		reversal.Currency,
 		reversal.Source,
-		originalID,
+		nullString(reversal.ReversesEntryRef),
 		reversal.CreatedAt.Format(constant.TimestampLayout),
 	)
 	if err != nil {
@@ -743,7 +757,7 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 		return fmt.Errorf("reversal id: %w", err)
 	}
 
-	if err := insertPostings(ctx, tx, reversalID,
+	if err := insertPostings(ctx, tx, reversalRef,
 		reversal.OccurredOn.Format(constant.DateLayout), reversal.Postings); err != nil {
 		return err
 	}
@@ -757,16 +771,16 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 	})
 }
 
-func (s *Store) reversalByReversesID(ctx context.Context, originalID int64) (entity.Entry, error) {
+func (s *Store) reversalByReversesRef(ctx context.Context, originalRef string) (entity.Entry, error) {
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
-		SELECT id, ref, occurred_on, payee_id, note, currency, source, client_id,
-		       reverses_entry_id, voided_at, created_at
-		FROM ledger_entries WHERE reverses_entry_id = ?`, originalID))
+		SELECT id, ref, occurred_on, payee_ref, note, currency, source, client_id,
+		       reverses_entry_ref, voided_at, created_at
+		FROM ledger_entries WHERE reverses_entry_ref = ?`, originalRef))
 	if err != nil {
 		return entity.Entry{}, fmt.Errorf("select reversal: %w", err)
 	}
 
-	if entry.Postings, err = s.postingsByEntryID(ctx, entry.ID); err != nil {
+	if entry.Postings, err = s.postingsByEntryID(ctx, entry.Ref); err != nil {
 		return entity.Entry{}, err
 	}
 
@@ -782,17 +796,17 @@ func (s *Store) scanEntry(ctx context.Context, row *sql.Row) (entity.Entry, erro
 func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, error) {
 	var (
 		entry       entity.Entry
-		payeeID     sql.NullInt64
+		payeeRef    sql.NullString
 		note        sql.NullString
 		clientID    sql.NullString
-		reversesID  sql.NullInt64
+		reversesRef sql.NullString
 		voidedRaw   sql.NullString
 		occurredRaw string
 		createdRaw  string
 	)
 
-	err := scanner.Scan(&entry.ID, &entry.Ref, &occurredRaw, &payeeID, &note, &entry.Currency,
-		&entry.Source, &clientID, &reversesID, &voidedRaw, &createdRaw)
+	err := scanner.Scan(&entry.ID, &entry.Ref, &occurredRaw, &payeeRef, &note, &entry.Currency,
+		&entry.Source, &clientID, &reversesRef, &voidedRaw, &createdRaw)
 	if err != nil {
 		return entity.Entry{}, err
 	}
@@ -805,15 +819,8 @@ func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, e
 		return entity.Entry{}, fmt.Errorf("created_at %q: %w", createdRaw, err)
 	}
 
-	if payeeID.Valid {
-		id := payeeID.Int64
-		entry.PayeeID = &id
-	}
-
-	if reversesID.Valid {
-		id := reversesID.Int64
-		entry.ReversesID = &id
-	}
+	entry.PayeeRef = payeeRef.String
+	entry.ReversesEntryRef = reversesRef.String
 
 	if voidedRaw.Valid {
 		at, parseErr := time.Parse(constant.TimestampLayout, voidedRaw.String)
@@ -844,9 +851,8 @@ func (s *Store) MatchingEntryRef(
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT e.ref FROM ledger_entries e
-		JOIN ledger_postings p ON p.entry_id = e.id
-		JOIN accounts a ON a.id = p.account_id
-		WHERE a.ref = ?
+		JOIN ledger_postings p ON p.entry_ref = e.ref
+		WHERE p.account_ref = ?
 		  AND e.currency = ?
 		  AND e.voided_at IS NULL
 		  AND ABS(p.amount_minor) = ?
@@ -879,18 +885,18 @@ func insertEntryRow(
 ) (int64, error) {
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO ledger_entries
-			(ref, occurred_on, payee_id, note, currency, source, recurring_rule_id,
-			 client_id, reverses_entry_id, voided_at, created_at)
+			(ref, occurred_on, payee_ref, note, currency, source, recurring_rule_ref,
+			 client_id, reverses_entry_ref, voided_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
 		ref,
 		e.OccurredOn.Format(constant.DateLayout),
-		nullInt(e.PayeeID),
+		nullString(e.PayeeRef),
 		nullString(e.Note),
 		e.Currency,
 		e.Source,
-		nullInt(e.RecurringRuleID),
+		nullString(e.RecurringRuleRef),
 		nullString(e.ClientID),
-		nullInt(e.ReversesID),
+		nullString(e.ReversesEntryRef),
 		createdAt.Format(constant.TimestampLayout),
 	)
 	if err != nil {
@@ -902,7 +908,7 @@ func insertEntryRow(
 		return 0, fmt.Errorf("entry id: %w", err)
 	}
 
-	if err := insertPostings(ctx, tx, id,
+	if err := insertPostings(ctx, tx, ref,
 		e.OccurredOn.Format(constant.DateLayout), e.Postings); err != nil {
 		return 0, err
 	}
@@ -916,13 +922,13 @@ func reversalOf(original entity.Entry, reason string, at time.Time) (entity.Entr
 	}
 
 	reversal := entity.Entry{
-		OccurredOn: original.OccurredOn,
-		PayeeID:    original.PayeeID,
-		Note:       reason,
-		Currency:   original.Currency,
-		Source:     constant.EntrySourceAdjustment,
-		ReversesID: &original.ID,
-		CreatedAt:  at,
+		OccurredOn:       original.OccurredOn,
+		PayeeRef:         original.PayeeRef,
+		Note:             reason,
+		Currency:         original.Currency,
+		Source:           constant.EntrySourceAdjustment,
+		ReversesEntryRef: original.Ref,
+		CreatedAt:        at,
 	}
 
 	for index, posting := range original.Postings {
@@ -1017,8 +1023,8 @@ func writeReplacement(
 ) error {
 	res, err := tx.ExecContext(ctx, `
 		UPDATE ledger_entries SET voided_at = ?
-		WHERE id = ? AND voided_at IS NULL`,
-		at.Format(constant.TimestampLayout), original.ID)
+		WHERE ref = ? AND voided_at IS NULL`,
+		at.Format(constant.TimestampLayout), original.Ref)
 	if err != nil {
 		return fmt.Errorf("mark voided: %w", err)
 	}

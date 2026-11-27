@@ -15,9 +15,9 @@ import (
 )
 
 const ruleColumns = `r.id, r.ref, r.pattern, r.field, r.match_kind,
-	COALESCE(a.ref, ''), a.kind, r.priority, r.archived_at, r.created_at`
+	a.ref, a.kind, r.priority, r.archived_at, r.created_at`
 
-const ruleJoins = `JOIN accounts a ON a.id = r.account_id`
+const ruleJoins = `JOIN accounts a ON a.ref = r.account_ref`
 
 const ruleFrom = `FROM categorization_rules r ` + ruleJoins
 
@@ -28,8 +28,7 @@ func (s *Store) CreateRule(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CreateRule")
 	defer endSpan()
 
-	accountID, err := s.accountID(ctx, rule.AccountRef)
-	if err != nil {
+	if err := requireAccounts(ctx, s.db, rule.AccountRef); err != nil {
 		return entity.CategorizationRule{}, err
 	}
 
@@ -37,16 +36,17 @@ func (s *Store) CreateRule(
 	rule.Ref = uuid.New()
 	rule.CreatedAt = time.Now().UTC()
 
-	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
 			INSERT INTO categorization_rules
-				(ref, pattern, field, match_kind, account_id, priority, archived_at, created_at)
+				(ref, pattern, field, match_kind, account_ref, priority,
+				 archived_at, created_at)
 			VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
 			rule.Ref,
 			rule.Pattern,
 			rule.Field,
 			rule.MatchKind,
-			accountID,
+			rule.AccountRef,
 			rule.Priority,
 			rule.CreatedAt.Format(constant.TimestampLayout),
 		)
@@ -109,7 +109,7 @@ func (s *Store) ListRules(
 
 	builder := newList("categorization_rules r", ruleColumns)
 	builder.join(ruleJoins)
-	builder.parentRef("r.account_id", "accounts", filter.AccountRef)
+	builder.parentRef("r.account_ref", filter.AccountRef)
 
 	if !filter.IncludeArchived {
 		builder.null("r.archived_at", false)
@@ -128,20 +128,19 @@ func (s *Store) UpdateRule(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.UpdateRule")
 	defer endSpan()
 
-	accountID, err := s.accountID(ctx, rule.AccountRef)
-	if err != nil {
+	if err := requireAccounts(ctx, s.db, rule.AccountRef); err != nil {
 		return entity.CategorizationRule{}, err
 	}
 
 	rule.Pattern = normalizePattern(rule.Pattern)
 
-	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		if _, execErr := tx.ExecContext(ctx, `
 			UPDATE categorization_rules
-			SET pattern = ?, account_id = ?, priority = ?, archived_at = ?
+			SET pattern = ?, account_ref = ?, priority = ?, archived_at = ?
 			WHERE ref = ?`,
 			rule.Pattern,
-			accountID,
+			rule.AccountRef,
 			rule.Priority,
 			nullTime(rule.ArchivedAt),
 			rule.Ref,

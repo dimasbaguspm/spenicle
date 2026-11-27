@@ -37,14 +37,14 @@ func approvalEntry(t *testing.T, asset, expense entity.Account, currency string)
 		Source:     constant.EntrySourceManual,
 		Postings: []entity.Posting{
 			{
-				AccountID:       expense.ID,
+				AccountRef:      expense.Ref,
 				AmountMinor:     25_000,
 				BaseAmountMinor: 25_000,
 				FXRate:          "1",
 				FXSource:        constant.FXSourceIdentity,
 			},
 			{
-				AccountID:       asset.ID,
+				AccountRef:      asset.Ref,
 				AmountMinor:     -25_000,
 				BaseAmountMinor: -25_000,
 				FXRate:          "1",

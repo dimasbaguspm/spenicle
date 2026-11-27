@@ -70,16 +70,6 @@ func nullInt(v *int64) sql.NullInt64 {
 	return sql.NullInt64{Int64: *v, Valid: true}
 }
 
-func intPtr(v sql.NullInt64) *int64 {
-	if !v.Valid {
-		return nil
-	}
-
-	value := v.Int64
-
-	return &value
-}
-
 func orDefault(v, fallback string) string {
 	if v == "" {
 		return fallback
@@ -111,4 +101,24 @@ func uniqueViolation(err error) error {
 	}
 
 	return err
+}
+
+func requireAccounts(ctx context.Context, db *sql.DB, refs ...string) error {
+	for _, ref := range refs {
+		if ref == "" {
+			continue
+		}
+
+		var exists bool
+		if err := db.QueryRowContext(ctx,
+			`SELECT EXISTS(SELECT 1 FROM accounts WHERE ref = ?)`, ref).Scan(&exists); err != nil {
+			return fmt.Errorf("check account %s: %w", ref, err)
+		}
+
+		if !exists {
+			return fmt.Errorf("%w: account %s", entity.ErrNotFound, ref)
+		}
+	}
+
+	return nil
 }

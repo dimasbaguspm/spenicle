@@ -15,8 +15,8 @@ func validEntry() entity.Entry {
 		OccurredOn: time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 		Currency:   "IDR",
 		Postings: []entity.Posting{
-			{AccountID: 2, AmountMinor: 25_000, BaseAmountMinor: 25_000},
-			{AccountID: 1, AmountMinor: -25_000, BaseAmountMinor: -25_000},
+			{AccountRef: "acc-a", AmountMinor: 25_000, BaseAmountMinor: 25_000},
+			{AccountRef: "acc-b", AmountMinor: -25_000, BaseAmountMinor: -25_000},
 		},
 	}
 }

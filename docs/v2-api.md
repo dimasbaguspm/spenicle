@@ -226,7 +226,7 @@ to the `*_ref` column beside it.
 | `id` | INTEGER PK | |
 | `name` | TEXT | |
 | `kind` | TEXT | `asset` \| `liability` \| `equity` \| `expense` \| `income` |
-| `parent_id` | INTEGER NULL | self-FK, category hierarchy |
+| `parent_ref` | TEXT NULL | the parent account's `ref`, same `kind`, three levels |
 | `currency` | TEXT | ISO code, validated in code against the embedded list |
 | `icon` | TEXT NULL | |
 | `archived_at` | TEXT NULL | |
@@ -240,8 +240,8 @@ to the `*_ref` column beside it.
 | --- | --- | --- |
 | `id` | INTEGER PK | |
 | `name` | TEXT UNIQUE | |
-| `default_account_id` | INTEGER NULL | prefills capture |
-| `default_category_id` | INTEGER NULL | prefills capture |
+| `default_account_ref` | TEXT NULL | the account's `ref`; prefills capture |
+| `default_category_ref` | TEXT NULL | the account's `ref`; prefills capture |
 | `archived_at` | TEXT NULL | |
 | `created_at` | TEXT | |
 
@@ -250,9 +250,9 @@ to the `*_ref` column beside it.
 | column | type | notes |
 | --- | --- | --- |
 | `id` | INTEGER PK | |
-| `payee_id` | INTEGER | FK |
-| `account_id` | INTEGER | FK |
-| `category_id` | INTEGER NULL | FK |
+| `payee_ref` | TEXT | the payee's `ref` |
+| `account_ref` | TEXT | the account's `ref` |
+| `category_ref` | TEXT NULL | the category account's `ref` |
 | `amount_minor` | INTEGER | signed |
 | `currency` | TEXT | ISO code |
 | `cadence` | TEXT | `daily` \| `weekly` \| `monthly` \| `yearly` |
@@ -272,13 +272,13 @@ to the `*_ref` column beside it.
 | --- | --- | --- |
 | `id` | INTEGER PK | |
 | `occurred_on` | TEXT | any month, no gate |
-| `payee_id` | INTEGER NULL | FK |
+| `payee_ref` | TEXT NULL | the payee's `ref` |
 | `note` | TEXT NULL | |
 | `currency` | TEXT | ISO code of the postings |
 | `source` | TEXT | `manual` \| `share` \| `email` \| `statement` \| `recurring` \| `adjustment` |
-| `recurring_rule_id` | INTEGER NULL | FK, `UNIQUE(rule, occurred_on)` |
+| `recurring_rule_ref` | TEXT NULL | the rule's `ref`, `UNIQUE(rule, occurred_on)` |
 | `client_id` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
-| `reverses_entry_id` | INTEGER NULL | self-FK, set on the reversal |
+| `reverses_entry_ref` | TEXT NULL | the voided entry's `ref`, set on the reversal |
 | `voided_at` | TEXT NULL | set on the original |
 | `created_at` | TEXT | |
 
@@ -287,8 +287,8 @@ to the `*_ref` column beside it.
 | column | type | notes |
 | --- | --- | --- |
 | `id` | INTEGER PK | |
-| `entry_id` | INTEGER | FK, `ON DELETE RESTRICT` |
-| `account_id` | INTEGER | FK |
+| `entry_ref` | TEXT | the entry's `ref` |
+| `account_ref` | TEXT | the account's `ref` |
 | `amount_minor` | INTEGER | signed, sums to 0 per entry |
 | `base_amount_minor` | INTEGER | signed, sums to 0 per entry |
 | `fx_rate` | TEXT | native→base, `'1'` for identity |
@@ -338,7 +338,7 @@ sealed envelope).
 | --- | --- | --- |
 | `id` | INTEGER PK | |
 | `entity_kind` | TEXT | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `categorization_rule`, `setting`, `api_token`, `system` |
-| `entity_id` | INTEGER NULL | |
+| `entity_id` | INTEGER NULL | retired; `entity_ref` is the relation |
 | `entity_ref` | TEXT NULL | the row's ref, when it has one |
 | `action` | TEXT | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke`, `start` |
 | `actor_kind` | TEXT | `user`, `worker`, `system` — CHECK-constrained; a token is `user` with its ref in `actor_ref` |
@@ -382,7 +382,7 @@ The reference a mailbox poll leaves behind. No content: the body is sealed in
 | `pattern` | TEXT | trimmed and lowercased before it is stored, 2–80 characters |
 | `field` | TEXT | `payee` \| `note` — which text the pattern looks at |
 | `match_kind` | TEXT | `exact` \| `contains` \| `prefix` |
-| `account_id` | INTEGER | FK to `accounts`, always an `expense` or `income` row |
+| `account_ref` | TEXT | the category account's `ref`, always an `expense` or `income` row |
 | `priority` | INTEGER | default 0; higher wins inside a tier |
 | `archived_at` | TEXT NULL | retired, never deleted |
 | `created_at` | TEXT | |
