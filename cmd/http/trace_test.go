@@ -56,7 +56,7 @@ func newServer(t *testing.T) http.Handler {
 	}
 
 	return httpcmd.New(handlers.Deps{
-		Ledger:   ledger.New(store, store, store, settingsService, nil, clock.System{}, clock.System{}),
+		Ledger:   ledger.New(store, store, store, settingsService, nil, clock.System{}),
 		Accounts: store,
 		Payees:   store,
 		Settings: settingsService,

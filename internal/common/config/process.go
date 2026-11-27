@@ -160,7 +160,7 @@ func boot(ctx context.Context, cfg entity.AppConfig, logger *logging.Logger) (*P
 	}
 
 	ledgerService := ledger.New(store, store, store, settingsService, ratesService,
-		clock.System{}, clock.System{})
+		clock.System{})
 
 	return &Process{
 		Cfg:          cfg,

@@ -27,7 +27,6 @@ type Service struct {
 	base     BaseCurrencySource
 	rates    RateSource
 	clock    TimeSource
-	ids      IDSource
 }
 
 type BaseCurrencySource interface {
@@ -42,10 +41,7 @@ type PayeeSource interface {
 	PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool, error)
 }
 
-type (
-	TimeSource interface{ Now() time.Time }
-	IDSource   interface{ NewID() string }
-)
+type TimeSource interface{ Now() time.Time }
 
 func New(
 	entries repository.Ledger,
@@ -54,7 +50,6 @@ func New(
 	base BaseCurrencySource,
 	rates RateSource,
 	clock TimeSource,
-	ids IDSource,
 ) *Service {
 	return &Service{
 		entries:  entries,
@@ -63,7 +58,6 @@ func New(
 		base:     base,
 		rates:    rates,
 		clock:    clock,
-		ids:      ids,
 	}
 }
 

@@ -49,14 +49,14 @@ func newCaptures(t *testing.T, endpoint string) *captures.Service {
 	}
 
 	clockSystem := clock.System{}
-	ledgerService := ledger.New(store, store, store, fixedCurrency{code: "IDR"}, nil, clockSystem, clockSystem)
+	ledgerService := ledger.New(store, store, store, fixedCurrency{code: "IDR"}, nil, clockSystem)
 
 	artifacts, err := filestore.New(filepath.Join(dir, "artifacts"), []byte("0123456789abcdef"))
 	if err != nil {
 		t.Fatalf("filestore: %v", err)
 	}
 
-	return captures.New(store, ledgerService, sealer, artifacts, store, extractor, store, clockSystem, clockSystem)
+	return captures.New(store, ledgerService, sealer, artifacts, store, extractor, store, clockSystem)
 }
 
 type fixedCurrency struct{ code string }

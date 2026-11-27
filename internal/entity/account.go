@@ -49,12 +49,6 @@ func CheckParent(candidate AccountParent) error {
 	return nil
 }
 
-type AccountBalance struct {
-	Account
-
-	BaseAmountMinor int64
-}
-
 type AccountFilter struct {
 	Query     string
 	Refs      []string

@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -499,8 +498,4 @@ func (s *Service) encode(ctx context.Context, settings entity.Settings) (string,
 	}
 
 	return sealed, nil
-}
-
-func IsPasswordMismatch(err error) bool {
-	return errors.Is(err, entity.ErrPasswordMismatch)
 }

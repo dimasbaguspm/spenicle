@@ -58,7 +58,7 @@ func Serve(ctx context.Context, process *config.Process) {
 	}
 
 	captured := captures.New(store, process.Ledger, process.Sealer, process.Artifacts, store,
-		extractor, store, clock.System{}, clock.System{})
+		extractor, store, clock.System{})
 
 	runner.Intake = intake.New(store, captured, store, process.Sealer,
 		gmailmail.New(nil, "", connector))

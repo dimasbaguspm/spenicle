@@ -27,7 +27,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/module/intake"
 	"github.com/dimasbaguspm/spenicle/internal/module/settings"
 	"github.com/dimasbaguspm/spenicle/internal/module/tokens"
-	"github.com/dimasbaguspm/spenicle/internal/repository/extraction"
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 	gmailmail "github.com/dimasbaguspm/spenicle/internal/repository/mailbox/gmail"
 	"github.com/dimasbaguspm/spenicle/internal/repository/oauth/google"
@@ -404,7 +403,7 @@ func (s *server) writeInternal(ctx context.Context, w http.ResponseWriter, err e
 }
 
 func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, error) {
-	extractor, err := buildExtractor(ctx, process)
+	extractor, err := config.SelectRail(ctx, process.Cfg, process.Logger)
 	if err != nil {
 		return handlers.Deps{}, err
 	}
@@ -421,7 +420,7 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 
 	captured := captures.New(
 		store, process.Ledger, process.Sealer, process.Artifacts, store, extractor, store,
-		clock.System{}, clock.System{},
+		clock.System{},
 	)
 
 	intaker := intake.New(store, captured, store, process.Sealer,
@@ -470,23 +469,6 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		AIAssistance:      process.Cfg.AIAssistance(),
 		Logger:            process.Logger,
 	}, nil
-}
-
-func buildExtractor(ctx context.Context, process *config.Process) (extraction.Extractor, error) {
-	rail, err := selectRail(ctx, process.Cfg, process.Logger)
-	if err != nil {
-		return nil, err
-	}
-
-	return rail, nil
-}
-
-func selectRail(
-	ctx context.Context,
-	cfg entity.AppConfig,
-	logger *logging.Logger,
-) (extraction.Extractor, error) {
-	return config.SelectRail(ctx, cfg, logger)
 }
 
 func Serve(ctx context.Context, process *config.Process, handler http.Handler) error {

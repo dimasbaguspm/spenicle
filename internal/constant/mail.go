@@ -1,7 +1,6 @@
 package constant
 
 const (
-	MailSourceIMAP  = "imap"
 	MailSourceGmail = "gmail"
 
 	MailStatusCaptured = "captured"

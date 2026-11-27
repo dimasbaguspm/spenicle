@@ -28,14 +28,10 @@ type Service struct {
 	artifacts ArtifactRows
 	recurring RecurringSource
 	clock     TimeSource
-	ids       IDSource
 	extractor extraction.Extractor
 }
 
-type (
-	TimeSource interface{ Now() time.Time }
-	IDSource   interface{ NewID() string }
-)
+type TimeSource interface{ Now() time.Time }
 
 func New(
 	captures repository.Captures,
@@ -46,11 +42,10 @@ func New(
 	extractor extraction.Extractor,
 	recurring RecurringSource,
 	clock TimeSource,
-	ids IDSource,
 ) *Service {
 	return &Service{
 		captures: captures, entries: entries, sealer: sealer, blobs: blobs, artifacts: artifacts,
-		extractor: extractor, recurring: recurring, clock: clock, ids: ids,
+		extractor: extractor, recurring: recurring, clock: clock,
 	}
 }
 

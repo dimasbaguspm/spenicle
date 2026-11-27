@@ -97,7 +97,7 @@ func (w *world) boot(ctx context.Context) error {
 	w.rates = built.cache
 
 	ledgerService := ledger.New(store, store, store, settingsService, built.rates,
-		clockSystem, clockSystem)
+		clockSystem)
 
 	accounts, err := store.ListAccounts(ctx, entity.AccountFilter{Limit: worldListLimit})
 	if err != nil {
@@ -117,7 +117,7 @@ func (w *world) boot(ctx context.Context) error {
 
 	queue := captures.New(
 		store, ledgerService, sealer, artifacts, store, built.extractor, store,
-		clockSystem, clockSystem,
+		clockSystem,
 	)
 
 	w.exportDeps = export.Deps{
