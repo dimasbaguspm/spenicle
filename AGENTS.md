@@ -481,7 +481,7 @@ SnapToJSON only today. A new dependency needs a reason in the MR, not a `go get`
 | [`docs/endpoints/`](./docs/endpoints/README.md) | one page per route; same sections everywhere, including the sequence diagram |
 | [`docs/product-deck/`](./docs/product-deck/README.md) | one page per user-facing feature, client POV: journeys, backend path end to end, RRR, acceptance criteria |
 | [`docs/alignment.md`](./docs/alignment.md) | the check log: which commit the docs were verified against, by whom, and the release verdict |
-| [`docs/plan/`](./plan/refs-and-idempotency.md) | the technical plans that need a decision before code: ref-keyed relations, server-minted idempotency keys |
+| [`docs/plan/`](./plan/simplification.md) | the technical plans that need a decision before code: naming, balances, caching, indexes, request ids |
 | [`.env.example`](./.env.example) | every variable with its default, copy to `.env` |
 | [`LICENSE`](./LICENSE) | source-available: personal unmodified use only, no commercial use |
 
