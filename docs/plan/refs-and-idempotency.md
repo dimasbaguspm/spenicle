@@ -100,8 +100,12 @@ identical request with the returned key answers `200` and writes one batch and o
   chunk, or it is `422 invalid_request`. A key the caller sends is still honoured as sent, so
   existing clients and their tests keep working. The UAT harness normalises a minted key to
   `<client_id>`, so the snapshots stay stable.
-- **§1, relations by `ref`: open.** Option A is still the recommendation, and it is three
-  commits: expand (a migration that adds `<relation>_ref` beside the integer column and
-  backfills it), convert (the store reads and writes the ref column, table group by table
-  group), contract (drop the integer column and the `ID` fields above the store). Each
-  commit stays green on its own because the two columns coexist until the last one.
+- **§1, relations by `ref`: the schema is done, the queries are not.** There is one
+  migration again (`0001_init.sql`), and it now carries a `<relation>_ref` column beside
+  every retired `<relation>_id`, with the indexes on the ref. The store still writes the
+  id, so the new columns are empty for a row created today. What is left is the convert
+  step, one table group per commit: accounts + payees + categorization rules + recurring
+  rules, then ledger entries + postings + running balances, then captures + artifacts +
+  mail, then imports + exports. Each group: the store reads and writes `*_ref`, the entity
+  struct drops the `*ID` field, the docs follow. Then the contract commit drops the retired
+  columns and the plan section can go.
