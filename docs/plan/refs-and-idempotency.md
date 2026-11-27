@@ -92,8 +92,16 @@ Acceptance: `POST /api/imports` without `client_id` answers `201` with the batch
 identical request with the returned key answers `200` and writes one batch and one
 `resumed` event.
 
-## Decisions needed
+## Status
 
-1. Option A or B for the relations (A is my recommendation; B is a schema rewrite).
-2. Whether the minted key is echoed (yes is required for any deliberate replay) and
-   whether a foreign prefix is `403`.
+- **§2, server-minted keys: shipped.** `internal/common/idem` mints `<credential-ref>_<16 hex>`
+  (`root` for the instance password and open mode); entries, imports and exports mint when
+  `client_id` is absent and echo it; a chunked import must send the key back after the first
+  chunk, or it is `422 invalid_request`. A key the caller sends is still honoured as sent, so
+  existing clients and their tests keep working. The UAT harness normalises a minted key to
+  `<client_id>`, so the snapshots stay stable.
+- **§1, relations by `ref`: open.** Option A is still the recommendation, and it is three
+  commits: expand (a migration that adds `<relation>_ref` beside the integer column and
+  backfills it), convert (the store reads and writes the ref column, table group by table
+  group), contract (drop the integer column and the `ID` fields above the store). Each
+  commit stays green on its own because the two columns coexist until the last one.
