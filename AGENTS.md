@@ -29,9 +29,9 @@ the document wins until you change the document too.
    ledger group is fully converted: accounts, payees, categorization rules, recurring
    rules, entries, postings, `balance_state`, `running_balances` and the journal payloads
    relate by ref, and their `*_id` columns are gone from `0001_init.sql`. So do captures,
-   artifacts, `capture_payloads` and mail messages. The retired columns that remain
-   (imports, exports, and the journal's `entity_id`) exist only until their group moves
-   over.
+   artifacts, `capture_payloads`, mail messages, imports, exports and `audit_log`. No
+   column stores a relation as an integer: the only `*_id` left are `client_id` (the
+   idempotency key the server mints) and `captures.batch_id` (a client label, not a row).
 2. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
    zero. `entity.CheckZeroSum` runs before the store opens the write transaction, on
    both direct entry inserts and capture approvals.

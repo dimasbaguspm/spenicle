@@ -117,7 +117,7 @@ func (s *Service) Events(
 		return nil, fmt.Errorf("%w: export %s", entity.ErrNotFound, ref)
 	}
 
-	filter.ExportID = job.ID
+	filter.ExportRef = job.Ref
 
 	return s.events.ListExportEvents(ctx, filter)
 }
@@ -405,10 +405,10 @@ func (s *Service) record(
 	defer endSpan()
 
 	_, err := s.events.InsertExportEvent(ctx, entity.ExportEvent{
-		ExportID: job.ID,
-		Kind:     kind,
-		Actor:    actor,
-		At:       s.clock.Now(),
+		ExportRef: job.Ref,
+		Kind:      kind,
+		Actor:     actor,
+		At:        s.clock.Now(),
 	})
 	if err != nil {
 		return fmt.Errorf("record %s event: %w", kind, err)

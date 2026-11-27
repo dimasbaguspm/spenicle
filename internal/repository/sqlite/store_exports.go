@@ -17,7 +17,7 @@ const exportColumns = `id, ref, client_id, status, format, schema_version, count
 	file_hash, bytes, created_at, started_at, finished_at, expires_at, from_on, to_on,
 	error_message`
 
-const exportEventColumns = `id, ref, export_id, kind, payload_json, actor, at`
+const exportEventColumns = `id, ref, export_ref, kind, payload_json, actor, at`
 
 func (s *Store) InsertExport(ctx context.Context, job entity.Export) (entity.Export, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.InsertExport")
@@ -32,7 +32,7 @@ func (s *Store) InsertExportWithEvent(
 	event entity.ExportEvent,
 ) (entity.Export, error) {
 	writeEvent := func(ctx context.Context, exec sqlExecer, saved entity.Export) error {
-		event.ExportID = saved.ID
+		event.ExportRef = saved.Ref
 		_, err := insertExportEvent(ctx, exec, event)
 
 		return err
@@ -308,10 +308,10 @@ func insertExportEvent(
 	}
 
 	res, err := exec.ExecContext(ctx, `
-		INSERT INTO export_events (ref, export_id, kind, payload_json, actor, at)
+		INSERT INTO export_events (ref, export_ref, kind, payload_json, actor, at)
 		VALUES (?, ?, ?, ?, ?, ?)`,
 		event.Ref,
-		event.ExportID,
+		event.ExportRef,
 		event.Kind,
 		nullString(event.Payload),
 		event.Actor,
@@ -339,7 +339,7 @@ func (s *Store) ListExportEvents(
 	defer endSpan()
 
 	builder := newList("export_events", exportEventColumns)
-	builder.and("export_events.export_id = ?", filter.ExportID)
+	builder.and("export_events.export_ref = ?", filter.ExportRef)
 	builder.before("export_events.id", "export_events", filter.Cursor)
 	builder.orderBy("export_events.id DESC")
 
@@ -494,7 +494,7 @@ func scanExportEventRow(scanner interface{ Scan(dest ...any) error }) (entity.Ex
 	)
 
 	err := scanner.Scan(
-		&event.ID, &event.Ref, &event.ExportID, &event.Kind, &payload, &event.Actor, &atRaw,
+		&event.ID, &event.Ref, &event.ExportRef, &event.Kind, &payload, &event.Actor, &atRaw,
 	)
 	if err != nil {
 		return entity.ExportEvent{}, err

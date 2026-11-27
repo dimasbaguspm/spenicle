@@ -9,7 +9,6 @@ type Audit struct {
 	ID         int64
 	Ref        string
 	EntityKind string
-	EntityID   *int64
 	EntityRef  string
 	Action     string
 	ActorKind  string

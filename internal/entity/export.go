@@ -39,17 +39,17 @@ type ExportFilter struct {
 }
 
 type ExportEvent struct {
-	ID       int64
-	Ref      string
-	ExportID int64
-	Kind     string
-	Payload  string
-	Actor    string
-	At       time.Time
+	ID        int64
+	Ref       string
+	ExportRef string
+	Kind      string
+	Payload   string
+	Actor     string
+	At        time.Time
 }
 
 type ExportEventFilter struct {
-	ExportID int64
-	Cursor   string
-	Limit    int
+	ExportRef string
+	Cursor    string
+	Limit     int
 }

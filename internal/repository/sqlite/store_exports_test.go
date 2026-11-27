@@ -187,7 +187,7 @@ func TestInsertExportWithEventWritesTheFirstTrail(t *testing.T) {
 	}
 
 	events, err := store.ListExportEvents(ctx, entity.ExportEventFilter{
-		ExportID: queued.ID, Limit: 10,
+		ExportRef: queued.Ref, Limit: 10,
 	})
 	if err != nil {
 		t.Fatalf("list events: %v", err)

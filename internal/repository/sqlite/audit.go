@@ -15,7 +15,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const auditColumns = `id, ref, entity_kind, entity_id, entity_ref, action, actor_kind,
+const auditColumns = `id, ref, entity_kind, entity_ref, action, actor_kind,
 	actor_ref, from_json, to_json, at`
 
 // auditRecord is one journal entry to append inside the transaction that makes
@@ -46,20 +46,12 @@ func appendAudit(ctx context.Context, tx *sql.Tx, record auditRecord) error {
 		return err
 	}
 
-	var entityID *int64
-
-	if record.ID != 0 {
-		id := record.ID
-		entityID = &id
-	}
-
 	if _, execErr := tx.ExecContext(ctx, `
-		INSERT INTO audit_log (ref, entity_kind, entity_id, entity_ref, action, actor_kind,
+		INSERT INTO audit_log (ref, entity_kind, entity_ref, action, actor_kind,
 			actor_ref, from_json, to_json, at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		uuid.New(),
 		record.Kind,
-		nullInt(entityID),
 		nullString(record.Ref),
 		record.Action,
 		from.Kind,
@@ -185,7 +177,6 @@ func (s *Store) ListAudit(ctx context.Context, filter entity.AuditFilter) ([]ent
 func scanAuditRow(scanner interface{ Scan(dest ...any) error }) (entity.Audit, error) {
 	var (
 		record    entity.Audit
-		entityID  sql.NullInt64
 		entityRef sql.NullString
 		actorRef  sql.NullString
 		fromJSON  sql.NullString
@@ -193,7 +184,7 @@ func scanAuditRow(scanner interface{ Scan(dest ...any) error }) (entity.Audit, e
 		atRaw     string
 	)
 
-	if err := scanner.Scan(&record.ID, &record.Ref, &record.EntityKind, &entityID, &entityRef,
+	if err := scanner.Scan(&record.ID, &record.Ref, &record.EntityKind, &entityRef,
 		&record.Action, &record.ActorKind, &actorRef, &fromJSON, &toJSON, &atRaw); err != nil {
 		return entity.Audit{}, err
 	}
@@ -202,11 +193,6 @@ func scanAuditRow(scanner interface{ Scan(dest ...any) error }) (entity.Audit, e
 	record.ActorRef = actorRef.String
 	record.FromJSON = fromJSON.String
 	record.ToJSON = toJSON.String
-
-	if entityID.Valid {
-		id := entityID.Int64
-		record.EntityID = &id
-	}
 
 	parsed, parseErr := time.Parse(constant.TimestampLayout, atRaw)
 	if parseErr != nil {

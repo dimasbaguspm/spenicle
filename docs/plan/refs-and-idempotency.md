@@ -100,7 +100,11 @@ identical request with the returned key answers `200` and writes one batch and o
   chunk, or it is `422 invalid_request`. A key the caller sends is still honoured as sent, so
   existing clients and their tests keep working. The UAT harness normalises a minted key to
   `<client_id>`, so the snapshots stay stable.
-- **§1, relations by `ref`: the ledger and capture groups are converted.** Captures,
+- **§1, relations by `ref`: done.** Every relation is a `ref` in `0001_init.sql`: the
+  ledger, captures, artifacts, mail, imports, exports and `audit_log` all point at their
+  parent's `ref`, and no `*_id` column stores a relation. The only `*_id` left are
+  `client_id` (the minted idempotency key) and `captures.batch_id` (a client label).
+- **§1 (history), relations by `ref`: the ledger and capture groups are converted.** Captures,
   `capture_payloads`, artifacts and mail messages now relate by `capture_ref` (and
   `resolved_entry_ref`), and their `*_id` columns are gone. Next: imports + exports, then
   `audit_log.entity_id`.

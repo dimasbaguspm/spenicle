@@ -348,8 +348,8 @@ func assertCommitChunks(t *testing.T, prePosted, wantEvents int, wantDone []int)
 	}
 
 	if _, acceptErr := h.store.DB().ExecContext(ctx,
-		`UPDATE import_rows SET status = ? WHERE batch_id = ?`,
-		constant.ImportRowStatusAccepted, batch.ID); acceptErr != nil {
+		`UPDATE import_rows SET status = ? WHERE batch_ref = ?`,
+		constant.ImportRowStatusAccepted, batch.Ref); acceptErr != nil {
 		t.Fatalf("accept rows: %v", acceptErr)
 	}
 
@@ -622,12 +622,12 @@ func TestEditImportRowRefusesAClosedBatchAtomically(t *testing.T) {
 		t.Fatalf("close batch: %v", err)
 	}
 
-	rows := requireImportRows(t, h, batch.ID, 1)
+	rows := requireImportRows(t, h, batch.Ref, 1)
 	row := rows[0]
 	row.Description = "must not be written"
 	index := row.RowIndex
 	events := []entity.ImportEvent{{
-		BatchID:  batch.ID,
+		BatchRef: batch.Ref,
 		Kind:     constant.ImportEventRowEdited,
 		RowIndex: &index,
 		Actor:    constant.ImportActorUser,
@@ -644,7 +644,7 @@ func TestEditImportRowRefusesAClosedBatchAtomically(t *testing.T) {
 		t.Fatalf("expires_at = %v, want %v", after.ExpiresAt, before.ExpiresAt)
 	}
 
-	afterRows := requireImportRows(t, h, batch.ID, 1)
+	afterRows := requireImportRows(t, h, batch.Ref, 1)
 	assertImportRowUnchanged(t, afterRows[0], batch.Rows[0])
 	if got := countImportEvents(t, h, constant.ImportEventRowEdited); got != 0 {
 		t.Fatalf("row_edited events = %d, want 0", got)
@@ -661,10 +661,10 @@ func requireImportBatch(t *testing.T, h harness, ref string) entity.ImportBatch 
 	return batch
 }
 
-func requireImportRows(t *testing.T, h harness, batchID int64, want int) []entity.ImportRow {
+func requireImportRows(t *testing.T, h harness, batchRef string, want int) []entity.ImportRow {
 	t.Helper()
 
-	rows, err := h.store.ImportRows(t.Context(), batchID)
+	rows, err := h.store.ImportRows(t.Context(), batchRef)
 	if err != nil || len(rows) != want {
 		t.Fatalf("read rows: rows=%d want=%d err=%v", len(rows), want, err)
 	}

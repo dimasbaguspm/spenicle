@@ -217,9 +217,9 @@ sweep cursors) and `ref TEXT NOT NULL UNIQUE` (a dashless UUID), except
 relation is a `ref`**: `parent_ref`, `payee_ref`, `account_ref`, `entry_ref`, `batch_ref`,
 `upload_ref`, `export_ref`, `capture_ref`, `reverses_entry_ref`, `recurring_rule_ref`,
 `resolved_entry_ref` point at the parent row's `ref`, never at its `id`. The API speaks
-`ref` only: `account_ref`, `ref`, and never a number. The `*_id` columns still listed
-below are retired: `0001_init.sql` keeps them until the last query that reads them moves
-to the `*_ref` column beside it.
+`ref` only: `account_ref`, `ref`, and never a number. No `*_id` column stores a relation
+any more — the only `*_id` left in the schema are `client_id` (an idempotency key the
+server mints) and `captures.batch_id` (a free-text label from the client, not a row).
 
 | column | type | notes |
 | --- | --- | --- |
@@ -338,7 +338,6 @@ sealed envelope).
 | --- | --- | --- |
 | `id` | INTEGER PK | |
 | `entity_kind` | TEXT | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `categorization_rule`, `setting`, `api_token`, `system` |
-| `entity_id` | INTEGER NULL | retired; `entity_ref` is the relation |
 | `entity_ref` | TEXT NULL | the row's ref, when it has one |
 | `action` | TEXT | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke`, `start` |
 | `actor_kind` | TEXT | `user`, `worker`, `system` — CHECK-constrained; a token is `user` with its ref in `actor_ref` |

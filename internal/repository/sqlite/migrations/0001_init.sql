@@ -1,7 +1,8 @@
 -- 0001_init: the whole schema, one migration, no history to migrate.
 -- Every table carries a bigint id as its own row identity and a dashless UUID ref for
 -- the wire. Relations carry both while the store moves over: the *_ref column is the
--- relation, the *_id column is retired and disappears when the last query stops using it.
+-- relation, and no *_id column stores one. The two event logs and audit_log point at their
+-- row by ref without a foreign key on purpose: the log outlives the row it describes.
 -- Keep comments free of semicolons: the splitter is naive on purpose.
 
 CREATE TABLE settings (
@@ -220,8 +221,7 @@ CREATE INDEX ix_import_batches_expiry ON import_batches (status, expires_at);
 CREATE TABLE import_rows (
   id              INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  batch_id        INTEGER NOT NULL REFERENCES import_batches(id),  -- retired
-  batch_ref       TEXT NOT NULL DEFAULT '',
+  batch_ref       TEXT NOT NULL REFERENCES import_batches(ref),
   row_index       INTEGER NOT NULL,
   occurred_on     TEXT NOT NULL,
   amount_minor    INTEGER NOT NULL,
@@ -236,15 +236,13 @@ CREATE TABLE import_rows (
   created_at      TEXT NOT NULL,
   updated_at      TEXT NOT NULL,
   edited_at       TEXT,
-  edited_fields   TEXT,
-  UNIQUE (batch_id, row_index)
+  edited_fields   TEXT
 );
 
 CREATE TABLE import_events (
   id           INTEGER PRIMARY KEY,
   ref          TEXT NOT NULL UNIQUE,
-  batch_id     INTEGER NOT NULL,  -- retired
-  batch_ref    TEXT NOT NULL DEFAULT '',
+  batch_ref    TEXT NOT NULL,
   kind         TEXT NOT NULL,
   row_index    INTEGER,
   payload_json TEXT,
@@ -252,7 +250,6 @@ CREATE TABLE import_events (
   at           TEXT NOT NULL
 );
 
-CREATE INDEX ix_import_events_batch ON import_events (batch_id, id);
 CREATE INDEX ix_import_events_batch_ref ON import_events (batch_ref, id);
 CREATE UNIQUE INDEX ux_import_rows_batch_ref ON import_rows (batch_ref, row_index)
   WHERE batch_ref <> '';
@@ -276,13 +273,11 @@ CREATE INDEX ix_import_uploads_status ON import_uploads (status, updated_at);
 
 CREATE TABLE import_upload_chunks (
   id           INTEGER PRIMARY KEY,
-  upload_id    INTEGER NOT NULL REFERENCES import_uploads(id),  -- retired
-  upload_ref   TEXT NOT NULL DEFAULT '',
+  upload_ref   TEXT NOT NULL REFERENCES import_uploads(ref),
   chunk_index  INTEGER NOT NULL,
   bytes        INTEGER NOT NULL,
   chunk_sha256 TEXT NOT NULL,
-  created_at   TEXT NOT NULL,
-  UNIQUE (upload_id, chunk_index)
+  created_at   TEXT NOT NULL
 );
 
 CREATE TABLE exports (
@@ -310,15 +305,13 @@ CREATE INDEX ix_exports_expiry ON exports (status, expires_at);
 CREATE TABLE export_events (
   id           INTEGER PRIMARY KEY,
   ref          TEXT NOT NULL UNIQUE,
-  export_id    INTEGER NOT NULL,  -- retired
-  export_ref   TEXT NOT NULL DEFAULT '',
+  export_ref   TEXT NOT NULL,
   kind         TEXT NOT NULL,
   payload_json TEXT,
   actor        TEXT NOT NULL,
   at           TEXT NOT NULL
 );
 
-CREATE INDEX ix_export_events_export ON export_events (export_id, id);
 CREATE INDEX ix_export_events_export_ref ON export_events (export_ref, id);
 CREATE UNIQUE INDEX ux_import_upload_chunks_ref ON import_upload_chunks (upload_ref, chunk_index)
   WHERE upload_ref <> '';
@@ -347,7 +340,6 @@ CREATE TABLE audit_log (
   id          INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
   entity_kind TEXT NOT NULL,
-  entity_id   INTEGER,  -- retired: entity_ref is the only link
   entity_ref  TEXT,
   action      TEXT NOT NULL,
   actor_kind  TEXT NOT NULL

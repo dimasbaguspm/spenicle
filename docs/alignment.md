@@ -11,6 +11,7 @@ Append a row per check; never rewrite a past one.
 | 2026-11-27T11:35Z | `2fdf1ef3` + the code fixes in this change | `main` | Dimas Mukti (PI-Desktop agent) | the ten product-deck features against the code and the UAT suite | **GO** |
 | 2026-11-27T15:20Z | `59ee5c9` + the ledger-group refactor and the new scenarios in this change | `main` | Dimas Mukti (PI-Desktop agent) | every deck clause that was listed as "untested", one UAT scenario each | **GO** |
 | 2026-11-27T16:40Z | `ec127d1` + the captures-group refactor in this change | `main` | Dimas Mukti (PI-Desktop agent) | captures, payloads, artifacts and mail messages by ref, plus the mail→capture link | **GO** |
+| 2026-11-27T17:30Z | `de7d06b` + the imports/exports/journal refactor in this change | `main` | Dimas Mukti (PI-Desktop agent) | the last integer relations: import rows, import/export events, upload chunks, `audit_log.entity_id` | **GO** |
 
 ## What a check covers
 

@@ -19,17 +19,17 @@ const importBatchColumns = `import_batches.id, import_batches.ref, import_batche
 	import_batches.rows_total, import_batches.currency, import_batches.created_at,
 	import_batches.expires_at, import_batches.committed_at, import_batches.rejected_at`
 
-const importRowColumns = `id, ref, batch_id, row_index, occurred_on, amount_minor, currency, description,
+const importRowColumns = `id, ref, batch_ref, row_index, occurred_on, amount_minor, currency, description,
 	account_ref, category_ref, payee_ref, status, clash_kind, clash_entry_ref, edited_at,
 	edited_fields, created_at, updated_at`
 
-const importEventColumns = `id, ref, batch_id, kind, row_index, payload_json, actor, at`
+const importEventColumns = `id, ref, batch_ref, kind, row_index, payload_json, actor, at`
 
 const (
 	importRowChunkSize   = 200
 	importRowColumnCount = 18
 	importRowInsertHead  = `INSERT INTO import_rows
-		(id, ref, batch_id, row_index, occurred_on, amount_minor, currency, description, account_ref,
+		(id, ref, batch_ref, row_index, occurred_on, amount_minor, currency, description, account_ref,
 		 category_ref, payee_ref, status, clash_kind, clash_entry_ref, edited_at, edited_fields,
 		 created_at, updated_at) VALUES `
 	importRowInsertValues = `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -62,7 +62,7 @@ func (s *Store) InsertImportBatchWithEvent(
 	event entity.ImportEvent,
 ) (entity.ImportBatch, error) {
 	writeEvent := func(ctx context.Context, exec sqlExecer, saved entity.ImportBatch) error {
-		event.BatchID = saved.ID
+		event.BatchRef = saved.Ref
 		_, err := insertImportEvent(ctx, exec, event)
 
 		return err
@@ -115,7 +115,7 @@ func insertImportBatch(
 	batch.ID = id
 
 	for index := range batch.Rows {
-		batch.Rows[index].BatchID = id
+		batch.Rows[index].BatchRef = batch.Ref
 	}
 
 	if rowErr := insertImportRows(ctx, exec, batch.Rows); rowErr != nil {
@@ -225,12 +225,12 @@ func (s *Store) CloseImportBatch(
 	return batch, nil
 }
 
-func (s *Store) ImportRows(ctx context.Context, batchID int64) ([]entity.ImportRow, error) {
+func (s *Store) ImportRows(ctx context.Context, batchRef string) ([]entity.ImportRow, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ImportRows")
 	defer endSpan()
 
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT `+importRowColumns+` FROM import_rows WHERE batch_id = ? ORDER BY row_index`, batchID)
+		`SELECT `+importRowColumns+` FROM import_rows WHERE batch_ref = ? ORDER BY row_index`, batchRef)
 	if err != nil {
 		return nil, fmt.Errorf("select import rows: %w", err)
 	}
@@ -278,7 +278,7 @@ func (s *Store) EditImportRow(
 			return err
 		}
 
-		if err := extendImportBatchDraft(ctx, tx, row.BatchID, expiresAt); err != nil {
+		if err := extendImportBatchDraft(ctx, tx, row.BatchRef, expiresAt); err != nil {
 			return err
 		}
 
@@ -302,7 +302,7 @@ func importRowBatchState(ctx context.Context, tx *sql.Tx, rowID int64) (string, 
 
 	err := tx.QueryRowContext(ctx, `
 		SELECT b.ref, b.status FROM import_rows r
-		JOIN import_batches b ON b.id = r.batch_id WHERE r.id = ?`, rowID,
+		JOIN import_batches b ON b.ref = r.batch_ref WHERE r.id = ?`, rowID,
 	).Scan(&ref, &status)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", "", fmt.Errorf("%w: import row %d", entity.ErrNotFound, rowID)
@@ -320,7 +320,7 @@ func updateImportRowDraft(ctx context.Context, tx *sql.Tx, row entity.ImportRow)
 		UPDATE import_rows SET
 			occurred_on = ?, amount_minor = ?, currency = ?, description = ?, category_ref = ?,
 			payee_ref = ?, status = ?, edited_at = ?, edited_fields = ?, updated_at = ?
-		WHERE id = ? AND batch_id = ?`,
+		WHERE id = ? AND batch_ref = ?`,
 		row.OccurredOn.Format(constant.DateLayout),
 		row.AmountMinor,
 		row.Currency,
@@ -332,7 +332,7 @@ func updateImportRowDraft(ctx context.Context, tx *sql.Tx, row entity.ImportRow)
 		nullString(row.EditedFields),
 		row.UpdatedAt.UTC().Format(constant.TimestampLayout),
 		row.ID,
-		row.BatchID,
+		row.BatchRef,
 	)
 	if err != nil {
 		return fmt.Errorf("update import row: %w", err)
@@ -353,13 +353,13 @@ func updateImportRowDraft(ctx context.Context, tx *sql.Tx, row entity.ImportRow)
 func extendImportBatchDraft(
 	ctx context.Context,
 	tx *sql.Tx,
-	batchID int64,
+	batchRef string,
 	expiresAt time.Time,
 ) error {
 	_, err := tx.ExecContext(ctx, `
 		UPDATE import_batches SET expires_at = ?
-		WHERE id = ? AND status = ?`,
-		expiresAt.UTC().Format(constant.TimestampLayout), batchID, constant.ImportStatusDraft,
+		WHERE ref = ? AND status = ?`,
+		expiresAt.UTC().Format(constant.TimestampLayout), batchRef, constant.ImportStatusDraft,
 	)
 	if err != nil {
 		return fmt.Errorf("extend import batch: %w", err)
@@ -418,7 +418,7 @@ func (s *Store) DropImportBatch(ctx context.Context, ref string, event entity.Im
 
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx,
-			`DELETE FROM import_rows WHERE batch_id = (SELECT id FROM import_batches WHERE ref = ?)`,
+			`DELETE FROM import_rows WHERE batch_ref = ?`,
 			ref)
 		if execErr != nil {
 			return fmt.Errorf("delete import rows: %w", execErr)
@@ -465,10 +465,10 @@ func insertImportEvent(
 	event entity.ImportEvent,
 ) (entity.ImportEvent, error) {
 	res, err := exec.ExecContext(ctx, `
-		INSERT INTO import_events (ref, batch_id, kind, row_index, payload_json, actor, at)
+		INSERT INTO import_events (ref, batch_ref, kind, row_index, payload_json, actor, at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		refOf(event),
-		event.BatchID,
+		event.BatchRef,
 		event.Kind,
 		nullRowIndex(event.RowIndex),
 		nullString(event.Payload),
@@ -497,7 +497,7 @@ func (s *Store) ListImportEvents(
 	defer endSpan()
 
 	builder := newList("import_events", importEventColumns)
-	builder.and("import_events.batch_id = ?", filter.BatchID)
+	builder.and("import_events.batch_ref = ?", filter.BatchRef)
 	builder.before("import_events.id", "import_events", filter.Cursor)
 	builder.orderBy("import_events.id DESC")
 
@@ -543,7 +543,7 @@ func insertImportRows(ctx context.Context, exec sqlExecer, rows []entity.ImportR
 			args = append(args,
 				row.ID,
 				row.Ref,
-				row.BatchID,
+				row.BatchRef,
 				row.RowIndex,
 				row.OccurredOn.Format(constant.DateLayout),
 				row.AmountMinor,
@@ -641,7 +641,7 @@ func scanImportRowRow(scanner interface{ Scan(dest ...any) error }) (entity.Impo
 	)
 
 	err := scanner.Scan(
-		&row.ID, &row.Ref, &row.BatchID, &row.RowIndex, &occurredRaw, &row.AmountMinor,
+		&row.ID, &row.Ref, &row.BatchRef, &row.RowIndex, &occurredRaw, &row.AmountMinor,
 		&row.Currency, &row.Description, &row.AccountRef, &category, &payee, &row.Status, &clashKind,
 		&clashEntry, &editedAt, &editedFields, &createdRaw, &updatedRaw,
 	)
@@ -703,8 +703,8 @@ func insertImportEventByRef(
 	batchRef string,
 ) error {
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO import_events (ref, batch_id, kind, row_index, payload_json, actor, at)
-		VALUES (?, (SELECT id FROM import_batches WHERE ref = ?), ?, ?, ?, ?, ?)`,
+		INSERT INTO import_events (ref, batch_ref, kind, row_index, payload_json, actor, at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		refOf(event),
 		batchRef,
 		event.Kind,
@@ -728,7 +728,7 @@ func scanImportEventRow(scanner interface{ Scan(dest ...any) error }) (entity.Im
 	)
 
 	err := scanner.Scan(
-		&event.ID, &event.Ref, &event.BatchID, &event.Kind, &rowIndex, &payload,
+		&event.ID, &event.Ref, &event.BatchRef, &event.Kind, &rowIndex, &payload,
 		&event.Actor, &atRaw,
 	)
 	if err != nil {
@@ -844,18 +844,11 @@ func (s *Store) AppendImportChunk(
 	var inserted bool
 
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
-		var id int64
-		if scanErr := tx.QueryRowContext(ctx,
-			`SELECT id FROM import_uploads WHERE ref = ?`, ref,
-		).Scan(&id); scanErr != nil {
-			return fmt.Errorf("%w: import upload %s", entity.ErrNotFound, ref)
-		}
-
 		var existing sql.NullString
 
 		queryErr := tx.QueryRowContext(ctx, `
 			SELECT chunk_sha256 FROM import_upload_chunks
-			WHERE upload_id = ? AND chunk_index = ?`, id, index).Scan(&existing)
+			WHERE upload_ref = ? AND chunk_index = ?`, ref, index).Scan(&existing)
 		if queryErr != nil && !errors.Is(queryErr, sql.ErrNoRows) {
 			return fmt.Errorf("read import chunk: %w", queryErr)
 		}
@@ -870,9 +863,9 @@ func (s *Store) AppendImportChunk(
 
 		if _, execErr := tx.ExecContext(ctx, `
 			INSERT INTO import_upload_chunks
-				(upload_id, chunk_index, bytes, chunk_sha256, created_at)
+				(upload_ref, chunk_index, bytes, chunk_sha256, created_at)
 			VALUES (?, ?, ?, ?, ?)`,
-			id, index, bytes, chunkHash, at.UTC().Format(constant.TimestampLayout),
+			ref, index, bytes, chunkHash, at.UTC().Format(constant.TimestampLayout),
 		); execErr != nil {
 			return fmt.Errorf("insert import chunk: %w", execErr)
 		}
@@ -882,8 +875,8 @@ func (s *Store) AppendImportChunk(
 				received_chunks = received_chunks + 1,
 				received_bytes = received_bytes + ?,
 				updated_at = ?
-			WHERE id = ?`,
-			bytes, at.UTC().Format(constant.TimestampLayout), id,
+			WHERE ref = ?`,
+			bytes, at.UTC().Format(constant.TimestampLayout), ref,
 		); updateErr != nil {
 			return fmt.Errorf("advance import upload: %w", updateErr)
 		}
@@ -980,7 +973,7 @@ func (s *Store) DropImportUpload(ctx context.Context, ref string) (int, error) {
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx,
 			`DELETE FROM import_upload_chunks
-			 WHERE upload_id = (SELECT id FROM import_uploads WHERE ref = ?)`,
+			 WHERE upload_ref = ?`,
 			ref)
 		if execErr != nil {
 			return fmt.Errorf("delete import chunks: %w", execErr)

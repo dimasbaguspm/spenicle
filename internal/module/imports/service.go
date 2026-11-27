@@ -238,7 +238,7 @@ func (s *Service) PatchRow(
 		return entity.ImportBatch{}, fmt.Errorf("%w: %s is %s", entity.ErrImportClosed, ref, batch.Status)
 	}
 
-	rows, err := s.batches.ImportRows(ctx, batch.ID)
+	rows, err := s.batches.ImportRows(ctx, batch.Ref)
 	if err != nil {
 		return entity.ImportBatch{}, err
 	}
@@ -317,7 +317,7 @@ func (s *Service) ListEvents(
 		return nil, fmt.Errorf("%w: import batch %s", entity.ErrNotFound, ref)
 	}
 
-	filter.BatchID = batch.ID
+	filter.BatchRef = batch.Ref
 
 	return s.events.ListImportEvents(ctx, filter)
 }
@@ -391,7 +391,7 @@ func (s *Service) postChunks(
 	batch entity.ImportBatch,
 	resume bool,
 ) (entity.ImportBatch, error) {
-	rows, err := s.batches.ImportRows(ctx, batch.ID)
+	rows, err := s.batches.ImportRows(ctx, batch.Ref)
 	if err != nil {
 		return entity.ImportBatch{}, err
 	}
@@ -749,7 +749,7 @@ func (s *Service) raced(
 }
 
 func (s *Service) load(ctx context.Context, batch entity.ImportBatch) (entity.ImportBatch, error) {
-	rows, err := s.batches.ImportRows(ctx, batch.ID)
+	rows, err := s.batches.ImportRows(ctx, batch.Ref)
 	if err != nil {
 		return entity.ImportBatch{}, err
 	}
@@ -792,7 +792,7 @@ func (s *Service) makeEvent(
 	payload string,
 ) entity.ImportEvent {
 	return entity.ImportEvent{
-		BatchID:  batch.ID,
+		BatchRef: batch.Ref,
 		Kind:     kind,
 		RowIndex: rowIndex,
 		Payload:  payload,

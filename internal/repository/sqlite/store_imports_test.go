@@ -54,7 +54,7 @@ func TestInsertImportBatchChunksRowsAndKeepsEditableIDs(t *testing.T) {
 		t.Fatalf("row 400 id = %d, want %d", batch.Rows[400].ID, want)
 	}
 
-	loaded, err := store.ImportRows(ctx, batch.ID)
+	loaded, err := store.ImportRows(ctx, batch.Ref)
 	if err != nil {
 		t.Fatalf("load rows: %v", err)
 	}

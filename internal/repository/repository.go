@@ -164,7 +164,7 @@ type Imports interface {
 		at time.Time,
 		event entity.ImportEvent,
 	) (entity.ImportBatch, error)
-	ImportRows(ctx context.Context, batchID int64) ([]entity.ImportRow, error)
+	ImportRows(ctx context.Context, batchRef string) ([]entity.ImportRow, error)
 	EditImportRow(
 		ctx context.Context,
 		row entity.ImportRow,

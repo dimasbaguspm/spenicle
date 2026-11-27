@@ -59,7 +59,7 @@ func (b ImportBatch) IsCommitting() bool { return b.Status == constant.ImportSta
 type ImportRow struct {
 	ID            int64
 	Ref           string
-	BatchID       int64
+	BatchRef      string
 	RowIndex      int
 	OccurredOn    time.Time
 	AmountMinor   int64
@@ -86,7 +86,7 @@ type ImportFilter struct {
 type ImportEvent struct {
 	ID       int64
 	Ref      string
-	BatchID  int64
+	BatchRef string
 	Kind     string
 	RowIndex *int
 	Payload  string
@@ -95,9 +95,9 @@ type ImportEvent struct {
 }
 
 type ImportEventFilter struct {
-	BatchID int64
-	Cursor  string
-	Limit   int
+	BatchRef string
+	Cursor   string
+	Limit    int
 }
 
 type EntryProbe struct {
