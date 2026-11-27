@@ -1,6 +1,8 @@
 import { Field as ArkField } from '@ark-ui/react/field'
 import type { ReactNode } from 'react'
 
+import { Text } from '@/components/ui/text'
+
 type FieldProps = {
   label: string
   /** shown under the control, replaced by the error when there is one */
@@ -12,20 +14,31 @@ type FieldProps = {
 
 /**
  * Ark's field owns the aria wiring: one id for the label, the control and the two
- * messages, so a screen cannot forget the association. We own the type scale.
+ * messages. The label is Ark's element with our `Text` inside it (`asChild`), so the
+ * association stays Ark's and the type scale stays ours.
  */
 export function Field({ label, hint, error, children }: FieldProps) {
   return (
     <ArkField.Root invalid={error !== undefined} className="space-y-1.5">
-      <ArkField.Label className="text-text-muted block text-[11px] tracking-[0.12em] uppercase">
-        {label}
+      <ArkField.Label asChild>
+        <Text as="label" tone="caption" className="tracking-[0.12em] uppercase">
+          {label}
+        </Text>
       </ArkField.Label>
       {children}
       {error === undefined ? null : (
-        <ArkField.ErrorText className="text-danger text-xs">{error}</ArkField.ErrorText>
+        <ArkField.ErrorText asChild>
+          <Text as="p" tone="caption" className="text-danger">
+            {error}
+          </Text>
+        </ArkField.ErrorText>
       )}
       {hint === undefined || error !== undefined ? null : (
-        <ArkField.HelperText className="text-ink-300 text-xs">{hint}</ArkField.HelperText>
+        <ArkField.HelperText asChild>
+          <Text as="p" tone="caption">
+            {hint}
+          </Text>
+        </ArkField.HelperText>
       )}
     </ArkField.Root>
   )

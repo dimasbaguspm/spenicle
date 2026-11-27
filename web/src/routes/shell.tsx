@@ -6,6 +6,7 @@ import { clearToken, hasToken } from '@/api/token'
 import { Button } from '@/components/ui/button'
 import { Drawer } from '@/components/ui/drawer'
 import { Menu } from '@/components/ui/menu'
+import { Text } from '@/components/ui/text'
 
 const linkClass = 'text-text-muted transition-colors hover:text-accent'
 
@@ -52,11 +53,10 @@ export function AppShell() {
               </Button>
             </Drawer>
           </div>
-          <Link
-            to="/ledger"
-            className="font-display text-porcelain-50 text-base font-semibold tracking-wide"
-          >
-            Spenicle
+          <Link to="/ledger">
+            <Text as="span" tone="title" className="text-base tracking-wide">
+              Spenicle
+            </Text>
           </Link>
           <nav className="hidden items-center gap-4 sm:flex">{nav}</nav>
           <div className="ml-auto">

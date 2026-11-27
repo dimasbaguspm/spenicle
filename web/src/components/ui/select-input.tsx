@@ -3,14 +3,14 @@ import { useMemo } from 'react'
 
 import { cn } from '@/lib/cn'
 
-type SelectOption = {
+type SelectInputOption = {
   label: string
   value: string
 }
 
-type SelectProps = {
+type SelectInputProps = {
   value: string
-  options: SelectOption[]
+  options: SelectInputOption[]
   placeholder?: string | undefined
   onChange: (value: string) => void
   /** injected by Ui Field; a screen never passes these by hand */
@@ -24,7 +24,7 @@ type SelectProps = {
  * we own every pixel. This file is the only place in the app allowed to import it,
  * so a future swap (or a native `<select>` on a tiny screen) is one edit.
  */
-export function Select({
+export function SelectInput({
   value,
   options,
   placeholder = 'choose',
@@ -32,7 +32,7 @@ export function Select({
   id,
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
-}: SelectProps) {
+}: SelectInputProps) {
   const collection = useMemo(() => createListCollection({ items: options }), [options])
   const selected = useMemo(() => (value === '' ? [] : [value]), [value])
 

@@ -24,22 +24,34 @@ make web-types   # regenerate src/api/schema.d.ts from ../openapi.json
 ## `components/ui` — our vocabulary, not Ark's
 
 Every primitive the screens use lives here, with a props type of our own and exactly one
-export per file: `Button`, `Input`, `Field`, `Select`, `Drawer`, `Menu`. A widget never imports
-a headless library — `oxlint`'s `no-restricted-imports` blocks `@ark-ui/*` outside this
-directory, so the boundary is enforced, not documented.
+export per file. A widget never imports a headless library — `oxlint`'s `no-restricted-imports`
+blocks `@ark-ui/*` outside this directory, so the boundary is enforced, not documented. A file
+carries wiring and theme only: a screen decides what a value means, the component decides how a
+value is chosen and shown.
 
-| component | headless owner                                  | ours                                     |
-| --------- | ----------------------------------------------- | ---------------------------------------- |
-| `Button`  | — (Ark has no button)                           | cva `tone`/`size`/`block`                |
-| `Input`   | Ark `Field.Input`                               | type scale, `size` variant, invalid ring |
-| `Field`   | Ark `Field.Root/Label/HelperText/ErrorText`     | the type scale, one-child contract       |
-| `Select`  | Ark `Select` (listbox, typeahead, roving focus) | every pixel, string options              |
-| `Drawer`  | Ark `Drawer` (focus trap, scroll lock, escape)  | paper, close-on-navigate                 |
-| `Menu`    | Ark `Menu` (roving focus, anchored position)    | plate, `{label, onSelect}[]`             |
+56 components, by the job a screen hires them for:
 
-cva variants are merged by `tailwind-merge` through `lib/cn.ts`, so a caller's `className`
-wins on conflict. `Input` is deliberately Ark's text input and not `NumberInput`: an amount is
-a string of minor units, and a numeric widget would tempt a float.
+| group                | components                                                                                                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| text and scaffolding | `Text` (h1–h6, p, span, label, pre, code, …), `Field`, `Fieldset`, `Button`                                                                                                                                                          |
+| text entry           | `TextInput`, `EmailInput`, `PasswordInput`, `TextAreaInput`, `NumberInput`, `DateInput`, `DateTimeInput`, `DatePicker`, `Editable`                                                                                                   |
+| choice               | `Checkbox`, `RadioGroup`, `SwitchInput`, `Toggle`, `ToggleGroup`, `SegmentGroup`, `SelectInput`, `Combobox`, `Listbox`, `PinInput`, `TagsInput`, `Slider`, `AngleSlider`, `RatingGroup`, `ColorPicker`, `FileUpload`, `SignaturePad` |
+| overlay              | `Dialog`, `Drawer`, `Popover`, `HoverCard`, `Tooltip`, `Menu`, `Toaster`                                                                                                                                                             |
+| status               | `Progress` (linear and circle), `Timer`, `QrCode`, `Clipboard`, `Highlight`, `Marquee`                                                                                                                                               |
+| structure            | `Accordion`, `Collapsible`, `Tabs`, `Steps`, `ScrollArea`, `Splitter`, `Carousel`, `Avatar`, `Pagination`, `TreeView`, `JsonTreeView`, `Toc`, `FloatingPanel`, `ImageCropper`                                                        |
+
+Ark owns the behaviour — field association, listbox and typeahead, focus trap, roving focus,
+page-range math, dropzone, calendar — and we own the props, the markup and every token.
+`Text` is the one exception to the Ark rule, and it is deliberate: a tag carries the semantics
+(`as="h1"`), a `tone` carries the look, and Ark's `Label`/`ErrorText` clone it with `asChild` so
+the type scale lives in one file instead of in twenty `className` strings.
+
+Two files break "one component per export" on purpose: `control.ts` is the shared cva every
+input wears, and `toaster.ts` is the imperative `toast` store `Toaster` reads.
+
+cva variants are merged by `tailwind-merge` through `lib/cn.ts`, so a caller's `className` wins
+on conflict. `TextInput` and not `NumberInput` represents an amount: an amount is a string of
+minor units, and a numeric widget would tempt a float.
 
 ## The theme
 

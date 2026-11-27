@@ -6,9 +6,11 @@ import { Controller, useForm, type Resolver } from 'react-hook-form'
 import { api, errorMessage } from '@/api/client'
 import { queryClient } from '@/api/query'
 import { Button } from '@/components/ui/button'
+import { DateInput } from '@/components/ui/date-input'
 import { Field } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import { SelectInput } from '@/components/ui/select-input'
+import { Text } from '@/components/ui/text'
+import { TextInput } from '@/components/ui/text-input'
 import { CaptureForm, today, type CaptureValues } from '@/lib/capture'
 import { formatMoney, toMinor } from '@/lib/money'
 
@@ -152,13 +154,13 @@ export function LedgerPage() {
         className="border-border bg-surface-raised space-y-4 rounded-lg border p-5"
         onSubmit={submit}
       >
-        <h2 className="text-brass-500 text-xs font-medium tracking-[0.14em] uppercase">
+        <Text as="h2" tone="section">
           Quick capture
-        </h2>
+        </Text>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[9rem_1fr_11rem]">
           <Field label="Amount" error={errors.amount?.message}>
-            <Input
+            <TextInput
               inputMode="decimal"
               placeholder={baseCurrency}
               autoComplete="off"
@@ -166,10 +168,10 @@ export function LedgerPage() {
             />
           </Field>
           <Field label="What was it" error={errors.note?.message}>
-            <Input placeholder="coffee, taxi, rent…" {...form.register('note')} />
+            <TextInput placeholder="coffee, taxi, rent…" {...form.register('note')} />
           </Field>
           <Field label="Day" error={errors.occurredOn?.message}>
-            <Input type="date" {...form.register('occurredOn')} />
+            <DateInput {...form.register('occurredOn')} />
           </Field>
         </div>
 
@@ -179,7 +181,7 @@ export function LedgerPage() {
             name="categoryRef"
             render={({ field, fieldState }) => (
               <Field label="Category" error={fieldState.error?.message}>
-                <Select
+                <SelectInput
                   value={field.value}
                   options={categoryOptions}
                   placeholder="pick a category"
@@ -193,7 +195,7 @@ export function LedgerPage() {
             name="accountRef"
             render={({ field, fieldState }) => (
               <Field label="Paid from" error={fieldState.error?.message}>
-                <Select
+                <SelectInput
                   value={field.value}
                   options={accountOptions}
                   placeholder="pick an account"
@@ -222,7 +224,9 @@ export function LedgerPage() {
       </form>
 
       <section className="space-y-1">
-        <h2 className="text-brass-500 text-xs font-medium tracking-[0.14em] uppercase">Register</h2>
+        <Text as="h2" tone="section">
+          Register
+        </Text>
         {entries.isPending ? <p className="text-text-muted">Loading…</p> : null}
         {entries.error === null ? null : (
           <p role="alert" className="text-danger text-sm">

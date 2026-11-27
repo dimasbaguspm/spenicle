@@ -6,7 +6,8 @@ import { api, errorMessage } from '@/api/client'
 import { setToken } from '@/api/token'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
+import { Text } from '@/components/ui/text'
 
 /**
  * The password never leaves this form: it is exchanged for a scoped token, and only
@@ -48,19 +49,19 @@ export function LoginPage() {
       }}
     >
       <div className="space-y-2">
-        <h1 className="text-porcelain-50 text-3xl font-semibold">Spenicle</h1>
-        <p className="text-text-muted text-sm leading-relaxed">
+        <Text as="h1" tone="display">
+          Spenicle
+        </Text>
+        <Text as="p" tone="muted" className="leading-relaxed">
           Sign in with the instance password. It is exchanged for a scoped token and never stored.
-        </p>
+        </Text>
       </div>
       <Field
         label="Instance password"
         hint="Only the token is kept, in this tab."
         error={signIn.error?.message}
       >
-        <Input
-          type="password"
-          autoComplete="current-password"
+        <PasswordInput
           placeholder="Instance password"
           value={password}
           onChange={(event) => {

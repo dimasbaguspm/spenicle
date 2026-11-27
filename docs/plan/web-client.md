@@ -101,13 +101,32 @@ pre-commit and pre-push.
 
 ## Components
 
-`web/src/components/ui` is the app's own vocabulary — `Button`, `Input`, `Field`, `Select`,
-`Drawer`, `Menu` — each with a private props type, one export, and cva variants merged by
-`tailwind-merge`. Behaviour is Ark UI's (field association, listbox, focus trap, roving focus);
-the props, the markup and every token are ours. Only that directory may import a headless
-library; oxlint's `no-restricted-imports` enforces it. Adding a primitive means: write the ui
-file, then use it in a screen. Ark has no `NavigationMenu` — navigation is a `Drawer` under
-`sm` and a link row above it.
+`web/src/components/ui` is the app's own vocabulary: one file per Ark primitive, a private
+props type, exactly one export, and cva variants merged by `tailwind-merge`. Behaviour is Ark
+UI's (field association, listbox, focus trap, roving focus, page-range math); the props, the
+markup and every token are ours, and none of them carries business logic — a screen decides
+what the value means, the component only decides how a value is chosen and shown. Only that
+directory may import a headless library; oxlint's `no-restricted-imports` enforces it.
+Adding a primitive means: write the ui file, then use it in a screen.
+
+56 components, grouped by the job a screen hires them for:
+
+| group | components |
+| --- | --- |
+| text and form scaffolding | `Text` (h1–h6, p, span, label, pre, code, …), `Field`, `Fieldset`, `Button` |
+| text entry | `TextInput`, `EmailInput`, `PasswordInput`, `TextAreaInput`, `NumberInput`, `DateInput`, `DateTimeInput`, `DatePicker`, `Editable` |
+| choice and value picking | `Checkbox`, `RadioGroup`, `SwitchInput`, `Toggle`, `ToggleGroup`, `SegmentGroup`, `SelectInput`, `Combobox`, `Listbox`, `PinInput`, `TagsInput`, `Slider`, `AngleSlider`, `RatingGroup`, `ColorPicker`, `FileUpload`, `SignaturePad` |
+| overlay | `Dialog`, `Drawer`, `Popover`, `HoverCard`, `Tooltip`, `Menu`, `Toaster` |
+| status | `Progress` (linear and circle), `Timer`, `QrCode`, `Clipboard`, `Highlight`, `Marquee` |
+| structure and data | `Accordion`, `Collapsible`, `Tabs`, `Steps`, `ScrollArea`, `Splitter`, `Carousel`, `Avatar`, `Pagination`, `TreeView`, `JsonTreeView`, `Toc`, `FloatingPanel`, `ImageCropper` |
+
+Two deliberate exceptions to "one component per file": `control.ts` exports the shared cva that
+every input wears (so an input cannot drift from its neighbours) and `toaster.ts` exports the
+imperative `toast` store that `Toaster` reads — a store is not a component.
+
+An amount is a string of minor units, so no amount ever reaches `NumberInput` or `Slider`: the
+type scale difference is the feature. Ark has no `NavigationMenu` — navigation is a `Drawer`
+under `sm` and a link row above it.
 
 ## Theme
 
