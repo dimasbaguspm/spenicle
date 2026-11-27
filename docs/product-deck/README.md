@@ -104,7 +104,9 @@ is re-coded to the domain code when the table knows it, so `unknown_currency` an
 - **Refs only.** Every row has a 32-lowercase-hex `ref`; that is the only identifier
   the API speaks. Requests send `account_ref`, `payee_ref`, `category_ref`, `entry_ref`,
   responses carry `ref` (and `resolved_entry_ref`). No route accepts or returns an
-  integer id: an unknown field such as `payee_id` is `400 invalid_json`.
+  integer id: an unknown field such as `payee_id` is `400 invalid_json` on every route
+  that binds a JSON body through the shared binder. `POST /api/captures` decodes its own
+  body and ignores an unknown field instead of refusing it.
 - **Dates** are `YYYY-MM-DD`, timestamps RFC3339 in UTC. Every calendar decision
   ("today", "due", "this month") is made in `APP_TIMEZONE`, pinned at the first boot
   and reported by `GET /api/settings` and `GET /healthz`.

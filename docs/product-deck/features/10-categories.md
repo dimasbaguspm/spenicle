@@ -151,7 +151,7 @@ Scenario: The longer pattern wins the tie-break
 Scenario: A rule on an archived category is skipped
   Given a rule whose category is archived
   When I ask for a suggestion that would match it
-  Then the tier is not "rule_contains"
+  Then the suggestion comes from a live rule, never the archived one
 
 Scenario: No match answers none
   When I ask for a suggestion for a merchant nobody has filed

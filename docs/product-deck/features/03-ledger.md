@@ -213,7 +213,7 @@ Scenario: Voiding writes a reversal and keeps the original
     {"void":true,"reason":"duplicate"}
     """
   Then the response status is 200
-  And the reversal carries reverses_entry_id
+  And the reversal is a new entry with its own ref, while the original carries voided_at
   And the original carries voided_at
   And the journal holds 1 "ledger_entry" row with action "void"
   And the account balances are unchanged

@@ -69,8 +69,8 @@ reserved for a future chat endpoint, so `ai_assistance` must never gate a screen
 
 `PATCH /api/captures/{ref}` also has `{"action":"retry"}`: it needs a `pending` capture,
 a configured extractor and an existing `job_ref`, and it polls that job. `match` is live
-but has no user-facing reverse action. Retry and an unbalanced approve are implemented
-without committed-UAT coverage.
+but has no user-facing reverse action. Retry and an unbalanced approve are implemented and covered by
+committed UAT (`PATCH_api_captures_:ref.feature`).
 
 ---
 

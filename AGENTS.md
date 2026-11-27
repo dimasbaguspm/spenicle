@@ -54,6 +54,13 @@ the document wins until you change the document too.
    import GC, renders exports and polls the mailbox, and opens no port. runit in the
    image supervises both. No Postgres, no Redis, no queue, no sidecar: adding
    infrastructure needs a design-doc change first.
+8. **A code change ships its docs in the same commit.** Every route, field, status, code,
+   cap, state or limit you touch updates the page that states it — `docs/endpoints/`,
+   `docs/v2-api.md`, `docs/product-deck/`, `README.md`, this file — in the commit that
+   changes the behaviour, never in a follow-up. A doc that is not updated is a false
+   claim, and a false claim is a defect: the docs are checked against the code, not the
+   other way round. Record the check in [`docs/alignment.md`](./docs/alignment.md) when a
+   change moves the verdict.
 
 ## Layout
 
@@ -464,6 +471,7 @@ SnapToJSON only today. A new dependency needs a reason in the MR, not a `go get`
 | [`docs/endpoints/`](./docs/endpoints/README.md) | one page per route; same sections everywhere, including the sequence diagram |
 | [`docs/product-deck/`](./docs/product-deck/README.md) | one page per user-facing feature, client POV: journeys, backend path end to end, RRR, acceptance criteria |
 | [`docs/alignment.md`](./docs/alignment.md) | the check log: which commit the docs were verified against, by whom, and the release verdict |
+| [`docs/plan/`](./plan/refs-and-idempotency.md) | the technical plans that need a decision before code: ref-keyed relations, server-minted idempotency keys |
 | [`.env.example`](./.env.example) | every variable with its default, copy to `.env` |
 | [`LICENSE`](./LICENSE) | source-available: personal unmodified use only, no commercial use |
 

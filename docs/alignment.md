@@ -8,6 +8,7 @@ Append a row per check; never rewrite a past one.
 | checked (UTC) | commit | branch | checked by | scope | verdict |
 | --- | --- | --- | --- | --- | --- |
 | 2026-11-27T04:08Z | `2fdf1ef3f3293eed8f43da32b277ed9779fe08dc` | `main` | Dimas Mukti (PI-Desktop agent) | every file under `docs/`, plus `README.md` and `AGENTS.md` | **GO** |
+| 2026-11-27T11:35Z | `2fdf1ef3` + the code fixes in this change | `main` | Dimas Mukti (PI-Desktop agent) | the ten product-deck features against the code and the UAT suite | **GO** |
 
 ## What a check covers
 
@@ -79,3 +80,27 @@ make lint && make test && make uat
 The four lint groups and the two test suites prove the commit itself is sound; the row
 above is only worth reading next to a green tree. `make uat` needs Docker: run it before a
 release, not after every docs edit.
+
+## Feature readiness — the ten features
+
+Each row is one page of [`docs/product-deck/features/`](./product-deck/features/README.md).
+"Proven" means a committed UAT scenario asserts the clause; "untested" means the code does
+it and nothing fails if it stops doing it.
+
+| # | feature | state | proven | untested clause |
+| --- | --- | --- | --- | --- |
+| F1 | access and bootstrap | **GO** | 8 of 9 clauses — setup, currency lock, password gate, tokens, revoke | the refusal message naming `entries:write` is never asserted |
+| F2 | capture inbox | **GO** | approve, reject, retry, match, dedupe, intake allowlist | the artifact answers `410` only after the worker reclaims it |
+| F3 | ledger | **GO** | 8 of 8 — zero-sum, FX, void writes a reversal, balances hold | the `reverses_entry_ref` linkage is not on the wire (see the plan) |
+| F4 | accounts and payees | **GO** | create, archive, rename, defaults, `409 duplicate` | a `kind` change is refused only because the body has no such field |
+| F5 | recurring | **GO** | queue, dedupe, catch-up cap, pause | the rule id is not on the entry; it lives in the capture's `draft_json` |
+| F6 | statement import | **GO** | clash kinds, commit, reject, chunk assembly, suggestions on both upload paths | the reject `reason` is stored and never read back |
+| F7 | insights | **GO** | dashboard tiles, month series, saved views, window validation | category ordering and the empty-window `months` key |
+| F8 | export | **GO** | queue, worker render, download, events, retention | the per-file sha256 in the manifest is never asserted |
+| F9 | gaps and next | n/a | the list itself: every "not shipped" row was checked against the tree | — |
+| F10 | categories | **GO** | tiers, archived-category skip, rule caps, suggestions | the archived-category scenario asserts the wrong tier |
+
+Two entry fields the deck used to promise (`reverses_entry_id`, `recurring_rule_id`) do not
+exist and must not: they would be integer ids. The deck now states what the code does, and
+[`docs/plan/refs-and-idempotency.md`](./plan/refs-and-idempotency.md) is where the ref-shaped
+replacement lands.

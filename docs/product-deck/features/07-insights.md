@@ -181,7 +181,7 @@ Scenario: A saved view runs with the same shape it was saved with
   Then the response status is 201
   When I send a GET to "/api/analytics/custom/{{ref}}?from=2026-01-01&to=2026-02-28"
   Then the response body echoes query.chart "bar"
-  And the response body carries "months"
+  And the response body carries the "months" array, omitted when the window has no rows
 
 Scenario: A report window is validated
   When I send a GET to "/api/dashboard"
