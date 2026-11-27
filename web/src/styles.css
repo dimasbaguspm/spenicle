@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* the register is a column of numbers: make tabular the default */
+  font-variant-numeric: tabular-nums;
+}
+
+/* every amount on the wire is a string of minor units; never let a browser round one */
+input[inputmode='decimal'] {
+  font-variant-numeric: tabular-nums;
+}

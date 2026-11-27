@@ -104,6 +104,9 @@ internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore, mai
 tools/openapi/         the OpenAPI 3.1 generator: `go run ./tools/openapi` reads the
                        annotations on the handlers and writes `openapi.json` at the
                        repo root
+web/                   the SPA: React 19 + Vite + TanStack Router/Query, typed from
+                       `openapi.json` by `make web-types`; `make web` builds `web/dist`,
+                       which the binary serves on the API's own port in the release image
 ```
 
 The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` stages
@@ -172,6 +175,10 @@ make uat-snapshots   # rewrite snapshot files, then review the diff
 make cover      # coverage over the whole module; -coverpkg makes the UAT count
 make fmt        # gofmt the tree
 make openapi    # regenerate openapi.json from the handler annotations
+make web        # build the SPA into web/dist
+make web-dev    # serve the SPA on :5173, proxying /api to :8080
+make web-test   # the SPA's unit tests (vitest)
+make web-types  # regenerate the SPA's typed client from openapi.json
 make lint       # all four groups; every one must stay at 0 issues
 make lint-fix   # safe automatic fixes (style, then correctness)
 ```
