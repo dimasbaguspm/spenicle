@@ -17,6 +17,7 @@ Feature: PATCH /api/entries/{{ref}}
       | table           | count |
       | ledger_entries  | 2     |
       | ledger_postings | 4     |
+    And the database matches the snapshot "patch_api_entries_:ref__voiding_writes_a_reversal_and_keeps_the_original"
 
   Scenario: An entry cannot be voided twice
     Given a running API

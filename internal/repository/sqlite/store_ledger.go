@@ -718,7 +718,7 @@ func (s *Store) VoidEntry(
 			return fmt.Errorf("%w: entry %s is already voided", entity.ErrInvalidState, ref)
 		}
 
-		return insertReversal(ctx, tx, original.ID, reversal)
+		return insertReversal(ctx, tx, reversal)
 	})
 	if err != nil {
 		return entity.Entry{}, err
@@ -727,7 +727,7 @@ func (s *Store) VoidEntry(
 	return s.reversalByReversesRef(ctx, original.Ref)
 }
 
-func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal entity.Entry) error {
+func insertReversal(ctx context.Context, tx *sql.Tx, reversal entity.Entry) error {
 	if err := entity.CheckZeroSum(reversal.Postings); err != nil {
 		return err
 	}
@@ -767,7 +767,10 @@ func insertReversal(ctx context.Context, tx *sql.Tx, originalID int64, reversal 
 		ID:     reversalID,
 		Ref:    reversalRef,
 		Action: constant.AuditActionVoid,
-		To:     entity.EntryVoided{VoidedEntryID: originalID, ReversalEntryID: reversalID},
+		To: entity.EntryVoided{
+			VoidedEntryRef:   reversal.ReversesEntryRef,
+			ReversalEntryRef: reversalRef,
+		},
 	})
 }
 
@@ -1038,7 +1041,7 @@ func writeReplacement(
 		return fmt.Errorf("%w: entry %s is already voided", entity.ErrInvalidState, original.Ref)
 	}
 
-	if revErr := insertReversal(ctx, tx, original.ID, reversal); revErr != nil {
+	if revErr := insertReversal(ctx, tx, reversal); revErr != nil {
 		return revErr
 	}
 

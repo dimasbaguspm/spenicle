@@ -1,0 +1,217 @@
+{
+  "accounts": [
+    {
+      "archived_at": null,
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "icon": null,
+      "id": 1,
+      "kind": "asset",
+      "name": "Cash",
+      "parent_ref": null,
+      "ref": "<ref>"
+    },
+    {
+      "archived_at": null,
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "icon": null,
+      "id": 2,
+      "kind": "expense",
+      "name": "Unsorted",
+      "parent_ref": null,
+      "ref": "<ref>"
+    }
+  ],
+  "artifacts": [],
+  "audit_log": [
+    {
+      "action": "update",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_kind": "setting",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 1,
+      "ref": "<ref>",
+      "to_json": "{\"key\":\"secret_fingerprint\"}"
+    },
+    {
+      "action": "create",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_kind": "setting",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 2,
+      "ref": "<ref>",
+      "to_json": "{\"key\":\"app_settings\"}"
+    },
+    {
+      "action": "start",
+      "actor_kind": "system",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_kind": "system",
+      "entity_ref": null,
+      "from_json": null,
+      "id": 3,
+      "ref": "<ref>",
+      "to_json": "{\"service\":\"spenicle-http\",\"version\":\"uat\",\"schema_version\":1,\"started_at\":\"<timestamp>\"}"
+    },
+    {
+      "action": "create",
+      "actor_kind": "user",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_kind": "ledger_entry",
+      "entity_ref": "<ref>",
+      "from_json": null,
+      "id": 4,
+      "ref": "<ref>",
+      "to_json": "{\"occurred_on\":\"2026-02-14\",\"currency\":\"IDR\",\"source\":\"manual\",\"postings\":2}"
+    },
+    {
+      "action": "void",
+      "actor_kind": "user",
+      "actor_ref": null,
+      "at": "<timestamp>",
+      "entity_kind": "ledger_entry",
+      "entity_ref": "<ref>",
+      "from_json": null,
+      "id": 5,
+      "ref": "<ref>",
+      "to_json": "{\"voided_entry_ref\":\"<ref>\",\"reversal_entry_ref\":\"<ref>\"}"
+    }
+  ],
+  "capture_payloads": [],
+  "captures": [],
+  "fx_rates": [
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 1,
+      "on_date": "2026-11-20",
+      "quote": "USD",
+      "rate": "1.0990",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 2,
+      "on_date": "2026-11-20",
+      "quote": "JPY",
+      "rate": "174.35",
+      "ref": "<ref>",
+      "source": "ecb"
+    },
+    {
+      "base": "EUR",
+      "fetched_at": "<timestamp>",
+      "id": 3,
+      "on_date": "2026-11-20",
+      "quote": "IDR",
+      "rate": "16000.50",
+      "ref": "<ref>",
+      "source": "ecb"
+    }
+  ],
+  "import_batches": [],
+  "import_rows": [],
+  "import_upload_chunks": [],
+  "import_uploads": [],
+  "ledger_entries": [
+    {
+      "client_id": "<client_id>",
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "id": 1,
+      "note": "duplicate",
+      "occurred_on": "2026-02-14",
+      "payee_ref": null,
+      "recurring_rule_ref": null,
+      "ref": "<ref>",
+      "reverses_entry_ref": null,
+      "source": "manual",
+      "voided_at": "<timestamp>"
+    },
+    {
+      "client_id": null,
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "id": 2,
+      "note": "duplicate of 811",
+      "occurred_on": "2026-02-14",
+      "payee_ref": null,
+      "recurring_rule_ref": null,
+      "ref": "<ref>",
+      "reverses_entry_ref": "<ref>",
+      "source": "adjustment",
+      "voided_at": null
+    }
+  ],
+  "ledger_postings": [
+    {
+      "account_ref": "<ref>",
+      "amount_minor": -15000,
+      "base_amount_minor": -15000,
+      "entry_ref": "<ref>",
+      "fx_rate": "1",
+      "fx_rate_date": null,
+      "fx_source": "identity",
+      "id": 1,
+      "ref": "<ref>"
+    },
+    {
+      "account_ref": "<ref>",
+      "amount_minor": 15000,
+      "base_amount_minor": 15000,
+      "entry_ref": "<ref>",
+      "fx_rate": "1",
+      "fx_rate_date": null,
+      "fx_source": "identity",
+      "id": 2,
+      "ref": "<ref>"
+    },
+    {
+      "account_ref": "<ref>",
+      "amount_minor": 15000,
+      "base_amount_minor": 15000,
+      "entry_ref": "<ref>",
+      "fx_rate": "1",
+      "fx_rate_date": null,
+      "fx_source": "identity",
+      "id": 3,
+      "ref": "<ref>"
+    },
+    {
+      "account_ref": "<ref>",
+      "amount_minor": -15000,
+      "base_amount_minor": -15000,
+      "entry_ref": "<ref>",
+      "fx_rate": "1",
+      "fx_rate_date": null,
+      "fx_source": "identity",
+      "id": 4,
+      "ref": "<ref>"
+    }
+  ],
+  "settings": [
+    {
+      "id": 1,
+      "k": "secret_fingerprint",
+      "ref": "<ref>",
+      "v": "47ed2e331b50a9ee"
+    },
+    {
+      "id": 2,
+      "k": "app_settings",
+      "ref": "<ref>",
+      "v": "<sealed>"
+    }
+  ]
+}

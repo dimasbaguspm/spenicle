@@ -57,7 +57,7 @@ is voided. There is no `meta`: the page envelope belongs to the list route.
 ## Limitations
 
 - A void writes a second entry; this route answers the original carrying `voided_at` and
-  never follows `reverses_entry_id`, so the reversal is found through the list route
+  never follows `reverses_entry_ref`, so the reversal is found through the list route
   (`?source=adjustment`).
 - Display names cost two extra reads per request (`ListAccounts`, `ListPayees`), the same
   cost the list route pays. Acceptable at one user's volume.

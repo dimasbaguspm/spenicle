@@ -48,8 +48,8 @@ type EntryPayee struct {
 
 // EntryVoided records a void: the original and the reversal it produced.
 type EntryVoided struct {
-	VoidedEntryID   int64 `json:"voided_entry_id"   validate:"required,gt=0"`
-	ReversalEntryID int64 `json:"reversal_entry_id" validate:"required,gt=0"`
+	VoidedEntryRef   string `json:"voided_entry_ref"   validate:"required,ref"`
+	ReversalEntryRef string `json:"reversal_entry_ref" validate:"required,ref"`
 }
 
 // AccountChanged records a created or renamed account.

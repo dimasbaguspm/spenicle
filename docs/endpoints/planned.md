@@ -11,7 +11,7 @@ Every method and path in [`README.md`](./README.md) exists in the current tree. 
 
 ## Ledger, reports and rates
 
-- **Production integrity job.** There is no boot or post-import integrity job. `entity.CheckZeroSum` runs before insert and again inside the write transaction, and reversals are checked when created; that is the shipped invariant enforcement.
+- **Production integrity job.** There is no boot or post-import integrity job. `entity.CheckZeroSum` runs before the store opens the write transaction, on every insert and reversal; that is the shipped invariant enforcement.
 - **Four-way month close.** No lock, snapshot, `expected`/`tracked` diff or balancing adjustment exists. `GET /api/analytics/months` returns monthly totals derived from the ledger.
 - **Dashboard derivations.** Safe-to-spend, 30/60/90-day forecast, month pace and top-payee tiles are planned. `GET /api/dashboard` returns only the fields it documents today.
 - **Recurring detection and promotion.** The worker queues captures for rules that already exist; it does not infer rules from entries and exposes no HTTP detection route.
