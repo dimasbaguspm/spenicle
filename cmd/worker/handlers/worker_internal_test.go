@@ -133,6 +133,8 @@ func (s *stubStore) FindAccount(context.Context, string, string) (entity.Account
 
 func (s *stubStore) SetSetting(context.Context, string, string) error { return nil }
 
+func (s *stubStore) OptimizeStats(context.Context) error { return nil }
+
 func TestRunRuleStopsAtEndsOn(t *testing.T) {
 	ends := parseDay(t, "2026-04-10")
 
@@ -337,6 +339,12 @@ func (s *recordingStore) SetSetting(_ context.Context, key, value string) error 
 	return nil
 }
 
+func (s *recordingStore) OptimizeStats(context.Context) error {
+	s.calls = append(s.calls, "optimize")
+
+	return nil
+}
+
 func TestRunRecordsTheHeartbeatAfterTheWork(t *testing.T) {
 	at := time.Date(2026, 4, 15, 9, 0, 0, 0, time.UTC)
 	store := &recordingStore{}
@@ -348,7 +356,7 @@ func TestRunRecordsTheHeartbeatAfterTheWork(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	if got, want := strings.Join(store.calls, ","), "due,heartbeat"; got != want {
+	if got, want := strings.Join(store.calls, ","), "due,optimize,heartbeat"; got != want {
 		t.Fatalf("worker calls = %q, want %q", got, want)
 	}
 	if want := at.Format(constant.TimestampLayout); store.heartbeat != want {

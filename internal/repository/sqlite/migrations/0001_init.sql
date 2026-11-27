@@ -352,6 +352,7 @@ CREATE INDEX ix_artifacts_live ON artifacts (created_at, id) WHERE deleted_at IS
 CREATE INDEX ix_audit_entity ON audit_log (entity_kind, entity_ref, id);
 CREATE INDEX ix_audit_actor ON audit_log (actor_kind, at);
 CREATE INDEX ix_audit_action ON audit_log (action, at);
+CREATE INDEX ix_audit_at ON audit_log (at, id);
 
 CREATE TABLE connections (
   id                INTEGER PRIMARY KEY,
@@ -390,3 +391,4 @@ CREATE TABLE mail_messages (
 );
 
 CREATE UNIQUE INDEX ux_mail_messages_source ON mail_messages (source, message_ref);
+CREATE INDEX ix_mail_status ON mail_messages (status, id);

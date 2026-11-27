@@ -29,6 +29,7 @@ type Store interface {
 	AdvanceRecurring(ctx context.Context, ref string, from, to, postedAt time.Time) (bool, error)
 	FindAccount(ctx context.Context, name, kind string) (entity.Account, bool, error)
 	SetSetting(ctx context.Context, key, value string) error
+	OptimizeStats(ctx context.Context) error
 }
 
 type ArtifactFiles interface {
@@ -111,6 +112,15 @@ func (r *Runner) record(ctx context.Context, at time.Time) {
 
 	if err := r.store.SetSetting(ctx, constant.SettingWorkerLastRunAt, value); err != nil {
 		r.logger.Warn(ctx, "worker heartbeat not stored", slog.Any("error", err))
+	}
+}
+
+func (r *Runner) optimizeStats(ctx context.Context) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Worker.Handler.OptimizeStats")
+	defer endSpan()
+
+	if err := r.store.OptimizeStats(ctx); err != nil {
+		r.logger.Warn(ctx, "planner statistics not refreshed", slog.Any("error", err))
 	}
 }
 

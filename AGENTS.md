@@ -330,13 +330,19 @@ assembles the draft on the last chunk (`409 import_conflict` when the total disa
 a replayed commit resumes from the rows whose ledger `idempotency_key` is still missing. A row
 edit while `committing` is `409 import_committing`.
 
-The worker does six things per run, in this order: queue a capture for each due recurring
+The worker does seven things per run, in this order: queue a capture for each due recurring
 rule (never an entry), reclaim
 the artifacts of rejected captures, drop expired import drafts and `open` uploads older than
 24h, claim up to 5 export jobs and sweep the queue, poll the configured mailbox
-(`Module.Intake.Poll`), which queues captures and never posts an entry, and finally stamp the
-heartbeat it reports as `worker_last_run_at`. Every calendar decision it makes
-("today", the due comparison, the business-day shift) runs in `APP_TIMEZONE`, not UTC.
+(`Module.Intake.Poll`), which queues captures and never posts an entry, refresh the query
+planner's statistics (`PRAGMA optimize`, where SQLite decides which tables have moved enough
+to re-`ANALYZE`), and finally stamp the heartbeat it reports as `worker_last_run_at`. Every
+calendar decision it makes ("today", the due comparison, the business-day shift) runs in
+`APP_TIMEZONE`, not UTC.
+Statistics are a correctness issue, not a tuning knob: without them the planner reads the
+schema blind and picks the wrong index for the register listing (`ix_entries_reversal_ref`
+instead of `ix_entries_occurred`, plus a sort) and for the month roll-up. The store exposes
+it as `OptimizeStats`; nothing else writes `sqlite_stat1`.
 
 ## Observability
 

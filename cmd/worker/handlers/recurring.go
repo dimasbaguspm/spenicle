@@ -51,6 +51,7 @@ func (r *Runner) Run(ctx context.Context) (Summary, error) {
 	r.collectUploads(ctx, now)
 	r.runExports(ctx, now)
 	r.runIntake(ctx, now)
+	r.optimizeStats(ctx)
 	r.record(ctx, r.clock.Now())
 
 	return summary, firstErr

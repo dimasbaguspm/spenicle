@@ -54,6 +54,17 @@ func (s *Store) Ping(ctx context.Context) error {
 	return nil
 }
 
+func (s *Store) OptimizeStats(ctx context.Context) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.OptimizeStats")
+	defer endSpan()
+
+	if _, err := s.db.ExecContext(ctx, `PRAGMA optimize`); err != nil {
+		return fmt.Errorf("optimize statistics: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Store) Setting(ctx context.Context, key string) (string, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.Setting")
 	defer endSpan()

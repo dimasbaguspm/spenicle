@@ -178,7 +178,20 @@ Ranked by queries saved per request:
 - **§5 indexes: shipped.** Five dead indexes dropped, four partial predicates that blocked an
   equality lookup removed, four new indexes added (`postings (entry_ref, id)`,
   `entries (payee_ref)`, `exports (status, started_at, id)`, live artifacts by `created_at`).
-  `ix_recurring_payee_ref` stayed: it serves the recurring list's order.
+  `ix_recurring_payee_ref` stayed: it serves the payee-name prefix filter, not the list order
+  (that list sorts, the filter searches). The partial-index reason above is too broad: SQLite
+  *does* use `ux_entries_idem` and `ux_captures_idem` for `idempotency_key = ?`; what it will
+  not use is a predicate it cannot prove, like `<> ''`. And `ix_artifacts_live` is not picked
+  by the reclaim statement it was added for — that query drives from `ix_captures_queue` and
+  sorts, so the index is write cost for nothing.
+- **Planner statistics: shipped.** Nothing ever ran `ANALYZE`, so every plan in §5 was an
+  estimate over a missing `sqlite_stat1`. With 5k entries the register listing chose
+  `ix_entries_reversal_ref` and sorted; after `ANALYZE` it chooses `ix_entries_occurred` with
+  no sort, and the month roll-up flips the same way. The worker runs `PRAGMA optimize` on each
+  tick, before the heartbeat.
+- **Two equality paths that had no index: shipped.** `ix_audit_at (at, id)` for the audit date
+  range — it was a full scan of the append-only table — and `ix_mail_status (status, id)` for
+  the intake listing.
 - **§6 dates: shipped.** The shared list filter now reads `from`/`to` through the same
   `Moment`/`MomentEnd` parser as audit and analytics, in `APP_TIMEZONE`; `occurred_on` stays a date.
 - **§8 request id: shipped.** `X-Request-Id` on every response (the trace id, or a minted one
