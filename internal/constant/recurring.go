@@ -1,8 +1,7 @@
 package constant
 
 const (
-	RecurringOriginUser     = "user"
-	RecurringOriginDetected = "detected"
+	RecurringOriginUser = "user"
 
 	RecurringStateSuggested = "suggested"
 	RecurringStateActive    = "active"

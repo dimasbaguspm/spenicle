@@ -58,7 +58,8 @@ rate carried from the nearest earlier business day or derived as a cross rate.
 ## Errors
 
 `422 postings_not_balanced`, `422 invalid_postings`, `422 unknown_currency`,
-`422 invalid_rate`, `422 invalid_request` (bad date, amount or `payee_ref`),
+`422 invalid_rate` when a rate is missing or unparseable, `422 invalid_amount` when an amount
+overflows the minor-unit range, `422 invalid_request` (bad date, amount or `payee_ref`),
 `404 not_found` when `payee_ref` names no payee, `400 invalid_json`.
 
 ## Limitations

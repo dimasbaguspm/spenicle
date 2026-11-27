@@ -12,7 +12,6 @@ const (
 	MailSkipSenderNotAllowed = "sender_not_allowed"
 	MailSkipNoBody           = "no_body"
 	MailSkipDuplicate        = "duplicate"
-	MailSkipTooLarge         = "too_large"
 
 	MailErrorParse = "parse_failed"
 )

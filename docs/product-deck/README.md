@@ -90,7 +90,7 @@ structured log, joined to the request by `trace_id`. Codes a client must handle:
 | `404` | `not_found` |
 | `409` | `capture_resolved`, `invalid_state`, `base_currency_locked`, `secret_mismatch`, `password_change_required` (forced password change blocks every authenticated route but `/api/password` and `/api/meta`), `duplicate` (name already in use), `setup_conflict` (settings changed during setup), `import_conflict`, `import_closed`, `import_committing`, `export_conflict`, `export_not_ready`, `export_failed`, `intake_disabled`, `reauth_required` |
 | `410` | `gone` (an artifact or export blob the worker reclaimed) |
-| `422` | `invalid_request`, `unknown_currency`, `unknown_reference`, `postings_not_balanced`, `invalid_postings`, `invalid_rate`, `empty_setup`, `empty_patch`, `unsupported_patch`, `weak_password`, `unknown_capture_kind` |
+| `422` | `invalid_request`, `unknown_currency`, `unknown_reference`, `postings_not_balanced`, `invalid_postings`, `invalid_rate`, `invalid_amount`, `empty_setup`, `empty_patch`, `unsupported_patch`, `weak_password`, `unknown_capture_kind` |
 | `503` | `degraded` (`GET /healthz` only) |
 
 The promotion rule matters to a client: a field failure inside `422 invalid_request`

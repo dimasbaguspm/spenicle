@@ -36,8 +36,7 @@ None.
 ```
 
 `status` is `captured`, `skipped`, `failed` or `gone`; `skip_reason` names why a skip happened
-(`sender_not_allowed`, `no_body`, `duplicate` — `too_large` is defined in the enum but no
-code path writes it), and `superseded_by` points at the reference that replaced this one
+(`sender_not_allowed`, `no_body`, `duplicate`), and `superseded_by` points at the reference that replaced this one
 after a refresh. `thread_ref` is the provider's thread handle and is omitted when the
 adapter reports none.
 
