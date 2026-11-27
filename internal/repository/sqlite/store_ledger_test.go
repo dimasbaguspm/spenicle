@@ -294,3 +294,85 @@ func TestRunningBalanceRebuildGivesEachCheckpointARef(t *testing.T) {
 		t.Fatalf("checkpoints = %d rows with %d refs, want 3 and 3", rows, refs)
 	}
 }
+
+func TestAPostedEntryKeepsTheRateItWasPostedWith(t *testing.T) {
+	store := newStore(t)
+	ctx := t.Context()
+
+	cash, err := store.CreateAccount(ctx, "Cash", constant.AccountKindAsset, "USD")
+	if err != nil {
+		t.Fatalf("cash account: %v", err)
+	}
+
+	coffee, err := store.CreateAccount(ctx, "Coffee", constant.AccountKindExpense, "IDR")
+	if err != nil {
+		t.Fatalf("coffee account: %v", err)
+	}
+
+	day := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	entry, err := entity.NewEntry(entity.Entry{
+		OccurredOn: day,
+		Currency:   "USD",
+		Source:     constant.EntrySourceManual,
+		Postings: []entity.Posting{
+			{
+				AccountRef: cash.Ref, AmountMinor: -1, BaseAmountMinor: -16200,
+				FXRate: "16200", FXRateDate: "2026-02-14", FXSource: constant.FXSourceManual,
+			},
+			{AccountRef: coffee.Ref, AmountMinor: 1, BaseAmountMinor: 16200},
+		},
+	})
+	if err != nil {
+		t.Fatalf("new entry: %v", err)
+	}
+
+	posted, err := store.InsertEntry(ctx, entry)
+	if err != nil {
+		t.Fatalf("insert entry: %v", err)
+	}
+
+	republishTheSheet(t, store)
+	assertStoredRate(t, store, posted.Ref, cash.Ref)
+}
+
+func republishTheSheet(t *testing.T, store *sqlite.Store) {
+	t.Helper()
+
+	// The sheet moves the next day at a different rate. A locked entry must not move.
+	if _, err := store.DB().ExecContext(t.Context(), `
+		INSERT INTO fx_rates (ref, base, quote, on_date, rate, source, fetched_at)
+		VALUES (?, 'EUR', 'USD', '2026-02-14', '1.2000', 'ecb', ?)`,
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", time.Now().UTC().Format(constant.TimestampLayout),
+	); err != nil {
+		t.Fatalf("publish the sheet: %v", err)
+	}
+}
+
+func assertStoredRate(t *testing.T, store *sqlite.Store, entryRef, accountRef string) {
+	t.Helper()
+
+	reloaded, found, err := store.EntryByRef(t.Context(), entryRef)
+	if err != nil || !found {
+		t.Fatalf("read entry: found=%v err=%v", found, err)
+	}
+
+	for _, posting := range reloaded.Postings {
+		if posting.AccountRef != accountRef {
+			continue
+		}
+
+		if posting.FXRate != "16200" || posting.FXSource != constant.FXSourceManual {
+			t.Fatalf("stored rate = %q/%q, want 16200/manual: the entry is the source of truth",
+				posting.FXRate, posting.FXSource)
+		}
+
+		if posting.FXRateDate != "2026-02-14" {
+			t.Fatalf("stored fx_rate_date = %q, want the posting day", posting.FXRateDate)
+		}
+
+		return
+	}
+
+	t.Fatalf("no posting for account %s", accountRef)
+}

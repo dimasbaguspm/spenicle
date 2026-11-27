@@ -183,7 +183,10 @@ Ranked by queries saved per request:
   `Moment`/`MomentEnd` parser as audit and analytics, in `APP_TIMEZONE`; `occurred_on` stays a date.
 - **§8 request id: shipped.** `X-Request-Id` on every response (the trace id, or a minted one
   when tracing is off) and `trace_id` in the `5xx` body.
-- §1, §2, §7, caching and the N+1 list: open.
+- **§7 a locked rate: shipped.** A posting carries `fx_rate`/`fx_rate_date`/`fx_source` and a
+  test proves the sheet moving does not touch it.
+- The suggestion fallback no longer re-reads `FindAccount` per row (one lookup per draft).
+- §1, §2, caching and the rest of the N+1 list: open.
 
 ## Order of work
 

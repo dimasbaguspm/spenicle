@@ -116,6 +116,27 @@ func keepKind(kind string, rules []entity.CategorizationRule) []entity.Categoriz
 	return kept
 }
 
+func (s *Service) unsorted(ctx context.Context, cache map[string]entity.Account) (entity.Account, error) {
+	key := constant.SeedExpenseAccount + "/" + constant.AccountKindExpense
+
+	if cached, ok := cache[key]; ok {
+		return cached, nil
+	}
+
+	account, found, err := s.store.FindAccount(ctx, constant.SeedExpenseAccount, constant.AccountKindExpense)
+	if err != nil {
+		return entity.Account{}, err
+	}
+
+	if !found {
+		return entity.Account{}, nil
+	}
+
+	cache[key] = account
+
+	return account, nil
+}
+
 func (s *Service) describe(
 	ctx context.Context,
 	resolved entity.CategorySuggestion,
@@ -129,18 +150,13 @@ func (s *Service) describe(
 	}
 
 	if resolved.AccountRef == "" {
-		fallback, found, err := s.store.FindAccount(
-			ctx, constant.SeedExpenseAccount, constant.AccountKindExpense,
-		)
+		fallback, err := s.unsorted(ctx, cache)
 		if err != nil {
 			return Suggestion{}, err
 		}
 
-		if found {
-			out.AccountRef = fallback.Ref
-			out.AccountName = fallback.Name
-			cache[fallback.Ref] = fallback
-		}
+		out.AccountRef = fallback.Ref
+		out.AccountName = fallback.Name
 
 		return out, nil
 	}

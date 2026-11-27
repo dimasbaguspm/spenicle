@@ -45,7 +45,10 @@ None.
 Every posting carries its account's `name` and `kind` next to the ref, and an entry with a
 payee carries its `name`, so one call renders the whole screen. `note` is omitted when
 empty, `payee` when the entry has none, and `voided_at` (RFC3339) appears once the entry
-is voided. There is no `meta`: the page envelope belongs to the list route.
+is voided. Each posting also carries the rate it was posted with — `fx_rate`, `fx_rate_date`
+and `fx_source` — frozen in the row: re-publishing the ECB sheet never moves a locked entry,
+because the ledger is the source of truth, not today's sheet. There is no `meta`: the page
+envelope belongs to the list route.
 
 ## Errors
 
