@@ -115,7 +115,7 @@ func (s *Server) ListRecurring(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Recurring.List")
 	defer endSpan()
 
-	filter, ok := bindListParams(w, r, recurringFilter)
+	filter, ok := bindListParams(w, r, s.location, recurringFilter)
 	if !ok {
 		return
 	}

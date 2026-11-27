@@ -81,7 +81,7 @@ func (s *Server) ListEntries(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.List")
 	defer endSpan()
 
-	filter, ok := bindListParams(w, r, entryFilter)
+	filter, ok := bindListParams(w, r, s.location, entryFilter)
 	if !ok {
 		return
 	}

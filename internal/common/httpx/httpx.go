@@ -5,6 +5,7 @@
 package httpx
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -64,10 +65,21 @@ func WriteJSON(w http.ResponseWriter, status int, payload any) {
 type ErrorDetail struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	TraceID string `json:"trace_id,omitempty"`
 }
 
 type ErrorBody struct {
 	Error ErrorDetail `json:"error"`
+}
+
+func WriteServerError(w http.ResponseWriter, message, traceID string) {
+	var body ErrorBody
+
+	body.Error.Code = "internal_error"
+	body.Error.Message = message
+	body.Error.TraceID = traceID
+
+	WriteJSON(w, http.StatusInternalServerError, body)
 }
 
 func WriteError(w http.ResponseWriter, status int, code, message string) {
@@ -77,4 +89,16 @@ func WriteError(w http.ResponseWriter, status int, code, message string) {
 	body.Error.Message = message
 
 	WriteJSON(w, status, body)
+}
+
+type requestIDKey struct{}
+
+func WithRequestID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, requestIDKey{}, id)
+}
+
+func RequestID(ctx context.Context) string {
+	id, _ := ctx.Value(requestIDKey{}).(string)
+
+	return id
 }

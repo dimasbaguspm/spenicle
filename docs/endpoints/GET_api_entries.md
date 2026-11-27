@@ -20,8 +20,8 @@ one query for the whole page's postings, and — with `with_balance` — one
 
 | name | type | default | notes |
 | --- | --- | --- | --- |
-| `from` | date | — | `occurred_on >= from` |
-| `to` | date | — | `occurred_on <= to` |
+| `from` | moment | — | `occurred_on >= from`; `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` in `APP_TIMEZONE` |
+| `to` | moment | — | `occurred_on <= to`; a bare date covers the whole day |
 | `account_ref` | ref list | — | comma-separated: entries touching any of these accounts |
 | `payee_ref` | ref list | — | comma-separated: entries for any of these payees |
 | `source` | source list | — | comma-separated: `manual`, `share`, `email`, `statement`, `recurring`, `adjustment` |

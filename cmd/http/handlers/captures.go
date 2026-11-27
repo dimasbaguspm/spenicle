@@ -75,7 +75,7 @@ func (s *Server) ListCaptures(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.List")
 	defer endSpan()
 
-	filter, ok := bindListParams(w, r, captureFilter)
+	filter, ok := bindListParams(w, r, s.location, captureFilter)
 	if !ok {
 		return
 	}

@@ -37,6 +37,7 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 
 	sc.Step(`^the response status is (\d+)$`, responseStatusIs)
 	sc.Step(`^the artifact garbage collector runs$`, theArtifactGarbageCollectorRuns)
+	sc.Step(`^the response carries a request id$`, responseCarriesRequestID)
 	sc.Step(`^the response header "([^"]*)" is "([^"]*)"$`, responseHeaderIs)
 	sc.Step(`^the response header "([^"]*)" contains "([^"]*)"$`, responseHeaderContains)
 	sc.Step(`^the import draft is older than its expiry$`, theImportDraftIsExpired)

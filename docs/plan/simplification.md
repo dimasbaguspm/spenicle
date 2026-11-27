@@ -179,7 +179,11 @@ Ranked by queries saved per request:
   equality lookup removed, four new indexes added (`postings (entry_ref, id)`,
   `entries (payee_ref)`, `exports (status, started_at, id)`, live artifacts by `created_at`).
   `ix_recurring_payee_ref` stayed: it serves the recurring list's order.
-- §1, §2, §6, §7, §8, caching and the N+1 list: open.
+- **§6 dates: shipped.** The shared list filter now reads `from`/`to` through the same
+  `Moment`/`MomentEnd` parser as audit and analytics, in `APP_TIMEZONE`; `occurred_on` stays a date.
+- **§8 request id: shipped.** `X-Request-Id` on every response (the trace id, or a minted one
+  when tracing is off) and `trace_id` in the `5xx` body.
+- §1, §2, §7, caching and the N+1 list: open.
 
 ## Order of work
 

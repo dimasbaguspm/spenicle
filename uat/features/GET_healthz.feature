@@ -33,3 +33,9 @@ Feature: GET /healthz
       | header | Access-Control-Request-Headers | authorization,content-type |
     Then the response status is 204
     And the response header "Access-Control-Allow-Origin" is "https://app.example.com"
+
+  Scenario: Every response carries a request id a client can quote
+    Given a running API
+    When I send a GET to "/healthz"
+    Then the response status is 200
+    And the response carries a request id

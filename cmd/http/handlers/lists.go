@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
@@ -10,7 +11,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-func entryFilter(params list.Params) (entity.EntryFilter, error) {
+func entryFilter(params list.Params, loc *time.Location) (entity.EntryFilter, error) {
 	refs, err := params.SplitRefs()
 	if err != nil {
 		return entity.EntryFilter{}, err
@@ -29,13 +30,13 @@ func entryFilter(params list.Params) (entity.EntryFilter, error) {
 	}
 
 	if params.From != "" {
-		if filter.From, err = validating.Day(params.From, "from"); err != nil {
+		if filter.From, err = validating.Moment(params.From, "from", loc); err != nil {
 			return entity.EntryFilter{}, err
 		}
 	}
 
 	if params.To != "" {
-		if filter.To, err = validating.Day(params.To, "to"); err != nil {
+		if filter.To, err = validating.MomentEnd(params.To, "to", loc); err != nil {
 			return entity.EntryFilter{}, err
 		}
 	}
@@ -63,7 +64,7 @@ func entryFilter(params list.Params) (entity.EntryFilter, error) {
 	return filter, nil
 }
 
-func captureFilter(params list.Params) (entity.CaptureFilter, error) {
+func captureFilter(params list.Params, _ *time.Location) (entity.CaptureFilter, error) {
 	refs, err := params.SplitRefs()
 	if err != nil {
 		return entity.CaptureFilter{}, err
@@ -77,7 +78,7 @@ func captureFilter(params list.Params) (entity.CaptureFilter, error) {
 	}, nil
 }
 
-func accountFilter(params list.Params) (entity.AccountFilter, error) {
+func accountFilter(params list.Params, _ *time.Location) (entity.AccountFilter, error) {
 	refs, err := params.SplitRefs()
 	if err != nil {
 		return entity.AccountFilter{}, err
@@ -95,7 +96,7 @@ func accountFilter(params list.Params) (entity.AccountFilter, error) {
 	}, nil
 }
 
-func payeeFilter(params list.Params) (entity.PayeeFilter, error) {
+func payeeFilter(params list.Params, _ *time.Location) (entity.PayeeFilter, error) {
 	refs, err := params.SplitRefs()
 	if err != nil {
 		return entity.PayeeFilter{}, err
@@ -110,7 +111,7 @@ func payeeFilter(params list.Params) (entity.PayeeFilter, error) {
 	}, nil
 }
 
-func recurringFilter(params list.Params) (entity.RecurringFilter, error) {
+func recurringFilter(params list.Params, _ *time.Location) (entity.RecurringFilter, error) {
 	refs, err := params.SplitRefs()
 	if err != nil {
 		return entity.RecurringFilter{}, err
@@ -129,7 +130,8 @@ func recurringFilter(params list.Params) (entity.RecurringFilter, error) {
 func bindListParams[T any](
 	w http.ResponseWriter,
 	r *http.Request,
-	build func(list.Params) (T, error),
+	loc *time.Location,
+	build func(list.Params, *time.Location) (T, error),
 ) (T, bool) {
 	var empty T
 
@@ -140,7 +142,7 @@ func bindListParams[T any](
 		return empty, false
 	}
 
-	filter, err := build(params)
+	filter, err := build(params, loc)
 	if err != nil {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", err.Error())
 

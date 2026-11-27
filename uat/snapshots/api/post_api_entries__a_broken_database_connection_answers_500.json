@@ -1,6 +1,7 @@
 {
   "error": {
     "code": "internal_error",
-    "message": "internal error"
+    "message": "internal error",
+    "trace_id": "<ref>"
   }
 }

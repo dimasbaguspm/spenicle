@@ -11,6 +11,7 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
+	"github.com/dimasbaguspm/spenicle/internal/common/uuid"
 )
 
 func CORS() Middleware {
@@ -60,7 +61,7 @@ func Recover(logger *logging.Logger) Middleware {
 					logger.Error(r.Context(), "panic",
 						slog.Any("value", recovered),
 						slog.String("path", r.URL.Path))
-					WriteError(w, http.StatusInternalServerError, "internal_error", "unexpected failure")
+					WriteServerError(w, "unexpected failure", RequestID(r.Context()))
 				}
 			}()
 
@@ -82,6 +83,14 @@ func Observe(routeOf func(*http.Request) string) Middleware {
 			telemetry.AddHTTPInFlight(ctx, r.Method, route, 1)
 
 			defer telemetry.AddHTTPInFlight(ctx, r.Method, route, -1)
+
+			requestID := telemetry.TraceID(ctx)
+			if requestID == "" {
+				requestID = uuid.New()
+			}
+
+			ctx = WithRequestID(ctx, requestID)
+			w.Header().Set("X-Request-Id", requestID)
 
 			recorder := &Recorder{ResponseWriter: w}
 			start := time.Now()

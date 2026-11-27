@@ -8,8 +8,10 @@ Base path `/api`. No version prefix: we are the only consumer, and an agent can 
 change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, timestamps ISO
 8601 UTC. Money crosses the wire as **minor-unit strings** (`"25000"`) plus a currency code,
 never floats. Errors: `{"error":{"code":"...","message":"...","details":{}}}`. A `500` always
-carries the generic message `internal error`: the cause is written to the structured log,
-never to the client.
+carries the generic message `internal error` plus the `trace_id` of the request: the cause
+is written to the structured log, never to the client. Every response carries
+`X-Request-Id`, the same id (`<32 hex>`): quote it and the span, the log lines and the
+`trace_id` all resolve to the one request.
 
 Implemented contract, one entry per live route with upstream/downstream, params, body,
 limitations and a sequence diagram: [`endpoints.md`](./endpoints.md).

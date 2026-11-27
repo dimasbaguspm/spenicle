@@ -364,7 +364,7 @@ func requiredFor(scope string) string {
 
 func (s *server) writeInternal(ctx context.Context, w http.ResponseWriter, err error) {
 	s.logger.Error(ctx, "request failed", slog.String("error", err.Error()))
-	httpx.WriteError(w, http.StatusInternalServerError, "internal_error", "internal error")
+	httpx.WriteServerError(w, "internal error", httpx.RequestID(ctx))
 }
 
 func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, error) {

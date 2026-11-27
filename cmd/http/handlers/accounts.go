@@ -177,7 +177,7 @@ func (s *Server) ListAccounts(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Accounts.List")
 	defer endSpan()
 
-	filter, ok := bindListParams(w, r, accountFilter)
+	filter, ok := bindListParams(w, r, s.location, accountFilter)
 	if !ok {
 		return
 	}

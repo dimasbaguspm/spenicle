@@ -27,5 +27,5 @@ func (s *Server) writeClassified(ctx context.Context, w http.ResponseWriter, err
 
 func (s *Server) InternalError(ctx context.Context, w http.ResponseWriter, err error) {
 	s.deps.Logger.Error(ctx, "request failed", slog.String("error", err.Error()))
-	httpx.WriteError(w, http.StatusInternalServerError, codeInternal, "internal error")
+	httpx.WriteServerError(w, "internal error", httpx.RequestID(ctx))
 }

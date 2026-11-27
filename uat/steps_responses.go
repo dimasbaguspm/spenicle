@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -95,6 +96,28 @@ func theLastRefIsStill(ctx context.Context, name string) (context.Context, error
 
 	if w.lastRef != ref {
 		return ctx, fmt.Errorf("the last ref is %s, want the remembered %s", w.lastRef, ref)
+	}
+
+	return ctx, nil
+}
+
+func responseCarriesRequestID(ctx context.Context) (context.Context, error) {
+	w, err := worldFrom(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	traceID := w.header.Get("X-Request-Id")
+	if traceID == "" {
+		return ctx, errors.New("no X-Request-Id header on the response")
+	}
+
+	if !regexp.MustCompile(`^[0-9a-f]{32}$`).MatchString(traceID) {
+		return ctx, fmt.Errorf("X-Request-Id = %q, want a 32-hex trace id", traceID)
+	}
+
+	if traceID == "00000000000000000000000000000000" {
+		return ctx, errors.New("X-Request-Id is the zero trace id")
 	}
 
 	return ctx, nil

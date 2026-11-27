@@ -159,7 +159,7 @@ func (s *Server) ListPayees(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Payees.List")
 	defer endSpan()
 
-	filter, ok := bindListParams(w, r, payeeFilter)
+	filter, ok := bindListParams(w, r, s.location, payeeFilter)
 	if !ok {
 		return
 	}

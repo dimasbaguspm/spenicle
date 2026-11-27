@@ -62,6 +62,15 @@ func StartSpan(ctx context.Context, name string) (context.Context, func()) {
 	return ctx, func() { span.End() }
 }
 
+func TraceID(ctx context.Context) string {
+	span := oteltrace.SpanFromContext(ctx)
+	if !span.SpanContext().IsValid() {
+		return ""
+	}
+
+	return span.SpanContext().TraceID().String()
+}
+
 // Ref tags the current span with the ref the work is about. Spans may carry a
 // ref; metrics never may.
 func Ref(ctx context.Context, ref string) {
