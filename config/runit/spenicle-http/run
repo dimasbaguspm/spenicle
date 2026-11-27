@@ -1,2 +1,5 @@
 #!/bin/sh
+# runsv starts us in the service directory, and ./data is relative: without this the db
+# would land next to the run script instead of on the volume.
+cd / || exit 1
 exec chpst -u spenicle:spenicle /spenicle http

@@ -42,7 +42,8 @@ The image runs two supervised processes from the same environment: `spenicle htt
 staging, reclaiming the artifacts of rejected captures, expired import draft and stale
 upload GC, export claim/render/sweep, the mailbox intake poll and the heartbeat stamp,
 no port). Neither the listen address nor the data directory is configurable — the
-container works in `/data`, which is the volume. Inside the container `sv status
+container works in `/data`, which is the volume. Each run script starts from `/` before dropping privileges, so the relative
+`./data` lands on the volume and not next to the script. Inside the container `sv status
 /etc/service/spenicle-worker` reports either one, `sv restart spenicle-worker` restarts
 it alone and a `down` file next to its `run` script keeps it stopped. A
 one-shot debug run skips supervision: `docker run --rm --entrypoint /spenicle -e
