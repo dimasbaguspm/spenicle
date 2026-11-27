@@ -17,6 +17,7 @@ Append a row per check; never rewrite a past one.
 | 2026-11-27T19:40Z | `ebf4347` + the request-id and date-parser pass in this change | `main` | Dimas Mukti (PI-Desktop agent) | one date parser for every `from`/`to`, `X-Request-Id` on every response, `trace_id` on `5xx` | **GO** |
 | 2026-11-27T20:05Z | `d61a15b` + the frozen-rate test and the suggestion memo | `main` | Dimas Mukti (PI-Desktop agent) | a locked posting keeps its rate; one lookup per draft for the fallback category | **GO** |
 | 2026-11-27T22:05Z | uncommitted (the OpenAPI document in this change) | `main` | Dimas Mukti (PI-Desktop agent) | `openapi.json` against the 59 routes in `cmd/http/handler.go`, the group and scope of each, and the `validate`, `pattern`, `format` and `enums` tags on the structs it publishes | **GO** |
+| 2026-11-27T17:40Z | `2e3b59d` + the rename, balance and `Match`-fold pass in this change | `main` | Dimas Mukti (PI-Desktop agent) | every page that names a table, column, query parameter or body action: `entries`/`postings`/`entry_balances`, `reversed_at`/`reversal_of_ref`, `group_label`, `?reversed=`, `{"reverse":true}`, `accounts.balance_minor` as a derived column, and `match` as an `Approve` with an `entry_ref` | **GO** |
 
 ## What a check covers
 

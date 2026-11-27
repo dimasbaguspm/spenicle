@@ -263,7 +263,7 @@ func (s *Server) matchCapture(
 		return
 	}
 
-	capture, err := s.deps.Captures.Match(ctx, ref, request.EntryRef)
+	_, capture, err := s.deps.Captures.Approve(ctx, ref, captures.ApproveInput{EntryRef: request.EntryRef})
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 

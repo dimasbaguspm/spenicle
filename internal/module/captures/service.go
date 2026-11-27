@@ -151,35 +151,18 @@ func (s *Service) Approve(
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
+	if in.EntryRef != "" {
+		return s.resolveAgainst(ctx, capture, in.EntryRef)
+	}
+
 	err = approvable(&capture)
 	if err != nil {
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
-	ruleRef, err := s.recurringRuleRef(ctx, capture)
+	entry, err := s.buildApproval(ctx, capture, in)
 	if err != nil {
 		return entity.Entry{}, entity.Capture{}, err
-	}
-
-	postings := approvalPostings(in.Postings)
-
-	entry, created, err := s.entries.Build(ctx, ledger.PostInput{
-		OccurredOn:       in.OccurredOn,
-		Note:             in.Note,
-		PayeeRef:         in.PayeeRef,
-		Currency:         in.Currency,
-		Source:           sourceOf(capture.Kind),
-		RecurringRuleRef: ruleRef,
-		Postings:         postings,
-	})
-	if err != nil {
-		return entity.Entry{}, entity.Capture{}, err
-	}
-
-	if !created {
-		return entity.Entry{}, entity.Capture{}, fmt.Errorf(
-			"%w: the entry already exists", entity.ErrDuplicate,
-		)
 	}
 
 	now := s.clock.Now()
@@ -263,28 +246,6 @@ func (s *Service) Reject(ctx context.Context, ref, reason string) (entity.Captur
 	}
 
 	return s.resolve(ctx, capture, constant.CaptureStatusRejected, sealedNote, "")
-}
-
-func (s *Service) Match(ctx context.Context, ref, entryRef string) (entity.Capture, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Match")
-	defer endSpan()
-
-	capture, err := s.pending(ctx, ref)
-	if err != nil {
-		return entity.Capture{}, err
-	}
-
-	entry, err := s.entries.Get(ctx, entryRef)
-	if err != nil {
-		return entity.Capture{}, err
-	}
-
-	note, err := s.sealText(ctx, "matched "+entry.Ref)
-	if err != nil {
-		return entity.Capture{}, err
-	}
-
-	return s.resolve(ctx, capture, constant.CaptureStatusDuplicate, note, entry.Ref)
 }
 
 func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error) {
@@ -781,4 +742,57 @@ func openTextWith(ctx context.Context, sealer seal.Sealer, sealed string) (strin
 	}
 
 	return string(plain), nil
+}
+
+func (s *Service) buildApproval(
+	ctx context.Context,
+	capture entity.Capture,
+	in ApproveInput,
+) (entity.Entry, error) {
+	ruleRef, err := s.recurringRuleRef(ctx, capture)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	entry, created, err := s.entries.Build(ctx, ledger.PostInput{
+		OccurredOn:       in.OccurredOn,
+		Note:             in.Note,
+		PayeeRef:         in.PayeeRef,
+		Currency:         in.Currency,
+		Source:           sourceOf(capture.Kind),
+		RecurringRuleRef: ruleRef,
+		Postings:         approvalPostings(in.Postings),
+	})
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	if !created {
+		return entity.Entry{}, fmt.Errorf("%w: the entry already exists", entity.ErrDuplicate)
+	}
+
+	return entry, nil
+}
+
+func (s *Service) resolveAgainst(
+	ctx context.Context,
+	capture entity.Capture,
+	entryRef string,
+) (entity.Entry, entity.Capture, error) {
+	entry, err := s.entries.Get(ctx, entryRef)
+	if err != nil {
+		return entity.Entry{}, entity.Capture{}, err
+	}
+
+	note, err := s.sealText(ctx, "matched "+entry.Ref)
+	if err != nil {
+		return entity.Entry{}, entity.Capture{}, err
+	}
+
+	resolved, err := s.resolve(ctx, capture, constant.CaptureStatusDuplicate, note, entry.Ref)
+	if err != nil {
+		return entity.Entry{}, entity.Capture{}, err
+	}
+
+	return entry, resolved, nil
 }

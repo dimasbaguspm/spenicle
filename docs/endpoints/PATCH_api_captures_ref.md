@@ -34,8 +34,9 @@ row is already resolved and refuses approval with `409 capture_resolved`.
 written with a conditional update that also fails when the row was resolved while the
 vendor was answering, so a read-back never reopens an approved capture.
 
-`match` → `Module.Ledger.Get` for the named entry, then `UpdateCapture` with
-`status='duplicate'` and `resolved_entry_id` — no ledger write.
+`match` is the same `Module.Captures.Approve` with an `entry_ref` instead of a payload: it
+calls `Module.Ledger.Get` for the named entry, then `UpdateCapture` with
+`status='duplicate'` and `resolved_entry_ref` — no ledger write.
 
 ## Path / query params
 

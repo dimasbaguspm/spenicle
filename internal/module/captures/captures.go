@@ -37,7 +37,6 @@ type Contract interface {
 	Approve(ctx context.Context, ref string, in ApproveInput) (entity.Entry, entity.Capture, error)
 	Reject(ctx context.Context, ref, reason string) (entity.Capture, error)
 	Retry(ctx context.Context, ref string) (entity.Capture, error)
-	Match(ctx context.Context, ref, entryRef string) (entity.Capture, error)
 }
 
 type CreateInput struct {
@@ -63,6 +62,7 @@ type EnqueueInput struct {
 
 type ApproveInput struct {
 	OccurredOn time.Time
+	EntryRef   string
 	PayeeRef   string
 	Note       string
 	Currency   string

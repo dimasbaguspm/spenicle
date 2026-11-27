@@ -171,12 +171,14 @@ Ranked by queries saved per request:
 
 ## Status
 
-- **§1 names: shipped**, except folding `Captures.Match` into `Approve`. `void` is a
-  `reverse`, the tables are `entries` and `postings`, `captures.batch_label` is
-  `group_label`, `?voided=` is `?reversed=` and the body action is `{"reverse": true}`. Two
-  deliberate exceptions: `audit_log.entity_kind` still says `ledger_entry` (it names an
-  entity type, not a table) and the metric prefix `spenicle.entries|postings` lost its
-  `ledger` word to match AGENTS.md, which had drifted.
+- **§1 names: shipped.** `void` is a `reverse`, the tables are `entries` and `postings`,
+  `captures.batch_label` is `group_label`, `?voided=` is `?reversed=` and the body action is
+  `{"reverse": true}`. `Module.Captures.Match` is gone: `Approve` resolves against that
+  `entry_ref` when the input carries one, so a capture has one resolution path. The wire
+  action is still called `match` — the fold is in the service, not the route. Two deliberate
+  exceptions: `audit_log.entity_kind` still says `ledger_entry` (it names an entity type,
+  not a table) and the metric prefix `spenicle.entries|postings` lost its `ledger` word to
+  match AGENTS.md, which had drifted.
 - **§2 balances: shipped, with one deviation.** `accounts` carries `balance_minor`,
   `balance_dirty` and `balance_through_on`; `balance_state` is gone. The through marker is
   the day, not the ref the plan proposed: comparing a ref with a candidate entry needs a
