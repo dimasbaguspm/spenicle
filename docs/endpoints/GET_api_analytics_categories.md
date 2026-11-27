@@ -26,7 +26,7 @@ and `substr(occurred_on, 1, 7)` in one pass and folds the rows into one entry pe
 
 | name | type | required | notes |
 | --- | --- | --- | --- |
-| `from` | string | no | `YYYY-MM-DD`; defaults to 11 months back, first of month |
+| `from` | string | no | `YYYY-MM-DD`; defaults to the first of the month 11 months before `to` |
 | `to` | string | no | `YYYY-MM-DD`; defaults to today |
 | `kind` | string | no | `expense` (default) or `income` |
 | `rollup` | string | no | `parent` sums each child into its top-most ancestor and lists only roots; absent keeps one row per account |
@@ -54,7 +54,7 @@ zero is dropped, and an empty window answers `"categories":[]`.
 
 ## Errors
 
-`422 invalid_request` for a malformed date, a `kind` outside the two, a `rollup` other
+`422 invalid_request` for a malformed date, a `from` after `to`, a `kind` outside the two, a `rollup` other
 than `parent`, a `bucket` other than `month`, or `bucket` combined with `rollup` — the
 message names both params, because the shapes are exclusive.
 

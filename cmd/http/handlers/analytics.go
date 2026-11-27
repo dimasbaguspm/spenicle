@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -45,7 +46,7 @@ func (s *Server) MonthlyAnalytics(w http.ResponseWriter, r *http.Request) {
 
 	from, to, err := analyticsWindow(query)
 	if err != nil {
-		writeInvalid(w, err)
+		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput, err.Error())
 
 		return
 	}
@@ -79,8 +80,17 @@ func analyticsWindow(query analyticsRangeQuery) (time.Time, time.Time, error) {
 	now := time.Now().UTC()
 
 	to := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	from := to.AddDate(0, -(analyticsWindowMonths - 1), 0)
-	from = time.Date(from.Year(), from.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	if query.To != "" {
+		parsed, err := validating.Day(query.To, "to")
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+
+		to = parsed
+	}
+
+	from := time.Date(to.Year(), to.Month()-(analyticsWindowMonths-1), 1, 0, 0, 0, 0, time.UTC)
 
 	if query.From != "" {
 		parsed, err := validating.Day(query.From, "from")
@@ -91,13 +101,8 @@ func analyticsWindow(query analyticsRangeQuery) (time.Time, time.Time, error) {
 		from = parsed
 	}
 
-	if query.To != "" {
-		parsed, err := validating.Day(query.To, "to")
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		to = parsed
+	if from.After(to) {
+		return time.Time{}, time.Time{}, errors.New("from must not be after to")
 	}
 
 	return from, to, nil
@@ -158,7 +163,7 @@ func (s *Server) CategoryAnalytics(w http.ResponseWriter, r *http.Request) {
 
 	from, to, err := analyticsWindow(analyticsRangeQuery{From: query.From, To: query.To})
 	if err != nil {
-		writeInvalid(w, err)
+		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput, err.Error())
 
 		return
 	}

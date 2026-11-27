@@ -22,7 +22,7 @@ excluded, so a void leaves no trace.
 
 | name | type | required | notes |
 | --- | --- | --- | --- |
-| `from` | string | no | `YYYY-MM-DD`; defaults to the first day of the month that is 11 months before today's day-of-month — Go's date arithmetic means a 29th–31st can roll that start one month forward |
+| `from` | string | no | `YYYY-MM-DD`; defaults to the first of the month 11 months before `to`, so the default answer is the 12 buckets ending with `to`'s month |
 | `to` | string | no | `YYYY-MM-DD`; defaults to today |
 
 ## Body
@@ -45,7 +45,7 @@ travels as a float.
 
 ## Errors
 
-`422 invalid_request` for a malformed `from`/`to`.
+`422 invalid_request` for a malformed `from`/`to`, or when `from` is after `to`.
 
 ## Limitations
 
