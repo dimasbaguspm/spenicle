@@ -13,8 +13,10 @@ WEB     := web
 
 .PHONY: help hooks build build-web run test uat uat-snapshots cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt openapi web web-dev web-test web-check web-types
 
+include dev.mk
+
 help: ## show targets
-	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 hooks: ## install the git hooks (lefthook: build, lint, test, UAT before commit)
 	lefthook install
@@ -25,8 +27,7 @@ build: ## compile the single binary (no SPA embedded)
 build-web: web ## compile with the SPA embedded: the `latest` image's binary
 	$(GO) build -tags web -o $(BIN) .
 
-run: ## run the API and the worker in one process against ./data
-	$(GO) run . all
+run: dev ## alias for `make dev`: the API and the worker in one process
 
 test: ## unit and integration tests (UAT has its own target)
 	$(GO) test $$( $(GO) list ./... | grep -v '/uat' ) -count=1
@@ -50,8 +51,7 @@ openapi: ## regenerate the API document at the repo root
 web: ## build the SPA into web/dist
 	cd $(WEB) && pnpm install --frozen-lockfile && pnpm run build
 
-web-dev: ## serve the SPA on :5173 against a local API on :8080
-	cd $(WEB) && pnpm run dev
+web-dev: dev-web ## alias for `make dev-web`: the SPA on :5173
 
 web-test: ## the SPA's unit tests
 	cd $(WEB) && pnpm test

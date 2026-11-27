@@ -10,7 +10,16 @@ type CaptureFields = {
   status?: string | undefined
 }
 
-export const absent = '—'
+export type FormattedCapture = {
+  time: string
+  kind: string
+  status: string
+  statusTone: string
+  isResolved: boolean
+  needsAttention: boolean
+}
+
+const absent = '—'
 
 const muted = 'text-text-muted'
 
@@ -25,29 +34,19 @@ const tones: Record<string, string> = {
   failed: 'text-danger',
 }
 
-export function captureKind(capture: CaptureFields): string {
-  return capture.kind ?? absent
-}
-
 /** the wire sends RFC3339; a list row shows the minute of it, no seconds, no offset. */
-export function captureTime(capture: CaptureFields): string {
-  const received = capture.received_at
-
+function formatTime(received: string | undefined): string {
   return received === undefined ? absent : received.slice(0, 16).replace('T', ' ')
 }
 
-export function captureStatus(capture: CaptureFields): string {
-  return capture.status ?? absent
-}
-
-export function captureStatusTone(capture: CaptureFields): string {
-  return tones[capture.status ?? ''] ?? muted
-}
-
-export function isResolved(capture: CaptureFields): boolean {
-  return capture.resolved_at !== undefined
-}
-
-export function needsAttention(capture: CaptureFields): boolean {
-  return capture.status === 'pending' || capture.status === 'extracting'
+/** one call answers every question a capture row asks: fallbacks, tone and both flags. */
+export function formatCaptureData(capture: CaptureFields): FormattedCapture {
+  return {
+    time: formatTime(capture.received_at),
+    kind: capture.kind ?? absent,
+    status: capture.status ?? absent,
+    statusTone: tones[capture.status ?? ''] ?? muted,
+    isResolved: capture.resolved_at !== undefined,
+    needsAttention: capture.status === 'pending' || capture.status === 'extracting',
+  }
 }

@@ -173,7 +173,9 @@ Rules that keep it pluggable:
 ```bash
 make hooks      # install the git hook (build + lint + test + UAT before commit)
 make build      # bin/spenicle
-make run        # go run . all (listens on :8080, writes to ./data)
+make dev        # go run . all (listens on :8080, writes to ./data); dev.mk owns the trio:
+                # dev-api, dev-worker, dev-web (:5173) and dev-build (-tags web)
+make run        # alias for make dev
 make test       # unit and integration tests (UAT has its own target)
 make uat        # the Gherkin suite plus the containerised mock services (needs Docker)
 make uat-snapshots   # rewrite snapshot files, then review the diff

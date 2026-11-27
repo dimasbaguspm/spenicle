@@ -1,5 +1,5 @@
 import { Text } from '@/components/primitives/text'
-import { captureKind, captureStatus, captureStatusTone, captureTime } from '@/lib/format/capture'
+import { formatCaptureData } from '@/lib/format/capture'
 
 type CaptureRow = {
   ref?: string | undefined
@@ -19,19 +19,23 @@ type CaptureListProps = {
 export function CaptureList({ rows }: CaptureListProps) {
   return (
     <ul className="divide-ink-800 divide-y">
-      {rows.map((capture) => (
-        <li key={capture.ref} className="flex items-baseline gap-3 py-2.5 text-sm">
-          <Text as="span" tone="body" className="text-text-muted w-32 shrink-0 tabular-nums">
-            {captureTime(capture)}
-          </Text>
-          <Text as="span" tone="body" className="flex-1 truncate">
-            {captureKind(capture)}
-          </Text>
-          <Text as="span" tone="caption" className={captureStatusTone(capture)}>
-            {captureStatus(capture)}
-          </Text>
-        </li>
-      ))}
+      {rows.map((capture) => {
+        const row = formatCaptureData(capture)
+
+        return (
+          <li key={capture.ref} className="flex items-baseline gap-3 py-2.5 text-sm">
+            <Text as="span" tone="body" className="text-text-muted w-32 shrink-0 tabular-nums">
+              {row.time}
+            </Text>
+            <Text as="span" tone="body" className="flex-1 truncate">
+              {row.kind}
+            </Text>
+            <Text as="span" tone="caption" className={row.statusTone}>
+              {row.status}
+            </Text>
+          </li>
+        )
+      })}
     </ul>
   )
 }

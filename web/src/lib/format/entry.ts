@@ -12,22 +12,17 @@ type EntryFields = {
   reversed_at?: string | undefined
 }
 
-export const absent = '—'
-
-export function hasNote(entry: EntryFields): boolean {
-  return entry.note !== undefined
+export type FormattedEntry = {
+  title: string
+  note: string
+  isReversed: boolean
+  postings: Posting[]
 }
 
-export function entryNote(entry: EntryFields): string {
-  return entry.note ?? absent
-}
-
-export function isReversed(entry: EntryFields): boolean {
-  return entry.reversed_at !== undefined
-}
+const absent = '—'
 
 /** the payee is what a reader recognises, the note is why: one line holds both when it has them. */
-export function entryTitle(entry: EntryFields): string {
+function formatTitle(entry: EntryFields): string {
   const payee = entry.payee?.name
 
   if (payee === undefined) {
@@ -37,6 +32,12 @@ export function entryTitle(entry: EntryFields): string {
   return entry.note === undefined ? payee : `${payee} · ${entry.note}`
 }
 
-export function entryPostings(entry: EntryFields): Posting[] {
-  return entry.postings ?? []
+/** one call answers every question an entry row asks: the joined title, the note and its flags. */
+export function formatEntryData(entry: EntryFields): FormattedEntry {
+  return {
+    title: formatTitle(entry),
+    note: entry.note ?? absent,
+    isReversed: entry.reversed_at !== undefined,
+    postings: entry.postings ?? [],
+  }
 }

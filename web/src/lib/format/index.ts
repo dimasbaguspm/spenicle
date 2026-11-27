@@ -1,23 +1,7 @@
 /**
- * The formatting layer: each module owns one row's fallbacks, tones and flags, so a component
- * asks a question instead of comparing a raw field. `absent` is the same em dash in all three,
- * and this barrel re-exports one of them so a screen imports the fallback from one place too.
+ * The formatting layer: each module owns one row's fallbacks, tones and flags, behind a single
+ * function that answers every question a component asks of a row — never a raw field compare.
  */
-export {
-  absent,
-  accountBalance,
-  accountKind,
-  accountName,
-  defaultMinorUnits,
-  hasParent,
-  isArchived,
-} from './account'
-export {
-  captureKind,
-  captureStatus,
-  captureStatusTone,
-  captureTime,
-  isResolved,
-  needsAttention,
-} from './capture'
-export { entryNote, entryPostings, entryTitle, hasNote, isReversed } from './entry'
+export { formatAccountData, type FormattedAccount } from './account'
+export { formatCaptureData, type FormattedCapture } from './capture'
+export { formatEntryData, type FormattedEntry } from './entry'

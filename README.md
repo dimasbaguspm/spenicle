@@ -24,6 +24,23 @@ put a decision you did not feel like making. v2 changes three things:
 3. **User records are never deleted.** Reverse and reject instead, with an audit trail;
    derived balances and expired imports are pruned.
 
+## Develop
+
+`dev.mk` is the local loop and works on its own (`make -f dev.mk dev-api`) or through the root
+Makefile. It needs one exported secret:
+
+```bash
+export APP_SECRET="$(openssl rand -base64 32)"
+
+make dev          # the API and the worker in one process, :8080, db in ./data
+make dev-web      # the SPA on :5173, proxying /api to that process
+# or, one process per service, on the same database:
+make dev-api      #   the only listener
+make dev-worker   #   recurring captures, retention/GC, exports, intake
+# and the prod-like single origin:
+make dev-build    #   vite build + go build -tags web, then ./bin/spenicle all
+```
+
 ## Install
 
 ```bash
