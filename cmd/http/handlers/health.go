@@ -12,14 +12,21 @@ import (
 type healthResponse struct {
 	Status          string `json:"status"`
 	Version         string `json:"version"`
-	StartedAt       string `json:"started_at"`
+	StartedAt       string `format:"date-time"    json:"started_at"`
 	SchemaVersion   int    `json:"schema_version"`
 	AppSecret       string `json:"app_secret"`
-	BaseCurrency    string `json:"base_currency"`
+	BaseCurrency    string `json:"base_currency"  maxLength:"3"             minLength:"3"`
 	Timezone        string `json:"timezone"`
-	WorkerLastRunAt string `json:"worker_last_run_at"`
+	WorkerLastRunAt string `format:"date-time"    json:"worker_last_run_at"`
 }
 
+// @Summary     Liveness, build and schema fingerprint
+// @Description Answers `degraded` when the store cannot be reached. The `app_secret` value is a fingerprint, never the secret. Public route: no credential is read.
+// @Tags        system
+// @Produce     json
+// @Success     200 {object} healthResponse
+// @Failure     503 {object} httpx.ErrorBody
+// @Router      /healthz [get]
 func (s *Server) Health(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Health.Check")
 	defer endSpan()

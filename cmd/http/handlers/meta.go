@@ -18,12 +18,12 @@ type currencyResponse struct {
 }
 
 type accountResponse struct {
-	Ref             string `json:"ref"`
+	Ref             string `json:"ref"                  pattern:"^[0-9a-f]{32}$"`
 	Name            string `json:"name"`
 	Kind            string `json:"kind"`
-	Currency        string `json:"currency"`
-	BaseAmountMinor string `json:"base_amount_minor"`
-	ParentRef       string `json:"parent_ref,omitempty"`
+	Currency        string `json:"currency"             maxLength:"3"            minLength:"3"`
+	BaseAmountMinor string `json:"base_amount_minor"    pattern:"^[+-]?[0-9]+$"`
+	ParentRef       string `json:"parent_ref,omitempty" pattern:"^[0-9a-f]{32}$"`
 	Icon            string `json:"icon,omitempty"`
 	Archived        bool   `json:"archived"`
 }
@@ -36,6 +36,15 @@ type metaResponse struct {
 	Currencies []currencyResponse  `json:"currencies"`
 }
 
+// @Summary     Bootstrap payload: settings, accounts, payees, recurring rules, currencies
+// @Description Everything the shell needs before its first screen, in one response.
+// @Tags        settings
+// @Produce     json
+// @Success     200 {object} metaResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/meta [get]
 func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Meta.Get")
 	defer endSpan()

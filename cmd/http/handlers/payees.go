@@ -12,26 +12,38 @@ import (
 
 type payeeCreateRequest struct {
 	Name               string `json:"name"                 validate:"required,max=80"`
-	DefaultAccountRef  string `json:"default_account_ref"  validate:"omitempty,ref"`
-	DefaultCategoryRef string `json:"default_category_ref" validate:"omitempty,ref"`
+	DefaultAccountRef  string `json:"default_account_ref"  pattern:"^[0-9a-f]{32}$"   validate:"omitempty,ref"`
+	DefaultCategoryRef string `json:"default_category_ref" pattern:"^[0-9a-f]{32}$"   validate:"omitempty,ref"`
 }
 
 type payeePatchRequest struct {
 	Name               *string `json:"name,omitempty"                 validate:"omitempty,max=80"`
-	DefaultAccountRef  *string `json:"default_account_ref,omitempty"  validate:"omitempty,ref"`
-	DefaultCategoryRef *string `json:"default_category_ref,omitempty" validate:"omitempty,ref"`
+	DefaultAccountRef  *string `json:"default_account_ref,omitempty"  pattern:"^[0-9a-f]{32}$"    validate:"omitempty,ref"`
+	DefaultCategoryRef *string `json:"default_category_ref,omitempty" pattern:"^[0-9a-f]{32}$"    validate:"omitempty,ref"`
 	Archived           *bool   `json:"archived,omitempty"`
 }
 
 type payeeResponse struct {
-	Ref                string `json:"ref"`
+	Ref                string `json:"ref"                            pattern:"^[0-9a-f]{32}$"`
 	Name               string `json:"name"`
-	DefaultAccountRef  string `json:"default_account_ref,omitempty"`
-	DefaultCategoryRef string `json:"default_category_ref,omitempty"`
+	DefaultAccountRef  string `json:"default_account_ref,omitempty"  pattern:"^[0-9a-f]{32}$"`
+	DefaultCategoryRef string `json:"default_category_ref,omitempty" pattern:"^[0-9a-f]{32}$"`
 	Archived           bool   `json:"archived"`
-	CreatedAt          string `json:"created_at"`
+	CreatedAt          string `format:"date-time"                    json:"created_at"`
 }
 
+// @Summary     Create a payee with optional defaults
+// @Description The default account and category prefill a capture approval; both must name an existing row.
+// @Tags        payees
+// @Accept      json
+// @Param       body body payeeCreateRequest true "the request body"
+// @Produce     json
+// @Success     201 {object} payeeResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody "unknown_reference"
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/payees [post]
 func (s *Server) CreatePayee(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Payees.Post")
 	defer endSpan()
@@ -57,6 +69,20 @@ func (s *Server) CreatePayee(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, toPayeeResponse(created))
 }
 
+// @Summary     Rename, re-default or archive a payee
+// @Description Absolute values only; `archived: true` hides the payee from a prefill without deleting it.
+// @Tags        payees
+// @Accept      json
+// @Param       body body payeePatchRequest true "the request body"
+// @Produce     json
+// @Param       ref path string true "32 lowercase hex ref"
+// @Success     200 {object} payeeResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/payees/{ref} [patch]
 func (s *Server) PatchPayee(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Payees.Patch")
 	defer endSpan()
@@ -155,6 +181,21 @@ func toPayeeResponse(payee entity.Payee) payeeResponse {
 	}
 }
 
+// @Summary     Every payee with its default accounts
+// @Description Newest first, paged by cursor.
+// @Tags        payees
+// @Produce     json
+// @Param       query query string false "substring of the name"
+// @Param       refs query string false "payee refs, comma-separated"
+// @Param       archived query string false "true only archived, false only live"
+// @Param       cursor query string false "return payees after this ref"
+// @Param       limit query int false "max 200, default 50"
+// @Success     200 {object} object{payees=[]payeeResponse,limit=int,has_more=bool,next_cursor=string}
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/payees [get]
 func (s *Server) ListPayees(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Payees.List")
 	defer endSpan()

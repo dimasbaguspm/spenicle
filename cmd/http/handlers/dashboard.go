@@ -20,9 +20,9 @@ const (
 )
 
 type topCategoryResponse struct {
-	AccountRef  string `json:"account_ref"`
+	AccountRef  string `json:"account_ref"  pattern:"^[0-9a-f]{32}$"`
 	AccountName string `json:"account_name"`
-	AmountMinor string `json:"amount_minor"`
+	AmountMinor string `json:"amount_minor" pattern:"^[+-]?[0-9]+$"`
 }
 
 type dashboardQuery struct {
@@ -53,13 +53,13 @@ func dashboardWindow(query dashboardQuery) (time.Time, time.Time, error) {
 }
 
 type dashboardResponse struct {
-	From            string               `json:"from"`
-	To              string               `json:"to"`
-	BaseCurrency    string               `json:"base_currency"`
+	From            string               `format:"date"                 json:"from"`
+	To              string               `format:"date"                 json:"to"`
+	BaseCurrency    string               `json:"base_currency"          maxLength:"3"           minLength:"3"`
 	Month           string               `json:"month"`
-	SpendMinor      string               `json:"spend_minor"`
-	IncomeMinor     string               `json:"income_minor"`
-	NetMinor        string               `json:"net_minor"`
+	SpendMinor      string               `json:"spend_minor"            pattern:"^[+-]?[0-9]+$"`
+	IncomeMinor     string               `json:"income_minor"           pattern:"^[+-]?[0-9]+$"`
+	NetMinor        string               `json:"net_minor"              pattern:"^[+-]?[0-9]+$"`
 	Months          []monthTotalResponse `json:"months"`
 	PendingCaptures int                  `json:"pending_captures"`
 	TopCategory     *topCategoryResponse `json:"top_category,omitempty"`
@@ -91,6 +91,18 @@ func topCategory(categories []entity.CategoryTotal) *topCategoryResponse {
 	}
 }
 
+// @Summary     The landing tiles in one response
+// @Description One round trip for the screen: the window totals, the month series, the pending capture count and the biggest category.
+// @Tags        dashboard
+// @Produce     json
+// @Param       from query string true "window start"
+// @Param       to query string true "window end"
+// @Success     200 {object} dashboardResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/dashboard [get]
 func (s *Server) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Dashboard.Get")
 	defer endSpan()

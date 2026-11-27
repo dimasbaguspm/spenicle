@@ -14,27 +14,39 @@ import (
 type accountCreateRequest struct {
 	Name      string `json:"name"       validate:"required,max=80"`
 	Kind      string `json:"kind"       validate:"required,accountkind"`
-	Currency  string `json:"currency"   validate:"omitempty,currency"`
-	ParentRef string `json:"parent_ref" validate:"omitempty,ref"`
+	Currency  string `json:"currency"   maxLength:"3"                   minLength:"3"            validate:"omitempty,currency"`
+	ParentRef string `json:"parent_ref" pattern:"^[0-9a-f]{32}$"        validate:"omitempty,ref"`
 }
 
 type accountPatchRequest struct {
 	Name      *string `json:"name,omitempty"       validate:"omitempty,max=80"`
 	Icon      *string `json:"icon,omitempty"       validate:"omitempty,max=32"`
-	ParentRef *string `json:"parent_ref,omitempty" validate:"omitempty,ref"`
+	ParentRef *string `json:"parent_ref,omitempty" pattern:"^[0-9a-f]{32}$"    validate:"omitempty,ref"`
 	Archived  *bool   `json:"archived,omitempty"`
 }
 
 type accountDetailResponse struct {
-	Ref       string `json:"ref"`
+	Ref       string `json:"ref"                  pattern:"^[0-9a-f]{32}$"`
 	Name      string `json:"name"`
 	Kind      string `json:"kind"`
-	Currency  string `json:"currency"`
-	ParentRef string `json:"parent_ref,omitempty"`
+	Currency  string `json:"currency"             maxLength:"3"            minLength:"3"`
+	ParentRef string `json:"parent_ref,omitempty" pattern:"^[0-9a-f]{32}$"`
 	Icon      string `json:"icon,omitempty"`
 	Archived  bool   `json:"archived"`
 }
 
+// @Summary     Create an account or a category
+// @Description `kind` decides what it is: asset, liability, equity, expense or income. A missing `currency` inherits the base currency; a `parent_ref` must name an existing account.
+// @Tags        accounts
+// @Accept      json
+// @Param       body body accountCreateRequest true "the request body"
+// @Produce     json
+// @Success     201 {object} accountDetailResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody "unknown_currency, unknown_reference"
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/accounts [post]
 func (s *Server) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Accounts.Post")
 	defer endSpan()
@@ -92,6 +104,20 @@ func (s *Server) parentExists(ctx context.Context, w http.ResponseWriter, ref st
 	return true
 }
 
+// @Summary     Rename, re-icon, reparent or archive an account
+// @Description Send absolute values only; an omitted field is left alone. Archiving is `archived: true` and never deletes the row.
+// @Tags        accounts
+// @Accept      json
+// @Param       body body accountPatchRequest true "the request body"
+// @Produce     json
+// @Param       ref path string true "32 lowercase hex ref"
+// @Success     200 {object} accountDetailResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/accounts/{ref} [patch]
 func (s *Server) PatchAccount(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Accounts.Patch")
 	defer endSpan()
@@ -173,6 +199,24 @@ func archivedAt(archived bool) *time.Time {
 	return &now
 }
 
+// @Summary     Every account with the balance the ledger implies
+// @Description Balances are in the account's own currency, `base_amount_minor` in the base currency. Filters widen: a `* list` parameter takes comma-separated values.
+// @Tags        accounts
+// @Produce     json
+// @Param       query query string false "substring of the name"
+// @Param       refs query string false "account refs, comma-separated"
+// @Param       currency query string false "ISO 4217"
+// @Param       kind query string false "asset, liability, equity, expense, income"
+// @Param       parent_ref query string false "children of this account"
+// @Param       archived query string false "true only archived, false only live"
+// @Param       cursor query string false "return accounts after this ref"
+// @Param       limit query int false "max 200, default 50"
+// @Success     200 {object} object{accounts=[]accountResponse,limit=int,has_more=bool,next_cursor=string}
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/accounts [get]
 func (s *Server) ListAccounts(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Accounts.List")
 	defer endSpan()

@@ -25,17 +25,35 @@ type auditQuery struct {
 }
 
 type auditResponse struct {
-	Ref        string          `json:"ref"`
+	Ref        string          `json:"ref"                  pattern:"^[0-9a-f]{32}$"`
 	EntityKind string          `json:"entity_kind"`
 	EntityRef  string          `json:"entity_ref,omitempty"`
 	Action     string          `json:"action"`
 	ActorKind  string          `json:"actor_kind"`
-	ActorRef   string          `json:"actor_ref,omitempty"`
-	From       json.RawMessage `json:"from,omitempty"`
-	To         json.RawMessage `json:"to,omitempty"`
-	At         string          `json:"at"`
+	ActorRef   string          `json:"actor_ref,omitempty"  pattern:"^[0-9a-f]{32}$"`
+	From       json.RawMessage `json:"from,omitempty"       swaggertype:"object"`
+	To         json.RawMessage `json:"to,omitempty"         swaggertype:"object"`
+	At         string          `format:"date-time"          json:"at"`
 }
 
+// @Summary     The journal: what changed, who changed it
+// @Description Append-only and newest first. `payload` carries the recorded shape of the change; a ref is never resolved to a name.
+// @Tags        audit
+// @Produce     json
+// @Param       entity_kind query string false "the table kind"
+// @Param       entity_ref query string false "one row's ref"
+// @Param       action query string false "created, updated, voided, revoked and friends"
+// @Param       actor_kind query string false "user or worker"
+// @Param       from query string false "window start"
+// @Param       to query string false "window end"
+// @Param       cursor query string false "return rows after this ref"
+// @Param       limit query int false "max 200, default 50"
+// @Success     200 {object} object{audit=[]auditResponse,limit=int,has_more=bool,next_cursor=string}
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/audit [get]
 func (s *Server) ListAudit(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Audit.List")
 	defer endSpan()

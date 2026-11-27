@@ -13,47 +13,59 @@ import (
 )
 
 type recurringCreateRequest struct {
-	PayeeRef         string `json:"payee_ref"                    validate:"required,ref"`
-	AccountRef       string `json:"account_ref"                  validate:"required,ref"`
-	CategoryRef      string `json:"category_ref,omitempty"       validate:"omitempty,ref"`
-	AmountMinor      string `json:"amount_minor"                 validate:"required,money"`
-	Currency         string `json:"currency"                     validate:"required,currency"`
+	PayeeRef         string `json:"payee_ref"                    pattern:"^[0-9a-f]{32}$"          validate:"required,ref"`
+	AccountRef       string `json:"account_ref"                  pattern:"^[0-9a-f]{32}$"          validate:"required,ref"`
+	CategoryRef      string `json:"category_ref,omitempty"       pattern:"^[0-9a-f]{32}$"          validate:"omitempty,ref"`
+	AmountMinor      string `json:"amount_minor"                 pattern:"^[+-]?[0-9]+$"           validate:"required,money"`
+	Currency         string `json:"currency"                     maxLength:"3"                     minLength:"3"                validate:"required,currency"`
 	Cadence          string `json:"cadence"                      validate:"required,cadence"`
 	IntervalN        int    `json:"interval_n,omitempty"         validate:"omitempty,gte=1,lte=52"`
 	DayOfMonth       int    `json:"day_of_month,omitempty"       validate:"omitempty,gte=1,lte=31"`
 	BusinessDayShift string `json:"business_day_shift,omitempty" validate:"omitempty,shift"`
-	NextDueOn        string `json:"next_due_on"                  validate:"required,datestr"`
-	EndsOn           string `json:"ends_on,omitempty"            validate:"omitempty,datestr"`
+	NextDueOn        string `format:"date"                       json:"next_due_on"                validate:"required,datestr"`
+	EndsOn           string `format:"date"                       json:"ends_on,omitempty"          validate:"omitempty,datestr"`
 }
 
 type recurringPatchRequest struct {
-	AmountMinor *string `json:"amount_minor,omitempty" validate:"omitempty,money"`
+	AmountMinor *string `json:"amount_minor,omitempty" pattern:"^[+-]?[0-9]+$"             validate:"omitempty,money"`
 	Cadence     *string `json:"cadence,omitempty"      validate:"omitempty,cadence"`
 	IntervalN   *int    `json:"interval_n,omitempty"   validate:"omitempty,gte=1,lte=52"`
 	DayOfMonth  *int    `json:"day_of_month,omitempty" validate:"omitempty,gte=1,lte=31"`
-	NextDueOn   *string `json:"next_due_on,omitempty"  validate:"omitempty,datestr"`
-	EndsOn      *string `json:"ends_on,omitempty"      validate:"omitempty,datestr"`
+	NextDueOn   *string `format:"date"                 json:"next_due_on,omitempty"        validate:"omitempty,datestr"`
+	EndsOn      *string `format:"date"                 json:"ends_on,omitempty"            validate:"omitempty,datestr"`
 	State       *string `json:"state,omitempty"        validate:"omitempty,recurringstate"`
 }
 
 type recurringResponse struct {
-	Ref              string `json:"ref"`
-	PayeeRef         string `json:"payee_ref"`
-	AccountRef       string `json:"account_ref"`
-	CategoryRef      string `json:"category_ref,omitempty"`
-	AmountMinor      string `json:"amount_minor"`
-	Currency         string `json:"currency"`
+	Ref              string `json:"ref"                    pattern:"^[0-9a-f]{32}$"`
+	PayeeRef         string `json:"payee_ref"              pattern:"^[0-9a-f]{32}$"`
+	AccountRef       string `json:"account_ref"            pattern:"^[0-9a-f]{32}$"`
+	CategoryRef      string `json:"category_ref,omitempty" pattern:"^[0-9a-f]{32}$"`
+	AmountMinor      string `json:"amount_minor"           pattern:"^[+-]?[0-9]+$"`
+	Currency         string `json:"currency"               maxLength:"3"            minLength:"3"`
 	Cadence          string `json:"cadence"`
 	IntervalN        int    `json:"interval_n"`
 	DayOfMonth       int    `json:"day_of_month,omitempty"`
 	BusinessDayShift string `json:"business_day_shift"`
-	NextDueOn        string `json:"next_due_on"`
-	EndsOn           string `json:"ends_on,omitempty"`
+	NextDueOn        string `format:"date"                 json:"next_due_on"`
+	EndsOn           string `format:"date"                 json:"ends_on,omitempty"`
 	Origin           string `json:"origin"`
 	State            string `json:"state"`
-	CreatedAt        string `json:"created_at"`
+	CreatedAt        string `format:"date-time"            json:"created_at"`
 }
 
+// @Summary     Create a recurring rule
+// @Description The worker queues a capture for each due rule and never posts an entry: an approval still writes the ledger.
+// @Tags        recurring
+// @Accept      json
+// @Param       body body recurringCreateRequest true "the request body"
+// @Produce     json
+// @Success     201 {object} recurringResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody "unknown_reference"
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/recurring [post]
 func (s *Server) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Recurring.Post")
 	defer endSpan()
@@ -111,6 +123,22 @@ func (s *Server) CreateRecurring(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, toRecurringResponse(created))
 }
 
+// @Summary     Every recurring rule, soonest due first
+// @Description `state` narrows to active or paused rules; a `* list` parameter widens with comma-separated values.
+// @Tags        recurring
+// @Produce     json
+// @Param       query query string false "substring of the payee name"
+// @Param       refs query string false "rule refs, comma-separated"
+// @Param       state query string false "active or paused"
+// @Param       cadence query string false "the rule interval kind"
+// @Param       cursor query string false "return rules after this ref"
+// @Param       limit query int false "max 200, default 50"
+// @Success     200 {object} object{recurring=[]recurringResponse,limit=int,has_more=bool,next_cursor=string}
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/recurring [get]
 func (s *Server) ListRecurring(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Recurring.List")
 	defer endSpan()
@@ -128,6 +156,20 @@ func (s *Server) ListRecurring(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// @Summary     Steer a recurring rule
+// @Description Absolute values only. Pausing is `state: paused`; the row and its journal entries stay.
+// @Tags        recurring
+// @Accept      json
+// @Param       body body recurringPatchRequest true "the request body"
+// @Produce     json
+// @Param       ref path string true "rule ref"
+// @Success     200 {object} recurringResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/recurring/{ref} [patch]
 func (s *Server) PatchRecurring(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Recurring.Patch")
 	defer endSpan()

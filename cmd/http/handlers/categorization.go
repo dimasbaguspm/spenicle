@@ -17,26 +17,26 @@ type ruleCreateRequest struct {
 	Pattern     string `json:"pattern"      validate:"required,rulepattern"`
 	Field       string `json:"field"        validate:"required,rulefield"`
 	MatchKind   string `json:"match_kind"   validate:"required,rulematch"`
-	CategoryRef string `json:"category_ref" validate:"required,ref"`
+	CategoryRef string `json:"category_ref" pattern:"^[0-9a-f]{32}$"        validate:"required,ref"`
 	Priority    int    `json:"priority"`
 }
 
 type rulePatchRequest struct {
 	Pattern     *string `json:"pattern,omitempty"      validate:"omitempty,rulepattern"`
-	CategoryRef *string `json:"category_ref,omitempty" validate:"omitempty,ref"`
+	CategoryRef *string `json:"category_ref,omitempty" pattern:"^[0-9a-f]{32}$"         validate:"omitempty,ref"`
 	Priority    *int    `json:"priority,omitempty"`
 	Archived    *bool   `json:"archived,omitempty"`
 }
 
 type ruleResponse struct {
-	Ref         string `json:"ref"`
+	Ref         string `json:"ref"          pattern:"^[0-9a-f]{32}$"`
 	Pattern     string `json:"pattern"`
 	Field       string `json:"field"`
 	MatchKind   string `json:"match_kind"`
-	CategoryRef string `json:"category_ref"`
+	CategoryRef string `json:"category_ref" pattern:"^[0-9a-f]{32}$"`
 	Priority    int    `json:"priority"`
 	Archived    bool   `json:"archived"`
-	CreatedAt   string `json:"created_at"`
+	CreatedAt   string `format:"date-time"  json:"created_at"`
 }
 
 type ruleListQuery struct {
@@ -53,13 +53,27 @@ type suggestQuery struct {
 }
 
 type suggestResponse struct {
-	AccountRef  string `json:"account_ref"`
+	AccountRef  string `json:"account_ref"        pattern:"^[0-9a-f]{32}$"`
 	AccountName string `json:"account_name"`
 	Why         string `json:"why"`
 	Tier        string `json:"tier"`
-	RuleRef     string `json:"rule_ref,omitempty"`
+	RuleRef     string `json:"rule_ref,omitempty" pattern:"^[0-9a-f]{32}$"`
 }
 
+// @Summary     The deterministic category rules, oldest first
+// @Description A rule maps a pattern, a field and a match kind to one category; the highest priority wins.
+// @Tags        categorization
+// @Produce     json
+// @Param       include_archived query string false "true to include archived rules"
+// @Param       account_ref query string false "rules for one account"
+// @Param       cursor query string false "return rules after this ref"
+// @Param       limit query int false "max 200, default 50"
+// @Success     200 {object} object{rules=[]ruleResponse,limit=int,has_more=bool,next_cursor=string}
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/categorization/rules [get]
 func (s *Server) ListCategorizationRules(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Categorization.List")
 	defer endSpan()
@@ -88,6 +102,18 @@ func (s *Server) ListCategorizationRules(w http.ResponseWriter, r *http.Request)
 	)
 }
 
+// @Summary     Teach one rule: a pattern, a field and a category
+// @Description The category must exist and be an expense or income account. Rules are deterministic: the same input always suggests the same category.
+// @Tags        categorization
+// @Accept      json
+// @Param       body body ruleCreateRequest true "the request body"
+// @Produce     json
+// @Success     201 {object} ruleResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/categorization/rules [post]
 func (s *Server) CreateCategorizationRule(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Categorization.Post")
 	defer endSpan()
@@ -138,6 +164,20 @@ func (s *Server) CreateCategorizationRule(w http.ResponseWriter, r *http.Request
 	httpx.WriteJSON(w, http.StatusCreated, toRuleResponse(created))
 }
 
+// @Summary     Repoint, reprioritise or archive a rule
+// @Description Absolute values only. Archiving keeps the row and its journal entry.
+// @Tags        categorization
+// @Accept      json
+// @Param       body body rulePatchRequest true "the request body"
+// @Produce     json
+// @Param       ref path string true "rule ref"
+// @Success     200 {object} ruleResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/categorization/rules/{ref} [patch]
 func (s *Server) PatchCategorizationRule(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Categorization.Patch")
 	defer endSpan()
@@ -197,6 +237,19 @@ func (s *Server) PatchCategorizationRule(w http.ResponseWriter, r *http.Request)
 	httpx.WriteJSON(w, http.StatusOK, toRuleResponse(updated))
 }
 
+// @Summary     The category this payee or text would get, and why
+// @Description `tier` says which layer answered: an explicit rule, the payee default, or the fallback category.
+// @Tags        categorization
+// @Produce     json
+// @Param       payee_ref query string false "the payee to look up"
+// @Param       text query string false "free text to match, max 200"
+// @Param       kind query string false "expense or income"
+// @Success     200 {object} suggestResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/categorization/suggest [get]
 func (s *Server) SuggestCategory(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Categorization.Suggest")
 	defer endSpan()

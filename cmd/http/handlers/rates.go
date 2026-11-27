@@ -17,15 +17,29 @@ type rateQuery struct {
 }
 
 type rateResponse struct {
-	Ref       string `json:"ref"`
-	Base      string `json:"base"`
-	Quote     string `json:"quote"`
-	OnDate    string `json:"on_date"`
-	Rate      string `json:"rate"`
+	Ref       string `json:"ref"         pattern:"^[0-9a-f]{32}$"`
+	Base      string `json:"base"        maxLength:"3"                  minLength:"3"`
+	Quote     string `json:"quote"       maxLength:"3"                  minLength:"3"`
+	OnDate    string `format:"date"      json:"on_date"`
+	Rate      string `json:"rate"        pattern:"^[0-9]+(\\.[0-9]+)?$"`
 	Source    string `json:"source"`
-	FetchedAt string `json:"fetched_at"`
+	FetchedAt string `format:"date-time" json:"fetched_at"`
 }
 
+// @Summary     The cached ECB reference rate for one day
+// @Description Answers from the in-memory cache, then the stored sheet for that exact day, then the nearest earlier day, then a cross rate through EUR. `on` defaults to today in `APP_TIMEZONE`.
+// @Tags        rates
+// @Produce     json
+// @Param       base query string true "ISO 4217"
+// @Param       quote query string true "ISO 4217"
+// @Param       on query string false "the day to price, default today"
+// @Success     200 {object} rateResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody "no rate for that pair"
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/rates [get]
 func (s *Server) GetRate(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Rates.Get")
 	defer endSpan()

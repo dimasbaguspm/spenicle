@@ -24,14 +24,14 @@ type connectionCallbackQuery struct {
 }
 
 type connectionResponse struct {
-	Ref             string   `json:"ref,omitempty"`
+	Ref             string   `json:"ref,omitempty"     pattern:"^[0-9a-f]{32}$"`
 	Provider        string   `json:"provider"`
 	Status          string   `json:"status"`
 	Account         string   `json:"account,omitempty"`
 	Scopes          []string `json:"scopes,omitempty"`
-	AccessExpiresAt string   `json:"access_expires_at,omitempty"`
-	LastRefreshedAt string   `json:"last_refreshed_at,omitempty"`
-	RevokedAt       string   `json:"revoked_at,omitempty"`
+	AccessExpiresAt string   `format:"date-time"       json:"access_expires_at,omitempty"`
+	LastRefreshedAt string   `format:"date-time"       json:"last_refreshed_at,omitempty"`
+	RevokedAt       string   `format:"date-time"       json:"revoked_at,omitempty"`
 }
 
 type connectionStartResponse struct {
@@ -39,6 +39,15 @@ type connectionStartResponse struct {
 	State        string `json:"state"`
 }
 
+// @Summary     The current Google mailbox connection, or `disconnected`
+// @Description Answers `disconnected` when no grant is stored; the secrets never leave the sealed row.
+// @Tags        connections
+// @Produce     json
+// @Success     200 {object} connectionResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/connections [get]
 func (s *Server) GetConnection(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Connections.Get")
 	defer endSpan()
@@ -53,6 +62,18 @@ func (s *Server) GetConnection(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toConnectionResponse(connection, found))
 }
 
+// @Summary     Store OAuth client credentials and start authorisation
+// @Description Writes the client id and secret into the sealed row and answers the URL the browser must visit. The secret is never echoed back.
+// @Tags        connections
+// @Accept      json
+// @Param       body body connectionStartRequest true "the request body"
+// @Produce     json
+// @Success     201 {object} connectionStartResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/connections/google [post]
 func (s *Server) StartConnection(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Connections.Start")
 	defer endSpan()
@@ -79,6 +100,16 @@ func (s *Server) StartConnection(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary     Finish the Google grant from the browser redirect
+// @Description Public route: the browser arrives here with `code` and `state`, not with a credential. An unknown or replayed `state` is refused.
+// @Tags        connections
+// @Produce     json
+// @Param       code query string true "the grant code"
+// @Param       state query string true "the state issued at start"
+// @Success     200 {object} connectionResponse
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/connections/google/callback [get]
 func (s *Server) CompleteConnection(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Connections.Complete")
 	defer endSpan()
@@ -103,6 +134,17 @@ func (s *Server) CompleteConnection(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toConnectionResponse(connection, true))
 }
 
+// @Summary     Disconnect the stored grant, keep the row
+// @Description Marks the connection revoked; a capture that already arrived keeps its evidence.
+// @Tags        connections
+// @Produce     json
+// @Param       ref path string true "connection ref"
+// @Success     200 {object} connectionResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/connections/{ref}/revoke [post]
 func (s *Server) RevokeConnection(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Connections.Revoke")
 	defer endSpan()

@@ -19,64 +19,88 @@ import (
 )
 
 type postingRequest struct {
-	AccountRef  string `json:"account_ref"            validate:"required,ref"`
-	AmountMinor string `json:"amount_minor"           validate:"required,money"`
-	FXRate      string `json:"fx_rate,omitempty"      validate:"omitempty,rate"`
-	FXRateDate  string `json:"fx_rate_date,omitempty" validate:"omitempty,datestr"`
+	AccountRef  string `json:"account_ref"       pattern:"^[0-9a-f]{32}$"       validate:"required,ref"`
+	AmountMinor string `json:"amount_minor"      pattern:"^[+-]?[0-9]+$"        validate:"required,money"`
+	FXRate      string `json:"fx_rate,omitempty" pattern:"^[0-9]+(\\.[0-9]+)?$" validate:"omitempty,rate"`
+	FXRateDate  string `format:"date"            json:"fx_rate_date,omitempty"  validate:"omitempty,datestr"`
 }
 
 type postEntryRequest struct {
-	IdempotencyKey string           `json:"idempotency_key,omitempty" validate:"omitempty,max=64"`
-	OccurredOn     string           `json:"occurred_on"               validate:"required,datestr"`
-	PayeeRef       string           `json:"payee_ref,omitempty"       validate:"omitempty,ref"`
-	Note           string           `json:"note,omitempty"            validate:"max=2000"`
-	Currency       string           `json:"currency"                  validate:"required,currency"`
-	Source         string           `json:"source,omitempty"          validate:"omitempty,source"`
-	Postings       []postingRequest `json:"postings"                  validate:"required,min=2,dive"`
+	IdempotencyKey string           `json:"idempotency_key,omitempty"                          validate:"omitempty,max=64"`
+	OccurredOn     string           `format:"date"                                             json:"occurred_on"             validate:"required,datestr"`
+	PayeeRef       string           `json:"payee_ref,omitempty"                                pattern:"^[0-9a-f]{32}$"       validate:"omitempty,ref"`
+	Note           string           `json:"note,omitempty"                                     maxLength:"2000"               validate:"max=2000"`
+	Currency       string           `json:"currency"                                           maxLength:"3"                  minLength:"3"               validate:"required,currency"`
+	Source         string           `enums:"manual,share,email,statement,recurring,adjustment" json:"source,omitempty"        validate:"omitempty,source"`
+	Postings       []postingRequest `json:"postings"                                           validate:"required,min=2,dive"`
 }
 
 type accountSummary struct {
-	Ref  string `json:"ref"`
+	Ref  string `json:"ref"                                    pattern:"^[0-9a-f]{32}$"`
 	Name string `json:"name"`
-	Kind string `json:"kind"`
+	Kind string `enums:"asset,liability,equity,expense,income" json:"kind"`
 }
 
 type payeeSummary struct {
-	Ref  string `json:"ref"`
+	Ref  string `json:"ref"  pattern:"^[0-9a-f]{32}$"`
 	Name string `json:"name"`
 }
 
 type postingResponse struct {
 	Account         accountSummary `json:"account"`
-	AccountRef      string         `json:"account_ref"`
-	AmountMinor     string         `json:"amount_minor"`
-	BaseAmountMinor string         `json:"base_amount_minor"`
-	FXRate          string         `json:"fx_rate"`
-	FXSource        string         `json:"fx_source"`
+	AccountRef      string         `json:"account_ref"                 pattern:"^[0-9a-f]{32}$"`
+	AmountMinor     string         `json:"amount_minor"                pattern:"^[+-]?[0-9]+$"`
+	BaseAmountMinor string         `json:"base_amount_minor"           pattern:"^[+-]?[0-9]+$"`
+	FXRate          string         `json:"fx_rate"                     pattern:"^[0-9]+(\\.[0-9]+)?$"`
+	FXSource        string         `enums:"identity,manual,ecb,cached" json:"fx_source"`
 }
 
 type entryResponse struct {
-	Ref                 string            `json:"ref"`
+	Ref                 string            `json:"ref"                                                pattern:"^[0-9a-f]{32}$"`
 	IdempotencyKey      string            `json:"idempotency_key,omitempty"`
-	OccurredOn          string            `json:"occurred_on"`
-	Currency            string            `json:"currency"`
-	Source              string            `json:"source"`
+	OccurredOn          string            `format:"date"                                             json:"occurred_on"`
+	Currency            string            `json:"currency"                                           maxLength:"3"              minLength:"3"`
+	Source              string            `enums:"manual,share,email,statement,recurring,adjustment" json:"source"`
 	Note                string            `json:"note,omitempty"`
 	Payee               *payeeSummary     `json:"payee,omitempty"`
-	VoidedAt            string            `json:"voided_at,omitempty"`
+	VoidedAt            string            `format:"date-time"                                        json:"voided_at,omitempty"`
 	Postings            []postingResponse `json:"postings"`
-	RunningBalanceMinor string            `json:"running_balance_minor,omitempty"`
+	RunningBalanceMinor string            `json:"running_balance_minor,omitempty"                    pattern:"^[+-]?[0-9]+$"`
 }
 
 type entryPatchRequest struct {
 	Void       *bool            `json:"void,omitempty"`
-	Reason     string           `json:"reason,omitempty"      validate:"max=2000"`
-	PayeeRef   *string          `json:"payee_ref,omitempty"   validate:"omitempty,ref"`
-	OccurredOn string           `json:"occurred_on,omitempty" validate:"omitempty,datestr"`
-	Note       *string          `json:"note,omitempty"        validate:"omitempty,max=2000"`
-	Postings   []postingRequest `json:"postings,omitempty"    validate:"omitempty,min=2,dive"`
+	Reason     string           `json:"reason,omitempty"    validate:"max=2000"`
+	PayeeRef   *string          `json:"payee_ref,omitempty" pattern:"^[0-9a-f]{32}$"        validate:"omitempty,ref"`
+	OccurredOn string           `format:"date"              json:"occurred_on,omitempty"    validate:"omitempty,datestr"`
+	Note       *string          `json:"note,omitempty"      validate:"omitempty,max=2000"`
+	Postings   []postingRequest `json:"postings,omitempty"  validate:"omitempty,min=2,dive"`
 }
 
+// @Summary     List the ledger, newest first
+// @Description Filters widen the result: every `* list` parameter takes one value or many, comma-separated. `amount_min` and `amount_max` compare the absolute base-currency posting amount. A `limit` above 200 is refused, never clamped.
+// @Tags        entries
+// @Produce     json
+// @Param       from        query string false "occurred_on >= from; YYYY-MM-DD or YYYY-MM-DDTHH:MM in APP_TIMEZONE"
+// @Param       to          query string false "occurred_on <= to; a bare date covers the whole day"
+// @Param       account_ref query string false "account refs, comma-separated"
+// @Param       payee_ref   query string false "payee refs, comma-separated"
+// @Param       source      query string false "entry sources, comma-separated"
+// @Param       currency    query string false "ISO 4217 of the entry"
+// @Param       query       query string false "substring of the note or of the payee name"
+// @Param       refs        query string false "entry refs, comma-separated"
+// @Param       voided      query string false "true only voided entries, false only live ones, absent both"
+// @Param       amount_min  query string false "smallest absolute posting amount to match"
+// @Param       amount_max  query string false "largest absolute posting amount to match"
+// @Param       cursor      query string false "return entries older than the entry with that ref"
+// @Param       with_balance query string false "true (with exactly one account_ref) adds each entry's running_balance_minor"
+// @Param       limit       query int    false "page size" default(50) minimum(1) maximum(200)
+// @Success     200 {object} object{entries=[]entryResponse,limit=int,has_more=bool,next_cursor=string}
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/entries [get]
 func (s *Server) ListEntries(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.List")
 	defer endSpan()
@@ -101,6 +125,17 @@ func (s *Server) ListEntries(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// @Summary     One entry with its postings
+// @Description A voided entry still answers and carries `voided_at`; the reversal is a separate entry.
+// @Tags        entries
+// @Produce     json
+// @Param       ref path string true "entry ref"
+// @Success     200 {object} entryResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/entries/{ref} [get]
 func (s *Server) GetEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Get")
 	defer endSpan()
@@ -129,6 +164,20 @@ func (s *Server) GetEntry(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, body)
 }
 
+// @Summary     Void an entry or correct it
+// @Description One body action per call: `void: true` writes the reversal (the original stays), `payee_ref` repoints, `occurred_on`, `note` and `postings` replace the entry in place.
+// @Tags        entries
+// @Accept      json
+// @Param       body body entryPatchRequest true "the request body"
+// @Produce     json
+// @Param       ref path string true "entry ref"
+// @Success     200 {object} entryResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody "invalid_request, invalid_postings, postings_not_balanced"
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/entries/{ref} [patch]
 func (s *Server) PatchEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Patch")
 	defer endSpan()
@@ -208,6 +257,21 @@ func (s *Server) applyEntryPatch(
 	return entry, true
 }
 
+// @Summary     Post one balanced entry
+// @Description The only way money enters the ledger. Native and base sums must both be zero; a posting without `fx_rate` is converted with the resolved rate, and the result is rounded once, half away from zero. Replaying `idempotency_key` returns the stored entry with `200` instead of posting a second one.
+// @Tags        entries
+// @Accept      json
+// @Param       body body postEntryRequest true "the request body"
+// @Produce     json
+// @Param       entry body postEntryRequest true "the entry to post"
+// @Success     201 {object} entryResponse
+// @Success     200 {object} entryResponse "the idempotency_key replayed a stored entry"
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody "unknown payee_ref"
+// @Failure     422 {object} httpx.ErrorBody "postings_not_balanced, invalid_postings, unknown_currency, invalid_rate"
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/entries [post]
 func (s *Server) PostEntry(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Entries.Post")
 	defer endSpan()

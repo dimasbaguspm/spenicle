@@ -79,6 +79,11 @@ linters:
       - path: cmd/
         linters:
           - forbidigo
+      # The document generator writes one reviewed file at the repo root; there is
+      # no runtime storage behind it.
+      - path: openapi/
+        linters:
+          - forbidigo
 
 run:
   timeout: 5m

@@ -6,6 +6,12 @@ One file per route. Every file answers the same questions in the same order:
 `Response` · `Errors` · `Limitations` · `Sequence` (mermaid).
 
 Planned and deliberately unshipped decisions are in [`planned.md`](./planned.md); the live routes are all listed below.
+
+The machine-readable form of these pages is [`openapi.json`](../../openapi.json) at the
+repo root, OpenAPI 3.1: one operation per route, carrying the group, the scope and the
+credential scheme the route table declares. It is generated — `make openapi` — from the
+annotation block above each handler and joined with `cmd/http/handler.go`; never edit it
+by hand, and change the page here when you change the block.
 | method | path | purpose | file |
 | --- | --- | --- | --- |
 | `GET` | `/api/connections` | current Google mailbox connection, or `disconnected` | [`GET_api_connections.md`](./GET_api_connections.md) |

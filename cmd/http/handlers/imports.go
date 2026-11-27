@@ -43,42 +43,42 @@ type importRowPathRequest struct {
 }
 
 type importRowPatchRequest struct {
-	OccurredOn  *string `json:"occurred_on,omitempty"  validate:"omitempty,datestr"`
-	AmountMinor *string `json:"amount_minor,omitempty" validate:"omitempty,money"`
+	OccurredOn  *string `format:"date"                 json:"occurred_on,omitempty"         validate:"omitempty,datestr"`
+	AmountMinor *string `json:"amount_minor,omitempty" pattern:"^[+-]?[0-9]+$"              validate:"omitempty,money"`
 	Description *string `json:"description,omitempty"  validate:"omitempty,max=500"`
-	CategoryRef *string `json:"category_ref,omitempty" validate:"omitempty,ref"`
-	PayeeRef    *string `json:"payee_ref,omitempty"    validate:"omitempty,ref"`
+	CategoryRef *string `json:"category_ref,omitempty" pattern:"^[0-9a-f]{32}$"             validate:"omitempty,ref"`
+	PayeeRef    *string `json:"payee_ref,omitempty"    pattern:"^[0-9a-f]{32}$"             validate:"omitempty,ref"`
 	Status      *string `json:"status,omitempty"       validate:"omitempty,importrowstatus"`
 }
 
 type importRowResponse struct {
-	Ref                  string `json:"ref"`
+	Ref                  string `json:"ref"                              pattern:"^[0-9a-f]{32}$"`
 	RowIndex             int    `json:"row_index"`
-	OccurredOn           string `json:"occurred_on"`
-	AmountMinor          string `json:"amount_minor"`
+	OccurredOn           string `format:"date"                           json:"occurred_on"`
+	AmountMinor          string `json:"amount_minor"                     pattern:"^[+-]?[0-9]+$"`
 	Description          string `json:"description"`
-	AccountRef           string `json:"account_ref"`
-	CategoryRef          string `json:"category_ref,omitempty"`
-	SuggestedCategoryRef string `json:"suggested_category_ref,omitempty"`
-	PayeeRef             string `json:"payee_ref,omitempty"`
+	AccountRef           string `json:"account_ref"                      pattern:"^[0-9a-f]{32}$"`
+	CategoryRef          string `json:"category_ref,omitempty"           pattern:"^[0-9a-f]{32}$"`
+	SuggestedCategoryRef string `json:"suggested_category_ref,omitempty" pattern:"^[0-9a-f]{32}$"`
+	PayeeRef             string `json:"payee_ref,omitempty"              pattern:"^[0-9a-f]{32}$"`
 	Status               string `json:"status"`
 	ClashKind            string `json:"clash_kind,omitempty"`
-	ClashEntryRef        string `json:"clash_entry_ref,omitempty"`
+	ClashEntryRef        string `json:"clash_entry_ref,omitempty"        pattern:"^[0-9a-f]{32}$"`
 }
 
 type importBatchResponse struct {
-	Ref            string              `json:"ref"`
+	Ref            string              `json:"ref"             pattern:"^[0-9a-f]{32}$"`
 	IdempotencyKey string              `json:"idempotency_key"`
 	Filename       string              `json:"filename"`
 	FileHash       string              `json:"file_hash"`
 	Status         string              `json:"status"`
-	Currency       string              `json:"currency"`
+	Currency       string              `json:"currency"        maxLength:"3"                 minLength:"3"`
 	RowsTotal      int                 `json:"rows_total"`
 	Rows           []importRowResponse `json:"rows,omitempty"`
-	CreatedAt      string              `json:"created_at"`
-	ExpiresAt      string              `json:"expires_at"`
-	CommittedAt    string              `json:"committed_at,omitempty"`
-	RejectedAt     string              `json:"rejected_at,omitempty"`
+	CreatedAt      string              `format:"date-time"     json:"created_at"`
+	ExpiresAt      string              `format:"date-time"     json:"expires_at"`
+	CommittedAt    string              `format:"date-time"     json:"committed_at,omitempty"`
+	RejectedAt     string              `format:"date-time"     json:"rejected_at,omitempty"`
 }
 
 type importReviewRequest struct {
@@ -92,7 +92,7 @@ type importChunkFields struct {
 }
 
 type importChunkResponse struct {
-	Ref            string `json:"ref"`
+	Ref            string `json:"ref"             pattern:"^[0-9a-f]{32}$"`
 	IdempotencyKey string `json:"idempotency_key"`
 	ReceivedChunks int    `json:"received_chunks"`
 	ChunkTotal     int    `json:"chunk_total"`
@@ -100,14 +100,32 @@ type importChunkResponse struct {
 }
 
 type importEventResponse struct {
-	Ref      string          `json:"ref"`
+	Ref      string          `json:"ref"                 pattern:"^[0-9a-f]{32}$"`
 	Kind     string          `json:"kind"`
 	RowIndex *int            `json:"row_index,omitempty"`
-	Payload  json.RawMessage `json:"payload,omitempty"`
+	Payload  json.RawMessage `json:"payload,omitempty"   swaggertype:"object"`
 	Actor    string          `json:"actor"`
-	At       string          `json:"at"`
+	At       string          `format:"date-time"         json:"at"`
 }
 
+// @Summary     Upload a CSV statement as a reviewable draft
+// @Description Two-phase: this route writes a draft and nothing reaches the ledger until `PATCH /api/imports/{ref}` commits it. Send the whole file, or a chunk per call with `chunk_index` and `chunk_total`; the last chunk assembles the draft. The same `idempotency_key` with the same bytes resumes the draft (`200`), with different bytes it is `409 import_conflict`.
+// @Tags        imports
+// @Produce     json
+// @Param       file formData file true "the CSV statement"
+// @Param       idempotency_key formData string false "resume key, max 64"
+// @Param       account_ref formData string false "the account every row is posted against"
+// @Param       chunk_index formData int false "0-based chunk position"
+// @Param       chunk_total formData int false "chunk count"
+// @Success     201 {object} importBatchResponse
+// @Success     200 {object} importBatchResponse
+// @Success     202 {object} importChunkResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     409 {object} httpx.ErrorBody "import_conflict"
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/imports [post]
 func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.Create")
 	defer endSpan()
@@ -273,6 +291,19 @@ func (s *Server) suggestCategories(ctx context.Context, rows []importRowResponse
 	}
 }
 
+// @Summary     Every statement batch, newest first
+// @Description A draft holds its rows for 24h past the last edit; a committed or rejected batch keeps its evidence forever.
+// @Tags        imports
+// @Produce     json
+// @Param       status query string false "draft, committing, committed or rejected"
+// @Param       cursor query string false "return batches after this ref"
+// @Param       limit query int false "max 200, default 50"
+// @Success     200 {object} object{imports=[]importBatchResponse,limit=int,has_more=bool,next_cursor=string}
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/imports [get]
 func (s *Server) ListImports(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.List")
 	defer endSpan()
@@ -298,6 +329,17 @@ func (s *Server) ListImports(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// @Summary     One batch with its rows
+// @Description Each row carries its own clash verdict: `already_imported`, `duplicate`, `possible_duplicate` or `invalid_row`.
+// @Tags        imports
+// @Produce     json
+// @Param       ref path string true "batch ref"
+// @Success     200 {object} importBatchResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/imports/{ref} [get]
 func (s *Server) GetImport(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.Get")
 	defer endSpan()
@@ -317,6 +359,22 @@ func (s *Server) GetImport(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toImportResponse(batch, true))
 }
 
+// @Summary     Edit, accept or skip one drafted row
+// @Description Absolute values only, so a retry changes nothing. An edit extends the draft's `expires_at` and records the edited fields; a row edit while `committing` is `409 import_committing`.
+// @Tags        imports
+// @Accept      json
+// @Param       body body importRowPatchRequest true "the request body"
+// @Produce     json
+// @Param       ref path string true "batch ref"
+// @Param       index path integer true "0-based row position"
+// @Success     200 {object} importBatchResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     409 {object} httpx.ErrorBody "import_closed, import_committing"
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/imports/{ref}/rows/{index} [patch]
 func (s *Server) PatchImportRow(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.PatchRow")
 	defer endSpan()
@@ -355,6 +413,21 @@ func (s *Server) PatchImportRow(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toImportResponse(batch, true))
 }
 
+// @Summary     Commit the draft or reject it, one body action
+// @Description `commit` posts the accepted rows, each under `import:<file_hash>:<row_index>`, which makes a replay a no-op. `reject` closes the draft and keeps the evidence.
+// @Tags        imports
+// @Accept      json
+// @Param       body body importReviewRequest true "the request body"
+// @Produce     json
+// @Param       ref path string true "batch ref"
+// @Success     200 {object} importBatchResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     409 {object} httpx.ErrorBody "import_closed, import_committing"
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/imports/{ref} [patch]
 func (s *Server) PatchImport(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.Patch")
 	defer endSpan()
@@ -386,6 +459,20 @@ func (s *Server) PatchImport(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, toImportResponse(batch, true))
 }
 
+// @Summary     The append-only log of one batch
+// @Description `uploaded`, `resumed`, `conflict_refused`, `row_edited`, `row_accepted`, `row_skipped`, `committed`, `rejected`, `expired`; the actor says whether the user or the worker wrote it.
+// @Tags        imports
+// @Produce     json
+// @Param       ref path string true "batch ref"
+// @Param       cursor query string false "return events after this ref"
+// @Param       limit query int false "max 200, default 50"
+// @Success     200 {object} object{events=[]importEventResponse,limit=int,has_more=bool,next_cursor=string}
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/imports/{ref}/events [get]
 func (s *Server) ListImportEvents(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Imports.Events")
 	defer endSpan()

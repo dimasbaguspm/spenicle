@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/dimasbaguspm/spenicle/cmd/http/handlers"
 	"github.com/dimasbaguspm/spenicle/internal/common/access"
@@ -89,14 +90,21 @@ func patternOf(mux *http.ServeMux, r *http.Request) string {
 	return pattern
 }
 
-const notFoundPattern = "/*"
+const (
+	notFoundPattern  = "/*"
+	routeGroupPublic = "public"
+	routeGroupRoot   = "root"
+	routeGroupScoped = "scoped"
+)
 
 // routeGroup is one surface of the API and the scope book it collects while the
 // routes register: a token reads its allow-list from the group it was mounted in,
 // so a route and the scope it needs are declared on the same line.
 type routeGroup struct {
+	name   string
 	mux    *http.ServeMux
 	scopes map[string]string
+	routes []Route
 }
 
 type routeGroups struct {
@@ -105,30 +113,58 @@ type routeGroups struct {
 	scoped routeGroup
 }
 
-func newGroup() routeGroup {
-	return routeGroup{mux: http.NewServeMux(), scopes: make(map[string]string)}
+// Route is one pattern the handler serves, with the group it is mounted in and the
+// scope a token needs to reach it. The OpenAPI generator reads it so a published
+// path and the scope it demands can only come from here.
+type Route struct {
+	Method string
+	Path   string
+	Scope  string
+	Group  string
+}
+
+func newGroup(name string) routeGroup {
+	return routeGroup{name: name, mux: http.NewServeMux(), scopes: make(map[string]string)}
 }
 
 // route mounts one pattern with the scope a token needs; an empty scope means the
 // root credential only, which is what the public and root groups use.
-func (g routeGroup) route(scope, pattern string, handler http.HandlerFunc) {
+func (g *routeGroup) route(scope, pattern string, handler http.HandlerFunc) {
 	g.mux.HandleFunc(pattern, handler)
 
 	if scope != "" {
 		g.scopes[pattern] = scope
 	}
+
+	method, path, _ := strings.Cut(pattern, " ")
+	g.routes = append(g.routes, Route{Method: method, Path: path, Scope: scope, Group: g.name})
+}
+
+func Routes() []Route {
+	groups := (&server{}).routes()
+
+	routes := make([]Route, 0, len(groups.public.routes)+len(groups.root.routes)+len(groups.scoped.routes))
+	routes = append(routes, groups.public.routes...)
+	routes = append(routes, groups.root.routes...)
+	routes = append(routes, groups.scoped.routes...)
+
+	return routes
 }
 
 // routes declares each route exactly once, next to the scope it asks for.
 func (s *server) routes() routeGroups {
-	groups := routeGroups{public: newGroup(), root: newGroup(), scoped: newGroup()}
+	groups := routeGroups{
+		public: newGroup(routeGroupPublic),
+		root:   newGroup(routeGroupRoot),
+		scoped: newGroup(routeGroupScoped),
+	}
 
 	// open to everyone
 	groups.public.route("", "GET /healthz", s.api.Health)
 	groups.public.route("", "GET /api/connections/google/callback", s.api.CompleteConnection)
 
 	// root credential only
-	s.credentialRoutes(groups.root)
+	s.credentialRoutes(&groups.root)
 
 	// any credential carrying the scope
 	groups.scoped.route(constant.ScopeSettingsRead, "GET /api/settings", s.api.GetSettings)
@@ -193,7 +229,7 @@ func (s *server) routes() routeGroups {
 
 // credentialRoutes mount the surface only the root credential may reach, so no token can
 // ever mint a second credential of any kind.
-func (s *server) credentialRoutes(group routeGroup) {
+func (s *server) credentialRoutes(group *routeGroup) {
 	group.route("", "POST /api/setup", s.api.Setup)
 	group.route("", "POST /api/password", s.api.ChangePassword)
 	group.route("", "PATCH /api/settings", s.api.PatchSettings)

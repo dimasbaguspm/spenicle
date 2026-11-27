@@ -10,7 +10,7 @@ GOLANGCI := golangci-lint
 BIN     := bin/spenicle
 LINTDIR := tools/lint
 
-.PHONY: help hooks build run test uat uat-snapshots cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt
+.PHONY: help hooks build run test uat uat-snapshots cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt openapi
 
 help: ## show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -39,6 +39,9 @@ cover: ## coverage over the whole module, UAT and mocks included
 
 fmt: ## gofmt the tree
 	$(GO) fmt ./...
+
+openapi: ## regenerate the API document at the repo root
+	$(GO) run ./tools/openapi
 
 mocks:
 	go generate ./...

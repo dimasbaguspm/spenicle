@@ -39,31 +39,31 @@ type captureApprove struct {
 }
 
 type captureResponse struct {
-	Ref                  string `json:"ref"`
+	Ref                  string `json:"ref"                              pattern:"^[0-9a-f]{32}$"`
 	Kind                 string `json:"kind"`
 	Status               string `json:"status"`
 	RawText              string `json:"raw_text,omitempty"`
 	DraftJSON            string `json:"draft_json,omitempty"`
 	ResolutionNote       string `json:"resolution_note,omitempty"`
-	JobRef               string `json:"job_ref,omitempty"`
+	JobRef               string `json:"job_ref,omitempty"                pattern:"^[0-9a-f]{32}$"`
 	ExtractionRail       string `json:"extraction_rail,omitempty"`
 	ExtractionModel      string `json:"extraction_model,omitempty"`
-	EntryRef             string `json:"resolved_entry_ref,omitempty"`
-	SuggestedCategoryRef string `json:"suggested_category_ref,omitempty"`
-	ReceivedAt           string `json:"received_at"`
-	ResolvedAt           string `json:"resolved_at,omitempty"`
+	EntryRef             string `json:"resolved_entry_ref,omitempty"     pattern:"^[0-9a-f]{32}$"`
+	SuggestedCategoryRef string `json:"suggested_category_ref,omitempty" pattern:"^[0-9a-f]{32}$"`
+	ReceivedAt           string `format:"date-time"                      json:"received_at"`
+	ResolvedAt           string `format:"date-time"                      json:"resolved_at,omitempty"`
 }
 
 type capturePatchRequest struct {
-	Action     string           `json:"action"                validate:"required,captureaction"`
-	Reason     string           `json:"reason,omitempty"      validate:"max=2000"`
-	OccurredOn string           `json:"occurred_on,omitempty" validate:"omitempty,datestr"`
-	PayeeRef   string           `json:"payee_ref,omitempty"   validate:"omitempty,ref"`
-	Note       string           `json:"note,omitempty"        validate:"max=2000"`
-	EntryRef   string           `json:"entry_ref,omitempty"   validate:"omitempty,ref"`
-	Currency   string           `json:"currency,omitempty"    validate:"omitempty,currency"`
-	Postings   []postingRequest `json:"postings,omitempty"    validate:"omitempty,min=2,dive"`
-	Learn      *bool            `json:"learn,omitempty"       validate:"omitempty"`
+	Action     string           `json:"action"              validate:"required,captureaction"`
+	Reason     string           `json:"reason,omitempty"    validate:"max=2000"`
+	OccurredOn string           `format:"date"              json:"occurred_on,omitempty"      validate:"omitempty,datestr"`
+	PayeeRef   string           `json:"payee_ref,omitempty" pattern:"^[0-9a-f]{32}$"          validate:"omitempty,ref"`
+	Note       string           `json:"note,omitempty"      validate:"max=2000"`
+	EntryRef   string           `json:"entry_ref,omitempty" pattern:"^[0-9a-f]{32}$"          validate:"omitempty,ref"`
+	Currency   string           `json:"currency,omitempty"  maxLength:"3"                     minLength:"3"                validate:"omitempty,currency"`
+	Postings   []postingRequest `json:"postings,omitempty"  validate:"omitempty,min=2,dive"`
+	Learn      *bool            `json:"learn,omitempty"     validate:"omitempty"`
 }
 
 type captureApprovedResponse struct {
@@ -71,6 +71,20 @@ type captureApprovedResponse struct {
 	Capture captureResponse `json:"capture"`
 }
 
+// @Summary     The review queue
+// @Description Pending first. A capture is unconfirmed by definition: only an approval writes an entry.
+// @Tags        captures
+// @Produce     json
+// @Param       status query string false "pending, approved or rejected"
+// @Param       refs query string false "capture refs, comma-separated"
+// @Param       cursor query string false "return captures after this ref"
+// @Param       limit query int false "max 200, default 50"
+// @Success     200 {object} object{captures=[]captureResponse,limit=int,has_more=bool,next_cursor=string}
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/captures [get]
 func (s *Server) ListCaptures(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.List")
 	defer endSpan()
@@ -88,6 +102,19 @@ func (s *Server) ListCaptures(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// @Summary     Park something unconfirmed
+// @Description Writes no ledger entry: a capture is the two-second capture path. `202` when it is parked for extraction, `200` when `idempotency_key` replayed a stored capture.
+// @Tags        captures
+// @Accept      json
+// @Produce     json
+// @Param       body body captureRequest true "the capture to park"
+// @Success     202 {object} captureResponse
+// @Success     200 {object} captureResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/captures [post]
 func (s *Server) CreateCapture(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Create")
 	defer endSpan()
@@ -139,6 +166,21 @@ func (s *Server) CreateCapture(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, status, response)
 }
 
+// @Summary     Approve, reject, retry or match a capture
+// @Description `action` picks the branch: `approve` posts a balanced entry and answers `201` with the entry beside the capture, `reject` closes it, `retry` re-runs extraction, `match` links it to an entry that already exists.
+// @Tags        captures
+// @Accept      json
+// @Param       body body capturePatchRequest true "the request body"
+// @Produce     json
+// @Param       ref path string true "capture ref"
+// @Success     200 {object} captureResponse
+// @Success     201 {object} captureApprovedResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/captures/{ref} [patch]
 func (s *Server) PatchCapture(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Patch")
 	defer endSpan()
@@ -307,6 +349,18 @@ func (s *Server) rejectCapture(
 	httpx.WriteJSON(w, http.StatusOK, toCaptureResponse(capture))
 }
 
+// @Summary     Download the document behind a capture
+// @Description The bytes are gzipped when compressible and encrypted under `APP_SECRET`; the row is metadata, the file is the document. `410` once the retention sweep reclaimed it.
+// @Tags        captures
+// @Produce     octet-stream
+// @Param       ref path string true "capture ref"
+// @Success     200 {file} file
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     410 {object} httpx.ErrorBody "the artifact was reclaimed"
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/captures/{ref}/artifact [get]
 func (s *Server) GetCaptureArtifact(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Captures.Artifact")
 	defer endSpan()

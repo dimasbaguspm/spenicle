@@ -24,13 +24,25 @@ type customQueryPatchRequest struct {
 }
 
 type customQueryResponse struct {
-	Ref       string `json:"ref"`
+	Ref       string `json:"ref"         pattern:"^[0-9a-f]{32}$"`
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
 	Chart     string `json:"chart"`
-	CreatedAt string `json:"created_at"`
+	CreatedAt string `format:"date-time" json:"created_at"`
 }
 
+// @Summary     Save a named analytics view
+// @Description A saved view is a name, a namespace and a chart kind; running it reuses the analytics routes.
+// @Tags        analytics
+// @Accept      json
+// @Param       body body customQueryCreateRequest true "the request body"
+// @Produce     json
+// @Success     201 {object} customQueryResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/analytics/custom [post]
 func (s *Server) CreateCustomQuery(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Analytics.CreateCustom")
 	defer endSpan()
@@ -54,6 +66,20 @@ func (s *Server) CreateCustomQuery(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, toCustomQueryResponse(created))
 }
 
+// @Summary     Rename or re-chart a saved view
+// @Description Absolute values only; the namespace is fixed once saved.
+// @Tags        analytics
+// @Accept      json
+// @Param       body body customQueryPatchRequest true "the request body"
+// @Produce     json
+// @Param       ref path string true "saved view ref"
+// @Success     200 {object} customQueryResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/analytics/custom/{ref} [patch]
 func (s *Server) PatchCustomQuery(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Analytics.PatchCustom")
 	defer endSpan()
@@ -103,12 +129,26 @@ func (s *Server) PatchCustomQuery(w http.ResponseWriter, r *http.Request) {
 
 type customQueryRunResponse struct {
 	Query      customQueryResponse     `json:"query"`
-	From       string                  `json:"from"`
-	To         string                  `json:"to"`
+	From       string                  `format:"date"               json:"from"`
+	To         string                  `format:"date"               json:"to"`
 	Months     []monthTotalResponse    `json:"months,omitempty"`
 	Categories []categoryTotalResponse `json:"categories,omitempty"`
 }
 
+// @Summary     Run a saved view over a window
+// @Description Answers the namespace's own shape: `months` for the monthly namespace, `categories` for the category one.
+// @Tags        analytics
+// @Produce     json
+// @Param       ref path string true "saved view ref"
+// @Param       from query string false "window start"
+// @Param       to query string false "window end"
+// @Success     200 {object} customQueryRunResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     404 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/analytics/custom/{ref} [get]
 func (s *Server) RunCustomQuery(w http.ResponseWriter, r *http.Request) {
 	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Analytics.RunCustom")
 	defer endSpan()
