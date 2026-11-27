@@ -10,6 +10,7 @@ Append a row per check; never rewrite a past one.
 | 2026-11-27T04:08Z | `2fdf1ef3f3293eed8f43da32b277ed9779fe08dc` | `main` | Dimas Mukti (PI-Desktop agent) | every file under `docs/`, plus `README.md` and `AGENTS.md` | **GO** |
 | 2026-11-27T11:35Z | `2fdf1ef3` + the code fixes in this change | `main` | Dimas Mukti (PI-Desktop agent) | the ten product-deck features against the code and the UAT suite | **GO** |
 | 2026-11-27T15:20Z | `59ee5c9` + the ledger-group refactor and the new scenarios in this change | `main` | Dimas Mukti (PI-Desktop agent) | every deck clause that was listed as "untested", one UAT scenario each | **GO** |
+| 2026-11-27T16:40Z | `ec127d1` + the captures-group refactor in this change | `main` | Dimas Mukti (PI-Desktop agent) | captures, payloads, artifacts and mail messages by ref, plus the mail→capture link | **GO** |
 
 ## What a check covers
 
@@ -91,7 +92,7 @@ it and nothing fails if it stops doing it.
 | # | feature | state | proven | untested clause |
 | --- | --- | --- | --- | --- |
 | F1 | access and bootstrap | **GO** | 9 of 9 clauses — setup, currency lock, password gate, tokens, revoke, and the `403` that names the scope a token lacks (`post_api_tokens__a_capture_token_cannot_approve`) | the `?status=revoked` listing filter |
-| F2 | capture inbox | **GO** | approve, reject, retry, match, dedupe, intake allowlist, and the artifact answering `410` once the worker reclaims it (`get_api_captures_artifact__a_reclaimed_artifact_answers_410`) | the journal row's `action` is asserted by kind only |
+| F2 | capture inbox | **GO** | approve, reject, retry, match, dedupe, intake allowlist, the artifact answering `410` once the worker reclaims it (`get_api_captures_artifact__a_reclaimed_artifact_answers_410`), and a captured mail naming its capture (`get_api_intake_messages__a_captured_mail_names_its_capture`) | the journal row's `action` is asserted by kind only |
 | F3 | ledger | **GO** | 8 of 8 — zero-sum, FX, void writes a reversal, balances hold | the `reverses_entry_ref` linkage is not on the wire (see the plan) |
 | F4 | accounts and payees | **GO** | create, archive, rename, defaults, `409 duplicate`, and a `kind` change answered `400 invalid_json` (`patch_api_accounts_:ref__a_kind_change_is_refused_as_unknown`) | archiving keeps the posting on its entry (no step) |
 | F5 | recurring | **GO** | queue, dedupe, catch-up cap, pause, and the rule that survives in the capture's `draft_json` | the entry cannot name the rule: it is a ref on the capture, not on the entry |

@@ -190,6 +190,7 @@ func toMailMessageResponse(message entity.MailMessage) mailMessageResponse {
 		ReceivedAt:       message.ReceivedAt.Format(time.RFC3339),
 		ObservedAt:       message.ObservedAt.Format(time.RFC3339),
 		Status:           message.Status,
+		CaptureRef:       message.CaptureRef,
 		SkipReason:       message.SkipReason,
 		SupersededBy:     message.SupersededBy,
 	}

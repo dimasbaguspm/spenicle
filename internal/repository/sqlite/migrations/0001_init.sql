@@ -166,8 +166,7 @@ CREATE TABLE captures (
   extraction_job_ref TEXT,
   extraction_rail    TEXT,
   extraction_model   TEXT,
-  resolved_entry_id  INTEGER REFERENCES ledger_entries(id),  -- retired
-  resolved_entry_ref TEXT,
+  resolved_entry_ref TEXT REFERENCES ledger_entries(ref),
   resolution_note    TEXT,
   received_at        TEXT NOT NULL,
   resolved_at        TEXT
@@ -180,8 +179,7 @@ CREATE INDEX ix_captures_batch ON captures (batch_id);
 CREATE TABLE capture_payloads (
   id              INTEGER PRIMARY KEY,
   ref             TEXT NOT NULL UNIQUE,
-  capture_id      INTEGER NOT NULL UNIQUE REFERENCES captures(id),  -- retired
-  capture_ref     TEXT NOT NULL DEFAULT '',
+  capture_ref     TEXT NOT NULL UNIQUE REFERENCES captures(ref),
   raw_text        TEXT,
   draft_json      TEXT,
   extraction_error TEXT
@@ -190,16 +188,14 @@ CREATE TABLE capture_payloads (
 CREATE TABLE artifacts (
   id           INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  capture_id   INTEGER NOT NULL REFERENCES captures(id),  -- retired
-  capture_ref  TEXT NOT NULL DEFAULT '',
+  capture_ref  TEXT NOT NULL UNIQUE REFERENCES captures(ref),
   sha256       TEXT NOT NULL,
   content_type TEXT NOT NULL,
   filename     TEXT NOT NULL,
   plain_bytes  INTEGER NOT NULL,
   stored_bytes INTEGER NOT NULL,
   created_at   TEXT NOT NULL,
-  deleted_at   TEXT,
-  UNIQUE (capture_id)
+  deleted_at   TEXT
 );
 
 CREATE INDEX ix_artifacts_sha256 ON artifacts (sha256);
@@ -326,8 +322,6 @@ CREATE INDEX ix_export_events_export ON export_events (export_id, id);
 CREATE INDEX ix_export_events_export_ref ON export_events (export_ref, id);
 CREATE UNIQUE INDEX ux_import_upload_chunks_ref ON import_upload_chunks (upload_ref, chunk_index)
   WHERE upload_ref <> '';
-CREATE UNIQUE INDEX ux_capture_payloads_capture_ref ON capture_payloads (capture_ref)
-  WHERE capture_ref <> '';
 CREATE INDEX ix_entries_reversal_ref ON ledger_entries (reverses_entry_ref)
   WHERE reverses_entry_ref IS NOT NULL;
 CREATE INDEX ix_postings_account_ref ON ledger_postings (account_ref, entry_ref);
@@ -395,8 +389,7 @@ CREATE TABLE mail_messages (
   provider_revision TEXT,
   received_at       TEXT NOT NULL,
   observed_at       TEXT NOT NULL,
-  capture_id        INTEGER REFERENCES captures(id),  -- retired
-  capture_ref       TEXT,
+  capture_ref       TEXT REFERENCES captures(ref),
   status            TEXT NOT NULL CHECK (status IN ('captured','skipped','failed','gone')),
   skip_reason       TEXT,
   attempts          INTEGER NOT NULL DEFAULT 0,
@@ -407,5 +400,4 @@ CREATE TABLE mail_messages (
 
 CREATE UNIQUE INDEX ux_mail_messages_source ON mail_messages (source, message_ref);
 CREATE INDEX ix_mail_messages_observed ON mail_messages (observed_at);
-CREATE INDEX ix_mail_messages_capture ON mail_messages (capture_id);
 CREATE INDEX ix_mail_messages_capture_ref ON mail_messages (capture_ref);

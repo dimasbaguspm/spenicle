@@ -197,7 +197,7 @@ func (s *Service) Approve(
 		return entity.Entry{}, entity.Capture{}, err
 	}
 
-	capture.ResolvedEntryID = &saved.ID
+	capture.ResolvedEntryRef = saved.Ref
 
 	telemetry.RecordLedgerPost(ctx, saved.Source, int64(len(saved.Postings)))
 	telemetry.RecordCaptureTransition(ctx, capture.Kind, constant.CaptureStatusApproved)
@@ -267,7 +267,7 @@ func (s *Service) Reject(ctx context.Context, ref, reason string) (entity.Captur
 		return entity.Capture{}, err
 	}
 
-	return s.resolve(ctx, capture, constant.CaptureStatusRejected, sealedNote, nil)
+	return s.resolve(ctx, capture, constant.CaptureStatusRejected, sealedNote, "")
 }
 
 func (s *Service) Match(ctx context.Context, ref, entryRef string) (entity.Capture, error) {
@@ -289,7 +289,7 @@ func (s *Service) Match(ctx context.Context, ref, entryRef string) (entity.Captu
 		return entity.Capture{}, err
 	}
 
-	return s.resolve(ctx, capture, constant.CaptureStatusDuplicate, note, &entry.ID)
+	return s.resolve(ctx, capture, constant.CaptureStatusDuplicate, note, entry.Ref)
 }
 
 func (s *Service) Retry(ctx context.Context, ref string) (entity.Capture, error) {
@@ -531,7 +531,7 @@ func (s *Service) resolve(
 	ctx context.Context,
 	capture entity.Capture,
 	status, note string,
-	entryID *int64,
+	entryRef string,
 ) (entity.Capture, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Captures.Resolve")
 	defer endSpan()
@@ -544,7 +544,7 @@ func (s *Service) resolve(
 
 	capture.Status = status
 	capture.ResolutionNote = note
-	capture.ResolvedEntryID = entryID
+	capture.ResolvedEntryRef = entryRef
 	capture.ResolvedAt = &now
 
 	updated, err := s.captures.UpdateCapture(ctx, capture)

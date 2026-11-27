@@ -247,7 +247,7 @@ func (s *Service) ingest(ctx context.Context, message Mail, now time.Time) strin
 
 	if !allowed(message.From, config.Allowlist) {
 		s.record(ctx, message, now, constant.MailStatusSkipped, constant.MailSkipSenderNotAllowed,
-			nil)
+			"")
 
 		return constant.MailStatusSkipped
 	}
@@ -263,7 +263,7 @@ func (s *Service) ingest(ctx context.Context, message Mail, now time.Time) strin
 func (s *Service) capture(ctx context.Context, message Mail, now time.Time) entity.MailMessage {
 	text, err := parseBody(message.Raw)
 	if err != nil || text == "" {
-		return s.record(ctx, message, now, constant.MailStatusSkipped, constant.MailSkipNoBody, nil)
+		return s.record(ctx, message, now, constant.MailStatusSkipped, constant.MailSkipNoBody, "")
 	}
 
 	created, fresh, err := s.queue.Create(ctx, captures.CreateInput{
@@ -273,15 +273,15 @@ func (s *Service) capture(ctx context.Context, message Mail, now time.Time) enti
 		ReceivedAt: message.ReceivedAt,
 	})
 	if err != nil {
-		return s.record(ctx, message, now, constant.MailStatusFailed, constant.MailErrorParse, nil)
+		return s.record(ctx, message, now, constant.MailStatusFailed, constant.MailErrorParse, "")
 	}
 
 	if !fresh {
 		return s.record(ctx, message, now, constant.MailStatusSkipped, constant.MailSkipDuplicate,
-			nil)
+			"")
 	}
 
-	return s.record(ctx, message, now, constant.MailStatusCaptured, "", &created.ID)
+	return s.record(ctx, message, now, constant.MailStatusCaptured, "", created.Ref)
 }
 
 func (s *Service) record(
@@ -289,7 +289,7 @@ func (s *Service) record(
 	message Mail,
 	now time.Time,
 	status, skipReason string,
-	captureID *int64,
+	captureRef string,
 ) entity.MailMessage {
 	saved, err := s.store.InsertMailMessage(ctx, entity.MailMessage{
 		Source:           s.mailbox.Source(),
@@ -299,7 +299,7 @@ func (s *Service) record(
 		ProviderRevision: message.Revision,
 		ReceivedAt:       message.ReceivedAt,
 		ObservedAt:       now,
-		CaptureID:        captureID,
+		CaptureRef:       captureRef,
 		Status:           status,
 		SkipReason:       skipReason,
 		LastSyncedAt:     now,

@@ -16,11 +16,10 @@ import (
 const captureColumns = `captures.id, captures.ref, captures.kind, captures.status,
 	captures.client_id, captures.dedupe_key, captures.batch_id, captures.artifact_hash,
 	p.raw_text, p.draft_json, p.extraction_error, captures.extraction_job_ref,
-	captures.extraction_rail, captures.extraction_model, captures.resolved_entry_id,
-	captures.resolution_note, captures.received_at, captures.resolved_at,
-	(SELECT e.ref FROM ledger_entries e WHERE e.id = captures.resolved_entry_id)`
+	captures.extraction_rail, captures.extraction_model, captures.resolved_entry_ref,
+	captures.resolution_note, captures.received_at, captures.resolved_at`
 
-const captureJoin = `LEFT JOIN capture_payloads p ON p.capture_id = captures.id`
+const captureJoin = `LEFT JOIN capture_payloads p ON p.capture_ref = captures.ref`
 
 const (
 	captureStatusRank = `CASE captures.status ` +
@@ -42,7 +41,7 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 			INSERT INTO captures
 				(ref, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
 				 extraction_job_ref, extraction_rail, extraction_model,
-				 resolved_entry_id, resolution_note, received_at, resolved_at)
+				 resolved_entry_ref, resolution_note, received_at, resolved_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			capture.Ref,
 			capture.Kind,
@@ -54,7 +53,7 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 			nullString(capture.JobRef),
 			nullString(capture.ExtractionRail),
 			nullString(capture.ExtractionModel),
-			nullInt(capture.ResolvedEntryID),
+			nullString(capture.ResolvedEntryRef),
 			nullString(capture.ResolutionNote),
 			capture.ReceivedAt.Format(constant.TimestampLayout),
 			nullTime(capture.ResolvedAt),
@@ -72,9 +71,9 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 
 		if _, payloadErr := tx.ExecContext(ctx, `
 			INSERT INTO capture_payloads
-				(ref, capture_id, raw_text, draft_json, extraction_error)
+				(ref, capture_ref, raw_text, draft_json, extraction_error)
 			VALUES (?, ?, ?, ?, ?)`,
-			uuid.New(), id,
+			uuid.New(), capture.Ref,
 			nullString(capture.RawText),
 			nullString(capture.DraftJSON),
 			nullString(capture.ExtractionError),
@@ -180,7 +179,7 @@ func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (enti
 			ID:     capture.ID,
 			Ref:    capture.Ref,
 			Action: auditActionOf(capture.Status),
-			To:     entity.CaptureChanged{Status: capture.Status, ResolvedEntryID: capture.ResolvedEntryID},
+			To:     entity.CaptureChanged{Status: capture.Status, ResolvedEntryRef: capture.ResolvedEntryRef},
 		})
 	})
 	if err != nil {
@@ -228,7 +227,7 @@ func (s *Store) UpdateCaptureIfUnresolved(
 			ID:     capture.ID,
 			Ref:    capture.Ref,
 			Action: auditActionOf(capture.Status),
-			To:     entity.CaptureChanged{Status: capture.Status, ResolvedEntryID: capture.ResolvedEntryID},
+			To:     entity.CaptureChanged{Status: capture.Status, ResolvedEntryRef: capture.ResolvedEntryRef},
 		})
 	})
 	if err != nil {
@@ -281,7 +280,7 @@ func (s *Store) Approve(
 		}
 
 		entryID = id
-		capture.ResolvedEntryID = &id
+		capture.ResolvedEntryRef = entryRef
 
 		if auditErr := appendEntryCreated(ctx, tx, entry, id, entryRef); auditErr != nil {
 			return auditErr
@@ -296,7 +295,7 @@ func (s *Store) Approve(
 			ID:     capture.ID,
 			Ref:    capture.Ref,
 			Action: constant.AuditActionApprove,
-			To:     entity.CaptureChanged{Status: capture.Status, ResolvedEntryID: &id},
+			To:     entity.CaptureChanged{Status: capture.Status, ResolvedEntryRef: entryRef},
 		})
 	})
 	if err != nil {
@@ -314,14 +313,14 @@ func updateCaptureRow(ctx context.Context, tx *sql.Tx, capture entity.Capture) e
 	res, err := tx.ExecContext(ctx, `
 		UPDATE captures SET
 			status = ?, extraction_job_ref = ?, extraction_rail = ?,
-			extraction_model = ?, resolved_entry_id = ?, resolution_note = ?,
+			extraction_model = ?, resolved_entry_ref = ?, resolution_note = ?,
 			resolved_at = ?
 		WHERE id = ?`,
 		capture.Status,
 		nullString(capture.JobRef),
 		nullString(capture.ExtractionRail),
 		nullString(capture.ExtractionModel),
-		nullInt(capture.ResolvedEntryID),
+		nullString(capture.ResolvedEntryRef),
 		nullString(capture.ResolutionNote),
 		nullTime(capture.ResolvedAt),
 		capture.ID,
@@ -345,14 +344,14 @@ func updateCaptureRow(ctx context.Context, tx *sql.Tx, capture entity.Capture) e
 func updateCapturePayload(ctx context.Context, tx *sql.Tx, capture entity.Capture) error {
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO capture_payloads
-			(ref, capture_id, raw_text, draft_json, extraction_error)
+			(ref, capture_ref, raw_text, draft_json, extraction_error)
 		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT(capture_id) DO UPDATE SET
+		ON CONFLICT(capture_ref) DO UPDATE SET
 			draft_json = COALESCE(excluded.draft_json, capture_payloads.draft_json),
 			extraction_error = excluded.extraction_error
 		WHERE excluded.raw_text IS NOT NULL OR excluded.draft_json IS NOT NULL
 		   OR excluded.extraction_error IS NOT NULL`,
-		uuid.New(), capture.ID,
+		uuid.New(), capture.Ref,
 		nullString(capture.RawText),
 		nullString(capture.DraftJSON),
 		nullString(capture.ExtractionError),
@@ -390,7 +389,6 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 		jobRef      sql.NullString
 		rail        sql.NullString
 		model       sql.NullString
-		resolvedID  sql.NullInt64
 		resolvedRf  sql.NullString
 		resolvedNt  sql.NullString
 		receivedRaw string
@@ -399,8 +397,8 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 
 	err := scanner.Scan(
 		&capture.ID, &capture.Ref, &capture.Kind, &capture.Status, &clientID, &capture.DedupeKey,
-		&batchID, &artifact, &rawText, &draft, &extractErr, &jobRef, &rail, &model, &resolvedID,
-		&resolvedNt, &receivedRaw, &resolvedRaw, &resolvedRf,
+		&batchID, &artifact, &rawText, &draft, &extractErr, &jobRef, &rail, &model,
+		&resolvedRf, &resolvedNt, &receivedRaw, &resolvedRaw,
 	)
 	if err != nil {
 		return entity.Capture{}, err
@@ -418,11 +416,6 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 	capture.ResolutionNote = resolvedNt.String
 
 	capture.ResolvedEntryRef = resolvedRf.String
-
-	if resolvedID.Valid {
-		id := resolvedID.Int64
-		capture.ResolvedEntryID = &id
-	}
 
 	if capture.ReceivedAt, err = time.Parse(constant.TimestampLayout, receivedRaw); err != nil {
 		return entity.Capture{}, fmt.Errorf("received_at %q: %w", receivedRaw, err)

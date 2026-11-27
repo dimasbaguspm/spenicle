@@ -3,6 +3,7 @@ package intake_test
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -113,7 +114,7 @@ func (c *fakeCaptures) Create(
 ) (entity.Capture, bool, error) {
 	c.created++
 
-	return entity.Capture{ID: int64(c.created)}, true, nil
+	return entity.Capture{ID: int64(c.created), Ref: "capture-" + strconv.Itoa(c.created)}, true, nil
 }
 
 type fakeSettings struct{ values map[string]string }
@@ -190,7 +191,7 @@ func TestPollCapturesAnAllowedMail(t *testing.T) {
 	}
 
 	saved := store.inserted[0]
-	if saved.Status != constant.MailStatusCaptured || saved.CaptureID == nil {
+	if saved.Status != constant.MailStatusCaptured || saved.CaptureRef == "" {
 		t.Fatalf("row = %+v, want a captured row linked to the capture", saved)
 	}
 

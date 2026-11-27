@@ -49,8 +49,8 @@ adapter reports none.
 ## Limitations
 
 - Use `GET /api/intake/messages` for the list; this route addresses one known ref.
-- `capture_ref` is not exposed by this handler: the capture is reached through
-  `GET /api/captures` by its own ref.
+- `capture_ref` is the capture this mail became, omitted until one exists; the capture is
+  reached through `GET /api/captures/{ref}`.
 
 ## Sequence
 

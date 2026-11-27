@@ -311,15 +311,15 @@ The single review queue. One row per thing captured, from any channel.
 | `extraction_job_ref` | TEXT NULL | SnapToJSON job ref |
 | `extraction_rail` | TEXT NULL | `snaptojson` when extraction ran |
 | `extraction_model` | TEXT NULL | model reported by the rail |
-| `resolved_entry_id` | INTEGER NULL | the entry produced, or the entry it matched |
+| `resolved_entry_ref` | TEXT NULL | the entry produced, or the entry it matched |
 | `resolution_note` | TEXT NULL | sealed |
 | `received_at` | TEXT | |
 | `resolved_at` | TEXT NULL | |
 
 ### `capture_payloads`
 
-The sealed half of a capture lives in a 1:1 child table. `capture_id` is `UNIQUE` and
-references `captures(id)`, so a payload can be replaced without rewriting queue state.
+The sealed half of a capture lives in a 1:1 child table. `capture_ref` is `UNIQUE` and
+references `captures(ref)`, so a payload can be replaced without rewriting queue state.
 
 | column | type | notes |
 | --- | --- | --- |
@@ -370,7 +370,7 @@ The reference a mailbox poll leaves behind. No content: the body is sealed in
 - `thread_ref`, `message_id_header`, `provider_revision` — thread, RFC 5322 identity, provider
   revision
 - `received_at` / `observed_at` — the mail's own date versus when the poll saw it
-- `capture_id`, `status`, `skip_reason` — what it became: `captured` \| `skipped` \| `failed` \|
+- `capture_ref`, `status`, `skip_reason` — what it became: `captured` \| `skipped` \| `failed` \|
   `gone`
 - `attempts`, `last_error`, `last_synced_at`, `superseded_by` — retry and revision trail
 
@@ -787,7 +787,7 @@ sequenceDiagram
     participant API as Captures handler
     participant DB as SQLite
     UI->>API: GET captures with status and ref filters
-    API->>DB: SELECT captures with resolved_entry_id and batch info
+    API->>DB: SELECT captures with resolved_entry_ref and batch info
     API->>API: decrypt sealed columns with APP_SECRET
     API->>API: order extracting first, then pending by received_at
     API-->>UI: 200 captures and next_cursor
@@ -867,7 +867,7 @@ sequenceDiagram
         API->>DB: INSERT audit_log action reject
         API-->>UI: 200 capture
     else action match
-        API->>DB: UPDATE captures SET status duplicate, resolved_entry_id
+        API->>DB: UPDATE captures SET status duplicate, resolved_entry_ref
         API-->>UI: 200 capture
     else action approve
         API->>API: validate zero sum and status; failed/extracting normalize via pending
@@ -876,7 +876,7 @@ sequenceDiagram
         API->>DB: BEGIN IMMEDIATE
         API->>DB: INSERT ledger_entries with source from capture kind
         API->>DB: INSERT ledger_postings
-        API->>DB: UPDATE captures SET status approved, resolved_entry_id, resolved_at
+        API->>DB: UPDATE captures SET status approved, resolved_entry_ref, resolved_at
         API->>DB: INSERT audit_log action approve and COMMIT
         API-->>UI: 201 entry, capture resolved
     end

@@ -254,7 +254,7 @@ func (s *snapshot) captureRow(capture entity.Capture) any {
 		Ref:              capture.Ref,
 		Kind:             capture.Kind,
 		Status:           capture.Status,
-		ResolvedEntryRef: s.entryRefs[parentID(capture.ResolvedEntryID)],
+		ResolvedEntryRef: capture.ResolvedEntryRef,
 		ExtractionRail:   capture.ExtractionRail,
 		ExtractionModel:  capture.ExtractionModel,
 		ReceivedAt:       stamp(capture.ReceivedAt),
@@ -317,14 +317,6 @@ func (s *snapshot) categorizationRuleRow(rule entity.CategorizationRule) any {
 		ArchivedAt: optionalStamp(rule.ArchivedAt),
 		CreatedAt:  stamp(rule.CreatedAt),
 	}
-}
-
-func parentID(id *int64) int64 {
-	if id == nil {
-		return 0
-	}
-
-	return *id
 }
 
 func stamp(at time.Time) string {

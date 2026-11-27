@@ -232,7 +232,7 @@ func captureSheet(snap *snapshot) [][]string {
 			capture.Ref,
 			capture.Kind,
 			capture.Status,
-			snap.entryRefs[parentID(capture.ResolvedEntryID)],
+			capture.ResolvedEntryRef,
 			capture.ExtractionRail,
 			capture.ExtractionModel,
 			stamp(capture.ReceivedAt),

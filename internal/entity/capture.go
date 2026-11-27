@@ -48,7 +48,6 @@ type Capture struct {
 	JobRef           string
 	ExtractionRail   string
 	ExtractionModel  string
-	ResolvedEntryID  *int64
 	ResolvedEntryRef string
 	ResolutionNote   string
 	ReceivedAt       time.Time

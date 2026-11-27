@@ -13,7 +13,7 @@ import (
 )
 
 const mailMessageColumns = `id, ref, source, message_ref, thread_ref, message_id_header,
-	provider_revision, received_at, observed_at, capture_id, status, skip_reason, attempts,
+	provider_revision, received_at, observed_at, capture_ref, status, skip_reason, attempts,
 	last_error, last_synced_at, superseded_by`
 
 func (s *Store) InsertMailMessage(
@@ -30,7 +30,7 @@ func (s *Store) InsertMailMessage(
 
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO mail_messages (ref, source, message_ref, thread_ref, message_id_header,
-			provider_revision, received_at, observed_at, capture_id, status, skip_reason,
+			provider_revision, received_at, observed_at, capture_ref, status, skip_reason,
 			attempts, last_error, last_synced_at, superseded_by)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		ref,
@@ -41,7 +41,7 @@ func (s *Store) InsertMailMessage(
 		nullString(message.ProviderRevision),
 		message.ReceivedAt.Format(constant.TimestampLayout),
 		message.ObservedAt.Format(constant.TimestampLayout),
-		nullInt(message.CaptureID),
+		nullString(message.CaptureRef),
 		message.Status,
 		nullString(message.SkipReason),
 		message.Attempts,
@@ -95,11 +95,11 @@ func (s *Store) UpdateMailMessage(
 
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE mail_messages SET
-			provider_revision = ?, capture_id = ?, status = ?, skip_reason = ?, attempts = ?,
+			provider_revision = ?, capture_ref = ?, status = ?, skip_reason = ?, attempts = ?,
 			last_error = ?, last_synced_at = ?, superseded_by = ?
 		WHERE ref = ?`,
 		nullString(message.ProviderRevision),
-		nullInt(message.CaptureID),
+		nullString(message.CaptureRef),
 		message.Status,
 		nullString(message.SkipReason),
 		message.Attempts,
@@ -139,7 +139,7 @@ func (s *Store) scanMailMessage(
 		revision     sql.NullString
 		receivedAt   string
 		observedAt   string
-		captureID    sql.NullInt64
+		captureRef   sql.NullString
 		skipReason   sql.NullString
 		lastError    sql.NullString
 		lastSyncedAt sql.NullString
@@ -148,7 +148,7 @@ func (s *Store) scanMailMessage(
 
 	err := s.db.QueryRowContext(ctx, query, args...).Scan(&message.ID, &message.Ref,
 		&message.Source, &message.MessageRef, &thread, &messageID, &revision, &receivedAt,
-		&observedAt, &captureID, &message.Status, &skipReason, &message.Attempts, &lastError,
+		&observedAt, &captureRef, &message.Status, &skipReason, &message.Attempts, &lastError,
 		&lastSyncedAt, &supersededBy)
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.MailMessage{}, false, nil
@@ -165,8 +165,8 @@ func (s *Store) scanMailMessage(
 	message.LastError = lastError.String
 	message.SupersededBy = supersededBy.String
 
-	if captureID.Valid {
-		message.CaptureID = &captureID.Int64
+	if captureRef.Valid {
+		message.CaptureRef = captureRef.String
 	}
 
 	var parseErr error
@@ -238,7 +238,7 @@ func scanMailMessageRow(rows *sql.Rows) (entity.MailMessage, error) {
 		revision     sql.NullString
 		receivedAt   string
 		observedAt   string
-		captureID    sql.NullInt64
+		captureRef   sql.NullString
 		skipReason   sql.NullString
 		lastError    sql.NullString
 		lastSyncedAt sql.NullString
@@ -246,7 +246,7 @@ func scanMailMessageRow(rows *sql.Rows) (entity.MailMessage, error) {
 	)
 
 	err := rows.Scan(&message.ID, &message.Ref, &message.Source, &message.MessageRef, &thread,
-		&messageID, &revision, &receivedAt, &observedAt, &captureID, &message.Status,
+		&messageID, &revision, &receivedAt, &observedAt, &captureRef, &message.Status,
 		&skipReason, &message.Attempts, &lastError, &lastSyncedAt, &supersededBy)
 	if err != nil {
 		return entity.MailMessage{}, fmt.Errorf("scan mail message: %w", err)
@@ -259,8 +259,8 @@ func scanMailMessageRow(rows *sql.Rows) (entity.MailMessage, error) {
 	message.LastError = lastError.String
 	message.SupersededBy = supersededBy.String
 
-	if captureID.Valid {
-		message.CaptureID = &captureID.Int64
+	if captureRef.Valid {
+		message.CaptureRef = captureRef.String
 	}
 
 	var parseErr error

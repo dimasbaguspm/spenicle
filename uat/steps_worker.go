@@ -259,7 +259,7 @@ func theRecurringDraftFieldIs(ctx context.Context, field, want string) (context.
 	var sealed string
 	if queryErr := w.store.DB().QueryRowContext(ctx,
 		`SELECT p.draft_json FROM captures
-		 JOIN capture_payloads p ON p.capture_id = captures.id
+		 JOIN capture_payloads p ON p.capture_ref = captures.ref
 		 WHERE captures.kind = 'recurring' ORDER BY captures.id LIMIT 1`,
 	).Scan(&sealed); queryErr != nil {
 		return ctx, fmt.Errorf("read the recurring draft: %w", queryErr)

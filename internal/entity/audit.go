@@ -80,9 +80,9 @@ type RecurringChanged struct {
 
 // CaptureChanged records where a queue item is, and what it became.
 type CaptureChanged struct {
-	Kind            string `json:"kind,omitempty"              validate:"omitempty,capturekind"`
-	Status          string `json:"status,omitempty"            validate:"omitempty,capturestatus"`
-	ResolvedEntryID *int64 `json:"resolved_entry_id,omitempty" validate:"omitempty,gt=0"`
+	Kind             string `json:"kind,omitempty"               validate:"omitempty,capturekind"`
+	Status           string `json:"status,omitempty"             validate:"omitempty,capturestatus"`
+	ResolvedEntryRef string `json:"resolved_entry_ref,omitempty" validate:"omitempty,ref"`
 }
 
 // SettingChanged records a settings key. Never its value: one of them is sealed.

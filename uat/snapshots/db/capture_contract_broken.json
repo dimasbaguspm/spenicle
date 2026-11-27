@@ -25,8 +25,7 @@
   ],
   "artifacts": [
     {
-      "capture_id": 1,
-      "capture_ref": "",
+      "capture_ref": "<ref>",
       "content_type": "application/octet-stream",
       "created_at": "<timestamp>",
       "deleted_at": null,
@@ -107,8 +106,7 @@
   ],
   "capture_payloads": [
     {
-      "capture_id": 1,
-      "capture_ref": "",
+      "capture_ref": "<ref>",
       "draft_json": null,
       "extraction_error": "snaptojson: decode report: unexpected end of JSON input",
       "id": 1,
@@ -131,7 +129,6 @@
       "ref": "<ref>",
       "resolution_note": null,
       "resolved_at": null,
-      "resolved_entry_id": null,
       "resolved_entry_ref": null,
       "status": "pending"
     }

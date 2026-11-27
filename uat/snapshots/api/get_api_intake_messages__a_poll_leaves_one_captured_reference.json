@@ -1,6 +1,7 @@
 {
   "messages": [
     {
+      "capture_ref": "<ref>",
       "handle": "gmail-uat-1",
       "last_synced_at": "<timestamp>",
       "message_id_header": "<uat-1@bank.example>",

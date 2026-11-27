@@ -24,3 +24,16 @@ Feature: GET /api/intake/messages
     When I send a GET to "/api/intake/messages?status=maybe"
     Then the response status is 422
     And the response JSON matches the snapshot "get_api_intake_messages__a_malformed_status_filter_is_refused"
+
+  Scenario: A captured mail names the capture it became
+    Given a running API
+    And I send a PATCH to "/api/intake" with:
+      """json
+      {"enabled":true,"allowlist":["bank.example"]}
+      """
+    And the response status is 200
+    And I send a POST to "/api/intake/run"
+    Then the response status is 200
+    When I send a GET to "/api/intake/messages?status=captured"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_intake_messages__a_captured_mail_names_its_capture"

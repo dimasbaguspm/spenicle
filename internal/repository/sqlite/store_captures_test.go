@@ -104,9 +104,6 @@ func assertApproved(
 	if stored.Status != constant.CaptureStatusApproved {
 		t.Fatalf("status = %q, want approved", stored.Status)
 	}
-	if stored.ResolvedEntryID == nil || *stored.ResolvedEntryID != saved.ID {
-		t.Fatalf("resolved_entry_id = %v, want %d", stored.ResolvedEntryID, saved.ID)
-	}
 	if stored.ResolvedEntryRef != saved.Ref {
 		t.Fatalf("resolved_entry_ref = %q, want %q", stored.ResolvedEntryRef, saved.Ref)
 	}
@@ -173,8 +170,8 @@ func TestApproveCaptureRollsBackAfterInsert(t *testing.T) {
 	if stored.Status != constant.CaptureStatusFailed {
 		t.Fatalf("status = %q, want failed", stored.Status)
 	}
-	if stored.ResolvedEntryID != nil {
-		t.Fatalf("resolved_entry_id = %v, want nil", stored.ResolvedEntryID)
+	if stored.ResolvedEntryRef != "" {
+		t.Fatalf("resolved_entry_ref = %q, want empty", stored.ResolvedEntryRef)
 	}
 }
 
@@ -295,8 +292,8 @@ func TestUpdateCaptureStatusLeavesPayloadAlone(t *testing.T) {
 	}
 
 	if _, err := store.DB().ExecContext(ctx,
-		`UPDATE capture_payloads SET draft_json = ? WHERE capture_id = ?`,
-		`{"note":"kept"}`, capture.ID); err != nil {
+		`UPDATE capture_payloads SET draft_json = ? WHERE capture_ref = ?`,
+		`{"note":"kept"}`, capture.Ref); err != nil {
 		t.Fatalf("seed payload: %v", err)
 	}
 

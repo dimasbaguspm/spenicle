@@ -25,8 +25,7 @@
   ],
   "artifacts": [
     {
-      "capture_id": 1,
-      "capture_ref": "",
+      "capture_ref": "<ref>",
       "content_type": "application/octet-stream",
       "created_at": "<timestamp>",
       "deleted_at": "<timestamp>",
@@ -107,8 +106,7 @@
   ],
   "capture_payloads": [
     {
-      "capture_id": 1,
-      "capture_ref": "",
+      "capture_ref": "<ref>",
       "draft_json": null,
       "extraction_error": null,
       "id": 1,
@@ -131,7 +129,6 @@
       "ref": "<ref>",
       "resolution_note": "<sealed>",
       "resolved_at": "<timestamp>",
-      "resolved_entry_id": null,
       "resolved_entry_ref": null,
       "status": "rejected"
     }

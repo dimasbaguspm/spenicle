@@ -15,7 +15,7 @@ type MailMessage struct {
 	ProviderRevision string
 	ReceivedAt       time.Time
 	ObservedAt       time.Time
-	CaptureID        *int64
+	CaptureRef       string
 	Status           string
 	SkipReason       string
 	Attempts         int

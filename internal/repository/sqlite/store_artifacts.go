@@ -13,7 +13,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const artifactColumns = `artifacts.id, artifacts.ref, captures.ref, artifacts.sha256,
+const artifactColumns = `artifacts.id, artifacts.ref, artifacts.capture_ref, artifacts.sha256,
 	artifacts.content_type, artifacts.filename, artifacts.plain_bytes,
 	artifacts.stored_bytes, artifacts.created_at, artifacts.deleted_at`
 
@@ -27,9 +27,9 @@ func (s *Store) InsertArtifact(ctx context.Context, artifact entity.Artifact) (e
 
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO artifacts
-			(ref, capture_id, sha256, content_type, filename, plain_bytes,
+			(ref, capture_ref, sha256, content_type, filename, plain_bytes,
 			 stored_bytes, created_at, deleted_at)
-		VALUES (?, (SELECT id FROM captures WHERE ref = ?), ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		artifact.Ref,
 		artifact.CaptureRef,
 		artifact.SHA256,
@@ -63,8 +63,7 @@ func (s *Store) ArtifactByCaptureRef(
 
 	artifact, err := scanArtifactRow(s.db.QueryRowContext(ctx,
 		`SELECT `+artifactColumns+` FROM artifacts
-		 JOIN captures ON captures.id = artifacts.capture_id
-		 WHERE captures.ref = ?`, captureRef))
+		 WHERE artifacts.capture_ref = ?`, captureRef))
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Artifact{}, false, nil
 	}
@@ -86,7 +85,7 @@ func (s *Store) ExpiredArtifacts(
 
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT `+artifactColumns+` FROM artifacts
-		 JOIN captures ON captures.id = artifacts.capture_id
+		 JOIN captures ON captures.ref = artifacts.capture_ref
 		 WHERE captures.status = ?
 		   AND artifacts.deleted_at IS NULL
 		   AND artifacts.created_at < ?
