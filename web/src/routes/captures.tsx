@@ -1,23 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
-import { api, errorMessage } from '@/api/client'
 import { Text } from '@/components/primitives/text'
 import { CaptureList } from '@/components/widgets/capture-list'
-
-async function fetchCaptures() {
-  const { data, error, response } = await api.GET('/api/captures', {
-    params: { query: { limit: 20 } },
-  })
-  if (error !== undefined) {
-    throw new Error(errorMessage(error, response.status))
-  }
-
-  return data
-}
+import { useCaptures } from '@/hooks/queries/use-captures'
 
 export function CapturesPage() {
-  const captures = useQuery({ queryKey: ['captures'], queryFn: fetchCaptures })
+  const captures = useCaptures({ limit: 20 })
   const rows = useMemo(() => captures.data?.captures ?? [], [captures.data])
 
   return (

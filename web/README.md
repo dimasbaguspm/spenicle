@@ -34,19 +34,19 @@ Composition runs one way and the linter holds the line: **primitives → ui → 
 a page**. A layer may import the layers below it and never the ones above, so a primitive can
 never grow a page's idea of what an amount means.
 
-| layer         | what it is                                                                                                                    | example                                                |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `primitives/` | the lowest UI layer: Ark headless wiring + our palette. One props type of our own, one export per file, wiring and theme only | `Button`, `TextInput`, `Dialog`, `Text`                |
-| `ui/`         | domain-agnostic presentation, composed from primitives                                                                        | `Form`, `DebounceForm`, the nineteen `*Field` bindings |
-| `widgets/`    | page-level composition: a section a page drops in, given its data                                                             | `CaptureList`                                          |
-| `layouts/`    | structure only: chrome, navigation, the outlet                                                                                | `AppShell`                                             |
+| layer         | what it is                                                                                                                    | example                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `primitives/` | the lowest UI layer: Ark headless wiring + our palette. One props type of our own, one export per file, wiring and theme only | `Button`, `TextInput`, `Dialog`, `Text`              |
+| `ui/`         | domain-agnostic presentation, composed from primitives                                                                        | `Form`, `DebounceForm`, the twenty `*Field` bindings |
+| `widgets/`    | page-level composition: a section a page drops in, given its data                                                             | `CaptureList`                                        |
+| `layouts/`    | structure only: chrome, navigation, the outlet                                                                                | `AppShell`                                           |
 
 `oxlint`'s `no-restricted-imports` carries one override per layer, so an upward import (`ui/` into
 `primitives/`, `layouts/` into `widgets/`) is a lint error with a message saying why, and `@ark-ui/*`
-stays unreachable outside `primitives/`. The boundary is enforced, not documented. 59 primitives,
+stays unreachable outside `primitives/`. The boundary is enforced, not documented. 66 primitives,
 by the job a screen hires them for:
 
-59 components, by the job a screen hires them for:
+66 primitives, by the job a screen hires them for:
 
 | group                | components                                                                                                                                                                                                                           |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -84,7 +84,7 @@ src/components/
     control/index.ts    the shared cva every input wears
   ui/
     index.ts
-    form/index.ts       Form, DebounceForm, useFormProvider and the nineteen `*Field` bindings
+    form/index.ts       Form, DebounceForm, useFormProvider and the twenty `*Field` bindings
     form/form.tsx
     form/text-field.tsx
   widgets/
@@ -135,6 +135,31 @@ migrate. A screen writes the shape once and never wires a `Controller`:
   It never accepts a value, an onChange, a `control` or a form. Outside a `Form` it throws, so a
   misplacement is a stack trace rather than a silently orphaned input.
 
+## `api/` and `hooks/queries/` — one shape, one door
+
+The generated contract (`src/types/generated/openapi.ts`) marks every field optional, which is
+honest about the wire and useless in a component. `src/api/types.ts` fixes that once: `Fixed<T>`
+deep-strips optionality, and the aliases (`Account`, `Entry`, `Capture`, `Meta`, …) re-open the
+handful of fields Go's `omitempty` really can drop (`Entry.note`, `Capture.raw_text`,
+`Token.revoked_at`). Presentation imports the alias, never the schema.
+
+One module per resource (`api/entries.ts`, `api/accounts.ts`, …) owns its endpoints: it calls
+`api.GET/POST/PATCH` exactly once, unwraps the envelope, and either returns the fixed type or
+throws `ApiError` (`status`, `code`, `traceId`, message read from the shared `{ error: {…} }`
+body). A screen never writes `await api.GET(…)`, never inspects `response.status`, and never
+formats an error envelope itself.
+
+`hooks/queries/*` wraps a caller in TanStack Query: one stable key per resource
+(`['entries', filters]`), and a mutation invalidates what it changed. Hooks hold the React
+lifecycle; callers stay plain async functions, which is what keeps them callable from a test and
+from a route loader.
+
+**Effect or TanStack?** Both, at different jobs, and the boundary is a _value_, not a request.
+Effect Schema validates and parses what a person typed (the form resolver); TanStack owns
+fetching, caching, retry and invalidation. An Effect `Runtime` on the request path would buy
+nothing here — no resource scopes, no per-query concurrency — and bridging it to `useQuery`'s
+promise contract would only re-implement `useQuery`.
+
 ## The theme
 
 One file owns the look: `src/styles.css`. Four brand ramps — **ink black** (the paper),
@@ -173,12 +198,17 @@ aria while Tailwind owns the look.
 ## Layout
 
 ```
-src/api/client.ts   openapi-fetch over the same origin, Bearer from the token store
-src/api/schema.d.ts generated — never edit; run `make web-types`
-src/api/query.ts    the one QueryClient
-src/router.tsx      code-based routes + the auth guard in beforeLoad
-src/routes/         shell, login, ledger, captures
-src/lib/money.ts    minor-unit string arithmetic
+src/api/client.ts     openapi-fetch over the same origin, Bearer from the token store
+src/api/types.ts      Fixed<> and the row aliases — the only shapes a screen names
+src/api/<resource>.ts one module per resource: the endpoint, the envelope, the ApiError
+src/api/error.ts      ApiError: status, code, traceId, one message
+src/api/query.ts      the one QueryClient
+src/hooks/queries/    TanStack queries and mutations over those callers
+src/types/generated/  generated contract — never edit; run `make web-types`
+src/components/       primitives → ui → widgets → layouts (see above)
+src/router.tsx        code-based routes + the auth guard in beforeLoad
+src/routes/           AppShell's outlet: login, ledger, captures
+src/lib/money.ts      minor-unit string arithmetic
 ```
 
 ## What is deliberately not here yet

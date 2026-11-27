@@ -1,10 +1,12 @@
 import { render } from '@testing-library/react'
+import { ChevronDown } from 'lucide-react'
 import type { ReactElement } from 'react'
 
 import { Accordion } from '@/components/primitives/accordion'
 import { AngleSlider } from '@/components/primitives/angle-slider'
 import { Avatar } from '@/components/primitives/avatar'
 import { Button } from '@/components/primitives/button'
+import { ButtonGroup } from '@/components/primitives/button-group'
 import { Carousel } from '@/components/primitives/carousel'
 import { Checkbox } from '@/components/primitives/checkbox'
 import { Clipboard } from '@/components/primitives/clipboard'
@@ -23,7 +25,9 @@ import { Field } from '@/components/primitives/field'
 import { Fieldset } from '@/components/primitives/fieldset'
 import { FileUpload } from '@/components/primitives/file-upload'
 import { FloatingPanel } from '@/components/primitives/floating-panel'
+import { HiddenInput } from '@/components/primitives/hidden-input'
 import { Highlight } from '@/components/primitives/highlight'
+import { Icon } from '@/components/primitives/icon'
 import { HoverCard } from '@/components/primitives/hover-card'
 import { ImageCropper } from '@/components/primitives/image-cropper'
 import { JsonTreeView } from '@/components/primitives/json-tree-view'
@@ -45,6 +49,7 @@ import { SegmentGroup } from '@/components/primitives/segment-group'
 import { SelectInput } from '@/components/primitives/select-input'
 import { SignaturePad } from '@/components/primitives/signature-pad'
 import { Slider } from '@/components/primitives/slider'
+import { SplitButton } from '@/components/primitives/split-button'
 import { Splitter } from '@/components/primitives/splitter'
 import { Steps } from '@/components/primitives/steps'
 import { Swap } from '@/components/primitives/swap'
@@ -211,6 +216,25 @@ const cases: { name: string; element: ReactElement }[] = [
       <Tooltip content="tip">
         <Button type="button">?</Button>
       </Tooltip>
+    ),
+  },
+  {
+    name: 'ButtonGroup',
+    element: (
+      <ButtonGroup attached>
+        <Button type="button">One</Button>
+        <Button type="button">Two</Button>
+      </ButtonGroup>
+    ),
+  },
+  { name: 'HiddenInput', element: <HiddenInput name="entry_ref" value="abc" /> },
+  { name: 'Icon', element: <Icon as={ChevronDown} size="sm" variant="muted" /> },
+  {
+    name: 'SplitButton',
+    element: (
+      <SplitButton onClick={noop} items={[{ label: 'Save as draft', onSelect: noop }]}>
+        Save
+      </SplitButton>
     ),
   },
   { name: 'TreeView', element: <TreeView items={[{ value: 'a', label: 'A' }]} /> },

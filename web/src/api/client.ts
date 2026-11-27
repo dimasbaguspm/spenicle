@@ -2,6 +2,7 @@ import createClient from 'openapi-fetch'
 
 import type { paths } from '@/types/generated/openapi'
 
+import { apiError } from './error'
 import { clearToken, token } from './token'
 
 /**
@@ -12,6 +13,11 @@ export const api = createClient<paths>({ baseUrl: '' })
 
 api.use({
   onRequest({ request }) {
+    // a caller that brings its own credential (the instance password) outranks the stored one
+    if (request.headers.has('Authorization')) {
+      return request
+    }
+
     const credential = token()
     if (credential !== undefined) {
       request.headers.set('Authorization', `Bearer ${credential}`)
@@ -31,12 +37,5 @@ api.use({
 
 /** unwrap the shared error envelope so a screen can show the code the API named */
 export function errorMessage(body: unknown, status: number): string {
-  if (typeof body === 'object' && body !== null && 'error' in body) {
-    const error = (body as { error?: { code?: string; message?: string } }).error
-    if (error?.message !== undefined) {
-      return `${error.code ?? 'error'}: ${error.message}`
-    }
-  }
-
-  return `request failed (${status.toString()})`
+  return apiError(status, body).message
 }

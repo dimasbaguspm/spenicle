@@ -121,11 +121,12 @@ unreachable outside `primitives/`.
 
 Adding a primitive means: write the folder, re-export it, then use it.
 
-59 components, grouped by the job a screen hires them for:
+66 primitives, grouped by the job a screen hires them for:
 
 | group | components |
 | --- | --- |
-| text and form scaffolding | `Text` (h1–h6, p, span, label, pre, code, …), `Field`, `Fieldset`, `Button` |
+| text and form scaffolding | `Text` (h1–h6, p, span, label, pre, code, …), `Icon`, `Field`, `Fieldset`, `HiddenInput` |
+| actions | `Button` (`tone`, `size`, `loading`, leading/trailing icon), `ButtonGroup`, `SplitButton` |
 | text entry | `TextInput`, `EmailInput`, `PasswordInput`, `TextAreaInput`, `NumberInput`, `DateInput`, `DateTimeInput`, `DatePicker`, `Editable` |
 | choice and value picking | `Checkbox`, `RadioGroup`, `SwitchInput`, `Toggle`, `ToggleGroup`, `SegmentGroup`, `SelectInput`, `Combobox`, `Listbox`, `PinInput`, `TagsInput`, `Slider`, `AngleSlider`, `RatingGroup`, `ColorPicker`, `FileUpload`, `SignaturePad` |
 | overlay | `Dialog`, `Drawer`, `Popover`, `HoverCard`, `Tooltip`, `Menu`, `NavigationMenu`, `Toaster` |
@@ -155,7 +156,7 @@ a screen that saves as it types: same provider, no submit button, `onDebounce(va
 once per quiet window through radash's `debounce` (`options: { delay }`), with the first render —
 the default values — excluded.
 
-Each of the nineteen `*Field` bindings (`TextField`, `SelectField`, `DatePickerField`, …) takes a
+Each of the twenty `*Field` bindings (`TextField`, `SelectField`, `DatePickerField`, …) takes a
 `name`, a `label` and its widget's own props, then reaches the form through `useFormProvider()`.
 It never accepts a value, an onChange, a `control` or a form; outside a `Form` it throws, so a
 misplacement is a stack trace instead of a silently orphaned input. That is the whole reason the
@@ -166,6 +167,20 @@ type scale difference is the feature. `DownloadTrigger` covers the one export a 
 straight to the browser (`data` + `fileName`), so no screen builds an object URL. `NavigationMenu`
 is wrapped but not used yet: today the shell is one row of links above `sm` and a `Drawer` under
 it, and a nested rail would move to that component rather than grow a second menu.
+
+## API layer
+
+The generated contract is all-optional, so `src/api/types.ts` owns `Fixed<T>` (deep-required) and
+the row aliases a screen actually names; the fields Go's `omitempty` really drops are re-opened
+explicitly, and `Paged<>` keeps `next_cursor` optional because the list envelope omits it at the
+end. `src/api/<resource>.ts` is the only place `api.GET/POST/PATCH` is written: one function per
+endpoint, envelope unwrapped, failures thrown as `ApiError` (`status`, `code`, `traceId`).
+`src/hooks/queries/<resource>.ts` adds the TanStack layer — stable keyed queries, mutations that
+invalidate what they changed — so a screen holds no fetcher and no error formatting.
+
+Effect stays where it was: a Schema parses what a person typed, at the form resolver. The request
+path is a promise + TanStack on purpose; an Effect runtime there would add a bridge without
+adding a capability.
 
 ## Theme
 
