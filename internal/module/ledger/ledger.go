@@ -8,6 +8,7 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 	"github.com/dimasbaguspm/spenicle/internal/repository"
+	"github.com/dimasbaguspm/spenicle/internal/repository/cache"
 )
 
 type Contract interface {
@@ -22,11 +23,13 @@ type Contract interface {
 
 type Service struct {
 	entries  repository.Ledger
-	accounts repository.Accounts
+	accounts AccountSource
 	payees   PayeeSource
 	base     BaseCurrencySource
 	rates    RateSource
 	clock    TimeSource
+	found    *cache.Cache[string, accountResult]
+	known    *cache.Cache[string, bool]
 }
 
 type BaseCurrencySource interface {
@@ -41,11 +44,15 @@ type PayeeSource interface {
 	PayeeByRef(ctx context.Context, ref string) (entity.Payee, bool, error)
 }
 
+type AccountSource interface {
+	AccountByRef(ctx context.Context, ref string) (entity.Account, bool, error)
+}
+
 type TimeSource interface{ Now() time.Time }
 
 func New(
 	entries repository.Ledger,
-	accounts repository.Accounts,
+	accounts AccountSource,
 	payees PayeeSource,
 	base BaseCurrencySource,
 	rates RateSource,
@@ -58,6 +65,8 @@ func New(
 		base:     base,
 		rates:    rates,
 		clock:    clock,
+		found:    cache.New[string, accountResult](accountTTL, nil),
+		known:    cache.New[string, bool](accountTTL, nil),
 	}
 }
 

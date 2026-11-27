@@ -96,7 +96,11 @@ internal/entity/       shared structs + invariants; imports stdlib + constant on
 internal/module/       business logic: ledger, captures, imports, exports, export, rates,
                        settings, tokens, connections, intake, categorization
 internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore, mailbox/gmail,
-                       oauth/google, extraction/{snaptojson,openai}
+                       oauth/google, extraction/{snaptojson,openai}, and `cache` — the one
+                       in-process TTL primitive (`Get`/`Set`/`Load`/`Delete`/`Clear`, a
+                       single flight per key). A module that reads a table on every request
+                       holds its own `cache.Cache`, and the path that writes that table calls
+                       `Delete`/`Clear`; nothing caches inside a handler.
 tools/openapi/         the OpenAPI 3.1 generator: `go run ./tools/openapi` reads the
                        annotations on the handlers and writes `openapi.json` at the
                        repo root

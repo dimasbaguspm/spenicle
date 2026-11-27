@@ -171,6 +171,19 @@ Ranked by queries saved per request:
 
 ## Status
 
+- **Caching: the primitive and its first consumer are shipped.** `internal/repository/cache`
+  is the one TTL cache (Set/Get/Load with a single flight per key, Delete, Clear; a key lives
+  for the TTL of the instance it belongs to). The first consumer lives inside
+  `internal/module/ledger`, the module that reads accounts and payees on every posting: it
+  resolves each account and payee once per minute instead of once per entry. That cache is
+  read-through with a TTL and **no invalidation**, because the ledger never writes those two
+  tables — the window is the whole contract. Still open: the account and payee listings
+  (`GET /api/meta`, the display names on every entry response), live `categorization_rules`,
+  token verification and `connections`. Each wants the module that owns its write path, and
+  accounts/payees have no such module today — the CRUD lives in the handlers. One TTL for
+  everything is wrong on purpose: `settings` already caches for an hour because only setup
+  and a password change touch it, while a renamed account must show up in seconds.
+
 - **§1 names: shipped.** `void` is a `reverse`, the tables are `entries` and `postings`,
   `captures.batch_label` is `group_label`, `?voided=` is `?reversed=` and the body action is
   `{"reverse": true}`. `Module.Captures.Match` is gone: `Approve` resolves against that

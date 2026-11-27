@@ -12,6 +12,16 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
+// accountTTL is how long a resolved account or a known payee stays in memory. The
+// ledger only reads those two tables, so nothing here can invalidate the cache: a
+// rename shows up on the next write of the day, or within this window.
+const accountTTL = time.Minute
+
+type accountResult struct {
+	account entity.Account
+	found   bool
+}
+
 func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Post")
 	defer endSpan()
@@ -122,7 +132,7 @@ func (s *Service) buildPostings(
 	for index, input := range in.Postings {
 		account, found := known[input.AccountRef]
 		if !found && !missing[input.AccountRef] {
-			loaded, loadedFound, err := s.accounts.AccountByRef(ctx, input.AccountRef)
+			loaded, loadedFound, err := s.accountFor(ctx, input.AccountRef)
 			if err != nil {
 				return nil, err
 			}
@@ -528,7 +538,11 @@ func (s *Service) requirePayee(ctx context.Context, ref string) error {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.RequirePayee")
 	defer endSpan()
 
-	_, found, err := s.payees.PayeeByRef(ctx, ref)
+	found, err := s.known.Load(ctx, ref, func(ctx context.Context) (bool, error) {
+		_, known, loadErr := s.payees.PayeeByRef(ctx, ref)
+
+		return known, loadErr
+	})
 	if err != nil {
 		return fmt.Errorf("payee: %w", err)
 	}
@@ -538,4 +552,14 @@ func (s *Service) requirePayee(ctx context.Context, ref string) error {
 	}
 
 	return nil
+}
+
+func (s *Service) accountFor(ctx context.Context, ref string) (entity.Account, bool, error) {
+	result, err := s.found.Load(ctx, ref, func(ctx context.Context) (accountResult, error) {
+		account, found, loadErr := s.accounts.AccountByRef(ctx, ref)
+
+		return accountResult{account: account, found: found}, loadErr
+	})
+
+	return result.account, result.found, err
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/repository/cache"
 )
 
 type sheetRate struct {
@@ -134,7 +135,11 @@ func TestResolveRate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			service := &Service{rates: tc.rates}
+			service := &Service{
+				rates: tc.rates,
+				found: cache.New[string, accountResult](accountTTL, nil),
+				known: cache.New[string, bool](accountTTL, nil),
+			}
 
 			rate, err := service.resolveRate(t.Context(), tc.on, tc.native, tc.base)
 			if tc.wantErr {
@@ -240,6 +245,71 @@ func TestBalanceBaseAllocatesRoundingResidual(t *testing.T) {
 
 			if err := entity.CheckZeroSum(got); err != nil {
 				t.Fatalf("balanced postings still fail: %v", err)
+			}
+		})
+	}
+}
+
+type countingAccounts struct {
+	calls   int
+	account entity.Account
+	found   bool
+}
+
+func (s *countingAccounts) AccountByRef(
+	context.Context, string,
+) (entity.Account, bool, error) {
+	s.calls++
+
+	return s.account, s.found, nil
+}
+
+type countingPayees struct {
+	calls int
+	payee entity.Payee
+}
+
+func (s *countingPayees) PayeeByRef(context.Context, string) (entity.Payee, bool, error) {
+	s.calls++
+
+	return s.payee, true, nil
+}
+
+func TestPostingResolvesEachSourceOnce(t *testing.T) {
+	tests := []struct {
+		name  string
+		found bool
+	}{
+		{name: "a funded account is cached", found: true},
+		{name: "a missing account is cached too"},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			accounts := &countingAccounts{
+				account: entity.Account{Ref: "0123456789abcdef0123456789abcdef"},
+				found:   testCase.found,
+			}
+			payees := &countingPayees{payee: entity.Payee{Ref: "0123456789abcdef0123456789abcdef"}}
+
+			service := New(nil, accounts, payees, nil, nil, nil)
+
+			for range 3 {
+				if _, _, err := service.accountFor(t.Context(), accounts.account.Ref); err != nil {
+					t.Fatalf("account: %v", err)
+				}
+
+				if err := service.requirePayee(t.Context(), payees.payee.Ref); err != nil {
+					t.Fatalf("payee: %v", err)
+				}
+			}
+
+			if accounts.calls != 1 {
+				t.Fatalf("AccountByRef calls = %d, want 1", accounts.calls)
+			}
+
+			if payees.calls != 1 {
+				t.Fatalf("PayeeByRef calls = %d, want 1", payees.calls)
 			}
 		})
 	}
