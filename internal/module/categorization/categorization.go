@@ -18,6 +18,7 @@ type Store interface {
 
 type Contract interface {
 	Resolve(ctx context.Context, in SuggestInput) (Suggestion, error)
+	ResolveMany(ctx context.Context, in []SuggestInput) ([]Suggestion, error)
 }
 
 type SuggestInput struct {

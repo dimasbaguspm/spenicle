@@ -22,39 +22,65 @@ func New(store Store) *Service {
 var _ Contract = (*Service)(nil)
 
 func (s *Service) Resolve(ctx context.Context, in SuggestInput) (Suggestion, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Categorization.Resolve")
-	defer endSpan()
-
-	payeeName := in.Text
-	defaultCategory := ""
-
-	if in.PayeeRef != "" {
-		payee, found, err := s.store.PayeeByRef(ctx, in.PayeeRef)
-		if err != nil {
-			return Suggestion{}, err
-		}
-
-		if !found {
-			return Suggestion{}, fmt.Errorf("%w: payee %s", entity.ErrNotFound, in.PayeeRef)
-		}
-
-		payeeName = payee.Name
-
-		if defaultCategory, err = s.defaultCategory(ctx, in.Kind, payee.DefaultCategoryRef); err != nil {
-			return Suggestion{}, err
-		}
-	}
-
-	rules, err := s.store.ListLiveRules(ctx)
+	out, err := s.ResolveMany(ctx, []SuggestInput{in})
 	if err != nil {
 		return Suggestion{}, err
 	}
 
-	if in.Kind != "" {
-		rules = keepKind(in.Kind, rules)
+	return out[0], nil
+}
+
+func (s *Service) ResolveMany(ctx context.Context, inputs []SuggestInput) ([]Suggestion, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Categorization.ResolveMany")
+	defer endSpan()
+
+	if len(inputs) == 0 {
+		return nil, nil
 	}
 
-	return s.describe(ctx, Suggest(payeeName, in.Text, defaultCategory, rules))
+	rules, err := s.store.ListLiveRules(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := make(map[string]entity.Account, len(inputs))
+	out := make([]Suggestion, 0, len(inputs))
+
+	for _, in := range inputs {
+		payeeName := in.Text
+		defaultCategory := ""
+
+		if in.PayeeRef != "" {
+			payee, found, err := s.store.PayeeByRef(ctx, in.PayeeRef)
+			if err != nil {
+				return nil, err
+			}
+
+			if !found {
+				return nil, fmt.Errorf("%w: payee %s", entity.ErrNotFound, in.PayeeRef)
+			}
+
+			payeeName = payee.Name
+
+			if defaultCategory, err = s.defaultCategory(ctx, in.Kind, payee.DefaultCategoryRef); err != nil {
+				return nil, err
+			}
+		}
+
+		kept := rules
+		if in.Kind != "" {
+			kept = keepKind(in.Kind, rules)
+		}
+
+		resolved, err := s.describe(ctx, Suggest(payeeName, in.Text, defaultCategory, kept), accounts)
+		if err != nil {
+			return nil, err
+		}
+
+		out = append(out, resolved)
+	}
+
+	return out, nil
 }
 
 func (s *Service) defaultCategory(ctx context.Context, kind, ref string) (string, error) {
@@ -93,6 +119,7 @@ func keepKind(kind string, rules []entity.CategorizationRule) []entity.Categoriz
 func (s *Service) describe(
 	ctx context.Context,
 	resolved entity.CategorySuggestion,
+	cache map[string]entity.Account,
 ) (Suggestion, error) {
 	out := Suggestion{
 		AccountRef: resolved.AccountRef,
@@ -112,19 +139,28 @@ func (s *Service) describe(
 		if found {
 			out.AccountRef = fallback.Ref
 			out.AccountName = fallback.Name
+			cache[fallback.Ref] = fallback
 		}
 
 		return out, nil
 	}
 
-	account, found, err := s.store.AccountByRef(ctx, resolved.AccountRef)
-	if err != nil {
-		return Suggestion{}, err
+	account, cached := cache[resolved.AccountRef]
+	if !cached {
+		fresh, found, err := s.store.AccountByRef(ctx, resolved.AccountRef)
+		if err != nil {
+			return Suggestion{}, err
+		}
+
+		if !found {
+			return out, nil
+		}
+
+		account = fresh
+		cache[resolved.AccountRef] = fresh
 	}
 
-	if found {
-		out.AccountName = account.Name
-	}
+	out.AccountName = account.Name
 
 	return out, nil
 }

@@ -157,17 +157,7 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := toImportResponse(batch, true)
-	if s.deps.Categorization != nil {
-		for i := range response.Rows {
-			suggestion, err := s.deps.Categorization.Resolve(ctx, categorization.SuggestInput{
-				Text: response.Rows[i].Description,
-				Kind: constant.AccountKindExpense,
-			})
-			if err == nil {
-				response.Rows[i].SuggestedCategoryRef = suggestion.AccountRef
-			}
-		}
-	}
+	s.suggestCategories(ctx, response.Rows)
 
 	httpx.WriteJSON(w, status, response)
 }
@@ -198,7 +188,10 @@ func (s *Server) writeChunk(
 			status = http.StatusCreated
 		}
 
-		httpx.WriteJSON(w, status, toImportResponse(result.Batch, true))
+		response := toImportResponse(result.Batch, true)
+		s.suggestCategories(ctx, response.Rows)
+
+		httpx.WriteJSON(w, status, response)
 
 		return
 	}
@@ -214,6 +207,29 @@ func (s *Server) writeChunk(
 		ChunkTotal:     result.Upload.ChunkTotal,
 		ReceivedBytes:  strconv.FormatInt(result.Upload.ReceivedBytes, 10),
 	})
+}
+
+func (s *Server) suggestCategories(ctx context.Context, rows []importRowResponse) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Handler.Imports.Suggest")
+	defer endSpan()
+
+	if s.deps.Categorization == nil || len(rows) == 0 {
+		return
+	}
+
+	inputs := make([]categorization.SuggestInput, len(rows))
+	for i := range rows {
+		inputs[i] = categorization.SuggestInput{Text: rows[i].Description, Kind: constant.AccountKindExpense}
+	}
+
+	suggestions, err := s.deps.Categorization.ResolveMany(ctx, inputs)
+	if err != nil {
+		return
+	}
+
+	for i := range suggestions {
+		rows[i].SuggestedCategoryRef = suggestions[i].AccountRef
+	}
 }
 
 func (s *Server) ListImports(w http.ResponseWriter, r *http.Request) {

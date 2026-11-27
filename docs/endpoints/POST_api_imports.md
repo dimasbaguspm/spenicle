@@ -77,8 +77,9 @@ The same `chunk_index` again is a no-op that answers `200` with the same
 progress — the bytes are truncated back, so a retry cannot corrupt the file.
 When `received_chunks == chunk_total` the handler assembles the file, hashes it
 (sha256), creates the draft exactly as the single-shot path does, marks the
-upload `complete`, deletes the `.part` file and answers `201` with the batch.
-A `client_id` that already names a batch resumes that batch (`200`).
+upload `complete`, deletes the `.part` file and answers `201` with the batch —
+rows included, each carrying its `suggested_category_ref` like the single-shot
+answer. A `client_id` that already names a batch resumes that batch (`200`).
 
 A statement above `ImportMaxRows` (default 50 000 rows) is refused with
 `422 invalid_request`. A worker run drops `open` uploads untouched for 24h

@@ -29,7 +29,7 @@ The order above is illustrative: the same names in a different column order pars
 | --- | --- | --- |
 | 1 | `GET /api/accounts?kind=asset` | pick the account the statement belongs to (defaults to `Unsorted`) |
 | 2 | `POST /api/imports` (multipart) | `file`, `client_id` (≤ 64, the idempotency key), optional `account_ref` |
-| 3 | same call, chunked | add `chunk_index` + `chunk_total`; each chunk answers `202` with `{received_chunks, chunk_total, received_bytes}`, the last one assembles the draft and answers `201` with the full batch — no progress fields, no `suggested_category_ref` |
+| 3 | same call, chunked | add `chunk_index` + `chunk_total`; each chunk answers `202` with `{received_chunks, chunk_total, received_bytes}`, the last one assembles the draft and answers `201` with the full batch — no progress fields, and the same per-row `suggested_category_ref` the single-shot answer carries |
 | 4 | `POST /api/imports` again with the same `client_id` and bytes | `200` with the same batch — the resume path after a restart |
 
 Caps: `ImportMaxBytes` is a 32 MiB outer body cap, but multipart parsing and the file read use `maxFormBytes = 11 << 20`, so the effective multipart file cap is 11 MiB; `ImportMaxRows` is 50 000 rows. A conflicting replay writes `conflict_refused` before answering `409 import_conflict`; UAT asserts that event.
