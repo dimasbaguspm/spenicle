@@ -26,9 +26,15 @@ importers:
       effect:
         specifier: ^4.1.7
         version: 4.1.7
+      lucide-react:
+        specifier: 1.82.0
+        version: 1.82.0(@types/react@19.3.3)(react@19.3.1)
       openapi-fetch:
         specifier: ^0.13.0
         version: 0.13.8
+      radash:
+        specifier: 12.1.1
+        version: 12.1.1
       react:
         specifier: ^19.0.0
         version: 19.3.1
@@ -2574,6 +2580,15 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
+  lucide-react@1.82.0:
+    resolution: {integrity: sha512-6jSApJxVZnyOGO5q7ygxiaVmzt87OtkfzpU5aD14ph32W78hBtmwEkVj2ehGyhfEynSM6TEEnFhPq24QhSOz6g==}
+    peerDependencies:
+      '@types/react': '*'
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
     hasBin: true
@@ -2755,6 +2770,10 @@ packages:
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
+
+  radash@12.1.1:
+    resolution: {integrity: sha512-h36JMxKRqrAxVD8201FrCpyeNuUY9Y5zZwujr20fFO77tpUtGa6EZzfKw/3WaiBX95fq7+MpsuMLNdSnORAwSA==}
+    engines: {node: '>=14.18.0'}
 
   react-dom@19.3.1:
     resolution: {integrity: sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==}
@@ -6164,6 +6183,12 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
+  lucide-react@1.82.0(@types/react@19.3.3)(react@19.3.1):
+    dependencies:
+      react: 19.3.1
+    optionalDependencies:
+      '@types/react': 19.3.3
+
   lz-string@1.5.0: {}
 
   magic-string@0.30.21:
@@ -6342,6 +6367,8 @@ snapshots:
       proxy-compare: 3.0.1
 
   punycode@2.3.1: {}
+
+  radash@12.1.1: {}
 
   react-dom@19.3.1(react@19.3.1):
     dependencies:

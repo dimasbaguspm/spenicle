@@ -101,13 +101,14 @@ pre-commit and pre-push.
 
 ## Components
 
-`web/src/components/ui` is the app's own vocabulary: one file per Ark primitive, a private
-props type, exactly one export, and cva variants merged by `tailwind-merge`. Behaviour is Ark
-UI's (field association, listbox, focus trap, roving focus, page-range math); the props, the
-markup and every token are ours, and none of them carries business logic — a screen decides
-what the value means, the component only decides how a value is chosen and shown. Only that
-directory may import a headless library; oxlint's `no-restricted-imports` enforces it.
-Adding a primitive means: write the ui file, then use it in a screen.
+`web/src/components/ui` is the app's own vocabulary: one folder per component
+(`button/index.tsx`), a private props type, exactly one export, and cva variants merged by
+`tailwind-merge`. `ui/index.ts` re-exports the lot, so a screen may import from the barrel or
+from the one folder it needs. Behaviour is Ark UI's (field association, listbox, focus trap,
+roving focus, page-range math); the props, the markup and every token are ours, and none of them
+carries business logic — a screen decides what the value means, the component only decides how a
+value is chosen and shown. Only that tree may import a headless library; oxlint's
+`no-restricted-imports` enforces it. Adding a primitive means: write the folder, then use it.
 
 59 components, grouped by the job a screen hires them for:
 
@@ -120,9 +121,34 @@ Adding a primitive means: write the ui file, then use it in a screen.
 | status | `Progress` (linear and circle), `Timer`, `QrCode`, `Clipboard`, `Highlight`, `Marquee`, `Swap`, `DownloadTrigger` |
 | structure and data | `Accordion`, `Collapsible`, `Tabs`, `Steps`, `ScrollArea`, `Splitter`, `Carousel`, `Avatar`, `Pagination`, `TreeView`, `JsonTreeView`, `Toc`, `FloatingPanel`, `ImageCropper` |
 
-Two deliberate exceptions to "one component per file": `control.ts` exports the shared cva that
-every input wears (so an input cannot drift from its neighbours) and `toaster.ts` exports the
-imperative `toast` store that `Toaster` reads — a store is not a component.
+Icons are `lucide-react` and nothing else: `size-4` (`size-3` where the row is dense),
+`strokeWidth={1.75}`, `aria-hidden`, colour from the parent's `text-*` token. A character glyph
+is a font dependency and an unstylable shape, so none survived; where one carried meaning it
+moved to the trigger's `aria-label`.
+
+Two deliberate exceptions to "one component per file": `control/index.ts` exports the shared cva
+that every input wears (so an input cannot drift from its neighbours) and `toaster/index.ts`
+exports the imperative `toast` store that `Toaster` reads — a store is not a component.
+
+## Forms
+
+`components/ui/form/` is where the app's form layer lives and the only place `react-hook-form` is
+meant to be imported. One caller still holds out — `routes/ledger.tsx` uses `useForm` directly
+because it preselects the first account once the meta query lands and resets two fields on a
+successful post; migrating it needs `Form` to hand the instance to `onSubmit`, which is the next
+slice, not a rename. `Form` owns the `<form>`,
+the `FormProvider`, the submit binding and the action row (`submitLabel`, optional `onCancel`, or
+a caller `footer`); its `resolver` is where an Effect schema becomes per-field messages, and the
+render callback receives the form instance but does not need it. `DebounceForm` is the sibling for
+a screen that saves as it types: same provider, no submit button, `onDebounce(values, form)` fired
+once per quiet window through radash's `debounce` (`options: { delay }`), with the first render —
+the default values — excluded.
+
+Each of the nineteen `*Field` bindings (`TextField`, `SelectField`, `DatePickerField`, …) takes a
+`name`, a `label` and its widget's own props, then reaches the form through `useFormProvider()`.
+It never accepts a value, an onChange, a `control` or a form; outside a `Form` it throws, so a
+misplacement is a stack trace instead of a silently orphaned input. That is the whole reason the
+layer exists: a screen declares a shape once and writes nineteen one-line fields.
 
 An amount is a string of minor units, so no amount ever reaches `NumberInput` or `Slider`: the
 type scale difference is the feature. `DownloadTrigger` covers the one export a screen hands

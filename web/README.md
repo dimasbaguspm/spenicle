@@ -11,6 +11,13 @@ make web-check   # typecheck + lint + format check + tests — the gate
 make web-types   # regenerate src/api/schema.d.ts from ../openapi.json
 ```
 
+Six runtime dependencies beyond React, each earning its place: **Ark UI** (behaviour — focus
+trap, listbox, calendar, dismissable layers), **TanStack Router/Query** (typed routes, cache),
+**react-hook-form** + **Effect Schema** (field state, one parse that is both validation and
+type), **radash** (the debounce in `DebounceForm`, plus the odd `group`/`pick`), **lucide-react**
+(the only icon source), **openapi-fetch** + **tailwind-merge**/`clsx`. Nothing else gets added
+without a reason stronger than convenience.
+
 ## Toolchain
 
 | tool                                    | why this one                                                                                                                                                                                                                    |
@@ -55,6 +62,61 @@ does not have fails here instead of in a screen.
 cva variants are merged by `tailwind-merge` through `lib/cn.ts`, so a caller's `className` wins
 on conflict. `TextInput` and not `NumberInput` represents an amount: an amount is a string of
 minor units, and a numeric widget would tempt a float.
+
+### One folder per component
+
+```
+src/components/ui/
+  index.ts              re-exports every component, so a screen can `import { Button, Text } from '@/components/ui'`
+  button/index.tsx      one component, one private props type, one export
+  text/index.tsx
+  control/index.ts      the shared cva every input wears
+  form/
+    index.ts            Form, DebounceForm, useFormProvider and the nineteen `*Field` bindings
+    form.tsx
+    debounce-form.tsx
+    text-field.tsx
+```
+
+The folder is the identity: a file that needs a helper or a test sits next to its component
+instead of in a shared bag, and `@/components/ui/button` still resolves to the folder's
+`index.tsx`, so no call site has to know the layout.
+
+### Icons
+
+Every icon comes from `lucide-react` — `size-4` (`size-3` in a dense row), `strokeWidth={1.75}`,
+`aria-hidden="true"`, colour inherited from the parent's `text-*` token. No unicode glyphs, no
+CSS-drawn chevrons: a character is a font that might be missing and a shape that cannot be
+restyled. Where the glyph meant something, the meaning moved to the trigger's `aria-label`.
+
+### Forms
+
+`form/` is where the app's form layer lives: it is the only place `react-hook-form` is meant to be
+imported, and the ledger screen (still written directly against `useForm`) is the last caller to
+migrate. A screen writes the shape once and never wires a `Controller`:
+
+```tsx
+<Form<CaptureValues> defaultValues={empty} resolver={resolver} onSubmit={save}>
+  {() => (
+    <>
+      <DateField<CaptureValues> name="occurred_on" label="Date" />
+      <SelectField<CaptureValues> name="account_ref" label="Account" options={accounts} />
+      <TextField<CaptureValues> name="amount" label="Amount" hint="Minor units" />
+    </>
+  )}
+</Form>
+```
+
+- `Form` owns the `<form>`, the `FormProvider`, the submit binding and the action row
+  (`submitLabel`, optional `onCancel`, or your own `footer`). `resolver` is where an Effect
+  schema turns into per-field errors; the callback is handed the form instance but does not
+  need it.
+- `DebounceForm` is the sibling for a screen that saves as it types: same provider, no submit
+  button, `onDebounce(values, form)` called once per quiet window (`options: { delay }`, radash
+  underneath), and the first render — the default values — never counts as an edit.
+- A `*Field` takes a `name`, a `label` and its widget's props, then calls `useFormProvider()`.
+  It never accepts a value, an onChange, a `control` or a form. Outside a `Form` it throws, so a
+  misplacement is a stack trace rather than a silently orphaned input.
 
 ## The theme
 

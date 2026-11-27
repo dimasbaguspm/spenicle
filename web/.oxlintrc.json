@@ -110,7 +110,7 @@
   },
   "overrides": [
     {
-      "files": ["src/components/ui/button.tsx"],
+      "files": ["src/components/ui/button/index.tsx"],
       "rules": {
         "react/button-has-type": "off"
       }
