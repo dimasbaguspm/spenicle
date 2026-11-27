@@ -24,19 +24,22 @@ make web-types   # regenerate src/api/schema.d.ts from ../openapi.json
 ## `components/ui` — our vocabulary, not Ark's
 
 Every primitive the screens use lives here, with a props type of our own and exactly one
-export per file: `Button`, `Input`, `Field`, `Select`. A widget never imports a headless
-library — `oxlint`'s `no-restricted-imports` blocks `@ark-ui/*` outside this directory, so the
-boundary is enforced, not documented.
+export per file: `Button`, `Input`, `Field`, `Select`, `Drawer`, `Menu`. A widget never imports
+a headless library — `oxlint`'s `no-restricted-imports` blocks `@ark-ui/*` outside this
+directory, so the boundary is enforced, not documented.
 
-- **`Button`, `Input`** — cva variants (`tone`, `size`, `block`; `invalid`, `size`) merged with
-  `tailwind-merge` through `lib/cn.ts`, so a caller's `className` wins on conflict.
-- **`Field`** — label, hint and error wired to the control by `useId`; the control is cloned
-  with `id`, `aria-describedby` and `aria-invalid`, so a screen cannot forget the association.
-- **`Select`** — Ark UI behind our props: listbox semantics, typeahead and roving focus stay
-  Ark's job, every pixel is ours. Enums and callbacks are string refs, never Ark's internals.
+| component | headless owner                                  | ours                                     |
+| --------- | ----------------------------------------------- | ---------------------------------------- |
+| `Button`  | — (Ark has no button)                           | cva `tone`/`size`/`block`                |
+| `Input`   | Ark `Field.Input`                               | type scale, `size` variant, invalid ring |
+| `Field`   | Ark `Field.Root/Label/HelperText/ErrorText`     | the type scale, one-child contract       |
+| `Select`  | Ark `Select` (listbox, typeahead, roving focus) | every pixel, string options              |
+| `Drawer`  | Ark `Drawer` (focus trap, scroll lock, escape)  | paper, close-on-navigate                 |
+| `Menu`    | Ark `Menu` (roving focus, anchored position)    | plate, `{label, onSelect}[]`             |
 
-`Input` is deliberately a plain `<input>`, not Ark's `NumberInput`: an amount is a string of
-minor units, and a numeric widget would tempt a float.
+cva variants are merged by `tailwind-merge` through `lib/cn.ts`, so a caller's `className`
+wins on conflict. `Input` is deliberately Ark's text input and not `NumberInput`: an amount is
+a string of minor units, and a numeric widget would tempt a float.
 
 ## The theme
 

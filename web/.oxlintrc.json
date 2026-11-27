@@ -105,7 +105,8 @@
           }
         ]
       }
-    ]
+    ],
+    "react-perf/jsx-no-jsx-as-prop": "off"
   },
   "overrides": [
     {
