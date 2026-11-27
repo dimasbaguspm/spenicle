@@ -27,11 +27,11 @@ put a decision you did not feel like making. v2 changes three things:
 ## Develop
 
 `dev.mk` is the local loop and works on its own (`make -f dev.mk dev-api`) or through the root
-Makefile. It needs one exported secret:
+Makefile. It generates one secret per checkout (`.dev-secret`, gitignored) and reuses it, because
+a new `APP_SECRET` on every run makes the existing database unreadable
+(`cipher: message authentication failed`); an exported one still wins:
 
 ```bash
-export APP_SECRET="$(openssl rand -base64 32)"
-
 make dev          # the API and the worker in one process, SPA on :8080, db in ./data
 make dev-web      # the SPA with HMR on :5173, proxying /api to that process
 # or, one process per service, on the same database:

@@ -10,22 +10,29 @@
 GO   ?= go
 BIN  ?= bin/spenicle
 PORT ?= 8080
+# One secret per checkout, generated once: `APP_SECRET=$(openssl rand …)` inline mints a new key
+# on every run, and the database's sealed settings are useless under a different one. An exported
+# APP_SECRET still wins.
+SECRET_FILE ?= .dev-secret
 
-.PHONY: dev dev-api dev-worker dev-web dev-build web-dist
+.PHONY: dev dev-api dev-worker dev-web dev-build web-dist dev-secret
 
 # The SPA is embedded only with `-tags web`, so the dev binary needs web/dist to exist. Built
 # once here; after a UI change either `make dev-web` (HMR) or `make web-dist` again.
 web-dist: ## build web/dist if it is missing (the embed needs it)
 	@test -f web/dist/index.html || (cd web && pnpm install --frozen-lockfile && pnpm run build)
 
-dev: web-dist ## run the API and the worker in one process, SPA served on :8080
-	$(GO) run -tags web . all
+dev-secret: ## create the stable dev APP_SECRET once (.dev-secret)
+	@test -s $(SECRET_FILE) || (openssl rand -base64 32 > $(SECRET_FILE) && chmod 600 $(SECRET_FILE) && echo "wrote $(SECRET_FILE)")
 
-dev-api: web-dist ## run only the API (the sole listener, SPA served) against ./data
-	$(GO) run -tags web . http
+dev: web-dist dev-secret ## run the API and the worker in one process, SPA served on :8080
+	@APP_SECRET="$${APP_SECRET:-$$(cat $(SECRET_FILE))}" $(GO) run -tags web . all
 
-dev-worker: ## run only the worker: recurring captures, retention, exports, intake
-	$(GO) run . worker
+dev-api: web-dist dev-secret ## run only the API (the sole listener, SPA served) against ./data
+	@APP_SECRET="$${APP_SECRET:-$$(cat $(SECRET_FILE))}" $(GO) run -tags web . http
+
+dev-worker: dev-secret ## run only the worker: recurring captures, retention, exports, intake
+	@APP_SECRET="$${APP_SECRET:-$$(cat $(SECRET_FILE))}" $(GO) run . worker
 
 dev-web: ## the SPA dev server on :5173, proxying /api to the API
 	cd web && pnpm install --frozen-lockfile && pnpm run dev

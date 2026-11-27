@@ -16,3 +16,6 @@ coverage.out
 # the image copies into /etc/service.
 /run/
 down
+
+# the local dev APP_SECRET, generated once by `make dev`
+/.dev-secret
