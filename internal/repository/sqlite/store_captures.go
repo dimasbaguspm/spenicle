@@ -141,29 +141,7 @@ func (s *Store) ListCaptures(ctx context.Context, filter entity.CaptureFilter) (
 
 	query, args := builder.page(limit)
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("select captures: %w", err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	out := make([]entity.Capture, 0, limit+1)
-
-	for rows.Next() {
-		capture, scanErr := scanCaptureRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-
-		out = append(out, capture)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate captures: %w", err)
-	}
-
-	return out, nil
+	return scanRows(ctx, s.db, "captures", query, args, scanCaptureRow)
 }
 
 func (s *Store) UpdateCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error) {

@@ -101,29 +101,7 @@ func (s *Store) ListPayees(ctx context.Context, filter entity.PayeeFilter) ([]en
 
 	query, args := builder.page(limit)
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("select payees: %w", err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	out := make([]entity.Payee, 0, limit+1)
-
-	for rows.Next() {
-		payee, scanErr := scanPayeeRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-
-		out = append(out, payee)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate payees: %w", err)
-	}
-
-	return out, nil
+	return scanRows(ctx, s.db, "payees", query, args, scanPayeeRow)
 }
 
 func (s *Store) UpdatePayee(ctx context.Context, payee entity.Payee) (entity.Payee, error) {

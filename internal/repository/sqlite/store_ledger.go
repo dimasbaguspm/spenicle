@@ -371,29 +371,15 @@ func (s *Store) ListEntries(
 
 	query, args := entryQuery(filter)
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	out, err := scanRows(ctx, s.db, "entries", query, args, scanEntryRow)
 	if err != nil {
-		return nil, fmt.Errorf("select entries: %w", err)
+		return nil, err
 	}
 
-	defer func() { _ = rows.Close() }()
+	refs := make([]string, 0, len(out))
 
-	var out []entity.Entry
-
-	refs := make([]string, 0, clampLimit(filter.Limit))
-
-	for rows.Next() {
-		entry, scanErr := scanEntryRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-
-		out = append(out, entry)
+	for _, entry := range out {
 		refs = append(refs, entry.Ref)
-	}
-
-	if rowsErr := rows.Err(); rowsErr != nil {
-		return nil, fmt.Errorf("iterate entries: %w", rowsErr)
 	}
 
 	postings, err := s.postingsByEntryIDs(ctx, refs)

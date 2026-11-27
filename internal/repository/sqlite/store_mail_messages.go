@@ -205,32 +205,10 @@ func (s *Store) ListMailMessages(
 
 	query, args := builder.page(clampLimit(filter.Limit))
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("select mail messages: %w", err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	out := make([]entity.MailMessage, 0, clampLimit(filter.Limit))
-
-	for rows.Next() {
-		message, scanErr := scanMailMessageRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-
-		out = append(out, message)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate mail messages: %w", err)
-	}
-
-	return out, nil
+	return scanRows(ctx, s.db, "mail messages", query, args, scanMailMessageRow)
 }
 
-func scanMailMessageRow(rows *sql.Rows) (entity.MailMessage, error) {
+func scanMailMessageRow(rows interface{ Scan(dest ...any) error }) (entity.MailMessage, error) {
 	var (
 		message      entity.MailMessage
 		thread       sql.NullString

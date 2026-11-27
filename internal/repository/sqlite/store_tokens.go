@@ -115,29 +115,7 @@ func (s *Store) ListTokens(ctx context.Context, filter entity.TokenFilter) ([]en
 
 	query, args := builder.page(limit)
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("select tokens: %w", err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	out := make([]entity.Token, 0, limit+1)
-
-	for rows.Next() {
-		token, scanErr := scanTokenRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-
-		out = append(out, token)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate tokens: %w", err)
-	}
-
-	return out, nil
+	return scanRows(ctx, s.db, "tokens", query, args, scanTokenRow)
 }
 
 func (s *Store) RevokeToken(ctx context.Context, ref string, at time.Time) (entity.Token, bool, error) {

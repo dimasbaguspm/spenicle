@@ -166,29 +166,7 @@ func (s *Store) ListRecurring(
 
 	query, args := builder.page(limit)
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("select recurring rules: %w", err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	out := make([]entity.Recurring, 0, limit+1)
-
-	for rows.Next() {
-		rule, scanErr := scanRecurringRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-
-		out = append(out, rule)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate recurring rules: %w", err)
-	}
-
-	return out, nil
+	return scanRows(ctx, s.db, "recurring rules", query, args, scanRecurringRow)
 }
 
 func (s *Store) UpdateRecurring(ctx context.Context, rule entity.Recurring) (entity.Recurring, error) {

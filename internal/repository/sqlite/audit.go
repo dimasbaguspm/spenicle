@@ -149,29 +149,7 @@ func (s *Store) ListAudit(ctx context.Context, filter entity.AuditFilter) ([]ent
 
 	query, args := builder.page(limit)
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("select audit: %w", err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	out := make([]entity.Audit, 0, limit+1)
-
-	for rows.Next() {
-		record, scanErr := scanAuditRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-
-		out = append(out, record)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate audit: %w", err)
-	}
-
-	return out, nil
+	return scanRows(ctx, s.db, "audit", query, args, scanAuditRow)
 }
 
 func scanAuditRow(scanner interface{ Scan(dest ...any) error }) (entity.Audit, error) {

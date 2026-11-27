@@ -241,6 +241,16 @@ func pageScan[T any](
 ) ([]T, error) {
 	query, args := builder.page(limit)
 
+	return scanRows(ctx, db, what, query, args, scan)
+}
+
+func scanRows[T any](
+	ctx context.Context,
+	db *sql.DB,
+	what, query string,
+	args []any,
+	scan func(interface{ Scan(dest ...any) error }) (T, error),
+) ([]T, error) {
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("select %s: %w", what, err)
@@ -248,7 +258,7 @@ func pageScan[T any](
 
 	defer func() { _ = rows.Close() }()
 
-	out := make([]T, 0, limit+1)
+	out := make([]T, 0)
 
 	for rows.Next() {
 		item, scanErr := scan(rows)

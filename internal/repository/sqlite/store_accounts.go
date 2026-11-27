@@ -315,29 +315,7 @@ func (s *Store) ListAccounts(ctx context.Context, filter entity.AccountFilter) (
 
 	query, args := builder.page(limit)
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("select accounts: %w", err)
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	out := make([]entity.Account, 0, limit+1)
-
-	for rows.Next() {
-		account, scanErr := scanAccountRow(rows)
-		if scanErr != nil {
-			return nil, fmt.Errorf("scan account: %w", scanErr)
-		}
-
-		out = append(out, account)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate accounts: %w", err)
-	}
-
-	return out, nil
+	return scanRows(ctx, s.db, "accounts", query, args, scanAccountRow)
 }
 
 func (s *Store) BalancesByAccount(ctx context.Context) (map[string]int64, error) {
