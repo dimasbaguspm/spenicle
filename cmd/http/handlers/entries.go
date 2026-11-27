@@ -272,12 +272,20 @@ type displayNames struct {
 }
 
 func (s *Server) displayNames(ctx context.Context) (displayNames, error) {
-	accounts, err := s.deps.Accounts.ListAccounts(ctx, entity.AccountFilter{Limit: list.MaxLimit})
+	accounts, err := allPages(ctx, list.MaxLimit,
+		func(account entity.Account) string { return account.Ref },
+		func(ctx context.Context, cursor string, limit int) ([]entity.Account, error) {
+			return s.deps.Accounts.ListAccounts(ctx, entity.AccountFilter{Cursor: cursor, Limit: limit})
+		})
 	if err != nil {
 		return displayNames{}, err
 	}
 
-	payees, err := s.deps.Payees.ListPayees(ctx, entity.PayeeFilter{Limit: list.MaxLimit})
+	payees, err := allPages(ctx, list.MaxLimit,
+		func(payee entity.Payee) string { return payee.Ref },
+		func(ctx context.Context, cursor string, limit int) ([]entity.Payee, error) {
+			return s.deps.Payees.ListPayees(ctx, entity.PayeeFilter{Cursor: cursor, Limit: limit})
+		})
 	if err != nil {
 		return displayNames{}, err
 	}
