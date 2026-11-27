@@ -88,7 +88,6 @@ func (w *world) clearDatabase(ctx context.Context) error {
 		"mail_messages",
 		"entry_balances",
 		"postings",
-		"balance_state",
 		"capture_payloads",
 		"captures",
 		"entries",

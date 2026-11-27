@@ -46,6 +46,9 @@ CREATE TABLE accounts (
   currency    TEXT NOT NULL,
   icon        TEXT,
   archived_at TEXT,
+  balance_minor      INTEGER NOT NULL DEFAULT 0,
+  balance_dirty      INTEGER NOT NULL DEFAULT 1,
+  balance_through_on TEXT,
   created_at  TEXT NOT NULL,
   UNIQUE (name, kind)
 );
@@ -136,13 +139,6 @@ CREATE TABLE postings (
   fx_source         TEXT NOT NULL CHECK (fx_source IN ('ecb','cached','manual','identity'))
 );
 
-
-CREATE TABLE balance_state (
-  id         INTEGER PRIMARY KEY,
-  ref TEXT NOT NULL UNIQUE,
-  account_ref TEXT NOT NULL UNIQUE REFERENCES accounts(ref),
-  dirty      INTEGER NOT NULL DEFAULT 1
-);
 
 CREATE TABLE entry_balances (
   id            INTEGER PRIMARY KEY,

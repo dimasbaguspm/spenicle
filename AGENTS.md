@@ -27,7 +27,7 @@ the document wins until you change the document too.
    bookkeeping with an `id` and no `ref`, never addressed on the wire. Requests send
    `account_ref`, responses carry `ref` — an integer id never leaves the database. The
    ledger group is fully converted: accounts, payees, categorization rules, recurring
-   rules, entries, postings, `balance_state`, `entry_balances` and the journal payloads
+   rules, entries, postings, `entry_balances` and the journal payloads
    relate by ref, and their `*_id` columns are gone from `0001_init.sql`. So do captures,
    artifacts, `capture_payloads`, mail messages, imports, exports and `audit_log`. No
    column ends in `_id` at all: the idempotency key is `idempotency_key`, the capture
@@ -35,7 +35,11 @@ the document wins until you change the document too.
    `ref`.
 2. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
    zero. `entity.CheckZeroSum` runs before the store opens the write transaction, on
-   both direct entry inserts and capture approvals.
+   both direct entry inserts and capture approvals. `accounts.balance_minor` is a derived
+   cache of the postings and never a source of truth: the write that inserts a posting adds
+   its base amount to the account in the same transaction, `accounts.balance_dirty` marks a
+   row to rebuild from `postings` before it is read, and `GET /api/accounts` rebuilds only
+   the accounts that flag names.
 3. **No deletes of user records.** Reverse (`reversed_at`) or reject. Every state change on
    `accounts`, `payees`, `recurring_rules`, `entries`, `captures`, `settings`,
    `api_tokens` and `categorization_rules` appends one `audit_log` row inside the same

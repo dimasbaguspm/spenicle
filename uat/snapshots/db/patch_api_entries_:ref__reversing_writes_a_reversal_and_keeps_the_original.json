@@ -2,6 +2,9 @@
   "accounts": [
     {
       "archived_at": null,
+      "balance_dirty": 0,
+      "balance_minor": 0,
+      "balance_through_on": "2026-02-14",
       "created_at": "<timestamp>",
       "currency": "IDR",
       "icon": null,
@@ -13,6 +16,9 @@
     },
     {
       "archived_at": null,
+      "balance_dirty": 0,
+      "balance_minor": 0,
+      "balance_through_on": "2026-02-14",
       "created_at": "<timestamp>",
       "currency": "IDR",
       "icon": null,

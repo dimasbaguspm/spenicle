@@ -187,17 +187,17 @@ func insertPostings(
 		return fmt.Errorf("insert postings: %w", err)
 	}
 
-	return updateRunningBalances(ctx, tx, entryRef, occurredOn, postings)
+	return updateBalances(ctx, tx, entryRef, occurredOn, postings)
 }
 
-func updateRunningBalances(
+func updateBalances(
 	ctx context.Context,
 	tx *sql.Tx,
 	entryRef string,
 	occurredOn string,
 	postings []entity.Posting,
 ) error {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.updateRunningBalances")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.updateBalances")
 	defer endSpan()
 
 	deltas := make(map[string]int64, len(postings))
@@ -212,25 +212,7 @@ func updateRunningBalances(
 	}
 
 	for _, accountRef := range accounts {
-		state := tx.QueryRowContext(ctx,
-			`SELECT dirty FROM balance_state WHERE account_ref = ?`, accountRef)
-
-		var dirty bool
-
-		err := state.Scan(&dirty)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("select balance state: %w", err)
-		}
-
-		if errors.Is(err, sql.ErrNoRows) || dirty {
-			if err := rebuildRunningBalancesInTx(ctx, tx, accountRef); err != nil {
-				return err
-			}
-
-			continue
-		}
-
-		if err := shiftRunningBalances(
+		if err := applyAccountBalance(
 			ctx, tx, accountRef, entryRef, occurredOn, deltas[accountRef],
 		); err != nil {
 			return err
@@ -238,6 +220,41 @@ func updateRunningBalances(
 	}
 
 	return nil
+}
+
+func applyAccountBalance(
+	ctx context.Context,
+	tx *sql.Tx,
+	accountRef, entryRef, occurredOn string,
+	delta int64,
+) error {
+	var (
+		dirty   bool
+		through sql.NullString
+	)
+
+	if err := tx.QueryRowContext(ctx,
+		`SELECT balance_dirty, balance_through_on FROM accounts WHERE ref = ?`,
+		accountRef).Scan(&dirty, &through); err != nil {
+		return fmt.Errorf("select account balance: %w", err)
+	}
+
+	if dirty {
+		return rebuildRunningBalancesInTx(ctx, tx, accountRef)
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE accounts SET
+			balance_minor = balance_minor + ?,
+			balance_through_on = CASE
+				WHEN balance_through_on IS NULL OR balance_through_on < ? THEN ?
+				ELSE balance_through_on
+			END
+		WHERE ref = ?`, delta, occurredOn, occurredOn, accountRef); err != nil {
+		return fmt.Errorf("apply account balance: %w", err)
+	}
+
+	return shiftRunningBalances(ctx, tx, accountRef, entryRef, occurredOn, delta)
 }
 
 func shiftRunningBalances(
@@ -441,16 +458,14 @@ func (s *Store) RunningBalances(
 
 	var dirty bool
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT COALESCE(b.dirty, 1) FROM accounts a
-		LEFT JOIN balance_state b ON b.account_ref = a.ref
-		WHERE a.ref = ?`, accountRef).Scan(&dirty)
+	err := s.db.QueryRowContext(ctx,
+		`SELECT balance_dirty FROM accounts WHERE ref = ?`, accountRef).Scan(&dirty)
 	if errors.Is(err, sql.ErrNoRows) {
 		return balances, nil
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("select balance state: %w", err)
+		return nil, fmt.Errorf("select account balance: %w", err)
 	}
 
 	if dirty {
@@ -506,16 +521,44 @@ func (s *Store) rebuildRunningBalances(ctx context.Context, accountRef string) e
 	})
 }
 
+func (s *Store) rebuildDirtyBalances(ctx context.Context) error {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.rebuildDirtyBalances")
+	defer endSpan()
+
+	refs, err := scanRows(ctx, s.db, "dirty accounts",
+		`SELECT ref FROM accounts WHERE balance_dirty = 1`, nil,
+		func(scanner interface{ Scan(dest ...any) error }) (string, error) {
+			var ref string
+
+			if scanErr := scanner.Scan(&ref); scanErr != nil {
+				return "", fmt.Errorf("scan account ref: %w", scanErr)
+			}
+
+			return ref, nil
+		})
+	if err != nil {
+		return err
+	}
+
+	for _, ref := range refs {
+		if rebuildErr := s.rebuildRunningBalances(ctx, ref); rebuildErr != nil {
+			return rebuildErr
+		}
+	}
+
+	return nil
+}
+
 func rebuildRunningBalancesInTx(ctx context.Context, tx *sql.Tx, accountRef string) error {
 	var dirty bool
 
 	err := tx.QueryRowContext(ctx,
-		`SELECT dirty FROM balance_state WHERE account_ref = ?`, accountRef).Scan(&dirty)
+		`SELECT balance_dirty FROM accounts WHERE ref = ?`, accountRef).Scan(&dirty)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("select balance state: %w", err)
+		return fmt.Errorf("select account balance: %w", err)
 	}
 
-	if !errors.Is(err, sql.ErrNoRows) && !dirty {
+	if !dirty {
 		return nil
 	}
 
@@ -544,12 +587,17 @@ func rebuildRunningBalancesInTx(ctx context.Context, tx *sql.Tx, accountRef stri
 		return fmt.Errorf("rebuild running balances: %w", err)
 	}
 
-	_, err = tx.ExecContext(ctx, `
-		INSERT INTO balance_state (ref, account_ref, dirty)
-		VALUES (?, ?, 0)
-		ON CONFLICT (account_ref) DO UPDATE SET dirty = 0`, uuid.New(), accountRef)
-	if err != nil {
-		return fmt.Errorf("clear balance state: %w", err)
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE accounts SET
+			balance_minor = COALESCE(
+				(SELECT SUM(p.base_amount_minor) FROM postings p WHERE p.account_ref = ?), 0),
+			balance_through_on = (
+				SELECT MAX(e.occurred_on)
+				FROM postings p JOIN entries e ON e.ref = p.entry_ref
+				WHERE p.account_ref = ?),
+			balance_dirty = 0
+		WHERE ref = ?`, accountRef, accountRef, accountRef); err != nil {
+		return fmt.Errorf("store account balance: %w", err)
 	}
 
 	return nil

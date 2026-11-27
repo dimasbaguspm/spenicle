@@ -369,3 +369,77 @@ func accountKey(accounts map[string]entity.Account, ref string) string {
 
 	return ref
 }
+
+func TestBalancesByAccountKeepsTheStoredColumnTrue(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		corrupt bool
+	}{
+		{name: "a written balance answers from the account row"},
+		{name: "a dirty account is rebuilt before it answers", corrupt: true},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			store, asset, expense := postedPair(t, testCase.corrupt)
+
+			balances, err := store.BalancesByAccount(t.Context())
+			if err != nil {
+				t.Fatalf("balances: %v", err)
+			}
+
+			assertBalance(t, balances, asset, -350)
+			assertBalance(t, balances, expense, 350)
+			assertClean(t, store, asset)
+		})
+	}
+}
+
+func postedPair(t *testing.T, corrupt bool) (*sqlite.Store, entity.Account, entity.Account) {
+	t.Helper()
+
+	store := newStore(t)
+	asset, expense := baseline(t, store)
+
+	first := time.Date(2026, time.February, 1, 0, 0, 0, 0, time.UTC)
+
+	postCashEntry(t, store, first, 100, asset, expense)
+	postCashEntry(t, store, first.AddDate(0, 0, 1), 250, asset, expense)
+
+	if !corrupt {
+		return store, asset, expense
+	}
+
+	if _, err := store.DB().ExecContext(t.Context(),
+		`UPDATE accounts SET balance_minor = 999, balance_dirty = 1 WHERE ref = ?`,
+		asset.Ref); err != nil {
+		t.Fatalf("corrupt balance: %v", err)
+	}
+
+	return store, asset, expense
+}
+
+func assertBalance(t *testing.T, balances map[string]int64, account entity.Account, want int64) {
+	t.Helper()
+
+	if got := balances[account.Ref]; got != want {
+		t.Fatalf("%s balance = %d, want %d", account.Name, got, want)
+	}
+}
+
+func assertClean(t *testing.T, store *sqlite.Store, account entity.Account) {
+	t.Helper()
+
+	var dirty bool
+
+	if err := store.DB().QueryRowContext(t.Context(),
+		`SELECT balance_dirty FROM accounts WHERE ref = ?`, account.Ref).Scan(&dirty); err != nil {
+		t.Fatalf("read dirty flag: %v", err)
+	}
+
+	if dirty {
+		t.Fatalf("%s stayed dirty after it answered", account.Name)
+	}
+}

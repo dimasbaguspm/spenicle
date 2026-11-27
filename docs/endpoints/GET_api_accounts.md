@@ -12,7 +12,7 @@ Account picker on the entry form, balances panel, the ledger screen's account fi
 
 ## Downstream
 
-`Repository.Sqlite.ListAccounts` + `Repository.Sqlite.BalancesByAccount` (sum of `postings` per account, reversed entries excluded). The handler joins them; no stored balance column exists.
+`Repository.Sqlite.ListAccounts` + `Repository.Sqlite.BalancesByAccount`, which reads `accounts.balance_minor` — a derived column the posting write keeps in step in the same transaction, and rebuilds from `postings` for any account whose `balance_dirty` flag is set. The handler joins the two; the column is a cache of the ledger, never a second source of truth.
 
 ## Path / query params
 

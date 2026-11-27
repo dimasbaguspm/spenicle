@@ -212,8 +212,8 @@ func TestRunningBalanceCheckpointShiftsBackdatedEntry(t *testing.T) {
 
 	var dirty bool
 	if err := store.DB().QueryRowContext(t.Context(),
-		`SELECT dirty FROM balance_state WHERE account_ref = ?`, asset.Ref).Scan(&dirty); err != nil {
-		t.Fatalf("balance state: %v", err)
+		`SELECT balance_dirty FROM accounts WHERE ref = ?`, asset.Ref).Scan(&dirty); err != nil {
+		t.Fatalf("account balance state: %v", err)
 	}
 	if dirty {
 		t.Fatal("the checkpoint was left dirty after a normal insert")
@@ -266,7 +266,7 @@ func TestRunningBalanceRebuildGivesEachCheckpointARef(t *testing.T) {
 	postCashEntry(t, store, first.AddDate(0, 0, 1), 50, asset, expense)
 
 	if _, err := store.DB().ExecContext(t.Context(),
-		`UPDATE balance_state SET dirty = 1 WHERE account_ref = ?`, asset.Ref); err != nil {
+		`UPDATE accounts SET balance_dirty = 1 WHERE ref = ?`, asset.Ref); err != nil {
 		t.Fatalf("mark dirty: %v", err)
 	}
 

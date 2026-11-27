@@ -171,6 +171,18 @@ Ranked by queries saved per request:
 
 ## Status
 
+- **§1 names: shipped**, except folding `Captures.Match` into `Approve`. `void` is a
+  `reverse`, the tables are `entries` and `postings`, `captures.batch_label` is
+  `group_label`, `?voided=` is `?reversed=` and the body action is `{"reverse": true}`. Two
+  deliberate exceptions: `audit_log.entity_kind` still says `ledger_entry` (it names an
+  entity type, not a table) and the metric prefix `spenicle.entries|postings` lost its
+  `ledger` word to match AGENTS.md, which had drifted.
+- **§2 balances: shipped, with one deviation.** `accounts` carries `balance_minor`,
+  `balance_dirty` and `balance_through_on`; `balance_state` is gone. The through marker is
+  the day, not the ref the plan proposed: comparing a ref with a candidate entry needs a
+  join, and a sum is order-independent, so a backdated entry only has to leave the date
+  behind instead of forcing a rebuild. `BalancesByAccount` rebuilds exactly the accounts the
+  flag names and then reads a column.
 - **§3 limits from the environment: shipped.** Eight `APP_*` overrides, each defaulting to the
   old constant; `maxFormBytes` is gone and the import cap is the documented one.
 - **§4 every currency: shipped.** The table is the ISO 4217 set (170+ codes, exponents 0/2/3/4)

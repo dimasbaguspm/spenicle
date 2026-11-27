@@ -67,7 +67,7 @@ pure data adapter, the HTTP layer owns presentation.
 `running_balance_minor` is the balance of the account the request named, in base-currency
 minor units, **after** that entry: the `balance_minor` of the derived `entry_balances`
 row kept for that `(account, entry)` pair, not a `SUM` computed per request. When the
-account's `balance_state.dirty` is set, the table is rebuilt from the whole history before
+account's `balance_dirty` flag is set, that account is rebuilt from its whole history before
 the page is answered, so the numbers are the ledger's and not the page's: page two already
 includes everything above it. Send `with_balance=true` together with exactly one
 `account_ref` and every row carries it, so a register screen renders newest-first pages
@@ -88,8 +88,8 @@ validation runs.
 Keyset paging by entry ref only. The `running_balance_minor` column needs exactly one
 `account_ref`: with none, or with several, there is no single balance to walk. It is
 base-currency only, like every other amount on the wire, and it is a lookup on the derived
-`entry_balances` table — one query per page, never one per row — so a dirty
-`balance_state` pays for a rebuild of that account's whole history once, on the next read,
+`entry_balances` table — one query per page, never one per row — so a dirty account pays for a
+rebuild of its whole history once, on the next read,
 instead of every request summing the history. Filters deliberately absent: an amount in
 the entry's own currency (the range is base-currency), a sort order (always newest first),
 and a posting-level match —
@@ -117,7 +117,7 @@ sequenceDiagram
     L->>DB: SELECT postings WHERE entry_id IN (page ids) — one query for the page
     opt with_balance and exactly one account_ref
         L->>DB: SELECT entry_balances WHERE account_id = ? AND entry_id IN (page ids)
-        DB-->>L: one balance per entry (a dirty balance_state rebuilds from the whole account history first)
+        DB-->>L: one balance per entry (a dirty account rebuilds from its whole history first)
     end
     L-->>H: entries
     H->>H: trim to limit, meta{limit, has_more, next_cursor}

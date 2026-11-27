@@ -414,8 +414,8 @@ name, `contains`/`prefix` rule on the note, then `none` — and inside a tier it
 
 `internal/repository/sqlite/migrations/0001_init.sql` (`//go:embed migrations/*.sql` in
 `migrate.go`) is the canonical DDL. It is embedded and applied verbatim on boot. There are
-25 domain tables plus `schema_migrations`, managed in Go; `schema_version` is 1. The tables
-and columns highlighted above are the API-facing subset: `balance_state`, `entry_balances`,
+24 domain tables plus `schema_migrations`, managed in Go; `schema_version` is 1. The tables
+and columns highlighted above are the API-facing subset: `entry_balances`,
 `capture_payloads`, `artifacts`, `import_batches`, `import_rows`, `import_events`,
 `import_uploads`, `import_upload_chunks`, `exports`, `export_events`, `custom_queries` and
 `schema_migrations` are not expanded here. When prose and SQL disagree, the SQL wins.

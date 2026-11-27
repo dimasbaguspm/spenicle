@@ -322,10 +322,11 @@ func (s *Store) BalancesByAccount(ctx context.Context) (map[string]int64, error)
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.BalancesByAccount")
 	defer endSpan()
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT p.account_ref, SUM(p.base_amount_minor)
-		FROM postings p
-		GROUP BY p.account_ref`)
+	if err := s.rebuildDirtyBalances(ctx); err != nil {
+		return nil, err
+	}
+
+	rows, err := s.db.QueryContext(ctx, `SELECT ref, balance_minor FROM accounts`)
 	if err != nil {
 		return nil, fmt.Errorf("select balances: %w", err)
 	}

@@ -143,13 +143,12 @@ Canonical DDL with every column lives in [`v2-api.md`](./v2-api.md). Summary:
 | `settings` | sealed app settings and key/value worker stamps |
 | `api_tokens` | hashed tokens with scopes, for agents and scripts |
 | `fx_rates` | ECB EUR pairs per business day |
-| `accounts` | assets, liabilities, and — as `expense`/`income` rows — categories |
+| `accounts` | assets, liabilities, and — as `expense`/`income` rows — categories; carries its derived `balance_minor` |
 | `payees` | counterparties, with capture defaults |
 | `categorization_rules` | deterministic payee → category rules |
 | `recurring_rules` | scheduled expectations; no detection path is shipped |
 | `entries` | what a human says happened |
 | `postings` | where money moved, zero-sum per entry |
-| `balance_state` | dirty flag for balance rebuilds |
 | `entry_balances` | derived per-account checkpoints |
 | `captures` | everything unconfirmed, the single review queue |
 | `capture_payloads` | sealed raw text and draft JSON, one per capture |
@@ -175,9 +174,16 @@ embedded in the binary and validated at the API boundary.
 
 Running balances are checkpoints in `entry_balances`, one per account and entry, with
 `occurred_on` copied from the entry so an ordered index can find the prior checkpoint and
-shift later ones inside the entry transaction. `balance_state.dirty` forces a rebuild after
-a backdated reversal. Listing an account reads one checkpoint per returned entry
-instead of recomputing a window over every posting.
+shift later ones inside the entry transaction. Listing an account reads one checkpoint per
+returned entry instead of recomputing a window over every posting.
+
+Each account carries its own balance: `balance_minor` is derived, `balance_dirty` marks it
+untrustworthy, and `balance_through_on` is the newest day folded in. A posting write either
+adds its base amount to the account row or, when the account is dirty, rebuilds the row from
+`postings` in the same transaction; `GET /api/accounts` reads that column and rebuilds only
+the accounts the flag points at, instead of summing every posting per request. A backdated
+entry needs no rebuild for the total — a sum is order-independent — only the through date
+stays behind.
 
 ## Invariants
 
