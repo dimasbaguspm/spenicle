@@ -27,7 +27,7 @@ The web shell's "upload a statement" action, a script, or an agent dragging a ba
 
 ## Downstream
 
-`Module.Imports.Create` hashes the bytes (sha256), stores them with `Repository.Filestore.Put` (hash addressed, no `artifacts` row — the batch keeps `file_hash`), parses the CSV, resolves the batch account and the batch currency, runs the clash probes once per row, then writes `import_batches` plus every `import_rows` in one transaction.
+`Module.Imports.Create` hashes the bytes (sha256), stores them with `Repository.Filestore.Put` (hash addressed, no `artifacts` row — the batch keeps `file_hash`), parses the CSV, resolves the batch account and the batch currency, runs the clash probes once for the whole draft — one lookup for the row keys plus one window query over the batch account, matched in memory — then writes `import_batches` plus every `import_rows` in one transaction.
 
 Clash detection, deterministic and computed at upload:
 

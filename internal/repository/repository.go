@@ -19,7 +19,12 @@ type Ledger interface {
 	ListEntries(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
 	ReverseEntry(ctx context.Context, ref, reason string, at time.Time) (entity.Entry, error)
 	UpdateEntryPayee(ctx context.Context, ref, payeeRef string) (entity.Entry, bool, error)
-	MatchingEntryRef(ctx context.Context, probe entity.EntryProbe) (string, bool, error)
+	EntryRefsByIdempotencyKeys(ctx context.Context, keys []string) (map[string]string, error)
+	ClashCandidates(
+		ctx context.Context,
+		accountRef string,
+		from, to time.Time,
+	) ([]entity.ClashCandidate, error)
 	RunningBalances(ctx context.Context, accountRef string, entryRefs []string) (map[string]int64, error)
 	ReplaceEntry(
 		ctx context.Context,

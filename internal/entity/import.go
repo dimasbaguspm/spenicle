@@ -100,10 +100,9 @@ type ImportEventFilter struct {
 	Limit    int
 }
 
-type EntryProbe struct {
+type ClashCandidate struct {
+	Ref         string
 	OccurredOn  time.Time
 	Currency    string
 	AmountMinor int64
-	AccountRef  string
-	DayWindow   int
 }

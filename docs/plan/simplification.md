@@ -185,6 +185,13 @@ Ranked by queries saved per request:
   join, and a sum is order-independent, so a backdated entry only has to leave the date
   behind instead of forcing a rebuild. `BalancesByAccount` rebuilds exactly the accounts the
   flag names and then reads a column.
+- **Fewer round-trips, first two: shipped.** Clash detection is two queries per
+  draft instead of three per row (`EntryRefsByIdempotencyKeys` for the row keys,
+  `ClashCandidates` for the account's entries inside the draft window, matched in memory
+  with the same duplicate-then-possible order), and the commit's resume filter is one
+  lookup for the accepted rows instead of one probe per row. Still open: preloading the
+  accounts, payees and rates once per commit chunk, the `displayNames` scans and
+  `GET /api/meta`, which belong with the caching pass.
 - **§3 limits from the environment: shipped.** Eight `APP_*` overrides, each defaulting to the
   old constant; `maxFormBytes` is gone and the import cap is the documented one.
 - **§4 every currency: shipped.** The table is the ISO 4217 set (170+ codes, exponents 0/2/3/4)

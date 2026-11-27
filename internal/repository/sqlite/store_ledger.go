@@ -874,43 +874,100 @@ func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, e
 	return entry, nil
 }
 
-func (s *Store) MatchingEntryRef(
+func (s *Store) EntryRefsByIdempotencyKeys(
 	ctx context.Context,
-	probe entity.EntryProbe,
-) (string, bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.MatchingEntryRef")
+	keys []string,
+) (map[string]string, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EntryRefsByIdempotencyKeys")
 	defer endSpan()
 
-	from := probe.OccurredOn.AddDate(0, 0, -probe.DayWindow)
-	to := probe.OccurredOn.AddDate(0, 0, probe.DayWindow)
+	out := make(map[string]string, len(keys))
 
-	var ref string
+	if len(keys) == 0 {
+		return out, nil
+	}
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT e.ref FROM entries e
+	args := make([]any, 0, len(keys))
+	for _, key := range keys {
+		args = append(args, key)
+	}
+
+	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT idempotency_key, ref FROM entries
+		WHERE idempotency_key IN (`+placeholders(len(keys))+`)`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select idempotent entries: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var key, ref string
+
+		if scanErr := rows.Scan(&key, &ref); scanErr != nil {
+			return nil, fmt.Errorf("scan idempotent entry: %w", scanErr)
+		}
+
+		out[key] = ref
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate idempotent entries: %w", err)
+	}
+
+	return out, nil
+}
+
+func (s *Store) ClashCandidates(
+	ctx context.Context,
+	accountRef string,
+	from, to time.Time,
+) ([]entity.ClashCandidate, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ClashCandidates")
+	defer endSpan()
+
+	if accountRef == "" {
+		return nil, nil
+	}
+
+	refs, err := scanRows(ctx, s.db, "clash candidates", `
+		SELECT e.ref, e.occurred_on, e.currency, ABS(p.amount_minor)
+		FROM entries e
 		JOIN postings p ON p.entry_ref = e.ref
 		WHERE p.account_ref = ?
-		  AND e.currency = ?
 		  AND e.reversed_at IS NULL
-		  AND ABS(p.amount_minor) = ?
 		  AND e.occurred_on >= ? AND e.occurred_on <= ?
-		ORDER BY e.occurred_on ASC, e.id ASC
-		LIMIT 1`,
-		probe.AccountRef,
-		probe.Currency,
-		probe.AmountMinor,
-		from.Format(constant.DateLayout),
-		to.Format(constant.DateLayout),
-	).Scan(&ref)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", false, nil
-	}
-
+		ORDER BY e.occurred_on ASC, e.id ASC`,
+		[]any{accountRef, from.Format(constant.DateLayout), to.Format(constant.DateLayout)},
+		scanClashCandidate)
 	if err != nil {
-		return "", false, fmt.Errorf("select matching entry: %w", err)
+		return nil, err
 	}
 
-	return ref, true, nil
+	return refs, nil
+}
+
+func scanClashCandidate(
+	scanner interface{ Scan(dest ...any) error },
+) (entity.ClashCandidate, error) {
+	var (
+		candidate entity.ClashCandidate
+		day       string
+	)
+
+	if err := scanner.Scan(&candidate.Ref, &day, &candidate.Currency, &candidate.AmountMinor); err != nil {
+		return entity.ClashCandidate{}, fmt.Errorf("scan clash candidate: %w", err)
+	}
+
+	parsed, err := time.Parse(constant.DateLayout, day)
+	if err != nil {
+		return entity.ClashCandidate{}, fmt.Errorf("clash candidate day %q: %w", day, err)
+	}
+
+	candidate.OccurredOn = parsed
+
+	return candidate, nil
 }
 
 func insertEntryRow(

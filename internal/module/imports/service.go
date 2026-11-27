@@ -31,6 +31,7 @@ const (
 	maxDescription   = 500
 	draftTTL         = 24 * time.Hour
 	possibleWindow   = 3
+	hoursPerDay      = 24
 	clientIDPrefix   = "import:"
 	statementType    = "text/csv"
 )
@@ -467,20 +468,27 @@ func (s *Service) pendingRows(
 	batch entity.ImportBatch,
 	rows []entity.ImportRow,
 ) ([]entity.ImportRow, error) {
-	pending := make([]entity.ImportRow, 0, len(rows))
+	keys := make([]string, 0, len(rows))
+
+	for _, row := range rows {
+		if row.Status == constant.ImportRowStatusAccepted {
+			keys = append(keys, rowIdempotencyKey(batch.FileHash, row.RowIndex))
+		}
+	}
+
+	posted, err := s.entries.EntryRefsByIdempotencyKeys(ctx, keys)
+	if err != nil {
+		return nil, fmt.Errorf("resume probe: %w", err)
+	}
+
+	pending := make([]entity.ImportRow, 0, len(keys))
 
 	for _, row := range rows {
 		if row.Status != constant.ImportRowStatusAccepted {
 			continue
 		}
 
-		_, posted, err := s.entries.EntryByIdempotencyKey(ctx,
-			rowIdempotencyKey(batch.FileHash, row.RowIndex))
-		if err != nil {
-			return nil, fmt.Errorf("resume probe: %w", err)
-		}
-
-		if posted {
+		if _, done := posted[rowIdempotencyKey(batch.FileHash, row.RowIndex)]; done {
 			continue
 		}
 
@@ -551,6 +559,43 @@ func (s *Service) postRow(
 	return nil
 }
 
+func buildRows(
+	parsed []statementRow,
+	account entity.Account,
+	currency string,
+	now time.Time,
+) []entity.ImportRow {
+	rows := make([]entity.ImportRow, 0, len(parsed))
+
+	for index, row := range parsed {
+		rowCurrency := currency
+		if row.Currency != "" {
+			rowCurrency = row.Currency
+		}
+
+		built := entity.ImportRow{
+			RowIndex:    index,
+			OccurredOn:  row.OccurredOn,
+			AmountMinor: row.AmountMinor,
+			Currency:    rowCurrency,
+			Description: row.Description,
+			AccountRef:  account.Ref,
+			Status:      constant.ImportRowStatusPending,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}
+
+		if !row.Valid {
+			built.Status = constant.ImportRowStatusSkipped
+			built.ClashKind = constant.ImportClashInvalidRow
+		}
+
+		rows = append(rows, built)
+	}
+
+	return rows
+}
+
 func (s *Service) draft(ctx context.Context, in CreateInput, now time.Time) (entity.ImportBatch, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Draft")
 	defer endSpan()
@@ -587,95 +632,135 @@ func (s *Service) draft(ctx context.Context, in CreateInput, now time.Time) (ent
 		CreatedAt:      now, ExpiresAt: now.Add(draftTTL),
 	}
 
-	for index, row := range parsed {
-		rowCurrency := currency
-		if row.Currency != "" {
-			rowCurrency = row.Currency
-		}
+	batch.Rows = buildRows(parsed, account, currency, now)
 
-		built := entity.ImportRow{
-			RowIndex:    index,
-			OccurredOn:  row.OccurredOn,
-			AmountMinor: row.AmountMinor,
-			Currency:    rowCurrency,
-			Description: row.Description,
-			AccountRef:  account.Ref,
-			Status:      constant.ImportRowStatusPending,
-			CreatedAt:   now,
-			UpdatedAt:   now,
-		}
-
-		if !row.Valid {
-			built.Status = constant.ImportRowStatusSkipped
-			built.ClashKind = constant.ImportClashInvalidRow
-
-			batch.Rows = append(batch.Rows, built)
-
-			continue
-		}
-
-		if err := s.detect(ctx, in.FileHash, rowCurrency, &built); err != nil {
-			return entity.ImportBatch{}, err
-		}
-
-		batch.Rows = append(batch.Rows, built)
+	rows, err := s.detect(ctx, in.FileHash, batch.Rows)
+	if err != nil {
+		return entity.ImportBatch{}, err
 	}
+
+	batch.Rows = rows
 
 	return batch, nil
 }
 
 func (s *Service) detect(
 	ctx context.Context,
-	fileHash, currency string,
-	row *entity.ImportRow,
-) error {
+	fileHash string,
+	rows []entity.ImportRow,
+) ([]entity.ImportRow, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Detect")
 	defer endSpan()
 
-	existing, found, err := s.entries.EntryByIdempotencyKey(ctx, rowIdempotencyKey(fileHash, row.RowIndex))
+	keys := make([]string, 0, len(rows))
+
+	for _, row := range rows {
+		if row.Status == constant.ImportRowStatusSkipped {
+			continue
+		}
+
+		keys = append(keys, rowIdempotencyKey(fileHash, row.RowIndex))
+	}
+
+	posted, err := s.entries.EntryRefsByIdempotencyKeys(ctx, keys)
 	if err != nil {
-		return fmt.Errorf("already imported probe: %w", err)
+		return nil, fmt.Errorf("already imported probe: %w", err)
 	}
 
-	if found {
-		row.Status = constant.ImportRowStatusSkipped
-		row.ClashKind = constant.ImportClashAlreadyImported
-		row.ClashEntryRef = existing.Ref
-
-		telemetry.RecordImportClash(ctx, constant.ImportClashAlreadyImported)
-
-		return nil
+	candidates, err := s.clashCandidates(ctx, rows)
+	if err != nil {
+		return nil, err
 	}
 
-	probe := entity.EntryProbe{
-		OccurredOn:  row.OccurredOn,
-		Currency:    currency,
-		AmountMinor: absolute(row.AmountMinor),
-		AccountRef:  row.AccountRef,
-	}
+	for index := range rows {
+		row := &rows[index]
 
-	for _, clash := range []string{constant.ImportClashDuplicate, constant.ImportClashPossible} {
-		if clash == constant.ImportClashPossible {
-			probe.DayWindow = possibleWindow
+		if row.Status == constant.ImportRowStatusSkipped {
+			continue
 		}
 
-		ref, hit, matchErr := s.entries.MatchingEntryRef(ctx, probe)
-		if matchErr != nil {
-			return fmt.Errorf("clash probe: %w", matchErr)
+		if ref, found := posted[rowIdempotencyKey(fileHash, row.RowIndex)]; found {
+			markClash(ctx, row, constant.ImportClashAlreadyImported, ref)
+
+			continue
 		}
 
-		if hit {
-			row.Status = constant.ImportRowStatusSkipped
-			row.ClashKind = clash
-			row.ClashEntryRef = ref
-
-			telemetry.RecordImportClash(ctx, clash)
-
-			return nil
+		if ref, kind, hit := matchClash(candidates, *row); hit {
+			markClash(ctx, row, kind, ref)
 		}
 	}
 
-	return nil
+	return rows, nil
+}
+
+func (s *Service) clashCandidates(
+	ctx context.Context,
+	rows []entity.ImportRow,
+) ([]entity.ClashCandidate, error) {
+	if len(rows) == 0 {
+		return nil, nil
+	}
+
+	earliest, latest := rows[0].OccurredOn, rows[0].OccurredOn
+
+	for _, row := range rows[1:] {
+		if row.OccurredOn.Before(earliest) {
+			earliest = row.OccurredOn
+		}
+
+		if row.OccurredOn.After(latest) {
+			latest = row.OccurredOn
+		}
+	}
+
+	return s.entries.ClashCandidates(ctx, rows[0].AccountRef,
+		earliest.AddDate(0, 0, -possibleWindow), latest.AddDate(0, 0, possibleWindow))
+}
+
+func matchClash(
+	candidates []entity.ClashCandidate,
+	row entity.ImportRow,
+) (string, string, bool) {
+	amount := absolute(row.AmountMinor)
+
+	var possible string
+
+	for _, candidate := range candidates {
+		if candidate.Currency != row.Currency || candidate.AmountMinor != amount {
+			continue
+		}
+
+		if candidate.OccurredOn.Equal(row.OccurredOn) {
+			return candidate.Ref, constant.ImportClashDuplicate, true
+		}
+
+		if possible == "" && daysApart(candidate.OccurredOn, row.OccurredOn) <= possibleWindow {
+			possible = candidate.Ref
+		}
+	}
+
+	if possible != "" {
+		return possible, constant.ImportClashPossible, true
+	}
+
+	return "", "", false
+}
+
+func daysApart(left, right time.Time) int {
+	days := int(right.Sub(left).Hours() / hoursPerDay)
+	if days < 0 {
+		return -days
+	}
+
+	return days
+}
+
+func markClash(ctx context.Context, row *entity.ImportRow, kind, ref string) {
+	row.Status = constant.ImportRowStatusSkipped
+	row.ClashKind = kind
+	row.ClashEntryRef = ref
+
+	telemetry.RecordImportClash(ctx, kind)
 }
 
 func (s *Service) defaultAccount(ctx context.Context, ref string) (entity.Account, error) {
