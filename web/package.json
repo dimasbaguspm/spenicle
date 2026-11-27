@@ -13,7 +13,8 @@
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "test": "vitest run",
-    "api:types": "openapi-typescript ../openapi.json -o src/api/schema.d.ts"
+    "api:types": "openapi-typescript ../openapi.json -o src/types/generated/openapi.ts",
+    "api:types:check": "openapi-typescript ../openapi.json -o /tmp/spenicle-openapi.ts && diff -q /tmp/spenicle-openapi.ts src/types/generated/openapi.ts"
   },
   "dependencies": {
     "@ark-ui/react": "^5.40.1",

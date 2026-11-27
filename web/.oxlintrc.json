@@ -6,10 +6,11 @@
     "oxc",
     "react",
     "react-perf",
-    "import",
     "jsx-a11y",
+    "import",
     "promise",
-    "vitest"
+    "vitest",
+    "node"
   ],
   "categories": {
     "correctness": "error",
@@ -30,16 +31,30 @@
     "no-shadow": "error",
     "no-throw-literal": "error",
     "no-unneeded-ternary": "error",
+    "no-useless-rename": "error",
     "object-shorthand": "error",
     "prefer-template": "error",
     "radix": "error",
     "react/jsx-key": "error",
     "react/rules-of-hooks": "error",
+    "react/jsx-boolean-value": ["error", "never"],
+    "react/self-closing-comp": "error",
+    "react/jsx-fragments": ["error", "syntax"],
     "react/no-array-index-key": "error",
     "react/no-danger": "error",
+    "react/button-has-type": "error",
+    "react/no-unstable-nested-components": "error",
+    "react/no-unknown-property": "error",
     "typescript/consistent-type-definitions": ["error", "type"],
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports"
+      }
+    ],
     "typescript/no-explicit-any": "error",
     "typescript/no-non-null-assertion": "error",
+    "typescript/no-empty-object-type": "error",
     "unicorn/filename-case": [
       "error",
       {
@@ -47,8 +62,24 @@
       }
     ],
     "unicorn/prefer-number-properties": "error",
+    "unicorn/prefer-at": "error",
+    "unicorn/prefer-set-has": "error",
+    "unicorn/prefer-structured-clone": "error",
+    "unicorn/require-number-to-fixed-digits-argument": "error",
+    "unicorn/no-array-callback-reference": "error",
+    "unicorn/no-useless-undefined": "error",
     "import/no-cycle": "error",
+    "import/no-duplicates": "error",
+    "import/first": "error",
+    "import/no-self-import": "error",
+    "promise/no-return-in-finally": "error",
+    "jsx-a11y/alt-text": "error",
+    "jsx-a11y/anchor-is-valid": "error",
+    "jsx-a11y/click-events-have-key-events": "error",
+    "jsx-a11y/label-has-associated-control": "error",
     "jsx-a11y/no-autofocus": "error",
+    "jsx-a11y/no-static-element-interactions": "error",
+    "jsx-a11y/role-has-required-aria-props": "error",
     "react/react-in-jsx-scope": "off",
     "import/no-unassigned-import": [
       "error",
@@ -59,9 +90,18 @@
     "react-perf/jsx-no-new-function-as-prop": "off",
     "react-perf/jsx-no-new-object-as-prop": "off"
   },
+  "overrides": [
+    {
+      "files": ["vite.config.ts", "src/test/**/*.ts", "**/*.test.tsx"],
+      "rules": {
+        "import/no-default-export": "off",
+        "no-console": "off"
+      }
+    }
+  ],
   "env": {
     "browser": true,
     "es2024": true
   },
-  "ignorePatterns": ["dist/**", "dev-dist/**", "src/api/schema.d.ts", "node_modules/**"]
+  "ignorePatterns": ["dist/**", "dev-dist/**", "src/types/generated/**", "node_modules/**"]
 }

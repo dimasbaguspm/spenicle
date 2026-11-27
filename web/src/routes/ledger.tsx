@@ -143,23 +143,28 @@ export function LedgerPage() {
 
   return (
     <div className="space-y-8">
-      <form className="space-y-3 rounded border border-neutral-800 p-4" onSubmit={submit}>
-        <h2 className="text-sm font-medium text-neutral-400">Quick capture</h2>
+      <form
+        className="space-y-3 rounded-lg border border-border bg-surface-raised p-5"
+        onSubmit={submit}
+      >
+        <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-brass-500">
+          Quick capture
+        </h2>
         <div className="flex gap-2">
           <input
             inputMode="decimal"
             placeholder={`amount (${baseCurrency})`}
-            className="w-32 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 outline-none focus:border-neutral-500"
+            className="w-32 rounded border border-border bg-surface px-3 py-2 text-text placeholder:text-ink-400 outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
             {...form.register('amount')}
           />
           <input
             placeholder="what was it"
-            className="flex-1 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 outline-none focus:border-neutral-500"
+            className="flex-1 rounded border border-border bg-surface px-3 py-2 text-text placeholder:text-ink-400 outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
             {...form.register('note')}
           />
           <input
             type="date"
-            className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 outline-none focus:border-neutral-500"
+            className="rounded border border-border bg-surface px-3 py-2 text-text outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
             {...form.register('occurredOn')}
           />
         </div>
@@ -198,31 +203,31 @@ export function LedgerPage() {
         <button
           type="submit"
           disabled={post.isPending}
-          className="rounded bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900 disabled:opacity-50"
+          className="rounded bg-primary px-4 py-2 text-sm font-medium text-porcelain-50 transition-colors hover:bg-primary-hover disabled:opacity-50"
         >
           {post.isPending ? 'Posting…' : 'Post entry'}
         </button>
         {form.formState.errors.root === undefined ? null : (
-          <p role="alert" className="text-sm text-red-400">
+          <p role="alert" className="text-sm text-danger">
             {form.formState.errors.root.message}
           </p>
         )}
         {post.error === null ? null : (
-          <p role="alert" className="text-sm text-red-400">
+          <p role="alert" className="text-sm text-danger">
             {post.error.message}
           </p>
         )}
       </form>
 
       <section className="space-y-1">
-        <h2 className="text-sm font-medium text-neutral-400">Register</h2>
-        {entries.isPending ? <p className="text-neutral-500">Loading…</p> : null}
+        <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-brass-500">Register</h2>
+        {entries.isPending ? <p className="text-text-muted">Loading…</p> : null}
         {entries.error === null ? null : (
-          <p role="alert" className="text-sm text-red-400">
+          <p role="alert" className="text-sm text-danger">
             {entries.error.message}
           </p>
         )}
-        <ul className="divide-y divide-neutral-900">
+        <ul className="divide-y divide-ink-800">
           {(entries.data?.entries ?? []).map((entry) => {
             const postings = entry.postings ?? []
             const shown =
@@ -233,13 +238,17 @@ export function LedgerPage() {
                 : entry.note
 
             return (
-              <li key={entry.ref} className="flex items-baseline gap-3 py-2 text-sm">
-                <span className="tabular-nums text-neutral-500">{entry.occurred_on}</span>
+              <li key={entry.ref} className="flex items-baseline gap-3 py-2.5 text-sm">
+                <span className="w-24 shrink-0 tabular-nums text-text-muted">
+                  {entry.occurred_on}
+                </span>
                 <span className="flex-1 truncate">{label}</span>
-                <span className="text-neutral-500">
+                <span className="text-ink-300">
                   {shown === undefined ? '' : (names.get(shown.account_ref ?? '') ?? '')}
                 </span>
-                <span className="tabular-nums">
+                <span
+                  className={`tabular-nums ${(shown?.amount_minor ?? '').startsWith('-') ? 'text-porcelain-200' : 'text-cherry-300'}`}
+                >
                   {shown === undefined
                     ? ''
                     : formatMoney(shown.amount_minor ?? '0', units, entry.currency ?? baseCurrency)}

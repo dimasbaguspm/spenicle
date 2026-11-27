@@ -1,8 +1,105 @@
 @import 'tailwindcss';
 
+/*
+ * The Spenicle palette: lacquer cherry on ink black, warmed by porcelain text and
+ * brass highlights. Every ramp is a real scale so a component can pick a shade for
+ * hover, focus or a border instead of inventing one; the semantic tokens at the end
+ * are what screens should use, so a re-theme touches this file and nothing else.
+ */
 @theme {
+  /* ink black — the paper. Warm-shifted neutral, never pure #000 */
+  --color-ink-100: #ecebe8;
+  --color-ink-200: #d6d4cf;
+  --color-ink-300: #b3b1ab;
+  --color-ink-400: #8b8983;
+  --color-ink-500: #64625c;
+  --color-ink-600: #47453f;
+  --color-ink-700: #33322e;
+  --color-ink-800: #21201d;
+  --color-ink-850: #191817;
+  --color-ink-900: #121110;
+  --color-ink-950: #0a0908;
+
+  /* porcelain cream — the ink. Slightly yellow, so it reads as paper not as #fff */
+  --color-porcelain-50: #fdfbf6;
+  --color-porcelain-100: #f8f3e8;
+  --color-porcelain-200: #efe6d4;
+  --color-porcelain-300: #ded0b6;
+  --color-porcelain-400: #c2ad8c;
+
+  /* lacquer cherry — the primary. Deep enough to sit on ink without glowing */
+  --color-cherry-200: #f3cdcb;
+  --color-cherry-300: #e5a19f;
+  --color-cherry-400: #d2706f;
+  --color-cherry-500: #b23a3f;
+  --color-cherry-600: #94292e;
+  --color-cherry-700: #751e23;
+  --color-cherry-800: #56171a;
+  --color-cherry-900: #3b0f12;
+
+  /* brass glow — the accent: focus rings, selected rows, the one gold line */
+  --color-brass-100: #fbf3dc;
+  --color-brass-200: #f4e4bd;
+  --color-brass-300: #e8ce93;
+  --color-brass-400: #d9b96b;
+  --color-brass-500: #c7a252;
+  --color-brass-600: #a8853b;
+  --color-brass-700: #7f6429;
+  --color-brass-800: #5a461c;
+
+  /* jade — success, and the colour of money that came in */
+  --color-jade-300: #8cc4ad;
+  --color-jade-400: #63a98b;
+  --color-jade-500: #3f8a6c;
+  --color-jade-600: #2f6e55;
+
+  /* amber — warning, an unresolved capture */
+  --color-amber-300: #edc481;
+  --color-amber-400: #e0a24a;
+  --color-amber-500: #c77c1e;
+  --color-amber-600: #a3631a;
+
+  /* verdigris — tertiary, the patina green of brass left alone */
+  --color-verdigris-300: #93c7c1;
+  --color-verdigris-400: #5fa8a0;
+  --color-verdigris-500: #3e8781;
+  --color-verdigris-600: #2e6a66;
+
+  /* lapis — info, a quiet blue that never fights the cherry */
+  --color-lapis-300: #a8bcd8;
+  --color-lapis-400: #7c95b8;
+  --color-lapis-500: #4a6fa5;
+  --color-lapis-600: #3a5784;
+
+  /* oxblood — danger, deliberately duller than the brand cherry */
+  --color-oxblood-300: #dda3a3;
+  --color-oxblood-400: #c25555;
+  --color-oxblood-500: #a33a3a;
+  --color-oxblood-600: #7f2a2a;
+
+  /* semantics: screens use these, not the ramps */
+  --color-surface: var(--color-ink-900);
+  --color-surface-raised: var(--color-ink-850);
+  --color-surface-sunken: var(--color-ink-950);
+  --color-border: var(--color-ink-700);
+  --color-border-strong: var(--color-ink-600);
+  --color-text: var(--color-porcelain-100);
+  --color-text-muted: var(--color-porcelain-400);
+  --color-primary: var(--color-cherry-500);
+  --color-primary-hover: var(--color-cherry-400);
+  --color-primary-soft: var(--color-cherry-800);
+  --color-accent: var(--color-brass-400);
+  --color-tertiary: var(--color-verdigris-500);
+  --color-success: var(--color-jade-500);
+  --color-warning: var(--color-amber-500);
+  --color-info: var(--color-lapis-500);
+  --color-danger: var(--color-oxblood-500);
+
+  /* type: a serif for the one place a ledger should feel expensive */
+  --font-display: ui-serif, 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
 }
 
 html {
@@ -11,13 +108,29 @@ html {
 
 body {
   margin: 0;
+  background-color: var(--color-surface);
+  color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   /* the register is a column of numbers: make tabular the default */
   font-variant-numeric: tabular-nums;
 }
 
+/* headings are the one serif in the product: restrained, wide-tracked, small caps feel */
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
 /* every amount on the wire is a string of minor units; never let a browser round one */
 input[inputmode='decimal'] {
   font-variant-numeric: tabular-nums;
+}
+
+/* a single brass hairline is the whole decoration budget */
+::selection {
+  background-color: var(--color-brass-700);
+  color: var(--color-porcelain-50);
 }

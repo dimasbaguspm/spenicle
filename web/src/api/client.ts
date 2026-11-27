@@ -1,6 +1,6 @@
 import createClient from 'openapi-fetch'
 
-import type { paths } from './schema'
+import type { paths } from '@/types/generated/openapi'
 
 import { clearToken, token } from './token'
 

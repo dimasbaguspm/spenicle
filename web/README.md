@@ -21,6 +21,17 @@ make web-types   # regenerate src/api/schema.d.ts from ../openapi.json
 | **tsgo** (`@typescript/native-preview`) | TypeScript's native compiler: the same `tsc` semantics, ~10x faster on this tree. It already rejected a `baseUrl` that `tsc` still tolerates, so the config is future-proof                                                     |
 | **mise**                                | `node` + `pnpm` are pinned in `mise.toml` next to `go`, so a clone is one `mise install`                                                                                                                                        |
 
+## The theme
+
+One file owns the look: `src/styles.css`. Four brand ramps — **ink black** (the paper),
+**porcelain cream** (the ink), **lacquer cherry** (primary), **brass glow** (accent) — plus
+**jade** success, **amber** warning, **oxblood** danger, **verdigris** tertiary and **lapis**
+info, each as a real scale so a hover or a border has a shade to reach for.
+
+Screens use the semantic tokens only (`bg-surface`, `text-text-muted`, `border-border`,
+`bg-primary`, `text-accent`, `text-success`…), so a re-theme is that file and nothing else.
+Headings are the one serif in the product; everything numeric is tabular.
+
 ## The three decisions this scaffold encodes
 
 **Client-side rendering, one origin.** There is no SSR: the API serves JSON and the browser

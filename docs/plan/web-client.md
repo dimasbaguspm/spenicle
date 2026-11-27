@@ -92,9 +92,19 @@ arrives: *someone else must see my write before I sync*.
 
 ## Toolchain
 
-pnpm (pinned in `packageManager` and in `mise.toml`), oxlint with warnings denied and a
-curated rule set, oxfmt, tsgo for `tsc` parity at native speed, vitest for tests. `make
-web-check` runs all four.
+pnpm (pinned in `packageManager` and in `mise.toml`, `.npmrc` committed, postinstall scripts
+granted one package at a time), oxfmt, tsgo for `tsc` parity at native speed, vitest, and
+oxlint with warnings denied: correctness/suspicious/perf as error categories, then ~45
+curated rules across react, typescript, unicorn, import, promise, jsx-a11y, vitest and node.
+`make web-check` runs all four, and `lefthook.yml` calls it on any `web/**` change in both
+pre-commit and pre-push.
+
+## Theme
+
+`web/src/styles.css` is the whole design system: ink black, porcelain cream, lacquer cherry,
+brass glow as brand ramps; jade, amber, oxblood, verdigris, lapis for success, warning,
+danger, tertiary and info; and semantic aliases (`surface`, `border`, `text`, `primary`,
+`accent`) that screens use instead of reaching into a ramp.
 
 ## Open
 

@@ -15,10 +15,13 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-dvh bg-neutral-950 text-neutral-100">
+    <div className="min-h-dvh bg-surface-sunken text-text">
       {signedIn && path !== '/' ? (
-        <header className="flex items-center gap-4 border-b border-neutral-800 px-4 py-3 text-sm">
-          <Link to="/ledger" className="font-semibold tracking-tight">
+        <header className="flex items-center gap-4 border-b border-border bg-surface px-4 py-3 text-sm">
+          <Link
+            to="/ledger"
+            className="font-display text-base font-semibold tracking-wide text-porcelain-50"
+          >
             Spenicle
           </Link>
           <Link to="/ledger" className="text-neutral-400 hover:text-neutral-100">
@@ -30,13 +33,13 @@ export function AppShell() {
           <button
             type="button"
             onClick={signOut}
-            className="ml-auto text-neutral-400 hover:text-neutral-100"
+            className="ml-auto text-text-muted transition-colors hover:text-primary"
           >
             Sign out
           </button>
         </header>
       ) : null}
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main className="mx-auto max-w-2xl px-4 py-8">
         <Outlet />
       </main>
     </div>

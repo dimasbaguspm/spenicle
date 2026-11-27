@@ -17,8 +17,8 @@ export default defineConfig({
         description: 'Log what you spent in two seconds; organize it later.',
         start_url: '/',
         display: 'standalone',
-        background_color: '#0b0b0c',
-        theme_color: '#0b0b0c',
+        background_color: '#0a0908',
+        theme_color: '#121110',
       },
       workbox: {
         // the shell is cached; /api is never cached, so no stale money

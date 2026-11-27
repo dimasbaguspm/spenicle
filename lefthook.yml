@@ -49,8 +49,6 @@ pre-push:
       glob: "**/*.go"
       run: make uat
 
-    # The SPA has its own gate: install from the frozen lockfile, build, then
-    # tsgo + oxlint + oxfmt --check + vitest. Only when web/ is part of the change.
     - name: web
       glob: "web/**"
       run: make web web-check
