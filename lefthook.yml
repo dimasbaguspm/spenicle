@@ -30,6 +30,12 @@ pre-commit:
       glob: "**/*.go"
       run: make uat
 
+    # The SPA has its own gate: install from the frozen lockfile, build, then
+    # tsgo + oxlint + oxfmt --check + vitest. Only when web/ is part of the change.
+    - name: web
+      glob: "web/**"
+      run: make web web-check
+
 # Pushing is the last cheap place to catch a broken tree; skip it with `git push
 # --no-verify` when you have already run the pre-commit hook.
 pre-push:
@@ -42,3 +48,9 @@ pre-push:
     - name: uat
       glob: "**/*.go"
       run: make uat
+
+    # The SPA has its own gate: install from the frozen lockfile, build, then
+    # tsgo + oxlint + oxfmt --check + vitest. Only when web/ is part of the change.
+    - name: web
+      glob: "web/**"
+      run: make web web-check
