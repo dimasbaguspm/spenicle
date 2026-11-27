@@ -11,7 +11,7 @@ BIN     := bin/spenicle
 LINTDIR := tools/lint
 WEB     := web
 
-.PHONY: help hooks build run test uat uat-snapshots cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt openapi web web-dev web-test web-check web-types
+.PHONY: help hooks build build-web run test uat uat-snapshots cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt openapi web web-dev web-test web-check web-types
 
 help: ## show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -19,8 +19,11 @@ help: ## show targets
 hooks: ## install the git hooks (lefthook: build, lint, test, UAT before commit)
 	lefthook install
 
-build: ## compile the single binary
+build: ## compile the single binary (no SPA embedded)
 	$(GO) build -o $(BIN) .
+
+build-web: web ## compile with the SPA embedded: the `latest` image's binary
+	$(GO) build -tags web -o $(BIN) .
 
 run: ## run the API and the worker in one process against ./data
 	$(GO) run . all

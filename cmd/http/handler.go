@@ -30,6 +30,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 	gmailmail "github.com/dimasbaguspm/spenicle/internal/repository/mailbox/gmail"
 	"github.com/dimasbaguspm/spenicle/internal/repository/oauth/google"
+	webui "github.com/dimasbaguspm/spenicle/web"
 )
 
 type server struct {
@@ -37,6 +38,7 @@ type server struct {
 	settings settings.Contract
 	tokens   tokens.Contract
 	logger   *logging.Logger
+	web      *webAssets
 }
 
 func Handler(ctx context.Context, process *config.Process) (http.Handler, error) {
@@ -58,6 +60,10 @@ func New(deps handlers.Deps) http.Handler {
 		settings: deps.Settings,
 		tokens:   deps.Tokens,
 		logger:   deps.Logger,
+	}
+
+	if files, ok := webui.Assets(); ok {
+		instance.web = newWebAssets(files)
 	}
 
 	groups := instance.routes()
@@ -263,6 +269,12 @@ func (s *server) authenticate(groups routeGroups) http.Handler {
 			ctx = access.With(ctx, access.From{Root: true})
 			groups.public.mux.ServeHTTP(w, r.WithContext(ctx))
 
+			return
+		}
+
+		// the SPA is public: its shell has to load before anyone can sign in, and it answers
+		// only what the API did not claim above
+		if s.web.try(w, r) {
 			return
 		}
 

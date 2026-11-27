@@ -10,3 +10,6 @@ coverage.out
 *.db-wal
 .gitignore
 Makefile
+web/node_modules
+web/dist
+web/dev-dist

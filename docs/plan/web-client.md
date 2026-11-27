@@ -182,6 +182,18 @@ Effect stays where it was: a Schema parses what a person typed, at the form reso
 path is a promise + TanStack on purpose; an Effect runtime there would add a bridge without
 adding a capability.
 
+## How it ships
+
+`make web` writes `web/dist`; `go build -tags web` embeds it (`web/assets_web.go`) and the `http`
+process serves it: the file when the path names one, `index.html` otherwise, `/api/*` and
+`/healthz` untouched, `/assets/*` immutable for a year and the shell `no-cache`. Without the tag
+(`web/assets_off.go`) nothing is embedded and `GET /` stays a JSON `404`.
+
+There is no environment variable for this, by design. The Dockerfile carries four targets —
+`latest` (embedded), `server` (headless), `web` (the SPA on nginx, for split deploys) and `cli` —
+and its `APP_WEB` build arg exists only to refuse `off` on the full image. CI compiles
+`-tags web` on every push so a broken embed is not a release-day surprise.
+
 ## Theme
 
 `web/src/styles.css` is the whole design system: ink black, porcelain cream, lacquer cherry,

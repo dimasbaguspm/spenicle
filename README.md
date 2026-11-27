@@ -51,6 +51,24 @@ APP_SECRET=… <image> worker`.
 Releases are container images only — there are no binary downloads. Pin a specific
 release by tag (`:v0.2.0`) or by digest (`@sha256:…`) from its release notes.
 
+### The four images
+
+The full image embeds the built SPA and serves it from the API's own port, so one container is
+the whole product. Three more targets come from the same Dockerfile for the deployments that
+want a piece instead:
+
+| tag | what runs | when |
+| --- | --- | --- |
+| `latest`, `v0.2.0`, `sha-…` | `http` + `worker`, the SPA embedded | the default: one URL for API and UI |
+| `server` | `http` + `worker`, no SPA bytes at all | you serve the UI yourself. `GET /` is a JSON `404` |
+| `web` | nginx serving the SPA on `:8080` (no API proxy) | split deploy: put your own reverse proxy in front of `web` and `server` |
+| `cli` | the binary, no supervisor | `docker run --rm --entrypoint /spenicle … http` in a job |
+
+Whether the SPA is embedded is a **compile-time** decision (`-tags web`), not a setting:
+`APP_WEB=off` exists only as a Dockerfile/CI build switch, and it refuses to build the full
+image — the headless binary is the `server` target. There is no environment variable that can
+make a `server` image serve a UI it does not contain.
+
 With compose:
 
 ```yaml

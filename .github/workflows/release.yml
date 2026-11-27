@@ -63,7 +63,7 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Publish image
+      - name: Publish the full image (API, worker and the embedded SPA)
         id: image
         uses: docker/build-push-action@v7
         with:
@@ -72,6 +72,7 @@ jobs:
           # The image is the whole distribution, so build the two architectures
           # a self-hoster actually runs: a server and a Raspberry Pi.
           platforms: linux/amd64,linux/arm64
+          target: latest
           build-args: |
             VERSION=${{ steps.v.outputs.full }}
           tags: |
@@ -82,6 +83,24 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ steps.v.outputs.full }}
             org.opencontainers.image.revision=${{ github.sha }}
+
+      # The other three targets come from the same Dockerfile: `server` is the binary without
+      # the SPA bytes (the headless deploy), `web` is the SPA alone on nginx, `cli` is the
+      # binary with no supervisor. The embed switch is a build target, never an env var.
+      - name: Publish the headless, web and CLI images
+        run: |
+          set -euo pipefail
+
+          for target in server web cli; do
+            docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              --push \
+              --target "$target" \
+              --build-arg "VERSION=${{ steps.v.outputs.full }}" \
+              --tag "ghcr.io/${{ github.repository }}:${target}" \
+              --tag "ghcr.io/${{ github.repository }}:sha-${{ steps.v.outputs.sha7 }}-${target}" \
+              .
+          done
 
       - name: Collect the changes
         env:

@@ -30,6 +30,11 @@ jobs:
       - name: Build
         run: go build ./...
 
+      # The full image compiles with `-tags web`, which embeds web/dist: prove that build
+      # works on every push instead of discovering it during a release.
+      - name: Build with the SPA embedded
+        run: make web && go build -tags web ./...
+
   test:
     name: test
     runs-on: ubuntu-latest

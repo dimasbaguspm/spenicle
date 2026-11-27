@@ -109,8 +109,9 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        typed from `openapi.json` by `make web-types`. Toolchain:
                        pnpm (pinned by `packageManager`), oxlint (curated rules, warnings
                        denied), oxfmt, tsgo (`@typescript/native-preview`). `make web`
-                       builds `web/dist`, which the binary serves on the API's own port in
-                       the release image
+                       builds `web/dist`, which the binary serves on the API's own port when
+                       it was compiled with `-tags web` (the `latest` image); `web/assets_*.go`
+                       is the whole switch
 ```
 
 The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` stages
@@ -305,6 +306,12 @@ the idempotency key: the same key with the same bytes resumes the draft (`200`),
 same key with different bytes is `409 import_conflict`, replaying the same review action
 is `200` with the current batch, and the other action or a row edit on a terminal batch
 is `409 import_closed`.
+
+One thing is deliberately **not** an environment variable: whether the binary serves the SPA.
+`web/assets_web.go` (`//go:build web`) embeds `web/dist`, `web/assets_off.go` returns nothing,
+and the release images pick the tag per target (`latest` embeds, `server`/`cli` do not). The
+Dockerfile's `APP_WEB` build arg is our switch only and refuses `off` for the full image — a
+self-hoster cannot turn a UI on in bytes that are not there.
 
 Only those eight are environment variables. **Every other knob — listen address, data
 dir, DB path, HTTP timeouts, shutdown budgets, `/healthz` timeout, request body cap, pool
