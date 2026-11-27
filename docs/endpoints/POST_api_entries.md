@@ -68,7 +68,7 @@ An explicit `fx_rate` always wins over the resolver. A foreign entry whose day, 
 earlier day, is missing from the sheet is `422 invalid_rate`: the ledger does not guess a
 future rate, and with no sheet at all (no vendor configured) every foreign entry still
 needs its own `fx_rate`. After posting, only the payee
-(`PATCH /api/entries/{ref}`) can change; anything else is void plus re-post.
+(`PATCH /api/entries/{ref}`) can change; anything else is reverse plus re-post.
 
 
 

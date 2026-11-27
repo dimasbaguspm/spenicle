@@ -32,7 +32,7 @@ manager.
 ## What a change must respect
 
 1. **Double-entry.** ≥ 2 postings, native and base sums both zero.
-2. **No user-record deletes.** Void or reject; every state change appends to
+2. **No user-record deletes.** Reverse or reject; every state change appends to
    `audit_log`, except token usage stamps, worker heartbeats and boot seeds.
    Derived balances and expired imports are pruned.
 3. **Money is integers.** Minor units + ISO code, rates as `TEXT` + `big.Rat`, one

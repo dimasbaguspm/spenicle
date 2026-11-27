@@ -14,7 +14,7 @@ import (
 )
 
 const captureColumns = `captures.id, captures.ref, captures.kind, captures.status,
-	captures.idempotency_key, captures.dedupe_key, captures.batch_label, captures.artifact_hash,
+	captures.idempotency_key, captures.dedupe_key, captures.group_label, captures.artifact_hash,
 	p.raw_text, p.draft_json, p.extraction_error, captures.extraction_job_ref,
 	captures.extraction_rail, captures.extraction_model, captures.resolved_entry_ref,
 	captures.resolution_note, captures.received_at, captures.resolved_at`
@@ -39,7 +39,7 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
 			INSERT INTO captures
-				(ref, kind, status, idempotency_key, dedupe_key, batch_label, artifact_hash,
+				(ref, kind, status, idempotency_key, dedupe_key, group_label, artifact_hash,
 				 extraction_job_ref, extraction_rail, extraction_model,
 				 resolved_entry_ref, resolution_note, received_at, resolved_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -48,7 +48,7 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 			capture.Status,
 			nullString(capture.IdempotencyKey),
 			capture.DedupeKey,
-			nullString(capture.BatchLabel),
+			nullString(capture.GroupLabel),
 			nullString(capture.ArtifactHash),
 			nullString(capture.JobRef),
 			nullString(capture.ExtractionRail),
@@ -360,7 +360,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 	var (
 		capture     entity.Capture
 		clientID    sql.NullString
-		batchID     sql.NullString
+		groupLabel  sql.NullString
 		artifact    sql.NullString
 		rawText     sql.NullString
 		draft       sql.NullString
@@ -376,7 +376,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 
 	err := scanner.Scan(
 		&capture.ID, &capture.Ref, &capture.Kind, &capture.Status, &clientID, &capture.DedupeKey,
-		&batchID, &artifact, &rawText, &draft, &extractErr, &jobRef, &rail, &model,
+		&groupLabel, &artifact, &rawText, &draft, &extractErr, &jobRef, &rail, &model,
 		&resolvedRf, &resolvedNt, &receivedRaw, &resolvedRaw,
 	)
 	if err != nil {
@@ -384,7 +384,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 	}
 
 	capture.IdempotencyKey = clientID.String
-	capture.BatchLabel = batchID.String
+	capture.GroupLabel = groupLabel.String
 	capture.ArtifactHash = artifact.String
 	capture.RawText = rawText.String
 	capture.DraftJSON = draft.String

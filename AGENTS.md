@@ -22,27 +22,27 @@ the document wins until you change the document too.
    ordering key, the sweep cursor — and a `ref`: a dashless UUID (32 lowercase hex) that
    is the only identifier the API speaks. **A relation between two rows is a `ref`**, never
    an `id`: `parent_ref`, `payee_ref`, `account_ref`, `entry_ref`, `batch_ref`,
-   `upload_ref`, `export_ref`, `capture_ref`, `reverses_entry_ref`, `recurring_rule_ref`,
+   `upload_ref`, `export_ref`, `capture_ref`, `reversal_of_ref`, `recurring_rule_ref`,
    `resolved_entry_ref`. One table is the exception — `import_upload_chunks` is internal
    bookkeeping with an `id` and no `ref`, never addressed on the wire. Requests send
    `account_ref`, responses carry `ref` — an integer id never leaves the database. The
    ledger group is fully converted: accounts, payees, categorization rules, recurring
-   rules, entries, postings, `balance_state`, `running_balances` and the journal payloads
+   rules, entries, postings, `balance_state`, `entry_balances` and the journal payloads
    relate by ref, and their `*_id` columns are gone from `0001_init.sql`. So do captures,
    artifacts, `capture_payloads`, mail messages, imports, exports and `audit_log`. No
    column ends in `_id` at all: the idempotency key is `idempotency_key`, the capture
-   grouping label is `captures.batch_label`, and every relation between two rows is a
+   grouping label is `captures.group_label`, and every relation between two rows is a
    `ref`.
 2. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
    zero. `entity.CheckZeroSum` runs before the store opens the write transaction, on
    both direct entry inserts and capture approvals.
-3. **No deletes of user records.** Void (`voided_at`) or reject. Every state change on
-   `accounts`, `payees`, `recurring_rules`, `ledger_entries`, `captures`, `settings`,
+3. **No deletes of user records.** Reverse (`reversed_at`) or reject. Every state change on
+   `accounts`, `payees`, `recurring_rules`, `entries`, `captures`, `settings`,
    `api_tokens` and `categorization_rules` appends one `audit_log` row inside the same
    transaction, through `sqlite.appendAudit`, which opens its own span and validates the
    typed payload (`entity.EntryCreated` and friends, same `validate` tags as the API).
    Usage stamps (`TouchToken`), the worker heartbeat and first-boot seed accounts are
-   exceptions. Derived `running_balances` are rebuilt, and expired import drafts and
+   exceptions. Derived `entry_balances` are rebuilt, and expired import drafts and
    uploads are deleted with their own event trail; committed and rejected batches keep
    their evidence. Import and export jobs keep their own append-only
    `import_events`/`export_events` instead of being journaled twice; artifact rows are
@@ -340,7 +340,7 @@ to re-`ANALYZE`), and finally stamp the heartbeat it reports as `worker_last_run
 calendar decision it makes ("today", the due comparison, the business-day shift) runs in
 `APP_TIMEZONE`, not UTC.
 Statistics are a correctness issue, not a tuning knob: without them the planner reads the
-schema blind and picks the wrong index for the register listing (`ix_entries_reversal_ref`
+schema blind and picks the wrong index for the register listing (`ix_entries_reversal_of_ref`
 instead of `ix_entries_occurred`, plus a sort) and for the month roll-up. The store exposes
 it as `OptimizeStats`; nothing else writes `sqlite_stat1`.
 
@@ -385,7 +385,7 @@ Rules that bind every change:
   remote-parent resume land.
 - **Metrics are prefixed `spenicle.`**, dotted lowercase, units in the instrument option and
   never in the name (`_seconds`, `By`, `1`): `spenicle.http.server.requests|duration|in_flight`,
-  `spenicle.worker.runs|items|run.duration`, `spenicle.ledger.entries|postings`,
+  `spenicle.worker.runs|items|run.duration`, `spenicle.entries|postings`,
   `spenicle.captures.transitions`, `spenicle.imports.rows|clashes`, `spenicle.exports.bytes`,
   `spenicle.sqlite.locked`, plus `otelruntime`. Attributes are bounded enums only (`job`,
   `outcome`, `operation`, `source`, `clash.kind`, `http.route`); a ref, a name or an amount in

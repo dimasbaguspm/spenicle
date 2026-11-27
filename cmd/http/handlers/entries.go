@@ -59,17 +59,17 @@ type entryResponse struct {
 	Ref                 string            `json:"ref"                                                pattern:"^[0-9a-f]{32}$"`
 	IdempotencyKey      string            `json:"idempotency_key,omitempty"`
 	OccurredOn          string            `format:"date"                                             json:"occurred_on"`
-	Currency            string            `json:"currency"                                           maxLength:"3"              minLength:"3"`
+	Currency            string            `json:"currency"                                           maxLength:"3"                minLength:"3"`
 	Source              string            `enums:"manual,share,email,statement,recurring,adjustment" json:"source"`
 	Note                string            `json:"note,omitempty"`
 	Payee               *payeeSummary     `json:"payee,omitempty"`
-	VoidedAt            string            `format:"date-time"                                        json:"voided_at,omitempty"`
+	ReversedAt          string            `format:"date-time"                                        json:"reversed_at,omitempty"`
 	Postings            []postingResponse `json:"postings"`
 	RunningBalanceMinor string            `json:"running_balance_minor,omitempty"                    pattern:"^[+-]?[0-9]+$"`
 }
 
 type entryPatchRequest struct {
-	Void       *bool            `json:"void,omitempty"`
+	Reverse    *bool            `json:"reverse,omitempty"`
 	Reason     string           `json:"reason,omitempty"    validate:"max=2000"`
 	PayeeRef   *string          `json:"payee_ref,omitempty" pattern:"^[0-9a-f]{32}$"        validate:"omitempty,ref"`
 	OccurredOn string           `format:"date"              json:"occurred_on,omitempty"    validate:"omitempty,datestr"`
@@ -89,7 +89,7 @@ type entryPatchRequest struct {
 // @Param       currency    query string false "ISO 4217 of the entry"
 // @Param       query       query string false "substring of the note or of the payee name"
 // @Param       refs        query string false "entry refs, comma-separated"
-// @Param       voided      query string false "true only voided entries, false only live ones, absent both"
+// @Param       reversed      query string false "true only reversed entries, false only live ones, absent both"
 // @Param       amount_min  query string false "smallest absolute posting amount to match"
 // @Param       amount_max  query string false "largest absolute posting amount to match"
 // @Param       cursor      query string false "return entries older than the entry with that ref"
@@ -126,7 +126,7 @@ func (s *Server) ListEntries(w http.ResponseWriter, r *http.Request) {
 }
 
 // @Summary     One entry with its postings
-// @Description A voided entry still answers and carries `voided_at`; the reversal is a separate entry.
+// @Description A reversed entry still answers and carries `reversed_at`; the reversal is a separate entry.
 // @Tags        entries
 // @Produce     json
 // @Param       ref path string true "entry ref"
@@ -164,8 +164,8 @@ func (s *Server) GetEntry(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, body)
 }
 
-// @Summary     Void an entry or correct it
-// @Description One body action per call: `void: true` writes the reversal (the original stays), `payee_ref` repoints, `occurred_on`, `note` and `postings` replace the entry in place.
+// @Summary     Reverse an entry or correct it
+// @Description One body action per call: `reverse: true` writes the reversal (the original stays), `payee_ref` repoints, `occurred_on`, `note` and `postings` replace the entry in place.
 // @Tags        entries
 // @Accept      json
 // @Param       body body entryPatchRequest true "the request body"
@@ -235,8 +235,8 @@ func (s *Server) applyEntryPatch(
 	)
 
 	switch action {
-	case entryPatchVoid:
-		entry, err = s.deps.Ledger.Void(ctx, ref, request.Reason)
+	case entryPatchReverse:
+		entry, err = s.deps.Ledger.Reverse(ctx, ref, request.Reason)
 	case entryPatchPayee:
 		entry, err = s.deps.Ledger.UpdatePayee(ctx, ref, *request.PayeeRef)
 	default:
@@ -405,8 +405,8 @@ func toEntryResponse(entry entity.Entry, names displayNames) entryResponse {
 		out.RunningBalanceMinor = strconv.FormatInt(*entry.RunningBalanceMinor, 10)
 	}
 
-	if entry.VoidedAt != nil {
-		out.VoidedAt = entry.VoidedAt.Format(constant.TimestampLayout)
+	if entry.ReversedAt != nil {
+		out.ReversedAt = entry.ReversedAt.Format(constant.TimestampLayout)
 	}
 
 	if entry.PayeeRef != "" {
@@ -532,7 +532,7 @@ func postingInputs(request []postingRequest) ([]ledger.PostingInput, error) {
 }
 
 const (
-	entryPatchVoid    = "void"
+	entryPatchReverse = "reverse"
 	entryPatchPayee   = "payee"
 	entryPatchCorrect = "correct"
 )
@@ -542,7 +542,7 @@ func entryPatchAction(w http.ResponseWriter, request entryPatchRequest) (string,
 
 	actions := 0
 
-	for _, present := range []bool{request.Void != nil, request.PayeeRef != nil, corrects} {
+	for _, present := range []bool{request.Reverse != nil, request.PayeeRef != nil, corrects} {
 		if present {
 			actions++
 		}
@@ -551,24 +551,24 @@ func entryPatchAction(w http.ResponseWriter, request entryPatchRequest) (string,
 	switch {
 	case actions == 0:
 		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput,
-			`send {"void": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings`)
+			`send {"reverse": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings`)
 
 		return "", false
 	case actions > 1:
 		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput,
-			"void, payee_ref and a correction are separate actions")
+			"reverse, payee_ref and a correction are separate actions")
 
 		return "", false
-	case request.Void != nil && !*request.Void:
+	case request.Reverse != nil && !*request.Reverse:
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_patch",
-			`only {"void": true} is supported today`)
+			`only {"reverse": true} is supported today`)
 
 		return "", false
 	}
 
 	switch {
-	case request.Void != nil:
-		return entryPatchVoid, true
+	case request.Reverse != nil:
+		return entryPatchReverse, true
 	case request.PayeeRef != nil:
 		return entryPatchPayee, true
 	default:

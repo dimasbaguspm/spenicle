@@ -1,6 +1,6 @@
 {
   "error": {
     "code": "invalid_request",
-    "message": "send {\"void\": true}, {\"payee_ref\": \"...\"} or the corrected occurred_on/note/postings"
+    "message": "send {\"reverse\": true}, {\"payee_ref\": \"...\"} or the corrected occurred_on/note/postings"
   }
 }

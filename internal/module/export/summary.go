@@ -61,7 +61,7 @@ func (s *snapshot) summarise() summary {
 	categories := make(map[string]int64)
 
 	for _, entry := range s.entries {
-		if entry.VoidedAt != nil || entry.ReversesEntryRef != "" {
+		if entry.ReversedAt != nil || entry.ReversalOfRef != "" {
 			continue
 		}
 

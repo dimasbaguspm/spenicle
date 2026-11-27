@@ -45,9 +45,9 @@ type Entry struct {
 	Currency            string
 	Source              string
 	Postings            []Posting
-	VoidedAt            *time.Time
+	ReversedAt          *time.Time
 	CreatedAt           time.Time
-	ReversesEntryRef    string
+	ReversalOfRef       string
 	RecurringRuleRef    string
 	RunningBalanceMinor *int64
 }

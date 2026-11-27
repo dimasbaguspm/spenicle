@@ -14,7 +14,7 @@ Feature: GET /api/captures
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: The status filter narrows the queue
     Given a running API

@@ -87,11 +87,11 @@
   "captures": [
     {
       "artifact_hash": null,
-      "batch_label": null,
       "dedupe_key": "75763d11383a141939d2115e2965c5a2804e4e84094a86e1ffc5d7f0c4174fdd",
       "extraction_job_ref": null,
       "extraction_model": null,
       "extraction_rail": null,
+      "group_label": null,
       "id": 1,
       "idempotency_key": null,
       "kind": "share",
@@ -103,6 +103,7 @@
       "status": "pending"
     }
   ],
+  "entries": [],
   "fx_rates": [
     {
       "base": "EUR",
@@ -139,8 +140,7 @@
   "import_rows": [],
   "import_upload_chunks": [],
   "import_uploads": [],
-  "ledger_entries": [],
-  "ledger_postings": [],
+  "postings": [],
   "settings": [
     {
       "id": 1,

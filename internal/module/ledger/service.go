@@ -385,11 +385,11 @@ func (s *Service) Get(ctx context.Context, ref string) (entity.Entry, error) {
 	return entry, nil
 }
 
-func (s *Service) Void(ctx context.Context, ref, reason string) (entity.Entry, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Void")
+func (s *Service) Reverse(ctx context.Context, ref, reason string) (entity.Entry, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Reverse")
 	defer endSpan()
 
-	reversal, err := s.entries.VoidEntry(ctx, ref, reason, s.clock.Now())
+	reversal, err := s.entries.ReverseEntry(ctx, ref, reason, s.clock.Now())
 	if err != nil {
 		return entity.Entry{}, err
 	}
@@ -428,8 +428,8 @@ func (s *Service) Correct(ctx context.Context, ref string, in CorrectInput) (ent
 		return entity.Entry{}, err
 	}
 
-	if original.VoidedAt != nil {
-		return entity.Entry{}, fmt.Errorf("%w: entry %s is voided", entity.ErrInvalidState, ref)
+	if original.ReversedAt != nil {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s is reversed", entity.ErrInvalidState, ref)
 	}
 
 	occurredOn := original.OccurredOn

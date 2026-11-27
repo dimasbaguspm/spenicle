@@ -23,7 +23,7 @@ Feature: POST /api/imports
       | table          | count |
       | import_batches | 1     |
       | import_rows    | 2     |
-      | ledger_entries | 1     |
+      | entries | 1     |
 
   Scenario: Re-uploading the same bytes under the same client id resumes the draft
     Given a running API

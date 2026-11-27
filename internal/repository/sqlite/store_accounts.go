@@ -324,7 +324,7 @@ func (s *Store) BalancesByAccount(ctx context.Context) (map[string]int64, error)
 
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT p.account_ref, SUM(p.base_amount_minor)
-		FROM ledger_postings p
+		FROM postings p
 		GROUP BY p.account_ref`)
 	if err != nil {
 		return nil, fmt.Errorf("select balances: %w", err)

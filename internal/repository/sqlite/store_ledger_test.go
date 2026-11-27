@@ -220,7 +220,7 @@ func TestRunningBalanceCheckpointShiftsBackdatedEntry(t *testing.T) {
 	}
 }
 
-func TestRunningBalanceCheckpointIncludesVoidReversal(t *testing.T) {
+func TestRunningBalanceCheckpointIncludesReverseReversal(t *testing.T) {
 	t.Parallel()
 
 	store := newStore(t)
@@ -230,9 +230,9 @@ func TestRunningBalanceCheckpointIncludesVoidReversal(t *testing.T) {
 	original := postCashEntry(t, store, first, 100, asset, expense)
 	postCashEntry(t, store, first.AddDate(0, 0, 1), 200, asset, expense)
 
-	if _, err := store.VoidEntry(t.Context(), original.Ref, "corrected",
+	if _, err := store.ReverseEntry(t.Context(), original.Ref, "corrected",
 		first.AddDate(0, 0, 3)); err != nil {
-		t.Fatalf("void entry: %v", err)
+		t.Fatalf("reverse entry: %v", err)
 	}
 
 	entries, err := store.ListEntries(t.Context(), entity.EntryFilter{
@@ -286,7 +286,7 @@ func TestRunningBalanceRebuildGivesEachCheckpointARef(t *testing.T) {
 
 	var rows, refs int
 	if err := store.DB().QueryRowContext(t.Context(),
-		`SELECT COUNT(*), COUNT(DISTINCT ref) FROM running_balances WHERE account_ref = ?`,
+		`SELECT COUNT(*), COUNT(DISTINCT ref) FROM entry_balances WHERE account_ref = ?`,
 		asset.Ref).Scan(&rows, &refs); err != nil {
 		t.Fatalf("checkpoint refs: %v", err)
 	}

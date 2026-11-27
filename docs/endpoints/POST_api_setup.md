@@ -56,7 +56,7 @@ the request was being saved.
 Accounts are optional: currency-only setup remains valid and still locks the ledger.
 Each requested account receives one `adjustment` entry with two postings, against the
 dedicated `Opening balance` equity account. No opening equity account is created for
-currency-only setup. The base currency cannot be changed afterwards, voiding entries
+currency-only setup. The base currency cannot be changed afterwards, reversing entries
 does not unlock it, and `PATCH /api/settings` refuses it. `timezone` is never settable
 through the API. Both fields stay in every settings payload, with no `omitempty`, so a
 client never has to guess a missing default.

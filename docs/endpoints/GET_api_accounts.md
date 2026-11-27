@@ -12,7 +12,7 @@ Account picker on the entry form, balances panel, the ledger screen's account fi
 
 ## Downstream
 
-`Repository.Sqlite.ListAccounts` + `Repository.Sqlite.BalancesByAccount` (sum of `ledger_postings` per account, voids excluded by their reversal). The handler joins them; no stored balance column exists.
+`Repository.Sqlite.ListAccounts` + `Repository.Sqlite.BalancesByAccount` (sum of `postings` per account, reversed entries excluded). The handler joins them; no stored balance column exists.
 
 ## Path / query params
 

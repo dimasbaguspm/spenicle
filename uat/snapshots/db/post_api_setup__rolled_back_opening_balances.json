@@ -76,6 +76,7 @@
   ],
   "capture_payloads": [],
   "captures": [],
+  "entries": [],
   "fx_rates": [
     {
       "base": "EUR",
@@ -112,8 +113,7 @@
   "import_rows": [],
   "import_upload_chunks": [],
   "import_uploads": [],
-  "ledger_entries": [],
-  "ledger_postings": [],
+  "postings": [],
   "settings": [
     {
       "id": 1,

@@ -87,7 +87,7 @@ rule `PATCH /api/imports/{ref}/rows/{index}` follows.
 
 1. A group is readable by `ref`, renameable, and never deletable.
 2. Membership is absolute and idempotent; one transaction per change, one audit row.
-3. `balance_minor` is derived from postings and excluded voids, like every other balance.
+3. `balance_minor` is derived from postings and excluded reversals, like every other balance.
 4. Only `asset`/`liability` accounts may join a group.
 5. No group appears in `POST /api/entries`, `PATCH /api/entries`, capture approval or
    import commit — the lens never becomes a posting target.

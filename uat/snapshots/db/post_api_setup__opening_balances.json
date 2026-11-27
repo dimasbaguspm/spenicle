@@ -170,6 +170,36 @@
   ],
   "capture_payloads": [],
   "captures": [],
+  "entries": [
+    {
+      "created_at": "<timestamp>",
+      "currency": "USD",
+      "id": 1,
+      "idempotency_key": null,
+      "note": "Opening balance",
+      "occurred_on": "2026-02-14",
+      "payee_ref": null,
+      "recurring_rule_ref": null,
+      "ref": "<ref>",
+      "reversal_of_ref": null,
+      "reversed_at": null,
+      "source": "adjustment"
+    },
+    {
+      "created_at": "<timestamp>",
+      "currency": "USD",
+      "id": 2,
+      "idempotency_key": null,
+      "note": "Opening balance",
+      "occurred_on": "2026-02-14",
+      "payee_ref": null,
+      "recurring_rule_ref": null,
+      "ref": "<ref>",
+      "reversal_of_ref": null,
+      "reversed_at": null,
+      "source": "adjustment"
+    }
+  ],
   "fx_rates": [
     {
       "base": "EUR",
@@ -206,37 +236,7 @@
   "import_rows": [],
   "import_upload_chunks": [],
   "import_uploads": [],
-  "ledger_entries": [
-    {
-      "created_at": "<timestamp>",
-      "currency": "USD",
-      "id": 1,
-      "idempotency_key": null,
-      "note": "Opening balance",
-      "occurred_on": "2026-02-14",
-      "payee_ref": null,
-      "recurring_rule_ref": null,
-      "ref": "<ref>",
-      "reverses_entry_ref": null,
-      "source": "adjustment",
-      "voided_at": null
-    },
-    {
-      "created_at": "<timestamp>",
-      "currency": "USD",
-      "id": 2,
-      "idempotency_key": null,
-      "note": "Opening balance",
-      "occurred_on": "2026-02-14",
-      "payee_ref": null,
-      "recurring_rule_ref": null,
-      "ref": "<ref>",
-      "reverses_entry_ref": null,
-      "source": "adjustment",
-      "voided_at": null
-    }
-  ],
-  "ledger_postings": [
+  "postings": [
     {
       "account_ref": "<ref>",
       "amount_minor": 125000,

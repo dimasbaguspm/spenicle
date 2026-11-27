@@ -109,7 +109,7 @@ func TestListQuery(t *testing.T) {
 		{
 			name: "every filter keeps its own argument",
 			build: func() *listQuery {
-				query := newList("ledger_entries", "id")
+				query := newList("entries", "id")
 				query.gte("occurred_on", "2024-01-01")
 				query.lte("occurred_on", "2024-01-31")
 				query.inSubquery("id", `SELECT entry_ref WHERE a.ref`, "ace", "ade")
@@ -121,7 +121,7 @@ func TestListQuery(t *testing.T) {
 				return query
 			},
 			limit: 10,
-			want: `SELECT id FROM ledger_entries WHERE 1 = 1 AND occurred_on >= ? AND occurred_on <= ?` +
+			want: `SELECT id FROM entries WHERE 1 = 1 AND occurred_on >= ? AND occurred_on <= ?` +
 				` AND id IN (SELECT entry_ref WHERE a.ref IN (?, ?)) AND source = ? AND ref IN (?)` +
 				` AND parent_ref = ? ORDER BY id DESC LIMIT 11`,
 			args: []any{"2024-01-01", "2024-01-31", "ace", "ade", "manual", "aaa", "aba"},
@@ -129,7 +129,7 @@ func TestListQuery(t *testing.T) {
 		{
 			name: "amount range matches any posting inside the bounds",
 			build: func() *listQuery {
-				query := newList("ledger_entries", "id")
+				query := newList("entries", "id")
 
 				lower := int64(1500)
 				upper := int64(20000)
@@ -138,15 +138,15 @@ func TestListQuery(t *testing.T) {
 				return query
 			},
 			limit: 50,
-			want: `SELECT id FROM ledger_entries WHERE 1 = 1 AND EXISTS (SELECT 1 FROM ledger_postings p` +
-				"\n\t\t" + `WHERE p.entry_ref = ledger_entries.ref AND ABS(p.base_amount_minor) BETWEEN ? AND ?)` +
+			want: `SELECT id FROM entries WHERE 1 = 1 AND EXISTS (SELECT 1 FROM postings p` +
+				"\n\t\t" + `WHERE p.entry_ref = entries.ref AND ABS(p.base_amount_minor) BETWEEN ? AND ?)` +
 				` LIMIT 51`,
 			args: []any{int64(1500), int64(20000)},
 		},
 		{
 			name: "amount floor alone keeps every posting above it",
 			build: func() *listQuery {
-				query := newList("ledger_entries", "id")
+				query := newList("entries", "id")
 
 				lower := int64(1500)
 				entryAmountRange(query, &lower, nil)
@@ -154,21 +154,21 @@ func TestListQuery(t *testing.T) {
 				return query
 			},
 			limit: 50,
-			want: `SELECT id FROM ledger_entries WHERE 1 = 1 AND EXISTS (SELECT 1 FROM ledger_postings p` +
-				"\n\t\t" + `WHERE p.entry_ref = ledger_entries.ref AND ABS(p.base_amount_minor) >= ?)` +
+			want: `SELECT id FROM entries WHERE 1 = 1 AND EXISTS (SELECT 1 FROM postings p` +
+				"\n\t\t" + `WHERE p.entry_ref = entries.ref AND ABS(p.base_amount_minor) >= ?)` +
 				` LIMIT 51`,
 			args: []any{int64(1500)},
 		},
 		{
 			name: "no amount bound adds no clause",
 			build: func() *listQuery {
-				query := newList("ledger_entries", "id")
+				query := newList("entries", "id")
 				entryAmountRange(query, nil, nil)
 
 				return query
 			},
 			limit: 50,
-			want:  `SELECT id FROM ledger_entries WHERE 1 = 1 LIMIT 51`,
+			want:  `SELECT id FROM entries WHERE 1 = 1 LIMIT 51`,
 			args:  nil,
 		},
 	}

@@ -1,6 +1,6 @@
 # F3 — The ledger is the truth
 
-**Status** live on core paths · **Client** entry form, ledger list, entry detail, void sheet, rate lookup
+**Status** live on core paths · **Client** entry form, ledger list, entry detail, reverse sheet, rate lookup
 **Routes** `POST /api/entries` · `GET /api/entries` · `GET /api/entries/{ref}` · `PATCH /api/entries/{ref}` · `GET /api/rates`
 
 ## 1. The job the user has
@@ -13,7 +13,7 @@ Three properties the user feels even though nobody says them out loud:
 
 - **every entry is balanced** (native and base sums zero), so a percentage or a chart
   cannot drift;
-- **nothing is deleted** — a mistyped entry is voided, which writes its opposite;
+- **nothing is deleted** — a mistyped entry is reversed, which writes its opposite;
 - **any date is legal** — backdating never asks permission, and no month is ever closed.
 
 ## 2. Client journeys (multi-hit by design)
@@ -44,7 +44,7 @@ Signs carry the meaning: money leaving an asset is negative, the expense categor
 positive, and the two always sum to zero. `source` defaults to `manual`; a capture
 approval derives it from the capture kind (`share` and `image` → `share`, `email`,
 `statement`, `recurring`, anything else → `manual`), an import sends `statement`, and a
-voided original's reversal is `adjustment`.
+reversed original's reversal is `adjustment`.
 
 ### 2.2 Read it
 
@@ -58,7 +58,7 @@ voided original's reversal is `adjustment`.
 | 6 | `GET /api/entries/{ref}` | a deep link; the same object without the envelope |
 
 Filters, all optional: `from`, `to`, `account_ref` (list), `payee_ref` (list), `source`
-(list), `currency`, `query`, `refs` (list), `voided`, `amount_min`, `amount_max`,
+(list), `currency`, `query`, `refs` (list), `reversed`, `amount_min`, `amount_max`,
 `cursor`, `limit`. `amount_min`/`amount_max` compare `ABS(base_amount_minor)`, so the
 bounds are base-currency and an income of 18 000 matches the same window as a spend.
 
@@ -67,16 +67,16 @@ bounds are base-currency and an income of 18 000 matches the same window as a sp
 | intent | call | result |
 | --- | --- | --- |
 | the merchant was wrong | `PATCH /api/entries/{ref}` `{"payee_ref":"<ref>"}` | `200`, the same entry now carrying the new payee; `""` clears it |
-| it should never have counted | `PATCH /api/entries/{ref}` `{"void":true,"reason":"duplicate"}` | `200` the **reversal** entry; the original carries `voided_at` |
-| anything else (amount, date, note) | `PATCH /api/entries/{ref}` `{"occurred_on":"2026-02-15","note":"coffee and a bun"}` or `postings` | `200` the **replacement** entry (source `adjustment`); the original carries `voided_at` |
+| it should never have counted | `PATCH /api/entries/{ref}` `{"reverse":true,"reason":"duplicate"}` | `200` the **reversal** entry; the original carries `reversed_at` |
+| anything else (amount, date, note) | `PATCH /api/entries/{ref}` `{"occurred_on":"2026-02-15","note":"coffee and a bun"}` or `postings` | `200` the **replacement** entry (source `adjustment`); the original carries `reversed_at` |
 
-`{"void":false}` is `422 unsupported_patch`. Each action travels alone: a body with a void
+`{"reverse":false}` is `422 unsupported_patch`. Each action travels alone: a body with a reverse
 and anything else is `422 invalid_request`, and so is a body mixing `payee_ref` with a
-correction. A second void is `409 invalid_state`.
+correction. A second reversal is `409 invalid_state`.
 
-The reversal is a real entry: negated postings, `reverses_entry_id`, `source:
+The reversal is a real entry: negated postings, `reversal_of_ref`, `source:
 "adjustment"`. Every derived number (balance, dashboard, month spend, category pie)
-excludes both the voided entry and its reversal, which is why a corrected ledger reads as
+excludes both the reversed entry and its reversal, which is why a corrected ledger reads as
 if the mistake never happened while the rows still prove it did.
 
 ## 3. Backend, end to end
@@ -90,10 +90,10 @@ POST /api/entries      Handler.Entries.Post → Module.Ledger.Post
                        → CheckZeroSum again inside the TX
 GET  /api/entries      Handler.Entries.List → Module.Ledger.List → ListEntries (+ per-entry postings)
 GET  /api/entries/{r}  Handler.Entries.Get  → Module.Ledger.Get → EntryByRef + postingsByEntryID
-PATCH/api/entries/{r}  Handler.Entries.Patch → Module.Ledger.Void → VoidEntry
-                       (UPDATE voided_at WHERE NULL, INSERT reversal + negated postings + audit, one TX)
+PATCH/api/entries/{r}  Handler.Entries.Patch → Module.Ledger.Reverse → ReverseEntry
+                       (UPDATE reversed_at WHERE NULL, INSERT reversal + negated postings + audit, one TX)
                        → Module.Ledger.UpdatePayee → UpdateEntryPayee + audit
-                       → Module.Ledger.Correct → void + replacement, one TX
+                       → Module.Ledger.Correct → reverse + replacement, one TX
 GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → fx_rates on a miss)
 ```
 
@@ -112,10 +112,10 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
   gets `fx_rate: "1"` and `fx_source: "identity"`; anything else takes an explicit rate or
   resolves from `fx_rates` through exact day, nearest earlier business day, then a EUR
   cross rate. The stored posting carries the rate, the day used and `ecb|cached|manual|identity`.
-- **Voiding is a write, not an undo.** The store builds and zero-sum-checks the full
-  reversal before opening the write transaction, then updates the original's `voided_at`
-  with `WHERE voided_at IS NULL` (that predicate is the concurrency guard: the loser gets
-  `409`), inserts the reversal and its negated postings, and appends the `void` audit row
+- **Reversing is a write, not an undo.** The store builds and zero-sum-checks the full
+  reversal before opening the write transaction, then updates the original's `reversed_at`
+  with `WHERE reversed_at IS NULL` (that predicate is the concurrency guard: the loser gets
+  `409`), inserts the reversal and its negated postings, and appends the `reverse` audit row
   — all in one transaction. An unrepresentable original writes nothing.
 - **Reads stay dumb.** `ListEntries` is one query for the page plus one for all its
   postings; `with_balance=true` with one `account_ref` adds one windowed sum. The handler
@@ -130,10 +130,10 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
    by the client.
 2. A replay of a `idempotency_key` returns the stored entry with `200` and writes nothing.
 3. Only the payee patch edits a row in place. Amount, date, note and postings are
-   corrected by `Module.Ledger.Correct` (void + replacement in one transaction), and the
+   corrected by `Module.Ledger.Correct` (reverse + replacement in one transaction), and the
    reversal is visible.
-4. Void is idempotent in effect, not in status: the second attempt is `409 invalid_state`,
-   and a voided entry's `voided_at` can never be cleared by an API call.
+4. Reverse is idempotent in effect, not in status: the second attempt is `409 invalid_state`,
+   and a reversed entry's `reversed_at` can never be cleared by an API call.
 5. Backdating is always allowed: no month gate, no period lock, no "you cannot edit a
    closed month".
 6. Money crosses the wire as minor-unit strings; a foreign entry may omit `fx_rate` and
@@ -141,7 +141,7 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
    `invalid_rate`.
 7. Every read is derived from postings. No stored balance, no stored total, no cache
    invalidation to get wrong.
-8. The audit row for a void names the entry, the action and the actor (a user, or the
+8. The audit row for a reversal names the entry, the action and the actor (a user, or the
    token's `actor_ref`).
 
 ### Risks
@@ -150,17 +150,17 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
 | --- | --- | --- |
 | a client sends a wrong `fx_rate` | the base amount is wrong forever, and every report inherits it | an explicit rate still wins and is stored per posting with `fx_rate`/`fx_source`; `fx_rate_date` is request-only. Omit an explicit rate to let the ledger resolve from the sheet day and read `fx_source` from the response |
 | a day has no ECB sheet | `?on=today` misses on weekends and holidays | the ledger and `GET /api/rates` walk back to the nearest earlier business day, then cross through EUR; a miss is `invalid_rate`, never an identity fallback |
-| voiding does not touch the capture that produced the entry | the review queue shows `approved` for an entry that no longer counts | void is the ledger's verb; the capture keeps `resolved_entry_id` as evidence. The UI must read the entry, not the capture, when it says "this receipt was filed" |
-| voiding a recurring-posted entry | the rule already advanced, so that due date is not re-queued | correct answer for the user: the month is genuinely skipped, and reversing it is a new manual entry |
-| an entry can be voided but never deleted | someone who wants the row gone will not get it | state the vocabulary in the UI ("void", never "delete"), and show the reversal in the list with `source: adjustment` |
-| `voided` filter is optional | a client that forgets it shows reversed and reversal side by side, doubling the apparent spend | default screens to `voided=false`; keep the "show voided" toggle explicit |
+| reversing does not touch the capture that produced the entry | the review queue shows `approved` for an entry that no longer counts | reverse is the ledger's verb; the capture keeps `resolved_entry_id` as evidence. The UI must read the entry, not the capture, when it says "this receipt was filed" |
+| reversing a recurring-posted entry | the rule already advanced, so that due date is not re-queued | correct answer for the user: the month is genuinely skipped, and reversing it is a new manual entry |
+| an entry can be reversed but never deleted | someone who wants the row gone will not get it | state the vocabulary in the UI ("reverse", never "delete"), and show the reversal in the list with `source: adjustment` |
+| `reversed` filter is optional | a client that forgets it shows reversed and reversal side by side, doubling the apparent spend | default screens to `reversed=false`; keep the "show reversed" toggle explicit |
 | posting reads are N+1 | one page of 200 entries is 201 queries | acceptable at one user's volume; page size 50 is the default. Do not raise `limit` to 200 in a list that also renders postings |
 
 ### Rollout
 
 1. **Post + list first.** Those two make the product usable with no other feature: a
    manual ledger with a correct balance.
-2. **Void second, payee patch third.** Both are single-field PATCH bodies; ship them
+2. **Reverse second, payee patch third.** Both are single-field PATCH bodies; ship them
    behind a long-press on the row, not as a separate screen.
 3. **FX last**, and only with the manual-rate field on screen. An entry in a foreign
    currency without a rate is a `422`, so a client that ships FX without the field ships
@@ -186,14 +186,14 @@ Scenario: An unbalanced entry is refused by name
   When I send a POST to "/api/entries" with postings that do not sum to zero
   Then the response status is 422
   And the error code is "postings_not_balanced"
-  And the store holds 0 "ledger_entries" rows
+  And the store holds 0 "entries" rows
 
 Scenario: A replayed idempotency_key returns the stored entry
   Given an entry posted with idempotency_key "e-1"
   When I send the same POST to "/api/entries" again
   Then the response status is 200
   And the response body has the same ref
-  And the store holds 1 "ledger_entries" row
+  And the store holds 1 "entries" row
 
 Scenario: A foreign entry without a rate is refused
   When I send a POST to "/api/entries" with currency "USD" and no fx_rate
@@ -206,21 +206,21 @@ Scenario: A foreign entry derives its base amount
   And each posting carries a base_amount_minor sixteen thousand times its amount
   And fx_source is "manual"
 
-Scenario: Voiding writes a reversal and keeps the original
+Scenario: Reversing writes a reversal and keeps the original
   Given an entry "coffee"
   When I send a PATCH to "/api/entries/{{ref}}" with:
     """json
-    {"void":true,"reason":"duplicate"}
+    {"reverse":true,"reason":"duplicate"}
     """
   Then the response status is 200
-  And the reversal is a new entry with its own ref, while the original carries voided_at
-  And the original carries voided_at
-  And the journal holds 1 "ledger_entry" row with action "void"
+  And the reversal is a new entry with its own ref, while the original carries reversed_at
+  And the original carries reversed_at
+  And the journal holds 1 "ledger_entry" row with action "reverse"
   And the account balances are unchanged
 
-Scenario: A second void is refused
-  Given a voided entry "coffee"
-  When I send the same void again
+Scenario: A second reversal is refused
+  Given a reversed entry "coffee"
+  When I send the same reversal again
   Then the response status is 409
   And the error code is "invalid_state"
 
@@ -240,14 +240,14 @@ Scenario: The payee is patched; a correction replaces
     """
   Then the response status is 200
   And the replacement carries source "adjustment"
-  And the original carries voided_at
+  And the original carries reversed_at
 ```
 
 ## 6. What this page does not promise
 
 - No running balance unless `with_balance=true` and exactly one `account_ref` are sent.
 - No sort order other than newest first, no filter on an entry's own currency amount.
-- No in-place edit of the amount, date or postings: a correction voids the original and
+- No in-place edit of the amount, date or postings: a correction reverses the original and
   posts a replacement in one write. Only the payee patch mutates the original entry.
 - No guessed FX: an explicit `fx_rate` wins; without one the ledger resolves from ECB data
   or refuses with `invalid_rate`.

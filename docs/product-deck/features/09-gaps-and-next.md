@@ -16,7 +16,7 @@ The table below records them once; section (A) lists only what is still open.
 | gap | shipped as | commit |
 | --- | --- | --- |
 | 1 | `PATCH /api/captures/{ref}` takes `payee_ref`, resolves it through `PayeeSource.PayeeByRef`, and every capture answers `resolved_entry_ref`; an integer `payee_id` is now `400 invalid_json` | `feat: resolve a capture with refs, never integer ids` |
-| 2 | `PATCH /api/entries/{ref}` accepts `occurred_on`, `note`, `reason` and `postings`; the backend voids the original and inserts a reversal plus a replacement in one transaction | `feat: correct an entry's amount, date or note in one write` |
+| 2 | `PATCH /api/entries/{ref}` accepts `occurred_on`, `note`, `reason` and `postings`; the backend reverses the original and inserts a reversal plus a replacement in one transaction | `feat: correct an entry's amount, date or note in one write` |
 | 4 | `POST /api/accounts` and `PATCH /api/accounts/{ref}` take `parent_ref` (same kind, no cycle, three levels) and `GET /api/analytics/categories?rollup=parent` sums a child into its root | `feat: nest a category under a parent and roll it up` |
 | 6 | a duplicate `name`+`kind`, `payees.name` or `custom_queries.name` answers `409 duplicate` | `fix: answer 409 for a duplicate name` |
 | 8 | `PATCH /api/captures/{ref}` accepts `{"action":"match","entry_ref":"…"}`, moving the capture to `duplicate` without touching the ledger; there is no user-facing unmatch action | `feat: resolve a capture with refs, never integer ids` |
@@ -119,15 +119,15 @@ slice with its own acceptance criteria, in the shape
 - **Client sees:** "edit this entry" with a required reason, showing both the original and
   the correction.
 - **Backend change:** `PATCH /api/entries/{ref}` takes `occurred_on`, `note`, `reason` and
-  `postings`; `Module.Ledger.Correct` voids the original and inserts a reversal plus a
+  `postings`; `Module.Ledger.Correct` reverses the original and inserts a reversal plus a
   replacement in one transaction, so the client makes one call instead of two.
 - **RRR:** *Requirement* — the ledger still never deletes, and the pair is atomic so no
   read can see a ledger with the old entry and without the new one. *Risk* — a taxonomy of
   "why" that nobody uses; keep one free-text reason. *Rollout* — additive fields on the
   existing PATCH; the two-call sequence keeps working.
-- **Acceptance:** one `PATCH` voids the original and inserts a reversal plus a replacement;
+- **Acceptance:** one `PATCH` reverses the original and inserts a reversal plus a replacement;
   the account balance is unchanged when the correction equals the original; replaying the
-  call on the voided ref is `409 invalid_state`.
+  call on the reversed ref is `409 invalid_state`.
 
 ### N4 — Opening balances in the setup wizard *(shipped: G1)*
 

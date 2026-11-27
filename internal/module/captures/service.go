@@ -339,7 +339,7 @@ func (s *Service) insertCapture(
 		Status:         constant.CaptureStatusPending,
 		IdempotencyKey: in.IdempotencyKey,
 		DedupeKey:      key,
-		BatchLabel:     in.BatchLabel,
+		GroupLabel:     in.GroupLabel,
 		ArtifactHash:   in.ArtifactHash,
 		RawText:        rawText,
 		ReceivedAt:     receivedAt,

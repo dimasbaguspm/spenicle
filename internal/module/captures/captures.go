@@ -45,7 +45,7 @@ type CreateInput struct {
 	Kind           string
 	RawText        string
 	ArtifactHash   string
-	BatchLabel     string
+	GroupLabel     string
 	ReceivedAt     time.Time
 	Artifact       *extraction.Artifact
 }

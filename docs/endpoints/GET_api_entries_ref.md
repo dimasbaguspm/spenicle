@@ -44,8 +44,8 @@ None.
 
 Every posting carries its account's `name` and `kind` next to the ref, and an entry with a
 payee carries its `name`, so one call renders the whole screen. `note` is omitted when
-empty, `payee` when the entry has none, and `voided_at` (RFC3339) appears once the entry
-is voided. Each posting also carries the rate it was posted with — `fx_rate`, `fx_rate_date`
+empty, `payee` when the entry has none, and `reversed_at` (RFC3339) appears once the entry
+is reversed. Each posting also carries the rate it was posted with — `fx_rate`, `fx_rate_date`
 and `fx_source` — frozen in the row: re-publishing the ECB sheet never moves a locked entry,
 because the ledger is the source of truth, not today's sheet. There is no `meta`: the page
 envelope belongs to the list route.
@@ -59,12 +59,12 @@ envelope belongs to the list route.
 
 ## Limitations
 
-- A void writes a second entry; this route answers the original carrying `voided_at` and
-  never follows `reverses_entry_ref`, so the reversal is found through the list route
+- A reversal writes a second entry; this route answers the original carrying `reversed_at` and
+  never follows `reversal_of_ref`, so the reversal is found through the list route
   (`?source=adjustment`).
 - Display names cost two extra reads per request (`ListAccounts`, `ListPayees`), the same
   cost the list route pays. Acceptable at one user's volume.
-- No ETag and no `If-None-Match`: an entry only changes when it is voided or its payee is
+- No ETag and no `If-None-Match`: an entry only changes when it is reversed or its payee is
   reassigned, both of which are user actions in the same screen.
 - Read-only. Every mutation stays on `POST /api/entries` and `PATCH /api/entries/{ref}`.
 
@@ -80,12 +80,12 @@ sequenceDiagram
     C->>H: GET /api/entries/{ref}
     H->>H: bindPath(ref)
     H->>L: Get(ref)
-    L->>DB: SELECT ledger_entries WHERE ref = ?
+    L->>DB: SELECT entries WHERE ref = ?
     alt no row
         L-->>H: ErrNotFound
         H-->>C: 404 not_found
     else found
-        L->>DB: SELECT ledger_postings WHERE entry_id = ?
+        L->>DB: SELECT postings WHERE entry_id = ?
         L-->>H: entry + postings
         H->>DB: ListAccounts, ListPayees (display names)
         H-->>C: 200 entry

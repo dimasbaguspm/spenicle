@@ -461,7 +461,7 @@ func countEntries(t *testing.T, h harness) int {
 	var count int
 
 	if err := h.store.DB().QueryRowContext(t.Context(),
-		`SELECT COUNT(*) FROM ledger_entries`).Scan(&count); err != nil {
+		`SELECT COUNT(*) FROM entries`).Scan(&count); err != nil {
 		t.Fatalf("count entries: %v", err)
 	}
 

@@ -4,8 +4,8 @@
 
 ## Purpose
 
-Three corrections, one at a time: void the entry, set (or clear) its payee, or correct
-it — the date, the note, or the postings — which voids the original and posts the
+Three corrections, one at a time: reverse the entry, set (or clear) its payee, or correct
+it — the date, the note, or the postings — which reverses the original and posts the
 replacement in the same transaction. Nothing is ever deleted.
 
 ## Upstream
@@ -15,22 +15,22 @@ Ledger screen ("I logged this twice", "this was Kopi Kenangan, not the supermark
 
 ## Downstream
 
-`{"void": true}` → `Module.Ledger.Void` → `Repository.Sqlite.VoidEntry`: read the
+`{"reverse": true}` → `Module.Ledger.Reverse` → `Repository.Sqlite.ReverseEntry`: read the
 original, build and validate its full reversal before opening the write transaction
 (an original containing the int64 floor is `422 invalid_postings` and writes nothing),
-then negate every posting, insert the reversal with `reverses_entry_id`, `UPDATE …
-voided_at WHERE voided_at IS NULL`, insert `audit_log` action `void`.
+then negate every posting, insert the reversal with `reversal_of_ref`, `UPDATE …
+reversed_at WHERE reversed_at IS NULL`, insert `audit_log` action `reverse`.
 
 `{"payee_ref": "…"}` → `Module.Ledger.UpdatePayee` → `Repository.Sqlite.UpdateEntryPayee`:
-resolve the payee through `PayeeSource.PayeeByRef`, `UPDATE ledger_entries SET payee_ref`,
-insert `audit_log` action `update` on `ledger_entries`, then reload the entry with its
+resolve the payee through `PayeeSource.PayeeByRef`, `UPDATE entries SET payee_ref`,
+insert `audit_log` action `update` on `entries`, then reload the entry with its
 postings.
 
 `{"occurred_on"|"note"|"postings"}` → `Module.Ledger.Correct` → `Repository.Sqlite.ReplaceEntry`
-in one transaction: stamp `voided_at` on the original, insert the reversal, insert the
+in one transaction: stamp `reversed_at` on the original, insert the reversal, insert the
 replacement (source `adjustment`, same currency and payee, the corrected date/note and
 the postings you sent, rebuilt through the normal zero-sum and FX path), and append the
-`void` and `create` audit rows.
+`reverse` and `create` audit rows.
 
 ## Path / query params
 
@@ -40,7 +40,7 @@ the postings you sent, rebuilt through the normal zero-sum and FX path), and app
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
-| `void` | bool | one action | must be `true` |
+| `reverse` | bool | one action | must be `true` |
 | `payee_ref` | ref | one action | `""` clears the payee; an unknown ref is `404 not_found` |
 | `occurred_on` | date | one action | the corrected date |
 | `note` | string | one action | ≤ 2000; `""` clears it |
@@ -51,28 +51,28 @@ Exactly one action per request. A body that sends none, or two, is refused:
 
 | body | status | code | message |
 | --- | --- | --- | --- |
-| `{"void":true,"reason":"duplicate"}` | `200` | — | the reversal entry |
+| `{"reverse":true,"reason":"duplicate"}` | `200` | — | the reversal entry |
 | `{"payee_ref":"<32 hex>"}` | `200` | — | the entry, now carrying `payee{ref,name}` |
 | `{"payee_ref":""}` | `200` | — | the entry, without `payee` |
 | `{"note":"coffee and a bun"}` | `200` | — | the replacement entry (a reversal pair is written) |
 | `{"occurred_on":"2026-02-15","postings":[…]}` | `200` | — | the replacement entry with the new date |
-| `{"reason":"nothing"}` | `422` | `invalid_request` | `send {"void": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings` |
-| `{"void":true,"note":"both"}` | `422` | `invalid_request` | `void, payee_ref and a correction are separate actions` |
-| `{"void":false}` | `422` | `unsupported_patch` | `only {"void": true} is supported today` |
+| `{"reason":"nothing"}` | `422` | `invalid_request` | `send {"reverse": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings` |
+| `{"reverse":true,"note":"both"}` | `422` | `invalid_request` | `reverse, payee_ref and a correction are separate actions` |
+| `{"reverse":false}` | `422` | `unsupported_patch` | `only {"reverse": true} is supported today` |
 
 ## Response
 
 `200` with the full entry: `ref`, `occurred_on`, `currency`, `source`, `note`, the
-postings, `payee: {ref, name}` when the entry has one. `void` answers the reversal; a
+postings, `payee: {ref, name}` when the entry has one. `reverse` answers the reversal; a
 correction answers the replacement (`source: "adjustment"`).
 
 ## Errors
 
 `404 not_found` (unknown entry or unknown `payee_ref`); `409 invalid_state` (already
-voided, for both a second void and a correction); `422 invalid_request` (no action, more
+reversed, for both a second reverse and a correction); `422 invalid_request` (no action, more
 than one action, a `{ref}` or `payee_ref` that is not 32 hex); `422 postings_not_balanced`
 when the posting set does not sum to zero, `422 invalid_postings`, `422 unknown_currency`,
-`422 invalid_rate` from the ledger; `422 unsupported_patch` for `{"void": false}`;
+`422 invalid_rate` from the ledger; `422 unsupported_patch` for `{"reverse": false}`;
 `400 invalid_json`.
 
 ## Limitations
@@ -80,7 +80,7 @@ when the posting set does not sum to zero, `422 invalid_postings`, `422 unknown_
 A correction is never an in-place edit: it writes a reversal pair, so three rows exist
 after one correction and the store keeps the history. Sending `postings` re-derives the
 base amounts with the rates you send; omitting them reuses the original amounts and
-rates. A correction on a voided entry is `409`, and re-posting is the way forward.
+rates. A correction on a reversed entry is `409`, and re-posting is the way forward.
 
 ---
 
@@ -93,10 +93,10 @@ sequenceDiagram
     participant H as Entries handler
     participant L as Ledger module
     participant DB as SQLite
-    C->>H: PATCH /api/entries/{ref} {void|payee_ref|occurred_on,note,postings}
-    alt void
-        H->>L: Void(ref, reason)
-        L->>DB: BEGIN; UPDATE voided_at WHERE NULL; INSERT reversal + audit; COMMIT
+    C->>H: PATCH /api/entries/{ref} {reverse|payee_ref|occurred_on,note,postings}
+    alt reverse
+        H->>L: Reverse(ref, reason)
+        L->>DB: BEGIN; UPDATE reversed_at WHERE NULL; INSERT reversal + audit; COMMIT
         H-->>C: 200 reversal
     else payee
         H->>L: UpdatePayee(ref, payee_ref)
@@ -105,7 +105,7 @@ sequenceDiagram
     else correction
         H->>L: Correct(ref, occurred_on?, note?, postings?)
         L->>L: rebuild postings, CheckZeroSum
-        L->>DB: BEGIN; UPDATE voided_at; INSERT reversal; INSERT replacement + audit; COMMIT
+        L->>DB: BEGIN; UPDATE reversed_at; INSERT reversal; INSERT replacement + audit; COMMIT
         H-->>C: 200 replacement
     end
 ```

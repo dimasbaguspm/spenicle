@@ -54,7 +54,7 @@ Feature: GET /api/entries
     And the response JSON matches the snapshot "get_api_entries__the_date_range_narrows_the_listing"
     And the store holds:
       | table          | count |
-      | ledger_entries | 2     |
+      | entries | 2     |
 
   Scenario: Clearing the database leaves an empty listing
     Given a running API
@@ -69,7 +69,7 @@ Feature: GET /api/entries
     And the response JSON matches the snapshot "get_api_entries__clearing_the_database_leaves_an_empty_listing"
     And the store holds:
       | table          | count |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: The currency filter narrows the listing
     Given a running API
@@ -106,7 +106,7 @@ Feature: GET /api/entries
     And the response JSON matches the snapshot "get_api_entries__the_payee_filter_narrows_the_listing"
     And the store holds:
       | table          | count |
-      | ledger_entries | 2     |
+      | entries | 2     |
 
   Scenario: The amount floor drops the small ones
     Given a running API
@@ -197,49 +197,49 @@ Feature: GET /api/entries
       """
     And I send a PATCH to "/api/entries/{{ref}}" with:
       """json
-      {"void":true,"reason":"duplicate of 811"}
+      {"reverse":true,"reason":"duplicate of 811"}
       """
     When I send a GET to "/api/entries?source=manual,adjustment"
     Then the response status is 200
     And the response JSON matches the snapshot "get_api_entries__several_sources_answer_in_one_listing"
 
-  Scenario: The voided flag asks for what was voided
+  Scenario: The reversed flag asks for what was reversed
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-01","currency":"IDR","note":"voided","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"reversed","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
       """
-    And the last ref is remembered as "voided"
+    And the last ref is remembered as "reversed"
     And I send a POST to "/api/entries" with:
       """json
       {"occurred_on":"2026-02-02","currency":"IDR","note":"live","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2200"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2200"}]}
       """
-    And I send a PATCH to "/api/entries/{{ref:voided}}" with:
+    And I send a PATCH to "/api/entries/{{ref:reversed}}" with:
       """json
-      {"void":true,"reason":"wrong amount"}
+      {"reverse":true,"reason":"wrong amount"}
       """
-    When I send a GET to "/api/entries?voided=true"
+    When I send a GET to "/api/entries?reversed=true"
     Then the response status is 200
-    And the response JSON matches the snapshot "get_api_entries__the_voided_flag_asks_for_what_was_voided"
+    And the response JSON matches the snapshot "get_api_entries__the_reversed_flag_asks_for_what_was_reversed"
 
-  Scenario: The live flag drops what was voided
+  Scenario: The live flag drops what was reversed
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
-      {"occurred_on":"2026-02-01","currency":"IDR","note":"voided","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
+      {"occurred_on":"2026-02-01","currency":"IDR","note":"reversed","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-1500"},{"account_ref":"{{account:Unsorted}}","amount_minor":"1500"}]}
       """
-    And the last ref is remembered as "voided"
+    And the last ref is remembered as "reversed"
     And I send a POST to "/api/entries" with:
       """json
       {"occurred_on":"2026-02-02","currency":"IDR","note":"live","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-2200"},{"account_ref":"{{account:Unsorted}}","amount_minor":"2200"}]}
       """
-    And I send a PATCH to "/api/entries/{{ref:voided}}" with:
+    And I send a PATCH to "/api/entries/{{ref:reversed}}" with:
       """json
-      {"void":true,"reason":"wrong amount"}
+      {"reverse":true,"reason":"wrong amount"}
       """
-    When I send a GET to "/api/entries?voided=false"
+    When I send a GET to "/api/entries?reversed=false"
     Then the response status is 200
-    And the response JSON matches the snapshot "get_api_entries__the_live_flag_drops_what_was_voided"
+    And the response JSON matches the snapshot "get_api_entries__the_live_flag_drops_what_was_reversed"
 
   Scenario Outline: A malformed listing filter is refused
     Given a running API
@@ -252,7 +252,7 @@ Feature: GET /api/entries
       | amount_min  | abc   |
       | account_ref | zzz   |
       | source      | nope  |
-      | voided      | maybe |
+      | reversed      | maybe |
       | with_balance | maybe |
 
   Scenario: The running balance walks the one account the filter names

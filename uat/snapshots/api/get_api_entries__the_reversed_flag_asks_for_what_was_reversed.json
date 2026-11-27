@@ -3,7 +3,7 @@
     {
       "currency": "IDR",
       "idempotency_key": "<idempotency_key>",
-      "note": "voided",
+      "note": "reversed",
       "occurred_on": "2026-02-01",
       "postings": [
         {
@@ -32,8 +32,8 @@
         }
       ],
       "ref": "<ref>",
-      "source": "manual",
-      "voided_at": "<timestamp>"
+      "reversed_at": "<timestamp>",
+      "source": "manual"
     }
   ],
   "meta": {

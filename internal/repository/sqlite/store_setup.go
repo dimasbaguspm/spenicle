@@ -84,7 +84,7 @@ func checkSetupOpen(ctx context.Context, tx *sql.Tx) error {
 
 	if err := tx.QueryRowContext(ctx, `
 		SELECT EXISTS(SELECT 1 FROM settings WHERE k = ?),
-		       EXISTS(SELECT 1 FROM ledger_entries)`,
+		       EXISTS(SELECT 1 FROM entries)`,
 		constant.SettingSetupCompletedAt).Scan(&completed, &hasEntries); err != nil {
 		return fmt.Errorf("check setup state: %w", err)
 	}

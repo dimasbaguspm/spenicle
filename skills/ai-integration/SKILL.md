@@ -53,7 +53,7 @@ Rules an agent must respect:
    entry instead of posting twice.
 4. **Capture ≠ ledger.** An agent may create `captures`; only an explicit approval
    creates an entry.
-5. **No deletes.** Void an entry; the server appends to `audit_log`.
+5. **No deletes.** Reverse an entry; the server appends to `audit_log`.
 6. **Base currency is locked.** Do not attempt to change it via the API.
 
 Endpoints, error codes and DDL: [`docs/v2-api.md`](../../docs/v2-api.md). The API is

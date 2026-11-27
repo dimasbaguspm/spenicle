@@ -15,7 +15,7 @@ const (
 const (
 	AuditActionCreate   = "create"
 	AuditActionUpdate   = "update"
-	AuditActionVoid     = "void"
+	AuditActionReverse  = "reverse"
 	AuditActionApprove  = "approve"
 	AuditActionReject   = "reject"
 	AuditActionRetry    = "retry"

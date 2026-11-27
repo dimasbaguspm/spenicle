@@ -115,7 +115,7 @@ func (s *snapshot) dataWatermark() time.Time {
 	for _, entry := range s.entries {
 		note(entry.OccurredOn)
 		note(entry.CreatedAt)
-		noteOptional(entry.VoidedAt)
+		noteOptional(entry.ReversedAt)
 	}
 
 	for _, capture := range s.captures {

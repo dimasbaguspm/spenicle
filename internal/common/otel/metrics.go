@@ -79,8 +79,8 @@ type instrumentSet struct {
 	workerRuns     metric.Int64Counter
 	workerItems    metric.Int64Counter
 	workerDuration metric.Float64Histogram
-	ledgerEntries  metric.Int64Counter
-	ledgerPostings metric.Int64Counter
+	entries        metric.Int64Counter
+	postings       metric.Int64Counter
 	captures       metric.Int64Counter
 	importRows     metric.Int64Counter
 	importClashes  metric.Int64Counter
@@ -116,9 +116,9 @@ func newInstruments() *instrumentSet {
 			"Items a worker step handled, by job and outcome"),
 		workerDuration: mustFloatHistogram(meter, "spenicle.worker.run.duration", unitSecond,
 			"Wall-clock time one worker step took"),
-		ledgerEntries: mustCounter(meter, "spenicle.ledger.entries", unitEntry,
+		entries: mustCounter(meter, "spenicle.entries", unitEntry,
 			"Ledger entries posted, by source"),
-		ledgerPostings: mustCounter(meter, "spenicle.ledger.postings", unitPosting,
+		postings: mustCounter(meter, "spenicle.postings", unitPosting,
 			"Ledger postings written, by source"),
 		captures: mustCounter(meter, "spenicle.captures.transitions", unitTransition,
 			"Capture status transitions, by kind and outcome"),
@@ -258,8 +258,8 @@ func RecordLedgerPost(ctx context.Context, source string, postings int64) {
 	set := instruments()
 	attrs := metric.WithAttributes(LedgerAttributes(source)...)
 
-	set.ledgerEntries.Add(ctx, 1, attrs)
-	set.ledgerPostings.Add(ctx, postings, attrs)
+	set.entries.Add(ctx, 1, attrs)
+	set.postings.Add(ctx, postings, attrs)
 }
 
 func RecordCaptureTransition(ctx context.Context, kind, outcome string) {

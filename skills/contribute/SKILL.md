@@ -18,7 +18,7 @@ licence to use it. If that is not acceptable, don't send the change.
 
 ```bash
 git checkout main && git pull
-git checkout -b feat/entry-void      # or fix/, docs/, chore/
+git checkout -b feat/entry-reverse      # or fix/, docs/, chore/
 ```
 
 One concern per branch. A refactor plus a feature is two branches.

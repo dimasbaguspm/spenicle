@@ -102,7 +102,7 @@ CREATE TABLE recurring_rules (
 CREATE INDEX ix_recurring_due ON recurring_rules (state, next_due_on, id);
 CREATE INDEX ix_recurring_payee_ref ON recurring_rules (payee_ref, next_due_on, id);
 
-CREATE TABLE ledger_entries (
+CREATE TABLE entries (
   id                INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
   occurred_on       TEXT NOT NULL,
@@ -113,21 +113,21 @@ CREATE TABLE ledger_entries (
                     ('manual','share','email','statement','recurring','adjustment')),
   recurring_rule_ref TEXT REFERENCES recurring_rules(ref),
   idempotency_key         TEXT,
-  reverses_entry_ref TEXT REFERENCES ledger_entries(ref),
-  voided_at         TEXT,
+  reversal_of_ref   TEXT REFERENCES entries(ref),
+  reversed_at       TEXT,
   created_at        TEXT NOT NULL
 );
 
 
-CREATE UNIQUE INDEX ux_entries_idem ON ledger_entries (idempotency_key)
+CREATE UNIQUE INDEX ux_entries_idem ON entries (idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 
-CREATE INDEX ix_entries_occurred ON ledger_entries (occurred_on);
+CREATE INDEX ix_entries_occurred ON entries (occurred_on);
 
-CREATE TABLE ledger_postings (
+CREATE TABLE postings (
   id                INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  entry_ref         TEXT NOT NULL REFERENCES ledger_entries(ref) ON DELETE RESTRICT,
+  entry_ref         TEXT NOT NULL REFERENCES entries(ref) ON DELETE RESTRICT,
   account_ref       TEXT NOT NULL REFERENCES accounts(ref),
   amount_minor      INTEGER NOT NULL,
   base_amount_minor INTEGER NOT NULL,
@@ -144,11 +144,11 @@ CREATE TABLE balance_state (
   dirty      INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE TABLE running_balances (
+CREATE TABLE entry_balances (
   id            INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
   account_ref   TEXT NOT NULL REFERENCES accounts(ref),
-  entry_ref     TEXT NOT NULL REFERENCES ledger_entries(ref),
+  entry_ref     TEXT NOT NULL REFERENCES entries(ref),
   occurred_on   TEXT NOT NULL,
   balance_minor INTEGER NOT NULL
 );
@@ -163,12 +163,12 @@ CREATE TABLE captures (
                      ('extracting','pending','duplicate','approved','rejected','failed')),
   idempotency_key          TEXT,
   dedupe_key         TEXT NOT NULL UNIQUE,
-  batch_label           TEXT,
+  group_label           TEXT,
   artifact_hash      TEXT,
   extraction_job_ref TEXT,
   extraction_rail    TEXT,
   extraction_model   TEXT,
-  resolved_entry_ref TEXT REFERENCES ledger_entries(ref),
+  resolved_entry_ref TEXT REFERENCES entries(ref),
   resolution_note    TEXT,
   received_at        TEXT NOT NULL,
   resolved_at        TEXT
@@ -312,14 +312,14 @@ CREATE TABLE export_events (
 
 CREATE INDEX ix_export_events_export_ref ON export_events (export_ref, id);
 CREATE UNIQUE INDEX ux_import_upload_chunks_ref ON import_upload_chunks (upload_ref, chunk_index);
-CREATE INDEX ix_entries_reversal_ref ON ledger_entries (reverses_entry_ref);
-CREATE INDEX ix_postings_account_ref ON ledger_postings (account_ref, entry_ref);
+CREATE INDEX ix_entries_reversal_of_ref ON entries (reversal_of_ref);
+CREATE INDEX ix_postings_account_ref ON postings (account_ref, entry_ref);
 CREATE INDEX ix_exports_status_started ON exports (status, started_at, id);
 CREATE INDEX ix_rules_account_ref ON categorization_rules (account_ref);
-CREATE UNIQUE INDEX ux_entries_rule_due_ref ON ledger_entries (recurring_rule_ref, occurred_on)
+CREATE UNIQUE INDEX ux_entries_rule_due_ref ON entries (recurring_rule_ref, occurred_on)
   WHERE recurring_rule_ref IS NOT NULL;
-CREATE UNIQUE INDEX ux_running_balances_entry_ref ON running_balances (account_ref, entry_ref);
-CREATE INDEX ix_running_balances_order ON running_balances (account_ref, occurred_on, entry_ref);
+CREATE UNIQUE INDEX ux_entry_balances_entry_ref ON entry_balances (account_ref, entry_ref);
+CREATE INDEX ix_entry_balances_order ON entry_balances (account_ref, occurred_on, entry_ref);
 CREATE INDEX ix_accounts_parent_ref ON accounts (parent_ref);
 
 CREATE TABLE custom_queries (
@@ -346,8 +346,8 @@ CREATE TABLE audit_log (
   at          TEXT NOT NULL
 );
 
-CREATE INDEX ix_postings_entry_ref ON ledger_postings (entry_ref, id);
-CREATE INDEX ix_entries_payee_ref ON ledger_entries (payee_ref);
+CREATE INDEX ix_postings_entry_ref ON postings (entry_ref, id);
+CREATE INDEX ix_entries_payee_ref ON entries (payee_ref);
 CREATE INDEX ix_artifacts_live ON artifacts (created_at, id) WHERE deleted_at IS NULL;
 CREATE INDEX ix_audit_entity ON audit_log (entity_kind, entity_ref, id);
 CREATE INDEX ix_audit_actor ON audit_log (actor_kind, at);

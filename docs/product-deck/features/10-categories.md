@@ -88,7 +88,7 @@ GET  /api/analytics/categories    → CategoryTotals | CategoryTotalsByRoot | Ca
   category a human actually posted, fills `payees.default_category_ref` — and only when it
   is empty. Import commits do not learn.
 - **The chart stays derived.** `first_occurred_on` is `MIN(occurred_on)` over the same
-  void-excluding join; `bucket=month` groups by `substr(occurred_on,1,7)`. No counters, no
+  reversal-excluding join; `bucket=month` groups by `substr(occurred_on,1,7)`. No counters, no
   rollup table, so a correction moves every number on the next read.
 
 ## 4. RRR

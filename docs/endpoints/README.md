@@ -34,7 +34,7 @@ by hand, and change the page here when you change the block.
 | `PATCH` | `/api/recurring/{ref}` | steer a recurring rule | [`PATCH_api_recurring_ref.md`](./PATCH_api_recurring_ref.md) |
 | `GET` | `/api/entries` | list the ledger, newest first | [`GET_api_entries.md`](./GET_api_entries.md) |
 | `POST` | `/api/entries` | post one balanced entry | [`POST_api_entries.md`](./POST_api_entries.md) |
-| `PATCH` | `/api/entries/{ref}` | void an entry (write its reversal) | [`PATCH_api_entries_ref.md`](./PATCH_api_entries_ref.md) |
+| `PATCH` | `/api/entries/{ref}` | reverse an entry (write its reversal) | [`PATCH_api_entries_ref.md`](./PATCH_api_entries_ref.md) |
 | `GET` | `/api/entries/{ref}` | one entry with its postings | [`GET_api_entries_ref.md`](./GET_api_entries_ref.md) |
 | `GET` | `/api/captures` | the review queue | [`GET_api_captures.md`](./GET_api_captures.md) |
 | `POST` | `/api/captures` | park something unconfirmed | [`POST_api_captures.md`](./POST_api_captures.md) |

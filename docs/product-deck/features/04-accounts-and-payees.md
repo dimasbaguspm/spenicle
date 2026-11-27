@@ -89,7 +89,7 @@ PATCH/api/payees     Handler.Payees.Patch   → PayeeByRef → UpdatePayee → a
 ```
 
 - **No stored balance.** `base_amount_minor` is `SUM(base_amount_minor)` over
-  `ledger_postings` per account; a void excludes itself automatically because its
+  `postings` per account; a reversed entry excludes itself automatically because its
   reversal negates it. There is no column to drift and nothing to recompute after a
   correction.
 - **A category is not a table.** `expense` and `income` accounts are the categories; the
@@ -160,7 +160,7 @@ Scenario: A category is created as an expense account with a zero balance
   Then the response status is 201
   And the response body has kind "expense"
   And the response body has no base_amount_minor
-  And the store holds 0 "ledger_entries" rows
+  And the store holds 0 "entries" rows
 
 Scenario: A balance is derived from postings
   Given an entry posting "-18000" to "Cash"

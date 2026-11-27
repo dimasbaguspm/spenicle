@@ -24,7 +24,7 @@ func entryFilter(params list.Params, loc *time.Location) (entity.EntryFilter, er
 		Currency:    params.Currency,
 		Query:       params.Query,
 		Refs:        refs,
-		Voided:      params.Voided,
+		Reversed:    params.Reversed,
 		Cursor:      params.Cursor,
 		Limit:       list.ClampLimit(params.Limit),
 	}

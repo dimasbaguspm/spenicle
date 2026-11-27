@@ -21,7 +21,7 @@ put a decision you did not feel like making. v2 changes three things:
 1. **Capture is separate from organizing.** Logging takes 2 seconds and one number. Categorizing
    happens later, in a queue you clear in five minutes.
 2. **Setup is one command.** SQLite, no Postgres, no Redis, no JWT.
-3. **User records are never deleted.** Void and reject instead, with an audit trail;
+3. **User records are never deleted.** Reverse and reject instead, with an audit trail;
    derived balances and expired imports are pruned.
 
 ## Install

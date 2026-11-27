@@ -30,6 +30,6 @@
     }
   ],
   "ref": "<ref>",
-  "source": "manual",
-  "voided_at": "<timestamp>"
+  "reversed_at": "<timestamp>",
+  "source": "manual"
 }

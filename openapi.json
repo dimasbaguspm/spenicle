@@ -249,7 +249,7 @@
       },
       "captureRequest": {
         "properties": {
-          "batch_label": {
+          "group_label": {
             "maxLength": 64,
             "type": "string"
           },
@@ -620,7 +620,7 @@
             "maxLength": 2000,
             "type": "string"
           },
-          "void": {
+          "reverse": {
             "type": "boolean"
           }
         },
@@ -657,6 +657,10 @@
             "pattern": "^[0-9a-f]{32}$",
             "type": "string"
           },
+          "reversed_at": {
+            "format": "date-time",
+            "type": "string"
+          },
           "running_balance_minor": {
             "pattern": "^[+-]?[0-9]+$",
             "type": "string"
@@ -670,10 +674,6 @@
               "recurring",
               "adjustment"
             ],
-            "type": "string"
-          },
-          "voided_at": {
-            "format": "date-time",
             "type": "string"
           }
         },
@@ -2717,7 +2717,7 @@
             }
           },
           {
-            "description": "created, updated, voided, revoked and friends",
+            "description": "created, updated, reversed, revoked and friends",
             "in": "query",
             "name": "action",
             "schema": {
@@ -4103,9 +4103,9 @@
             }
           },
           {
-            "description": "true only voided entries, false only live ones, absent both",
+            "description": "true only reversed entries, false only live ones, absent both",
             "in": "query",
-            "name": "voided",
+            "name": "reversed",
             "schema": {
               "type": "string"
             }
@@ -4347,7 +4347,7 @@
     },
     "/api/entries/{ref}": {
       "get": {
-        "description": "A voided entry still answers and carries `voided_at`; the reversal is a separate entry.",
+        "description": "A reversed entry still answers and carries `reversed_at`; the reversal is a separate entry.",
         "operationId": "getApiEntriesByRef",
         "parameters": [
           {
@@ -4425,7 +4425,7 @@
         "x-spenicle-scope": "entries:read"
       },
       "patch": {
-        "description": "One body action per call: `void: true` writes the reversal (the original stays), `payee_ref` repoints, `occurred_on`, `note` and `postings` replace the entry in place.",
+        "description": "One body action per call: `reverse: true` writes the reversal (the original stays), `payee_ref` repoints, `occurred_on`, `note` and `postings` replace the entry in place.",
         "operationId": "patchApiEntriesByRef",
         "parameters": [
           {
@@ -4518,7 +4518,7 @@
             "Bearer": []
           }
         ],
-        "summary": "Void an entry or correct it",
+        "summary": "Reverse an entry or correct it",
         "tags": [
           "entries"
         ],

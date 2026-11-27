@@ -21,7 +21,7 @@ place to defer a decision. v2 fixes all three.
 | sealing | `APP_SECRET` is mandatory; it encrypts captures and artifacts and keys the root credential and the token digests, and the ledger stays readable plaintext |
 | capture | one `captures` queue for every channel; PWA share target + offline IndexedDB outbox are planned, not shipped |
 | review | single `captures` queue for every channel |
-| ledger | double-entry: `ledger_entries` + `ledger_postings`, zero-sum per entry |
+| ledger | double-entry: `entries` + `postings`, zero-sum per entry |
 | categories | implemented as `accounts` rows with `kind IN ('expense','income')` |
 | base currency | in-app setting (default IDR), locked when `POST /api/setup` completes |
 | currencies | embedded ISO 4217 list, not a table |
@@ -31,7 +31,7 @@ place to defer a decision. v2 fixes all three.
 | recurring | rules generate `captures`; **always** require a tap |
 | month close | none: no lock and no snapshot; monthly totals are derived from the ledger. The four-way month report is planned, not shipped |
 | history | fresh start; statement import commits accepted CSV rows, and extraction is not part of import |
-| deletions | no row deletes. Void and reject instead; `audit_log` records state changes. File reclamation is allowed |
+| deletions | no row deletes. Reverse and reject instead; `audit_log` records state changes. File reclamation is allowed |
 | configuration | eight environment variables; every other default lives in `internal/common/config/config.go`, no viper, no config file |
 | first boot | adapter seeds `Cash` and `Unsorted`; `POST /api/setup` locks the currency and optional opening balances in one transaction |
 
@@ -147,10 +147,10 @@ Canonical DDL with every column lives in [`v2-api.md`](./v2-api.md). Summary:
 | `payees` | counterparties, with capture defaults |
 | `categorization_rules` | deterministic payee → category rules |
 | `recurring_rules` | scheduled expectations; no detection path is shipped |
-| `ledger_entries` | what a human says happened |
-| `ledger_postings` | where money moved, zero-sum per entry |
+| `entries` | what a human says happened |
+| `postings` | where money moved, zero-sum per entry |
 | `balance_state` | dirty flag for balance rebuilds |
-| `running_balances` | derived per-account checkpoints |
+| `entry_balances` | derived per-account checkpoints |
 | `captures` | everything unconfirmed, the single review queue |
 | `capture_payloads` | sealed raw text and draft JSON, one per capture |
 | `artifacts` | metadata for content-addressed files under `./data/artifacts` |
@@ -167,16 +167,16 @@ Canonical DDL with every column lives in [`v2-api.md`](./v2-api.md). Summary:
 | `mail_messages` | the reference a mailbox poll leaves behind: handle, revision, outcome |
 
 `schema_migrations` is managed by the Go migrator and is not a domain table. There is no
-month table: monthly totals are derived from `ledger_postings`.
+month table: monthly totals are derived from `postings`.
 
 Rates are exact decimal `TEXT`, money is signed `INTEGER` minor units, enums are `CHECK`
 constraints. Currencies are **not** a table: the ISO 4217 list (code, minor units, symbol) is
 embedded in the binary and validated at the API boundary.
 
-Running balances are checkpoints in `running_balances`, one per account and entry, with
+Running balances are checkpoints in `entry_balances`, one per account and entry, with
 `occurred_on` copied from the entry so an ordered index can find the prior checkpoint and
 shift later ones inside the entry transaction. `balance_state.dirty` forces a rebuild after
-a backdated void or reversal. Listing an account reads one checkpoint per returned entry
+a backdated reversal. Listing an account reads one checkpoint per returned entry
 instead of recomputing a window over every posting.
 
 ## Invariants
@@ -190,14 +190,14 @@ instead of recomputing a window over every posting.
    cannot be negated.
 3. A posting's base amount is computed once, at write time, and never recomputed.
    This is why a past month's numbers cannot drift when rates change.
-4. No row `DELETE` on ledger, captures, rules or tokens. Void, reject, archive or revoke.
+4. No row `DELETE` on ledger, captures, rules or tokens. Reverse, reject, archive or revoke.
    Reclaiming artifact, import and export files is allowed.
 5. Every state change on an account, payee, rule, entry, capture, setting or token appends
    one `audit_log` row inside the same transaction, naming the actor (see *Audit journal*).
 
 ## Why postings exist
 
-`ledger_entries` holds what a human says happened. `ledger_postings` holds where money
+`entries` holds what a human says happened. `postings` holds where money
 moved, one row per account touched, summing to zero.
 
 Coffee, Rp 25.000 from BCA:
@@ -420,7 +420,7 @@ behind and a committed one cannot be forgotten.
 | --- | --- |
 | `entity_kind` | which table, as a bounded name: `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `categorization_rule`, `setting`, `api_token`, `system` |
 | `entity_ref` | the row, by `ref` — the same identifier every other relation uses |
-| `action` | `create`, `update`, `void`, `approve`, `reject`, `advance`, `revoke`, `generate`, `retry`, `start` |
+| `action` | `create`, `update`, `reverse`, `approve`, `reject`, `advance`, `revoke`, `generate`, `retry`, `start` |
 | `actor_kind` / `actor_ref` | `user`, `worker`, `system` — and, for a token, its ref in `actor_ref` (the kind stays `user`) |
 | `from_json` / `to_json` | what the change touched, as typed payload structs (`entity.EntryCreated`, …) validated with the same tags the API uses |
 | `at` | when, UTC |

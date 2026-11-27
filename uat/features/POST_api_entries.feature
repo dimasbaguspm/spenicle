@@ -51,8 +51,8 @@ Feature: POST /api/entries
     And the response JSON matches the snapshot "post_api_entries__a_balanced_expense_is_accepted_and_stored_once"
     And the store holds:
       | table           | count |
-      | ledger_entries  | 1     |
-      | ledger_postings | 2     |
+      | entries  | 1     |
+      | postings | 2     |
     And the journal holds 1 "ledger_entry" rows
 
   Scenario: Replaying an idempotency key returns the stored entry instead of a duplicate
@@ -74,8 +74,8 @@ Feature: POST /api/entries
     And the last ref is still "entry"
     And the store holds:
       | table           | count |
-      | ledger_entries  | 1     |
-      | ledger_postings | 2     |
+      | entries  | 1     |
+      | postings | 2     |
     And the response JSON matches the snapshot "post_api_entries__replaying_a_client_id_returns_the_stored_entry"
 
   Scenario: Postings that do not balance are refused
@@ -91,7 +91,7 @@ Feature: POST /api/entries
     And the response JSON matches the snapshot "post_api_entries__postings_that_do_not_balance_are_refused"
     And the store holds:
       | table          | count |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: A single posting is refused
     Given the base currency is "IDR"
@@ -180,7 +180,7 @@ Feature: POST /api/entries
     And the response JSON matches the snapshot "post_api_entries__a_late_entry_in_a_past_month_is_accepted"
     And the store holds:
       | table          | count |
-      | ledger_entries | 1     |
+      | entries | 1     |
 
   Scenario: A malformed amount is refused before it reaches the ledger
     Given the base currency is "IDR"
@@ -195,7 +195,7 @@ Feature: POST /api/entries
     And the response JSON matches the snapshot "post_api_entries__a_malformed_amount_is_refused_before_it_reaches_the_ledger"
     And the store holds:
       | table          | count |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: An unknown field is refused instead of ignored
     Given a running API
@@ -231,7 +231,7 @@ Feature: POST /api/entries
     And the response JSON matches the snapshot "post_api_entries__a_posted_entry_carries_its_payee_in_the_response"
     And the store holds:
       | table          | count |
-      | ledger_entries | 1     |
+      | entries | 1     |
     And the journal holds 1 "ledger_entry" rows
     And the journal holds 1 "payee" rows
 
@@ -245,7 +245,7 @@ Feature: POST /api/entries
     And the response JSON matches the snapshot "post_api_entries__an_unknown_payee_is_refused"
     And the store holds:
       | table          | count |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: A malformed payee ref is refused
     Given a running API
@@ -257,4 +257,4 @@ Feature: POST /api/entries
     And the response JSON matches the snapshot "post_api_entries__a_malformed_payee_ref_is_refused"
     And the store holds:
       | table          | count |
-      | ledger_entries | 0     |
+      | entries | 0     |

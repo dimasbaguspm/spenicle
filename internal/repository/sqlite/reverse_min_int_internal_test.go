@@ -32,7 +32,7 @@ func seedUnrepresentableEntry(t *testing.T, store *Store) (string, entity.Accoun
 	at := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	_, err = store.db.ExecContext(ctx, `
-		INSERT INTO ledger_entries (ref, occurred_on, currency, source, created_at)
+		INSERT INTO entries (ref, occurred_on, currency, source, created_at)
 		VALUES (?, ?, 'IDR', ?, ?)`,
 		ref, at.Format(constant.DateLayout), constant.EntrySourceManual, at.Format(constant.TimestampLayout))
 	if err != nil {
@@ -50,7 +50,7 @@ func seedUnrepresentableEntry(t *testing.T, store *Store) (string, entity.Accoun
 
 	for _, amount := range amounts {
 		_, err := store.db.ExecContext(ctx, `
-			INSERT INTO ledger_postings
+			INSERT INTO postings
 				(ref, entry_ref, account_ref, amount_minor, base_amount_minor, fx_rate, fx_source)
 			VALUES (?, ?, ?, ?, ?, '1', 'identity')`,
 			uuid.New(), ref, amount.account.Ref, amount.amount, amount.amount)
@@ -81,10 +81,10 @@ func assertNothingWritten(t *testing.T, db *sql.DB) {
 		query string
 		want  int
 	}{
-		{name: "entries", query: `SELECT COUNT(*) FROM ledger_entries`, want: 1},
-		{name: "postings", query: `SELECT COUNT(*) FROM ledger_postings`, want: 3},
-		{name: "voided entries", query: `SELECT COUNT(*) FROM ledger_entries WHERE voided_at IS NOT NULL`},
-		{name: "void audits", query: `SELECT COUNT(*) FROM audit_log WHERE action = 'void'`},
+		{name: "entries", query: `SELECT COUNT(*) FROM entries`, want: 1},
+		{name: "postings", query: `SELECT COUNT(*) FROM postings`, want: 3},
+		{name: "reversed entries", query: `SELECT COUNT(*) FROM entries WHERE reversed_at IS NOT NULL`},
+		{name: "reverse audits", query: `SELECT COUNT(*) FROM audit_log WHERE action = 'reverse'`},
 	}
 
 	for _, check := range checks {
@@ -100,9 +100,9 @@ func TestUnrepresentableReversalIsNotCommitted(t *testing.T) {
 		act  func(context.Context, *Store, string, entity.Account, entity.Account) error
 	}{
 		{
-			name: "void",
+			name: "reverse",
 			act: func(ctx context.Context, store *Store, ref string, _, _ entity.Account) error {
-				_, err := store.VoidEntry(ctx, ref, "why", time.Now().UTC())
+				_, err := store.ReverseEntry(ctx, ref, "why", time.Now().UTC())
 				return err
 			},
 		},

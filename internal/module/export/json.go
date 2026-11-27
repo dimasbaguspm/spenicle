@@ -49,8 +49,8 @@ type entryRow struct {
 	Note           string       `json:"note,omitempty"`
 	IdempotencyKey string       `json:"idempotency_key,omitempty"`
 	PayeeRef       string       `json:"payee_ref,omitempty"`
-	ReversesRef    string       `json:"reverses_ref,omitempty"`
-	VoidedAt       string       `json:"voided_at,omitempty"`
+	ReversalOfRef  string       `json:"reversal_of_ref,omitempty"`
+	ReversedAt     string       `json:"reversed_at,omitempty"`
 	CreatedAt      string       `json:"created_at"`
 	Postings       []postingRow `json:"postings"`
 }
@@ -242,8 +242,8 @@ func (s *snapshot) entryRow(entry entity.Entry) any {
 		Note:           entry.Note,
 		IdempotencyKey: entry.IdempotencyKey,
 		PayeeRef:       entry.PayeeRef,
-		ReversesRef:    entry.ReversesEntryRef,
-		VoidedAt:       optionalStamp(entry.VoidedAt),
+		ReversalOfRef:  entry.ReversalOfRef,
+		ReversedAt:     optionalStamp(entry.ReversedAt),
 		CreatedAt:      stamp(entry.CreatedAt),
 		Postings:       postings,
 	}

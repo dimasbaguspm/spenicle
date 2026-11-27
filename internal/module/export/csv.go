@@ -97,7 +97,7 @@ func sheets(snap *snapshot) []sheet {
 			name: "entries.csv",
 			header: []string{
 				"ref", "occurred_on", "currency", "source", "note", "idempotency_key",
-				"payee_ref", "reverses_ref", "voided_at", createdAtColumn,
+				"payee_ref", "reversal_of_ref", "reversed_at", createdAtColumn,
 			},
 			rows: entrySheet(snap),
 		},
@@ -195,8 +195,8 @@ func entrySheet(snap *snapshot) [][]string {
 			entry.Note,
 			entry.IdempotencyKey,
 			entry.PayeeRef,
-			entry.ReversesEntryRef,
-			optionalStamp(entry.VoidedAt),
+			entry.ReversalOfRef,
+			optionalStamp(entry.ReversedAt),
 			stamp(entry.CreatedAt),
 		})
 	}

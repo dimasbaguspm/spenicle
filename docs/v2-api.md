@@ -27,7 +27,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 9 | `GET /api/entries` | live (filters, cursor, limit) |
 | 9 | `GET /api/entries/{ref}` | live: one entry with its postings, `404` for an unknown ref |
 | 10 | `POST /api/entries` | live |
-| 11 | `PATCH /api/entries/{ref}` | live: `void` (writes the reversal) and `payee_ref` |
+| 11 | `PATCH /api/entries/{ref}` | live: `reverse` (writes the reversal) and `payee_ref` |
 | 12 | `GET /api/captures` | live (status filter, cursor, limit) |
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
 | 14 | `PATCH /api/captures/{ref}` | live: `approve`, `reject`, `retry`, `match`; an approved recurring capture resolves its rule from the sealed draft |
@@ -104,7 +104,7 @@ them yourself — `spenicle.env` is the cheapest separator.
 | `artifacts/<sha256>` files | AES-256-GCM, key = HKDF-SHA256(secret, info `spenicle/artifact/v1`), sha256 as AAD |
 | `api_tokens.token_hash` | HMAC-SHA256(secret, token), not bare sha256 |
 
-Deliberately **not** sealed: `ledger_entries`, `ledger_postings`, `accounts`, `amounts`. Your
+Deliberately **not** sealed: `entries`, `postings`, `accounts`, `amounts`. Your
 numbers stay readable with `sqlite3`, so a lost secret never costs you your financial history.
 
 Consequences, stated plainly:
@@ -161,11 +161,11 @@ entry stays), and the credential answers `401 unauthorized` at once.
 | --- | --- |
 | idempotency | `idempotency_key` (≤ 64 chars) on creates, optional everywhere: when it is absent the server mints `<credential-ref>_<16 hex>` (`root` for the instance password) and echoes it, so a retry replays a key it never had to invent. A key the caller sends is honoured as sent |
 | pagination | `?cursor=&limit=` (default 50, max 200), response carries `next_cursor` |
-| soft delete | never. `archived_at`, `voided_at`, `status='rejected'` |
+| soft delete | never. `archived_at`, `reversed_at`, `status='rejected'` |
 | backdated writes | **always allowed**, any month, past or future |
 | month close | no lock and no snapshot: the diff is computed from the ledger on every read |
 | concurrency | SQLite `BEGIN IMMEDIATE` for writes, WAL for readers |
-| deprecated verbs | approve/reject/retry/void/detect are **body actions** on `PATCH` |
+| deprecated verbs | approve/reject/retry/reverse/detect are **body actions** on `PATCH` |
 | browser clients | `OPTIONS` preflight is answered with `204` before auth; valid `http(s)` and `null` origins are reflected with `Vary: Origin`, `GET, POST, PATCH, OPTIONS` and `Authorization, Content-Type` are allowed, `Content-Disposition` is exposed, and no cookie is set |
 
 ---
@@ -231,10 +231,10 @@ Every table also has `id INTEGER PRIMARY KEY` (its own row identity: ordering an
 sweep cursors) and `ref TEXT NOT NULL UNIQUE` (a dashless UUID), except
 `import_upload_chunks`, which is internal bookkeeping with an `id` and no `ref`. **A
 relation is a `ref`**: `parent_ref`, `payee_ref`, `account_ref`, `entry_ref`, `batch_ref`,
-`upload_ref`, `export_ref`, `capture_ref`, `reverses_entry_ref`, `recurring_rule_ref`,
+`upload_ref`, `export_ref`, `capture_ref`, `reversal_of_ref`, `recurring_rule_ref`,
 `resolved_entry_ref` point at the parent row's `ref`, never at its `id`. The API speaks
 `ref` only: `account_ref`, `ref`, and never a number. No column ends in `_id` at all: the
-idempotency key is `idempotency_key`, the capture grouping label is `batch_label`, and
+idempotency key is `idempotency_key`, the capture grouping label is `group_label`, and
 every relation between two rows is a `ref`.
 
 | column | type | notes |
@@ -282,7 +282,7 @@ every relation between two rows is a `ref`.
 | `last_posted_on` | TEXT NULL | |
 | `created_at` | TEXT | |
 
-## 1.7 `ledger_entries`
+## 1.7 `entries`
 
 | column | type | notes |
 | --- | --- | --- |
@@ -294,11 +294,11 @@ every relation between two rows is a `ref`.
 | `source` | TEXT | `manual` \| `share` \| `email` \| `statement` \| `recurring` \| `adjustment` |
 | `recurring_rule_ref` | TEXT NULL | the rule's `ref`, `UNIQUE(rule, occurred_on)` |
 | `idempotency_key` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
-| `reverses_entry_ref` | TEXT NULL | the voided entry's `ref`, set on the reversal |
-| `voided_at` | TEXT NULL | set on the original |
+| `reversal_of_ref` | TEXT NULL | the reversed entry's `ref`, set on the reversal |
+| `reversed_at` | TEXT NULL | set on the original |
 | `created_at` | TEXT | |
 
-## 1.8 `ledger_postings`
+## 1.8 `postings`
 
 | column | type | notes |
 | --- | --- | --- |
@@ -322,7 +322,7 @@ The single review queue. One row per thing captured, from any channel.
 | `status` | TEXT | `extracting` \| `pending` \| `duplicate` \| `approved` \| `rejected` \| `failed` |
 | `idempotency_key` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
 | `dedupe_key` | TEXT UNIQUE | cross-channel duplicate guard |
-| `batch_label` | TEXT NULL | a client label (≤ 64) grouping rows of one statement — free text, not a row reference |
+| `group_label` | TEXT NULL | a client label (≤ 64) grouping rows of one statement — free text, not a row reference |
 | `artifact_hash` | TEXT NULL | `sha256`, the document lives at `artifacts/<hash[0:2]>/<hash[2:4]>/<hash>` |
 | `extraction_job_ref` | TEXT NULL | SnapToJSON job ref |
 | `extraction_rail` | TEXT NULL | `snaptojson` when extraction ran |
@@ -355,7 +355,7 @@ sealed envelope).
 | `id` | INTEGER PK | |
 | `entity_kind` | TEXT | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `categorization_rule`, `setting`, `api_token`, `system` |
 | `entity_ref` | TEXT NULL | the row's ref, when it has one |
-| `action` | TEXT | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke`, `start` |
+| `action` | TEXT | `create`, `update`, `reverse`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke`, `start` |
 | `actor_kind` | TEXT | `user`, `worker`, `system` — CHECK-constrained; a token is `user` with its ref in `actor_ref` |
 | `actor_ref` | TEXT NULL | the token's ref when a token made the change |
 | `from_json` | TEXT NULL | what the change moved away from |
@@ -415,7 +415,7 @@ name, `contains`/`prefix` rule on the note, then `none` — and inside a tier it
 `internal/repository/sqlite/migrations/0001_init.sql` (`//go:embed migrations/*.sql` in
 `migrate.go`) is the canonical DDL. It is embedded and applied verbatim on boot. There are
 25 domain tables plus `schema_migrations`, managed in Go; `schema_version` is 1. The tables
-and columns highlighted above are the API-facing subset: `balance_state`, `running_balances`,
+and columns highlighted above are the API-facing subset: `balance_state`, `entry_balances`,
 `capture_payloads`, `artifacts`, `import_batches`, `import_rows`, `import_events`,
 `import_uploads`, `import_upload_chunks`, `exports`, `export_events`, `custom_queries` and
 `schema_migrations` are not expanded here. When prose and SQL disagree, the SQL wins.
@@ -474,7 +474,7 @@ because the provider redirects a browser there; the signed `state` is its capabi
 | GET | `/api/entries` | `entries:read` | list entries and postings |
 | GET | `/api/entries/{ref}` | `entries:read` | one entry with postings |
 | POST | `/api/entries` | `entries:write` | post a balanced entry |
-| PATCH | `/api/entries/{ref}` | `entries:write` | correct or void an entry |
+| PATCH | `/api/entries/{ref}` | `entries:write` | correct or reverse an entry |
 | GET | `/api/captures` | `captures:read` | review queue |
 | POST | `/api/captures` | `captures:write` | park an unconfirmed item |
 | PATCH | `/api/captures/{ref}` | `captures:write` + action scope | approve, reject, retry, match |
@@ -501,7 +501,7 @@ because the provider redirects a browser there; the signed `state` is its capabi
 | `GET /accounts`, `/payees`, `/recurring` as the only bootstrap | those list routes still exist; `GET /api/meta` adds a complete bootstrap payload |
 | `GET /accounts/{id}/register` | `GET /api/entries?account_ref=&with_balance=true` |
 | integer `{id}` paths | `{ref}` everywhere on the wire |
-| `POST /entries/{id}/void` | `PATCH /api/entries/{ref}` with `{"void":true,"reason":"..."}` |
+| `POST /entries/{id}/void` | `PATCH /api/entries/{ref}` with `{"reverse":true,"reason":"..."}` |
 | separate approve/reject/retry endpoints | `PATCH /api/captures/{ref}` with a body `action` |
 | `POST /recurring/detect` | no HTTP detection route and no detection worker; create rules with `POST /api/recurring` |
 | `POST /internal/extractions/{id}/callback` | no extraction-provider callback; `PATCH /api/captures/{ref}` with `action:"retry"` polls the SnapToJSON `job_ref` |
@@ -693,7 +693,7 @@ sequenceDiagram
 
 ## 3.8 `GET /api/entries`
 
-`?from&to&account_ref&payee_ref&source&currency&query&refs&voided&amount_min&amount_max&cursor&with_balance&limit`
+`?from&to&account_ref&payee_ref&source&currency&query&refs&reversed&amount_min&amount_max&cursor&with_balance&limit`
 
 The ref filters and `source` take comma-separated unions (`payee_ref=a,b` is either payee),
 `query` matches the note or the payee name, and `amount_min`/`amount_max` match any
@@ -737,7 +737,7 @@ sequenceDiagram
     participant DB as SQLite
     C->>API: POST entry with idempotency_key and postings
     API->>API: require scope entries:write
-    API->>DB: SELECT ledger_entries WHERE idempotency_key equals
+    API->>DB: SELECT entries WHERE idempotency_key equals
     alt replay
         API-->>C: 200 existing entry
     else new
@@ -748,8 +748,8 @@ sequenceDiagram
         API->>API: compute base_amount_minor with one rounding
         API->>API: assign rounding residual to largest posting, check both sums
         API->>DB: BEGIN IMMEDIATE
-        API->>DB: INSERT ledger_entries
-        API->>DB: INSERT ledger_postings
+        API->>DB: INSERT entries
+        API->>DB: INSERT postings
         API->>DB: INSERT audit_log
         API->>DB: COMMIT
         API->>API: no lock to consult, any month is writable
@@ -761,7 +761,7 @@ sequenceDiagram
 
 ```json
 { "note":"flat white, large", "payee_ref":"0000000000000000000000000000000d" }
-{ "void": true, "reason": "duplicate of 811" }
+{ "reverse": true, "reason": "duplicate of 811" }
 ```
 
 ```mermaid
@@ -770,21 +770,21 @@ sequenceDiagram
     participant UI as Client
     participant API as Entry handler
     participant DB as SQLite
-    UI->>API: PATCH entry with fields or void flag
+    UI->>API: PATCH entry with fields or reverse flag
     API->>DB: SELECT entry and postings
-    alt void requested and already voided
-        API-->>UI: 409 already_voided
-    else void requested
+    alt reverse requested and already reversed
+        API-->>UI: 409 already_reversed
+    else reverse requested
         API->>API: build and zero-sum-check the reversal before writing
         API->>DB: BEGIN IMMEDIATE
-        API->>DB: INSERT reversal entry with reverses_entry_id set
+        API->>DB: INSERT reversal entry with reversal_of_ref set
         API->>DB: INSERT postings with negated amounts and same fx_rate
-        API->>DB: UPDATE ledger_entries SET voided_at
-        API->>DB: INSERT audit_log action void and COMMIT
-        API-->>UI: 200 void plus reversal
+        API->>DB: UPDATE entries SET reversed_at
+        API->>DB: INSERT audit_log action reverse and COMMIT
+        API-->>UI: 200 reversal
     else field edit
         API->>DB: BEGIN IMMEDIATE
-        API->>DB: UPDATE ledger_entries SET fields
+        API->>DB: UPDATE entries SET fields
         API->>DB: INSERT audit_log from_json to_json and COMMIT
         API-->>UI: 200 entry
     end
@@ -792,7 +792,7 @@ sequenceDiagram
 
 ## 3.11 `GET /api/captures`
 
-`?status=&refs=&cursor=&limit=`. Extracting first, then oldest pending. `batch_label` is a
+`?status=&refs=&cursor=&limit=`. Extracting first, then oldest pending. `group_label` is a
 `POST` body field, not a list filter.
 
 ```mermaid
@@ -889,8 +889,8 @@ sequenceDiagram
         API->>FX: resolve rate for occurred_on
         FX-->>API: rate and fx_source
         API->>DB: BEGIN IMMEDIATE
-        API->>DB: INSERT ledger_entries with source from capture kind
-        API->>DB: INSERT ledger_postings
+        API->>DB: INSERT entries with source from capture kind
+        API->>DB: INSERT postings
         API->>DB: UPDATE captures SET status approved, resolved_entry_ref, resolved_at
         API->>DB: INSERT audit_log action approve and COMMIT
         API-->>UI: 201 entry, capture resolved

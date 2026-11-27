@@ -19,8 +19,8 @@ Feature: GET /api/entries/{{ref}}
     And the response JSON matches the snapshot "get_api_entries_ref__one_entry_comes_back_by_ref"
     And the store holds:
       | table           | count |
-      | ledger_entries  | 1     |
-      | ledger_postings | 2     |
+      | entries  | 1     |
+      | postings | 2     |
 
   Scenario: An unknown entry is not found
     Given a running API
@@ -34,7 +34,7 @@ Feature: GET /api/entries/{{ref}}
     Then the response status is 422
     And the response JSON matches the snapshot "get_api_entries_ref__a_malformed_ref_is_refused"
 
-  Scenario: A voided entry still comes back, carrying its void timestamp
+  Scenario: A reversed entry still comes back, carrying its reversed timestamp
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
@@ -43,11 +43,11 @@ Feature: GET /api/entries/{{ref}}
     And the last ref is remembered as "entry"
     And I send a PATCH to "/api/entries/{{ref:entry}}" with:
       """json
-      {"void":true,"reason":"duplicate of 811"}
+      {"reverse":true,"reason":"duplicate of 811"}
       """
     When I send a GET to "/api/entries/{{ref:entry}}"
     Then the response status is 200
-    And the response JSON matches the snapshot "get_api_entries_ref__a_voided_entry_carries_its_void_timestamp"
+    And the response JSON matches the snapshot "get_api_entries_ref__a_reversed_entry_carries_its_reversed_timestamp"
     And the store holds:
       | table          | count |
-      | ledger_entries | 2     |
+      | entries | 2     |

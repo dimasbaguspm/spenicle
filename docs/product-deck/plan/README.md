@@ -24,7 +24,7 @@ These come from [`../../../AGENTS.md`](../../../AGENTS.md) and are not negotiabl
 brainstorm either:
 
 - **refs, never integer ids** on the wire; every new table gets `id` + `ref`.
-- **no deletes**: `archived_at`, `status`, `voided_at`.
+- **no deletes**: `archived_at`, `status`, `reversed_at`.
 - **money is integer minor units**, rates as `TEXT` + `big.Rat`.
 - **derived, not stored**: a budget's `spent` and a group's `balance` are queries, never
   counters that can drift.

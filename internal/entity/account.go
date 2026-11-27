@@ -76,7 +76,7 @@ type EntryFilter struct {
 	Currency    string
 	Query       string
 	Refs        []string
-	Voided      string
+	Reversed    string
 	AmountMin   *int64
 	AmountMax   *int64
 	Cursor      string

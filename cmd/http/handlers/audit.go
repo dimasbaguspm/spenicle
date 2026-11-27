@@ -42,7 +42,7 @@ type auditResponse struct {
 // @Produce     json
 // @Param       entity_kind query string false "the table kind"
 // @Param       entity_ref query string false "one row's ref"
-// @Param       action query string false "created, updated, voided, revoked and friends"
+// @Param       action query string false "created, updated, reversed, revoked and friends"
 // @Param       actor_kind query string false "user or worker"
 // @Param       from query string false "window start"
 // @Param       to query string false "window end"

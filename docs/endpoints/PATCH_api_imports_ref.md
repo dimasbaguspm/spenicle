@@ -68,7 +68,7 @@ Rows that were `pending` or `skipped` are not posted and stay in the batch for a
 ## Errors
 
 - `403 forbidden` — a `commit` without `entries:write`; the check runs before the batch is loaded.
-- `409 import_closed` — the other action on a terminal batch: `commit` on a `rejected` batch, `reject` on a `committed` one. The message names the state; the entries of a committed batch are undone with `PATCH /api/entries/{ref}` and `{"void": true}`, not here.
+- `409 import_closed` — the other action on a terminal batch: `commit` on a `rejected` batch, `reject` on a `committed` one. The message names the state; the entries of a committed batch are undone with `PATCH /api/entries/{ref}` and `{"reverse": true}`, not here.
 - `404 not_found` — the ref names no batch.
 - `422 invalid_request` — `action` missing or not one of the two, `reason` too long.
 - `422 invalid_postings`, `422 unknown_currency`, `422 invalid_rate` — a row could not become a balanced entry (a deleted account, a category that is not an account); nothing after it is posted and the batch stays `committing`, so the fix is a `PATCH` on the row and a commit replay, which resumes.
@@ -104,7 +104,7 @@ sequenceDiagram
         loop every accepted row
             M->>L: Post(idempotency_key = import:hash:index, source = statement)
             L->>DB: SELECT entry WHERE idempotency_key = ? (replay guard)
-            L->>DB: INSERT ledger_entries + ledger_postings
+            L->>DB: INSERT entries + postings
         end
         M->>DB: UPDATE import_batches SET status = committed, committed_at
         M->>DB: INSERT import_events (committed)

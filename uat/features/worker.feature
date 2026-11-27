@@ -28,7 +28,7 @@ Feature: Worker
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: A paused rule queues nothing
     Given the recurring worker clock is "2026-04-15"
@@ -81,7 +81,7 @@ Feature: Worker
     And the store holds:
       | table          | count |
       | captures       | 3     |
-      | ledger_entries | 0     |
+      | entries | 0     |
     When I send a GET to "/api/recurring"
     Then the response status is 200
     And the response JSON matches the snapshot "worker__a_monthly_rule_due_three_months_ago_catches_up"
@@ -110,7 +110,7 @@ Feature: Worker
     And the store holds:
       | table          | count |
       | captures       | 0     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: Approving a queued rule writes the entry once
     Given the recurring worker clock is "2026-04-15"
@@ -144,7 +144,7 @@ Feature: Worker
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 1     |
+      | entries | 1     |
     When the request body is:
       """json
       {"action":"approve","occurred_on":"2026-04-14","currency":"IDR","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
@@ -156,7 +156,7 @@ Feature: Worker
     And the response JSON matches the snapshot "worker__approving_a_queued_rule_twice_is_refused"
     And the store holds:
       | table          | count |
-      | ledger_entries | 1     |
+      | entries | 1     |
   Scenario: A catch-up run queues at most sixty captures
     Given the recurring worker clock is "2026-04-15"
     And a running API
@@ -178,13 +178,13 @@ Feature: Worker
     And the store holds:
       | table          | count |
       | captures       | 60    |
-      | ledger_entries | 0     |
+      | entries | 0     |
     When the recurring worker runs
     Then the recurring worker reports "45" queued
     And the store holds:
       | table          | count |
       | captures       | 105   |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: A recurring draft carries the rule's category, not a suggested one
     Given the recurring worker clock is "2026-04-15"
@@ -215,4 +215,4 @@ Feature: Worker
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |

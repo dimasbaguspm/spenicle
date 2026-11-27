@@ -33,12 +33,12 @@ func TestCategoryTotalsByMonth(t *testing.T) {
 	windowEnd := time.Date(2026, 2, 28, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name   string
-		spends []datedSpending
-		voided []int
-		from   time.Time
-		to     time.Time
-		want   []categoryMonths
+		name     string
+		spends   []datedSpending
+		reversed []int
+		from     time.Time
+		to       time.Time
+		want     []categoryMonths
 	}{
 		{
 			name: "two categories across two months",
@@ -58,14 +58,14 @@ func TestCategoryTotalsByMonth(t *testing.T) {
 			},
 		},
 		{
-			name: "a voided entry leaves no month",
+			name: "a reversed entry leaves no month",
 			spends: []datedSpending{
 				{account: "food", on: january, amount: 10_000},
 				{account: "food", on: february, amount: 9_000},
 			},
-			voided: []int{1},
-			from:   windowStart,
-			to:     windowEnd,
+			reversed: []int{1},
+			from:     windowStart,
+			to:       windowEnd,
 			want: []categoryMonths{
 				{account: "food", months: []monthSpend{{month: "2026-01", amount: 10_000}}},
 			},
@@ -95,7 +95,7 @@ func TestCategoryTotalsByMonth(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			requireCategoryMonths(t, testCase.spends, testCase.voided, testCase.from, testCase.to, testCase.want)
+			requireCategoryMonths(t, testCase.spends, testCase.reversed, testCase.from, testCase.to, testCase.want)
 		})
 	}
 }
@@ -103,7 +103,7 @@ func TestCategoryTotalsByMonth(t *testing.T) {
 func requireCategoryMonths(
 	t *testing.T,
 	spends []datedSpending,
-	voided []int,
+	reversed []int,
 	from, to time.Time,
 	want []categoryMonths,
 ) {
@@ -114,9 +114,9 @@ func requireCategoryMonths(
 
 	entries := insertDatedSpending(t, store, accounts, spends)
 
-	for _, index := range voided {
-		if _, err := store.VoidEntry(ctx, entries[index].Ref, "test", entries[index].CreatedAt); err != nil {
-			t.Fatalf("void entry: %v", err)
+	for _, index := range reversed {
+		if _, err := store.ReverseEntry(ctx, entries[index].Ref, "test", entries[index].CreatedAt); err != nil {
+			t.Fatalf("reverse entry: %v", err)
 		}
 	}
 

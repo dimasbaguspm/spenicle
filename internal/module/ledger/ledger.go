@@ -14,7 +14,7 @@ type Contract interface {
 	Post(ctx context.Context, in PostInput) (entity.Entry, bool, error)
 	List(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
 	Get(ctx context.Context, ref string) (entity.Entry, error)
-	Void(ctx context.Context, ref, reason string) (entity.Entry, error)
+	Reverse(ctx context.Context, ref, reason string) (entity.Entry, error)
 	UpdatePayee(ctx context.Context, ref, payeeRef string) (entity.Entry, error)
 	Correct(ctx context.Context, ref string, in CorrectInput) (entity.Entry, error)
 	Build(ctx context.Context, in PostInput) (entity.Entry, bool, error)

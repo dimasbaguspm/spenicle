@@ -23,7 +23,7 @@ into a root. Budgets are the first feature that mostly **reads** the ledger.
 | **B. a `budgets` table on a category** | one row per category, an amount, a period; usage computed from postings | **leaning yes** — matches the existing derived-numbers rule |
 | **C. a JSON blob in `settings`** | `settings['budgets']` | rejected: no `ref`, no audit row per change, no pagination, no validation at the boundary |
 | **D. explicit `budget_periods` rows** | the worker materialises a row per month | rejected for v1: a new job that can fail, stale rows, and the same math computed twice |
-| **E. tag the entry** | `ledger_entries.budget_ref` | rejected: an entry belongs to one category and possibly several budgets; a tag would double-count on a correction |
+| **E. tag the entry** | `entries.budget_ref` | rejected: an entry belongs to one category and possibly several budgets; a tag would double-count on a correction |
 
 ## 3. Data sketch (26th table)
 
@@ -65,7 +65,7 @@ Wire shapes follow the deck: money as minor-unit strings, `account_ref` in, `ref
 ## 5. Semantics that must be written down before code
 
 - **What counts**: postings whose account `kind` is `expense` (a budget never applies to
-  income), summed as `base_amount_minor`, with the voided entry **and** its reversal
+  income), summed as `base_amount_minor`, with the reversed entry **and** its reversal
   excluded — the same query `CategoryTotals` already runs.
 - **Children count**: a budget on a parent sums the subtree (`CategoryTotalsByRoot`). A
   budget on a leaf sums only the leaf. Both are one flag on the query, not two features.
@@ -121,6 +121,6 @@ Wire shapes follow the deck: money as minor-unit strings, `account_ref` in, `ref
 - [ ] rollover and period answered above
 - [ ] migration written, `budgets` added to `docs/v2-api.md`
 - [ ] `GET/POST/PATCH /api/budgets` + dashboard tile with endpoint pages
-- [ ] UAT: create, duplicate refusal, spent derives from postings, void disappears, archived
+- [ ] UAT: create, duplicate refusal, spent derives from postings, the reversal disappears, archived
       window stays readable
 - [ ] a client can render "budgeted / spent / left" without a second call

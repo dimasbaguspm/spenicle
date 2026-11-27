@@ -258,7 +258,7 @@ func validAuditKind(field validator.FieldLevel) bool {
 
 func validAuditAction(field validator.FieldLevel) bool {
 	switch field.Field().String() {
-	case constant.AuditActionCreate, constant.AuditActionUpdate, constant.AuditActionVoid,
+	case constant.AuditActionCreate, constant.AuditActionUpdate, constant.AuditActionReverse,
 		constant.AuditActionApprove, constant.AuditActionReject, constant.AuditActionRetry,
 		constant.AuditActionGenerate, constant.AuditActionAdvance, constant.AuditActionRevoke,
 		constant.AuditActionStart:

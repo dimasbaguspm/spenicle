@@ -76,6 +76,22 @@
   ],
   "capture_payloads": [],
   "captures": [],
+  "entries": [
+    {
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "id": 1,
+      "idempotency_key": "<idempotency_key>",
+      "note": "snapshotted",
+      "occurred_on": "2026-02-14",
+      "payee_ref": null,
+      "recurring_rule_ref": null,
+      "ref": "<ref>",
+      "reversal_of_ref": null,
+      "reversed_at": null,
+      "source": "manual"
+    }
+  ],
   "fx_rates": [
     {
       "base": "EUR",
@@ -112,23 +128,7 @@
   "import_rows": [],
   "import_upload_chunks": [],
   "import_uploads": [],
-  "ledger_entries": [
-    {
-      "created_at": "<timestamp>",
-      "currency": "IDR",
-      "id": 1,
-      "idempotency_key": "<idempotency_key>",
-      "note": "snapshotted",
-      "occurred_on": "2026-02-14",
-      "payee_ref": null,
-      "recurring_rule_ref": null,
-      "ref": "<ref>",
-      "reverses_entry_ref": null,
-      "source": "manual",
-      "voided_at": null
-    }
-  ],
-  "ledger_postings": [
+  "postings": [
     {
       "account_ref": "<ref>",
       "amount_minor": 25000,

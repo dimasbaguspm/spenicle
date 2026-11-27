@@ -8,7 +8,7 @@ Read the journal: one append-only row per state change, newest first.
 
 ## Upstream
 
-The audit screen, an operator asking "who voided this entry", a script diffing a backup.
+The audit screen, an operator asking "who reversed this entry", a script diffing a backup.
 
 ## Downstream
 
@@ -21,7 +21,7 @@ on `audit_log.id`. Rows are never written here.
 | --- | --- |
 | `entity_kind` | `account`, `payee`, `recurring_rule`, `ledger_entry`, `capture`, `categorization_rule`, `setting`, `api_token`, `system` |
 | `entity_ref` | the row's ref; a `setting` has none (its key is in `to.key`) |
-| `action` | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke`, `start` |
+| `action` | `create`, `update`, `reverse`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke`, `start` |
 | `actor_kind` | `user` (a person or a token — its ref is in `actor_ref`), `worker`, `system` |
 | `from`, `to` | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` (`:SS`, or full RFC3339), read in `APP_TIMEZONE`; a bare `from` starts that day, a bare `to` covers all of it, so `to=2026-02-14` includes every row written on the 14th, and `to=2026-02-14T09:30` stops at half past nine |
 | `cursor`, `limit` | the shared paging (default 50, max 200) |

@@ -16,7 +16,7 @@ here follows the same six sections, so a reader can jump to the part they need:
 | --- | --- | --- |
 | [F1](./01-access-and-bootstrap.md) | open the instance, then keep it closed | partial: password change returns settings, no token; OAuth state is HMAC+TTL with no replay guard |
 | [F2](./02-capture-inbox.md) | capture now, decide later | partial: OpenAI is UAT-only in production wiring; malformed POST JSON is `400 invalid_request`; retry and unbalanced approval are covered by UAT |
-| [F3](./03-ledger.md) | the ledger is the truth | live on the core paths: payee patch mutates in place, other corrections void and repost |
+| [F3](./03-ledger.md) | the ledger is the truth | live on the core paths: payee patch mutates in place, other corrections reverse and repost |
 | [F4](./04-accounts-and-payees.md) | accounts, categories, merchants | partial: create response omits `base_amount_minor`; no backend refusal to archive an account with active rules |
 | [F5](./05-recurring.md) | predictable money arrives on its own | partial: 60-capture cap is implemented and covered by UAT; archive guard is client-side only |
 | [F6](./06-statement-import.md) | a bank CSV becomes a reviewable draft | partial: effective multipart cap 11 MiB; final chunk omits suggestions; an expired event is unreachable through `GET .../events` |

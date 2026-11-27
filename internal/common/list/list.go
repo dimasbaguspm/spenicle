@@ -41,7 +41,7 @@ type Params struct {
 	Sources     string `query:"source"       validate:"omitempty,sourcelist"`
 	AccountRefs string `query:"account_ref"  validate:"omitempty,reflist"`
 	PayeeRefs   string `query:"payee_ref"    validate:"omitempty,reflist"`
-	Voided      string `query:"voided"       validate:"omitempty,oneof=true false"`
+	Reversed    string `query:"reversed"     validate:"omitempty,oneof=true false"`
 	AmountMin   string `query:"amount_min"   validate:"omitempty,money"`
 	AmountMax   string `query:"amount_max"   validate:"omitempty,money"`
 	WithBalance string `query:"with_balance" validate:"omitempty,oneof=true false"`

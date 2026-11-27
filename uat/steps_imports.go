@@ -90,7 +90,7 @@ func theLedgerHoldsEntry(ctx context.Context, prefix, source string) (context.Co
 
 	var count int
 
-	query := `SELECT COUNT(*) FROM ledger_entries WHERE idempotency_key LIKE ? ESCAPE '\' AND source = ?`
+	query := `SELECT COUNT(*) FROM entries WHERE idempotency_key LIKE ? ESCAPE '\' AND source = ?`
 
 	row := w.store.DB().QueryRowContext(ctx, query, escapeLikeForUAT(prefix)+"%", source)
 

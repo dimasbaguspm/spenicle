@@ -233,7 +233,7 @@ Scenario: Approving a capture posts one entry and resolves the capture
   Then the response status is 201
   And the response body carries "entry" and "capture"
   And the capture status is "approved"
-  And the store holds 1 "ledger_entries" row
+  And the store holds 1 "entries" row
   And the journal holds 1 "capture" row with action "approve"
 
 Scenario: Unbalanced postings are refused and the capture stays pending
@@ -276,7 +276,7 @@ Scenario: Intake is off until it is configured
 
 ## 6. What this page does not promise
 
-- No `batch_label` filter on the queue, no unread counts, no push.
+- No `group_label` filter on the queue, no unread counts, no push.
   `extracted` (a provider pushing a draft) is not implemented. A capture is resolved by
   `approve`, `reject` or `match`; a correction to the entry it produced is
   `PATCH /api/entries/{ref}` ([F3](./03-ledger.md)), not a capture action.

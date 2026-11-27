@@ -46,9 +46,9 @@ type EntryPayee struct {
 	PayeeRef string `json:"payee_ref,omitempty" validate:"omitempty,ref"`
 }
 
-// EntryVoided records a void: the original and the reversal it produced.
-type EntryVoided struct {
-	VoidedEntryRef   string `json:"voided_entry_ref"   validate:"required,ref"`
+// EntryReversed records a reversal: the original and the entry that reversed it.
+type EntryReversed struct {
+	ReversalOfRef    string `json:"reversal_of_ref"    validate:"required,ref"`
 	ReversalEntryRef string `json:"reversal_entry_ref" validate:"required,ref"`
 }
 

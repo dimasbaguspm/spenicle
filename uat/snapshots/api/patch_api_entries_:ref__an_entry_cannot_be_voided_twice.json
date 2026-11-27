@@ -1,6 +1,0 @@
-{
-  "error": {
-    "code": "invalid_state",
-    "message": "invalid state transition: entry <ref> is already voided"
-  }
-}

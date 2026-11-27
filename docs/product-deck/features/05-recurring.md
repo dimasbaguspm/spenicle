@@ -136,7 +136,7 @@ Worker.Recurring.Run    every WorkerInterval (1h):
 3. **Ship the queue item last** (it is [F2](./02-capture-inbox.md)'s screen): the
    recurring draft only becomes useful once approve exists.
 4. Rollback: `PATCH {"state":"paused"}` on every rule. Queued captures can be rejected;
-   posted entries are voided in the ledger.
+   posted entries are reversed in the ledger.
 
 ## 5. Acceptance criteria
 
@@ -151,14 +151,14 @@ Scenario: A rule is a plan, not a posting
   Then the response status is 201
   And the response body has state "active"
   And the response body has origin "user"
-  And the store holds 0 "ledger_entries" rows
+  And the store holds 0 "entries" rows
 
 Scenario: A due rule queues exactly one capture
   Given a rule due on "2026-03-01"
   And the clock is "2026-03-01"
   When the worker runs
   Then the store holds 1 "captures" row of kind "recurring"
-  And the store holds 0 "ledger_entries" rows
+  And the store holds 0 "entries" rows
   When the worker runs again
   Then the store still holds 1 "captures" row of kind "recurring"
 

@@ -66,8 +66,8 @@ defect.
 | `spenicle.worker.runs` | counter | `{run}` | `spenicle.job`, `spenicle.outcome` |
 | `spenicle.worker.items` | counter | `{item}` | `spenicle.job`, `spenicle.outcome` |
 | `spenicle.worker.run.duration` | histogram | `s` | `spenicle.job`, `spenicle.outcome` |
-| `spenicle.ledger.entries` | counter | `{entry}` | `spenicle.entry.source` |
-| `spenicle.ledger.postings` | counter | `{posting}` | `spenicle.entry.source` |
+| `spenicle.entries` | counter | `{entry}` | `spenicle.entry.source` |
+| `spenicle.postings` | counter | `{posting}` | `spenicle.entry.source` |
 | `spenicle.captures.transitions` | counter | `{transition}` | `spenicle.capture.kind`, `spenicle.outcome` |
 | `spenicle.imports.rows` | counter | `{row}` | — |
 | `spenicle.imports.clashes` | counter | `{clash}` | `spenicle.clash.kind` |
@@ -138,7 +138,7 @@ curl -s http://localhost:3000/api/dashboards/db \
 | | Items by job | `sum by (spenicle_job) (rate(spenicle_worker_items_total[5m]))` |
 | | Run duration p95 (`s`) | `histogram_quantile(0.95, sum by (le, spenicle_job) (rate(spenicle_worker_run_duration_seconds_bucket[5m])))` |
 | | Heartbeat age (stat, `s`) | `time() - max(spenicle_worker_last_run_timestamp_seconds)` |
-| Domain | Ledger entries by source | `sum by (spenicle_entry_source) (rate(spenicle_ledger_entries_total[5m]))` |
+| Domain | Ledger entries by source | `sum by (spenicle_entry_source) (rate(spenicle_entries_total[5m]))` |
 | | Captures by outcome | `sum by (spenicle_capture_kind, spenicle_outcome) (rate(spenicle_captures_transitions_total[5m]))` |
 | | Import rows and clashes | `sum(rate(spenicle_imports_rows_total[5m]))` and `sum by (spenicle_clash_kind) (rate(spenicle_imports_clashes_total[5m]))` |
 | | Export document size p95 (`bytes`) | `histogram_quantile(0.95, sum by (le) (rate(spenicle_exports_bytes_bucket[5m])))` |

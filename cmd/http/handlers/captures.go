@@ -27,7 +27,7 @@ type captureRequest struct {
 	IdempotencyKey string               `json:"idempotency_key,omitempty" validate:"omitempty,max=64"`
 	Kind           string               `json:"kind"                      validate:"capturekind"`
 	RawText        string               `json:"raw_text,omitempty"        validate:"max=8000"`
-	BatchLabel     string               `json:"batch_label,omitempty"     validate:"max=64"`
+	GroupLabel     string               `json:"group_label,omitempty"     validate:"max=64"`
 	ArtifactHash   string               `json:"-"`
 	Artifact       *extraction.Artifact `json:"-"`
 }
@@ -472,7 +472,7 @@ func (c captureRequest) input() captures.CreateInput {
 		IdempotencyKey: c.IdempotencyKey,
 		Kind:           c.Kind,
 		RawText:        c.RawText,
-		BatchLabel:     c.BatchLabel,
+		GroupLabel:     c.GroupLabel,
 		ArtifactHash:   c.ArtifactHash,
 		Artifact:       c.Artifact,
 	}
@@ -509,7 +509,7 @@ func readCaptureForm(w http.ResponseWriter, r *http.Request, limit int64) (captu
 		IdempotencyKey: r.FormValue("idempotency_key"),
 		Kind:           kind,
 		RawText:        r.FormValue("raw_text"),
-		BatchLabel:     r.FormValue("batch_label"),
+		GroupLabel:     r.FormValue("group_label"),
 	}
 
 	request.ArtifactHash = hex.EncodeToString(sum[:])

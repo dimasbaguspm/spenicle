@@ -173,7 +173,7 @@ Scenario: An upload drafts rows and posts nothing
   Then the response status is 201
   And the response body has status "draft"
   And the rows carry their clash kinds
-  And the store holds 0 "ledger_entries" rows
+  And the store holds 0 "entries" rows
 
 Scenario: A replayed upload resumes instead of duplicating
   Given a draft uploaded with idempotency_key "statement-1"
@@ -208,14 +208,14 @@ Scenario: Committing posts only the accepted rows
     """
   Then the response status is 200
   And the batch status is "committed"
-  And the store holds 2 "ledger_entries" rows with source "statement"
+  And the store holds 2 "entries" rows with source "statement"
   And each entry carries idempotency_key "import:<file_hash>:<row_index>"
 
 Scenario: A replayed commit posts nothing twice
   Given a committed batch
   When I send the same commit again
   Then the response status is 200
-  And the store still holds 2 "ledger_entries" rows
+  And the store still holds 2 "entries" rows
   And no second "committed" event was written
 
 Scenario: A row edit on a closed batch is refused

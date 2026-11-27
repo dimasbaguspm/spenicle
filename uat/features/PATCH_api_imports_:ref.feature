@@ -30,7 +30,7 @@ Feature: PATCH /api/imports/{ref}
     And the store holds:
       | table          | count |
       | import_batches | 1     |
-      | ledger_entries | 1     |
+      | entries | 1     |
     When I send a PATCH to "/api/imports/{{ref:batch}}" with:
       """json
       {"action":"commit"}
@@ -39,7 +39,7 @@ Feature: PATCH /api/imports/{ref}
     And the response JSON matches the snapshot "patch_api_imports_ref__committing_posts_the_accepted_rows"
     And the store holds:
       | table          | count |
-      | ledger_entries | 1     |
+      | entries | 1     |
 
   Scenario: Rejecting keeps the rows for audit and is idempotent
     Given a running API
@@ -66,7 +66,7 @@ Feature: PATCH /api/imports/{ref}
       | table          | count |
       | import_batches | 1     |
       | import_rows    | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: A rejected batch refuses the commit and keeps its rows
     Given a running API
@@ -92,7 +92,7 @@ Feature: PATCH /api/imports/{ref}
       | table          | count |
       | import_batches | 1     |
       | import_rows    | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: A committed batch refuses the row patch
     Given a running API
@@ -178,7 +178,7 @@ Feature: PATCH /api/imports/{ref}
     And the ledger holds an entry with idempotency key prefix "import:" and source "statement"
     And the store holds:
       | table          | count |
-      | ledger_entries | 3     |
+      | entries | 3     |
 
   Scenario: A row cannot change while the batch commits
     Given a running API

@@ -94,7 +94,7 @@ func TestConsolidatedSchemaCarriesEveryMergedChange(t *testing.T) {
 
 	for _, index := range []string{
 		"ux_rules_live", "ix_rules_account_ref", "ix_recurring_due",
-		"ix_entries_reversal_ref", "ix_exports_expiry",
+		"ix_entries_reversal_of_ref", "ix_exports_expiry",
 	} {
 		t.Run(index, func(t *testing.T) {
 			var found int

@@ -40,7 +40,7 @@ type Capture struct {
 	Status           string
 	IdempotencyKey   string
 	DedupeKey        string
-	BatchLabel       string
+	GroupLabel       string
 	ArtifactHash     string
 	RawText          string
 	DraftJSON        string

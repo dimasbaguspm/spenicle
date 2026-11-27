@@ -51,8 +51,8 @@ Feature: POST /api/setup
     And the store holds:
       | table           | count |
       | accounts        | 4     |
-      | ledger_entries  | 2     |
-      | ledger_postings | 4     |
+      | entries  | 2     |
+      | postings | 4     |
     And the journal holds 3 "account" rows
     And the journal holds 2 "ledger_entry" rows
     And the journal holds 4 "setting" rows
@@ -86,7 +86,7 @@ Feature: POST /api/setup
     And the store holds:
       | table          | count |
       | accounts       | 2     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
     Examples:
       | name         | accounts                                                                                          |
@@ -116,5 +116,5 @@ Feature: POST /api/setup
     And the store holds:
       | table          | count |
       | accounts       | 2     |
-      | ledger_entries | 0     |
+      | entries | 0     |
     And the database matches the snapshot "post_api_setup__rolled_back_opening_balances"

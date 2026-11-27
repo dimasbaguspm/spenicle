@@ -15,9 +15,9 @@ import (
 )
 
 const entryColumns = `id, ref, occurred_on, payee_ref, note, currency, source, idempotency_key,
-	reverses_entry_ref, voided_at, created_at`
+	reversal_of_ref, reversed_at, created_at`
 
-const entryAccountSubquery = `SELECT p.entry_ref FROM ledger_postings p WHERE p.account_ref`
+const entryAccountSubquery = `SELECT p.entry_ref FROM postings p WHERE p.account_ref`
 
 const payeeSubquery = `SELECT ref FROM payees WHERE ref`
 
@@ -79,7 +79,7 @@ func (s *Store) EntryByIdempotencyKey(ctx context.Context, clientID string) (ent
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, ref, occurred_on, payee_ref, note, currency, source, created_at
-		FROM ledger_entries WHERE idempotency_key = ?`, clientID).
+		FROM entries WHERE idempotency_key = ?`, clientID).
 		Scan(&e.ID, &e.Ref, &occurred, &payeeRef, &note, &e.Currency, &e.Source, &createdRaw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Entry{}, false, nil
@@ -118,7 +118,7 @@ func (s *Store) postingsByEntryID(ctx context.Context, entryRef string) ([]entit
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT p.account_ref, p.amount_minor, p.base_amount_minor,
 		       p.fx_rate, p.fx_rate_date, p.fx_source
-		FROM ledger_postings p
+		FROM postings p
 		JOIN accounts a ON a.ref = p.account_ref
 		WHERE p.entry_ref = ? ORDER BY p.id`, entryRef)
 	if err != nil {
@@ -163,7 +163,7 @@ func insertPostings(
 
 	var statement strings.Builder
 
-	statement.WriteString(`INSERT INTO ledger_postings
+	statement.WriteString(`INSERT INTO postings
 		(ref, entry_ref, account_ref, amount_minor, base_amount_minor,
 		 fx_rate, fx_rate_date, fx_source) VALUES `)
 
@@ -250,7 +250,7 @@ func shiftRunningBalances(
 	var entryID int64
 
 	if err := tx.QueryRowContext(ctx,
-		`SELECT id FROM ledger_entries WHERE ref = ?`, entryRef).Scan(&entryID); err != nil {
+		`SELECT id FROM entries WHERE ref = ?`, entryRef).Scan(&entryID); err != nil {
 		return fmt.Errorf("entry id: %w", err)
 	}
 
@@ -258,8 +258,8 @@ func shiftRunningBalances(
 
 	err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE((
-			SELECT rb.balance_minor FROM running_balances rb
-			JOIN ledger_entries e ON e.ref = rb.entry_ref
+			SELECT rb.balance_minor FROM entry_balances rb
+			JOIN entries e ON e.ref = rb.entry_ref
 			WHERE rb.account_ref = ? AND
 			      (e.occurred_on < ? OR (e.occurred_on = ? AND e.id < ?))
 			ORDER BY e.occurred_on DESC, e.id DESC LIMIT 1
@@ -269,10 +269,10 @@ func shiftRunningBalances(
 	}
 
 	_, err = tx.ExecContext(ctx, `
-		UPDATE running_balances SET balance_minor = balance_minor + ?
+		UPDATE entry_balances SET balance_minor = balance_minor + ?
 		WHERE account_ref = ? AND ref IN (
-			SELECT rb.ref FROM running_balances rb
-			JOIN ledger_entries e ON e.ref = rb.entry_ref
+			SELECT rb.ref FROM entry_balances rb
+			JOIN entries e ON e.ref = rb.entry_ref
 			WHERE rb.account_ref = ? AND
 			      (e.occurred_on > ? OR (e.occurred_on = ? AND e.id > ?))
 		)
@@ -282,7 +282,7 @@ func shiftRunningBalances(
 	}
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO running_balances
+		INSERT INTO entry_balances
 			(ref, account_ref, entry_ref, occurred_on, balance_minor)
 		VALUES (?, ?, ?, ?, ?)`,
 		uuid.New(), accountRef, entryRef, occurredOn, prior+delta)
@@ -299,8 +299,8 @@ func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool,
 
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
 		SELECT id, ref, occurred_on, payee_ref, note, currency, source, idempotency_key,
-		       reverses_entry_ref, voided_at, created_at
-		FROM ledger_entries WHERE ref = ?`, ref))
+		       reversal_of_ref, reversed_at, created_at
+		FROM entries WHERE ref = ?`, ref))
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Entry{}, false, nil
 	}
@@ -335,7 +335,7 @@ func (s *Store) UpdateEntryPayee(
 
 	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		if _, execErr := tx.ExecContext(ctx,
-			`UPDATE ledger_entries SET payee_ref = ? WHERE ref = ?`,
+			`UPDATE entries SET payee_ref = ? WHERE ref = ?`,
 			nullString(payeeRef), original.Ref,
 		); execErr != nil {
 			return fmt.Errorf("update payee: %w", execErr)
@@ -467,7 +467,7 @@ func (s *Store) RunningBalances(
 
 	//nolint:gosec // G202: placeholders() emits only "?" and commas, never caller text
 	query := `
-		SELECT entry_ref, balance_minor FROM running_balances
+		SELECT entry_ref, balance_minor FROM entry_balances
 		WHERE account_ref = ? AND entry_ref IN (` + placeholders(len(entryRefs)) + `)`
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
@@ -520,12 +520,12 @@ func rebuildRunningBalancesInTx(ctx context.Context, tx *sql.Tx, accountRef stri
 	}
 
 	if _, err = tx.ExecContext(ctx,
-		`DELETE FROM running_balances WHERE account_ref = ?`, accountRef); err != nil {
+		`DELETE FROM entry_balances WHERE account_ref = ?`, accountRef); err != nil {
 		return fmt.Errorf("clear running balances: %w", err)
 	}
 
 	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO running_balances
+		INSERT INTO entry_balances
 			(ref, account_ref, entry_ref, occurred_on, balance_minor)
 		SELECT lower(hex(randomblob(16))), a.ref, running.entry_ref,
 		       running.occurred_on, running.balance_minor
@@ -534,8 +534,8 @@ func rebuildRunningBalancesInTx(ctx context.Context, tx *sql.Tx, accountRef stri
 			       SUM(SUM(p.base_amount_minor)) OVER (
 			           ORDER BY e.occurred_on, e.id
 			           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balance_minor
-			FROM ledger_postings p
-			JOIN ledger_entries e ON e.ref = p.entry_ref
+			FROM postings p
+			JOIN entries e ON e.ref = p.entry_ref
 			JOIN accounts a ON a.ref = p.account_ref
 			WHERE a.ref = ?
 			GROUP BY e.id, e.ref, e.occurred_on
@@ -577,7 +577,7 @@ func (s *Store) postingsByEntryIDs(
 	query := `
 		SELECT p.entry_ref, p.account_ref, p.amount_minor, p.base_amount_minor,
 		       p.fx_rate, p.fx_rate_date, p.fx_source
-		FROM ledger_postings p
+		FROM postings p
 		JOIN accounts a ON a.ref = p.account_ref
 		WHERE p.entry_ref IN (` + placeholders(len(refs)) + `)
 		ORDER BY p.entry_ref, p.id`
@@ -613,7 +613,7 @@ func (s *Store) postingsByEntryIDs(
 }
 
 func entryQuery(filter entity.EntryFilter) (string, []any) {
-	builder := newList("ledger_entries", entryColumns)
+	builder := newList("entries", entryColumns)
 
 	if !filter.From.IsZero() {
 		builder.gte("occurred_on", filter.From.Format(constant.DateLayout))
@@ -630,8 +630,8 @@ func entryQuery(filter entity.EntryFilter) (string, []any) {
 	builder.inList("ref", filter.Refs)
 	builder.inSubquery("payee_ref", payeeSubquery, filter.PayeeRefs...)
 	entryAmountRange(builder, filter.AmountMin, filter.AmountMax)
-	builder.nullFlag("voided_at", filter.Voided)
-	builder.before("ledger_entries.id", "ledger_entries", filter.Cursor)
+	builder.nullFlag("reversed_at", filter.Reversed)
+	builder.before("entries.id", "entries", filter.Cursor)
 	builder.orderBy("id DESC")
 
 	return builder.page(clampLimit(filter.Limit))
@@ -645,14 +645,14 @@ func entrySearch(builder *listQuery, term string) {
 	pattern := "%" + escapeLike(term) + "%"
 
 	builder.and(`(note LIKE ? ESCAPE '\' OR EXISTS (
-		SELECT 1 FROM payees p WHERE p.ref = ledger_entries.payee_ref
+		SELECT 1 FROM payees p WHERE p.ref = entries.payee_ref
 		  AND p.name LIKE ? ESCAPE '\'))`,
 		pattern, pattern)
 }
 
 func entryAmountRange(builder *listQuery, low, high *int64) {
-	const match = `EXISTS (SELECT 1 FROM ledger_postings p
-		WHERE p.entry_ref = ledger_entries.ref AND ABS(p.base_amount_minor) `
+	const match = `EXISTS (SELECT 1 FROM postings p
+		WHERE p.entry_ref = entries.ref AND ABS(p.base_amount_minor) `
 
 	switch {
 	case low != nil && high != nil:
@@ -664,12 +664,12 @@ func entryAmountRange(builder *listQuery, low, high *int64) {
 	}
 }
 
-func (s *Store) VoidEntry(
+func (s *Store) ReverseEntry(
 	ctx context.Context,
 	ref, reason string,
 	at time.Time,
 ) (entity.Entry, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.VoidEntry")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ReverseEntry")
 	defer endSpan()
 
 	original, found, err := s.EntryByRef(ctx, ref)
@@ -688,20 +688,20 @@ func (s *Store) VoidEntry(
 
 	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
-			UPDATE ledger_entries SET voided_at = ?
-			WHERE ref = ? AND voided_at IS NULL`,
+			UPDATE entries SET reversed_at = ?
+			WHERE ref = ? AND reversed_at IS NULL`,
 			at.Format(constant.TimestampLayout), original.Ref)
 		if execErr != nil {
-			return fmt.Errorf("mark voided: %w", execErr)
+			return fmt.Errorf("mark reversed: %w", execErr)
 		}
 
 		affected, rowsErr := res.RowsAffected()
 		if rowsErr != nil {
-			return fmt.Errorf("void rows: %w", rowsErr)
+			return fmt.Errorf("reverse rows: %w", rowsErr)
 		}
 
 		if affected == 0 {
-			return fmt.Errorf("%w: entry %s is already voided", entity.ErrInvalidState, ref)
+			return fmt.Errorf("%w: entry %s is already reversed", entity.ErrInvalidState, ref)
 		}
 
 		return insertReversal(ctx, tx, reversal)
@@ -710,7 +710,7 @@ func (s *Store) VoidEntry(
 		return entity.Entry{}, err
 	}
 
-	return s.reversalByReversesRef(ctx, original.Ref)
+	return s.reversalByReversalOfRef(ctx, original.Ref)
 }
 
 func insertReversal(ctx context.Context, tx *sql.Tx, reversal entity.Entry) error {
@@ -721,9 +721,9 @@ func insertReversal(ctx context.Context, tx *sql.Tx, reversal entity.Entry) erro
 	reversalRef := uuid.New()
 
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO ledger_entries
+		INSERT INTO entries
 			(ref, occurred_on, payee_ref, note, currency, source, recurring_rule_ref,
-			 idempotency_key, reverses_entry_ref, voided_at, created_at)
+			 idempotency_key, reversal_of_ref, reversed_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL, ?)`,
 		reversalRef,
 		reversal.OccurredOn.Format(constant.DateLayout),
@@ -731,7 +731,7 @@ func insertReversal(ctx context.Context, tx *sql.Tx, reversal entity.Entry) erro
 		nullString(reversal.Note),
 		reversal.Currency,
 		reversal.Source,
-		nullString(reversal.ReversesEntryRef),
+		nullString(reversal.ReversalOfRef),
 		reversal.CreatedAt.Format(constant.TimestampLayout),
 	)
 	if err != nil {
@@ -752,19 +752,19 @@ func insertReversal(ctx context.Context, tx *sql.Tx, reversal entity.Entry) erro
 		Kind:   constant.AuditEntityEntry,
 		ID:     reversalID,
 		Ref:    reversalRef,
-		Action: constant.AuditActionVoid,
-		To: entity.EntryVoided{
-			VoidedEntryRef:   reversal.ReversesEntryRef,
+		Action: constant.AuditActionReverse,
+		To: entity.EntryReversed{
+			ReversalOfRef:    reversal.ReversalOfRef,
 			ReversalEntryRef: reversalRef,
 		},
 	})
 }
 
-func (s *Store) reversalByReversesRef(ctx context.Context, originalRef string) (entity.Entry, error) {
+func (s *Store) reversalByReversalOfRef(ctx context.Context, originalRef string) (entity.Entry, error) {
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
 		SELECT id, ref, occurred_on, payee_ref, note, currency, source, idempotency_key,
-		       reverses_entry_ref, voided_at, created_at
-		FROM ledger_entries WHERE reverses_entry_ref = ?`, originalRef))
+		       reversal_of_ref, reversed_at, created_at
+		FROM entries WHERE reversal_of_ref = ?`, originalRef))
 	if err != nil {
 		return entity.Entry{}, fmt.Errorf("select reversal: %w", err)
 	}
@@ -784,18 +784,18 @@ func (s *Store) scanEntry(ctx context.Context, row *sql.Row) (entity.Entry, erro
 
 func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, error) {
 	var (
-		entry       entity.Entry
-		payeeRef    sql.NullString
-		note        sql.NullString
-		clientID    sql.NullString
-		reversesRef sql.NullString
-		voidedRaw   sql.NullString
-		occurredRaw string
-		createdRaw  string
+		entry         entity.Entry
+		payeeRef      sql.NullString
+		note          sql.NullString
+		clientID      sql.NullString
+		reversalOfRef sql.NullString
+		reversedRaw   sql.NullString
+		occurredRaw   string
+		createdRaw    string
 	)
 
 	err := scanner.Scan(&entry.ID, &entry.Ref, &occurredRaw, &payeeRef, &note, &entry.Currency,
-		&entry.Source, &clientID, &reversesRef, &voidedRaw, &createdRaw)
+		&entry.Source, &clientID, &reversalOfRef, &reversedRaw, &createdRaw)
 	if err != nil {
 		return entity.Entry{}, err
 	}
@@ -809,15 +809,15 @@ func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, e
 	}
 
 	entry.PayeeRef = payeeRef.String
-	entry.ReversesEntryRef = reversesRef.String
+	entry.ReversalOfRef = reversalOfRef.String
 
-	if voidedRaw.Valid {
-		at, parseErr := time.Parse(constant.TimestampLayout, voidedRaw.String)
+	if reversedRaw.Valid {
+		at, parseErr := time.Parse(constant.TimestampLayout, reversedRaw.String)
 		if parseErr != nil {
-			return entity.Entry{}, fmt.Errorf("voided_at %q: %w", voidedRaw.String, parseErr)
+			return entity.Entry{}, fmt.Errorf("reversed_at %q: %w", reversedRaw.String, parseErr)
 		}
 
-		entry.VoidedAt = &at
+		entry.ReversedAt = &at
 	}
 
 	entry.Note = note.String
@@ -839,11 +839,11 @@ func (s *Store) MatchingEntryRef(
 	var ref string
 
 	err := s.db.QueryRowContext(ctx, `
-		SELECT e.ref FROM ledger_entries e
-		JOIN ledger_postings p ON p.entry_ref = e.ref
+		SELECT e.ref FROM entries e
+		JOIN postings p ON p.entry_ref = e.ref
 		WHERE p.account_ref = ?
 		  AND e.currency = ?
-		  AND e.voided_at IS NULL
+		  AND e.reversed_at IS NULL
 		  AND ABS(p.amount_minor) = ?
 		  AND e.occurred_on >= ? AND e.occurred_on <= ?
 		ORDER BY e.occurred_on ASC, e.id ASC
@@ -873,9 +873,9 @@ func insertEntryRow(
 	createdAt time.Time,
 ) (int64, error) {
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO ledger_entries
+		INSERT INTO entries
 			(ref, occurred_on, payee_ref, note, currency, source, recurring_rule_ref,
-			 idempotency_key, reverses_entry_ref, voided_at, created_at)
+			 idempotency_key, reversal_of_ref, reversed_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
 		ref,
 		e.OccurredOn.Format(constant.DateLayout),
@@ -885,7 +885,7 @@ func insertEntryRow(
 		e.Source,
 		nullString(e.RecurringRuleRef),
 		nullString(e.IdempotencyKey),
-		nullString(e.ReversesEntryRef),
+		nullString(e.ReversalOfRef),
 		createdAt.Format(constant.TimestampLayout),
 	)
 	if err != nil {
@@ -911,13 +911,13 @@ func reversalOf(original entity.Entry, reason string, at time.Time) (entity.Entr
 	}
 
 	reversal := entity.Entry{
-		OccurredOn:       original.OccurredOn,
-		PayeeRef:         original.PayeeRef,
-		Note:             reason,
-		Currency:         original.Currency,
-		Source:           constant.EntrySourceAdjustment,
-		ReversesEntryRef: original.Ref,
-		CreatedAt:        at,
+		OccurredOn:    original.OccurredOn,
+		PayeeRef:      original.PayeeRef,
+		Note:          reason,
+		Currency:      original.Currency,
+		Source:        constant.EntrySourceAdjustment,
+		ReversalOfRef: original.Ref,
+		CreatedAt:     at,
 	}
 
 	for index, posting := range original.Postings {
@@ -993,8 +993,8 @@ func (s *Store) replacementTarget(
 		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
 	}
 
-	if original.VoidedAt != nil {
-		return entity.Entry{}, fmt.Errorf("%w: entry %s is voided", entity.ErrInvalidState, ref)
+	if original.ReversedAt != nil {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s is reversed", entity.ErrInvalidState, ref)
 	}
 
 	if zeroErr := entity.CheckZeroSum(replacement.Postings); zeroErr != nil {
@@ -1011,11 +1011,11 @@ func writeReplacement(
 	at time.Time,
 ) error {
 	res, err := tx.ExecContext(ctx, `
-		UPDATE ledger_entries SET voided_at = ?
-		WHERE ref = ? AND voided_at IS NULL`,
+		UPDATE entries SET reversed_at = ?
+		WHERE ref = ? AND reversed_at IS NULL`,
 		at.Format(constant.TimestampLayout), original.Ref)
 	if err != nil {
-		return fmt.Errorf("mark voided: %w", err)
+		return fmt.Errorf("mark reversed: %w", err)
 	}
 
 	affected, err := res.RowsAffected()
@@ -1024,7 +1024,7 @@ func writeReplacement(
 	}
 
 	if affected == 0 {
-		return fmt.Errorf("%w: entry %s is already voided", entity.ErrInvalidState, original.Ref)
+		return fmt.Errorf("%w: entry %s is already reversed", entity.ErrInvalidState, original.Ref)
 	}
 
 	if revErr := insertReversal(ctx, tx, reversal); revErr != nil {

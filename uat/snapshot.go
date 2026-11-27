@@ -31,8 +31,8 @@ var allowedTables = []string{
 	"import_rows",
 	"import_upload_chunks",
 	"import_uploads",
-	"ledger_entries",
-	"ledger_postings",
+	"entries",
+	"postings",
 	"settings",
 }
 

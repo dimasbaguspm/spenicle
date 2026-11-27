@@ -31,7 +31,7 @@ None.
 | `idempotency_key` | string | no | ≤ 64, part of the dedupe key |
 | `kind` | string | yes | `share`, `image`, `email`, `statement`, `recurring`, `manual` |
 | `raw_text` | string | no | ≤ 8000, sealed before storage |
-| `batch_label` | string | no | groups a statement upload |
+| `group_label` | string | no | groups a statement upload |
 | `file` | multipart part | no | one file, up to `APP_ARTIFACT_MAX_BYTES` (10 MiB by default) |
 
 ## Response

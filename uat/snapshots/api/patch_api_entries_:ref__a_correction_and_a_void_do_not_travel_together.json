@@ -1,6 +1,0 @@
-{
-  "error": {
-    "code": "invalid_request",
-    "message": "void, payee_ref and a correction are separate actions"
-  }
-}

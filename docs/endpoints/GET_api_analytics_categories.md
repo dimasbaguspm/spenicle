@@ -14,7 +14,7 @@ The category chart, the dashboard's "top category" tile, an agent summarising a 
 ## Downstream
 
 `Repository.Sqlite.CategoryTotals`: one grouped query over postings joined to entries and
-accounts, filtered by `kind`, voided entries and reversals excluded, carrying the earliest
+accounts, filtered by `kind`, reversed entries and reversals excluded, carrying the earliest
 and the latest `occurred_on` of the rows behind each total. With
 `rollup=parent` the handler calls `Repository.Sqlite.CategoryTotalsByRoot` instead, which
 walks every account up to its top-most ancestor in a recursive CTE and groups by that

@@ -98,7 +98,7 @@ Feature: POST /api/captures
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   @vendors
   Scenario: OpenAI reads the receipt while the vendor is up
@@ -119,7 +119,7 @@ Feature: POST /api/captures
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   @vendors
   Scenario: SnapToJSON breaks its contract and the capture is kept
@@ -133,7 +133,7 @@ Feature: POST /api/captures
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   @vendors
   Scenario: OpenAI breaks its contract and the capture is kept
@@ -146,4 +146,4 @@ Feature: POST /api/captures
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |

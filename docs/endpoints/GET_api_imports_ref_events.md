@@ -12,7 +12,7 @@ The review screen's "history" drawer; a script proving why a row is not in the l
 
 ## Downstream
 
-`Module.Imports.ListEvents`: load the batch by ref (`404` when it names none), then `Repository.Sqlite.ListImportEvents` with `batch_label`, the shared ref cursor and `id DESC`.
+`Module.Imports.ListEvents`: load the batch by ref (`404` when it names none), then `Repository.Sqlite.ListImportEvents` with `batch_ref`, the shared ref cursor and `id DESC`.
 
 The kinds written by the API paths (`actor = user`):
 

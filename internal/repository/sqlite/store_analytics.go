@@ -22,10 +22,10 @@ func (s *Store) MonthlyTotals(
 		SELECT substr(e.occurred_on, 1, 7) AS month,
 		       SUM(CASE WHEN a.kind = 'expense' THEN p.base_amount_minor ELSE 0 END),
 		       SUM(CASE WHEN a.kind = 'income' THEN -p.base_amount_minor ELSE 0 END)
-		FROM ledger_postings p
-		JOIN ledger_entries e ON e.ref = p.entry_ref
+		FROM postings p
+		JOIN entries e ON e.ref = p.entry_ref
 		JOIN accounts a ON a.ref = p.account_ref
-		WHERE e.voided_at IS NULL AND e.reverses_entry_ref IS NULL
+		WHERE e.reversed_at IS NULL AND e.reversal_of_ref IS NULL
 		  AND e.occurred_on BETWEEN ? AND ?
 		GROUP BY month
 		ORDER BY month`, from.Format(constant.DateLayout), to.Format(constant.DateLayout))
@@ -59,10 +59,10 @@ func (s *Store) MonthlyTotals(
 const categoryTotalsQuery = `
 	SELECT a.ref, a.name, a.kind, SUM(p.base_amount_minor),
 	       MIN(e.occurred_on), MAX(e.occurred_on)
-	FROM ledger_postings p
-	JOIN ledger_entries e ON e.ref = p.entry_ref
+	FROM postings p
+	JOIN entries e ON e.ref = p.entry_ref
 	JOIN accounts a ON a.ref = p.account_ref
-	WHERE e.voided_at IS NULL AND e.reverses_entry_ref IS NULL
+	WHERE e.reversed_at IS NULL AND e.reversal_of_ref IS NULL
 	  AND e.occurred_on BETWEEN ? AND ?
 	  AND a.kind = ?
 	GROUP BY a.ref
@@ -77,11 +77,11 @@ const categoryTotalsByRootQuery = `
 	)
 	SELECT root.ref, root.name, root.kind, SUM(p.base_amount_minor),
 	       MIN(e.occurred_on), MAX(e.occurred_on)
-	FROM ledger_postings p
-	JOIN ledger_entries e ON e.ref = p.entry_ref
+	FROM postings p
+	JOIN entries e ON e.ref = p.entry_ref
 	JOIN tree ON tree.ref = p.account_ref
 	JOIN accounts root ON root.ref = tree.root_ref
-	WHERE e.voided_at IS NULL AND e.reverses_entry_ref IS NULL
+	WHERE e.reversed_at IS NULL AND e.reversal_of_ref IS NULL
 	  AND e.occurred_on BETWEEN ? AND ?
 	  AND root.kind = ?
 	GROUP BY root.ref
@@ -90,10 +90,10 @@ const categoryTotalsByRootQuery = `
 
 const categoryTotalsByMonthQuery = `
 	SELECT a.ref, a.name, substr(e.occurred_on, 1, 7), SUM(p.base_amount_minor)
-	FROM ledger_postings p
-	JOIN ledger_entries e ON e.ref = p.entry_ref
+	FROM postings p
+	JOIN entries e ON e.ref = p.entry_ref
 	JOIN accounts a ON a.ref = p.account_ref
-	WHERE e.voided_at IS NULL AND e.reverses_entry_ref IS NULL
+	WHERE e.reversed_at IS NULL AND e.reversal_of_ref IS NULL
 	  AND e.occurred_on BETWEEN ? AND ?
 	  AND a.kind = ?
 	GROUP BY a.ref, substr(e.occurred_on, 1, 7)

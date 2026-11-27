@@ -52,7 +52,7 @@ integer id.
 
 ## Limitations
 
-No `batch_label` filter yet; no unread counts; a payload sealed with a
+No `group_label` filter yet; no unread counts; a payload sealed with a
 previous `APP_SECRET` cannot be opened, so those fields come back empty rather than
 failing the listing.
 

@@ -24,7 +24,7 @@ Feature: GET /api/analytics/months
     Then the response status is 200
     And the response JSON matches the snapshot "get_api_analytics_months__expense_is_grouped_into_the_month_it_happened"
 
-  Scenario: A voided entry leaves no trace in the series
+  Scenario: A reversed entry leaves no trace in the series
     Given a running API
     And the request body is:
       """json
@@ -35,7 +35,7 @@ Feature: GET /api/analytics/months
       | header | Content-Type | application/json |
     And the request body is:
       """json
-      {"void":true,"reason":"mistake"}
+      {"reverse":true,"reason":"mistake"}
       """
     And I send a PATCH to "/api/entries/{{ref}}" with headers/query:
       | type   | key          | value            |
@@ -45,7 +45,7 @@ Feature: GET /api/analytics/months
       | query | from | 2026-03-01 |
       | query | to   | 2026-03-31 |
     Then the response status is 200
-    And the response JSON matches the snapshot "get_api_analytics_months__a_voided_entry_leaves_no_trace_in_the_series"
+    And the response JSON matches the snapshot "get_api_analytics_months__a_reversed_entry_leaves_no_trace_in_the_series"
 
   Scenario: A malformed date is refused
     Given a running API

@@ -20,8 +20,8 @@ Feature: PATCH /api/captures/{{ref}}
     And the response JSON matches the snapshot "patch_api_captures_:ref__approving_a_capture_posts_the_entry_and_resolves_the_queue_item"
     And the store holds:
       | table           | count |
-      | ledger_entries  | 2     |
-      | ledger_postings | 4     |
+      | entries  | 2     |
+      | postings | 4     |
 
   Scenario: An approved capture cannot be approved twice
     Given a running API
@@ -42,7 +42,7 @@ Feature: PATCH /api/captures/{{ref}}
     And the response JSON matches the snapshot "patch_api_captures_:ref__an_approved_capture_cannot_be_approved_twice"
     And the store holds:
       | table          | count |
-      | ledger_entries | 1     |
+      | entries | 1     |
 
   Scenario: Rejecting a capture never touches the ledger
     Given a running API
@@ -59,7 +59,7 @@ Feature: PATCH /api/captures/{{ref}}
     And the store holds:
       | table    | count |
       | captures | 1     |
-      | ledger_entries | 0 |
+      | entries | 0 |
 
   Scenario: Approving a capture with a payee ref attaches the payee
     Given a running API
@@ -112,7 +112,7 @@ Feature: PATCH /api/captures/{{ref}}
     And the response JSON matches the snapshot "patch_api_captures_:ref__matching_a_capture_resolves_it_without_touching_the_ledger"
     And the store holds:
       | table          | count |
-      | ledger_entries | 1     |
+      | entries | 1     |
       | captures       | 1     |
 
   Scenario: A match without an entry ref is refused
@@ -182,7 +182,7 @@ Feature: PATCH /api/captures/{{ref}}
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   @vendors
   Scenario: Retrying polls the SnapToJSON job
@@ -199,7 +199,7 @@ Feature: PATCH /api/captures/{{ref}}
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
 
   Scenario: An unbalanced approval is refused
     Given a running API
@@ -217,4 +217,4 @@ Feature: PATCH /api/captures/{{ref}}
     And the store holds:
       | table          | count |
       | captures       | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |

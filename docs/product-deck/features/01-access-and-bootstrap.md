@@ -7,7 +7,7 @@
 
 "I just started a container. Tell me it is alive, let me choose my currency, then make
 sure nobody else can read my spending." Later, the same screen answers "which device
-still has a credential?" and "who voided that entry?".
+still has a credential?" and "who reversed that entry?".
 
 ## 2. Client journeys (multi-hit by design)
 
@@ -134,7 +134,7 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
    must answer `ok` only after migrations, sealing and the baseline seeds succeeded.
 2. `POST /api/setup` succeeds exactly once. The completion marker locks the base
    currency even when the ledger is empty; a legacy database with entries is also locked.
-   Voiding entries does not unlock it. Optional opening balances commit with that marker.
+   Reversing entries does not unlock it. Optional opening balances commit with that marker.
 3. `timezone` is never writable through the API. It comes from `APP_TIMEZONE` at the
    first boot; a later boot that disagrees with the stored value refuses to start.
 4. `GET /api/settings` and the `settings` object in `GET /api/meta` always carry
@@ -214,7 +214,7 @@ Scenario: Opening balances land with the currency lock
     ]}
     """
   Then the response status is 200
-  And the store holds 2 "ledger_entries" rows
+  And the store holds 2 "entries" rows
   And the account "Bank" carries base_amount_minor "500000"
   And the account "Card" carries base_amount_minor "-75000"
 

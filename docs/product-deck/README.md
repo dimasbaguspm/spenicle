@@ -20,7 +20,7 @@ does today, what it refuses, and where the edge is.
 A self-hosted, single-user expense tracker. One binary, one SQLite file, one
 container. The promise is not bookkeeping purity, it is **capture separation**:
 logging a coffee costs two seconds, and nothing is organized behind your back.
-Deleting is never offered — you void. Capture is never the ledger — you approve.
+Deleting is never offered — you reverse. Capture is never the ledger — you approve.
 
 Three surfaces, one API:
 
@@ -36,7 +36,7 @@ Three surfaces, one API:
 | --- | --- | --- | --- |
 | [F1](./features/01-access-and-bootstrap.md) | open the instance, then keep it closed | first-run wizard, forced password change, token screen, audit |
 | [F2](./features/02-capture-inbox.md) | capture now, decide later | share sheet, review queue, receipt viewer, mail intake |
-| [F3](./features/03-ledger.md) | the ledger is the truth | entry form, ledger list, entry detail, void, correction |
+| [F3](./features/03-ledger.md) | the ledger is the truth | entry form, ledger list, entry detail, reverse, correction |
 | [F4](./features/04-accounts-and-payees.md) | accounts, categories, merchants | chart of accounts, payee picker, parent tree |
 | [F5](./features/05-recurring.md) | predictable money arrives on its own | recurring rules, queue items the worker queued |
 | [F6](./features/06-statement-import.md) | a bank CSV becomes a reviewable draft | import wizard, row editor, commit |
@@ -110,7 +110,7 @@ is re-coded to the domain code when the table knows it, so `unknown_currency` an
 - **Dates** are `YYYY-MM-DD`, timestamps RFC3339 in UTC. Every calendar decision
   ("today", "due", "this month") is made in `APP_TIMEZONE`, pinned at the first boot
   and reported by `GET /api/settings` and `GET /healthz`.
-- **Nothing is deleted.** `archived_at`, `voided_at`, `revoked_at`, `status` are the
+- **Nothing is deleted.** `archived_at`, `reversed_at`, `revoked_at`, `status` are the
   vocabulary. A client that offers a delete button is lying to the user.
 
 ### Lists, paging, idempotency
@@ -160,7 +160,7 @@ tell "the worker never finished a run" from "work is still in progress".
 3. **Every number is derived, never stored.** Balances, month spend, the dashboard
    tile, the export summary: all computed from postings at read time. No counter can
    drift; a correction moves every screen by itself.
-4. **Nothing disappears.** Void writes a reversal; archive hides; revoke keeps the
+4. **Nothing disappears.** Reverse writes a reversal; archive hides; revoke keeps the
    row. A client may only offer destructive-looking verbs that this contract can keep.
 5. **A retry is safe.** Every create a phone or a script may retry is idempotent by
    `idempotency_key`; every multi-step job (`imports`, `exports`) resumes from its own

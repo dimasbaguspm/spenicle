@@ -46,7 +46,7 @@ Append a row per check; never rewrite a past one.
   - `422 invalid_request` where the promoted code is `unknown_currency`, and the reverse;
   - missing `409 duplicate` on the three routes whose SQL carries a unique index;
   - a duplicate-name collision documented as `500` where the mapper answers `409`;
-  - the `running_balances` derivation and `CheckZeroSum` ordering described as something
+  - the `entry_balances` derivation and `CheckZeroSum` ordering described as something
     the code does not do;
   - `POST /api/recurring` claiming the scheduler is unimplemented when the worker
     advances `next_due_on` every tick;
@@ -99,7 +99,7 @@ it and nothing fails if it stops doing it.
 | --- | --- | --- | --- | --- |
 | F1 | access and bootstrap | **GO** | 9 of 9 clauses — setup, currency lock, password gate, tokens, revoke, and the `403` that names the scope a token lacks (`post_api_tokens__a_capture_token_cannot_approve`) | the `?status=revoked` listing filter |
 | F2 | capture inbox | **GO** | approve, reject, retry, match, dedupe, intake allowlist, the artifact answering `410` once the worker reclaims it (`get_api_captures_artifact__a_reclaimed_artifact_answers_410`), and a captured mail naming its capture (`get_api_intake_messages__a_captured_mail_names_its_capture`) | the journal row's `action` is asserted by kind only |
-| F3 | ledger | **GO** | 8 of 8 — zero-sum, FX, void writes a reversal, balances hold, and the journal records both entries by ref (`patch_api_entries_:ref__voiding_writes_a_reversal_and_keeps_the_original`) | the entry body still does not carry `reverses_entry_ref`; the journal does |
+| F3 | ledger | **GO** | 8 of 8 — zero-sum, FX, reverse writes its reversal, balances hold, and the journal records both entries by ref (`patch_api_entries_:ref__reversing_writes_a_reversal_and_keeps_the_original`) | the entry body still does not carry `reversal_of_ref`; the journal does |
 | F4 | accounts and payees | **GO** | create, archive, rename, defaults, `409 duplicate`, and a `kind` change answered `400 invalid_json` (`patch_api_accounts_:ref__a_kind_change_is_refused_as_unknown`) | archiving keeps the posting on its entry (no step) |
 | F5 | recurring | **GO** | queue, dedupe, catch-up cap, pause, and the rule that survives in the capture's `draft_json` | the entry cannot name the rule: it is a ref on the capture, not on the entry |
 | F6 | statement import | **GO** | clash kinds, commit, reject, chunk assembly, suggestions on both upload paths, and the reject reason kept on the event (`get_api_imports_ref_events__a_reject_keeps_its_reason`) | nothing |

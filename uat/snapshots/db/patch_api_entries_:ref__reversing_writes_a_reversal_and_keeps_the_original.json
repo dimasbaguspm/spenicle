@@ -74,7 +74,7 @@
       "to_json": "{\"occurred_on\":\"2026-02-14\",\"currency\":\"IDR\",\"source\":\"manual\",\"postings\":2}"
     },
     {
-      "action": "void",
+      "action": "reverse",
       "actor_kind": "user",
       "actor_ref": null,
       "at": "<timestamp>",
@@ -83,11 +83,41 @@
       "from_json": null,
       "id": 5,
       "ref": "<ref>",
-      "to_json": "{\"voided_entry_ref\":\"<ref>\",\"reversal_entry_ref\":\"<ref>\"}"
+      "to_json": "{\"reversal_of_ref\":\"<ref>\",\"reversal_entry_ref\":\"<ref>\"}"
     }
   ],
   "capture_payloads": [],
   "captures": [],
+  "entries": [
+    {
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "id": 1,
+      "idempotency_key": "<idempotency_key>",
+      "note": "duplicate",
+      "occurred_on": "2026-02-14",
+      "payee_ref": null,
+      "recurring_rule_ref": null,
+      "ref": "<ref>",
+      "reversal_of_ref": null,
+      "reversed_at": "<timestamp>",
+      "source": "manual"
+    },
+    {
+      "created_at": "<timestamp>",
+      "currency": "IDR",
+      "id": 2,
+      "idempotency_key": null,
+      "note": "duplicate of 811",
+      "occurred_on": "2026-02-14",
+      "payee_ref": null,
+      "recurring_rule_ref": null,
+      "ref": "<ref>",
+      "reversal_of_ref": "<ref>",
+      "reversed_at": null,
+      "source": "adjustment"
+    }
+  ],
   "fx_rates": [
     {
       "base": "EUR",
@@ -124,37 +154,7 @@
   "import_rows": [],
   "import_upload_chunks": [],
   "import_uploads": [],
-  "ledger_entries": [
-    {
-      "created_at": "<timestamp>",
-      "currency": "IDR",
-      "id": 1,
-      "idempotency_key": "<idempotency_key>",
-      "note": "duplicate",
-      "occurred_on": "2026-02-14",
-      "payee_ref": null,
-      "recurring_rule_ref": null,
-      "ref": "<ref>",
-      "reverses_entry_ref": null,
-      "source": "manual",
-      "voided_at": "<timestamp>"
-    },
-    {
-      "created_at": "<timestamp>",
-      "currency": "IDR",
-      "id": 2,
-      "idempotency_key": null,
-      "note": "duplicate of 811",
-      "occurred_on": "2026-02-14",
-      "payee_ref": null,
-      "recurring_rule_ref": null,
-      "ref": "<ref>",
-      "reverses_entry_ref": "<ref>",
-      "source": "adjustment",
-      "voided_at": null
-    }
-  ],
-  "ledger_postings": [
+  "postings": [
     {
       "account_ref": "<ref>",
       "amount_minor": -15000,

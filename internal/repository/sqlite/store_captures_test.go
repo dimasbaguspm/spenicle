@@ -76,7 +76,7 @@ func assertUnapproved(t *testing.T, store *sqlite.Store, err error) {
 	if !errors.Is(err, entity.ErrCaptureResolved) {
 		t.Fatalf("err = %v, want capture_resolved", err)
 	}
-	if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 0 {
+	if got := countRows(t, store, `SELECT COUNT(*) FROM entries`); got != 0 {
 		t.Fatalf("entries = %d, want 0", got)
 	}
 }
@@ -107,7 +107,7 @@ func assertApproved(
 	if stored.ResolvedEntryRef != saved.Ref {
 		t.Fatalf("resolved_entry_ref = %q, want %q", stored.ResolvedEntryRef, saved.Ref)
 	}
-	if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 1 {
+	if got := countRows(t, store, `SELECT COUNT(*) FROM entries`); got != 1 {
 		t.Fatalf("entries = %d, want 1", got)
 	}
 }
@@ -155,7 +155,7 @@ func TestApproveCaptureRollsBackAfterInsert(t *testing.T) {
 		t.Fatal("an invalid audit payload must fail the approval")
 	}
 
-	if got := countRows(t, store, `SELECT COUNT(*) FROM ledger_entries`); got != 0 {
+	if got := countRows(t, store, `SELECT COUNT(*) FROM entries`); got != 0 {
 		t.Fatalf("entries = %d, want 0 after rollback", got)
 	}
 	if got := countRows(t, store,

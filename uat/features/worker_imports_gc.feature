@@ -17,7 +17,7 @@ Feature: Worker import GC
       | table          | count |
       | import_batches | 0     |
       | import_rows    | 0     |
-      | ledger_entries | 0     |
+      | entries | 0     |
     And the import event log holds 1 event of kind "expired"
 
   Scenario: A committed batch outlives its expiry
@@ -44,7 +44,7 @@ Feature: Worker import GC
       | table          | count |
       | import_batches | 1     |
       | import_rows    | 1     |
-      | ledger_entries | 1     |
+      | entries | 1     |
     And the import event log holds 1 event of kind "committed"
     And the import event log holds 0 events of kind "expired"
 
@@ -67,6 +67,6 @@ Feature: Worker import GC
       | table          | count |
       | import_batches | 1     |
       | import_rows    | 1     |
-      | ledger_entries | 0     |
+      | entries | 0     |
     And the import event log holds 1 event of kind "rejected"
     And the import event log holds 0 events of kind "expired"

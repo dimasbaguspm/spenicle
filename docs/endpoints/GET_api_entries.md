@@ -14,7 +14,7 @@ Ledger screen, agents auditing spend, `skills/ai-integration`.
 
 `Module.Ledger.List` → `Repository.Sqlite.ListEntries` (one page query for the entries,
 one query for the whole page's postings, and — with `with_balance` — one
-`Repository.Sqlite.RunningBalances` lookup on the derived `running_balances` table for the page's entries).
+`Repository.Sqlite.RunningBalances` lookup on the derived `entry_balances` table for the page's entries).
 
 ## Path / query params
 
@@ -28,7 +28,7 @@ one query for the whole page's postings, and — with `with_balance` — one
 | `currency` | string | — | ISO 4217, the entry's own currency |
 | `query` | string | — | substring of the note or of the payee name |
 | `refs` | ref list | — | comma-separated entry refs |
-| `voided` | bool | — | `true` only voided entries, `false` only live ones, absent both |
+| `reversed` | bool | — | `true` only reversed entries, `false` only live ones, absent both |
 | `amount_min` | money | — | smallest absolute posting amount to match |
 | `amount_max` | money | — | largest absolute posting amount to match |
 | `cursor` | ref | — | return entries older than the entry with that ref |
@@ -59,13 +59,13 @@ next page (`has_more` false), including a short non-empty page. Send it back as 
 for the next page: the cursor is always a ref, never an integer id.
 
 Each posting carries the account's `name` and `kind` next to its `ref`, and an entry with a
-payee carries its `name` too, so a screen renders a row without a second call. `voided_at`
-appears on a voided entry or its reversal. The handler joins these from
+payee carries its `name` too, so a screen renders a row without a second call. `reversed_at`
+appears on a reversed entry or its reversal. The handler joins these from
 `Repository.Sqlite.ListAccounts` + `ListPayees` once per request — the store stays a
 pure data adapter, the HTTP layer owns presentation.
 
 `running_balance_minor` is the balance of the account the request named, in base-currency
-minor units, **after** that entry: the `balance_minor` of the derived `running_balances`
+minor units, **after** that entry: the `balance_minor` of the derived `entry_balances`
 row kept for that `(account, entry)` pair, not a `SUM` computed per request. When the
 account's `balance_state.dirty` is set, the table is rebuilt from the whole history before
 the page is answered, so the numbers are the ledger's and not the page's: page two already
@@ -78,7 +78,7 @@ omitted and the request is the one it was before.
 
 `422 invalid_request` for a malformed date, an `amount_min`/`amount_max` that is not an
 integer, a `source` outside the enum, a list member that is not a 32-hex ref, a `cursor`
-that is not a ref, a `voided` or `with_balance` value other than `true`/`false`, or a
+that is not a ref, a `reversed` or `with_balance` value other than `true`/`false`, or a
 `limit` over 200; `422 unknown_currency` for a `currency` outside ISO 4217;
 `400 invalid_request` for a `limit` that is not a number, which the binder rejects before
 validation runs.
@@ -88,7 +88,7 @@ validation runs.
 Keyset paging by entry ref only. The `running_balance_minor` column needs exactly one
 `account_ref`: with none, or with several, there is no single balance to walk. It is
 base-currency only, like every other amount on the wire, and it is a lookup on the derived
-`running_balances` table — one query per page, never one per row — so a dirty
+`entry_balances` table — one query per page, never one per row — so a dirty
 `balance_state` pays for a rebuild of that account's whole history once, on the next read,
 instead of every request summing the history. Filters deliberately absent: an amount in
 the entry's own currency (the range is base-currency), a sort order (always newest first),
@@ -110,13 +110,13 @@ sequenceDiagram
     participant H as Entries handler
     participant L as Ledger module
     participant DB as SQLite
-    UI->>H: GET /api/entries?from&to&account_ref&payee_ref&source&currency&query&refs&voided&amount_min&amount_max&cursor&with_balance&limit
+    UI->>H: GET /api/entries?from&to&account_ref&payee_ref&source&currency&query&refs&reversed&amount_min&amount_max&cursor&with_balance&limit
     H->>H: bind and validate the params, build the filter
     H->>L: List(filter)
     L->>DB: SELECT entries WHERE … ORDER BY id DESC LIMIT ? (limit + 1)
     L->>DB: SELECT postings WHERE entry_id IN (page ids) — one query for the page
     opt with_balance and exactly one account_ref
-        L->>DB: SELECT running_balances WHERE account_id = ? AND entry_id IN (page ids)
+        L->>DB: SELECT entry_balances WHERE account_id = ? AND entry_id IN (page ids)
         DB-->>L: one balance per entry (a dirty balance_state rebuilds from the whole account history first)
     end
     L-->>H: entries

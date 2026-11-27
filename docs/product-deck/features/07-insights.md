@@ -7,7 +7,7 @@
 
 "Open the app, see the month in one screen, and only then drill." The point of the
 feature is that nothing here is stored: every tile and every bar is a query over
-postings, so a void, a correction or a late import moves the numbers on the next read and
+postings, so a reversal, a correction or a late import moves the numbers on the next read and
 never needs a recalculation job.
 
 ## 2. Client journeys (multi-hit by design)
@@ -84,8 +84,8 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 ```
 
 - **One grouped query per question.** `MonthlyTotals` groups postings by month,
-  `CategoryTotals` groups by account and filters `kind`. Both join `ledger_postings` →
-  `ledger_entries` → `accounts` and **exclude voided entries and their reversals**, so a
+  `CategoryTotals` groups by account and filters `kind`. Both join `postings` →
+  `entries` → `accounts` and **exclude reversed entries and their reversals**, so a
   corrected entry leaves no trace in a chart while the rows remain.
 - **Nothing is materialised.** There is no `months` table, no daily rollup, no cache to
   invalidate: a correction is visible on the next read by construction.
@@ -98,7 +98,7 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 
 ### Requirements
 
-1. A void must not change any figure: the voided entry and its reversal are both excluded
+1. A reversal must not change any figure: the reversed entry and its reversal are both excluded
    from every aggregate.
 2. Every money field is a minor-unit **string**; the client formats, the API never does.
 3. The dashboard client supplies one explicit, ordered `from`/`to` window; every tile
@@ -154,9 +154,9 @@ Scenario: An empty ledger answers zeroes
   And spend_minor, income_minor and net_minor are "0"
   And top_category is absent
 
-Scenario: A void disappears from every chart
+Scenario: A reversal disappears from every chart
   Given an entry spending "10000" in "2026-02"
-  When I void that entry
+  When I reverse that entry
   And I send a GET to "/api/analytics/months?from=2026-02-01&to=2026-02-28"
   Then the month "2026-02" carries spend_minor "0"
   When I send a GET to "/api/dashboard?from=2026-02-01&to=2026-02-28"

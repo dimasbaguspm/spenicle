@@ -14,9 +14,9 @@ The charts screen, the month list, an agent summarising the year.
 
 ## Downstream
 
-`Repository.Sqlite.MonthlyTotals`: one grouped query over `ledger_postings` joined to
-`ledger_entries` and `accounts`. Voided entries and their reversal entries are both
-excluded, so a void leaves no trace.
+`Repository.Sqlite.MonthlyTotals`: one grouped query over `postings` joined to
+`entries` and `accounts`. Reversed entries and their reversal entries are both
+excluded, so a reversal leaves no trace.
 
 ## Path / query params
 
