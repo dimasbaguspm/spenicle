@@ -173,7 +173,7 @@ Rules that keep it pluggable:
 ```bash
 make hooks      # install the git hook (build + lint + test + UAT before commit)
 make build      # bin/spenicle
-make dev        # go run . all (listens on :8080, writes to ./data); dev.mk owns the trio:
+make dev        # go run -tags web . all (SPA on :8080, writes to ./data); dev.mk owns the trio:
                 # dev-api, dev-worker, dev-web (:5173) and dev-build (-tags web)
 make run        # alias for make dev
 make test       # unit and integration tests (UAT has its own target)

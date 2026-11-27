@@ -11,13 +11,18 @@ GO   ?= go
 BIN  ?= bin/spenicle
 PORT ?= 8080
 
-.PHONY: dev dev-api dev-worker dev-web dev-build
+.PHONY: dev dev-api dev-worker dev-web dev-build web-dist
 
-dev: ## run the API and the worker in one process against ./data
-	$(GO) run . all
+# The SPA is embedded only with `-tags web`, so the dev binary needs web/dist to exist. Built
+# once here; after a UI change either `make dev-web` (HMR) or `make web-dist` again.
+web-dist: ## build web/dist if it is missing (the embed needs it)
+	@test -f web/dist/index.html || (cd web && pnpm install --frozen-lockfile && pnpm run build)
 
-dev-api: ## run only the API (the sole listener) against ./data
-	$(GO) run . http
+dev: web-dist ## run the API and the worker in one process, SPA served on :8080
+	$(GO) run -tags web . all
+
+dev-api: web-dist ## run only the API (the sole listener, SPA served) against ./data
+	$(GO) run -tags web . http
 
 dev-worker: ## run only the worker: recurring captures, retention, exports, intake
 	$(GO) run . worker
