@@ -182,8 +182,13 @@ failure cannot hide a security failure.
 
 ## Environment
 
-Un-prefixed, all optional except `APP_SECRET`. Eight variables, and no ninth: the listen
-address (`:8080`), the data directory (`./data`), the DB path, the artifact and export
+Un-prefixed, all optional except `APP_SECRET`. Secrets and identity come from the
+environment; every *limit* has a default in `internal/common/config/config.go` and an
+override, so the eight limit variables (`APP_MAX_BODY_BYTES`, `APP_ARTIFACT_MAX_BYTES`,
+`APP_IMPORT_MAX_BYTES`, `APP_ARTIFACT_RETENTION`, `APP_EXPORT_RETENTION`,
+`APP_WORKER_INTERVAL`, `APP_HEALTH_TIMEOUT`, `APP_IMPORT_COMMIT_CHUNK`) are the only ones a
+self-hoster may need to touch without a rebuild. The listen address (`:8080`), the data
+directory (`./data`), the DB path, the artifact and export
 stores and every timeout are constants in `internal/common/config/config.go`.
 
 | var | default | meaning |

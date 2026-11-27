@@ -13,6 +13,7 @@ Append a row per check; never rewrite a past one.
 | 2026-11-27T16:40Z | `ec127d1` + the captures-group refactor in this change | `main` | Dimas Mukti (PI-Desktop agent) | captures, payloads, artifacts and mail messages by ref, plus the mail→capture link | **GO** |
 | 2026-11-27T17:30Z | `de7d06b` + the imports/exports/journal refactor in this change | `main` | Dimas Mukti (PI-Desktop agent) | the last integer relations: import rows, import/export events, upload chunks, `audit_log.entity_id` | **GO** |
 | 2026-11-27T18:10Z | `ad2a822` + the `idempotency_key` rename in this change | `main` | Dimas Mukti (PI-Desktop agent) | no `*_id` column left in the schema, wire and code (Google OAuth `client_id` excepted: it is Google's field) | **GO** |
+| 2026-11-27T19:05Z | `ec2237c` + the limits, currencies and index pass in this change | `main` | Dimas Mukti (PI-Desktop agent) | the eight limit overrides, the full ISO 4217 table, the index audit | **GO** |
 
 ## What a check covers
 

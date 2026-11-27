@@ -19,9 +19,149 @@
   ],
   "currencies": [
     {
+      "code": "AED",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "AFN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "ALL",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "AMD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "ANG",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "AOA",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "ARS",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
       "code": "AUD",
       "minor_units": 2,
       "symbol": "A$"
+    },
+    {
+      "code": "AWG",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "AZN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BAM",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BBD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BDT",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BGN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BHD",
+      "minor_units": 3,
+      "symbol": ""
+    },
+    {
+      "code": "BIF",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "BMD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BND",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BOB",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BOV",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BRL",
+      "minor_units": 2,
+      "symbol": "R$"
+    },
+    {
+      "code": "BSD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BTN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BWP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BYN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "BZD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "CAD",
+      "minor_units": 2,
+      "symbol": "C$"
+    },
+    {
+      "code": "CDF",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "CHE",
+      "minor_units": 2,
+      "symbol": ""
     },
     {
       "code": "CHF",
@@ -29,9 +169,89 @@
       "symbol": "CHF"
     },
     {
+      "code": "CHW",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "CLF",
+      "minor_units": 4,
+      "symbol": ""
+    },
+    {
+      "code": "CLP",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
       "code": "CNY",
       "minor_units": 2,
       "symbol": "¥"
+    },
+    {
+      "code": "COP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "COU",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "CRC",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "CUP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "CVE",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "CZK",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "DJF",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "DKK",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "DOP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "DZD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "EGP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "ERN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "ETB",
+      "minor_units": 2,
+      "symbol": ""
     },
     {
       "code": "EUR",
@@ -39,9 +259,74 @@
       "symbol": "€"
     },
     {
+      "code": "FJD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "FKP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
       "code": "GBP",
       "minor_units": 2,
       "symbol": "£"
+    },
+    {
+      "code": "GEL",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "GHS",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "GIP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "GMD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "GNF",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "GTQ",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "GYD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "HKD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "HNL",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "HTG",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "HUF",
+      "minor_units": 2,
+      "symbol": ""
     },
     {
       "code": "IDR",
@@ -49,14 +334,69 @@
       "symbol": "Rp"
     },
     {
+      "code": "ILS",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
       "code": "INR",
       "minor_units": 2,
       "symbol": "₹"
     },
     {
+      "code": "IQD",
+      "minor_units": 3,
+      "symbol": ""
+    },
+    {
+      "code": "IRR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "ISK",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "JMD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "JOD",
+      "minor_units": 3,
+      "symbol": ""
+    },
+    {
       "code": "JPY",
       "minor_units": 0,
       "symbol": "¥"
+    },
+    {
+      "code": "KES",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "KGS",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "KHR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "KMF",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "KPW",
+      "minor_units": 2,
+      "symbol": ""
     },
     {
       "code": "KRW",
@@ -69,9 +409,234 @@
       "symbol": "د.ك"
     },
     {
+      "code": "KZT",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "LAK",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "LBP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "LKR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "LRD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "LSL",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "LYD",
+      "minor_units": 3,
+      "symbol": ""
+    },
+    {
+      "code": "MAD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MDL",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MGA",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MKD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MMK",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MNT",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MOP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MRU",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MUR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MVR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MWK",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MXN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "MXV",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
       "code": "MYR",
       "minor_units": 2,
       "symbol": "RM"
+    },
+    {
+      "code": "MZN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "NAD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "NGN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "NIO",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "NOK",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "NPR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "NZD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "OMR",
+      "minor_units": 3,
+      "symbol": ""
+    },
+    {
+      "code": "PAB",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "PEN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "PGK",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "PHP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "PKR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "PLN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "PYG",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "QAR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "RON",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "RSD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "RUB",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "RWF",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "SAR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SBD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SCR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SDG",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SEK",
+      "minor_units": 2,
+      "symbol": ""
     },
     {
       "code": "SGD",
@@ -79,9 +644,104 @@
       "symbol": "S$"
     },
     {
+      "code": "SHP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SLE",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SOS",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SRD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SSP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "STN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SVC",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SYP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "SZL",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
       "code": "THB",
       "minor_units": 2,
       "symbol": "฿"
+    },
+    {
+      "code": "TJS",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "TMT",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "TND",
+      "minor_units": 3,
+      "symbol": ""
+    },
+    {
+      "code": "TOP",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "TRY",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "TTD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "TWD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "TZS",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "UAH",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "UGX",
+      "minor_units": 0,
+      "symbol": ""
     },
     {
       "code": "USD",
@@ -89,9 +749,124 @@
       "symbol": "$"
     },
     {
+      "code": "USN",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "UYI",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "UYU",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "UYW",
+      "minor_units": 4,
+      "symbol": ""
+    },
+    {
+      "code": "UZS",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "VES",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
       "code": "VND",
       "minor_units": 0,
       "symbol": "₫"
+    },
+    {
+      "code": "VUV",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "WST",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "XAF",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "XAG",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "XAU",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "XCD",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "XDR",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "XOF",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "XPD",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "XPF",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "XPT",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "XSU",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "XUA",
+      "minor_units": 0,
+      "symbol": ""
+    },
+    {
+      "code": "YER",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "ZAR",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "ZMW",
+      "minor_units": 2,
+      "symbol": ""
+    },
+    {
+      "code": "ZWL",
+      "minor_units": 2,
+      "symbol": ""
     }
   ],
   "payees": [

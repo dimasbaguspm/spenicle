@@ -23,8 +23,6 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/repository/filestore"
 )
 
-const maxFormBytes = 11 << 20
-
 type captureRequest struct {
 	IdempotencyKey string               `json:"idempotency_key,omitempty" validate:"omitempty,max=64"`
 	Kind           string               `json:"kind"                      validate:"capturekind"`
@@ -96,7 +94,7 @@ func (s *Server) CreateCapture(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, s.deps.MaxBodyBytes)
 
-	request, err := readCapture(w, r)
+	request, err := readCapture(w, r, s.deps.MaxArtifactBytes)
 	if err != nil {
 		writeInvalid(w, err)
 
@@ -402,9 +400,9 @@ func attachmentFilename(name string) string {
 	return cleaned
 }
 
-func readCapture(w http.ResponseWriter, r *http.Request) (captureRequest, error) {
+func readCapture(w http.ResponseWriter, r *http.Request, limit int64) (captureRequest, error) {
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
-		return readCaptureForm(w, r)
+		return readCaptureForm(w, r, limit)
 	}
 
 	var request captureRequest
@@ -426,11 +424,11 @@ func (c captureRequest) input() captures.CreateInput {
 	}
 }
 
-func readCaptureForm(w http.ResponseWriter, r *http.Request) (captureRequest, error) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxFormBytes)
+func readCaptureForm(w http.ResponseWriter, r *http.Request, limit int64) (captureRequest, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 
 	//nolint:gosec // G120: r.Body is capped by the MaxBytesReader above.
-	if err := r.ParseMultipartForm(maxFormBytes); err != nil {
+	if err := r.ParseMultipartForm(limit); err != nil {
 		return captureRequest{}, fmt.Errorf("multipart: %w", err)
 	}
 
@@ -441,7 +439,7 @@ func readCaptureForm(w http.ResponseWriter, r *http.Request) (captureRequest, er
 
 	defer func() { _ = file.Close() }()
 
-	body, err := io.ReadAll(io.LimitReader(file, maxFormBytes))
+	body, err := io.ReadAll(io.LimitReader(file, limit))
 	if err != nil {
 		return captureRequest{}, fmt.Errorf("read artifact: %w", err)
 	}

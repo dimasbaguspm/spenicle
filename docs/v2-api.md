@@ -71,6 +71,20 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | `OPENAI_HOST` | unset | base URL for the reserved OpenAI adapter; empty keeps the SDK default |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | OTLP/HTTP collector; empty makes tracing and metrics no-ops |
 
+Every limit has a default in `internal/common/config/config.go` and an override, so a
+self-hoster can raise a cap without a rebuild:
+
+| env | default | effect |
+| --- | --- | --- |
+| `APP_MAX_BODY_BYTES` | 1 MiB | the JSON body ceiling |
+| `APP_ARTIFACT_MAX_BYTES` | 10 MiB | one artifact upload, and the capture multipart body |
+| `APP_IMPORT_MAX_BYTES` | 32 MiB | the statement upload, body and file |
+| `APP_ARTIFACT_RETENTION` | `720h` | how long a rejected capture keeps its document |
+| `APP_EXPORT_RETENTION` | `720h` | how long a ready export keeps its blob |
+| `APP_WORKER_INTERVAL` | `1h` | how often the worker runs |
+| `APP_HEALTH_TIMEOUT` | `2s` | `/healthz` database budget |
+| `APP_IMPORT_COMMIT_CHUNK` | 500 | rows posted per commit chunk |
+
 The listen address (`:8080`), the data directory (`./data`), the DB path, artifact/export/import
 stores, retention and size caps, HTTP timeouts, shutdown budgets, health timeout, body and row
 caps, pool sizes and the worker interval are **not** environment variables: they are constants

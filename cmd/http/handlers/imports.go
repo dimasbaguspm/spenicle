@@ -114,7 +114,7 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, s.deps.ImportMaxBytes)
 
-	request, chunk, chunked, err := readImportUpload(w, r)
+	request, chunk, chunked, err := readImportUpload(w, r, s.deps.ImportMaxBytes)
 	if err != nil {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request", err.Error())
 
@@ -470,11 +470,12 @@ func toRowUpdate(request importRowPatchRequest) (imports.RowUpdate, error) {
 func readImportUpload(
 	w http.ResponseWriter,
 	r *http.Request,
+	limit int64,
 ) (importUploadRequest, importChunkFields, bool, error) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxFormBytes)
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 
 	//nolint:gosec // G120: r.Body is capped by the MaxBytesReader above.
-	if err := r.ParseMultipartForm(maxFormBytes); err != nil {
+	if err := r.ParseMultipartForm(limit); err != nil {
 		return importUploadRequest{}, importChunkFields{}, false, fmt.Errorf("multipart: %w", err)
 	}
 
@@ -486,7 +487,7 @@ func readImportUpload(
 
 	defer func() { _ = file.Close() }()
 
-	body, err := io.ReadAll(io.LimitReader(file, maxFormBytes))
+	body, err := io.ReadAll(io.LimitReader(file, limit))
 	if err != nil {
 		return importUploadRequest{}, importChunkFields{}, false, fmt.Errorf("read statement: %w", err)
 	}

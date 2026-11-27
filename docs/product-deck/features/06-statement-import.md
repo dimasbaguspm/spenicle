@@ -32,7 +32,7 @@ The order above is illustrative: the same names in a different column order pars
 | 3 | same call, chunked | add `chunk_index` + `chunk_total`; each chunk answers `202` with `{received_chunks, chunk_total, received_bytes}`, the last one assembles the draft and answers `201` with the full batch — no progress fields, and the same per-row `suggested_category_ref` the single-shot answer carries |
 | 4 | `POST /api/imports` again with the same `idempotency_key` and bytes | `200` with the same batch — the resume path after a restart |
 
-Caps: `ImportMaxBytes` is a 32 MiB outer body cap, but multipart parsing and the file read use `maxFormBytes = 11 << 20`, so the effective multipart file cap is 11 MiB; `ImportMaxRows` is 50 000 rows. A conflicting replay writes `conflict_refused` before answering `409 import_conflict`; UAT asserts that event.
+Caps: `APP_IMPORT_MAX_BYTES` (32 MiB by default) bounds both the body and the file; `ImportMaxRows` is 50 000 rows. A conflicting replay writes `conflict_refused` before answering `409 import_conflict`; UAT asserts that event.
 A CSV with a bad line does not fail the upload: that row is stored `skipped` with
 `clash_kind: "invalid_row"`, so the user sees the line instead of losing the file.
 

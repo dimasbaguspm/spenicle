@@ -100,6 +100,7 @@ CREATE TABLE recurring_rules (
 );
 
 CREATE INDEX ix_recurring_due ON recurring_rules (state, next_due_on, id);
+CREATE INDEX ix_recurring_payee_ref ON recurring_rules (payee_ref, next_due_on, id);
 
 CREATE TABLE ledger_entries (
   id                INTEGER PRIMARY KEY,
@@ -175,7 +176,6 @@ CREATE TABLE captures (
 
 CREATE UNIQUE INDEX ux_captures_idem ON captures (idempotency_key) WHERE idempotency_key IS NOT NULL;
 CREATE INDEX ix_captures_queue ON captures (status, received_at);
-CREATE INDEX ix_captures_batch_label ON captures (batch_label);
 
 CREATE TABLE capture_payloads (
   id              INTEGER PRIMARY KEY,
@@ -199,7 +199,6 @@ CREATE TABLE artifacts (
   deleted_at   TEXT
 );
 
-CREATE INDEX ix_artifacts_sha256 ON artifacts (sha256);
 
 CREATE TABLE import_batches (
   id           INTEGER PRIMARY KEY,
@@ -251,8 +250,7 @@ CREATE TABLE import_events (
 );
 
 CREATE INDEX ix_import_events_batch_ref ON import_events (batch_ref, id);
-CREATE UNIQUE INDEX ux_import_rows_batch_ref ON import_rows (batch_ref, row_index)
-  WHERE batch_ref <> '';
+CREATE UNIQUE INDEX ux_import_rows_batch_ref ON import_rows (batch_ref, row_index);
 
 CREATE TABLE import_uploads (
   id              INTEGER PRIMARY KEY,
@@ -313,18 +311,16 @@ CREATE TABLE export_events (
 );
 
 CREATE INDEX ix_export_events_export_ref ON export_events (export_ref, id);
-CREATE UNIQUE INDEX ux_import_upload_chunks_ref ON import_upload_chunks (upload_ref, chunk_index)
-  WHERE upload_ref <> '';
-CREATE INDEX ix_entries_reversal_ref ON ledger_entries (reverses_entry_ref)
-  WHERE reverses_entry_ref IS NOT NULL;
+CREATE UNIQUE INDEX ux_import_upload_chunks_ref ON import_upload_chunks (upload_ref, chunk_index);
+CREATE INDEX ix_entries_reversal_ref ON ledger_entries (reverses_entry_ref);
 CREATE INDEX ix_postings_account_ref ON ledger_postings (account_ref, entry_ref);
+CREATE INDEX ix_exports_status_started ON exports (status, started_at, id);
 CREATE INDEX ix_rules_account_ref ON categorization_rules (account_ref);
 CREATE UNIQUE INDEX ux_entries_rule_due_ref ON ledger_entries (recurring_rule_ref, occurred_on)
   WHERE recurring_rule_ref IS NOT NULL;
 CREATE UNIQUE INDEX ux_running_balances_entry_ref ON running_balances (account_ref, entry_ref);
 CREATE INDEX ix_running_balances_order ON running_balances (account_ref, occurred_on, entry_ref);
-CREATE INDEX ix_accounts_parent_ref ON accounts (parent_ref) WHERE parent_ref IS NOT NULL;
-CREATE INDEX ix_recurring_payee_ref ON recurring_rules (payee_ref, next_due_on);
+CREATE INDEX ix_accounts_parent_ref ON accounts (parent_ref);
 
 CREATE TABLE custom_queries (
   id         INTEGER PRIMARY KEY,
@@ -350,6 +346,9 @@ CREATE TABLE audit_log (
   at          TEXT NOT NULL
 );
 
+CREATE INDEX ix_postings_entry_ref ON ledger_postings (entry_ref, id);
+CREATE INDEX ix_entries_payee_ref ON ledger_entries (payee_ref);
+CREATE INDEX ix_artifacts_live ON artifacts (created_at, id) WHERE deleted_at IS NULL;
 CREATE INDEX ix_audit_entity ON audit_log (entity_kind, entity_ref, id);
 CREATE INDEX ix_audit_actor ON audit_log (actor_kind, at);
 CREATE INDEX ix_audit_action ON audit_log (action, at);
@@ -391,5 +390,3 @@ CREATE TABLE mail_messages (
 );
 
 CREATE UNIQUE INDEX ux_mail_messages_source ON mail_messages (source, message_ref);
-CREATE INDEX ix_mail_messages_observed ON mail_messages (observed_at);
-CREATE INDEX ix_mail_messages_capture_ref ON mail_messages (capture_ref);

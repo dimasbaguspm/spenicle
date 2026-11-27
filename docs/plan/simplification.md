@@ -169,6 +169,18 @@ Ranked by queries saved per request:
    account per entry (`store_ledger.go:214`). Fold into §2: one `UPDATE accounts SET balance…`
    and one `INSERT` per posting account.
 
+## Status
+
+- **§3 limits from the environment: shipped.** Eight `APP_*` overrides, each defaulting to the
+  old constant; `maxFormBytes` is gone and the import cap is the documented one.
+- **§4 every currency: shipped.** The table is the ISO 4217 set (170+ codes, exponents 0/2/3/4)
+  instead of 15; `internal/entity/currency_test.go` holds it in place.
+- **§5 indexes: shipped.** Five dead indexes dropped, four partial predicates that blocked an
+  equality lookup removed, four new indexes added (`postings (entry_ref, id)`,
+  `entries (payee_ref)`, `exports (status, started_at, id)`, live artifacts by `created_at`).
+  `ix_recurring_payee_ref` stayed: it serves the recurring list's order.
+- §1, §2, §6, §7, §8, caching and the N+1 list: open.
+
 ## Order of work
 
 1. §3 config, §4 currencies, §5 indexes — independent, small, no wire change.

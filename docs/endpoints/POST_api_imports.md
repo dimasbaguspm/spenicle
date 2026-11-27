@@ -51,15 +51,15 @@ None.
 
 | field | required | notes |
 | --- | --- | --- |
-| `file` | yes | the CSV bytes; the real ceiling is the handler's `maxFormBytes` (`11 << 20` ≈ 11 MiB), not `ImportMaxBytes` |
+| `file` | yes | the CSV bytes; the ceiling is `APP_IMPORT_MAX_BYTES` (default 32 MiB) |
 | `idempotency_key` | no | ≤ 64 characters, the idempotency key. Omit it and the server mints `<tokenref>_<16 hex>` and returns it on the batch; a chunk upload must send the key the first chunk answered with |
 | `account_ref` | no | the account the rows move through; unknown is `404`, omitted resolves to `Unsorted` |
 | `chunk_index` | no | zero-based index; send it together with `chunk_total` |
 | `chunk_total` | no | how many chunks the statement was split into (≥ 1) |
 
-`ImportMaxBytes` (default 32 MiB) never binds for a real upload: the multipart body is
-capped at `maxFormBytes` (`11 << 20`) before parsing, so a larger file fails while the
-form is read and answers `422 invalid_request` with a `multipart:` message.
+The multipart body is capped at the same `APP_IMPORT_MAX_BYTES` before parsing, so a larger
+file fails while the form is read and answers `422 invalid_request` with a `multipart:`
+message.
 
 ### Chunked, resumable upload
 
@@ -121,10 +121,10 @@ Idempotency is enforced by the unique index on `import_batches.idempotency_key`:
 
 - `409 import_conflict` — a chunk whose `chunk_total` disagrees with the open upload for that `idempotency_key`.
 - `409 import_closed` — a chunk for a `complete` or `abandoned` upload.
-- `422 invalid_request` — `chunk_index`/`chunk_total` alone, out of range, not numbers, too many rows, or a body above `maxFormBytes` (11 MiB).
+- `422 invalid_request` — `chunk_index`/`chunk_total` alone, out of range, not numbers, too many rows, or a body above `APP_IMPORT_MAX_BYTES` (32 MiB by default).
 
 - `409 import_conflict` — the `idempotency_key` exists with different bytes; use a new client id for a new file.
-- `422 invalid_request` — the header is missing `occurred_on`, `amount_minor` or `description` (the message names it), the file part is missing, `idempotency_key` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `maxFormBytes` (a `multipart:` message).
+- `422 invalid_request` — the header is missing `occurred_on`, `amount_minor` or `description` (the message names it), the file part is missing, `idempotency_key` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `APP_IMPORT_MAX_BYTES` (a `multipart:` message).
 - `404 not_found` — `account_ref` names no account.
 - `500 internal_error` — the store refused the write; nothing was committed.
 

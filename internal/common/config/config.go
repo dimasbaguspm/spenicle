@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +33,15 @@ const (
 	EnvSnapToJSONEndpoint = "SNAPTOJSON_ENDPOINT"
 	EnvOTLPEndpoint       = "OTEL_EXPORTER_OTLP_ENDPOINT"
 	EnvTimezone           = "APP_TIMEZONE"
+
+	EnvMaxBodyBytes     = "APP_MAX_BODY_BYTES"
+	EnvArtifactMaxBytes = "APP_ARTIFACT_MAX_BYTES"
+	EnvImportMaxBytes   = "APP_IMPORT_MAX_BYTES"
+	EnvArtifactKeep     = "APP_ARTIFACT_RETENTION"
+	EnvExportKeep       = "APP_EXPORT_RETENTION"
+	EnvWorkerInterval   = "APP_WORKER_INTERVAL"
+	EnvHealthTimeout    = "APP_HEALTH_TIMEOUT"
+	EnvCommitChunk      = "APP_IMPORT_COMMIT_CHUNK"
 )
 
 const (
@@ -133,6 +143,24 @@ func Load(ctx context.Context) (entity.AppConfig, error) {
 
 	cfg.Timezone = timezone
 
+	for _, knob := range []struct {
+		env   string
+		apply func() error
+	}{
+		{EnvMaxBodyBytes, func() error { return envInt64(EnvMaxBodyBytes, &cfg.MaxBodyBytes) }},
+		{EnvArtifactMaxBytes, func() error { return envInt64(EnvArtifactMaxBytes, &cfg.ArtifactMaxBytes) }},
+		{EnvImportMaxBytes, func() error { return envInt64(EnvImportMaxBytes, &cfg.ImportMaxBytes) }},
+		{EnvArtifactKeep, func() error { return envDuration(EnvArtifactKeep, &cfg.ArtifactRetention) }},
+		{EnvExportKeep, func() error { return envDuration(EnvExportKeep, &cfg.ExportRetention) }},
+		{EnvWorkerInterval, func() error { return envDuration(EnvWorkerInterval, &cfg.WorkerInterval) }},
+		{EnvHealthTimeout, func() error { return envDuration(EnvHealthTimeout, &cfg.HealthTimeout) }},
+		{EnvCommitChunk, func() error { return envInt(EnvCommitChunk, &cfg.ImportCommitChunk) }},
+	} {
+		if err := knob.apply(); err != nil {
+			return entity.AppConfig{}, err
+		}
+	}
+
 	if err := validate.Struct(cfg); err != nil {
 		return entity.AppConfig{}, fmt.Errorf(
 			"APP_SECRET is required, at least 16 bytes (generate one with "+
@@ -149,6 +177,54 @@ func env(key, fallback string) string {
 	}
 
 	return fallback
+}
+
+func envInt64(key string, target *int64) error {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return nil
+	}
+
+	parsed, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || parsed <= 0 {
+		return fmt.Errorf("%s %q is not a positive integer", key, raw)
+	}
+
+	*target = parsed
+
+	return nil
+}
+
+func envInt(key string, target *int) error {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return nil
+	}
+
+	parsed, err := strconv.Atoi(raw)
+	if err != nil || parsed <= 0 {
+		return fmt.Errorf("%s %q is not a positive integer", key, raw)
+	}
+
+	*target = parsed
+
+	return nil
+}
+
+func envDuration(key string, target *time.Duration) error {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return nil
+	}
+
+	parsed, err := time.ParseDuration(raw)
+	if err != nil || parsed <= 0 {
+		return fmt.Errorf("%s %q is not a positive duration (for example 720h)", key, raw)
+	}
+
+	*target = parsed
+
+	return nil
 }
 
 func loadTimezone(value string) (string, error) {
