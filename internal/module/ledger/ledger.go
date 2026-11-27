@@ -78,6 +78,7 @@ type PostInput struct {
 	Source           string
 	RecurringRuleRef string
 	Postings         []PostingInput
+	KnownAccounts    map[string]entity.Account
 }
 
 type PostingInput struct {

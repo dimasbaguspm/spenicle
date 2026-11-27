@@ -445,10 +445,16 @@ func (s *Service) postPending(
 		}
 
 		end := min(start+s.options.CommitChunk, len(pending))
+		chunk := pending[start:end]
 
-		for _, row := range pending[start:end] {
-			if err := s.postRow(ctx, batch, row, categoryRef); err != nil {
-				return err
+		known, err := s.knownAccounts(ctx, chunk, categoryRef)
+		if err != nil {
+			return err
+		}
+
+		for _, row := range chunk {
+			if postErr := s.postRow(ctx, batch, row, categoryRef, known); postErr != nil {
+				return postErr
 			}
 		}
 
@@ -532,13 +538,12 @@ func (s *Service) postRow(
 	batch entity.ImportBatch,
 	row entity.ImportRow,
 	categoryRef string,
+	known map[string]entity.Account,
 ) error {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.PostRow")
 	defer endSpan()
 
-	if row.CategoryRef != "" {
-		categoryRef = row.CategoryRef
-	}
+	categoryRef = categoryOf(row, categoryRef)
 
 	_, _, err := s.postings.Post(ctx, ledger.PostInput{
 		IdempotencyKey: rowIdempotencyKey(batch.FileHash, row.RowIndex),
@@ -547,6 +552,7 @@ func (s *Service) postRow(
 		Note:           row.Description,
 		Currency:       batchCurrency(row, batch),
 		Source:         constant.EntrySourceStatement,
+		KnownAccounts:  known,
 		Postings: []ledger.PostingInput{
 			{AccountRef: row.AccountRef, AmountMinor: -row.AmountMinor},
 			{AccountRef: categoryRef, AmountMinor: row.AmountMinor},
@@ -557,6 +563,47 @@ func (s *Service) postRow(
 	}
 
 	return nil
+}
+
+func (s *Service) knownAccounts(
+	ctx context.Context,
+	rows []entity.ImportRow,
+	categoryRef string,
+) (map[string]entity.Account, error) {
+	known := make(map[string]entity.Account, len(rows)+1)
+
+	for _, row := range rows {
+		for _, ref := range []string{row.AccountRef, categoryOf(row, categoryRef)} {
+			if ref == "" {
+				continue
+			}
+
+			if _, seen := known[ref]; seen {
+				continue
+			}
+
+			account, found, err := s.accounts.AccountByRef(ctx, ref)
+			if err != nil {
+				return nil, fmt.Errorf("resolve posting account: %w", err)
+			}
+
+			if !found {
+				return nil, fmt.Errorf("%w: account %s", entity.ErrNotFound, ref)
+			}
+
+			known[ref] = account
+		}
+	}
+
+	return known, nil
+}
+
+func categoryOf(row entity.ImportRow, fallback string) string {
+	if row.CategoryRef != "" {
+		return row.CategoryRef
+	}
+
+	return fallback
 }
 
 func buildRows(

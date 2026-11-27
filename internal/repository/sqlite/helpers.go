@@ -20,7 +20,7 @@ type sqlExecer interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
-//nolint:ireturn // T is resolved to a concrete entity at every call site
+//nolint:ireturn,nolintlint // ireturn flags the generic result; nolintlint loses track of it
 func insertWithEvent[T any](
 	ctx context.Context,
 	store *Store,

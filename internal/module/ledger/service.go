@@ -112,8 +112,12 @@ func (s *Service) buildPostings(
 	defer endSpan()
 
 	postings := make([]entity.Posting, 0, len(in.Postings))
-	known := make(map[string]entity.Account, len(in.Postings))
+	known := make(map[string]entity.Account, len(in.Postings)+len(in.KnownAccounts))
 	missing := make(map[string]bool, len(in.Postings))
+
+	for ref, account := range in.KnownAccounts {
+		known[ref] = account
+	}
 
 	for index, input := range in.Postings {
 		account, found := known[input.AccountRef]
