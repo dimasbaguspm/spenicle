@@ -8,8 +8,8 @@ import {
   type UseFormReturn,
 } from 'react-hook-form'
 
-import { Button } from '@/components/ui/button'
-import { Text } from '@/components/ui/text'
+import { Button } from '@/components/primitives/button'
+import { Text } from '@/components/primitives/text'
 import { cn } from '@/lib/cn'
 
 type FormProps<Schema extends FieldValues> = {

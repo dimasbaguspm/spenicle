@@ -110,15 +110,71 @@
   },
   "overrides": [
     {
-      "files": ["src/components/ui/button/index.tsx"],
+      "files": ["src/components/primitives/button/index.tsx"],
       "rules": {
         "react/button-has-type": "off"
       }
     },
     {
-      "files": ["src/components/ui/**/*.tsx"],
+      "files": ["src/components/primitives/**/*.tsx", "src/components/primitives/**/*.ts"],
       "rules": {
-        "no-restricted-imports": "off"
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/components/ui/*", "@/components/widgets/*", "@/components/layouts/*"],
+                "message": "primitives are the bottom layer: Ark plus the palette, nothing above it"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/ui/**/*.tsx", "src/components/ui/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@ark-ui/react",
+                "message": "compose a primitives component instead of importing Ark directly"
+              }
+            ],
+            "patterns": [
+              { "group": ["@ark-ui/*"], "message": "compose a primitives component instead" },
+              {
+                "group": ["@/components/widgets/*", "@/components/layouts/*"],
+                "message": "ui sits above primitives and below widgets: it may not reach up"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/widgets/**/*.tsx", "src/components/widgets/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@ark-ui/react",
+                "message": "compose a primitives component instead of importing Ark directly"
+              }
+            ],
+            "patterns": [
+              { "group": ["@ark-ui/*"], "message": "compose a primitives component instead" },
+              {
+                "group": ["@/components/layouts/*"],
+                "message": "a widget is placed by a layout; it may not import one"
+              }
+            ]
+          }
+        ]
       }
     },
     {

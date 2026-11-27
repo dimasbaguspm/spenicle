@@ -1,8 +1,8 @@
 import { Controller, type FieldPath, type FieldValues } from 'react-hook-form'
 
-import { Field } from '@/components/ui/field'
+import { Field } from '@/components/primitives/field'
 import { useFormProvider } from '@/components/ui/form/use-form-provider'
-import { PasswordInput } from '@/components/ui/password-input'
+import { PasswordInput } from '@/components/primitives/password-input'
 
 type PasswordFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>

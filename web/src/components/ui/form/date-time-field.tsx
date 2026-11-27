@@ -1,7 +1,7 @@
 import { Controller, type FieldPath, type FieldValues } from 'react-hook-form'
 
-import { DateTimeInput } from '@/components/ui/date-time-input'
-import { Field } from '@/components/ui/field'
+import { DateTimeInput } from '@/components/primitives/date-time-input'
+import { Field } from '@/components/primitives/field'
 import { useFormProvider } from '@/components/ui/form/use-form-provider'
 
 type DateTimeFieldProps<Schema extends FieldValues> = {

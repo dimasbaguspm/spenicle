@@ -1,8 +1,8 @@
 import { Controller, type FieldPath, type FieldValues } from 'react-hook-form'
 
-import { Field } from '@/components/ui/field'
+import { Field } from '@/components/primitives/field'
 import { useFormProvider } from '@/components/ui/form/use-form-provider'
-import { RatingGroup } from '@/components/ui/rating-group'
+import { RatingGroup } from '@/components/primitives/rating-group'
 
 type RatingFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>

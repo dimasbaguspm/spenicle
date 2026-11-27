@@ -1,8 +1,8 @@
 import { Controller, type FieldPath, type FieldValues } from 'react-hook-form'
 
-import { Field } from '@/components/ui/field'
+import { Field } from '@/components/primitives/field'
 import { useFormProvider } from '@/components/ui/form/use-form-provider'
-import { PinInput } from '@/components/ui/pin-input'
+import { PinInput } from '@/components/primitives/pin-input'
 
 const NO_DIGITS: string[] = []
 

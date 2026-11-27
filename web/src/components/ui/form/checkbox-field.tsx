@@ -1,8 +1,8 @@
 import { Controller, type FieldPath, type FieldValues } from 'react-hook-form'
 
-import { Checkbox } from '@/components/ui/checkbox'
+import { Checkbox } from '@/components/primitives/checkbox'
 import { useFormProvider } from '@/components/ui/form/use-form-provider'
-import { Text } from '@/components/ui/text'
+import { Text } from '@/components/primitives/text'
 
 type CheckboxFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>

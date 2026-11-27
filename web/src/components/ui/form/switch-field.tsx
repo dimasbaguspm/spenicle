@@ -1,8 +1,8 @@
 import { Controller, type FieldPath, type FieldValues } from 'react-hook-form'
 
 import { useFormProvider } from '@/components/ui/form/use-form-provider'
-import { SwitchInput } from '@/components/ui/switch-input'
-import { Text } from '@/components/ui/text'
+import { SwitchInput } from '@/components/primitives/switch-input'
+import { Text } from '@/components/primitives/text'
 
 type SwitchFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>

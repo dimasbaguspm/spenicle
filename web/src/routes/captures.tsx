@@ -1,20 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 
 import { api, errorMessage } from '@/api/client'
-
-const tones: Record<string, string> = {
-  captured: 'text-success',
-  approved: 'text-success',
-  pending: 'text-warning',
-  extracting: 'text-warning',
-  duplicate: 'text-info',
-  rejected: 'text-danger',
-  failed: 'text-danger',
-}
-
-function statusTone(status: string | undefined): string {
-  return tones[status ?? ''] ?? 'text-text-muted'
-}
+import { Text } from '@/components/primitives/text'
+import { CaptureList } from '@/components/widgets/capture-list'
 
 async function fetchCaptures() {
   const { data, error, response } = await api.GET('/api/captures', {
@@ -29,32 +18,27 @@ async function fetchCaptures() {
 
 export function CapturesPage() {
   const captures = useQuery({ queryKey: ['captures'], queryFn: fetchCaptures })
+  const rows = useMemo(() => captures.data?.captures ?? [], [captures.data])
 
   return (
     <section className="space-y-1">
-      <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-brass-500">
+      <Text as="h2" tone="section">
         Capture inbox
-      </h2>
-      <p className="pb-3 text-sm text-text-muted">
+      </Text>
+      <Text as="p" tone="muted" className="pb-3">
         Approving a capture is the next screen; the queue itself is read-only here.
-      </p>
-      {captures.isPending ? <p className="text-text-muted">Loading…</p> : null}
-      {captures.error !== null ? (
-        <p role="alert" className="text-sm text-danger">
-          {captures.error.message}
-        </p>
+      </Text>
+      {captures.isPending ? (
+        <Text as="p" tone="muted">
+          Loading…
+        </Text>
       ) : null}
-      <ul className="divide-y divide-ink-800">
-        {(captures.data?.captures ?? []).map((capture) => (
-          <li key={capture.ref} className="flex items-baseline gap-3 py-2.5 text-sm">
-            <span className="w-32 shrink-0 tabular-nums text-text-muted">
-              {(capture.received_at ?? '').slice(0, 16).replace('T', ' ')}
-            </span>
-            <span className="flex-1 truncate">{capture.kind ?? '—'}</span>
-            <span className={statusTone(capture.status)}>{capture.status}</span>
-          </li>
-        ))}
-      </ul>
+      {captures.error !== null ? (
+        <Text as="p" tone="muted" className="text-danger" role="alert">
+          {captures.error.message}
+        </Text>
+      ) : null}
+      <CaptureList rows={rows} />
     </section>
   )
 }

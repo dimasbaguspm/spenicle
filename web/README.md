@@ -28,13 +28,23 @@ without a reason stronger than convenience.
 | **tsgo** (`@typescript/native-preview`) | TypeScript's native compiler: the same `tsc` semantics, ~10x faster on this tree. It already rejected a `baseUrl` that `tsc` still tolerates, so the config is future-proof                                                     |
 | **mise**                                | `node` + `pnpm` are pinned in `mise.toml` next to `go`, so a clone is one `mise install`                                                                                                                                        |
 
-## `components/ui` — our vocabulary, not Ark's
+## `components/` — four layers, one direction
 
-Every primitive the screens use lives here, with a props type of our own and exactly one
-export per file. A widget never imports a headless library — `oxlint`'s `no-restricted-imports`
-blocks `@ark-ui/*` outside this directory, so the boundary is enforced, not documented. A file
-carries wiring and theme only: a screen decides what a value means, the component decides how a
-value is chosen and shown.
+Composition runs one way and the linter holds the line: **primitives → ui → widgets → layouts →
+a page**. A layer may import the layers below it and never the ones above, so a primitive can
+never grow a page's idea of what an amount means.
+
+| layer         | what it is                                                                                                                    | example                                                |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `primitives/` | the lowest UI layer: Ark headless wiring + our palette. One props type of our own, one export per file, wiring and theme only | `Button`, `TextInput`, `Dialog`, `Text`                |
+| `ui/`         | domain-agnostic presentation, composed from primitives                                                                        | `Form`, `DebounceForm`, the nineteen `*Field` bindings |
+| `widgets/`    | page-level composition: a section a page drops in, given its data                                                             | `CaptureList`                                          |
+| `layouts/`    | structure only: chrome, navigation, the outlet                                                                                | `AppShell`                                             |
+
+`oxlint`'s `no-restricted-imports` carries one override per layer, so an upward import (`ui/` into
+`primitives/`, `layouts/` into `widgets/`) is a lint error with a message saying why, and `@ark-ui/*`
+stays unreachable outside `primitives/`. The boundary is enforced, not documented. 59 primitives,
+by the job a screen hires them for:
 
 59 components, by the job a screen hires them for:
 
@@ -66,20 +76,27 @@ minor units, and a numeric widget would tempt a float.
 ### One folder per component
 
 ```
-src/components/ui/
-  index.ts              re-exports every component, so a screen can `import { Button, Text } from '@/components/ui'`
-  button/index.tsx      one component, one private props type, one export
-  text/index.tsx
-  control/index.ts      the shared cva every input wears
-  form/
-    index.ts            Form, DebounceForm, useFormProvider and the nineteen `*Field` bindings
-    form.tsx
-    debounce-form.tsx
-    text-field.tsx
+src/components/
+  primitives/
+    index.ts            re-exports every primitive, so a screen can `import { Button, Text } from '@/components/primitives'`
+    button/index.tsx    one component, one private props type, one export
+    text/index.tsx
+    control/index.ts    the shared cva every input wears
+  ui/
+    index.ts
+    form/index.ts       Form, DebounceForm, useFormProvider and the nineteen `*Field` bindings
+    form/form.tsx
+    form/text-field.tsx
+  widgets/
+    index.ts
+    capture-list/index.tsx
+  layouts/
+    index.ts
+    app-shell/index.tsx
 ```
 
 The folder is the identity: a file that needs a helper or a test sits next to its component
-instead of in a shared bag, and `@/components/ui/button` still resolves to the folder's
+instead of in a shared bag, and `@/components/primitives/button` resolves to the folder's
 `index.tsx`, so no call site has to know the layout.
 
 ### Icons

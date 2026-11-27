@@ -1,8 +1,8 @@
 import { Controller, type FieldPath, type FieldValues } from 'react-hook-form'
 
-import { FileUpload } from '@/components/ui/file-upload'
+import { FileUpload } from '@/components/primitives/file-upload'
 import { useFormProvider } from '@/components/ui/form/use-form-provider'
-import { Text } from '@/components/ui/text'
+import { Text } from '@/components/primitives/text'
 
 type FileUploadFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>

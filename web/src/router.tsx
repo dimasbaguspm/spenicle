@@ -4,7 +4,7 @@ import { hasToken } from '@/api/token'
 import { CapturesPage } from '@/routes/captures'
 import { LedgerPage } from '@/routes/ledger'
 import { LoginPage } from '@/routes/login'
-import { AppShell } from '@/routes/shell'
+import { AppShell } from '@/components/layouts/app-shell'
 
 const rootRoute = createRootRoute({
   component: AppShell,

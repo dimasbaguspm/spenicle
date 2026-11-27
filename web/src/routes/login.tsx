@@ -4,10 +4,10 @@ import { useState } from 'react'
 
 import { api, errorMessage } from '@/api/client'
 import { setToken } from '@/api/token'
-import { Button } from '@/components/ui/button'
-import { Field } from '@/components/ui/field'
-import { PasswordInput } from '@/components/ui/password-input'
-import { Text } from '@/components/ui/text'
+import { Button } from '@/components/primitives/button'
+import { Field } from '@/components/primitives/field'
+import { PasswordInput } from '@/components/primitives/password-input'
+import { Text } from '@/components/primitives/text'
 
 /**
  * The password never leaves this form: it is exchanged for a scoped token, and only

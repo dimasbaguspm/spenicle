@@ -101,14 +101,25 @@ pre-commit and pre-push.
 
 ## Components
 
-`web/src/components/ui` is the app's own vocabulary: one folder per component
-(`button/index.tsx`), a private props type, exactly one export, and cva variants merged by
-`tailwind-merge`. `ui/index.ts` re-exports the lot, so a screen may import from the barrel or
-from the one folder it needs. Behaviour is Ark UI's (field association, listbox, focus trap,
-roving focus, page-range math); the props, the markup and every token are ours, and none of them
-carries business logic — a screen decides what the value means, the component only decides how a
-value is chosen and shown. Only that tree may import a headless library; oxlint's
-`no-restricted-imports` enforces it. Adding a primitive means: write the folder, then use it.
+`web/src/components` is split into four layers, and composition only ever runs downhill:
+**primitives → ui → widgets → layouts → a page**. `oxlint` carries one
+`no-restricted-imports` override per layer, so reaching up (`ui/` into `primitives/` is fine,
+`primitives/` into `ui/` is not) is a lint error that names the direction, and `@ark-ui/*` stays
+unreachable outside `primitives/`.
+
+- `primitives/` — the lowest UI layer: Ark headless wiring plus our palette. One folder per
+  component (`button/index.tsx`), a private props type, exactly one export, cva variants merged
+  by `tailwind-merge`, a barrel at `primitives/index.ts`. Behaviour is Ark UI's (field
+  association, listbox, focus trap, roving focus, page-range math); the props, the markup and
+  every token are ours, and none of them carries business logic — a screen decides what the value
+  means, the primitive only decides how a value is chosen and shown.
+- `ui/` — domain-agnostic presentation built from primitives. Today that is the form layer
+  (`ui/form/`).
+- `widgets/` — a page-level composition: a section a page drops in, given its data and nothing
+  else. `CaptureList` is the first; a widget never fetches and never routes.
+- `layouts/` — structure only: chrome, navigation, the outlet. `AppShell` is the only one.
+
+Adding a primitive means: write the folder, re-export it, then use it.
 
 59 components, grouped by the job a screen hires them for:
 

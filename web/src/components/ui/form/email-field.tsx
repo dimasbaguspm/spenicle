@@ -1,7 +1,7 @@
 import { Controller, type FieldPath, type FieldValues } from 'react-hook-form'
 
-import { EmailInput } from '@/components/ui/email-input'
-import { Field } from '@/components/ui/field'
+import { EmailInput } from '@/components/primitives/email-input'
+import { Field } from '@/components/primitives/field'
 import { useFormProvider } from '@/components/ui/form/use-form-provider'
 
 type EmailFieldProps<Schema extends FieldValues> = {
