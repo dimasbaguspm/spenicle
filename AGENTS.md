@@ -18,11 +18,16 @@ the document wins until you change the document too.
 
 ## Invariants you must not break
 
-1. **Identity.** Every table carries a bigint `id` for the foreign keys and a `ref`:
-   a dashless UUID (32 lowercase hex) that is the only identifier the API speaks. One
-   table is the exception — `import_upload_chunks` is internal bookkeeping with an `id`
-   and no `ref`, never addressed on the wire. Requests send `account_ref`, responses
-   carry `ref` — an integer id never leaves the database.
+1. **Identity.** Every table carries a bigint `id` as its own row identity — the
+   ordering key, the sweep cursor — and a `ref`: a dashless UUID (32 lowercase hex) that
+   is the only identifier the API speaks. **A relation between two rows is a `ref`**, never
+   an `id`: `parent_ref`, `payee_ref`, `account_ref`, `entry_ref`, `batch_ref`,
+   `upload_ref`, `export_ref`, `capture_ref`, `reverses_entry_ref`, `recurring_rule_ref`,
+   `resolved_entry_ref`. One table is the exception — `import_upload_chunks` is internal
+   bookkeeping with an `id` and no `ref`, never addressed on the wire. Requests send
+   `account_ref`, responses carry `ref` — an integer id never leaves the database, and the
+   retired `*_id` columns still in `0001_init.sql` exist only until the query that reads
+   them moves over.
 2. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
    zero. `entity.CheckZeroSum` runs before the store opens the write transaction, on
    both direct entry inserts and capture approvals.

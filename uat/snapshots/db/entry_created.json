@@ -9,6 +9,7 @@
       "kind": "asset",
       "name": "Cash",
       "parent_id": null,
+      "parent_ref": null,
       "ref": "<ref>"
     },
     {
@@ -20,6 +21,7 @@
       "kind": "expense",
       "name": "Unsorted",
       "parent_id": null,
+      "parent_ref": null,
       "ref": "<ref>"
     }
   ],
@@ -125,9 +127,12 @@
       "note": "snapshotted",
       "occurred_on": "2026-02-14",
       "payee_id": null,
+      "payee_ref": null,
       "recurring_rule_id": null,
+      "recurring_rule_ref": null,
       "ref": "<ref>",
       "reverses_entry_id": null,
+      "reverses_entry_ref": null,
       "source": "manual",
       "voided_at": null
     }
@@ -135,9 +140,11 @@
   "ledger_postings": [
     {
       "account_id": 2,
+      "account_ref": "",
       "amount_minor": 25000,
       "base_amount_minor": 25000,
       "entry_id": 1,
+      "entry_ref": "",
       "fx_rate": "1",
       "fx_rate_date": null,
       "fx_source": "identity",
@@ -146,9 +153,11 @@
     },
     {
       "account_id": 1,
+      "account_ref": "",
       "amount_minor": -25000,
       "base_amount_minor": -25000,
       "entry_id": 1,
+      "entry_ref": "",
       "fx_rate": "1",
       "fx_rate_date": null,
       "fx_source": "identity",

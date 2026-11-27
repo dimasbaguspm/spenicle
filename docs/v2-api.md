@@ -211,9 +211,15 @@ the worker prunes `artifacts/` instead: a rejected capture loses its document af
 
 ## 1.4 `accounts`
 
-Every table also has `id INTEGER PRIMARY KEY` (the graph) and `ref TEXT NOT NULL UNIQUE`
-(a dashless UUID), except `import_upload_chunks`, which is internal bookkeeping with an
-`id` and no `ref`. The API speaks `ref` only: `account_ref`, `ref`, and never a number.
+Every table also has `id INTEGER PRIMARY KEY` (its own row identity: ordering and the
+sweep cursors) and `ref TEXT NOT NULL UNIQUE` (a dashless UUID), except
+`import_upload_chunks`, which is internal bookkeeping with an `id` and no `ref`. **A
+relation is a `ref`**: `parent_ref`, `payee_ref`, `account_ref`, `entry_ref`, `batch_ref`,
+`upload_ref`, `export_ref`, `capture_ref`, `reverses_entry_ref`, `recurring_rule_ref`,
+`resolved_entry_ref` point at the parent row's `ref`, never at its `id`. The API speaks
+`ref` only: `account_ref`, `ref`, and never a number. The `*_id` columns still listed
+below are retired: `0001_init.sql` keeps them until the last query that reads them moves
+to the `*_ref` column beside it.
 
 | column | type | notes |
 | --- | --- | --- |

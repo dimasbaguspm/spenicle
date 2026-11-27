@@ -9,6 +9,7 @@
       "kind": "asset",
       "name": "Cash",
       "parent_id": null,
+      "parent_ref": null,
       "ref": "<ref>"
     },
     {
@@ -20,6 +21,7 @@
       "kind": "expense",
       "name": "Unsorted",
       "parent_id": null,
+      "parent_ref": null,
       "ref": "<ref>"
     }
   ],
@@ -81,6 +83,7 @@
   "capture_payloads": [
     {
       "capture_id": 1,
+      "capture_ref": "",
       "draft_json": null,
       "extraction_error": null,
       "id": 1,
@@ -104,6 +107,7 @@
       "resolution_note": null,
       "resolved_at": null,
       "resolved_entry_id": null,
+      "resolved_entry_ref": null,
       "status": "pending"
     }
   ],

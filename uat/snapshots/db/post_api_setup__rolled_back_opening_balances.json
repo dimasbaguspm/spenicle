@@ -9,6 +9,7 @@
       "kind": "asset",
       "name": "Cash",
       "parent_id": null,
+      "parent_ref": null,
       "ref": "<ref>"
     },
     {
@@ -20,6 +21,7 @@
       "kind": "expense",
       "name": "Unsorted",
       "parent_id": null,
+      "parent_ref": null,
       "ref": "<ref>"
     }
   ],
