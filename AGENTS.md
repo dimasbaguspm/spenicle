@@ -391,7 +391,8 @@ command, `http`, `worker` and the hidden `all`), `go-playground/validator` for t
 declarative `validate` tags, `modernc.org/sqlite` as the cgo-free driver,
 `openai/openai-go` for the adapter wired by tests, the OpenTelemetry modules for traces,
 metrics and their instrumentation (`otelhttp` on every vendor client, `runtime` for the Go
-collector), and `cucumber/godog` and `testcontainers-go` for UAT. `config.SelectRail` uses
+collector), `cucumber/godog` and `testcontainers-go` for UAT, and `go.uber.org/mock` for the
+generated mocks (`mockgen`, pinned by `tools/tools.go`). `config.SelectRail` uses
 SnapToJSON only today. A new dependency needs a reason in the MR, not a `go get`.
 
 ## Testing

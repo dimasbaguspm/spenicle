@@ -33,6 +33,8 @@ const (
 	dateLayout     = "2006/01/02"
 )
 
+//go:generate go run go.uber.org/mock/mockgen -source=gmail.go -destination=mocks/gmail.go -package=mocks
+
 type TokenSource interface {
 	Token(ctx context.Context) (string, error)
 }
