@@ -31,7 +31,9 @@ export function CapturesPage() {
       <ul className="divide-y divide-neutral-900">
         {(captures.data?.captures ?? []).map((capture) => (
           <li key={capture.ref} className="flex items-baseline gap-3 py-2 text-sm">
-            <span className="tabular-nums text-neutral-500">{(capture.received_at ?? '').slice(0, 16).replace('T', ' ')}</span>
+            <span className="tabular-nums text-neutral-500">
+              {(capture.received_at ?? '').slice(0, 16).replace('T', ' ')}
+            </span>
             <span className="flex-1 truncate">{capture.kind ?? '—'}</span>
             <span className="text-neutral-400">{capture.status}</span>
           </li>

@@ -104,9 +104,13 @@ internal/repository/   contracts, plus the adapters: sqlite, ecb, filestore, mai
 tools/openapi/         the OpenAPI 3.1 generator: `go run ./tools/openapi` reads the
                        annotations on the handlers and writes `openapi.json` at the
                        repo root
-web/                   the SPA: React 19 + Vite + TanStack Router/Query, typed from
-                       `openapi.json` by `make web-types`; `make web` builds `web/dist`,
-                       which the binary serves on the API's own port in the release image
+web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms on
+                       react-hook-form with Effect Schema rules, headless Ark UI,
+                       typed from `openapi.json` by `make web-types`. Toolchain:
+                       pnpm (pinned by `packageManager`), oxlint (curated rules, warnings
+                       denied), oxfmt, tsgo (`@typescript/native-preview`). `make web`
+                       builds `web/dist`, which the binary serves on the API's own port in
+                       the release image
 ```
 
 The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` stages
@@ -178,14 +182,15 @@ make openapi    # regenerate openapi.json from the handler annotations
 make web        # build the SPA into web/dist
 make web-dev    # serve the SPA on :5173, proxying /api to :8080
 make web-test   # the SPA's unit tests (vitest)
+make web-check  # the SPA's gate: tsgo, oxlint, oxfmt --check, vitest
 make web-types  # regenerate the SPA's typed client from openapi.json
 make lint       # all four groups; every one must stay at 0 issues
 make lint-fix   # safe automatic fixes (style, then correctness)
 ```
 
-`mise.toml` pins the local toolchain: `go` from `go.mod`, `golangci-lint` from CI
-and `lefthook` for the hooks. Run `mise install` once per clone; `make` stays the
-entry point.
+`mise.toml` pins the local toolchain: `go` from `go.mod`, `golangci-lint` from CI,
+`lefthook` for the hooks, and `node` + `pnpm` for `web/`. Run `mise install` once per
+clone; `make` stays the entry point.
 
 `lefthook.yml` wires the checks into two hooks: `pre-commit` runs lint, build, test and
 UAT in that order, `pre-push` runs build and UAT only; install it with `make hooks`.

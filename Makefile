@@ -11,7 +11,7 @@ BIN     := bin/spenicle
 LINTDIR := tools/lint
 WEB     := web
 
-.PHONY: help hooks build run test uat uat-snapshots cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt openapi web web-dev web-test web-types
+.PHONY: help hooks build run test uat uat-snapshots cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt openapi web web-dev web-test web-check web-types
 
 help: ## show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -45,16 +45,19 @@ openapi: ## regenerate the API document at the repo root
 	$(GO) run ./tools/openapi
 
 web: ## build the SPA into web/dist
-	cd $(WEB) && npm ci --no-audit --no-fund && npm run build
+	cd $(WEB) && pnpm install --frozen-lockfile && pnpm run build
 
 web-dev: ## serve the SPA on :5173 against a local API on :8080
-	cd $(WEB) && npm run dev
+	cd $(WEB) && pnpm run dev
 
 web-test: ## the SPA's unit tests
-	cd $(WEB) && npm test
+	cd $(WEB) && pnpm test
+
+web-check: ## the SPA's gate: tsgo, oxlint, oxfmt --check, vitest
+	cd $(WEB) && pnpm run typecheck && pnpm run lint && pnpm run fmt:check && pnpm test
 
 web-types: ## regenerate the SPA's typed client from openapi.json
-	cd $(WEB) && npm run api:types
+	cd $(WEB) && pnpm run api:types
 
 mocks:
 	go generate ./...

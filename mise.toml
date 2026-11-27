@@ -2,3 +2,5 @@
 go = "1.26.0"
 golangci-lint = "2.11.4"
 lefthook = "2.2.3"
+node = "26.5.1"
+pnpm = "10.34.5"

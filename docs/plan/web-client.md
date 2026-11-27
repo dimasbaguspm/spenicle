@@ -70,6 +70,32 @@ of the navigation fallback). Queued captures in IndexedDB come next: the product
 separates *capture* from *ledger*, so an offline capture is the same object as an online one,
 just not sent yet.
 
+## Local-first: not Zero, yet
+
+Zero (Rocicorp) is the best local-first sync engine there is, and it does not fit this
+backend. `zero-cache` replicates from **Postgres** — logical replication, or a custom
+`zero-cache` writing into Postgres. Spenicle's only database is a SQLite file, and the
+invariant is one container, one file, one writer. Adopting Zero would mean a second database
+and a design-doc change, for a single-user ledger whose sync unit is "a draft capture", not a
+collaborative document.
+
+The product already has the shape that makes local-first cheap: **capture is not ledger**. So
+the plan is an outbox, not a replicator:
+
+1. the capture form writes to IndexedDB with a client-minted `idempotency_key` (the API mints
+   one when absent and replays it, so a retry is free),
+2. a background sync posts each queued capture and drops it on `2xx`,
+3. reads stay TanStack Query over the PWA cache — there is no replica to reconcile.
+
+That is offline capture without a second source of truth. Revisit Zero when the trigger
+arrives: *someone else must see my write before I sync*.
+
+## Toolchain
+
+pnpm (pinned in `packageManager` and in `mise.toml`), oxlint with warnings denied and a
+curated rule set, oxfmt, tsgo for `tsc` parity at native speed, vitest for tests. `make
+web-check` runs all four.
+
 ## Open
 
 - `APP_WEB=off` and the embed step are not wired yet: `spenicle http` does not serve `/` today.

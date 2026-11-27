@@ -39,6 +39,7 @@ export const routeTree = rootRoute.addChildren([loginRoute, ledgerRoute, capture
 export const router = createRouter({ routeTree, defaultPreload: 'intent' })
 
 declare module '@tanstack/react-router' {
+  // oxlint-disable-next-line typescript/consistent-type-definitions -- module augmentation is always an interface
   interface Register {
     router: typeof router
   }
