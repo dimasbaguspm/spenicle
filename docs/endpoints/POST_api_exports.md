@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Queue one export of the whole ledger, or of one date window inside it. The route answers `201` with a `queued` job and returns immediately: the worker renders the document later, so a slow read costs a job, not a request. `client_id` is the idempotency key and you no longer have to invent it: leave it out and the server mints one (`<tokenref>_<16 hex>`) and echoes it in the answer. A replay of that key returns the same job, and the same `client_id` with another `format` or another window is a conflict instead of a second one.
+Queue one export of the whole ledger, or of one date window inside it. The route answers `201` with a `queued` job and returns immediately: the worker renders the document later, so a slow read costs a job, not a request. `idempotency_key` is the idempotency key and you no longer have to invent it: leave it out and the server mints one (`<tokenref>_<16 hex>`) and echoes it in the answer. A replay of that key returns the same job, and the same `idempotency_key` with another `format` or another window is a conflict instead of a second one.
 
 ## Upstream
 
@@ -12,7 +12,7 @@ The "export" button, a script before an upgrade, or the spreadsheet path. One ca
 
 ## Downstream
 
-`Module.Exports.Create`: look up `exports.client_id`, read `SchemaVersion` from `System`, insert the `queued` row and append the `queued` event in the same call. Nothing is rendered and nothing is read from the ledger.
+`Module.Exports.Create`: look up `exports.idempotency_key`, read `SchemaVersion` from `System`, insert the `queued` row and append the `queued` event in the same call. Nothing is rendered and nothing is read from the ledger.
 
 ## Path / query params
 
@@ -21,26 +21,26 @@ None.
 ## Body
 
 ```json
-{"client_id": "laptop-2026-02-14", "format": "json", "from": "2025-01-01", "to": "2025-12-31"}
+{"idempotency_key": "laptop-2026-02-14", "format": "json", "from": "2025-01-01", "to": "2025-12-31"}
 ```
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
-| `client_id` | string | no | ≤ 64; omit it and the server mints `<tokenref>_<16 hex>` and echoes it on the job, which is what a replay sends back |
+| `idempotency_key` | string | no | ≤ 64; omit it and the server mints `<tokenref>_<16 hex>` and echoes it on the job, which is what a replay sends back |
 | `format` | string | no | `json` (default) or `csv` |
 | `from` | date | no | `YYYY-MM-DD`, inclusive first day of the window; `to` is required with it |
 | `to` | date | no | `YYYY-MM-DD`, inclusive last day of the window; `from` is required with it |
 
-A window is both ends or neither: one date alone is `422 invalid_request`. The window is stored on the job (`exports.from_on`, `exports.to_on`), so the worker renders exactly it, and it is part of the job's identity next to `client_id`.
+A window is both ends or neither: one date alone is `422 invalid_request`. The window is stored on the job (`exports.from_on`, `exports.to_on`), so the worker renders exactly it, and it is part of the job's identity next to `idempotency_key`.
 
 ## Response
 
-`201` for a new job, `200` for a replay of the same `client_id`, `format` and window:
+`201` for a new job, `200` for a replay of the same `idempotency_key`, `format` and window:
 
 ```json
 {
   "ref": "3f2a…",
-  "client_id": "laptop-2026-02-14",
+  "idempotency_key": "laptop-2026-02-14",
   "status": "queued",
   "format": "json",
   "from": "2025-01-01",
@@ -58,16 +58,16 @@ time.
 
 ## Errors
 
-- `409 export_conflict` — the same `client_id` already names a job with another `format` or another window. The existing job is untouched and no `resumed` event is written.
-- `422 invalid_request` — `client_id` too long, `format` neither `json` nor `csv`, a `from`/`to` that is not `YYYY-MM-DD`, or one end of a window without the other.
+- `409 export_conflict` — the same `idempotency_key` already names a job with another `format` or another window. The existing job is untouched and no `resumed` event is written.
+- `422 invalid_request` — `idempotency_key` too long, `format` neither `json` nor `csv`, a `from`/`to` that is not `YYYY-MM-DD`, or one end of a window without the other.
 - `400 invalid_json` — the body is not JSON or carries an unknown field.
 - `500 internal_error` — the write failed; the cause is logged, never sent.
 
 ## Limitations
 
-- One export at a time per `client_id`; there is no "cancel" and no re-queue. A `failed` job keeps its `error_message`, and the way forward is another `client_id`.
+- One export at a time per `idempotency_key`; there is no "cancel" and no re-queue. A `failed` job keeps its `error_message`, and the way forward is another `idempotency_key`.
 - The job is `queued` until the next worker tick claims it (`WorkerInterval`, one hour by default). The document is not a snapshot of the request: it is rendered when claimed, so it carries whatever the ledger holds at that moment.
-- `format` and the window are fixed at creation. Changing your mind is a new job with a new `client_id`.
+- `format` and the window are fixed at creation. Changing your mind is a new job with a new `idempotency_key`.
 - A window narrows the ledger, not the document's shape: `accounts`, `payees`, `captures`, `recurring`, `rates` and `custom_queries` are exported whole, and only `entries`, their `postings` and the `summary` figures follow the window.
 
 ## Sequence
@@ -79,10 +79,10 @@ sequenceDiagram
     participant H as Exports handler
     participant M as exports module
     participant DB as SQLite
-    C->>H: POST /api/exports {client_id, format, from, to}
+    C->>H: POST /api/exports {idempotency_key, format, from, to}
     H->>H: bindBody, validate, both ends or neither
     H->>M: Create(CreateInput{FromOn, ToOn})
-    M->>DB: SELECT exports WHERE client_id = ?
+    M->>DB: SELECT exports WHERE idempotency_key = ?
     alt client id known
         M->>M: format or window differs? → ErrExportConflict
         M->>DB: INSERT export_events (resumed)

@@ -114,10 +114,10 @@
   "import_uploads": [],
   "ledger_entries": [
     {
-      "client_id": "<client_id>",
       "created_at": "<timestamp>",
       "currency": "IDR",
       "id": 1,
+      "idempotency_key": "<idempotency_key>",
       "note": "snapshotted",
       "occurred_on": "2026-02-14",
       "payee_ref": null,

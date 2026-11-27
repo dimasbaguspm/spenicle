@@ -38,7 +38,7 @@ type Capture struct {
 	Ref              string
 	Kind             string
 	Status           string
-	ClientID         string
+	IdempotencyKey   string
 	DedupeKey        string
 	BatchLabel       string
 	ArtifactHash     string

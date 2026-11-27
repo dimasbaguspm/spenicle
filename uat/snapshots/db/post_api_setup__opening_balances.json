@@ -208,10 +208,10 @@
   "import_uploads": [],
   "ledger_entries": [
     {
-      "client_id": null,
       "created_at": "<timestamp>",
       "currency": "USD",
       "id": 1,
+      "idempotency_key": null,
       "note": "Opening balance",
       "occurred_on": "2026-02-14",
       "payee_ref": null,
@@ -222,10 +222,10 @@
       "voided_at": null
     },
     {
-      "client_id": null,
       "created_at": "<timestamp>",
       "currency": "USD",
       "id": 2,
+      "idempotency_key": null,
       "note": "Opening balance",
       "occurred_on": "2026-02-14",
       "payee_ref": null,

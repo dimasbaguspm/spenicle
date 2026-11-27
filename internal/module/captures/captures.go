@@ -41,13 +41,13 @@ type Contract interface {
 }
 
 type CreateInput struct {
-	ClientID     string
-	Kind         string
-	RawText      string
-	ArtifactHash string
-	BatchLabel   string
-	ReceivedAt   time.Time
-	Artifact     *extraction.Artifact
+	IdempotencyKey string
+	Kind           string
+	RawText        string
+	ArtifactHash   string
+	BatchLabel     string
+	ReceivedAt     time.Time
+	Artifact       *extraction.Artifact
 }
 
 type EnqueueInput struct {

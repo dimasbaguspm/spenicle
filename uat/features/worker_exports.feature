@@ -13,7 +13,7 @@ Feature: Worker export jobs
     Then the response status is 201
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-1","format":"json"}
+      {"idempotency_key":"export-1","format":"json"}
       """
     Then the response status is 201
     And the export worker runs
@@ -37,7 +37,7 @@ Feature: Worker export jobs
     Given a running API
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-restart","format":"json"}
+      {"idempotency_key":"export-restart","format":"json"}
       """
     Then the response status is 201
     When the export worker claims the job and dies
@@ -49,7 +49,7 @@ Feature: Worker export jobs
     Given a running API
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-stale","format":"json"}
+      {"idempotency_key":"export-stale","format":"json"}
       """
     Then the response status is 201
     When the export worker claims the job and dies

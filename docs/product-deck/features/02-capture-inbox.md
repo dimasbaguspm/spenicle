@@ -18,12 +18,12 @@ Approval does. A capture is evidence plus a draft; the ledger is a decision.
 
 | # | call | body |
 | --- | --- | --- |
-| 1 | `POST /api/captures` | `{"kind":"share","raw_text":"KOPI KENANGAN 18.000","client_id":"<uuidv7>"}` |
+| 1 | `POST /api/captures` | `{"kind":"share","raw_text":"KOPI KENANGAN 18.000","idempotency_key":"<uuidv7>"}` |
 | 2 | `POST /api/captures` (multipart) | one `file` part — the receipt photo, up to `ArtifactMaxBytes` (10 MiB) |
 
 `202` when the row is new, `200` when the dedupe key already knew it — both carry the
 capture, so a retry after a network drop returns the same row instead of creating a twin.
-The dedupe key is `sha256` of `kind`, `client_id`, `artifact_hash` and `raw_text` joined
+The dedupe key is `sha256` of `kind`, `idempotency_key`, `artifact_hash` and `raw_text` joined
 with a NUL byte (`\x00`); it is `UNIQUE` in the table, so the uniqueness is the guard,
 not a client check.
 
@@ -158,7 +158,7 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
 1. A capture call must succeed with **no account, no category and no amount** — one
    photograph or one pasted string is a complete request.
 2. The same bytes twice must produce one row. Dedupe is a UNIQUE index on a hash of
-   `(kind, client_id, artifact_hash, raw_text)`, so a retried share is `200`, not a twin.
+   `(kind, idempotency_key, artifact_hash, raw_text)`, so a retried share is `200`, not a twin.
 3. No capture transition may reach `approved` except through an entry built and
    zero-sum checked before the write and rechecked inside the insert transaction.
 4. `failed` and `extracting` rows are approvable by hand through `pending`; no
@@ -189,7 +189,7 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
 ### Rollout
 
 1. **Ship the shortcut before the review screen.** `POST /api/captures` with
-   `kind: "share"` and a `client_id` is useful on day one — captures accumulate, nothing
+   `kind: "share"` and a `idempotency_key` is useful on day one — captures accumulate, nothing
    lands in the ledger, nothing can be corrupted.
 2. **Ship the review queue next**, reading `GET /api/captures` and writing `approve` /
    `reject`. Keep the artifact viewer behind the queue: it is the most expensive call
@@ -206,7 +206,7 @@ POST /api/intake/run      Handler.Intake.Run → Module.Intake.Poll → Reposito
 Scenario: A share becomes one capture, and a replay does not duplicate it
   When I send a POST to "/api/captures" with:
     """json
-    {"client_id":"cap-1","kind":"share","raw_text":"KOPI 18.000"}
+    {"idempotency_key":"cap-1","kind":"share","raw_text":"KOPI 18.000"}
     """
   Then the response status is 202
   And the response body has status "pending"
@@ -276,7 +276,7 @@ Scenario: Intake is off until it is configured
 
 ## 6. What this page does not promise
 
-- No `batch_id` filter on the queue, no unread counts, no push.
+- No `batch_label` filter on the queue, no unread counts, no push.
   `extracted` (a provider pushing a draft) is not implemented. A capture is resolved by
   `approve`, `reject` or `match`; a correction to the entry it produced is
   `PATCH /api/entries/{ref}` ([F3](./03-ledger.md)), not a capture action.

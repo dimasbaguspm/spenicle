@@ -123,7 +123,7 @@ func firstChunkIsAccepted(t *testing.T, h harness) {
 	t.Helper()
 
 	result, err := h.service.AppendChunk(t.Context(), imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 0, ChunkTotal: 2, Bytes: statement(1)[:40],
 	})
 	if err != nil {
@@ -151,7 +151,7 @@ func lastChunkAssemblesTheDraft(t *testing.T, h harness) {
 	split := bytes.Index(body, []byte("2025-02-02"))
 
 	first, err := h.service.AppendChunk(t.Context(), imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 0, ChunkTotal: 2, Bytes: body[:split],
 	})
 	if err != nil || first.Complete() {
@@ -159,7 +159,7 @@ func lastChunkAssemblesTheDraft(t *testing.T, h harness) {
 	}
 
 	last, err := h.service.AppendChunk(t.Context(), imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 1, ChunkTotal: 2, Bytes: body[split:],
 	})
 	if err != nil {
@@ -187,7 +187,7 @@ func replayedChunkIsANoOp(t *testing.T, h harness) {
 	t.Helper()
 
 	chunk := imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 0, ChunkTotal: 2, Bytes: statement(1)[:40],
 	}
 
@@ -210,7 +210,7 @@ func replayedChunkIsANoOp(t *testing.T, h harness) {
 		t.Fatalf("replay moved the counters: %+v vs %+v", replay.Upload, first.Upload)
 	}
 
-	body, err := h.parts.Read(t.Context(), chunk.ClientID)
+	body, err := h.parts.Read(t.Context(), chunk.IdempotencyKey)
 	if err != nil {
 		t.Fatalf("read part: %v", err)
 	}
@@ -225,7 +225,7 @@ func conflictingChunkIsRolledBack(t *testing.T, h harness) {
 	ctx := t.Context()
 	original := statement(1)[:40]
 	first, err := h.service.AppendChunk(ctx, imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 0, ChunkTotal: 2, Bytes: original,
 	})
 	if err != nil {
@@ -233,7 +233,7 @@ func conflictingChunkIsRolledBack(t *testing.T, h harness) {
 	}
 
 	_, err = h.service.AppendChunk(ctx, imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 0, ChunkTotal: 2, Bytes: []byte("different bytes"),
 	})
 	if !errors.Is(err, entity.ErrImportChunkConflict) {
@@ -261,14 +261,14 @@ func anotherChunkTotalIsAConflict(t *testing.T, h harness) {
 	t.Helper()
 
 	if _, err := h.service.AppendChunk(t.Context(), imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 0, ChunkTotal: 2, Bytes: statement(1)[:40],
 	}); err != nil {
 		t.Fatalf("first chunk: %v", err)
 	}
 
 	_, err := h.service.AppendChunk(t.Context(), imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 1, ChunkTotal: 3, Bytes: []byte("more"),
 	})
 	if !errors.Is(err, entity.ErrImportChunkConflict) {
@@ -280,7 +280,7 @@ func aClosedUploadRefusesChunks(t *testing.T, h harness) {
 	t.Helper()
 
 	if _, err := h.service.AppendChunk(t.Context(), imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 0, ChunkTotal: 2, Bytes: statement(1)[:40],
 	}); err != nil {
 		t.Fatalf("first chunk: %v", err)
@@ -293,7 +293,7 @@ func aClosedUploadRefusesChunks(t *testing.T, h harness) {
 	}
 
 	_, err := h.service.AppendChunk(t.Context(), imports.ChunkInput{
-		ClientID: "chunked-1", Filename: "march.csv",
+		IdempotencyKey: "chunked-1", Filename: "march.csv",
 		ChunkIndex: 1, ChunkTotal: 2, Bytes: []byte("more"),
 	})
 	if !errors.Is(err, entity.ErrImportClosed) {
@@ -305,7 +305,7 @@ func tooManyRowsIsRefused(t *testing.T, h harness) {
 	t.Helper()
 
 	_, _, err := h.service.Create(t.Context(), imports.CreateInput{
-		ClientID: "big-1", Filename: "march.csv", FileHash: "abc",
+		IdempotencyKey: "big-1", Filename: "march.csv", FileHash: "abc",
 		Statement: statement(3),
 	})
 	if !errors.Is(err, entity.ErrInvalidImport) {
@@ -340,7 +340,7 @@ func assertCommitChunks(t *testing.T, prePosted, wantEvents int, wantDone []int)
 	ctx := t.Context()
 
 	batch, _, err := h.service.Create(ctx, imports.CreateInput{
-		ClientID: "big-1", Filename: "march.csv", FileHash: "abc",
+		IdempotencyKey: "big-1", Filename: "march.csv", FileHash: "abc",
 		Statement: statement(rows),
 	})
 	if err != nil {
@@ -387,7 +387,7 @@ func TestCommitRefusesARowEdit(t *testing.T) {
 	ctx := t.Context()
 
 	batch, _, err := h.service.Create(ctx, imports.CreateInput{
-		ClientID: "small-1", Filename: "march.csv", FileHash: "abc", Statement: statement(1),
+		IdempotencyKey: "small-1", Filename: "march.csv", FileHash: "abc", Statement: statement(1),
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -441,11 +441,11 @@ func postRow(ctx context.Context, h harness, batch entity.ImportBatch, index int
 	}
 
 	_, _, err = h.post.Post(ctx, ledger.PostInput{
-		ClientID:   fmt.Sprintf("import:%s:%d", batch.FileHash, index),
-		OccurredOn: time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC),
-		Note:       "resumed row",
-		Currency:   "IDR",
-		Source:     constant.EntrySourceStatement,
+		IdempotencyKey: fmt.Sprintf("import:%s:%d", batch.FileHash, index),
+		OccurredOn:     time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC),
+		Note:           "resumed row",
+		Currency:       "IDR",
+		Source:         constant.EntrySourceStatement,
 		Postings: []ledger.PostingInput{
 			{AccountRef: cash.Ref, AmountMinor: -amount},
 			{AccountRef: unsorted.Ref, AmountMinor: amount},
@@ -521,7 +521,7 @@ func TestImportRowsKeepTheirCurrency(t *testing.T) {
 		"2025-02-02,-2000,Tea,\n")
 
 	batch, created, err := h.service.Create(ctx, imports.CreateInput{
-		ClientID: "currency-1", Filename: "march.csv", FileHash: "abc",
+		IdempotencyKey: "currency-1", Filename: "march.csv", FileHash: "abc",
 		Statement: statement,
 	})
 	if err != nil || !created {
@@ -572,7 +572,7 @@ func TestTerminalReviewReplayDoesNotAppendEvents(t *testing.T) {
 			ctx := t.Context()
 
 			batch, _, err := h.service.Create(ctx, imports.CreateInput{
-				ClientID: "terminal-1", Filename: "march.csv", FileHash: "abc",
+				IdempotencyKey: "terminal-1", Filename: "march.csv", FileHash: "abc",
 				Statement: statement(1),
 			})
 			if err != nil {
@@ -607,7 +607,7 @@ func TestEditImportRowRefusesAClosedBatchAtomically(t *testing.T) {
 	ctx := t.Context()
 
 	batch, _, err := h.service.Create(ctx, imports.CreateInput{
-		ClientID: "closed-edit-1", Filename: "march.csv", FileHash: "abc",
+		IdempotencyKey: "closed-edit-1", Filename: "march.csv", FileHash: "abc",
 		Statement: statement(1),
 	})
 	if err != nil {
@@ -706,7 +706,7 @@ func TestCreateWritesOneUploadedEvent(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			h := newHarness(t, imports.Options{MaxRows: 10, CommitChunk: 2})
 			_, created, err := h.service.Create(t.Context(), imports.CreateInput{
-				ClientID: "uploaded-event", Filename: "march.csv", FileHash: "abc",
+				IdempotencyKey: "uploaded-event", Filename: "march.csv", FileHash: "abc",
 				Statement: statement(test.rows),
 			})
 			if err != nil || !created {

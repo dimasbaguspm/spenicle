@@ -28,9 +28,9 @@ The order above is illustrative: the same names in a different column order pars
 | # | call | notes |
 | --- | --- | --- |
 | 1 | `GET /api/accounts?kind=asset` | pick the account the statement belongs to (defaults to `Unsorted`) |
-| 2 | `POST /api/imports` (multipart) | `file`, `client_id` (≤ 64, the idempotency key), optional `account_ref` |
+| 2 | `POST /api/imports` (multipart) | `file`, `idempotency_key` (≤ 64, the idempotency key), optional `account_ref` |
 | 3 | same call, chunked | add `chunk_index` + `chunk_total`; each chunk answers `202` with `{received_chunks, chunk_total, received_bytes}`, the last one assembles the draft and answers `201` with the full batch — no progress fields, and the same per-row `suggested_category_ref` the single-shot answer carries |
-| 4 | `POST /api/imports` again with the same `client_id` and bytes | `200` with the same batch — the resume path after a restart |
+| 4 | `POST /api/imports` again with the same `idempotency_key` and bytes | `200` with the same batch — the resume path after a restart |
 
 Caps: `ImportMaxBytes` is a 32 MiB outer body cap, but multipart parsing and the file read use `maxFormBytes = 11 << 20`, so the effective multipart file cap is 11 MiB; `ImportMaxRows` is 50 000 rows. A conflicting replay writes `conflict_refused` before answering `409 import_conflict`; UAT asserts that event.
 A CSV with a bad line does not fail the upload: that row is stored `skipped` with
@@ -40,7 +40,7 @@ Clashes are computed **once, at upload**, and they are deterministic:
 
 | `clash_kind` | rule | default row status |
 | --- | --- | --- |
-| `already_imported` | the ledger already holds `client_id = import:<file_hash>:<row_index>` | `skipped` |
+| `already_imported` | the ledger already holds `idempotency_key = import:<file_hash>:<row_index>` | `skipped` |
 | `duplicate` | same day, currency and absolute amount, with a posting on the batch account | `skipped` |
 | `possible_duplicate` | amount and currency match, date within 3 days | `skipped` |
 | `invalid_row` | the line does not parse | `skipped` |
@@ -73,13 +73,13 @@ Every successful patch pushes `expires_at` another 24 hours and appends `row_edi
 `{"action":"commit"}` flips the batch `draft → committing` with a compare-and-swap, then
 posts accepted rows in chunks of 500. Each posted row becomes an entry with
 
-- `client_id = import:<file_hash>:<row_index>` — the final idempotency guard,
+- `idempotency_key = import:<file_hash>:<row_index>` — the final idempotency guard,
 - `source = "statement"`, `occurred_on` from the row, `note` = the description,
 - postings `[{account_ref, -amount_minor}, {category_ref or Unsorted, +amount_minor}]`.
 
 One `committing` event per chunk carries `{rows_done, rows_total}`. A cancellation or a
 restart leaves the batch `committing`, and **replaying `commit` resumes**: rows whose
-`client_id` is already in the ledger are skipped. That is why a long commit is safe to
+`idempotency_key` is already in the ledger are skipped. That is why a long commit is safe to
 retry and why the client can show progress from the event log.
 
 `reject` stamps `status = rejected`, keeps rows and blob, and stores the optional `reason`
@@ -110,11 +110,11 @@ Worker (per run)               → collectImports: drop drafts past expires_at (
   keeps `file_hash` only — the bytes live in the filestore, encrypted like every other
   artifact.
 - **Chunked uploads are a resumable file, not a retry of the whole body.** Chunks append
-  to `<DataDir>/imports/<client_id>.part` and are recorded idempotently
+  to `<DataDir>/imports/<idempotency_key>.part` and are recorded idempotently
   (`UNIQUE (upload_id, chunk_index)`); a repeated index truncates back and answers `200`,
   so a bad retry cannot corrupt the file.
-- **The ledger's `client_id` is the commit's real guard.** The compare-and-swap on
-  `status` keeps two reviewers out, and the per-row `client_id` keeps two commits from
+- **The ledger's `idempotency_key` is the commit's real guard.** The compare-and-swap on
+  `status` keeps two reviewers out, and the per-row `idempotency_key` keeps two commits from
   double-posting — which is why a half-finished commit is a resumable state rather than a
   disaster.
 - **The event log is the explanation.** `uploaded`, `resumed`, `conflict_refused`,
@@ -126,10 +126,10 @@ Worker (per run)               → collectImports: drop drafts past expires_at (
 ### Requirements
 
 1. An upload never writes a ledger entry. Only `{"action":"commit"}` does.
-2. The same `client_id` with the same bytes resumes the batch (`200` / `201` on the last
+2. The same `idempotency_key` with the same bytes resumes the batch (`200` / `201` on the last
    chunk); with different bytes it is `409 import_conflict` and writes nothing.
 3. A row is posted at most once, whatever the number of commit retries: the ledger
-   `client_id` `import:<file_hash>:<row_index>` is unique.
+   `idempotency_key` `import:<file_hash>:<row_index>` is unique.
 4. A row patch is absolute and idempotent; `pending` is not settable, `account_ref` is not
    editable, and a closed batch is immutable (`409 import_closed`).
 5. Clash detection runs once, at upload, from the ledger as it was then; the result is a
@@ -146,12 +146,12 @@ Worker (per run)               → collectImports: drop drafts past expires_at (
 
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
-| a commit is not one transaction | a failure halfway leaves a half-posted draft | deliberate: each row is its own entry with its own `client_id`, and replaying `commit` resumes from the rows the ledger already holds. The client must show "committed N of M" from the event log, not an all-or-nothing spinner |
+| a commit is not one transaction | a failure halfway leaves a half-posted draft | deliberate: each row is its own entry with its own `idempotency_key`, and replaying `commit` resumes from the rows the ledger already holds. The client must show "committed N of M" from the event log, not an all-or-nothing spinner |
 | a long commit outlives a proxy timeout | the request dies at chunk 40 of 100 | the batch stays `committing`; the retry resumes. The client should poll `GET /api/imports/{ref}` until `committed` instead of holding one request open |
 | row edits during a commit | a row set changing under a running commit | `409 import_committing` on the row patch — the set is frozen from `committing` to terminal |
 | the batch currency is the base currency only | a USD statement needs its own currency | a row's optional `currency` column overrides the batch currency; there is no import-side `fx_rate`, so the ledger applies its own rate resolution |
 | the account was archived after upload | the commit posts to an archived account (archive does not block posting) | accepted by design: the balance history must stay writable; the UI should warn if the batch account is archived |
-| a rejected batch cannot be reopened | the user who rejected by accident re-uploads | the re-upload with a **new** `client_id` recomputes the clashes and gives a fresh draft; the old batch remains as evidence |
+| a rejected batch cannot be reopened | the user who rejected by accident re-uploads | the re-upload with a **new** `idempotency_key` recomputes the clashes and gives a fresh draft; the old batch remains as evidence |
 | drafts expire quietly | a user opens the review screen two days later and the batch is gone | the client must show `expires_at` and refresh it on every patch; a dropped draft answers `404 not_found`, and `GET /api/imports/{ref}/events` is `404` even though the raw `expired` event survives |
 
 ### Rollout
@@ -169,21 +169,21 @@ Worker (per run)               → collectImports: drop drafts past expires_at (
 
 ```gherkin
 Scenario: An upload drafts rows and posts nothing
-  When I upload "march.csv" with client_id "statement-1"
+  When I upload "march.csv" with idempotency_key "statement-1"
   Then the response status is 201
   And the response body has status "draft"
   And the rows carry their clash kinds
   And the store holds 0 "ledger_entries" rows
 
 Scenario: A replayed upload resumes instead of duplicating
-  Given a draft uploaded with client_id "statement-1"
-  When I upload the same bytes with client_id "statement-1"
+  Given a draft uploaded with idempotency_key "statement-1"
+  When I upload the same bytes with idempotency_key "statement-1"
   Then the response status is 200
   And the store holds 1 "import_batches" row
 
-Scenario: The same client_id with different bytes is refused
-  Given a draft uploaded with client_id "statement-1"
-  When I upload different bytes with client_id "statement-1"
+Scenario: The same idempotency_key with different bytes is refused
+  Given a draft uploaded with idempotency_key "statement-1"
+  When I upload different bytes with idempotency_key "statement-1"
   Then the response status is 409
   And the error code is "import_conflict"
   And the batch still carries its original rows
@@ -209,7 +209,7 @@ Scenario: Committing posts only the accepted rows
   Then the response status is 200
   And the batch status is "committed"
   And the store holds 2 "ledger_entries" rows with source "statement"
-  And each entry carries client_id "import:<file_hash>:<row_index>"
+  And each entry carries idempotency_key "import:<file_hash>:<row_index>"
 
 Scenario: A replayed commit posts nothing twice
   Given a committed batch
@@ -239,7 +239,7 @@ Scenario: Rejecting keeps the evidence
   And the store still holds the batch rows
 
 Scenario: Chunked uploads resume and assemble
-  When I upload chunk 0 of 2 for client_id "big-1"
+  When I upload chunk 0 of 2 for idempotency_key "big-1"
   Then the response status is 202
   And the progress reads received_chunks "1"
   When I upload the same chunk 0 again

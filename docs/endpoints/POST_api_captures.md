@@ -13,7 +13,7 @@ PWA share target, Shortcut, an agent dumping a receipt, the mailbox poller.
 
 ## Downstream
 
-`Module.Captures.Create`: dedupe key `sha256(kind|client_id|artifact_hash|raw_text)`, seal
+`Module.Captures.Create`: dedupe key `sha256(kind|idempotency_key|artifact_hash|raw_text)`, seal
 the payload, insert the row, then — when `SNAPTOJSON_API_KEY` is set — submit the artifact
 to the rail: the uploaded file when there is one, else the pasted text as a `capture.txt`.
 The answer is stored with the `extraction_rail` that read it and the `extraction_model` it
@@ -28,10 +28,10 @@ None.
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
-| `client_id` | string | no | ≤ 64, part of the dedupe key |
+| `idempotency_key` | string | no | ≤ 64, part of the dedupe key |
 | `kind` | string | yes | `share`, `image`, `email`, `statement`, `recurring`, `manual` |
 | `raw_text` | string | no | ≤ 8000, sealed before storage |
-| `batch_id` | string | no | groups a statement upload |
+| `batch_label` | string | no | groups a statement upload |
 | `file` | multipart part | no | one file, up to `ArtifactMaxBytes` (10 MiB) |
 
 ## Response

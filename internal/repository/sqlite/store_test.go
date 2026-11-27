@@ -115,16 +115,16 @@ func TestConsolidatedSchemaCarriesEveryMergedChange(t *testing.T) {
 	}
 }
 
-func TestInsertEntryMapsClientIDConflictToDuplicate(t *testing.T) {
+func TestInsertEntryMapsIdempotencyKeyConflictToDuplicate(t *testing.T) {
 	store := newStore(t)
 	asset, expense := baseline(t, store)
 	ctx := t.Context()
 
 	entry, err := entity.NewEntry(entity.Entry{
-		ClientID:   "01924f7c-0000-7000-8000-000000000002",
-		OccurredOn: time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
-		Currency:   "IDR",
-		Source:     constant.EntrySourceManual,
+		IdempotencyKey: "01924f7c-0000-7000-8000-000000000002",
+		OccurredOn:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+		Currency:       "IDR",
+		Source:         constant.EntrySourceManual,
 		Postings: []entity.Posting{
 			{AccountRef: expense.Ref, AmountMinor: 25_000, BaseAmountMinor: 25_000},
 			{AccountRef: asset.Ref, AmountMinor: -25_000, BaseAmountMinor: -25_000},
@@ -152,10 +152,10 @@ func TestInsertEntryRoundTrip(t *testing.T) {
 	ctx := t.Context()
 
 	entry, err := entity.NewEntry(entity.Entry{
-		ClientID:   "01924f7c-0000-7000-8000-000000000001",
-		OccurredOn: time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
-		Currency:   "IDR",
-		Source:     constant.EntrySourceShare,
+		IdempotencyKey: "01924f7c-0000-7000-8000-000000000001",
+		OccurredOn:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+		Currency:       "IDR",
+		Source:         constant.EntrySourceShare,
 		Postings: []entity.Posting{
 			{AccountRef: expense.Ref, AmountMinor: 25_000, BaseAmountMinor: 25_000},
 			{AccountRef: asset.Ref, AmountMinor: -25_000, BaseAmountMinor: -25_000},
@@ -173,7 +173,7 @@ func TestInsertEntryRoundTrip(t *testing.T) {
 		t.Fatal("entry id was not assigned")
 	}
 
-	back, found, err := store.EntryByClientID(ctx, entry.ClientID)
+	back, found, err := store.EntryByIdempotencyKey(ctx, entry.IdempotencyKey)
 	if err != nil {
 		t.Fatalf("replay lookup: %v", err)
 	}

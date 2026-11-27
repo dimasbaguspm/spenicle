@@ -13,7 +13,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const exportColumns = `id, ref, client_id, status, format, schema_version, counts_json,
+const exportColumns = `id, ref, idempotency_key, status, format, schema_version, counts_json,
 	file_hash, bytes, created_at, started_at, finished_at, expires_at, from_on, to_on,
 	error_message`
 
@@ -50,11 +50,11 @@ func insertExport(ctx context.Context, exec sqlExecer, job entity.Export) (entit
 
 	res, err := exec.ExecContext(ctx, `
 		INSERT INTO exports
-			(ref, client_id, status, format, schema_version, counts_json, file_hash, bytes,
+			(ref, idempotency_key, status, format, schema_version, counts_json, file_hash, bytes,
 			 created_at, started_at, finished_at, expires_at, from_on, to_on, error_message)
 		VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, ?, NULL, NULL, NULL, ?, ?, NULL)`,
 		job.Ref,
-		job.ClientID,
+		job.IdempotencyKey,
 		job.Status,
 		job.Format,
 		job.SchemaVersion,
@@ -85,12 +85,12 @@ func (s *Store) ExportByRef(ctx context.Context, ref string) (entity.Export, boo
 		`SELECT `+exportColumns+` FROM exports WHERE ref = ?`, ref))
 }
 
-func (s *Store) ExportByClientID(ctx context.Context, clientID string) (entity.Export, bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ExportByClientID")
+func (s *Store) ExportByIdempotencyKey(ctx context.Context, clientID string) (entity.Export, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ExportByIdempotencyKey")
 	defer endSpan()
 
 	return scanExport(s.db.QueryRowContext(ctx,
-		`SELECT `+exportColumns+` FROM exports WHERE client_id = ?`, clientID))
+		`SELECT `+exportColumns+` FROM exports WHERE idempotency_key = ?`, clientID))
 }
 
 func (s *Store) ListExports(ctx context.Context, filter entity.ExportFilter) ([]entity.Export, error) {
@@ -441,7 +441,7 @@ func scanExportRow(scanner interface{ Scan(dest ...any) error }) (entity.Export,
 	)
 
 	err := scanner.Scan(
-		&job.ID, &job.Ref, &job.ClientID, &job.Status, &job.Format, &job.SchemaVersion,
+		&job.ID, &job.Ref, &job.IdempotencyKey, &job.Status, &job.Format, &job.SchemaVersion,
 		&counts, &fileHash, &job.Bytes, &createdRaw, &started, &finished, &expires,
 		&fromOn, &toOn, &message,
 	)

@@ -1,8 +1,8 @@
 {
   "entries": [
     {
-      "client_id": "<client_id>",
       "currency": "IDR",
+      "idempotency_key": "<idempotency_key>",
       "note": "second",
       "occurred_on": "2026-02-02",
       "postings": [
@@ -35,8 +35,8 @@
       "source": "manual"
     },
     {
-      "client_id": "<client_id>",
       "currency": "IDR",
+      "idempotency_key": "<idempotency_key>",
       "note": "first",
       "occurred_on": "2026-02-01",
       "postings": [

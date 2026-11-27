@@ -24,11 +24,11 @@ import (
 )
 
 type importUploadRequest struct {
-	ClientID   string `validate:"omitempty,max=64"`
-	AccountRef string `validate:"omitempty,ref"`
-	Filename   string
-	FileHash   string
-	Statement  []byte
+	IdempotencyKey string `validate:"omitempty,max=64"`
+	AccountRef     string `validate:"omitempty,ref"`
+	Filename       string
+	FileHash       string
+	Statement      []byte
 }
 
 type importListRequest struct {
@@ -67,18 +67,18 @@ type importRowResponse struct {
 }
 
 type importBatchResponse struct {
-	Ref         string              `json:"ref"`
-	ClientID    string              `json:"client_id"`
-	Filename    string              `json:"filename"`
-	FileHash    string              `json:"file_hash"`
-	Status      string              `json:"status"`
-	Currency    string              `json:"currency"`
-	RowsTotal   int                 `json:"rows_total"`
-	Rows        []importRowResponse `json:"rows,omitempty"`
-	CreatedAt   string              `json:"created_at"`
-	ExpiresAt   string              `json:"expires_at"`
-	CommittedAt string              `json:"committed_at,omitempty"`
-	RejectedAt  string              `json:"rejected_at,omitempty"`
+	Ref            string              `json:"ref"`
+	IdempotencyKey string              `json:"idempotency_key"`
+	Filename       string              `json:"filename"`
+	FileHash       string              `json:"file_hash"`
+	Status         string              `json:"status"`
+	Currency       string              `json:"currency"`
+	RowsTotal      int                 `json:"rows_total"`
+	Rows           []importRowResponse `json:"rows,omitempty"`
+	CreatedAt      string              `json:"created_at"`
+	ExpiresAt      string              `json:"expires_at"`
+	CommittedAt    string              `json:"committed_at,omitempty"`
+	RejectedAt     string              `json:"rejected_at,omitempty"`
 }
 
 type importReviewRequest struct {
@@ -93,7 +93,7 @@ type importChunkFields struct {
 
 type importChunkResponse struct {
 	Ref            string `json:"ref"`
-	ClientID       string `json:"client_id"`
+	IdempotencyKey string `json:"idempotency_key"`
 	ReceivedChunks int    `json:"received_chunks"`
 	ChunkTotal     int    `json:"chunk_total"`
 	ReceivedBytes  string `json:"received_bytes"`
@@ -135,7 +135,7 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if chunked {
-		if !s.resolveClientID(ctx, w, &request, chunk) {
+		if !s.resolveIdempotencyKey(ctx, w, &request, chunk) {
 			return
 		}
 
@@ -144,16 +144,16 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !s.resolveClientID(ctx, w, &request, importChunkFields{Index: -1}) {
+	if !s.resolveIdempotencyKey(ctx, w, &request, importChunkFields{Index: -1}) {
 		return
 	}
 
 	batch, created, err := s.deps.Imports.Create(ctx, imports.CreateInput{
-		ClientID:   request.ClientID,
-		AccountRef: request.AccountRef,
-		Filename:   request.Filename,
-		FileHash:   request.FileHash,
-		Statement:  request.Statement,
+		IdempotencyKey: request.IdempotencyKey,
+		AccountRef:     request.AccountRef,
+		Filename:       request.Filename,
+		FileHash:       request.FileHash,
+		Statement:      request.Statement,
 	})
 	if err != nil {
 		s.writeClassified(ctx, w, err)
@@ -179,12 +179,12 @@ func (s *Server) writeChunk(
 	chunk importChunkFields,
 ) {
 	result, err := s.deps.Imports.AppendChunk(ctx, imports.ChunkInput{
-		ClientID:   request.ClientID,
-		AccountRef: request.AccountRef,
-		Filename:   request.Filename,
-		ChunkIndex: chunk.Index,
-		ChunkTotal: chunk.Total,
-		Bytes:      request.Statement,
+		IdempotencyKey: request.IdempotencyKey,
+		AccountRef:     request.AccountRef,
+		Filename:       request.Filename,
+		ChunkIndex:     chunk.Index,
+		ChunkTotal:     chunk.Total,
+		Bytes:          request.Statement,
 	})
 	if err != nil {
 		s.writeClassified(ctx, w, err)
@@ -213,27 +213,27 @@ func (s *Server) writeChunk(
 
 	httpx.WriteJSON(w, status, importChunkResponse{
 		Ref:            result.Upload.Ref,
-		ClientID:       result.Upload.ClientID,
+		IdempotencyKey: result.Upload.IdempotencyKey,
 		ReceivedChunks: result.Upload.ReceivedChunks,
 		ChunkTotal:     result.Upload.ChunkTotal,
 		ReceivedBytes:  strconv.FormatInt(result.Upload.ReceivedBytes, 10),
 	})
 }
 
-func (s *Server) resolveClientID(
+func (s *Server) resolveIdempotencyKey(
 	ctx context.Context,
 	w http.ResponseWriter,
 	request *importUploadRequest,
 	chunk importChunkFields,
 ) bool {
-	request.ClientID = idem.Normalize(request.ClientID)
-	if request.ClientID != "" {
+	request.IdempotencyKey = idem.Normalize(request.IdempotencyKey)
+	if request.IdempotencyKey != "" {
 		return true
 	}
 
 	if chunk.Index > 0 {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput,
-			"send the client_id the first chunk answered with")
+			"send the idempotency_key the first chunk answered with")
 
 		return false
 	}
@@ -245,7 +245,7 @@ func (s *Server) resolveClientID(
 		return false
 	}
 
-	request.ClientID = minted
+	request.IdempotencyKey = minted
 
 	return true
 }
@@ -499,11 +499,11 @@ func readImportUpload(
 	sum := sha256.Sum256(body)
 
 	return importUploadRequest{
-		ClientID:   strings.TrimSpace(r.FormValue("client_id")),
-		AccountRef: strings.TrimSpace(r.FormValue("account_ref")),
-		Filename:   header.Filename,
-		FileHash:   hex.EncodeToString(sum[:]),
-		Statement:  body,
+		IdempotencyKey: strings.TrimSpace(r.FormValue("idempotency_key")),
+		AccountRef:     strings.TrimSpace(r.FormValue("account_ref")),
+		Filename:       header.Filename,
+		FileHash:       hex.EncodeToString(sum[:]),
+		Statement:      body,
 	}, chunk, chunked, nil
 }
 
@@ -536,15 +536,15 @@ func readChunkFields(r *http.Request) (importChunkFields, bool, error) {
 
 func toImportResponse(batch entity.ImportBatch, withRows bool) importBatchResponse {
 	out := importBatchResponse{
-		Ref:       batch.Ref,
-		ClientID:  batch.ClientID,
-		Filename:  batch.Filename,
-		FileHash:  batch.FileHash,
-		Status:    batch.Status,
-		Currency:  batch.Currency,
-		RowsTotal: batch.RowsTotal,
-		CreatedAt: batch.CreatedAt.Format(constant.TimestampLayout),
-		ExpiresAt: batch.ExpiresAt.Format(constant.TimestampLayout),
+		Ref:            batch.Ref,
+		IdempotencyKey: batch.IdempotencyKey,
+		Filename:       batch.Filename,
+		FileHash:       batch.FileHash,
+		Status:         batch.Status,
+		Currency:       batch.Currency,
+		RowsTotal:      batch.RowsTotal,
+		CreatedAt:      batch.CreatedAt.Format(constant.TimestampLayout),
+		ExpiresAt:      batch.ExpiresAt.Format(constant.TimestampLayout),
 	}
 
 	if batch.CommittedAt != nil {

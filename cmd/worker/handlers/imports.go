@@ -130,7 +130,7 @@ func (r *Runner) dropUpload(ctx context.Context, upload entity.ImportUpload) err
 		return err
 	}
 
-	if err := r.parts.Remove(ctx, upload.ClientID); err != nil {
+	if err := r.parts.Remove(ctx, upload.IdempotencyKey); err != nil {
 		return fmt.Errorf("remove import part: %w", err)
 	}
 

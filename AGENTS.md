@@ -30,8 +30,9 @@ the document wins until you change the document too.
    rules, entries, postings, `balance_state`, `running_balances` and the journal payloads
    relate by ref, and their `*_id` columns are gone from `0001_init.sql`. So do captures,
    artifacts, `capture_payloads`, mail messages, imports, exports and `audit_log`. No
-   column stores a relation as an integer: the only `*_id` left are `client_id` (the
-   idempotency key the server mints) and `captures.batch_id` (a client label, not a row).
+   column ends in `_id` at all: the idempotency key is `idempotency_key`, the capture
+   grouping label is `captures.batch_label`, and every relation between two rows is a
+   `ref`.
 2. **Double-entry.** Every entry has ≥ 2 postings whose native and base sums are both
    zero. `entity.CheckZeroSum` runs before the store opens the write transaction, on
    both direct entry inserts and capture approvals.
@@ -245,13 +246,13 @@ per run) and stamps `deleted_at`, which is what makes the download route answer 
 variable.
 
 **Statement import is two-phase, and the file is the client's.** `POST /api/imports`
-takes a multipart `file`, a `client_id` (≤ 64) and an optional `account_ref`, parses a
+takes a multipart `file`, a `idempotency_key` (≤ 64) and an optional `account_ref`, parses a
 CSV whose header is exactly `occurred_on,amount_minor,description`, and writes a
 **draft**: `import_batches` plus one `import_rows` row per line, in one transaction, with
 the bytes put through `internal/repository/filestore` and only `file_hash` kept on the
 Nothing reaches the ledger until `PATCH /api/imports/{ref}` takes one body action — the
 review endpoint is a single route with two actions, not two routes. `commit` posts the
-rows the user marked `accepted`, each with `client_id = import:<file_hash>:<row_index>`
+rows the user marked `accepted`, each with `idempotency_key = import:<file_hash>:<row_index>`
 and `source = statement`, which is what makes a replayed commit a no-op; `reject` closes
 the draft and keeps the evidence, and its optional `reason` (≤ 1000) is stored on the
 event, never on the batch row. `import_events` is the append-only log of every
@@ -259,7 +260,7 @@ transition — `uploaded`, `resumed`, `conflict_refused`, `row_edited`, `row_acc
 `row_skipped`, `committed`, `rejected`, `expired` — written inside the service paths
 (`actor = user`) and by the worker GC (`actor = worker`), and read back through
 `GET /api/imports/{ref}/events` with the shared envelope. Clash detection runs once, at
-upload, and is deterministic: `already_imported` (that row's `client_id` is already in
+upload, and is deterministic: `already_imported` (that row's `idempotency_key` is already in
 the ledger), `duplicate` (same day, currency and absolute amount, with a posting on the
 batch account), `possible_duplicate` (same amount and currency within 3 days),
 `invalid_row` (the line does not parse). A row with any clash defaults to `skipped`;
@@ -267,7 +268,7 @@ batch account), `possible_duplicate` (same amount and currency within 3 days),
 nothing, it bumps `expires_at`, and it stamps `edited_at` once with the accumulated
 `edited_fields`. Retention: a `draft` lives `24h` past its last edit and the worker
 drops exactly those — rows, blob and one `expired` event, 50 per run — while a
-`committed` or `rejected` batch keeps its rows, blob and events forever. `client_id` is
+`committed` or `rejected` batch keeps its rows, blob and events forever. `idempotency_key` is
 the idempotency key: the same key with the same bytes resumes the draft (`200`), the
 same key with different bytes is `409 import_conflict`, replaying the same review action
 is `200` with the current batch, and the other action or a row edit on a terminal batch
@@ -301,20 +302,20 @@ The document is refs only, no sealed value, and byte-identical for the same data
 wants without recomputing them. `export_events` mirrors `import_events`: `queued`,
 `resumed`, `started`, `completed`, `failed`, `downloaded`, `expired`, `swept`, with
 `actor = user` for the API paths and `actor = worker` for the claim, the sweep and the resume: a job left `running` by a restart is put back to `queued` before the worker claims, with a `resumed` event, so the document is produced instead of being failed. A
-`client_id` replay returns the same job (`200`); the same `client_id` with another
+`idempotency_key` replay returns the same job (`200`); the same `idempotency_key` with another
 `format` is `409 export_conflict`. A `running` job older than `ExportStaleAfter` is
 failed (`swept`), and a `ready` job past `ExportRetention` (default `720h`, a month)
 loses its blob **from the export store** and answers `410 gone` — 20 of each per run, and
 a blob that is already gone is not an error.
 
 `POST /api/imports` also takes a **chunked** upload: send `chunk_index` + `chunk_total` and the
-handler appends to `./data/imports/<client_id>.part`, records the chunk in
+handler appends to `./data/imports/<idempotency_key>.part`, records the chunk in
 `import_uploads`/`import_upload_chunks` idempotently, answers `202` with the progress and
 assembles the draft on the last chunk (`409 import_conflict` when the total disagrees,
 `409 import_closed` for a finished upload). A commit is chunked too: the batch is flipped
 `draft → committing` with a compare-and-swap, accepted rows post in chunks of
 `ImportCommitChunk`, one `committing` event per chunk records `rows_done`/`rows_total`, and
-a replayed commit resumes from the rows whose ledger `client_id` is still missing. A row
+a replayed commit resumes from the rows whose ledger `idempotency_key` is still missing. A row
 edit while `committing` is `409 import_committing`.
 
 The worker does six things per run, in this order: queue a capture for each due recurring

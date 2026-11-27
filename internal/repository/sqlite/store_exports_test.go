@@ -36,13 +36,13 @@ func TestExportWindowRoundTrip(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			queued, err := store.InsertExport(ctx, entity.Export{
-				ClientID:      test.clientID,
-				Status:        constant.ExportStatusQueued,
-				Format:        constant.ExportFormatJSON,
-				SchemaVersion: 4,
-				CreatedAt:     time.Date(2026, time.February, 14, 9, 0, 0, 0, time.UTC),
-				FromOn:        test.from,
-				ToOn:          test.to,
+				IdempotencyKey: test.clientID,
+				Status:         constant.ExportStatusQueued,
+				Format:         constant.ExportFormatJSON,
+				SchemaVersion:  4,
+				CreatedAt:      time.Date(2026, time.February, 14, 9, 0, 0, 0, time.UTC),
+				FromOn:         test.from,
+				ToOn:           test.to,
 			})
 			if err != nil {
 				t.Fatalf("insert export: %v", err)
@@ -59,7 +59,7 @@ func TestExportWindowRoundTrip(t *testing.T) {
 
 			assertExportWindow(t, "by ref", byRef, test.from, test.to)
 
-			byClientID, found, err := store.ExportByClientID(ctx, test.clientID)
+			byIdempotencyKey, found, err := store.ExportByIdempotencyKey(ctx, test.clientID)
 			if err != nil {
 				t.Fatalf("export by client id: %v", err)
 			}
@@ -68,23 +68,23 @@ func TestExportWindowRoundTrip(t *testing.T) {
 				t.Fatal("the job is not found by client id")
 			}
 
-			assertExportWindow(t, "by client id", byClientID, test.from, test.to)
+			assertExportWindow(t, "by client id", byIdempotencyKey, test.from, test.to)
 		})
 	}
 }
 
-func TestExportClientIDKeepsOneWindow(t *testing.T) {
+func TestExportIdempotencyKeyKeepsOneWindow(t *testing.T) {
 	store := newStore(t)
 	ctx := t.Context()
 
 	original := entity.Export{
-		ClientID:      "export-1",
-		Status:        constant.ExportStatusQueued,
-		Format:        constant.ExportFormatJSON,
-		SchemaVersion: 4,
-		CreatedAt:     time.Date(2026, time.February, 14, 9, 0, 0, 0, time.UTC),
-		FromOn:        exportDay(2025, time.January, 1),
-		ToOn:          exportDay(2025, time.December, 31),
+		IdempotencyKey: "export-1",
+		Status:         constant.ExportStatusQueued,
+		Format:         constant.ExportFormatJSON,
+		SchemaVersion:  4,
+		CreatedAt:      time.Date(2026, time.February, 14, 9, 0, 0, 0, time.UTC),
+		FromOn:         exportDay(2025, time.January, 1),
+		ToOn:           exportDay(2025, time.December, 31),
 	}
 
 	if _, err := store.InsertExport(ctx, original); err != nil {
@@ -99,7 +99,7 @@ func TestExportClientIDKeepsOneWindow(t *testing.T) {
 		t.Fatal("a second row for the same client id was accepted")
 	}
 
-	stored, found, err := store.ExportByClientID(ctx, original.ClientID)
+	stored, found, err := store.ExportByIdempotencyKey(ctx, original.IdempotencyKey)
 	if err != nil {
 		t.Fatalf("export by client id: %v", err)
 	}
@@ -116,13 +116,13 @@ func TestQueuedExportsCarryTheirWindow(t *testing.T) {
 	ctx := t.Context()
 
 	if _, err := store.InsertExport(ctx, entity.Export{
-		ClientID:      "export-1",
-		Status:        constant.ExportStatusQueued,
-		Format:        constant.ExportFormatCSV,
-		SchemaVersion: 4,
-		CreatedAt:     time.Date(2026, time.February, 14, 9, 0, 0, 0, time.UTC),
-		FromOn:        exportDay(2025, time.January, 1),
-		ToOn:          exportDay(2025, time.December, 31),
+		IdempotencyKey: "export-1",
+		Status:         constant.ExportStatusQueued,
+		Format:         constant.ExportFormatCSV,
+		SchemaVersion:  4,
+		CreatedAt:      time.Date(2026, time.February, 14, 9, 0, 0, 0, time.UTC),
+		FromOn:         exportDay(2025, time.January, 1),
+		ToOn:           exportDay(2025, time.December, 31),
 	}); err != nil {
 		t.Fatalf("insert export: %v", err)
 	}
@@ -172,11 +172,11 @@ func TestInsertExportWithEventWritesTheFirstTrail(t *testing.T) {
 	at := time.Date(2026, time.February, 14, 9, 0, 0, 0, time.UTC)
 
 	queued, err := store.InsertExportWithEvent(ctx, entity.Export{
-		ClientID:      "export-queued-event",
-		Status:        constant.ExportStatusQueued,
-		Format:        constant.ExportFormatJSON,
-		SchemaVersion: 4,
-		CreatedAt:     at,
+		IdempotencyKey: "export-queued-event",
+		Status:         constant.ExportStatusQueued,
+		Format:         constant.ExportFormatJSON,
+		SchemaVersion:  4,
+		CreatedAt:      at,
 	}, entity.ExportEvent{
 		Kind:  constant.ExportEventQueued,
 		Actor: constant.ExportActorUser,

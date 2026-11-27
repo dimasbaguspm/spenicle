@@ -13,22 +13,22 @@ var (
 )
 
 type Export struct {
-	ID            int64
-	Ref           string
-	ClientID      string
-	Status        string
-	Format        string
-	SchemaVersion int
-	CountsJSON    string
-	FileHash      string
-	Bytes         int64
-	CreatedAt     time.Time
-	StartedAt     *time.Time
-	FinishedAt    *time.Time
-	ExpiresAt     *time.Time
-	FromOn        *time.Time
-	ToOn          *time.Time
-	ErrorMessage  string
+	ID             int64
+	Ref            string
+	IdempotencyKey string
+	Status         string
+	Format         string
+	SchemaVersion  int
+	CountsJSON     string
+	FileHash       string
+	Bytes          int64
+	CreatedAt      time.Time
+	StartedAt      *time.Time
+	FinishedAt     *time.Time
+	ExpiresAt      *time.Time
+	FromOn         *time.Time
+	ToOn           *time.Time
+	ErrorMessage   string
 }
 
 type ExportFilter struct {

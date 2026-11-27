@@ -5,7 +5,7 @@ Feature: Worker import GC
 
   Scenario: An expired draft loses its rows, its file and leaves one expired event
     Given a running API
-    When I upload the statement "march.csv" with the client id "statement-1":
+    When I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -22,7 +22,7 @@ Feature: Worker import GC
 
   Scenario: A committed batch outlives its expiry
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -50,7 +50,7 @@ Feature: Worker import GC
 
   Scenario: A rejected batch outlives its expiry
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES

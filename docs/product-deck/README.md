@@ -131,9 +131,9 @@ first, `kind, name`).
 Multi-value filters are comma-separated and always **widen**: `payee_ref=a,b` is
 "either payee".
 
-Creates that a client may retry carry `client_id`: entries, captures, exports,
-imports. Same `client_id` + same body answers the stored row (`200`), same
-`client_id` + different body is a `409` on the routes that guard it (imports,
+Creates that a client may retry carry `idempotency_key`: entries, captures, exports,
+imports. Same `idempotency_key` + same body answers the stored row (`200`), same
+`idempotency_key` + different body is a `409` on the routes that guard it (imports,
 exports). That is how a phone that lost the network mid-request stops double-posting.
 
 ### Two processes, one honest delay
@@ -163,7 +163,7 @@ tell "the worker never finished a run" from "work is still in progress".
 4. **Nothing disappears.** Void writes a reversal; archive hides; revoke keeps the
    row. A client may only offer destructive-looking verbs that this contract can keep.
 5. **A retry is safe.** Every create a phone or a script may retry is idempotent by
-   `client_id`; every multi-step job (`imports`, `exports`) resumes from its own
+   `idempotency_key`; every multi-step job (`imports`, `exports`) resumes from its own
    ref instead of failing.
 6. **The API is additive-only.** No version prefix means the client must tolerate new
    fields and new enum values; it may never assume a field list is closed. Removing a

@@ -4,7 +4,7 @@ Feature: GET /api/imports/{ref}/events
 
   Scenario: An upload emits uploaded
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -17,14 +17,14 @@ Feature: GET /api/imports/{ref}/events
 
   Scenario: A resumed upload emits resumed
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
       """
     And the response status is 201
     And the last ref is remembered as "batch"
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -36,7 +36,7 @@ Feature: GET /api/imports/{ref}/events
 
   Scenario: A row edit emits the fields it changed
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -59,7 +59,7 @@ Feature: GET /api/imports/{ref}/events
 
   Scenario: A commit emits committed
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -89,7 +89,7 @@ Feature: GET /api/imports/{ref}/events
 
   Scenario: The events page carries the list envelope
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -119,7 +119,7 @@ Feature: GET /api/imports/{ref}/events
 
   Scenario: A reject keeps its reason on the event, not on the batch
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-reason":
+    And I upload the statement "march.csv" with the idempotency key "statement-reason":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES

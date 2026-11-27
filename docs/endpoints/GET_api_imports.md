@@ -38,7 +38,7 @@ None.
 
 ## Limitations
 
-No date or `client_id` filter; the ledger-sized list is small enough that `status` plus the cursor covers the shell. Rows are never inlined, so a hundred-row draft costs one extra request — `GET /api/imports/{ref}` loads them and `GET /api/imports/{ref}/events` loads the log.
+No date or `idempotency_key` filter; the ledger-sized list is small enough that `status` plus the cursor covers the shell. Rows are never inlined, so a hundred-row draft costs one extra request — `GET /api/imports/{ref}` loads them and `GET /api/imports/{ref}/events` loads the log.
 
 ## Sequence
 

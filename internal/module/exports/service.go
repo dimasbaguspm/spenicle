@@ -50,7 +50,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Export, bo
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Exports.Create")
 	defer endSpan()
 
-	existing, found, err := s.jobs.ExportByClientID(ctx, in.ClientID)
+	existing, found, err := s.jobs.ExportByIdempotencyKey(ctx, in.IdempotencyKey)
 	if err != nil {
 		return entity.Export{}, false, err
 	}
@@ -67,13 +67,13 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.Export, bo
 	now := s.clock.Now()
 
 	queued, err := s.jobs.InsertExportWithEvent(ctx, entity.Export{
-		ClientID:      in.ClientID,
-		Status:        constant.ExportStatusQueued,
-		Format:        in.Format,
-		SchemaVersion: version,
-		CreatedAt:     now,
-		FromOn:        in.FromOn,
-		ToOn:          in.ToOn,
+		IdempotencyKey: in.IdempotencyKey,
+		Status:         constant.ExportStatusQueued,
+		Format:         in.Format,
+		SchemaVersion:  version,
+		CreatedAt:      now,
+		FromOn:         in.FromOn,
+		ToOn:           in.ToOn,
 	}, entity.ExportEvent{
 		Kind:  constant.ExportEventQueued,
 		Actor: constant.ExportActorUser,
@@ -345,7 +345,7 @@ func (s *Service) resume(
 	in CreateInput,
 ) (entity.Export, bool, error) {
 	if job.Format != in.Format || !sameWindow(job, in.FromOn, in.ToOn) {
-		return entity.Export{}, false, fmt.Errorf("%w: %s", entity.ErrExportConflict, job.ClientID)
+		return entity.Export{}, false, fmt.Errorf("%w: %s", entity.ErrExportConflict, job.IdempotencyKey)
 	}
 
 	if err := s.record(ctx, job, constant.ExportEventResumed, constant.ExportActorUser); err != nil {
@@ -372,7 +372,7 @@ func (s *Service) raced(
 	in CreateInput,
 	cause error,
 ) (entity.Export, bool, error) {
-	existing, found, err := s.jobs.ExportByClientID(ctx, in.ClientID)
+	existing, found, err := s.jobs.ExportByIdempotencyKey(ctx, in.IdempotencyKey)
 	if err != nil || !found {
 		return entity.Export{}, false, cause
 	}

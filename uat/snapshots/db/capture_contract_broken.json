@@ -112,13 +112,13 @@
   "captures": [
     {
       "artifact_hash": "b3be5f5a9d30ee36242604380bd4ce604ee24fa17095cc02b062086e09983819",
-      "batch_id": null,
-      "client_id": null,
+      "batch_label": null,
       "dedupe_key": "b3d404a8a768d93686079ceda9c5f0d5c37956db7d4dbce0d0a8d189d4da027c",
       "extraction_job_ref": null,
       "extraction_model": null,
       "extraction_rail": "snaptojson",
       "id": 1,
+      "idempotency_key": null,
       "kind": "image",
       "received_at": "<timestamp>",
       "ref": "<ref>",

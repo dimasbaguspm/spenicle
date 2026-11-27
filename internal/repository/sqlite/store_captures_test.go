@@ -222,13 +222,13 @@ func TestCapturePayloadsFollowTheCapture(t *testing.T) {
 	ctx := t.Context()
 
 	capture, insertErr := store.InsertCapture(ctx, entity.Capture{
-		Kind:       constant.CaptureKindManual,
-		Status:     constant.CaptureStatusPending,
-		ClientID:   "client-1",
-		DedupeKey:  uuid.New(),
-		RawText:    "coffee 25k",
-		DraftJSON:  `{"note":"coffee"}`,
-		ReceivedAt: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
+		Kind:           constant.CaptureKindManual,
+		Status:         constant.CaptureStatusPending,
+		IdempotencyKey: "client-1",
+		DedupeKey:      uuid.New(),
+		RawText:        "coffee 25k",
+		DraftJSON:      `{"note":"coffee"}`,
+		ReceivedAt:     time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
 	})
 	if insertErr != nil {
 		t.Fatalf("insert capture: %v", insertErr)
@@ -242,7 +242,7 @@ func TestCapturePayloadsFollowTheCapture(t *testing.T) {
 			return store.CaptureByRef(ctx, capture.Ref)
 		}},
 		{name: "by client id", read: func() (entity.Capture, bool, error) {
-			return store.CaptureByClientID(ctx, capture.ClientID)
+			return store.CaptureByIdempotencyKey(ctx, capture.IdempotencyKey)
 		}},
 		{name: "by dedupe key", read: func() (entity.Capture, bool, error) {
 			return store.CaptureByDedupeKey(ctx, capture.DedupeKey)
@@ -279,13 +279,13 @@ func TestUpdateCaptureStatusLeavesPayloadAlone(t *testing.T) {
 	ctx := t.Context()
 
 	capture, err := store.InsertCapture(ctx, entity.Capture{
-		Kind:       constant.CaptureKindShare,
-		Status:     constant.CaptureStatusExtracting,
-		ClientID:   "status-only",
-		DedupeKey:  uuid.New(),
-		RawText:    "coffee 25k",
-		DraftJSON:  `{"note":"coffee"}`,
-		ReceivedAt: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
+		Kind:           constant.CaptureKindShare,
+		Status:         constant.CaptureStatusExtracting,
+		IdempotencyKey: "status-only",
+		DedupeKey:      uuid.New(),
+		RawText:        "coffee 25k",
+		DraftJSON:      `{"note":"coffee"}`,
+		ReceivedAt:     time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
 	})
 	if err != nil {
 		t.Fatalf("insert capture: %v", err)
@@ -335,7 +335,7 @@ func TestInsertCaptureMapsUniquenessToDuplicate(t *testing.T) {
 	}{
 		{name: "client id", conflict: func(*entity.Capture) {}},
 		{name: "dedupe key", conflict: func(second *entity.Capture) {
-			second.ClientID = "client-2"
+			second.IdempotencyKey = "client-2"
 		}},
 	}
 
@@ -345,11 +345,11 @@ func TestInsertCaptureMapsUniquenessToDuplicate(t *testing.T) {
 			ctx := t.Context()
 
 			first := entity.Capture{
-				Kind:       constant.CaptureKindManual,
-				Status:     constant.CaptureStatusPending,
-				ClientID:   "client-1",
-				DedupeKey:  uuid.New(),
-				ReceivedAt: time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
+				Kind:           constant.CaptureKindManual,
+				Status:         constant.CaptureStatusPending,
+				IdempotencyKey: "client-1",
+				DedupeKey:      uuid.New(),
+				ReceivedAt:     time.Date(2026, time.February, 14, 0, 0, 0, 0, time.UTC),
 			}
 			if _, err := store.InsertCapture(ctx, first); err != nil {
 				t.Fatalf("first insert: %v", err)

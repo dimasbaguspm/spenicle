@@ -17,7 +17,7 @@ The export panel's history drawer, and a script proving that a job was rendered 
 | kind | actor | when |
 | --- | --- | --- |
 | `queued` | `user` | `POST /api/exports` stored a new job |
-| `resumed` | `user` / `worker` | the same `client_id` and `format` came back (`user`), or the worker requeued a job a restart left `running` (`worker`) |
+| `resumed` | `user` / `worker` | the same `idempotency_key` and `format` came back (`user`), or the worker requeued a job a restart left `running` (`worker`) |
 | `started` | `worker` | the worker won the compare-and-swap on the row |
 | `completed` | `worker` | the document was rendered, stored and the job marked `ready` |
 | `failed` | `worker` | rendering failed; `error_message` on the job says so generically |

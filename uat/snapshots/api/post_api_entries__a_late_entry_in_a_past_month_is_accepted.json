@@ -1,6 +1,6 @@
 {
-  "client_id": "<client_id>",
   "currency": "IDR",
+  "idempotency_key": "<idempotency_key>",
   "occurred_on": "2024-01-31",
   "postings": [
     {

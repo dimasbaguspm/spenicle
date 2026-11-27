@@ -30,8 +30,8 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
 | 14 | `PATCH /api/captures/{ref}` | live: `approve`, `reject`, `retry`, `match`; an approved recurring capture resolves its rule from the sealed draft |
 | 21 | `GET /healthz` | live |
-| 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `client_id` |
-| 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `client_id` |
+| 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `idempotency_key` |
+| 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `idempotency_key` |
 | 1 | `POST /api/setup` | live: chooses the base currency once and optionally posts opening balances before setup completes |
 | 2 | `POST /api/password` | live: password rotation; the password itself is the root credential |
 | 4 | `GET/PATCH /api/settings` | `GET` is live; `PATCH` accepts no field yet — `base_currency` is not patchable |
@@ -143,7 +143,7 @@ entry stays), and the credential answers `401 unauthorized` at once.
 
 | concern | rule |
 | --- | --- |
-| idempotency | `client_id` (≤ 64 chars) on creates, optional everywhere: when it is absent the server mints `<credential-ref>_<16 hex>` (`root` for the instance password) and echoes it, so a retry replays a key it never had to invent. A key the caller sends is honoured as sent |
+| idempotency | `idempotency_key` (≤ 64 chars) on creates, optional everywhere: when it is absent the server mints `<credential-ref>_<16 hex>` (`root` for the instance password) and echoes it, so a retry replays a key it never had to invent. A key the caller sends is honoured as sent |
 | pagination | `?cursor=&limit=` (default 50, max 200), response carries `next_cursor` |
 | soft delete | never. `archived_at`, `voided_at`, `status='rejected'` |
 | backdated writes | **always allowed**, any month, past or future |
@@ -217,9 +217,9 @@ sweep cursors) and `ref TEXT NOT NULL UNIQUE` (a dashless UUID), except
 relation is a `ref`**: `parent_ref`, `payee_ref`, `account_ref`, `entry_ref`, `batch_ref`,
 `upload_ref`, `export_ref`, `capture_ref`, `reverses_entry_ref`, `recurring_rule_ref`,
 `resolved_entry_ref` point at the parent row's `ref`, never at its `id`. The API speaks
-`ref` only: `account_ref`, `ref`, and never a number. No `*_id` column stores a relation
-any more — the only `*_id` left in the schema are `client_id` (an idempotency key the
-server mints) and `captures.batch_id` (a free-text label from the client, not a row).
+`ref` only: `account_ref`, `ref`, and never a number. No column ends in `_id` at all: the
+idempotency key is `idempotency_key`, the capture grouping label is `batch_label`, and
+every relation between two rows is a `ref`.
 
 | column | type | notes |
 | --- | --- | --- |
@@ -277,7 +277,7 @@ server mints) and `captures.batch_id` (a free-text label from the client, not a 
 | `currency` | TEXT | ISO code of the postings |
 | `source` | TEXT | `manual` \| `share` \| `email` \| `statement` \| `recurring` \| `adjustment` |
 | `recurring_rule_ref` | TEXT NULL | the rule's `ref`, `UNIQUE(rule, occurred_on)` |
-| `client_id` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
+| `idempotency_key` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
 | `reverses_entry_ref` | TEXT NULL | the voided entry's `ref`, set on the reversal |
 | `voided_at` | TEXT NULL | set on the original |
 | `created_at` | TEXT | |
@@ -304,9 +304,9 @@ The single review queue. One row per thing captured, from any channel.
 | `id` | INTEGER PK | |
 | `kind` | TEXT | `share` \| `image` \| `email` \| `statement` \| `recurring` \| `manual` |
 | `status` | TEXT | `extracting` \| `pending` \| `duplicate` \| `approved` \| `rejected` \| `failed` |
-| `client_id` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
+| `idempotency_key` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
 | `dedupe_key` | TEXT UNIQUE | cross-channel duplicate guard |
-| `batch_id` | TEXT NULL | a client label (≤ 64) grouping rows of one statement — free text, not a row reference |
+| `batch_label` | TEXT NULL | a client label (≤ 64) grouping rows of one statement — free text, not a row reference |
 | `artifact_hash` | TEXT NULL | `sha256`, the document lives at `artifacts/<hash[0:2]>/<hash[2:4]>/<hash>` |
 | `extraction_job_ref` | TEXT NULL | SnapToJSON job ref |
 | `extraction_rail` | TEXT NULL | `snaptojson` when extraction ran |
@@ -702,7 +702,7 @@ sequenceDiagram
 ## 3.9 `POST /api/entries`
 
 ```json
-{ "client_id":"01924f7c-8f3a-7c11-9d0e-2b7f5a1c9e42",
+{ "idempotency_key":"01924f7c-8f3a-7c11-9d0e-2b7f5a1c9e42",
   "occurred_on":"2025-09-14",
   "payee_ref":"0000000000000000000000000000000c", "note":"flat white",
   "currency":"IDR",
@@ -719,9 +719,9 @@ sequenceDiagram
     participant API as Entries handler
     participant FX as Rate resolver
     participant DB as SQLite
-    C->>API: POST entry with client_id and postings
+    C->>API: POST entry with idempotency_key and postings
     API->>API: require scope entries:write
-    API->>DB: SELECT ledger_entries WHERE client_id equals
+    API->>DB: SELECT ledger_entries WHERE idempotency_key equals
     alt replay
         API-->>C: 200 existing entry
     else new
@@ -776,7 +776,7 @@ sequenceDiagram
 
 ## 3.11 `GET /api/captures`
 
-`?status=&refs=&cursor=&limit=`. Extracting first, then oldest pending. `batch_id` is a
+`?status=&refs=&cursor=&limit=`. Extracting first, then oldest pending. `batch_label` is a
 `POST` body field, not a list filter.
 
 ```mermaid
@@ -795,12 +795,12 @@ sequenceDiagram
 ## 3.12 `POST /api/captures`
 
 ```json
-{ "client_id":"01924f7c-...", "kind":"share",
+{ "idempotency_key":"01924f7c-...", "kind":"share",
   "raw_text":"BCA: Transaksi Rp25.000 di KOPI KENANGAN 14/02 08:12" }
 ```
 
 `multipart/form-data` with `file` for images and statements. A new capture answers `202`;
-a replayed `client_id` or the same `dedupe_key` answers `200` with the existing row. With
+a replayed `idempotency_key` or the same `dedupe_key` answers `200` with the existing row. With
 extraction disabled the row stays `pending` with an empty draft and you type the fields.
 
 ```mermaid
@@ -812,7 +812,7 @@ sequenceDiagram
     participant ST as Artifact store
     participant X as Extraction rail
     participant DB as SQLite
-    C->>API: POST capture with client_id and payload
+    C->>API: POST capture with idempotency_key and payload
     API->>API: require scope captures:write
     API->>M: Create input
     M->>DB: SELECT captures WHERE dedupe_key equals

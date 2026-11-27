@@ -111,15 +111,15 @@ CREATE TABLE ledger_entries (
   source            TEXT NOT NULL CHECK (source IN
                     ('manual','share','email','statement','recurring','adjustment')),
   recurring_rule_ref TEXT REFERENCES recurring_rules(ref),
-  client_id         TEXT,
+  idempotency_key         TEXT,
   reverses_entry_ref TEXT REFERENCES ledger_entries(ref),
   voided_at         TEXT,
   created_at        TEXT NOT NULL
 );
 
 
-CREATE UNIQUE INDEX ux_entries_client ON ledger_entries (client_id)
-  WHERE client_id IS NOT NULL;
+CREATE UNIQUE INDEX ux_entries_idem ON ledger_entries (idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
 
 CREATE INDEX ix_entries_occurred ON ledger_entries (occurred_on);
 
@@ -160,9 +160,9 @@ CREATE TABLE captures (
                      ('share','image','email','statement','recurring','manual')),
   status             TEXT NOT NULL CHECK (status IN
                      ('extracting','pending','duplicate','approved','rejected','failed')),
-  client_id          TEXT,
+  idempotency_key          TEXT,
   dedupe_key         TEXT NOT NULL UNIQUE,
-  batch_id           TEXT,
+  batch_label           TEXT,
   artifact_hash      TEXT,
   extraction_job_ref TEXT,
   extraction_rail    TEXT,
@@ -173,9 +173,9 @@ CREATE TABLE captures (
   resolved_at        TEXT
 );
 
-CREATE UNIQUE INDEX ux_captures_client ON captures (client_id) WHERE client_id IS NOT NULL;
+CREATE UNIQUE INDEX ux_captures_idem ON captures (idempotency_key) WHERE idempotency_key IS NOT NULL;
 CREATE INDEX ix_captures_queue ON captures (status, received_at);
-CREATE INDEX ix_captures_batch ON captures (batch_id);
+CREATE INDEX ix_captures_batch_label ON captures (batch_label);
 
 CREATE TABLE capture_payloads (
   id              INTEGER PRIMARY KEY,
@@ -204,7 +204,7 @@ CREATE INDEX ix_artifacts_sha256 ON artifacts (sha256);
 CREATE TABLE import_batches (
   id           INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  client_id    TEXT NOT NULL UNIQUE,
+  idempotency_key    TEXT NOT NULL UNIQUE,
   file_hash    TEXT NOT NULL,
   filename     TEXT NOT NULL,
   status       TEXT NOT NULL CHECK (status IN ('draft','committing','committed','rejected')),
@@ -257,7 +257,7 @@ CREATE UNIQUE INDEX ux_import_rows_batch_ref ON import_rows (batch_ref, row_inde
 CREATE TABLE import_uploads (
   id              INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  client_id       TEXT NOT NULL UNIQUE,
+  idempotency_key       TEXT NOT NULL UNIQUE,
   file_hash       TEXT,
   filename        TEXT NOT NULL,
   chunk_total     INTEGER NOT NULL,
@@ -283,7 +283,7 @@ CREATE TABLE import_upload_chunks (
 CREATE TABLE exports (
   id             INTEGER PRIMARY KEY,
   ref TEXT NOT NULL UNIQUE,
-  client_id      TEXT NOT NULL UNIQUE,
+  idempotency_key      TEXT NOT NULL UNIQUE,
   status         TEXT NOT NULL CHECK (status IN ('queued','running','ready','failed','expired')),
   format         TEXT NOT NULL,
   schema_version INTEGER NOT NULL,

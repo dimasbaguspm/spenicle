@@ -14,7 +14,7 @@ import (
 )
 
 const captureColumns = `captures.id, captures.ref, captures.kind, captures.status,
-	captures.client_id, captures.dedupe_key, captures.batch_id, captures.artifact_hash,
+	captures.idempotency_key, captures.dedupe_key, captures.batch_label, captures.artifact_hash,
 	p.raw_text, p.draft_json, p.extraction_error, captures.extraction_job_ref,
 	captures.extraction_rail, captures.extraction_model, captures.resolved_entry_ref,
 	captures.resolution_note, captures.received_at, captures.resolved_at`
@@ -39,14 +39,14 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 	err := s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		res, execErr := tx.ExecContext(ctx, `
 			INSERT INTO captures
-				(ref, kind, status, client_id, dedupe_key, batch_id, artifact_hash,
+				(ref, kind, status, idempotency_key, dedupe_key, batch_label, artifact_hash,
 				 extraction_job_ref, extraction_rail, extraction_model,
 				 resolved_entry_ref, resolution_note, received_at, resolved_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			capture.Ref,
 			capture.Kind,
 			capture.Status,
-			nullString(capture.ClientID),
+			nullString(capture.IdempotencyKey),
 			capture.DedupeKey,
 			nullString(capture.BatchLabel),
 			nullString(capture.ArtifactHash),
@@ -104,8 +104,8 @@ func (s *Store) CaptureByDedupeKey(ctx context.Context, key string) (entity.Capt
 		`SELECT `+captureColumns+` FROM captures `+captureJoin+` WHERE captures.dedupe_key = ?`, key))
 }
 
-func (s *Store) CaptureByClientID(ctx context.Context, clientID string) (entity.Capture, bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CaptureByClientID")
+func (s *Store) CaptureByIdempotencyKey(ctx context.Context, clientID string) (entity.Capture, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.CaptureByIdempotencyKey")
 	defer endSpan()
 
 	if clientID == "" {
@@ -113,7 +113,8 @@ func (s *Store) CaptureByClientID(ctx context.Context, clientID string) (entity.
 	}
 
 	return s.scanCapture(ctx, s.db.QueryRowContext(ctx,
-		`SELECT `+captureColumns+` FROM captures `+captureJoin+` WHERE captures.client_id = ?`, clientID))
+		`SELECT `+captureColumns+` FROM captures `+captureJoin+
+			` WHERE captures.idempotency_key = ?`, clientID))
 }
 
 func (s *Store) CaptureByRef(ctx context.Context, ref string) (entity.Capture, bool, error) {
@@ -404,7 +405,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 		return entity.Capture{}, err
 	}
 
-	capture.ClientID = clientID.String
+	capture.IdempotencyKey = clientID.String
 	capture.BatchLabel = batchID.String
 	capture.ArtifactHash = artifact.String
 	capture.RawText = rawText.String

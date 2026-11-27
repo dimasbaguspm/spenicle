@@ -3,7 +3,7 @@ Feature: GET /api/imports/{ref}
 
   Scenario: One batch comes back with its rows
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES

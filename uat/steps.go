@@ -27,12 +27,12 @@ func RegisterSteps(sc *godog.ScenarioContext, options Options) {
 		`^I send (?:a|an) (GET|POST|PATCH|DELETE|OPTIONS) to "([^"]*)" with the artifact "([^"]*)"$`,
 		sendWithArtifact,
 	)
-	sc.Step(`^I upload the statement "([^"]*)" with the client id "([^"]*)":$`, uploadStatement)
-	sc.Step(`^I upload the statement "([^"]*)" with the client id "([^"]*)" on the account "([^"]*)":$`,
+	sc.Step(`^I upload the statement "([^"]*)" with the idempotency key "([^"]*)":$`, uploadStatement)
+	sc.Step(`^I upload the statement "([^"]*)" with the idempotency key "([^"]*)" on the account "([^"]*)":$`,
 		uploadStatementOnAccount)
-	sc.Step(`^I upload chunk (\d+) of (\d+) of the statement "([^"]*)" with the client id "([^"]*)":$`,
+	sc.Step(`^I upload chunk (\d+) of (\d+) of the statement "([^"]*)" with the idempotency key "([^"]*)":$`,
 		uploadStatementChunk)
-	sc.Step(`^the ledger holds an entry with client id prefix "([^"]*)" and source "([^"]*)"$`,
+	sc.Step(`^the ledger holds an entry with idempotency key prefix "([^"]*)" and source "([^"]*)"$`,
 		theLedgerHoldsEntry)
 
 	sc.Step(`^the response status is (\d+)$`, responseStatusIs)

@@ -42,17 +42,17 @@ type postingRow struct {
 }
 
 type entryRow struct {
-	Ref         string       `json:"ref"`
-	OccurredOn  string       `json:"occurred_on"`
-	Currency    string       `json:"currency"`
-	Source      string       `json:"source"`
-	Note        string       `json:"note,omitempty"`
-	ClientID    string       `json:"client_id,omitempty"`
-	PayeeRef    string       `json:"payee_ref,omitempty"`
-	ReversesRef string       `json:"reverses_ref,omitempty"`
-	VoidedAt    string       `json:"voided_at,omitempty"`
-	CreatedAt   string       `json:"created_at"`
-	Postings    []postingRow `json:"postings"`
+	Ref            string       `json:"ref"`
+	OccurredOn     string       `json:"occurred_on"`
+	Currency       string       `json:"currency"`
+	Source         string       `json:"source"`
+	Note           string       `json:"note,omitempty"`
+	IdempotencyKey string       `json:"idempotency_key,omitempty"`
+	PayeeRef       string       `json:"payee_ref,omitempty"`
+	ReversesRef    string       `json:"reverses_ref,omitempty"`
+	VoidedAt       string       `json:"voided_at,omitempty"`
+	CreatedAt      string       `json:"created_at"`
+	Postings       []postingRow `json:"postings"`
 }
 
 type captureRow struct {
@@ -235,17 +235,17 @@ func (s *snapshot) entryRow(entry entity.Entry) any {
 	}
 
 	return entryRow{
-		Ref:         entry.Ref,
-		OccurredOn:  entry.OccurredOn.Format(constant.DateLayout),
-		Currency:    entry.Currency,
-		Source:      entry.Source,
-		Note:        entry.Note,
-		ClientID:    entry.ClientID,
-		PayeeRef:    entry.PayeeRef,
-		ReversesRef: entry.ReversesEntryRef,
-		VoidedAt:    optionalStamp(entry.VoidedAt),
-		CreatedAt:   stamp(entry.CreatedAt),
-		Postings:    postings,
+		Ref:            entry.Ref,
+		OccurredOn:     entry.OccurredOn.Format(constant.DateLayout),
+		Currency:       entry.Currency,
+		Source:         entry.Source,
+		Note:           entry.Note,
+		IdempotencyKey: entry.IdempotencyKey,
+		PayeeRef:       entry.PayeeRef,
+		ReversesRef:    entry.ReversesEntryRef,
+		VoidedAt:       optionalStamp(entry.VoidedAt),
+		CreatedAt:      stamp(entry.CreatedAt),
+		Postings:       postings,
 	}
 }
 

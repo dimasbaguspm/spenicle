@@ -2,7 +2,6 @@
   "exports": [
     {
       "bytes": 1367,
-      "client_id": "export-1",
       "counts": {
         "accounts": 2,
         "captures": 0,
@@ -18,6 +17,7 @@
       "expires_at": "<timestamp>",
       "finished_at": "<timestamp>",
       "format": "json",
+      "idempotency_key": "export-1",
       "ref": "<ref>",
       "schema_version": 1,
       "started_at": "<timestamp>",

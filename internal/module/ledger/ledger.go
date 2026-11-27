@@ -76,7 +76,7 @@ type CorrectInput struct {
 	Reason     string
 }
 type PostInput struct {
-	ClientID         string
+	IdempotencyKey   string
 	OccurredOn       time.Time
 	PayeeRef         string
 	Note             string

@@ -340,14 +340,14 @@ func (s *Service) insertCapture(
 	receivedAt time.Time,
 ) (entity.Capture, bool, error) {
 	stored, err := s.captures.InsertCapture(ctx, entity.Capture{
-		Kind:         in.Kind,
-		Status:       constant.CaptureStatusPending,
-		ClientID:     in.ClientID,
-		DedupeKey:    key,
-		BatchLabel:   in.BatchLabel,
-		ArtifactHash: in.ArtifactHash,
-		RawText:      rawText,
-		ReceivedAt:   receivedAt,
+		Kind:           in.Kind,
+		Status:         constant.CaptureStatusPending,
+		IdempotencyKey: in.IdempotencyKey,
+		DedupeKey:      key,
+		BatchLabel:     in.BatchLabel,
+		ArtifactHash:   in.ArtifactHash,
+		RawText:        rawText,
+		ReceivedAt:     receivedAt,
 	})
 	if err == nil {
 		return stored, true, nil
@@ -357,7 +357,7 @@ func (s *Service) insertCapture(
 		return entity.Capture{}, false, err
 	}
 
-	existing, found, readErr := s.captures.CaptureByClientID(ctx, in.ClientID)
+	existing, found, readErr := s.captures.CaptureByIdempotencyKey(ctx, in.IdempotencyKey)
 	if readErr != nil {
 		return entity.Capture{}, false, readErr
 	}
@@ -582,7 +582,7 @@ type draftEnvelope struct {
 
 func dedupeKey(in CreateInput) string {
 	joined := strings.Join([]string{
-		in.Kind, in.ClientID, in.ArtifactHash, in.RawText,
+		in.Kind, in.IdempotencyKey, in.ArtifactHash, in.RawText,
 	}, "\x00")
 
 	sum := sha256.Sum256([]byte(joined))

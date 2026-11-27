@@ -31,7 +31,7 @@ None.
 ```json
 {
   "ref": "3f2a…",
-  "client_id": "laptop-2026-02-14",
+  "idempotency_key": "laptop-2026-02-14",
   "status": "ready",
   "format": "json",
   "from": "2025-01-01",
@@ -46,7 +46,7 @@ None.
 }
 ```
 
-The status is one of `queued`, `running`, `ready`, `failed` or `expired`. `counts` is omitted until the job finished, `error_message` only when it failed, and the three timestamps as they happen. `from` and `to` echo the window the job renders and are omitted for an unwindowed job; they are part of the job's identity, so a `client_id` cannot be replayed with another window.
+The status is one of `queued`, `running`, `ready`, `failed` or `expired`. `counts` is omitted until the job finished, `error_message` only when it failed, and the three timestamps as they happen. `from` and `to` echo the window the job renders and are omitted for an unwindowed job; they are part of the job's identity, so a `idempotency_key` cannot be replayed with another window.
 `schema_version` was captured when the job was queued, from the same `MAX(schema_migrations)`
 source `/healthz` reads. The rendered file records its own schema version at render time;
 the two differ only if a migration lands between queue and claim.

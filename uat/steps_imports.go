@@ -52,8 +52,8 @@ func uploadStatementFor(
 		return ctx, fmt.Errorf("statement: %w", err)
 	}
 
-	if err = form.WriteField("client_id", clientID); err != nil {
-		return ctx, fmt.Errorf("client id field: %w", err)
+	if err = form.WriteField("idempotency_key", clientID); err != nil {
+		return ctx, fmt.Errorf("idempotency key field: %w", err)
 	}
 
 	if account != "" {
@@ -90,7 +90,7 @@ func theLedgerHoldsEntry(ctx context.Context, prefix, source string) (context.Co
 
 	var count int
 
-	query := `SELECT COUNT(*) FROM ledger_entries WHERE client_id LIKE ? ESCAPE '\' AND source = ?`
+	query := `SELECT COUNT(*) FROM ledger_entries WHERE idempotency_key LIKE ? ESCAPE '\' AND source = ?`
 
 	row := w.store.DB().QueryRowContext(ctx, query, escapeLikeForUAT(prefix)+"%", source)
 
@@ -99,7 +99,8 @@ func theLedgerHoldsEntry(ctx context.Context, prefix, source string) (context.Co
 	}
 
 	if count == 0 {
-		return ctx, fmt.Errorf("no entry holds a client id starting with %q and source %q", prefix, source)
+		return ctx, fmt.Errorf(
+			"no entry holds an idempotency key starting with %q and source %q", prefix, source)
 	}
 
 	return ctx, nil
@@ -152,9 +153,9 @@ func uploadStatementChunk(
 	}
 
 	for key, value := range map[string]string{
-		"client_id":   clientID,
-		"chunk_index": strconv.Itoa(index),
-		"chunk_total": strconv.Itoa(total),
+		"idempotency_key": clientID,
+		"chunk_index":     strconv.Itoa(index),
+		"chunk_total":     strconv.Itoa(total),
 	} {
 		if err = form.WriteField(key, value); err != nil {
 			return ctx, fmt.Errorf("%s field: %w", key, err)

@@ -45,7 +45,7 @@ Feature: POST /api/entries
     And the account "Coffee" exists as "expense"
     When I send a POST to "/api/entries" with:
       """json
-      {"client_id":"bdd-balanced","occurred_on":"2025-09-14","currency":"IDR","source":"share","note":"flat white","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
+      {"idempotency_key":"bdd-balanced","occurred_on":"2025-09-14","currency":"IDR","source":"share","note":"flat white","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     Then the response status is 201
     And the response JSON matches the snapshot "post_api_entries__a_balanced_expense_is_accepted_and_stored_once"
@@ -55,20 +55,20 @@ Feature: POST /api/entries
       | ledger_postings | 2     |
     And the journal holds 1 "ledger_entry" rows
 
-  Scenario: Replaying a client id returns the stored entry instead of a duplicate
+  Scenario: Replaying an idempotency key returns the stored entry instead of a duplicate
     Given the base currency is "IDR"
     And a running API
     And the account "Cash" exists as "asset"
     And the account "Coffee" exists as "expense"
     When I send a POST to "/api/entries" with:
       """json
-      {"client_id":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
+      {"idempotency_key":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     Then the response status is 201
     And the last ref is remembered as "entry"
     And I send a POST to "/api/entries" with:
       """json
-      {"client_id":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
+      {"idempotency_key":"bdd-replay","occurred_on":"2025-09-14","currency":"IDR","postings":[{"account_ref":"{{account:Coffee}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
       """
     Then the response status is 200
     And the last ref is still "entry"

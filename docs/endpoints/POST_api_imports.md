@@ -6,7 +6,7 @@
 
 Turn one uploaded CSV statement into a durable **draft**: rows the user reviews and edits one by one, then one review action on [`PATCH /api/imports/{ref}`](./PATCH_api_imports_ref.md) — `commit` posts the accepted ones, `reject` discards the draft. Nothing reaches the ledger here.
 
-The upload is also the first row of the batch's event log (`uploaded`, or `resumed` when the same `client_id` and bytes come back); the whole trail is read at [`GET /api/imports/{ref}/events`](./GET_api_imports_ref_events.md).
+The upload is also the first row of the batch's event log (`uploaded`, or `resumed` when the same `idempotency_key` and bytes come back); the whole trail is read at [`GET /api/imports/{ref}/events`](./GET_api_imports_ref_events.md).
 
 The statement contract is small: a header row is required, and its columns are matched
 by trimmed name in any order. `occurred_on`, `amount_minor` and `description` are required;
@@ -23,7 +23,7 @@ A missing required column is `422 invalid_request` and no batch is written. A we
 
 ## Upstream
 
-The web shell's "upload a statement" action, a script, or an agent dragging a bank export. The caller picks a `client_id` it can replay after a restart.
+The web shell's "upload a statement" action, a script, or an agent dragging a bank export. The caller picks a `idempotency_key` it can replay after a restart.
 
 ## Downstream
 
@@ -33,7 +33,7 @@ Clash detection, deterministic and computed at upload:
 
 | `clash_kind` | rule | default status |
 | --- | --- | --- |
-| `already_imported` | a ledger entry already exists with `client_id = import:<file_hash>:<row_index>` | `skipped` |
+| `already_imported` | a ledger entry already exists with `idempotency_key = import:<file_hash>:<row_index>` | `skipped` |
 | `duplicate` | an entry with the same `occurred_on`, same currency, same absolute `amount_minor` and a posting on the batch account | `skipped` |
 | `possible_duplicate` | the amount and currency match and the date is within 3 days | `skipped` |
 | `invalid_row` | the row does not parse | `skipped` |
@@ -52,7 +52,7 @@ None.
 | field | required | notes |
 | --- | --- | --- |
 | `file` | yes | the CSV bytes; the real ceiling is the handler's `maxFormBytes` (`11 << 20` ≈ 11 MiB), not `ImportMaxBytes` |
-| `client_id` | no | ≤ 64 characters, the idempotency key. Omit it and the server mints `<tokenref>_<16 hex>` and returns it on the batch; a chunk upload must send the key the first chunk answered with |
+| `idempotency_key` | no | ≤ 64 characters, the idempotency key. Omit it and the server mints `<tokenref>_<16 hex>` and returns it on the batch; a chunk upload must send the key the first chunk answered with |
 | `account_ref` | no | the account the rows move through; unknown is `404`, omitted resolves to `Unsorted` |
 | `chunk_index` | no | zero-based index; send it together with `chunk_total` |
 | `chunk_total` | no | how many chunks the statement was split into (≥ 1) |
@@ -65,15 +65,15 @@ form is read and answers `422 invalid_request` with a `multipart:` message.
 
 Without the two chunk fields the request is the single-shot upload described
 above. With them the request appends **one chunk** to
-`<DATA_DIR>/imports/<client_id>.part` (directory created on demand, `0750`),
+`<DATA_DIR>/imports/<idempotency_key>.part` (directory created on demand, `0750`),
 records the chunk in `import_uploads` + `import_upload_chunks` idempotently
 (`UNIQUE (upload_id, chunk_index)`), and answers `202` with the progress:
 
 ```json
-{"ref":"…","client_id":"<tokenref>_<16 hex>","received_chunks":1,"chunk_total":2,"received_bytes":"34"}
+{"ref":"…","idempotency_key":"<tokenref>_<16 hex>","received_chunks":1,"chunk_total":2,"received_bytes":"34"}
 ```
 
-The progress body carries the `client_id` the upload is keyed by — the minted one when
+The progress body carries the `idempotency_key` the upload is keyed by — the minted one when
 the first chunk sent none — and every later chunk must send it back, or it is `422
 invalid_request`. The same `chunk_index` again is a no-op that answers `200` with the same
 progress — the bytes are truncated back, so a retry cannot corrupt the file.
@@ -81,7 +81,7 @@ When `received_chunks == chunk_total` the handler assembles the file, hashes it
 (sha256), creates the draft exactly as the single-shot path does, marks the
 upload `complete`, deletes the `.part` file and answers `201` with the batch —
 rows included, each carrying its `suggested_category_ref` like the single-shot
-answer. A `client_id` that already names a batch resumes that batch (`200`).
+answer. A `idempotency_key` that already names a batch resumes that batch (`200`).
 
 A statement above `ImportMaxRows` (default 50 000 rows) is refused with
 `422 invalid_request`. A worker run drops `open` uploads untouched for 24h
@@ -94,7 +94,7 @@ A statement above `ImportMaxRows` (default 50 000 rows) is refused with
 ```json
 {
   "ref": "...",
-  "client_id": "statement-1",
+  "idempotency_key": "statement-1",
   "filename": "march.csv",
   "file_hash": "...",
   "status": "draft",
@@ -113,18 +113,18 @@ A statement above `ImportMaxRows` (default 50 000 rows) is refused with
 }
 ```
 
-`200` with the same document when `client_id` already exists **and** `file_hash` matches: that is the resume path after a restart, and no second batch is written. Money is a minor-unit string, refs only, no integer id. Every row also carries `suggested_category_ref` — the category the categorisation rules suggest for its description — omitted when nothing suggests one; this upload response is what fills it.
+`200` with the same document when `idempotency_key` already exists **and** `file_hash` matches: that is the resume path after a restart, and no second batch is written. Money is a minor-unit string, refs only, no integer id. Every row also carries `suggested_category_ref` — the category the categorisation rules suggest for its description — omitted when nothing suggests one; this upload response is what fills it.
 
-Idempotency is enforced by the unique index on `import_batches.client_id`: the lookup runs first, and a losing racer re-reads the winner's row.
+Idempotency is enforced by the unique index on `import_batches.idempotency_key`: the lookup runs first, and a losing racer re-reads the winner's row.
 
 ## Errors
 
-- `409 import_conflict` — a chunk whose `chunk_total` disagrees with the open upload for that `client_id`.
+- `409 import_conflict` — a chunk whose `chunk_total` disagrees with the open upload for that `idempotency_key`.
 - `409 import_closed` — a chunk for a `complete` or `abandoned` upload.
 - `422 invalid_request` — `chunk_index`/`chunk_total` alone, out of range, not numbers, too many rows, or a body above `maxFormBytes` (11 MiB).
 
-- `409 import_conflict` — the `client_id` exists with different bytes; use a new client id for a new file.
-- `422 invalid_request` — the header is missing `occurred_on`, `amount_minor` or `description` (the message names it), the file part is missing, `client_id` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `maxFormBytes` (a `multipart:` message).
+- `409 import_conflict` — the `idempotency_key` exists with different bytes; use a new client id for a new file.
+- `422 invalid_request` — the header is missing `occurred_on`, `amount_minor` or `description` (the message names it), the file part is missing, `idempotency_key` is missing or longer than 64, `account_ref` is not a ref, or the upload is larger than `maxFormBytes` (a `multipart:` message).
 - `404 not_found` — `account_ref` names no account.
 - `500 internal_error` — the store refused the write; nothing was committed.
 
@@ -142,10 +142,10 @@ sequenceDiagram
     participant M as Imports module
     participant F as Filestore
     participant DB as SQLite
-    C->>H: POST /api/imports (multipart file, client_id, account_ref)
+    C->>H: POST /api/imports (multipart file, idempotency_key, account_ref)
     H->>H: sha256 the bytes
     H->>M: Create(input)
-    M->>DB: SELECT import_batches WHERE client_id = ?
+    M->>DB: SELECT import_batches WHERE idempotency_key = ?
     alt same bytes
         M-->>H: batch, created=false
         H-->>C: 200 the same draft

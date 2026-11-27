@@ -52,10 +52,10 @@ entity id above `internal/repository/sqlite`, and `make lint test uat` is green.
 
 | route | field | required | consequence |
 | --- | --- | --- | --- |
-| `POST /api/entries` | `client_id` | no | a missing key means no dedupe; a replay posts a second entry |
-| `POST /api/imports` | `client_id` | **yes** (`422`) | the client invents the key; it also names the `.part` file on disk |
-| `POST /api/exports` | `client_id` | **yes** (`422`) | same; the key is echoed back so the client can poll |
-| `POST /api/captures` | `client_id` | no | the dedupe key is already `sha256(kind, client_id, artifact_sha, raw_text)` |
+| `POST /api/entries` | `idempotency_key` | no | a missing key means no dedupe; a replay posts a second entry |
+| `POST /api/imports` | `idempotency_key` | **yes** (`422`) | the client invents the key; it also names the `.part` file on disk |
+| `POST /api/exports` | `idempotency_key` | **yes** (`422`) | same; the key is echoed back so the client can poll |
+| `POST /api/captures` | `idempotency_key` | no | the dedupe key is already `sha256(kind, idempotency_key, artifact_sha, raw_text)` |
 
 The credential is available in the context today only as `actor.From.Ref`, which holds the
 token ref for a token and is empty for the root password and in open mode
@@ -65,7 +65,7 @@ token ref for a token and is empty for the root password and in open mode
 
 A key the server mints: `<tokenref>_<random>`, where `tokenref` is the calling token's
 32-hex ref and `random` is 16 hex characters from `crypto/rand`. In open mode and for the
-root password the prefix is `root`. `client_id` becomes optional everywhere; a key that is
+root password the prefix is `root`. `idempotency_key` becomes optional everywhere; a key that is
 sent is accepted only if it matches `^(root|[0-9a-f]{32})_[0-9a-f]{16}$`, so a client can
 echo back a key it received (that is what makes a *deliberate* replay possible) but cannot
 invent an arbitrary string.
@@ -80,7 +80,7 @@ carries the key it used so the client never has to construct one.
 ### Phases
 
 1. `internal/common/idem`: `Mint(ctx) (string, error)`, `Valid(string) bool`, tests.
-2. Entries, imports, exports: `client_id` → optional, default to `Mint`, echo it in the
+2. Entries, imports, exports: `idempotency_key` → optional, default to `Mint`, echo it in the
    response (`POST /api/entries` and `POST /api/imports` do not echo it today).
 3. Replay with an unknown key is `409`/no-op as today; a key minted by another credential
    (prefix mismatch) is `403 forbidden`.
@@ -88,7 +88,7 @@ carries the key it used so the client never has to construct one.
 5. The import `.part` file name becomes a hash of the key, so a key cannot reach the
    filesystem path.
 
-Acceptance: `POST /api/imports` without `client_id` answers `201` with the batch, a second
+Acceptance: `POST /api/imports` without `idempotency_key` answers `201` with the batch, a second
 identical request with the returned key answers `200` and writes one batch and one
 `resumed` event.
 
@@ -96,14 +96,14 @@ identical request with the returned key answers `200` and writes one batch and o
 
 - **§2, server-minted keys: shipped.** `internal/common/idem` mints `<credential-ref>_<16 hex>`
   (`root` for the instance password and open mode); entries, imports and exports mint when
-  `client_id` is absent and echo it; a chunked import must send the key back after the first
+  `idempotency_key` is absent and echo it; a chunked import must send the key back after the first
   chunk, or it is `422 invalid_request`. A key the caller sends is still honoured as sent, so
   existing clients and their tests keep working. The UAT harness normalises a minted key to
-  `<client_id>`, so the snapshots stay stable.
+  `<idempotency_key>`, so the snapshots stay stable.
 - **§1, relations by `ref`: done.** Every relation is a `ref` in `0001_init.sql`: the
   ledger, captures, artifacts, mail, imports, exports and `audit_log` all point at their
   parent's `ref`, and no `*_id` column stores a relation. The only `*_id` left are
-  `client_id` (the minted idempotency key) and `captures.batch_id` (a client label).
+  `idempotency_key` (the minted idempotency key) and `captures.batch_id` (a client label).
 - **§1 (history), relations by `ref`: the ledger and capture groups are converted.** Captures,
   `capture_payloads`, artifacts and mail messages now relate by `capture_ref` (and
   `resolved_entry_ref`), and their `*_id` columns are gone. Next: imports + exports, then

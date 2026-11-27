@@ -48,10 +48,10 @@ type Contract interface {
 }
 
 type CreateInput struct {
-	ClientID string
-	Format   string
-	FromOn   *time.Time
-	ToOn     *time.Time
+	IdempotencyKey string
+	Format         string
+	FromOn         *time.Time
+	ToOn           *time.Time
 }
 
 type Summary struct {

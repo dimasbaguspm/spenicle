@@ -1,10 +1,10 @@
 {
-  "client_id": "chunked-1",
   "created_at": "<timestamp>",
   "currency": "IDR",
   "expires_at": "<timestamp>",
   "file_hash": "2d661900c7fd7267dbe714e3565676414a2c0a574e75d52da1d9295953ff827a",
   "filename": "march.csv",
+  "idempotency_key": "chunked-1",
   "ref": "<ref>",
   "rows": [
     {

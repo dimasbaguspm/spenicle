@@ -12,7 +12,7 @@ Manual entry screen, agents, approvals from captures.
 
 ## Downstream
 
-`Module.Ledger.Post`: idempotency lookup by `client_id`, the payee resolution
+`Module.Ledger.Post`: idempotency lookup by `idempotency_key`, the payee resolution
 (`PayeeSource.PayeeByRef`, unknown ref → `404 not_found`), base currency from settings,
 rate resolution for a posting that carries no `fx_rate` (`RateSource.Rate`, the
 `module/rates` service: the in-memory cache, then `fx_rates` for the exact day, then the
@@ -32,7 +32,7 @@ None.
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
-| `client_id` | string | no | ≤ 64 chars; omit it and the server mints `<tokenref>_<16 hex>` (prefix `root` for the instance password) and echoes it in the response; sending one back replays the stored entry |
+| `idempotency_key` | string | no | ≤ 64 chars; omit it and the server mints `<tokenref>_<16 hex>` (prefix `root` for the instance password) and echoes it in the response; sending one back replays the stored entry |
 | `postings[].account_ref` | ref | yes | 32 lowercase hex account ref |
 | `occurred_on` | date | yes | any month, past or future |
 | `payee_ref` | ref | no | the payee this entry is for; an unknown ref answers `404 not_found` |
@@ -46,7 +46,7 @@ None.
 
 ## Response
 
-`201` with the posted entry (`200` when `client_id` replays one already stored). The body carries the `client_id` the entry was stored under — the minted one when the caller sent none — so a retry needs no client-side key. It
+`201` with the posted entry (`200` when `idempotency_key` replays one already stored). The body carries the `idempotency_key` the entry was stored under — the minted one when the caller sent none — so a retry needs no client-side key. It
 carries `ref`, `occurred_on`, `currency`, `source`, `note`, the postings — each with its
 account's `{ref,name,kind}`, its `fx_rate` and its `fx_source` — and, when the entry has a
 payee, `payee: {ref, name}`.
@@ -85,11 +85,11 @@ sequenceDiagram
     participant S as Settings module
     participant R as Rates module
     participant DB as SQLite
-    C->>H: POST /api/entries {currency, postings, client_id}
+    C->>H: POST /api/entries {currency, postings, idempotency_key}
     H->>H: parse amounts (minor units as strings)
     H->>L: Post(input)
-    opt client_id present
-        L->>DB: SELECT entry WHERE client_id = ?
+    opt idempotency_key present
+        L->>DB: SELECT entry WHERE idempotency_key = ?
         alt replay
             L-->>H: stored entry, created=false
             H-->>C: 200 existing entry

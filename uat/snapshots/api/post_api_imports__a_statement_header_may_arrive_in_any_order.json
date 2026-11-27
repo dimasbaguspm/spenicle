@@ -1,10 +1,10 @@
 {
-  "client_id": "statement-reordered",
   "created_at": "<timestamp>",
   "currency": "IDR",
   "expires_at": "<timestamp>",
   "file_hash": "9a606ac3ad0509a30cf90c6686cb24f1b1e5c5ccd9c15d4fa959cae26a7b514c",
   "filename": "reordered.csv",
+  "idempotency_key": "statement-reordered",
   "ref": "<ref>",
   "rows": [
     {

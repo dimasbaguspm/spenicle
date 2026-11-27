@@ -1,8 +1,8 @@
 {
   "bytes": 0,
-  "client_id": "export-1",
   "created_at": "<timestamp>",
   "format": "json",
+  "idempotency_key": "export-1",
   "ref": "<ref>",
   "schema_version": 1,
   "status": "queued"

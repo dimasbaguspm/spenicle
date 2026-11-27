@@ -26,12 +26,12 @@ import (
 const maxFormBytes = 11 << 20
 
 type captureRequest struct {
-	ClientID     string               `json:"client_id,omitempty" validate:"omitempty,max=64"`
-	Kind         string               `json:"kind"                validate:"capturekind"`
-	RawText      string               `json:"raw_text,omitempty"  validate:"max=8000"`
-	BatchID      string               `json:"batch_id,omitempty"  validate:"max=64"`
-	ArtifactHash string               `json:"-"`
-	Artifact     *extraction.Artifact `json:"-"`
+	IdempotencyKey string               `json:"idempotency_key,omitempty" validate:"omitempty,max=64"`
+	Kind           string               `json:"kind"                      validate:"capturekind"`
+	RawText        string               `json:"raw_text,omitempty"        validate:"max=8000"`
+	BatchLabel     string               `json:"batch_label,omitempty"     validate:"max=64"`
+	ArtifactHash   string               `json:"-"`
+	Artifact       *extraction.Artifact `json:"-"`
 }
 
 type captureApprove struct {
@@ -417,12 +417,12 @@ func readCapture(w http.ResponseWriter, r *http.Request) (captureRequest, error)
 
 func (c captureRequest) input() captures.CreateInput {
 	return captures.CreateInput{
-		ClientID:     c.ClientID,
-		Kind:         c.Kind,
-		RawText:      c.RawText,
-		BatchLabel:   c.BatchID,
-		ArtifactHash: c.ArtifactHash,
-		Artifact:     c.Artifact,
+		IdempotencyKey: c.IdempotencyKey,
+		Kind:           c.Kind,
+		RawText:        c.RawText,
+		BatchLabel:     c.BatchLabel,
+		ArtifactHash:   c.ArtifactHash,
+		Artifact:       c.Artifact,
 	}
 }
 
@@ -454,10 +454,10 @@ func readCaptureForm(w http.ResponseWriter, r *http.Request) (captureRequest, er
 	}
 
 	request := captureRequest{
-		ClientID: r.FormValue("client_id"),
-		Kind:     kind,
-		RawText:  r.FormValue("raw_text"),
-		BatchID:  r.FormValue("batch_id"),
+		IdempotencyKey: r.FormValue("idempotency_key"),
+		Kind:           kind,
+		RawText:        r.FormValue("raw_text"),
+		BatchLabel:     r.FormValue("batch_label"),
 	}
 
 	request.ArtifactHash = hex.EncodeToString(sum[:])

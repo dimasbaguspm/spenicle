@@ -14,7 +14,7 @@ import (
 
 type Ledger interface {
 	InsertEntry(ctx context.Context, entry entity.Entry) (entity.Entry, error)
-	EntryByClientID(ctx context.Context, clientID string) (entity.Entry, bool, error)
+	EntryByIdempotencyKey(ctx context.Context, clientID string) (entity.Entry, bool, error)
 	EntryByRef(ctx context.Context, ref string) (entity.Entry, bool, error)
 	ListEntries(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
 	VoidEntry(ctx context.Context, ref, reason string, at time.Time) (entity.Entry, error)
@@ -33,7 +33,7 @@ type Ledger interface {
 type Captures interface {
 	InsertCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error)
 	CaptureByDedupeKey(ctx context.Context, key string) (entity.Capture, bool, error)
-	CaptureByClientID(ctx context.Context, clientID string) (entity.Capture, bool, error)
+	CaptureByIdempotencyKey(ctx context.Context, clientID string) (entity.Capture, bool, error)
 	CaptureByRef(ctx context.Context, ref string) (entity.Capture, bool, error)
 	ListCaptures(ctx context.Context, filter entity.CaptureFilter) ([]entity.Capture, error)
 	UpdateCapture(ctx context.Context, capture entity.Capture) (entity.Capture, error)
@@ -156,7 +156,7 @@ type Imports interface {
 		event entity.ImportEvent,
 	) (entity.ImportBatch, error)
 	ImportBatchByRef(ctx context.Context, ref string) (entity.ImportBatch, bool, error)
-	ImportBatchByClientID(ctx context.Context, clientID string) (entity.ImportBatch, bool, error)
+	ImportBatchByIdempotencyKey(ctx context.Context, clientID string) (entity.ImportBatch, bool, error)
 	ListImportBatches(ctx context.Context, filter entity.ImportFilter) ([]entity.ImportBatch, error)
 	CloseImportBatch(
 		ctx context.Context,
@@ -175,7 +175,7 @@ type Imports interface {
 	DropImportBatch(ctx context.Context, ref string, event entity.ImportEvent) (int, error)
 	BeginImportCommit(ctx context.Context, ref string) (bool, error)
 	InsertImportUpload(ctx context.Context, upload entity.ImportUpload) (entity.ImportUpload, error)
-	ImportUploadByClientID(ctx context.Context, clientID string) (entity.ImportUpload, bool, error)
+	ImportUploadByIdempotencyKey(ctx context.Context, clientID string) (entity.ImportUpload, bool, error)
 	ImportUploadByRef(ctx context.Context, ref string) (entity.ImportUpload, bool, error)
 	AppendImportChunk(
 		ctx context.Context,
@@ -225,7 +225,7 @@ type Exports interface {
 		event entity.ExportEvent,
 	) (entity.Export, error)
 	ExportByRef(ctx context.Context, ref string) (entity.Export, bool, error)
-	ExportByClientID(ctx context.Context, clientID string) (entity.Export, bool, error)
+	ExportByIdempotencyKey(ctx context.Context, clientID string) (entity.Export, bool, error)
 	ListExports(ctx context.Context, filter entity.ExportFilter) ([]entity.Export, error)
 	FinishExport(ctx context.Context, job entity.Export) (entity.Export, error)
 	FailExport(ctx context.Context, ref, message string, at time.Time) (entity.Export, error)

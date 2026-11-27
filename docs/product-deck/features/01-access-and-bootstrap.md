@@ -70,7 +70,7 @@ route): `entries:read|write`, `captures:read|write`, `accounts:read|write`,
 | # | call | notes |
 | --- | --- | --- |
 | 1 | `GET /api/connections` | `{"provider":"google","status":"disconnected"}` until one exists |
-| 2 | `POST /api/connections/google {client_id, client_secret, redirect_url}` | `201 {authorize_url, state}`; the client opens `authorize_url` |
+| 2 | `POST /api/connections/google {idempotency_key, client_secret, redirect_url}` | `201 {authorize_url, state}`; the client opens `authorize_url` |
 | 3 | `GET /api/connections/google/callback?code&state` | the provider redirect lands here; answers the connection (`account`, `scopes`, `access_expires_at`) |
 | 4 | `POST /api/connections/{ref}/revoke` | stamps `revoked_at`; the row stays, the credential stops working |
 

@@ -267,10 +267,10 @@ func (s *Service) capture(ctx context.Context, message Mail, now time.Time) enti
 	}
 
 	created, fresh, err := s.queue.Create(ctx, captures.CreateInput{
-		ClientID:   clientID(message),
-		Kind:       captureKind,
-		RawText:    buildText(message, text),
-		ReceivedAt: message.ReceivedAt,
+		IdempotencyKey: clientID(message),
+		Kind:           captureKind,
+		RawText:        buildText(message, text),
+		ReceivedAt:     message.ReceivedAt,
 	})
 	if err != nil {
 		return s.record(ctx, message, now, constant.MailStatusFailed, constant.MailErrorParse, "")

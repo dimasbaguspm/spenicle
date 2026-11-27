@@ -152,8 +152,8 @@ func normaliseString(value string) string {
 		return "<token>"
 	}
 
-	if clientIDPattern.MatchString(value) {
-		return "<client_id>"
+	if idempotencyKeyPattern.MatchString(value) {
+		return "<idempotency_key>"
 	}
 
 	if refPattern.MatchString(value) {

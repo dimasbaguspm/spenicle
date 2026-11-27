@@ -28,10 +28,10 @@ const (
 )
 
 type exportCreateRequest struct {
-	ClientID string `json:"client_id" validate:"omitempty,max=64"`
-	Format   string `json:"format"    validate:"omitempty,oneof=json csv"`
-	From     string `json:"from"      validate:"omitempty,datestr"`
-	To       string `json:"to"        validate:"omitempty,datestr"`
+	IdempotencyKey string `json:"idempotency_key" validate:"omitempty,max=64"`
+	Format         string `json:"format"          validate:"omitempty,oneof=json csv"`
+	From           string `json:"from"            validate:"omitempty,datestr"`
+	To             string `json:"to"              validate:"omitempty,datestr"`
 }
 
 type exportListRequest struct {
@@ -42,20 +42,20 @@ type exportListRequest struct {
 }
 
 type exportResponse struct {
-	Ref           string         `json:"ref"`
-	ClientID      string         `json:"client_id"`
-	Status        string         `json:"status"`
-	Format        string         `json:"format"`
-	From          string         `json:"from,omitempty"`
-	To            string         `json:"to,omitempty"`
-	SchemaVersion int            `json:"schema_version"`
-	Counts        map[string]int `json:"counts,omitempty"`
-	Bytes         int64          `json:"bytes"`
-	CreatedAt     string         `json:"created_at"`
-	StartedAt     string         `json:"started_at,omitempty"`
-	FinishedAt    string         `json:"finished_at,omitempty"`
-	ExpiresAt     string         `json:"expires_at,omitempty"`
-	ErrorMessage  string         `json:"error_message,omitempty"`
+	Ref            string         `json:"ref"`
+	IdempotencyKey string         `json:"idempotency_key"`
+	Status         string         `json:"status"`
+	Format         string         `json:"format"`
+	From           string         `json:"from,omitempty"`
+	To             string         `json:"to,omitempty"`
+	SchemaVersion  int            `json:"schema_version"`
+	Counts         map[string]int `json:"counts,omitempty"`
+	Bytes          int64          `json:"bytes"`
+	CreatedAt      string         `json:"created_at"`
+	StartedAt      string         `json:"started_at,omitempty"`
+	FinishedAt     string         `json:"finished_at,omitempty"`
+	ExpiresAt      string         `json:"expires_at,omitempty"`
+	ErrorMessage   string         `json:"error_message,omitempty"`
 }
 
 type exportEventResponse struct {
@@ -85,7 +85,7 @@ func (s *Server) CreateExport(w http.ResponseWriter, r *http.Request) {
 		format = constant.ExportFormatJSON
 	}
 
-	clientID := idem.Normalize(request.ClientID)
+	clientID := idem.Normalize(request.IdempotencyKey)
 	if clientID == "" {
 		minted, mintErr := idem.Mint(ctx)
 		if mintErr != nil {
@@ -98,10 +98,10 @@ func (s *Server) CreateExport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job, created, err := s.deps.Exports.Create(ctx, exports.CreateInput{
-		ClientID: clientID,
-		Format:   format,
-		FromOn:   fromOn,
-		ToOn:     toOn,
+		IdempotencyKey: clientID,
+		Format:         format,
+		FromOn:         fromOn,
+		ToOn:           toOn,
 	})
 	if err != nil {
 		s.writeClassified(ctx, w, err)
@@ -230,17 +230,17 @@ func (s *Server) DownloadExport(w http.ResponseWriter, r *http.Request) {
 
 func toExportResponse(job entity.Export) exportResponse {
 	out := exportResponse{
-		Ref:           job.Ref,
-		ClientID:      job.ClientID,
-		Status:        job.Status,
-		Format:        job.Format,
-		From:          exportDayStamp(job.FromOn),
-		To:            exportDayStamp(job.ToOn),
-		SchemaVersion: job.SchemaVersion,
-		Counts:        exportCounts(job.CountsJSON),
-		Bytes:         job.Bytes,
-		CreatedAt:     job.CreatedAt.Format(constant.TimestampLayout),
-		ErrorMessage:  job.ErrorMessage,
+		Ref:            job.Ref,
+		IdempotencyKey: job.IdempotencyKey,
+		Status:         job.Status,
+		Format:         job.Format,
+		From:           exportDayStamp(job.FromOn),
+		To:             exportDayStamp(job.ToOn),
+		SchemaVersion:  job.SchemaVersion,
+		Counts:         exportCounts(job.CountsJSON),
+		Bytes:          job.Bytes,
+		CreatedAt:      job.CreatedAt.Format(constant.TimestampLayout),
+		ErrorMessage:   job.ErrorMessage,
 	}
 
 	if job.StartedAt != nil {

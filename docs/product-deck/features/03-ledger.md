@@ -28,13 +28,13 @@ Three properties the user feels even though nobody says them out loud:
 | 4 | `POST /api/entries` | the write |
 
 ```json
-{"client_id":"<uuidv7>","occurred_on":"2026-02-14","currency":"IDR","payee_ref":"<kopi>",
+{"idempotency_key":"<uuidv7>","occurred_on":"2026-02-14","currency":"IDR","payee_ref":"<kopi>",
  "note":"coffee",
  "postings":[{"account_ref":"<Cash>","amount_minor":"-18000"},
              {"account_ref":"<Unsorted>","amount_minor":"18000"}]}
 ```
 
-`201` with the entry, `200` when `client_id` replays one already stored. The response is
+`201` with the entry, `200` when `idempotency_key` replays one already stored. The response is
 the same object the list route returns per row: `ref`, `occurred_on`, `currency`,
 `source`, `note`, optional `payee {ref, name}`, and `postings[]` where each posting
 carries `account {ref, name, kind}`, `account_ref`, `amount_minor`, `base_amount_minor`,
@@ -83,7 +83,7 @@ if the mistake never happened while the rows still prove it did.
 
 ```
 POST /api/entries      Handler.Entries.Post → Module.Ledger.Post
-                       → idempotency lookup (client_id) → PayeeSource.PayeeByRef
+                       → idempotency lookup (idempotency_key) → PayeeSource.PayeeByRef
                        → Settings.BaseCurrency → per-posting FX (big.Rat, one rounding)
                        → entity.NewEntry → entity.CheckZeroSum (native + base)
                        → Repository.Sqlite.InsertEntry (entry + postings + audit, one TX)
@@ -128,7 +128,7 @@ GET  /api/rates        Handler.Rates.Get    → rates.Contract.Rate (memory → 
 
 1. Both sums — native and base — are zero for every stored entry. Enforced twice, never
    by the client.
-2. A replay of a `client_id` returns the stored entry with `200` and writes nothing.
+2. A replay of a `idempotency_key` returns the stored entry with `200` and writes nothing.
 3. Only the payee patch edits a row in place. Amount, date, note and postings are
    corrected by `Module.Ledger.Correct` (void + replacement in one transaction), and the
    reversal is visible.
@@ -188,8 +188,8 @@ Scenario: An unbalanced entry is refused by name
   And the error code is "postings_not_balanced"
   And the store holds 0 "ledger_entries" rows
 
-Scenario: A replayed client_id returns the stored entry
-  Given an entry posted with client_id "e-1"
+Scenario: A replayed idempotency_key returns the stored entry
+  Given an entry posted with idempotency_key "e-1"
   When I send the same POST to "/api/entries" again
   Then the response status is 200
   And the response body has the same ref

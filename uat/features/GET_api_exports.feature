@@ -6,7 +6,7 @@ Feature: GET /api/exports
     Given a running API
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-1"}
+      {"idempotency_key":"export-1"}
       """
     Then the response status is 201
     When I send a GET to "/api/exports"
@@ -17,13 +17,13 @@ Feature: GET /api/exports
     Given a running API
     And I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-1","format":"json"}
+      {"idempotency_key":"export-1","format":"json"}
       """
     And the response status is 201
     And the export worker runs
     And I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-2","format":"csv"}
+      {"idempotency_key":"export-2","format":"csv"}
       """
     And the response status is 201
     When I send a GET to "/api/exports" with headers/query:
@@ -44,12 +44,12 @@ Feature: GET /api/exports
     Given a running API
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-1","format":"json","from":"2025-01-01","to":"2025-12-31"}
+      {"idempotency_key":"export-1","format":"json","from":"2025-01-01","to":"2025-12-31"}
       """
     Then the response status is 201
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-2","format":"json"}
+      {"idempotency_key":"export-2","format":"json"}
       """
     Then the response status is 201
     When I send a GET to "/api/exports"

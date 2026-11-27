@@ -11,7 +11,7 @@ Feature: POST /api/imports
       {"occurred_on":"2025-01-02","currency":"IDR","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"-15000"},{"account_ref":"{{account:Unsorted}}","amount_minor":"15000"}]}
       """
     And the response status is 201
-    When I upload the statement "march.csv" with the client id "statement-1" on the account "Cash":
+    When I upload the statement "march.csv" with the idempotency key "statement-1" on the account "Cash":
       """csv
       occurred_on,amount_minor,description
       2025-01-02,-15000,COFFEE
@@ -27,14 +27,14 @@ Feature: POST /api/imports
 
   Scenario: Re-uploading the same bytes under the same client id resumes the draft
     Given a running API
-    When I upload the statement "march.csv" with the client id "statement-1":
+    When I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
       """
     Then the response status is 201
     And the last ref is remembered as "batch"
-    When I upload the statement "march.csv" with the client id "statement-1":
+    When I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -49,13 +49,13 @@ Feature: POST /api/imports
 
   Scenario: Re-uploading different bytes under the same client id is refused
     Given a running API
-    When I upload the statement "march.csv" with the client id "statement-1":
+    When I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
       """
     Then the response status is 201
-    When I upload the statement "april.csv" with the client id "statement-1":
+    When I upload the statement "april.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-03-10,-20000,GROCERIES
@@ -66,7 +66,7 @@ Feature: POST /api/imports
 
   Scenario: A statement without the expected header is refused
     Given a running API
-    When I upload the statement "march.csv" with the client id "statement-1":
+    When I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       date,amount,memo
       2025-02-10,-20000,GROCERIES
@@ -79,13 +79,13 @@ Feature: POST /api/imports
 
   Scenario: Two chunks assemble into one draft
     Given a running API
-    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+    When I upload chunk 0 of 2 of the statement "march.csv" with the idempotency key "chunked-1":
       """csv
       occurred_on,amount_m
       """
     Then the response status is 202
     And the response JSON matches the snapshot "post_api_imports__the_first_chunk_is_accepted"
-    When I upload chunk 1 of 2 of the statement "march.csv" with the client id "chunked-1":
+    When I upload chunk 1 of 2 of the statement "march.csv" with the idempotency key "chunked-1":
       """csv
       inor,description
       2025-02-10,-20000,GROCERIES
@@ -100,13 +100,13 @@ Feature: POST /api/imports
 
   Scenario: Replaying a chunk changes nothing
     Given a running API
-    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+    When I upload chunk 0 of 2 of the statement "march.csv" with the idempotency key "chunked-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
       """
     Then the response status is 202
-    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+    When I upload chunk 0 of 2 of the statement "march.csv" with the idempotency key "chunked-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -119,13 +119,13 @@ Feature: POST /api/imports
 
   Scenario: A chunked upload survives a restart
     Given a running API
-    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+    When I upload chunk 0 of 2 of the statement "march.csv" with the idempotency key "chunked-1":
       """csv
       occurred_on,amount_m
       """
     Then the response status is 202
     When the API restarts
-    And I upload chunk 1 of 2 of the statement "march.csv" with the client id "chunked-1":
+    And I upload chunk 1 of 2 of the statement "march.csv" with the idempotency key "chunked-1":
       """csv
       inor,description
       2025-02-10,-20000,GROCERIES
@@ -139,13 +139,13 @@ Feature: POST /api/imports
 
   Scenario: A chunk whose total disagrees with the open upload is refused
     Given a running API
-    When I upload chunk 0 of 2 of the statement "march.csv" with the client id "chunked-1":
+    When I upload chunk 0 of 2 of the statement "march.csv" with the idempotency key "chunked-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
       """
     Then the response status is 202
-    When I upload chunk 1 of 3 of the statement "march.csv" with the client id "chunked-1":
+    When I upload chunk 1 of 3 of the statement "march.csv" with the idempotency key "chunked-1":
       """csv
       2025-03-11,-30000,PHONE
       """
@@ -154,7 +154,7 @@ Feature: POST /api/imports
 
   Scenario: A statement header may arrive in any order
     Given a running API
-    When I upload the statement "reordered.csv" with the client id "statement-reordered":
+    When I upload the statement "reordered.csv" with the idempotency key "statement-reordered":
       """csv
       description,amount_minor,occurred_on
       COFFEE,-20000,2025-02-10

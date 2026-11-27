@@ -126,10 +126,10 @@
   "import_uploads": [],
   "ledger_entries": [
     {
-      "client_id": "<client_id>",
       "created_at": "<timestamp>",
       "currency": "IDR",
       "id": 1,
+      "idempotency_key": "<idempotency_key>",
       "note": "duplicate",
       "occurred_on": "2026-02-14",
       "payee_ref": null,
@@ -140,10 +140,10 @@
       "voided_at": "<timestamp>"
     },
     {
-      "client_id": null,
       "created_at": "<timestamp>",
       "currency": "IDR",
       "id": 2,
+      "idempotency_key": null,
       "note": "duplicate of 811",
       "occurred_on": "2026-02-14",
       "payee_ref": null,

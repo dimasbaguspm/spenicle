@@ -12,15 +12,15 @@ The review screen's "history" drawer; a script proving why a row is not in the l
 
 ## Downstream
 
-`Module.Imports.ListEvents`: load the batch by ref (`404` when it names none), then `Repository.Sqlite.ListImportEvents` with `batch_id`, the shared ref cursor and `id DESC`.
+`Module.Imports.ListEvents`: load the batch by ref (`404` when it names none), then `Repository.Sqlite.ListImportEvents` with `batch_label`, the shared ref cursor and `id DESC`.
 
 The kinds written by the API paths (`actor = user`):
 
 | kind | when | `row_index` | `payload` |
 | --- | --- | --- | --- |
 | `uploaded` | a new draft was stored | — | — |
-| `resumed` | the same `client_id` + bytes came back to an existing batch | — | — |
-| `conflict_refused` | the same `client_id` arrived with different bytes (`409 import_conflict`) | — | — |
+| `resumed` | the same `idempotency_key` + bytes came back to an existing batch | — | — |
+| `conflict_refused` | the same `idempotency_key` arrived with different bytes (`409 import_conflict`) | — | — |
 | `row_edited` | a row patch applied | the row | `{"fields": ["amount_minor", "occurred_on"]}`, the request struct's order and sorted before it is recorded |
 | `row_accepted` | a row patch moved the row to `accepted` | the row | — |
 | `row_skipped` | a row patch moved the row to `skipped` | the row | — |

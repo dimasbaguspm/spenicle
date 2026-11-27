@@ -23,11 +23,11 @@ func (s *Service) Post(ctx context.Context, in PostInput) (entity.Entry, bool, e
 
 	saved, err := s.entries.InsertEntry(ctx, entry)
 	if err != nil {
-		if !errors.Is(err, entity.ErrDuplicate) || in.ClientID == "" {
+		if !errors.Is(err, entity.ErrDuplicate) || in.IdempotencyKey == "" {
 			return entity.Entry{}, false, err
 		}
 
-		existing, found, readErr := s.entries.EntryByClientID(ctx, in.ClientID)
+		existing, found, readErr := s.entries.EntryByIdempotencyKey(ctx, in.IdempotencyKey)
 		if readErr != nil {
 			return entity.Entry{}, false, readErr
 		}
@@ -48,8 +48,8 @@ func (s *Service) Build(ctx context.Context, in PostInput) (entity.Entry, bool, 
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Build")
 	defer endSpan()
 
-	if in.ClientID != "" {
-		existing, found, err := s.entries.EntryByClientID(ctx, in.ClientID)
+	if in.IdempotencyKey != "" {
+		existing, found, err := s.entries.EntryByIdempotencyKey(ctx, in.IdempotencyKey)
 		if err != nil {
 			return entity.Entry{}, false, err
 		}
@@ -86,7 +86,7 @@ func (s *Service) Build(ctx context.Context, in PostInput) (entity.Entry, bool, 
 	}
 
 	entry, err := entity.NewEntry(entity.Entry{
-		ClientID:         in.ClientID,
+		IdempotencyKey:   in.IdempotencyKey,
 		OccurredOn:       in.OccurredOn,
 		PayeeRef:         in.PayeeRef,
 		Note:             in.Note,

@@ -56,7 +56,7 @@ func readyExport(t *testing.T, format, contentType string) exportFixture {
 	now := time.Now().UTC().Truncate(time.Second)
 	service := exports.New(store, store, store, blobs, time.Hour, frozenClock{at: now})
 
-	job, created, err := service.Create(ctx, exports.CreateInput{ClientID: "export-1", Format: format})
+	job, created, err := service.Create(ctx, exports.CreateInput{IdempotencyKey: "export-1", Format: format})
 	if err != nil || !created {
 		t.Fatalf("create: created=%v err=%v", created, err)
 	}

@@ -1,6 +1,6 @@
 {
-  "client_id": "<client_id>",
   "currency": "USD",
+  "idempotency_key": "<idempotency_key>",
   "note": "abroad",
   "occurred_on": "2026-11-21",
   "postings": [

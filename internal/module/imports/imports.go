@@ -48,20 +48,20 @@ type PartFiles interface {
 }
 
 type CreateInput struct {
-	ClientID   string
-	AccountRef string
-	Filename   string
-	FileHash   string
-	Statement  []byte
+	IdempotencyKey string
+	AccountRef     string
+	Filename       string
+	FileHash       string
+	Statement      []byte
 }
 
 type ChunkInput struct {
-	ClientID   string
-	AccountRef string
-	Filename   string
-	ChunkIndex int
-	ChunkTotal int
-	Bytes      []byte
+	IdempotencyKey string
+	AccountRef     string
+	Filename       string
+	ChunkIndex     int
+	ChunkTotal     int
+	Bytes          []byte
 }
 
 type ChunkResult struct {

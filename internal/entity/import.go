@@ -18,7 +18,7 @@ var (
 type ImportUpload struct {
 	ID             int64
 	Ref            string
-	ClientID       string
+	IdempotencyKey string
 	FileHash       string
 	Filename       string
 	ChunkTotal     int
@@ -33,19 +33,19 @@ type ImportUpload struct {
 func (u ImportUpload) IsOpen() bool { return u.Status == constant.ImportUploadStatusOpen }
 
 type ImportBatch struct {
-	ID          int64
-	Ref         string
-	ClientID    string
-	FileHash    string
-	Filename    string
-	Status      string
-	RowsTotal   int
-	Currency    string
-	CreatedAt   time.Time
-	ExpiresAt   time.Time
-	CommittedAt *time.Time
-	RejectedAt  *time.Time
-	Rows        []ImportRow
+	ID             int64
+	Ref            string
+	IdempotencyKey string
+	FileHash       string
+	Filename       string
+	Status         string
+	RowsTotal      int
+	Currency       string
+	CreatedAt      time.Time
+	ExpiresAt      time.Time
+	CommittedAt    *time.Time
+	RejectedAt     *time.Time
+	Rows           []ImportRow
 }
 
 func (b ImportBatch) IsClosed() bool {

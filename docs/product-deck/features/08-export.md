@@ -17,12 +17,12 @@ answers `queued` and names a ref, and the worker renders it.
 
 ```json
 POST /api/exports
-{"client_id":"laptop-2026-02-14","format":"json"}
+{"idempotency_key":"laptop-2026-02-14","format":"json"}
 ```
 
-`201` with `{ref, client_id, status:"queued", format, schema_version, bytes:0, created_at}`.
-`client_id` is **required** and is the idempotency key: the same `client_id` + `format`
-answers `200` with the same job; the same `client_id` with a different `format` is
+`201` with `{ref, idempotency_key, status:"queued", format, schema_version, bytes:0, created_at}`.
+`idempotency_key` is **required** and is the idempotency key: the same `idempotency_key` + `format`
+answers `200` with the same job; the same `idempotency_key` with a different `format` is
 `409 export_conflict` and writes nothing. `format` is `json` (default) or `csv`, fixed at
 creation.
 
@@ -81,7 +81,7 @@ The `csv` format is a zip in a fixed order: `accounts.csv`, `payees.csv`, `entri
 
 ```
 POST /api/exports          Handler.Exports.Create → Module.Exports.Create
-                           → lookup exports.client_id (replay) → SchemaVersion → insert `queued`
+                           → lookup exports.idempotency_key (replay) → SchemaVersion → insert `queued`
                            → append `queued` event, same call. Renders nothing.
 GET  /api/exports          Handler.Exports.List   → ListExports (status, format, ref cursor, id DESC)
 GET  /api/exports/{ref}    Handler.Exports.Get    → ExportByRef
@@ -118,7 +118,7 @@ Worker (per run)           resume `running` jobs left by a restart (`resumed`, b
 ### Requirements
 
 1. `POST /api/exports` never streams bytes and never renders: it stores a job and returns.
-2. `client_id` is required and idempotent; the same id with a different `format` is
+2. `idempotency_key` is required and idempotent; the same id with a different `format` is
    `409 export_conflict` and leaves the existing job untouched.
 3. A job's status moves `queued → running → ready|failed` (or `expired` after retention);
    `ready` is the only status the download serves.
@@ -138,11 +138,11 @@ Worker (per run)           resume `running` jobs left by a restart (`resumed`, b
 | --- | --- | --- |
 | the file is rendered at claim time, not request time | a user who queues at 09:00 and downloads at 11:00 gets 11:00 data | the job carries `started_at`/`finished_at`; the file's `exported_at` is a data watermark. Show the job's render time next to the download |
 | an hour of latency by default | "export" feels broken on a fresh job | poll with backoff, label the wait as a scheduled job, and show `worker_last_run_at`. A stale heartbeat means "the worker is not running", which is the real answer |
-| blobs expire after 720h | a month-old link answers `410` | the row stays `expired` and the list keeps it, so the client can explain and offer "queue it again" (a new `client_id`) |
+| blobs expire after 720h | a month-old link answers `410` | the row stays `expired` and the list keeps it, so the client can explain and offer "queue it again" (a new `idempotency_key`) |
 | the download is recorded before the first byte | a failed or aborted download still shows as downloaded | correct as an audit record; the UI must not treat it as "the user has the file" |
 | `APP_SECRET` rotation | every stored export becomes unreadable | boot refuses a changed secret; back the secret up next to the database |
 | a wide window | a huge ledger is one big document | `from`/`to` are both-or-neither and echo on the job; rendering is a job, so a large ledger costs a wait, never a timeout |
-| no cancel and no re-queue | a stuck job cannot be stopped | a restart normally resumes the job and renders it again; the stale sweep exists but UAT proves restart resume instead. Otherwise queue a new job with a new `client_id` |
+| no cancel and no re-queue | a stuck job cannot be stopped | a restart normally resumes the job and renders it again; the stale sweep exists but UAT proves restart resume instead. Otherwise queue a new job with a new `idempotency_key` |
 
 ### Rollout
 
@@ -161,7 +161,7 @@ Worker (per run)           resume `running` jobs left by a restart (`resumed`, b
 Scenario: A queued export answers at once and renders later
   When I send a POST to "/api/exports" with:
     """json
-    {"client_id":"laptop-1","format":"json"}
+    {"idempotency_key":"laptop-1","format":"json"}
     """
   Then the response status is 201
   And the response body has status "queued"
@@ -171,15 +171,15 @@ Scenario: A queued export answers at once and renders later
   Then the status is still "queued"
 
 Scenario: A replay returns the same job
-  Given a job queued with client_id "laptop-1" and format "json"
+  Given a job queued with idempotency_key "laptop-1" and format "json"
   When I send the same POST again
   Then the response status is 200
   And the response body has the same ref
   And the store holds 1 "exports" row
 
-Scenario: The same client_id with another format is refused
-  Given a job queued with client_id "laptop-1" and format "json"
-  When I send the same client_id with format "csv"
+Scenario: The same idempotency_key with another format is refused
+  Given a job queued with idempotency_key "laptop-1" and format "json"
+  When I send the same idempotency_key with format "csv"
   Then the response status is 409
   And the error code is "export_conflict"
 
@@ -226,7 +226,7 @@ Scenario: The CSV format is a zip with a manifest
 ## 6. What this page does not promise
 
 - The date window is all-or-nothing (`from` and `to`, both or neither); no per-table
-  filter, no `client_id` filter on the list.
+  filter, no `idempotency_key` filter on the list.
 - No cancel, no re-queue, no ETag.
 - No re-import: the document is re-importable in shape, but no route reads an export back
   in (statement import is CSV in, [F6](./06-statement-import.md)).

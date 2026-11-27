@@ -38,7 +38,7 @@ type Posting struct {
 type Entry struct {
 	ID                  int64
 	Ref                 string
-	ClientID            string
+	IdempotencyKey      string
 	OccurredOn          time.Time
 	PayeeRef            string
 	Note                string

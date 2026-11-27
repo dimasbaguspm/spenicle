@@ -30,7 +30,7 @@ The review screen's "commit" and "discard" buttons; a script that retries after 
   `ctx.Err()` is checked between chunks, so a cancelled request stops between two
   chunks with the batch still `committing`;
 - for each row with `status = accepted`, `ledger.Post` with
-  - `client_id = import:<file_hash>:<row_index>`,
+  - `idempotency_key = import:<file_hash>:<row_index>`,
   - `source = statement`, `occurred_on` from the row, note = the description, payee when one was patched,
   - currency = the batch currency (the locked base currency),
   - postings `[{account_ref, -amount_minor}, {category_ref or Unsorted, +amount_minor}]`;
@@ -38,9 +38,9 @@ The review screen's "commit" and "discard" buttons; a script that retries after 
 
 A replay of `commit` on a batch left `committing` by a cancelled request or a
 restart **resumes**: the rows whose
-`client_id = import:<file_hash>:<row_index>` is already in the ledger are skipped
+`idempotency_key = import:<file_hash>:<row_index>` is already in the ledger are skipped
 (that probe is the resume filter) and only the rest are posted. The ledger
-`client_id` is the final guard, so no row can be posted twice.
+`idempotency_key` is the final guard, so no row can be posted twice.
 
 `reject`:
 
@@ -75,9 +75,9 @@ Rows that were `pending` or `skipped` are not posted and stay in the batch for a
 
 ## Limitations
 
-Not one transaction: the ledger writes are per-row entries, so a failure halfway leaves the rows already posted behind. That is deliberate — each row is its own `client_id`, so retrying the commit resumes instead of duplicating. A partial failure does not put the batch back to `draft`: it stays `committing` (only a full success or a `reject` closes it), and a replay resumes from the rows whose ledger `client_id` is still missing — never a half-posted draft. No partial-failure report in the response yet.
+Not one transaction: the ledger writes are per-row entries, so a failure halfway leaves the rows already posted behind. That is deliberate — each row is its own `idempotency_key`, so retrying the commit resumes instead of duplicating. A partial failure does not put the batch back to `draft`: it stays `committing` (only a full success or a `reject` closes it), and a replay resumes from the rows whose ledger `idempotency_key` is still missing — never a half-posted draft. No partial-failure report in the response yet.
 
-A rejected batch cannot be reopened: upload the file again under a new `client_id` (a fresh draft recomputes the clashes). A committed or rejected batch is kept forever — rows, blob and events — while an abandoned `draft` is reclaimed by the worker 24 hours after its last edit.
+A rejected batch cannot be reopened: upload the file again under a new `idempotency_key` (a fresh draft recomputes the clashes). A committed or rejected batch is kept forever — rows, blob and events — while an abandoned `draft` is reclaimed by the worker 24 hours after its last edit.
 
 ## Sequence
 
@@ -102,8 +102,8 @@ sequenceDiagram
     else draft + commit
         M->>DB: SELECT import_rows WHERE batch_id = ?
         loop every accepted row
-            M->>L: Post(client_id = import:hash:index, source = statement)
-            L->>DB: SELECT entry WHERE client_id = ? (replay guard)
+            M->>L: Post(idempotency_key = import:hash:index, source = statement)
+            L->>DB: SELECT entry WHERE idempotency_key = ? (replay guard)
             L->>DB: INSERT ledger_entries + ledger_postings
         end
         M->>DB: UPDATE import_batches SET status = committed, committed_at

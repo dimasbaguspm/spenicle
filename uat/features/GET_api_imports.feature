@@ -5,7 +5,7 @@ Feature: GET /api/imports
 
   Scenario: A draft appears in the batch list
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -17,7 +17,7 @@ Feature: GET /api/imports
 
   Scenario: The status filter narrows the batches
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -34,7 +34,7 @@ Feature: GET /api/imports
 
   Scenario: A committed batch stays in the list
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES

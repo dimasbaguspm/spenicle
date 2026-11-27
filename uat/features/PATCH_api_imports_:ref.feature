@@ -7,7 +7,7 @@ Feature: PATCH /api/imports/{ref}
     Given a running API
     And the account "Cash" exists as "asset"
     And the account "Unsorted" exists as "expense"
-    And I upload the statement "march.csv" with the client id "statement-1" on the account "Cash":
+    And I upload the statement "march.csv" with the idempotency key "statement-1" on the account "Cash":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -26,7 +26,7 @@ Feature: PATCH /api/imports/{ref}
       """
     Then the response status is 200
     And the response JSON matches the snapshot "patch_api_imports_ref__committing_posts_the_accepted_rows"
-    And the ledger holds an entry with client id prefix "import:" and source "statement"
+    And the ledger holds an entry with idempotency key prefix "import:" and source "statement"
     And the store holds:
       | table          | count |
       | import_batches | 1     |
@@ -43,7 +43,7 @@ Feature: PATCH /api/imports/{ref}
 
   Scenario: Rejecting keeps the rows for audit and is idempotent
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -70,7 +70,7 @@ Feature: PATCH /api/imports/{ref}
 
   Scenario: A rejected batch refuses the commit and keeps its rows
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -96,7 +96,7 @@ Feature: PATCH /api/imports/{ref}
 
   Scenario: A committed batch refuses the row patch
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -122,7 +122,7 @@ Feature: PATCH /api/imports/{ref}
 
   Scenario Outline: The action must be one of the two the review screen sends
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -145,7 +145,7 @@ Feature: PATCH /api/imports/{ref}
     And a running API
     And the account "Cash" exists as "asset"
     And the account "Unsorted" exists as "expense"
-    And I upload the statement "march.csv" with the client id "statement-1" on the account "Cash":
+    And I upload the statement "march.csv" with the idempotency key "statement-1" on the account "Cash":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -175,14 +175,14 @@ Feature: PATCH /api/imports/{ref}
       """
     Then the response status is 200
     And the import event log holds 2 events of kind "committing"
-    And the ledger holds an entry with client id prefix "import:" and source "statement"
+    And the ledger holds an entry with idempotency key prefix "import:" and source "statement"
     And the store holds:
       | table          | count |
       | ledger_entries | 3     |
 
   Scenario: A row cannot change while the batch commits
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES

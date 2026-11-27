@@ -4,7 +4,7 @@ Feature: PATCH /api/imports/{ref}/rows/{index}
 
   Scenario: A row patch is absolute, so a retry is a no-op
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES
@@ -26,7 +26,7 @@ Feature: PATCH /api/imports/{ref}/rows/{index}
 
   Scenario: A row patch without a single field is refused
     Given a running API
-    And I upload the statement "march.csv" with the client id "statement-1":
+    And I upload the statement "march.csv" with the idempotency key "statement-1":
       """csv
       occurred_on,amount_minor,description
       2025-02-10,-20000,GROCERIES

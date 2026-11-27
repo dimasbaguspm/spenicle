@@ -7,7 +7,7 @@ Feature: GET /api/exports/{ref}/events
     Given a running API
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-1","format":"json"}
+      {"idempotency_key":"export-1","format":"json"}
       """
     Then the response status is 201
     And the export worker runs
@@ -19,7 +19,7 @@ Feature: GET /api/exports/{ref}/events
     Given a running API
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-1","format":"json"}
+      {"idempotency_key":"export-1","format":"json"}
       """
     Then the response status is 201
     And the export worker runs
@@ -40,7 +40,7 @@ Feature: GET /api/exports/{ref}/events
     Given a running API
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-1","format":"json","from":"2025-01-01","to":"2025-12-31"}
+      {"idempotency_key":"export-1","format":"json","from":"2025-01-01","to":"2025-12-31"}
       """
     Then the response status is 201
     And the export worker runs

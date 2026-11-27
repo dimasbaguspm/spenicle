@@ -30,15 +30,15 @@ func TestInsertImportBatchChunksRowsAndKeepsEditableIDs(t *testing.T) {
 	}
 
 	batch, err := store.InsertImportBatch(ctx, entity.ImportBatch{
-		ClientID:  "chunked-client",
-		FileHash:  "chunked-hash",
-		Filename:  "statement.csv",
-		Status:    constant.ImportStatusDraft,
-		RowsTotal: len(rows),
-		Currency:  "IDR",
-		CreatedAt: now,
-		ExpiresAt: now.Add(time.Hour),
-		Rows:      rows,
+		IdempotencyKey: "chunked-client",
+		FileHash:       "chunked-hash",
+		Filename:       "statement.csv",
+		Status:         constant.ImportStatusDraft,
+		RowsTotal:      len(rows),
+		Currency:       "IDR",
+		CreatedAt:      now,
+		ExpiresAt:      now.Add(time.Hour),
+		Rows:           rows,
 	})
 	if err != nil {
 		t.Fatalf("insert batch: %v", err)

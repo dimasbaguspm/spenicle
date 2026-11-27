@@ -26,13 +26,13 @@ type postingRequest struct {
 }
 
 type postEntryRequest struct {
-	ClientID   string           `json:"client_id,omitempty" validate:"omitempty,max=64"`
-	OccurredOn string           `json:"occurred_on"         validate:"required,datestr"`
-	PayeeRef   string           `json:"payee_ref,omitempty" validate:"omitempty,ref"`
-	Note       string           `json:"note,omitempty"      validate:"max=2000"`
-	Currency   string           `json:"currency"            validate:"required,currency"`
-	Source     string           `json:"source,omitempty"    validate:"omitempty,source"`
-	Postings   []postingRequest `json:"postings"            validate:"required,min=2,dive"`
+	IdempotencyKey string           `json:"idempotency_key,omitempty" validate:"omitempty,max=64"`
+	OccurredOn     string           `json:"occurred_on"               validate:"required,datestr"`
+	PayeeRef       string           `json:"payee_ref,omitempty"       validate:"omitempty,ref"`
+	Note           string           `json:"note,omitempty"            validate:"max=2000"`
+	Currency       string           `json:"currency"                  validate:"required,currency"`
+	Source         string           `json:"source,omitempty"          validate:"omitempty,source"`
+	Postings       []postingRequest `json:"postings"                  validate:"required,min=2,dive"`
 }
 
 type accountSummary struct {
@@ -57,7 +57,7 @@ type postingResponse struct {
 
 type entryResponse struct {
 	Ref                 string            `json:"ref"`
-	ClientID            string            `json:"client_id,omitempty"`
+	IdempotencyKey      string            `json:"idempotency_key,omitempty"`
 	OccurredOn          string            `json:"occurred_on"`
 	Currency            string            `json:"currency"`
 	Source              string            `json:"source"`
@@ -257,7 +257,7 @@ func toPostInput(ctx context.Context, request postEntryRequest) (ledger.PostInpu
 		return ledger.PostInput{}, err
 	}
 
-	clientID := idem.Normalize(request.ClientID)
+	clientID := idem.Normalize(request.IdempotencyKey)
 	if clientID == "" {
 		minted, mintErr := idem.Mint(ctx)
 		if mintErr != nil {
@@ -268,13 +268,13 @@ func toPostInput(ctx context.Context, request postEntryRequest) (ledger.PostInpu
 	}
 
 	return ledger.PostInput{
-		ClientID:   clientID,
-		OccurredOn: occurredOn,
-		PayeeRef:   request.PayeeRef,
-		Note:       request.Note,
-		Currency:   request.Currency,
-		Source:     request.Source,
-		Postings:   postings,
+		IdempotencyKey: clientID,
+		OccurredOn:     occurredOn,
+		PayeeRef:       request.PayeeRef,
+		Note:           request.Note,
+		Currency:       request.Currency,
+		Source:         request.Source,
+		Postings:       postings,
 	}, nil
 }
 
@@ -329,12 +329,12 @@ func (s *Server) entryResponse(ctx context.Context, entry entity.Entry) (entryRe
 
 func toEntryResponse(entry entity.Entry, names displayNames) entryResponse {
 	out := entryResponse{
-		Ref:        entry.Ref,
-		ClientID:   entry.ClientID,
-		OccurredOn: entry.OccurredOn.Format(constant.DateLayout),
-		Currency:   entry.Currency,
-		Source:     entry.Source,
-		Note:       entry.Note,
+		Ref:            entry.Ref,
+		IdempotencyKey: entry.IdempotencyKey,
+		OccurredOn:     entry.OccurredOn.Format(constant.DateLayout),
+		Currency:       entry.Currency,
+		Source:         entry.Source,
+		Note:           entry.Note,
 	}
 
 	if entry.RunningBalanceMinor != nil {

@@ -106,7 +106,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (entity.ImportBatc
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Create")
 	defer endSpan()
 
-	existing, found, err := s.batches.ImportBatchByClientID(ctx, in.ClientID)
+	existing, found, err := s.batches.ImportBatchByIdempotencyKey(ctx, in.IdempotencyKey)
 	if err != nil {
 		return entity.ImportBatch{}, false, err
 	}
@@ -140,12 +140,12 @@ func (s *Service) AppendChunk(ctx context.Context, in ChunkInput) (ChunkResult, 
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.AppendChunk")
 	defer endSpan()
 
-	lockValue, _ := s.chunkLocks.LoadOrStore(in.ClientID, &sync.Mutex{})
+	lockValue, _ := s.chunkLocks.LoadOrStore(in.IdempotencyKey, &sync.Mutex{})
 	lock, _ := lockValue.(*sync.Mutex)
 	lock.Lock()
 	defer lock.Unlock()
 
-	existing, found, err := s.batches.ImportBatchByClientID(ctx, in.ClientID)
+	existing, found, err := s.batches.ImportBatchByIdempotencyKey(ctx, in.IdempotencyKey)
 	if err != nil {
 		return ChunkResult{}, err
 	}
@@ -474,7 +474,8 @@ func (s *Service) pendingRows(
 			continue
 		}
 
-		_, posted, err := s.entries.EntryByClientID(ctx, rowClientID(batch.FileHash, row.RowIndex))
+		_, posted, err := s.entries.EntryByIdempotencyKey(ctx,
+			rowIdempotencyKey(batch.FileHash, row.RowIndex))
 		if err != nil {
 			return nil, fmt.Errorf("resume probe: %w", err)
 		}
@@ -532,12 +533,12 @@ func (s *Service) postRow(
 	}
 
 	_, _, err := s.postings.Post(ctx, ledger.PostInput{
-		ClientID:   rowClientID(batch.FileHash, row.RowIndex),
-		OccurredOn: row.OccurredOn,
-		PayeeRef:   row.PayeeRef,
-		Note:       row.Description,
-		Currency:   batchCurrency(row, batch),
-		Source:     constant.EntrySourceStatement,
+		IdempotencyKey: rowIdempotencyKey(batch.FileHash, row.RowIndex),
+		OccurredOn:     row.OccurredOn,
+		PayeeRef:       row.PayeeRef,
+		Note:           row.Description,
+		Currency:       batchCurrency(row, batch),
+		Source:         constant.EntrySourceStatement,
 		Postings: []ledger.PostingInput{
 			{AccountRef: row.AccountRef, AmountMinor: -row.AmountMinor},
 			{AccountRef: categoryRef, AmountMinor: row.AmountMinor},
@@ -577,13 +578,13 @@ func (s *Service) draft(ctx context.Context, in CreateInput, now time.Time) (ent
 	}
 
 	batch := entity.ImportBatch{
-		ClientID:  in.ClientID,
-		FileHash:  in.FileHash,
-		Filename:  in.Filename,
-		Status:    constant.ImportStatusDraft,
-		RowsTotal: len(parsed),
-		Currency:  currency,
-		CreatedAt: now, ExpiresAt: now.Add(draftTTL),
+		IdempotencyKey: in.IdempotencyKey,
+		FileHash:       in.FileHash,
+		Filename:       in.Filename,
+		Status:         constant.ImportStatusDraft,
+		RowsTotal:      len(parsed),
+		Currency:       currency,
+		CreatedAt:      now, ExpiresAt: now.Add(draftTTL),
 	}
 
 	for index, row := range parsed {
@@ -631,7 +632,7 @@ func (s *Service) detect(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Detect")
 	defer endSpan()
 
-	existing, found, err := s.entries.EntryByClientID(ctx, rowClientID(fileHash, row.RowIndex))
+	existing, found, err := s.entries.EntryByIdempotencyKey(ctx, rowIdempotencyKey(fileHash, row.RowIndex))
 	if err != nil {
 		return fmt.Errorf("already imported probe: %w", err)
 	}
@@ -720,7 +721,8 @@ func (s *Service) resume(
 			return entity.ImportBatch{}, false, err
 		}
 
-		return entity.ImportBatch{}, false, fmt.Errorf("%w: %s", entity.ErrImportConflict, batch.ClientID)
+		return entity.ImportBatch{}, false,
+			fmt.Errorf("%w: %s", entity.ErrImportConflict, batch.IdempotencyKey)
 	}
 
 	if err := s.record(ctx, batch, constant.ImportEventResumed, ""); err != nil {
@@ -740,7 +742,7 @@ func (s *Service) raced(
 	in CreateInput,
 	cause error,
 ) (entity.ImportBatch, bool, error) {
-	existing, found, err := s.batches.ImportBatchByClientID(ctx, in.ClientID)
+	existing, found, err := s.batches.ImportBatchByIdempotencyKey(ctx, in.IdempotencyKey)
 	if err != nil || !found {
 		return entity.ImportBatch{}, false, cause
 	}
@@ -962,7 +964,7 @@ func unreadableRow() statementRow {
 	return statementRow{Description: "unreadable statement row"}
 }
 
-func rowClientID(fileHash string, index int) string {
+func rowIdempotencyKey(fileHash string, index int) string {
 	return clientIDPrefix + fileHash + ":" + strconv.Itoa(index)
 }
 
@@ -1029,7 +1031,7 @@ func acceptedOnly(rows []entity.ImportRow) []entity.ImportRow {
 }
 
 func (s *Service) upload(ctx context.Context, in ChunkInput) (entity.ImportUpload, error) {
-	upload, found, err := s.batches.ImportUploadByClientID(ctx, in.ClientID)
+	upload, found, err := s.batches.ImportUploadByIdempotencyKey(ctx, in.IdempotencyKey)
 	if err != nil {
 		return entity.ImportUpload{}, err
 	}
@@ -1041,12 +1043,12 @@ func (s *Service) upload(ctx context.Context, in ChunkInput) (entity.ImportUploa
 	now := s.clock.Now()
 
 	created, err := s.batches.InsertImportUpload(ctx, entity.ImportUpload{
-		ClientID:   in.ClientID,
-		Filename:   in.Filename,
-		ChunkTotal: in.ChunkTotal,
-		Status:     constant.ImportUploadStatusOpen,
-		CreatedAt:  now,
-		UpdatedAt:  now,
+		IdempotencyKey: in.IdempotencyKey,
+		Filename:       in.Filename,
+		ChunkTotal:     in.ChunkTotal,
+		Status:         constant.ImportUploadStatusOpen,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	})
 	if err != nil {
 		return entity.ImportUpload{}, fmt.Errorf("open upload: %w", err)
@@ -1066,7 +1068,7 @@ func (s *Service) storeChunk(
 	sum := sha256.Sum256(in.Bytes)
 	chunkHash := hex.EncodeToString(sum[:])
 
-	size, err := s.parts.Append(ctx, in.ClientID, in.Bytes)
+	size, err := s.parts.Append(ctx, in.IdempotencyKey, in.Bytes)
 	if err != nil {
 		return false, err
 	}
@@ -1075,14 +1077,14 @@ func (s *Service) storeChunk(
 		ctx, upload.Ref, in.ChunkIndex, int64(len(in.Bytes)), chunkHash, s.clock.Now(),
 	)
 	if err != nil {
-		return false, errors.Join(err, s.parts.Truncate(ctx, in.ClientID, size-int64(len(in.Bytes))))
+		return false, errors.Join(err, s.parts.Truncate(ctx, in.IdempotencyKey, size-int64(len(in.Bytes))))
 	}
 
 	if inserted {
 		return false, nil
 	}
 
-	return true, s.parts.Truncate(ctx, in.ClientID, size-int64(len(in.Bytes)))
+	return true, s.parts.Truncate(ctx, in.IdempotencyKey, size-int64(len(in.Bytes)))
 }
 
 func (s *Service) assemble(
@@ -1093,7 +1095,7 @@ func (s *Service) assemble(
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Imports.Assemble")
 	defer endSpan()
 
-	body, err := s.parts.Read(ctx, in.ClientID)
+	body, err := s.parts.Read(ctx, in.IdempotencyKey)
 	if err != nil {
 		return ChunkResult{}, err
 	}
@@ -1102,11 +1104,11 @@ func (s *Service) assemble(
 	fileHash := hex.EncodeToString(sum[:])
 
 	batch, created, err := s.Create(ctx, CreateInput{
-		ClientID:   in.ClientID,
-		AccountRef: in.AccountRef,
-		Filename:   upload.Filename,
-		FileHash:   fileHash,
-		Statement:  body,
+		IdempotencyKey: in.IdempotencyKey,
+		AccountRef:     in.AccountRef,
+		Filename:       upload.Filename,
+		FileHash:       fileHash,
+		Statement:      body,
 	})
 	if err != nil {
 		return ChunkResult{}, err
@@ -1118,7 +1120,7 @@ func (s *Service) assemble(
 		return ChunkResult{}, err
 	}
 
-	if err := s.parts.Remove(ctx, in.ClientID); err != nil {
+	if err := s.parts.Remove(ctx, in.IdempotencyKey); err != nil {
 		return ChunkResult{}, err
 	}
 

@@ -6,7 +6,7 @@ Feature: GET /api/exports/{ref}
     Given a running API
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-1","format":"json"}
+      {"idempotency_key":"export-1","format":"json"}
       """
     Then the response status is 201
     When I send a GET to "/api/exports/{{ref}}"
@@ -22,7 +22,7 @@ Feature: GET /api/exports/{ref}
     Then the response status is 201
     When I send a POST to "/api/exports" with:
       """json
-      {"client_id":"export-1","format":"json"}
+      {"idempotency_key":"export-1","format":"json"}
       """
     Then the response status is 201
     And the export worker runs

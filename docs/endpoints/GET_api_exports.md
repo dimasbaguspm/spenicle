@@ -36,7 +36,7 @@ None.
   "exports": [
     {
       "ref": "3f2a…",
-      "client_id": "laptop-2026-02-14",
+      "idempotency_key": "laptop-2026-02-14",
       "status": "ready",
       "format": "json",
       "from": "2025-01-01",
@@ -66,7 +66,7 @@ current one.
 
 ## Limitations
 
-- No `client_id` filter and no window filter: the queue is short, the ref is the identifier the rest of the API speaks, and `from`/`to` on a row are what the job is, not what this list narrows by.
+- No `idempotency_key` filter and no window filter: the queue is short, the ref is the identifier the rest of the API speaks, and `from`/`to` on a row are what the job is, not what this list narrows by.
 - A `ready` job keeps appearing here after its blob is swept, as `expired`; the row is the receipt, the download answers `410`.
 
 ## Sequence

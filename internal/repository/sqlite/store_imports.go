@@ -14,7 +14,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const importBatchColumns = `import_batches.id, import_batches.ref, import_batches.client_id,
+const importBatchColumns = `import_batches.id, import_batches.ref, import_batches.idempotency_key,
 	import_batches.file_hash, import_batches.filename, import_batches.status,
 	import_batches.rows_total, import_batches.currency, import_batches.created_at,
 	import_batches.expires_at, import_batches.committed_at, import_batches.rejected_at`
@@ -90,11 +90,11 @@ func insertImportBatch(
 
 	res, err := exec.ExecContext(ctx, `
 		INSERT INTO import_batches
-			(ref, client_id, file_hash, filename, status, rows_total, currency,
+			(ref, idempotency_key, file_hash, filename, status, rows_total, currency,
 			 created_at, expires_at, committed_at, rejected_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
 		batch.Ref,
-		batch.ClientID,
+		batch.IdempotencyKey,
 		batch.FileHash,
 		batch.Filename,
 		batch.Status,
@@ -133,15 +133,15 @@ func (s *Store) ImportBatchByRef(ctx context.Context, ref string) (entity.Import
 		`SELECT `+importBatchColumns+` FROM import_batches WHERE ref = ?`, ref))
 }
 
-func (s *Store) ImportBatchByClientID(
+func (s *Store) ImportBatchByIdempotencyKey(
 	ctx context.Context,
 	clientID string,
 ) (entity.ImportBatch, bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ImportBatchByClientID")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ImportBatchByIdempotencyKey")
 	defer endSpan()
 
 	return scanImportBatch(s.db.QueryRowContext(ctx,
-		`SELECT `+importBatchColumns+` FROM import_batches WHERE client_id = ?`, clientID))
+		`SELECT `+importBatchColumns+` FROM import_batches WHERE idempotency_key = ?`, clientID))
 }
 
 func (s *Store) ListImportBatches(
@@ -593,7 +593,7 @@ func scanImportBatchRow(scanner interface{ Scan(dest ...any) error }) (entity.Im
 	)
 
 	err := scanner.Scan(
-		&batch.ID, &batch.Ref, &batch.ClientID, &batch.FileHash, &batch.Filename,
+		&batch.ID, &batch.Ref, &batch.IdempotencyKey, &batch.FileHash, &batch.Filename,
 		&batch.Status, &batch.RowsTotal, &batch.Currency, &createdRaw, &expiresRaw,
 		&committed, &rejected,
 	)
@@ -765,7 +765,7 @@ func nullRowIndex(index *int) sql.NullInt64 {
 	return sql.NullInt64{Int64: int64(*index), Valid: true}
 }
 
-const importUploadColumns = `id, ref, client_id, COALESCE(file_hash, ''), filename, chunk_total,
+const importUploadColumns = `id, ref, idempotency_key, COALESCE(file_hash, ''), filename, chunk_total,
 	received_chunks, received_bytes, status, created_at, updated_at, completed_at`
 
 func (s *Store) InsertImportUpload(
@@ -781,11 +781,11 @@ func (s *Store) InsertImportUpload(
 
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO import_uploads
-			(ref, client_id, file_hash, filename, chunk_total, received_chunks, received_bytes,
+			(ref, idempotency_key, file_hash, filename, chunk_total, received_chunks, received_bytes,
 			 status, created_at, updated_at, completed_at)
 		VALUES (?, ?, NULL, ?, ?, 0, 0, ?, ?, ?, NULL)`,
 		upload.Ref,
-		upload.ClientID,
+		upload.IdempotencyKey,
 		upload.Filename,
 		upload.ChunkTotal,
 		upload.Status,
@@ -808,15 +808,15 @@ func (s *Store) InsertImportUpload(
 	return upload, nil
 }
 
-func (s *Store) ImportUploadByClientID(
+func (s *Store) ImportUploadByIdempotencyKey(
 	ctx context.Context,
 	clientID string,
 ) (entity.ImportUpload, bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ImportUploadByClientID")
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.ImportUploadByIdempotencyKey")
 	defer endSpan()
 
 	return scanImportUpload(s.db.QueryRowContext(ctx,
-		`SELECT `+importUploadColumns+` FROM import_uploads WHERE client_id = ?`, clientID))
+		`SELECT `+importUploadColumns+` FROM import_uploads WHERE idempotency_key = ?`, clientID))
 }
 
 func (s *Store) ImportUploadByRef(
@@ -1022,7 +1022,7 @@ func scanImportUploadRow(scanner interface{ Scan(dest ...any) error }) (entity.I
 	)
 
 	err := scanner.Scan(
-		&upload.ID, &upload.Ref, &upload.ClientID, &upload.FileHash, &upload.Filename,
+		&upload.ID, &upload.Ref, &upload.IdempotencyKey, &upload.FileHash, &upload.Filename,
 		&upload.ChunkTotal, &upload.ReceivedChunks, &upload.ReceivedBytes, &upload.Status,
 		&createdRaw, &updatedRaw, &completedAt,
 	)

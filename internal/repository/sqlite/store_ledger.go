@@ -14,7 +14,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
-const entryColumns = `id, ref, occurred_on, payee_ref, note, currency, source, client_id,
+const entryColumns = `id, ref, occurred_on, payee_ref, note, currency, source, idempotency_key,
 	reverses_entry_ref, voided_at, created_at`
 
 const entryAccountSubquery = `SELECT p.entry_ref FROM ledger_postings p WHERE p.account_ref`
@@ -61,8 +61,8 @@ func (s *Store) InsertEntry(ctx context.Context, e entity.Entry) (entity.Entry, 
 	return e, nil
 }
 
-func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.Entry, bool, error) {
-	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EntryByClientID")
+func (s *Store) EntryByIdempotencyKey(ctx context.Context, clientID string) (entity.Entry, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.EntryByIdempotencyKey")
 	defer endSpan()
 
 	if clientID == "" {
@@ -79,7 +79,7 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, ref, occurred_on, payee_ref, note, currency, source, created_at
-		FROM ledger_entries WHERE client_id = ?`, clientID).
+		FROM ledger_entries WHERE idempotency_key = ?`, clientID).
 		Scan(&e.ID, &e.Ref, &occurred, &payeeRef, &note, &e.Currency, &e.Source, &createdRaw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Entry{}, false, nil
@@ -89,7 +89,7 @@ func (s *Store) EntryByClientID(ctx context.Context, clientID string) (entity.En
 		return entity.Entry{}, false, fmt.Errorf("select entry: %w", err)
 	}
 
-	e.ClientID = clientID
+	e.IdempotencyKey = clientID
 	if e.OccurredOn, err = time.Parse(constant.DateLayout, occurred); err != nil {
 		return entity.Entry{}, false, fmt.Errorf("occurred_on %q: %w", occurred, err)
 	}
@@ -298,7 +298,7 @@ func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool,
 	defer endSpan()
 
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
-		SELECT id, ref, occurred_on, payee_ref, note, currency, source, client_id,
+		SELECT id, ref, occurred_on, payee_ref, note, currency, source, idempotency_key,
 		       reverses_entry_ref, voided_at, created_at
 		FROM ledger_entries WHERE ref = ?`, ref))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -737,7 +737,7 @@ func insertReversal(ctx context.Context, tx *sql.Tx, reversal entity.Entry) erro
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO ledger_entries
 			(ref, occurred_on, payee_ref, note, currency, source, recurring_rule_ref,
-			 client_id, reverses_entry_ref, voided_at, created_at)
+			 idempotency_key, reverses_entry_ref, voided_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL, ?)`,
 		reversalRef,
 		reversal.OccurredOn.Format(constant.DateLayout),
@@ -776,7 +776,7 @@ func insertReversal(ctx context.Context, tx *sql.Tx, reversal entity.Entry) erro
 
 func (s *Store) reversalByReversesRef(ctx context.Context, originalRef string) (entity.Entry, error) {
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
-		SELECT id, ref, occurred_on, payee_ref, note, currency, source, client_id,
+		SELECT id, ref, occurred_on, payee_ref, note, currency, source, idempotency_key,
 		       reverses_entry_ref, voided_at, created_at
 		FROM ledger_entries WHERE reverses_entry_ref = ?`, originalRef))
 	if err != nil {
@@ -835,7 +835,7 @@ func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, e
 	}
 
 	entry.Note = note.String
-	entry.ClientID = clientID.String
+	entry.IdempotencyKey = clientID.String
 
 	return entry, nil
 }
@@ -889,7 +889,7 @@ func insertEntryRow(
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO ledger_entries
 			(ref, occurred_on, payee_ref, note, currency, source, recurring_rule_ref,
-			 client_id, reverses_entry_ref, voided_at, created_at)
+			 idempotency_key, reverses_entry_ref, voided_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
 		ref,
 		e.OccurredOn.Format(constant.DateLayout),
@@ -898,7 +898,7 @@ func insertEntryRow(
 		e.Currency,
 		e.Source,
 		nullString(e.RecurringRuleRef),
-		nullString(e.ClientID),
+		nullString(e.IdempotencyKey),
 		nullString(e.ReversesEntryRef),
 		createdAt.Format(constant.TimestampLayout),
 	)
