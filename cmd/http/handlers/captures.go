@@ -420,7 +420,7 @@ func (c captureRequest) input() captures.CreateInput {
 		ClientID:     c.ClientID,
 		Kind:         c.Kind,
 		RawText:      c.RawText,
-		BatchID:      c.BatchID,
+		BatchLabel:   c.BatchID,
 		ArtifactHash: c.ArtifactHash,
 		Artifact:     c.Artifact,
 	}

@@ -306,7 +306,7 @@ The single review queue. One row per thing captured, from any channel.
 | `status` | TEXT | `extracting` \| `pending` \| `duplicate` \| `approved` \| `rejected` \| `failed` |
 | `client_id` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
 | `dedupe_key` | TEXT UNIQUE | cross-channel duplicate guard |
-| `batch_id` | TEXT NULL | artifact hash shared by all rows of one statement |
+| `batch_id` | TEXT NULL | a client label (≤ 64) grouping rows of one statement — free text, not a row reference |
 | `artifact_hash` | TEXT NULL | `sha256`, the document lives at `artifacts/<hash[0:2]>/<hash[2:4]>/<hash>` |
 | `extraction_job_ref` | TEXT NULL | SnapToJSON job ref |
 | `extraction_rail` | TEXT NULL | `snaptojson` when extraction ran |

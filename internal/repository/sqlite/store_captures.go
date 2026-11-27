@@ -48,7 +48,7 @@ func (s *Store) InsertCapture(ctx context.Context, capture entity.Capture) (enti
 			capture.Status,
 			nullString(capture.ClientID),
 			capture.DedupeKey,
-			nullString(capture.BatchID),
+			nullString(capture.BatchLabel),
 			nullString(capture.ArtifactHash),
 			nullString(capture.JobRef),
 			nullString(capture.ExtractionRail),
@@ -405,7 +405,7 @@ func scanCaptureRow(scanner interface{ Scan(dest ...any) error }) (entity.Captur
 	}
 
 	capture.ClientID = clientID.String
-	capture.BatchID = batchID.String
+	capture.BatchLabel = batchID.String
 	capture.ArtifactHash = artifact.String
 	capture.RawText = rawText.String
 	capture.DraftJSON = draft.String

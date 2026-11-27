@@ -344,7 +344,7 @@ func (s *Service) insertCapture(
 		Status:       constant.CaptureStatusPending,
 		ClientID:     in.ClientID,
 		DedupeKey:    key,
-		BatchID:      in.BatchID,
+		BatchLabel:   in.BatchLabel,
 		ArtifactHash: in.ArtifactHash,
 		RawText:      rawText,
 		ReceivedAt:   receivedAt,

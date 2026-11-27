@@ -40,7 +40,7 @@ type Capture struct {
 	Status           string
 	ClientID         string
 	DedupeKey        string
-	BatchID          string
+	BatchLabel       string
 	ArtifactHash     string
 	RawText          string
 	DraftJSON        string
