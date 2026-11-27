@@ -1,6 +1,7 @@
 {
   "entries": [
     {
+      "client_id": "<client_id>",
       "currency": "IDR",
       "note": "rent",
       "occurred_on": "2026-02-02",

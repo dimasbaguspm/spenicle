@@ -35,7 +35,7 @@ None.
 **200**
 
 ```json
-{"ref":"<32 hex>","occurred_on":"2026-02-14","currency":"IDR","source":"manual","note":"coffee",
+{"ref":"<32 hex>","client_id":"<tokenref>_<16 hex>","occurred_on":"2026-02-14","currency":"IDR","source":"manual","note":"coffee",
  "payee":{"ref":"<32 hex>","name":"KOPI KENANGAN"},
  "postings":[{"account":{"ref":"<32 hex>","name":"Cash","kind":"asset"},
               "account_ref":"<32 hex>","amount_minor":"-18000","base_amount_minor":"-18000",

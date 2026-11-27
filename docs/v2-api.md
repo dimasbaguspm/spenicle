@@ -143,7 +143,7 @@ entry stays), and the credential answers `401 unauthorized` at once.
 
 | concern | rule |
 | --- | --- |
-| idempotency | caller-supplied `client_id` (≤ 64 chars) on creates; UUIDv7 is a client convention, not a server rule |
+| idempotency | `client_id` (≤ 64 chars) on creates, optional everywhere: when it is absent the server mints `<credential-ref>_<16 hex>` (`root` for the instance password) and echoes it, so a retry replays a key it never had to invent. A key the caller sends is honoured as sent |
 | pagination | `?cursor=&limit=` (default 50, max 200), response carries `next_cursor` |
 | soft delete | never. `archived_at`, `voided_at`, `status='rejected'` |
 | backdated writes | **always allowed**, any month, past or future |
@@ -271,7 +271,7 @@ Every table also has `id INTEGER PRIMARY KEY` (the graph) and `ref TEXT NOT NULL
 | `currency` | TEXT | ISO code of the postings |
 | `source` | TEXT | `manual` \| `share` \| `email` \| `statement` \| `recurring` \| `adjustment` |
 | `recurring_rule_id` | INTEGER NULL | FK, `UNIQUE(rule, occurred_on)` |
-| `client_id` | TEXT NULL | caller-supplied, ≤ 64 chars, `UNIQUE` when set |
+| `client_id` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
 | `reverses_entry_id` | INTEGER NULL | self-FK, set on the reversal |
 | `voided_at` | TEXT NULL | set on the original |
 | `created_at` | TEXT | |
@@ -298,7 +298,7 @@ The single review queue. One row per thing captured, from any channel.
 | `id` | INTEGER PK | |
 | `kind` | TEXT | `share` \| `image` \| `email` \| `statement` \| `recurring` \| `manual` |
 | `status` | TEXT | `extracting` \| `pending` \| `duplicate` \| `approved` \| `rejected` \| `failed` |
-| `client_id` | TEXT NULL | caller-supplied, ≤ 64 chars, `UNIQUE` when set |
+| `client_id` | TEXT NULL | ≤ 64 chars, `UNIQUE` when set; the API mints `<credential-ref>_<16 hex>` when the caller sends none |
 | `dedupe_key` | TEXT UNIQUE | cross-channel duplicate guard |
 | `batch_id` | TEXT NULL | artifact hash shared by all rows of one statement |
 | `artifact_hash` | TEXT NULL | `sha256`, the document lives at `artifacts/<hash[0:2]>/<hash[2:4]>/<hash>` |

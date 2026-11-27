@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Queue one export of the whole ledger, or of one date window inside it. The route answers `201` with a `queued` job and returns immediately: the worker renders the document later, so a slow read costs a job, not a request. `client_id` is the idempotency key — a replay returns the same job, and the same `client_id` with another `format` or another window is a conflict instead of a second one.
+Queue one export of the whole ledger, or of one date window inside it. The route answers `201` with a `queued` job and returns immediately: the worker renders the document later, so a slow read costs a job, not a request. `client_id` is the idempotency key and you no longer have to invent it: leave it out and the server mints one (`<tokenref>_<16 hex>`) and echoes it in the answer. A replay of that key returns the same job, and the same `client_id` with another `format` or another window is a conflict instead of a second one.
 
 ## Upstream
 
@@ -26,7 +26,7 @@ None.
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
-| `client_id` | string | yes | ≤ 64, the idempotency key |
+| `client_id` | string | no | ≤ 64; omit it and the server mints `<tokenref>_<16 hex>` and echoes it on the job, which is what a replay sends back |
 | `format` | string | no | `json` (default) or `csv` |
 | `from` | date | no | `YYYY-MM-DD`, inclusive first day of the window; `to` is required with it |
 | `to` | date | no | `YYYY-MM-DD`, inclusive last day of the window; `from` is required with it |
@@ -59,7 +59,7 @@ time.
 ## Errors
 
 - `409 export_conflict` — the same `client_id` already names a job with another `format` or another window. The existing job is untouched and no `resumed` event is written.
-- `422 invalid_request` — `client_id` missing or too long, `format` neither `json` nor `csv`, a `from`/`to` that is not `YYYY-MM-DD`, or one end of a window without the other.
+- `422 invalid_request` — `client_id` too long, `format` neither `json` nor `csv`, a `from`/`to` that is not `YYYY-MM-DD`, or one end of a window without the other.
 - `400 invalid_json` — the body is not JSON or carries an unknown field.
 - `500 internal_error` — the write failed; the cause is logged, never sent.
 

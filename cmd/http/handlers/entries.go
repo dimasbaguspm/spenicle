@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	"github.com/dimasbaguspm/spenicle/internal/common/idem"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/validating"
@@ -56,6 +57,7 @@ type postingResponse struct {
 
 type entryResponse struct {
 	Ref                 string            `json:"ref"`
+	ClientID            string            `json:"client_id,omitempty"`
 	OccurredOn          string            `json:"occurred_on"`
 	Currency            string            `json:"currency"`
 	Source              string            `json:"source"`
@@ -215,7 +217,7 @@ func (s *Server) PostEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input, err := toPostInput(request)
+	input, err := toPostInput(ctx, request)
 	if err != nil {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput, err.Error())
 
@@ -244,7 +246,7 @@ func (s *Server) PostEntry(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, status, body)
 }
 
-func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
+func toPostInput(ctx context.Context, request postEntryRequest) (ledger.PostInput, error) {
 	occurredOn, err := validating.Day(request.OccurredOn, "occurred_on")
 	if err != nil {
 		return ledger.PostInput{}, err
@@ -255,8 +257,18 @@ func toPostInput(request postEntryRequest) (ledger.PostInput, error) {
 		return ledger.PostInput{}, err
 	}
 
+	clientID := idem.Normalize(request.ClientID)
+	if clientID == "" {
+		minted, mintErr := idem.Mint(ctx)
+		if mintErr != nil {
+			return ledger.PostInput{}, mintErr
+		}
+
+		clientID = minted
+	}
+
 	return ledger.PostInput{
-		ClientID:   request.ClientID,
+		ClientID:   clientID,
 		OccurredOn: occurredOn,
 		PayeeRef:   request.PayeeRef,
 		Note:       request.Note,
@@ -318,6 +330,7 @@ func (s *Server) entryResponse(ctx context.Context, entry entity.Entry) (entryRe
 func toEntryResponse(entry entity.Entry, names displayNames) entryResponse {
 	out := entryResponse{
 		Ref:        entry.Ref,
+		ClientID:   entry.ClientID,
 		OccurredOn: entry.OccurredOn.Format(constant.DateLayout),
 		Currency:   entry.Currency,
 		Source:     entry.Source,

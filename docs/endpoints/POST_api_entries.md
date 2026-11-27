@@ -32,7 +32,7 @@ None.
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
-| `client_id` | string | no | caller-supplied id, ≤ 64 chars; a replay returns the stored entry |
+| `client_id` | string | no | ≤ 64 chars; omit it and the server mints `<tokenref>_<16 hex>` (prefix `root` for the instance password) and echoes it in the response; sending one back replays the stored entry |
 | `postings[].account_ref` | ref | yes | 32 lowercase hex account ref |
 | `occurred_on` | date | yes | any month, past or future |
 | `payee_ref` | ref | no | the payee this entry is for; an unknown ref answers `404 not_found` |
@@ -46,7 +46,7 @@ None.
 
 ## Response
 
-`201` with the posted entry (`200` when `client_id` replays one already stored). The body
+`201` with the posted entry (`200` when `client_id` replays one already stored). The body carries the `client_id` the entry was stored under — the minted one when the caller sent none — so a retry needs no client-side key. It
 carries `ref`, `occurred_on`, `currency`, `source`, `note`, the postings — each with its
 account's `{ref,name,kind}`, its `fx_rate` and its `fx_source` — and, when the entry has a
 payee, `payee: {ref, name}`.

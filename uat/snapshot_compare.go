@@ -152,6 +152,10 @@ func normaliseString(value string) string {
 		return "<token>"
 	}
 
+	if clientIDPattern.MatchString(value) {
+		return "<client_id>"
+	}
+
 	if refPattern.MatchString(value) {
 		return "<ref>"
 	}

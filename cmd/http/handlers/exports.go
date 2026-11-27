@@ -7,10 +7,10 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	"github.com/dimasbaguspm/spenicle/internal/common/idem"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/validating"
@@ -28,7 +28,7 @@ const (
 )
 
 type exportCreateRequest struct {
-	ClientID string `json:"client_id" validate:"required,max=64"`
+	ClientID string `json:"client_id" validate:"omitempty,max=64"`
 	Format   string `json:"format"    validate:"omitempty,oneof=json csv"`
 	From     string `json:"from"      validate:"omitempty,datestr"`
 	To       string `json:"to"        validate:"omitempty,datestr"`
@@ -85,8 +85,20 @@ func (s *Server) CreateExport(w http.ResponseWriter, r *http.Request) {
 		format = constant.ExportFormatJSON
 	}
 
+	clientID := idem.Normalize(request.ClientID)
+	if clientID == "" {
+		minted, mintErr := idem.Mint(ctx)
+		if mintErr != nil {
+			s.writeClassified(ctx, w, mintErr)
+
+			return
+		}
+
+		clientID = minted
+	}
+
 	job, created, err := s.deps.Exports.Create(ctx, exports.CreateInput{
-		ClientID: strings.TrimSpace(request.ClientID),
+		ClientID: clientID,
 		Format:   format,
 		FromOn:   fromOn,
 		ToOn:     toOn,

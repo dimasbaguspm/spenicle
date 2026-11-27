@@ -22,6 +22,7 @@
     "custom_queries": [],
     "entries": [
       {
+        "client_id": "<client_id>",
         "created_at": "<timestamp>",
         "currency": "IDR",
         "occurred_on": "2026-02-14",

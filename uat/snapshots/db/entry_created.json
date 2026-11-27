@@ -118,7 +118,7 @@
   "import_uploads": [],
   "ledger_entries": [
     {
-      "client_id": null,
+      "client_id": "<client_id>",
       "created_at": "<timestamp>",
       "currency": "IDR",
       "id": 1,

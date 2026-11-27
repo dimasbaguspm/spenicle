@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
+	"github.com/dimasbaguspm/spenicle/internal/common/idem"
 	"github.com/dimasbaguspm/spenicle/internal/common/list"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/validating"
@@ -23,7 +24,7 @@ import (
 )
 
 type importUploadRequest struct {
-	ClientID   string `validate:"required,max=64"`
+	ClientID   string `validate:"omitempty,max=64"`
 	AccountRef string `validate:"omitempty,ref"`
 	Filename   string
 	FileHash   string
@@ -92,6 +93,7 @@ type importChunkFields struct {
 
 type importChunkResponse struct {
 	Ref            string `json:"ref"`
+	ClientID       string `json:"client_id"`
 	ReceivedChunks int    `json:"received_chunks"`
 	ChunkTotal     int    `json:"chunk_total"`
 	ReceivedBytes  string `json:"received_bytes"`
@@ -133,8 +135,16 @@ func (s *Server) CreateImport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if chunked {
+		if !s.resolveClientID(ctx, w, &request, chunk) {
+			return
+		}
+
 		s.writeChunk(ctx, w, request, chunk)
 
+		return
+	}
+
+	if !s.resolveClientID(ctx, w, &request, importChunkFields{Index: -1}) {
 		return
 	}
 
@@ -203,10 +213,41 @@ func (s *Server) writeChunk(
 
 	httpx.WriteJSON(w, status, importChunkResponse{
 		Ref:            result.Upload.Ref,
+		ClientID:       result.Upload.ClientID,
 		ReceivedChunks: result.Upload.ReceivedChunks,
 		ChunkTotal:     result.Upload.ChunkTotal,
 		ReceivedBytes:  strconv.FormatInt(result.Upload.ReceivedBytes, 10),
 	})
+}
+
+func (s *Server) resolveClientID(
+	ctx context.Context,
+	w http.ResponseWriter,
+	request *importUploadRequest,
+	chunk importChunkFields,
+) bool {
+	request.ClientID = idem.Normalize(request.ClientID)
+	if request.ClientID != "" {
+		return true
+	}
+
+	if chunk.Index > 0 {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput,
+			"send the client_id the first chunk answered with")
+
+		return false
+	}
+
+	minted, err := idem.Mint(ctx)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return false
+	}
+
+	request.ClientID = minted
+
+	return true
 }
 
 func (s *Server) suggestCategories(ctx context.Context, rows []importRowResponse) {

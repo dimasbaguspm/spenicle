@@ -42,6 +42,9 @@ var refPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
 var refInText = regexp.MustCompile(`(^|[^0-9a-f])([0-9a-f]{32})([^0-9a-f]|$)`)
 
+// clientIDPattern is a key the server minted: a credential prefix and entropy.
+var clientIDPattern = regexp.MustCompile(`^(root|[0-9a-f]{32})_[0-9a-f]{16}$`)
+
 // statePattern is a signed OAuth state: the issuing second, a dot, then an HMAC.
 var statePattern = regexp.MustCompile(`\d{9,11}\.[0-9a-f]{64}`)
 

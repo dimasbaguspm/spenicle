@@ -52,7 +52,7 @@ None.
 | field | required | notes |
 | --- | --- | --- |
 | `file` | yes | the CSV bytes; the real ceiling is the handler's `maxFormBytes` (`11 << 20` ≈ 11 MiB), not `ImportMaxBytes` |
-| `client_id` | yes | ≤ 64 characters, the idempotency key |
+| `client_id` | no | ≤ 64 characters, the idempotency key. Omit it and the server mints `<tokenref>_<16 hex>` and returns it on the batch; a chunk upload must send the key the first chunk answered with |
 | `account_ref` | no | the account the rows move through; unknown is `404`, omitted resolves to `Unsorted` |
 | `chunk_index` | no | zero-based index; send it together with `chunk_total` |
 | `chunk_total` | no | how many chunks the statement was split into (≥ 1) |
@@ -70,10 +70,12 @@ records the chunk in `import_uploads` + `import_upload_chunks` idempotently
 (`UNIQUE (upload_id, chunk_index)`), and answers `202` with the progress:
 
 ```json
-{"ref":"…","received_chunks":1,"chunk_total":2,"received_bytes":"34"}
+{"ref":"…","client_id":"<tokenref>_<16 hex>","received_chunks":1,"chunk_total":2,"received_bytes":"34"}
 ```
 
-The same `chunk_index` again is a no-op that answers `200` with the same
+The progress body carries the `client_id` the upload is keyed by — the minted one when
+the first chunk sent none — and every later chunk must send it back, or it is `422
+invalid_request`. The same `chunk_index` again is a no-op that answers `200` with the same
 progress — the bytes are truncated back, so a retry cannot corrupt the file.
 When `received_chunks == chunk_total` the handler assembles the file, hashes it
 (sha256), creates the draft exactly as the single-shot path does, marks the
