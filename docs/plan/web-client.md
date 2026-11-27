@@ -99,6 +99,13 @@ curated rules across react, typescript, unicorn, import, promise, jsx-a11y, vite
 `make web-check` runs all four, and `lefthook.yml` calls it on any `web/**` change in both
 pre-commit and pre-push.
 
+## Components
+
+`web/src/components/ui` is the app's own vocabulary — `Button`, `Input`, `Field`, `Select` —
+each with a private props type, one export, and cva variants merged by `tailwind-merge`. Only
+that directory may import a headless library; oxlint's `no-restricted-imports` enforces it.
+Adding a primitive means: write the ui file, then use it in a screen.
+
 ## Theme
 
 `web/src/styles.css` is the whole design system: ink black, porcelain cream, lacquer cherry,

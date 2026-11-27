@@ -5,7 +5,10 @@ import { Controller, useForm, type Resolver } from 'react-hook-form'
 
 import { api, errorMessage } from '@/api/client'
 import { queryClient } from '@/api/query'
-import { AccountSelect } from '@/components/account-select'
+import { Button } from '@/components/ui/button'
+import { Field } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { CaptureForm, today, type CaptureValues } from '@/lib/capture'
 import { formatMoney, toMinor } from '@/lib/money'
 
@@ -141,93 +144,92 @@ export function LedgerPage() {
     post.mutate(values)
   })
 
+  const errors = form.formState.errors
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <form
-        className="space-y-3 rounded-lg border border-border bg-surface-raised p-5"
+        className="border-border bg-surface-raised space-y-4 rounded-lg border p-5"
         onSubmit={submit}
       >
-        <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-brass-500">
+        <h2 className="text-brass-500 text-xs font-medium tracking-[0.14em] uppercase">
           Quick capture
         </h2>
-        <div className="flex gap-2">
-          <input
-            inputMode="decimal"
-            placeholder={`amount (${baseCurrency})`}
-            className="w-32 rounded border border-border bg-surface px-3 py-2 text-text placeholder:text-ink-400 outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
-            {...form.register('amount')}
-          />
-          <input
-            placeholder="what was it"
-            className="flex-1 rounded border border-border bg-surface px-3 py-2 text-text placeholder:text-ink-400 outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
-            {...form.register('note')}
-          />
-          <input
-            type="date"
-            className="rounded border border-border bg-surface px-3 py-2 text-text outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/25"
-            {...form.register('occurredOn')}
-          />
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[9rem_1fr_11rem]">
+          <Field label="Amount" error={errors.amount?.message}>
+            <Input
+              inputMode="decimal"
+              placeholder={baseCurrency}
+              autoComplete="off"
+              {...form.register('amount')}
+            />
+          </Field>
+          <Field label="What was it" error={errors.note?.message}>
+            <Input placeholder="coffee, taxi, rent…" {...form.register('note')} />
+          </Field>
+          <Field label="Day" error={errors.occurredOn?.message}>
+            <Input type="date" {...form.register('occurredOn')} />
+          </Field>
         </div>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <Controller
-              control={form.control}
-              name="categoryRef"
-              render={({ field }) => (
-                <AccountSelect
-                  label="Category"
-                  placeholder="pick a category"
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Controller
+            control={form.control}
+            name="categoryRef"
+            render={({ field, fieldState }) => (
+              <Field label="Category" error={fieldState.error?.message}>
+                <Select
                   value={field.value}
                   options={categoryOptions}
+                  placeholder="pick a category"
                   onChange={field.onChange}
                 />
-              )}
-            />
-          </div>
-          <div className="flex-1">
-            <Controller
-              control={form.control}
-              name="accountRef"
-              render={({ field }) => (
-                <AccountSelect
-                  label="Paid from"
-                  placeholder="pick an account"
+              </Field>
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="accountRef"
+            render={({ field, fieldState }) => (
+              <Field label="Paid from" error={fieldState.error?.message}>
+                <Select
                   value={field.value}
                   options={accountOptions}
+                  placeholder="pick an account"
                   onChange={field.onChange}
                 />
-              )}
-            />
-          </div>
+              </Field>
+            )}
+          />
         </div>
-        <button
-          type="submit"
-          disabled={post.isPending}
-          className="rounded bg-primary px-4 py-2 text-sm font-medium text-porcelain-50 transition-colors hover:bg-primary-hover disabled:opacity-50"
-        >
-          {post.isPending ? 'Posting…' : 'Post entry'}
-        </button>
-        {form.formState.errors.root === undefined ? null : (
-          <p role="alert" className="text-sm text-danger">
-            {form.formState.errors.root.message}
-          </p>
-        )}
-        {post.error === null ? null : (
-          <p role="alert" className="text-sm text-danger">
-            {post.error.message}
-          </p>
-        )}
+
+        <div className="flex items-center gap-3">
+          <Button type="submit" disabled={post.isPending}>
+            {post.isPending ? 'Posting…' : 'Post entry'}
+          </Button>
+          {errors.root === undefined ? null : (
+            <p role="alert" className="text-danger text-sm">
+              {errors.root.message}
+            </p>
+          )}
+          {post.error === null ? null : (
+            <p role="alert" className="text-danger text-sm">
+              {post.error.message}
+            </p>
+          )}
+        </div>
       </form>
 
       <section className="space-y-1">
-        <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-brass-500">Register</h2>
+        <h2 className="text-brass-500 text-xs font-medium tracking-[0.14em] uppercase">Register</h2>
         {entries.isPending ? <p className="text-text-muted">Loading…</p> : null}
         {entries.error === null ? null : (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-danger text-sm">
             {entries.error.message}
           </p>
         )}
-        <ul className="divide-y divide-ink-800">
+        <ul className="divide-ink-800 divide-y">
           {(entries.data?.entries ?? []).map((entry) => {
             const postings = entry.postings ?? []
             const shown =
@@ -236,18 +238,17 @@ export function LedgerPage() {
               entry.note === undefined || entry.note === ''
                 ? (entry.payee?.name ?? '—')
                 : entry.note
+            const outgoing = (shown?.amount_minor ?? '').startsWith('-')
 
             return (
               <li key={entry.ref} className="flex items-baseline gap-3 py-2.5 text-sm">
-                <span className="w-24 shrink-0 tabular-nums text-text-muted">
+                <span className="text-text-muted w-24 shrink-0 tabular-nums">
                   {entry.occurred_on}
                 </span>
-                <span className="flex-1 truncate">{label}</span>
-                <span className="text-ink-300">
-                  {shown === undefined ? '' : (names.get(shown.account_ref ?? '') ?? '')}
-                </span>
+                <span className="text-porcelain-100 flex-1 truncate">{label}</span>
+                <span className="text-ink-300">{names.get(shown?.account_ref ?? '') ?? ''}</span>
                 <span
-                  className={`tabular-nums ${(shown?.amount_minor ?? '').startsWith('-') ? 'text-porcelain-200' : 'text-cherry-300'}`}
+                  className={`tabular-nums ${outgoing ? 'text-porcelain-200' : 'text-cherry-300'}`}
                 >
                   {shown === undefined
                     ? ''

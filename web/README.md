@@ -21,6 +21,23 @@ make web-types   # regenerate src/api/schema.d.ts from ../openapi.json
 | **tsgo** (`@typescript/native-preview`) | TypeScript's native compiler: the same `tsc` semantics, ~10x faster on this tree. It already rejected a `baseUrl` that `tsc` still tolerates, so the config is future-proof                                                     |
 | **mise**                                | `node` + `pnpm` are pinned in `mise.toml` next to `go`, so a clone is one `mise install`                                                                                                                                        |
 
+## `components/ui` — our vocabulary, not Ark's
+
+Every primitive the screens use lives here, with a props type of our own and exactly one
+export per file: `Button`, `Input`, `Field`, `Select`. A widget never imports a headless
+library — `oxlint`'s `no-restricted-imports` blocks `@ark-ui/*` outside this directory, so the
+boundary is enforced, not documented.
+
+- **`Button`, `Input`** — cva variants (`tone`, `size`, `block`; `invalid`, `size`) merged with
+  `tailwind-merge` through `lib/cn.ts`, so a caller's `className` wins on conflict.
+- **`Field`** — label, hint and error wired to the control by `useId`; the control is cloned
+  with `id`, `aria-describedby` and `aria-invalid`, so a screen cannot forget the association.
+- **`Select`** — Ark UI behind our props: listbox semantics, typeahead and roving focus stay
+  Ark's job, every pixel is ours. Enums and callbacks are string refs, never Ark's internals.
+
+`Input` is deliberately a plain `<input>`, not Ark's `NumberInput`: an amount is a string of
+minor units, and a numeric widget would tempt a float.
+
 ## The theme
 
 One file owns the look: `src/styles.css`. Four brand ramps — **ink black** (the paper),

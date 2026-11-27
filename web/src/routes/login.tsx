@@ -4,9 +4,12 @@ import { useState } from 'react'
 
 import { api, errorMessage } from '@/api/client'
 import { setToken } from '@/api/token'
+import { Button } from '@/components/ui/button'
+import { Field } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 
 /**
- * The password never leaves the page: it is exchanged for a scoped token, and only
+ * The password never leaves this form: it is exchanged for a scoped token, and only
  * the token is kept. A leaked browser credential is therefore revocable, not root.
  */
 export function LoginPage() {
@@ -38,39 +41,36 @@ export function LoginPage() {
 
   return (
     <form
-      className="mx-auto mt-20 max-w-sm space-y-5 rounded-lg border border-border bg-surface-raised p-8 shadow-[0_1px_0_0_var(--color-brass-800)]"
+      className="border-border bg-surface-raised mx-auto mt-20 max-w-sm space-y-5 rounded-lg border p-8 shadow-[0_1px_0_0_var(--color-brass-800)]"
       onSubmit={(event) => {
         event.preventDefault()
         signIn.mutate(password)
       }}
     >
-      <h1 className="text-3xl font-semibold text-porcelain-50">Spenicle</h1>
-      <p className="text-sm leading-relaxed text-text-muted">
-        Sign in with the instance password. It is exchanged for a scoped token and never stored.
-      </p>
-      <input
-        type="password"
-        autoComplete="current-password"
-        required
-        value={password}
-        onChange={(event) => {
-          setPassword(event.target.value)
-        }}
-        placeholder="Instance password"
-        className="w-full rounded border border-border bg-surface px-3 py-2 text-text outline-none transition-colors placeholder:text-ink-400 focus:border-accent focus:ring-2 focus:ring-accent/25"
-      />
-      <button
-        type="submit"
-        disabled={signIn.isPending}
-        className="w-full rounded bg-primary px-3 py-2 font-medium text-porcelain-50 transition-colors hover:bg-primary-hover disabled:opacity-50"
-      >
-        {signIn.isPending ? 'Signing in…' : 'Sign in'}
-      </button>
-      {signIn.error !== null ? (
-        <p role="alert" className="text-sm text-danger">
-          {signIn.error.message}
+      <div className="space-y-2">
+        <h1 className="text-porcelain-50 text-3xl font-semibold">Spenicle</h1>
+        <p className="text-text-muted text-sm leading-relaxed">
+          Sign in with the instance password. It is exchanged for a scoped token and never stored.
         </p>
-      ) : null}
+      </div>
+      <Field
+        label="Instance password"
+        hint="Only the token is kept, in this tab."
+        error={signIn.error?.message}
+      >
+        <Input
+          type="password"
+          autoComplete="current-password"
+          placeholder="Instance password"
+          value={password}
+          onChange={(event) => {
+            setPassword(event.target.value)
+          }}
+        />
+      </Field>
+      <Button type="submit" block disabled={signIn.isPending}>
+        {signIn.isPending ? 'Signing in…' : 'Sign in'}
+      </Button>
     </form>
   )
 }

@@ -88,9 +88,38 @@
       }
     ],
     "react-perf/jsx-no-new-function-as-prop": "off",
-    "react-perf/jsx-no-new-object-as-prop": "off"
+    "react-perf/jsx-no-new-object-as-prop": "off",
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "@ark-ui/react",
+            "message": "compose a Ui component instead of importing Ark directly"
+          }
+        ],
+        "patterns": [
+          {
+            "group": ["@ark-ui/*"],
+            "message": "compose a Ui component instead of importing Ark directly"
+          }
+        ]
+      }
+    ]
   },
   "overrides": [
+    {
+      "files": ["src/components/ui/button.tsx"],
+      "rules": {
+        "react/button-has-type": "off"
+      }
+    },
+    {
+      "files": ["src/components/ui/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
     {
       "files": ["vite.config.ts", "src/test/**/*.ts", "**/*.test.tsx"],
       "rules": {
