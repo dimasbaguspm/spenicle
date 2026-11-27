@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "gone",
+    "message": "artifact <ref> was reclaimed"
+  }
+}

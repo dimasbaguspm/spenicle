@@ -88,3 +88,12 @@ Feature: PATCH /api/accounts/{ref}
       | header | Content-Type | application/json |
     Then the response status is 422
     And the response JSON matches the snapshot "patch_api_accounts_:ref__a_parent_that_does_not_exist_is_refused"
+
+  Scenario: A kind change is an unknown field, never a silent rewrite
+    Given a running API
+    When I send a PATCH to "/api/accounts/{{account:Cash}}" with:
+      """json
+      {"kind":"expense"}
+      """
+    Then the response status is 400
+    And the response JSON matches the snapshot "patch_api_accounts_:ref__a_kind_change_is_refused_as_unknown"

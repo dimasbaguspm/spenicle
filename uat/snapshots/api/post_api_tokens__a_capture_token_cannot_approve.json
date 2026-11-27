@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "forbidden",
+    "message": "this action needs the entries:write scope"
+  }
+}

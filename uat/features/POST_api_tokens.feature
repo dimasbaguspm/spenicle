@@ -91,3 +91,32 @@ Feature: POST /api/tokens
       | {"name":"agent"}                              | 422    |
       | {"name":"agent","scopes":[]}                   | 422    |
       | {"name":"agent","scopes":["ledger:read"]}      | 422    |
+
+  Scenario: A capture token cannot approve, and the refusal names the scope it lacks
+    Given the instance password is "uat-password-1234"
+    And a running API
+    When I sign in with the instance password
+    And the request body is:
+      """json
+      {"name":"queue-only","scopes":["captures:write"]}
+      """
+    And I send a POST to "/api/tokens" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 201
+    When the issued token is the bearer credential
+    And the request body is:
+      """json
+      {"kind":"manual","raw_text":"coffee 25000"}
+      """
+    And I send a POST to "/api/captures" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
+    Then the response status is 202
+    And the last ref is remembered as "capture"
+    When I send a PATCH to "/api/captures/{{ref:capture}}" with:
+      """json
+      {"action":"approve","occurred_on":"2026-02-14","currency":"IDR","postings":[{"account_ref":"{{account:Unsorted}}","amount_minor":"25000"},{"account_ref":"{{account:Cash}}","amount_minor":"-25000"}]}
+      """
+    Then the response status is 403
+    And the response JSON matches the snapshot "post_api_tokens__a_capture_token_cannot_approve"

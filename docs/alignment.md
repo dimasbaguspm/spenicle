@@ -9,6 +9,7 @@ Append a row per check; never rewrite a past one.
 | --- | --- | --- | --- | --- | --- |
 | 2026-11-27T04:08Z | `2fdf1ef3f3293eed8f43da32b277ed9779fe08dc` | `main` | Dimas Mukti (PI-Desktop agent) | every file under `docs/`, plus `README.md` and `AGENTS.md` | **GO** |
 | 2026-11-27T11:35Z | `2fdf1ef3` + the code fixes in this change | `main` | Dimas Mukti (PI-Desktop agent) | the ten product-deck features against the code and the UAT suite | **GO** |
+| 2026-11-27T15:20Z | `59ee5c9` + the ledger-group refactor and the new scenarios in this change | `main` | Dimas Mukti (PI-Desktop agent) | every deck clause that was listed as "untested", one UAT scenario each | **GO** |
 
 ## What a check covers
 
@@ -89,14 +90,14 @@ it and nothing fails if it stops doing it.
 
 | # | feature | state | proven | untested clause |
 | --- | --- | --- | --- | --- |
-| F1 | access and bootstrap | **GO** | 8 of 9 clauses — setup, currency lock, password gate, tokens, revoke | the refusal message naming `entries:write` is never asserted |
-| F2 | capture inbox | **GO** | approve, reject, retry, match, dedupe, intake allowlist | the artifact answers `410` only after the worker reclaims it |
+| F1 | access and bootstrap | **GO** | 9 of 9 clauses — setup, currency lock, password gate, tokens, revoke, and the `403` that names the scope a token lacks (`post_api_tokens__a_capture_token_cannot_approve`) | the `?status=revoked` listing filter |
+| F2 | capture inbox | **GO** | approve, reject, retry, match, dedupe, intake allowlist, and the artifact answering `410` once the worker reclaims it (`get_api_captures_artifact__a_reclaimed_artifact_answers_410`) | the journal row's `action` is asserted by kind only |
 | F3 | ledger | **GO** | 8 of 8 — zero-sum, FX, void writes a reversal, balances hold | the `reverses_entry_ref` linkage is not on the wire (see the plan) |
-| F4 | accounts and payees | **GO** | create, archive, rename, defaults, `409 duplicate` | a `kind` change is refused only because the body has no such field |
-| F5 | recurring | **GO** | queue, dedupe, catch-up cap, pause | the rule id is not on the entry; it lives in the capture's `draft_json` |
-| F6 | statement import | **GO** | clash kinds, commit, reject, chunk assembly, suggestions on both upload paths | the reject `reason` is stored and never read back |
-| F7 | insights | **GO** | dashboard tiles, month series, saved views, window validation | category ordering and the empty-window `months` key |
-| F8 | export | **GO** | queue, worker render, download, events, retention | the per-file sha256 in the manifest is never asserted |
+| F4 | accounts and payees | **GO** | create, archive, rename, defaults, `409 duplicate`, and a `kind` change answered `400 invalid_json` (`patch_api_accounts_:ref__a_kind_change_is_refused_as_unknown`) | archiving keeps the posting on its entry (no step) |
+| F5 | recurring | **GO** | queue, dedupe, catch-up cap, pause, and the rule that survives in the capture's `draft_json` | the entry cannot name the rule: it is a ref on the capture, not on the entry |
+| F6 | statement import | **GO** | clash kinds, commit, reject, chunk assembly, suggestions on both upload paths, and the reject reason kept on the event (`get_api_imports_ref_events__a_reject_keeps_its_reason`) | nothing |
+| F7 | insights | **GO** | dashboard tiles, month series, saved views, window validation, and an empty window omitting the `months` key (`get_api_analytics_custom_ref__a_window_with_no_rows_omits_months`) | category ordering on a tie |
+| F8 | export | **GO** | queue, worker render, download, events, retention | the per-file `sha256` in the manifest |
 | F9 | gaps and next | n/a | the list itself: every "not shipped" row was checked against the tree | — |
 | F10 | categories | **GO** | tiers, archived-category skip, rule caps, suggestions | the archived-category scenario asserts the wrong tier |
 

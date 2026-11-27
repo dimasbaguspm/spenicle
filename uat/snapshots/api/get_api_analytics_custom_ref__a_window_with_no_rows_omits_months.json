@@ -1,0 +1,11 @@
+{
+  "from": "2020-01-01",
+  "query": {
+    "chart": "bar",
+    "created_at": "<timestamp>",
+    "name": "empty-window",
+    "namespace": "months",
+    "ref": "<ref>"
+  },
+  "to": "2020-02-29"
+}

@@ -1,0 +1,23 @@
+{
+  "events": [
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "rejected",
+      "payload": {
+        "reason": "the wrong month"
+      },
+      "ref": "<ref>"
+    },
+    {
+      "actor": "user",
+      "at": "<timestamp>",
+      "kind": "uploaded",
+      "ref": "<ref>"
+    }
+  ],
+  "meta": {
+    "has_more": false,
+    "limit": 50
+  }
+}

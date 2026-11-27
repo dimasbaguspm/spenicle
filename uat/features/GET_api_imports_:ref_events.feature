@@ -116,3 +116,21 @@ Feature: GET /api/imports/{ref}/events
     When I send a GET to "/api/imports/00000000000000000000000000000000/events"
     Then the response status is 404
     And the response JSON matches the snapshot "get_api_imports_ref_events__an_unknown_batch_has_no_events"
+
+  Scenario: A reject keeps its reason on the event, not on the batch
+    Given a running API
+    And I upload the statement "march.csv" with the client id "statement-reason":
+      """csv
+      occurred_on,amount_minor,description
+      2025-02-10,-20000,GROCERIES
+      """
+    And the response status is 201
+    And the last ref is remembered as "batch"
+    When I send a PATCH to "/api/imports/{{ref:batch}}" with:
+      """json
+      {"action":"reject","reason":"the wrong month"}
+      """
+    Then the response status is 200
+    When I send a GET to "/api/imports/{{ref:batch}}/events"
+    Then the response status is 200
+    And the response JSON matches the snapshot "get_api_imports_ref_events__a_reject_keeps_its_reason"

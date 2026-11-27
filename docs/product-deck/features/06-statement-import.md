@@ -254,7 +254,7 @@ Scenario: Chunked uploads resume and assemble
 - Allowed header names are fixed: `occurred_on`, `amount_minor`, `description`, optional `currency`,
   matched by trimmed name in any column order. No arbitrary column mapping, delimiter/encoding detection, PDF or XLSX.
 - A row without `currency` uses the batch's base currency; a row with `currency` overrides it.
-- Committed UAT covers the canonical header order, not reordered columns.
+- Committed UAT covers the canonical header order and a statement whose columns arrive in another order (`POST_api_imports.feature`).
 - No partial-failure report in the commit response — the event log is the report.
 - No reopen of a rejected batch; no bulk row patch.
 - A reclaimed draft is gone, not tombstoned.
