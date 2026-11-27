@@ -160,6 +160,21 @@ fetching, caching, retry and invalidation. An Effect `Runtime` on the request pa
 nothing here — no resource scopes, no per-query concurrency — and bridging it to `useQuery`'s
 promise contract would only re-implement `useQuery`.
 
+## `lib/format/` — the fallbacks live with the data
+
+A component should not decide what a missing field looks like. `lib/format/<entity>.ts` holds one
+pure module per entity (`capture`, `entry`, `account`), and it answers both questions a screen
+asks:
+
+- **what to show** — `captureTime(row)`, `entryTitle(row)`, `accountBalance(row)`, each already
+  carrying the fallback (`absent`, exported once) so JSX never writes `?? '—'`;
+- **what is true** — `isReversed(entry)`, `needsAttention(capture)`, `isArchived(account)`,
+  `hasNote(entry)`, so a branch reads as a fact instead of a field comparison.
+
+No React, no hooks, no `text-*` class except the data-driven tone a status earns. The input types
+are all-optional field shapes, so a partial row formats instead of throwing, and a `Fixed<>` row
+satisfies them. Table-driven tests live next to it (`format.test.ts`).
+
 ## The theme
 
 One file owns the look: `src/styles.css`. Four brand ramps — **ink black** (the paper),
@@ -209,6 +224,7 @@ src/components/       primitives → ui → widgets → layouts (see above)
 src/router.tsx        code-based routes + the auth guard in beforeLoad
 src/routes/           AppShell's outlet: login, ledger, captures
 src/lib/money.ts      minor-unit string arithmetic
+src/lib/format/       per-entity display: fallbacks and flags, so JSX has no `??`
 ```
 
 ## What is deliberately not here yet

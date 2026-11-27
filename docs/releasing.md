@@ -37,18 +37,23 @@ tagger.
 
 One artifact: **the container image**, and a GitHub release whose notes are links.
 
-1. **Image** — `ghcr.io/<owner>/spenicle`, built for `linux/amd64` and
-   `linux/arm64`, tagged four ways:
+1. **Images** — four targets from one `docker buildx bake` run
+   (`docker-bake.hcl`), so the Dockerfile's stages are built once and the extra
+   targets cost a copy layer, not a rebuild:
 
-   | tag | use |
+   | tag | what runs |
    |---|---|
-   | `v0.2.0` | exact release, immutable in practice |
-   | `0.2.0` | same digest, for tooling that dislikes the `v` |
-   | `sha-<sha7>` | the commit, before or after a tag exists |
-   | `latest` | convenience; moves on every release |
+   | `v0.2.0`, `0.2.0`, `sha-<sha7>`, `latest` | API + worker + the embedded SPA |
+   | `server` | API + worker, no SPA bytes |
+   | `web` | the SPA on nginx, for a split deploy |
+   | `cli` | the binary with no supervisor |
 
-2. **GitHub release** — no attached files. The notes carry a table (image,
-   digest, platforms, commit, the version `/healthz` reports) and then every commit
+   Every tag is multi-arch (`linux/amd64`, `linux/arm64`). Whether the SPA is
+   embedded is the `-tags web` build tag, chosen by the image target, never by an
+   environment variable a self-hoster could set.
+
+2. **GitHub release** — no attached files. The notes carry a table (the four
+   tags, the commit, the version `/healthz` reports) and then every commit
    since the previous tag, each one a **clickable link** to its commit, followed by
    a compare link across the whole range:
 

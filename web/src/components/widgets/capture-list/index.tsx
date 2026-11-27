@@ -1,4 +1,5 @@
 import { Text } from '@/components/primitives/text'
+import { captureKind, captureStatus, captureStatusTone, captureTime } from '@/lib/format/capture'
 
 type CaptureRow = {
   ref?: string | undefined
@@ -11,24 +12,9 @@ type CaptureListProps = {
   rows: CaptureRow[]
 }
 
-const tones: Record<string, string> = {
-  captured: 'text-success',
-  approved: 'text-success',
-  pending: 'text-warning',
-  extracting: 'text-warning',
-  duplicate: 'text-info',
-  rejected: 'text-danger',
-  failed: 'text-danger',
-}
-
-function statusTone(status: string | undefined): string {
-  return tones[status ?? ''] ?? 'text-text-muted'
-}
-
 /**
- * A widget: the inbox rows as one screen section. It owns the three-column rhythm and the
- * status colours, and knows nothing about fetching, query keys or routing — the page hands it
- * rows and it renders them.
+ * A widget: the inbox rows as one screen section. It owns the three-column rhythm and knows
+ * nothing about fetching, query keys or routing — the page hands it rows and it renders them.
  */
 export function CaptureList({ rows }: CaptureListProps) {
   return (
@@ -36,13 +22,13 @@ export function CaptureList({ rows }: CaptureListProps) {
       {rows.map((capture) => (
         <li key={capture.ref} className="flex items-baseline gap-3 py-2.5 text-sm">
           <Text as="span" tone="body" className="text-text-muted w-32 shrink-0 tabular-nums">
-            {(capture.received_at ?? '').slice(0, 16).replace('T', ' ')}
+            {captureTime(capture)}
           </Text>
           <Text as="span" tone="body" className="flex-1 truncate">
-            {capture.kind ?? '—'}
+            {captureKind(capture)}
           </Text>
-          <Text as="span" tone="caption" className={statusTone(capture.status)}>
-            {capture.status}
+          <Text as="span" tone="caption" className={captureStatusTone(capture)}>
+            {captureStatus(capture)}
           </Text>
         </li>
       ))}

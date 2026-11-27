@@ -194,6 +194,14 @@ There is no environment variable for this, by design. The Dockerfile carries fou
 and its `APP_WEB` build arg exists only to refuse `off` on the full image. CI compiles
 `-tags web` on every push so a broken embed is not a release-day surprise.
 
+## Formatting
+
+`src/lib/format/<entity>.ts` is where a display decision stops being a component's problem: one
+pure module per entity, a function per rendered field that already knows its fallback
+(`captureTime`, `entryTitle`, `accountBalance`), a boolean per question a screen branches on
+(`isReversed`, `needsAttention`, `isArchived`, `hasNote`), and one exported `absent` so the
+fallback is consistent. No React, no hooks; table-driven tests beside it.
+
 ## Theme
 
 `web/src/styles.css` is the whole design system: ink black, porcelain cream, lacquer cherry,

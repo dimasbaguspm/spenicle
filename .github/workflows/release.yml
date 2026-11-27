@@ -1,12 +1,7 @@
 name: release
 
-# One way in: push an annotated semver tag. Nothing else creates a release.
-#
-#   git tag -a v0.2.0 -m "v0.2.0"
-#   git push origin v0.2.0
-#
-# What it produces: the container image on GHCR and a GitHub release whose notes
-# link every commit. No binary assets — the image is the only artifact.
+# A release is one annotated semver tag: `git tag -a v0.2.0 -m v0.2.0 && git push origin v0.2.0`.
+# It publishes four container images from docker-bake.hcl and a release whose notes link every commit.
 on:
   push:
     tags: ['v*']
@@ -21,7 +16,6 @@ permissions:
 
 jobs:
   release:
-    name: publish image and notes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -32,120 +26,62 @@ jobs:
       - name: Resolve version
         id: v
         env:
-          VERSION: ${{ github.ref_name }}
+          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-
-          if ! printf '%s' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "tag '$VERSION' is not semver (vMAJOR.MINOR.PATCH); refusing to release" >&2
-            exit 1
-          fi
-
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "tag '$TAG' is not vMAJOR.MINOR.PATCH" >&2; exit 1; }
           SHA7="$(git rev-parse --short=7 HEAD)"
+          echo "version=$TAG"        >> "$GITHUB_OUTPUT"
+          echo "short=${TAG#v}"      >> "$GITHUB_OUTPUT"
+          echo "sha7=$SHA7"          >> "$GITHUB_OUTPUT"
+          echo "full=$TAG+$SHA7"     >> "$GITHUB_OUTPUT"
 
-          {
-            echo "version=$VERSION"
-            echo "short=${VERSION#v}"
-            echo "sha7=$SHA7"
-            echo "full=${VERSION}+${SHA7}"
-          } >> "$GITHUB_OUTPUT"
-
-          echo "releasing $VERSION at $SHA7"
-
-      # QEMU runs the arm64 toolchain on the amd64 runner; without it the second
-      # platform fails with "exec format error".
       - uses: docker/setup-qemu-action@v4
-
       - uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Publish the full image (API, worker and the embedded SPA)
-        id: image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: true
-          # The image is the whole distribution, so build the two architectures
-          # a self-hoster actually runs: a server and a Raspberry Pi.
-          platforms: linux/amd64,linux/arm64
-          target: latest
-          build-args: |
-            VERSION=${{ steps.v.outputs.full }}
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ steps.v.outputs.version }}
-            ghcr.io/${{ github.repository }}:${{ steps.v.outputs.short }}
-            ghcr.io/${{ github.repository }}:sha-${{ steps.v.outputs.sha7 }}
-            ghcr.io/${{ github.repository }}:latest
-          labels: |
-            org.opencontainers.image.version=${{ steps.v.outputs.full }}
-            org.opencontainers.image.revision=${{ github.sha }}
-
-      # The other three targets come from the same Dockerfile: `server` is the binary without
-      # the SPA bytes (the headless deploy), `web` is the SPA alone on nginx, `cli` is the
-      # binary with no supervisor. The embed switch is a build target, never an env var.
-      - name: Publish the headless, web and CLI images
-        run: |
-          set -euo pipefail
-
-          for target in server web cli; do
-            docker buildx build \
-              --platform linux/amd64,linux/arm64 \
-              --push \
-              --target "$target" \
-              --build-arg "VERSION=${{ steps.v.outputs.full }}" \
-              --tag "ghcr.io/${{ github.repository }}:${target}" \
-              --tag "ghcr.io/${{ github.repository }}:sha-${{ steps.v.outputs.sha7 }}-${target}" \
-              .
-          done
-
-      - name: Collect the changes
+      # One build for four images: bake shares the Dockerfile's `gosrc`, `spa` and `runtime`
+      # stages, so the second, third and fourth target cost a copy layer, not a rebuild.
+      - name: Build and push
         env:
           VERSION: ${{ steps.v.outputs.version }}
           SHORT: ${{ steps.v.outputs.short }}
+          SHA7: ${{ steps.v.outputs.sha7 }}
+          REPO: ${{ github.repository }}
+        run: docker buildx bake --push
+
+      - name: Write notes
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
           FULL: ${{ steps.v.outputs.full }}
           SHA7: ${{ steps.v.outputs.sha7 }}
-          DIGEST: ${{ steps.image.outputs.digest }}
           REPO: ${{ github.repository }}
-          SERVER: ${{ github.server_url }}
+          BASE: ${{ github.server_url }}/${{ github.repository }}
         run: |
           set -euo pipefail
-
-          base="$SERVER/$REPO"
-
           prev="$(git describe --tags --abbrev=0 "${VERSION}^" 2>/dev/null || true)"
-
-          if [ -n "$prev" ]; then
-            range="${prev}..${VERSION}"
-            heading="Changes since ${prev}"
-            diff="**Full diff:** [${prev}...${VERSION}](${base}/compare/${prev}...${VERSION})"
-          else
-            range="${VERSION}"
-            heading="Every commit up to ${VERSION}"
-            diff="**All commits:** [${VERSION}](${base}/commits/${VERSION})"
-          fi
+          if [ -n "$prev" ]; then range="${prev}..${VERSION}"; else range="${VERSION}"; fi
 
           {
             echo "The release is a container image. Nothing to download, nothing to unpack."
             echo
             echo "| | |"
             echo "|---|---|"
-            echo "| image | [\`ghcr.io/${REPO}:${VERSION}\`](${base}/pkgs/container/$(basename "$REPO")) |"
-            echo "| digest | \`${DIGEST}\` |"
-            echo "| platforms | \`linux/amd64\`, \`linux/arm64\` |"
-            echo "| commit | [\`${SHA7}\`](${base}/commit/${GITHUB_SHA}) |"
+            echo "| images | \`ghcr.io/${REPO}:latest\`, \`:server\`, \`:web\`, \`:cli\` |"
             echo "| version in \`/healthz\` | \`${FULL}\` |"
+            echo "| commit | [\`${SHA7}\`](${BASE}/commit/$GITHUB_SHA) |"
             echo
-            echo "## ${heading}"
+            echo "## Changes since ${prev:-the first tag}"
             echo
-            # Every commit is a link: the notes are meant to be clicked, not read
-            # as plain text.
-            git log --no-merges --pretty="- [\`%h\`](${base}/commit/%H) %s" "$range"
+            git log --no-merges --pretty="- [\`%h\`](${BASE}/commit/%H) %s" "$range"
             echo
-            echo "$diff"
+            if [ -n "$prev" ]; then
+              echo "**Full diff:** [${prev}...${VERSION}](${BASE}/compare/${prev}...${VERSION})"
+            else
+              echo "**All commits:** [${VERSION}](${BASE}/commits/${VERSION})"
+            fi
           } > notes.md
 
           cat notes.md
@@ -154,7 +90,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.v.outputs.version }}
-        run: |
-          gh release create "$VERSION" \
-            --title "$VERSION" \
-            --notes-file notes.md
+        run: gh release create "$VERSION" --title "$VERSION" --notes-file notes.md
