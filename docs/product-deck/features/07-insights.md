@@ -1,6 +1,6 @@
 # F7 — How did the month go
 
-**Status** partial — duplicate saved-view `409` is covered by UAT; default windows use UTC, not `APP_TIMEZONE` · **Client** home screen, month bars, category pie, saved views
+**Status** partial — duplicate saved-view `409` is covered by UAT; default windows follow `APP_TIMEZONE` · **Client** home screen, month bars, category pie, saved views
 **Routes** `GET /api/dashboard` · `GET /api/analytics/months` · `GET /api/analytics/categories` · `POST /api/analytics/custom` · `GET /api/analytics/custom/{ref}` · `PATCH /api/analytics/custom/{ref}`
 
 ## 1. The job the user has
@@ -38,7 +38,7 @@ echoes `from` and `to`, so the client never has to guess which window it rendere
 
 | # | call | notes |
 | --- | --- | --- |
-| 1 | `GET /api/analytics/months` | default window: first day of the month 11 months ago → today, both derived from `time.Now().UTC()` (not `APP_TIMEZONE`) |
+| 1 | `GET /api/analytics/months` | default window: first day of the month 11 months ago → today, both derived from the clock in `APP_TIMEZONE` |
 | 2 | `GET /api/analytics/months?from=2026-01-01&to=2026-12-31` | any range, unbounded allowed |
 | 3 | `GET /api/analytics/categories?from=&to=&kind=expense` | default `kind=expense`; `income` flips the pie |
 | 4 | tap a bar → `GET /api/entries?from=<month start>&to=<month end>` | the drill-down is the ledger, which already filters by date |
@@ -103,7 +103,7 @@ PATCH/api/analytics/custom/{r} Handler.Analytics.PatchCustom → UpdateCustomQue
 2. Every money field is a minor-unit **string**; the client formats, the API never does.
 3. The dashboard client supplies one explicit, ordered `from`/`to` window; every tile
    uses it and the response echoes both dates. Months and categories keep their
-   twelve-month **UTC** defaults when the client omits a window.
+   twelve-month defaults in `APP_TIMEZONE` when the client omits a window.
 4. An empty ledger answers zeroes and an omitted `top_category`, never a `404`.
 5. `month` on the dashboard is the newest month **with data**; the client must label the
    tile from that field, not from its own clock.
@@ -194,7 +194,7 @@ Scenario: A report window is validated
 
 ## 6. What this page does not promise
 
-- No fiscal-month offset, no timezone-shifted months: entries carry a date, not a time, and default windows use UTC, not `APP_TIMEZONE`.
+- No fiscal-month offset: entries carry a date, not a time, so a month is always the calendar month on the entry. Which *day* a default window ends on, and what `to` includes, follows `APP_TIMEZONE`.
 - No parent roll-up on `months`, no per-account split, no currency breakdown.
   `categories` has opt-in `rollup=parent`.
 - No caching, no materialised rollups, no incremental refresh.

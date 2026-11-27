@@ -16,8 +16,8 @@ import (
 const analyticsWindowMonths = 12
 
 type analyticsRangeQuery struct {
-	From string `query:"from" validate:"omitempty,datestr"`
-	To   string `query:"to"   validate:"omitempty,datestr"`
+	From string `query:"from" validate:"omitempty,momentstr"`
+	To   string `query:"to"   validate:"omitempty,momentstr"`
 }
 
 type monthTotalResponse struct {
@@ -44,7 +44,7 @@ func (s *Server) MonthlyAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	from, to, err := analyticsWindow(query)
+	from, to, err := analyticsWindow(query, s.location)
 	if err != nil {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput, err.Error())
 
@@ -76,13 +76,13 @@ func (s *Server) MonthlyAnalytics(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
-func analyticsWindow(query analyticsRangeQuery) (time.Time, time.Time, error) {
-	now := time.Now().UTC()
+func analyticsWindow(query analyticsRangeQuery, loc *time.Location) (time.Time, time.Time, error) {
+	now := time.Now().In(loc)
 
-	to := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	to := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 
 	if query.To != "" {
-		parsed, err := validating.Day(query.To, "to")
+		parsed, err := validating.MomentEnd(query.To, "to", loc)
 		if err != nil {
 			return time.Time{}, time.Time{}, err
 		}
@@ -90,10 +90,10 @@ func analyticsWindow(query analyticsRangeQuery) (time.Time, time.Time, error) {
 		to = parsed
 	}
 
-	from := time.Date(to.Year(), to.Month()-(analyticsWindowMonths-1), 1, 0, 0, 0, 0, time.UTC)
+	from := time.Date(to.Year(), to.Month()-(analyticsWindowMonths-1), 1, 0, 0, 0, 0, loc)
 
 	if query.From != "" {
-		parsed, err := validating.Day(query.From, "from")
+		parsed, err := validating.Moment(query.From, "from", loc)
 		if err != nil {
 			return time.Time{}, time.Time{}, err
 		}
@@ -109,8 +109,8 @@ func analyticsWindow(query analyticsRangeQuery) (time.Time, time.Time, error) {
 }
 
 type categoryAnalyticsQuery struct {
-	From   string `query:"from"   validate:"omitempty,datestr"`
-	To     string `query:"to"     validate:"omitempty,datestr"`
+	From   string `query:"from"   validate:"omitempty,momentstr"`
+	To     string `query:"to"     validate:"omitempty,momentstr"`
 	Kind   string `query:"kind"   validate:"omitempty,oneof=expense income"`
 	Rollup string `query:"rollup" validate:"omitempty,oneof=parent"`
 	Bucket string `query:"bucket" validate:"omitempty,oneof=month"`
@@ -161,7 +161,7 @@ func (s *Server) CategoryAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	from, to, err := analyticsWindow(analyticsRangeQuery{From: query.From, To: query.To})
+	from, to, err := analyticsWindow(analyticsRangeQuery{From: query.From, To: query.To}, s.location)
 	if err != nil {
 		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput, err.Error())
 

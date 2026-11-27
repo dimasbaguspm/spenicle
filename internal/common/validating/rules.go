@@ -36,6 +36,16 @@ var rules = map[string]validator.Func{ //nolint:gochecknoglobals // read-only ru
 
 		return err == nil
 	},
+	"momentstr": func(field validator.FieldLevel) bool {
+		raw := strings.TrimSpace(field.Field().String())
+		if raw == "" {
+			return false
+		}
+
+		_, err := Moment(raw, "moment", time.UTC)
+
+		return err == nil
+	},
 	"datestr": func(field validator.FieldLevel) bool {
 		raw := strings.TrimSpace(field.Field().String())
 		if raw == "" {

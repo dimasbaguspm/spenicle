@@ -140,9 +140,9 @@ func (s *Server) RunCustomQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	from, to, err := analyticsWindow(query)
+	from, to, err := analyticsWindow(query, s.location)
 	if err != nil {
-		writeInvalid(w, err)
+		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput, err.Error())
 
 		return
 	}

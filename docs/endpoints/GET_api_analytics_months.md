@@ -22,8 +22,8 @@ excluded, so a void leaves no trace.
 
 | name | type | required | notes |
 | --- | --- | --- | --- |
-| `from` | string | no | `YYYY-MM-DD`; defaults to the first of the month 11 months before `to`, so the default answer is the 12 buckets ending with `to`'s month |
-| `to` | string | no | `YYYY-MM-DD`; defaults to today |
+| `from` | string | no | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` (`:SS`, or full RFC3339), read in `APP_TIMEZONE`; defaults to the first of the month 11 months before `to`, so the default answer is the 12 buckets ending with `to`'s month |
+| `to` | string | no | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` (`:SS`, or full RFC3339), read in `APP_TIMEZONE`; defaults to today *there*, so `APP_TIMEZONE` decides which day the window ends on |
 
 ## Body
 

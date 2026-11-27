@@ -21,8 +21,8 @@ Opening a pinned chart, a dashboard embedding a saved view.
 | name | type | required | notes |
 | --- | --- | --- | --- |
 | `ref` | string | yes | path: the saved query |
-| `from` | string | no | `YYYY-MM-DD`; defaults to 11 months back |
-| `to` | string | no | `YYYY-MM-DD`; defaults to today |
+| `from` | string | no | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` (`:SS`, or full RFC3339), read in `APP_TIMEZONE`; defaults to 11 months back |
+| `to` | string | no | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` (`:SS`, or full RFC3339), read in `APP_TIMEZONE`; defaults to today *there* |
 
 ## Body
 

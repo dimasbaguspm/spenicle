@@ -26,8 +26,8 @@ and `substr(occurred_on, 1, 7)` in one pass and folds the rows into one entry pe
 
 | name | type | required | notes |
 | --- | --- | --- | --- |
-| `from` | string | no | `YYYY-MM-DD`; defaults to the first of the month 11 months before `to` |
-| `to` | string | no | `YYYY-MM-DD`; defaults to today |
+| `from` | string | no | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` (`:SS`, or full RFC3339), read in `APP_TIMEZONE`; defaults to the first of the month 11 months before `to` |
+| `to` | string | no | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` (`:SS`, or full RFC3339), read in `APP_TIMEZONE`; defaults to today *there* |
 | `kind` | string | no | `expense` (default) or `income` |
 | `rollup` | string | no | `parent` sums each child into its top-most ancestor and lists only roots; absent keeps one row per account |
 | `bucket` | string | no | `month` answers one entry per account carrying a `months` array instead of one `amount_minor`; cannot be combined with `rollup` |

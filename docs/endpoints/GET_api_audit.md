@@ -23,7 +23,7 @@ on `audit_log.id`. Rows are never written here.
 | `entity_ref` | the row's ref; a `setting` has none (its key is in `to.key`) |
 | `action` | `create`, `update`, `void`, `approve`, `reject`, `retry`, `advance`, `generate`, `revoke`, `start` |
 | `actor_kind` | `user` (a person or a token — its ref is in `actor_ref`), `worker`, `system` |
-| `from`, `to` | `YYYY-MM-DD`; `from` is inclusive from midnight UTC, `to` is compared against midnight UTC of that day, so rows written later on the `to` day are excluded |
+| `from`, `to` | `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM` (`:SS`, or full RFC3339), read in `APP_TIMEZONE`; a bare `from` starts that day, a bare `to` covers all of it, so `to=2026-02-14` includes every row written on the 14th, and `to=2026-02-14T09:30` stops at half past nine |
 | `cursor`, `limit` | the shared paging (default 50, max 200) |
 
 ## Body
