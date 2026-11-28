@@ -1,9 +1,6 @@
 import { Outlet } from '@tanstack/react-router'
 
-import { Brand } from '@/components/layouts/brand'
-import { ThemeToggle } from '@/components/layouts/theme-toggle'
-import { Version } from '@/components/layouts/version'
-import { Text } from '@/components/primitives/text'
+import { ShellFooter } from '@/components/layouts/footer'
 
 /**
  * The signed-out shell: the claim or sign-in plate in the middle of a wide page — `Gate` lays the
@@ -20,16 +17,7 @@ export function PublicShell() {
         <Outlet />
       </main>
 
-      <footer className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 pb-6">
-        <div className="flex items-center gap-3">
-          <Brand size="sm" />
-          <Text as="span" tone="caption" className="text-text-faint">
-            Self-hosted. One household.
-          </Text>
-          <Version />
-        </div>
-        <ThemeToggle />
-      </footer>
+      <ShellFooter width="max-w-5xl" />
     </div>
   )
 }

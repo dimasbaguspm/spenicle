@@ -1,4 +1,5 @@
 export * from './app-shell'
 export * from './brand'
 export * from './theme-toggle'
+export { ShellFooter } from './footer'
 export { Gate } from './gate'
