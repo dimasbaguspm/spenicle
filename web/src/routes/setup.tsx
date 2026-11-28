@@ -36,7 +36,9 @@ export function SetupPage() {
 
   // a claimed instance has nothing to set up: the screen is a dead end, so it says so.
   // A password without a completed setup reaches the same answer through the 401 below.
-  const claimed = boot.data?.setup_completed === true || isApiError(meta.error)
+  // Any other failure is not a claim: the form stays and shows what the API said.
+  const unauthorized = isApiError(meta.error) && meta.error.status === 401
+  const claimed = boot.data?.setup_completed === true || unauthorized
 
   const chooseCurrency = useMemo(
     () =>
