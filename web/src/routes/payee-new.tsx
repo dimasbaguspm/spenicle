@@ -22,7 +22,11 @@ export function NewPayeePage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader
-        items={[{ label: 'Payees', to: '/manage/payees' }, { label: 'New payee' }]}
+        items={[
+          { label: 'Manage', to: '/manage' },
+          { label: 'Payees', to: '/manage/payees' },
+          { label: 'New payee' },
+        ]}
         title="New payee"
       />
 

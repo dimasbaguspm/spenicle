@@ -44,7 +44,11 @@ export function AccountDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        items={[{ label: 'Accounts', to: '/manage/accounts' }, { label: account?.name ?? absent }]}
+        items={[
+          { label: 'Manage', to: '/manage' },
+          { label: 'Accounts', to: '/manage/accounts' },
+          { label: account?.name ?? absent },
+        ]}
         title={account?.name ?? absent}
         action={
           <div className="flex items-center gap-3">

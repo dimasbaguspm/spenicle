@@ -33,6 +33,7 @@ export function PayeeEditPage() {
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader
         items={[
+          { label: 'Manage', to: '/manage' },
           { label: 'Payees', to: '/manage/payees' },
           { label: payee?.name ?? 'Payee', to: `/manage/payees/${ref}` },
           { label: 'Edit' },

@@ -44,7 +44,11 @@ export function CaptureReviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        items={[{ label: 'Captures', to: '/manage/captures' }, { label: 'Review' }]}
+        items={[
+          { label: 'Manage', to: '/manage' },
+          { label: 'Captures', to: '/manage/captures' },
+          { label: 'Review' },
+        ]}
         title="Review a capture"
       />
 

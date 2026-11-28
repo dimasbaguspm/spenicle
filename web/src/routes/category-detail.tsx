@@ -42,6 +42,7 @@ export function CategoryDetailPage() {
     <div className="space-y-6">
       <PageHeader
         items={[
+          { label: 'Manage', to: '/manage' },
           { label: 'Categories', to: '/manage/categories' },
           { label: account?.name ?? absent },
         ]}

@@ -68,6 +68,7 @@ function ScopeCreate({
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader
         items={[
+          { label: 'Manage', to: '/manage' },
           {
             label: listLabel,
             to: scope === 'category' ? '/manage/categories' : '/manage/accounts',

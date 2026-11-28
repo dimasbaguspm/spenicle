@@ -40,7 +40,11 @@ export function PayeeDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        items={[{ label: 'Payees', to: '/manage/payees' }, { label: row?.name ?? absent }]}
+        items={[
+          { label: 'Manage', to: '/manage' },
+          { label: 'Payees', to: '/manage/payees' },
+          { label: row?.name ?? absent },
+        ]}
         title={row?.name ?? absent}
         action={
           <Link

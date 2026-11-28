@@ -61,6 +61,7 @@ function RenameAccount({ accountRef, listLabel, listTo, detailTo }: RenameProps)
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader
         items={[
+          { label: 'Manage', to: '/manage' },
           { label: listLabel, to: listTo },
           { label: account?.name ?? 'Account', to: `${listTo}/${accountRef}` },
           { label: 'Edit' },
