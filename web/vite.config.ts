@@ -23,12 +23,32 @@ export default defineConfig({
       workbox: {
         // the shell is cached; /api is never cached, so no stale money
         navigateFallbackDenylist: [/^\/api\//],
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        // fonts are precached for the two subsets the product can render — latin and
+        // latin-ext — not every cyrillic or greek file the package ships
+        globPatterns: [
+          '**/*.{js,css,html,svg,webmanifest}',
+          '**/*-latin-*-normal-*.woff2',
+          '**/*-latin-ext-*-normal-*.woff2',
+        ],
       },
     }),
   ],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
+  build: {
+    // a vendor change should not invalidate the app chunk, and one 750 kB file
+    // means every deploy re-downloads the router along with the screen that changed
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          router: ['@tanstack/react-router', '@tanstack/react-query'],
+          ark: ['@ark-ui/react'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
   },
   server: {
     // dev only: the browser talks to vite, vite talks to spenicle http
