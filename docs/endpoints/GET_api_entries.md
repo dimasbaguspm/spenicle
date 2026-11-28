@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Read the ledger: newest first, filtered, paged, postings included.
+Read the ledger: newest day first, filtered, paged, postings included.
 
 ## Upstream
 
@@ -31,7 +31,7 @@ one query for the whole page's postings, and — with `with_balance` — one
 | `reversed` | bool | — | `true` only reversed entries, `false` only live ones, absent both |
 | `amount_min` | money | — | smallest absolute posting amount to match |
 | `amount_max` | money | — | largest absolute posting amount to match |
-| `cursor` | ref | — | return entries older than the entry with that ref |
+| `cursor` | ref | — | return the entries after that one in `(occurred_on, id)` order |
 | `with_balance` | bool | — | `true` (with exactly one `account_ref`) adds each entry's `running_balance_minor` |
 | `limit` | int | 50 | max 200 — a larger value is `422 invalid_request`, never clamped |
 
@@ -54,6 +54,10 @@ None.
 
 `meta.limit` is the clamped page size the store was asked for, `meta.has_more` is exact
 (the store fetches `limit + 1` rows and the handler trims the extra one) and
+A page is ordered by `occurred_on DESC, id DESC`: the day the money moved, ties broken by
+insertion. It is not insertion order — a backdated entry belongs where its day belongs. The
+keyset cursor is therefore the pair `(occurred_on, id)` of the row the cursor names.
+
 `meta.next_cursor` is the `ref` of the last returned entry, omitted whenever there is no
 next page (`has_more` false), including a short non-empty page. Send it back as `cursor`
 for the next page: the cursor is always a ref, never an integer id.
@@ -91,7 +95,8 @@ base-currency only, like every other amount on the wire, and it is a lookup on t
 `entry_balances` table — one query per page, never one per row — so a dirty account pays for a
 rebuild of its whole history once, on the next read,
 instead of every request summing the history. Filters deliberately absent: an amount in
-the entry's own currency (the range is base-currency), a sort order (always newest first),
+the entry's own currency (the range is base-currency), a sort order (always the day it
+happened, newest first, ties broken by insertion),
 and a posting-level match —
 `account_ref` and `amount_min` are separate `EXISTS` clauses, so an entry can satisfy them
 through two different postings. One entry by ref is

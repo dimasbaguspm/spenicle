@@ -205,7 +205,8 @@ func TestRunningBalanceCheckpointShiftsBackdatedEntry(t *testing.T) {
 		t.Fatalf("list entries: %v", err)
 	}
 
-	want := []string{"2026-02-02=-150", "2026-02-03=-350", "2026-02-01=-100"}
+	// the register reads in the order the days happened, not the order the rows arrived
+	want := []string{"2026-02-03=-350", "2026-02-02=-150", "2026-02-01=-100"}
 	if got := labelsOf(entries); !slices.Equal(got, want) {
 		t.Fatalf("entries = %v, want %v", got, want)
 	}
@@ -244,9 +245,10 @@ func TestRunningBalanceCheckpointIncludesReverseReversal(t *testing.T) {
 		t.Fatalf("list entries: %v", err)
 	}
 
+	// the days descend, and two rows on the same day fall back to insertion order
 	want := []string{
-		"2026-02-01=0",
 		"2026-02-02=-200",
+		"2026-02-01=0",
 		"2026-02-01=-100",
 	}
 	if got := labelsOf(entries); !slices.Equal(got, want) {
@@ -279,7 +281,8 @@ func TestRunningBalanceRebuildGivesEachCheckpointARef(t *testing.T) {
 		t.Fatalf("list entries: %v", err)
 	}
 
-	want := []string{"2026-02-02=-150", "2026-02-03=-350", "2026-02-01=-100"}
+	// day order, not insertion order: the rebuild keeps the register's contract
+	want := []string{"2026-02-03=-350", "2026-02-02=-150", "2026-02-01=-100"}
 	if got := labelsOf(entries); !slices.Equal(got, want) {
 		t.Fatalf("entries = %v, want %v", got, want)
 	}

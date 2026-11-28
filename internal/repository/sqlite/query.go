@@ -186,6 +186,17 @@ func (q *listQuery) before(column, table, ref string) {
 	q.and(column+` < (SELECT id FROM `+table+` WHERE ref = ?)`, ref)
 }
 
+// beforeDay pages by the day a row happened, with the row's own id as the tie-break: the cursor
+// ref names the row, and the page continues after it in (day, id) order. SQLite compares the row
+// values left to right, which is exactly the ordering the query asks for.
+func (q *listQuery) beforeDay(dayColumn, idColumn, table, ref string) {
+	if ref == "" {
+		return
+	}
+
+	q.and(`(`+dayColumn+`, `+idColumn+`) < (SELECT occurred_on, id FROM `+table+` WHERE ref = ?)`, ref)
+}
+
 func (q *listQuery) after(outer, inner, table, ref string) {
 	if ref == "" {
 		return

@@ -679,8 +679,8 @@ func entryQuery(filter entity.EntryFilter) (string, []any) {
 	builder.inSubquery("payee_ref", payeeSubquery, filter.PayeeRefs...)
 	entryAmountRange(builder, filter.AmountMin, filter.AmountMax)
 	builder.nullFlag("reversed_at", filter.Reversed)
-	builder.before("entries.id", "entries", filter.Cursor)
-	builder.orderBy("id DESC")
+	builder.beforeDay("entries.occurred_on", "entries.id", "entries", filter.Cursor)
+	builder.orderBy("occurred_on DESC, id DESC")
 
 	return builder.page(clampLimit(filter.Limit))
 }

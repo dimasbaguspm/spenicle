@@ -2,39 +2,6 @@
   "entries": [
     {
       "currency": "IDR",
-      "note": "wrong amount",
-      "occurred_on": "2026-02-01",
-      "postings": [
-        {
-          "account": {
-            "kind": "asset",
-            "name": "Cash",
-            "ref": "<ref>"
-          },
-          "account_ref": "<ref>",
-          "amount_minor": "1500",
-          "base_amount_minor": "1500",
-          "fx_rate": "1",
-          "fx_source": "identity"
-        },
-        {
-          "account": {
-            "kind": "expense",
-            "name": "Unsorted",
-            "ref": "<ref>"
-          },
-          "account_ref": "<ref>",
-          "amount_minor": "-1500",
-          "base_amount_minor": "-1500",
-          "fx_rate": "1",
-          "fx_source": "identity"
-        }
-      ],
-      "ref": "<ref>",
-      "source": "adjustment"
-    },
-    {
-      "currency": "IDR",
       "idempotency_key": "<idempotency_key>",
       "note": "live",
       "occurred_on": "2026-02-02",
@@ -66,6 +33,39 @@
       ],
       "ref": "<ref>",
       "source": "manual"
+    },
+    {
+      "currency": "IDR",
+      "note": "wrong amount",
+      "occurred_on": "2026-02-01",
+      "postings": [
+        {
+          "account": {
+            "kind": "asset",
+            "name": "Cash",
+            "ref": "<ref>"
+          },
+          "account_ref": "<ref>",
+          "amount_minor": "1500",
+          "base_amount_minor": "1500",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        },
+        {
+          "account": {
+            "kind": "expense",
+            "name": "Unsorted",
+            "ref": "<ref>"
+          },
+          "account_ref": "<ref>",
+          "amount_minor": "-1500",
+          "base_amount_minor": "-1500",
+          "fx_rate": "1",
+          "fx_source": "identity"
+        }
+      ],
+      "ref": "<ref>",
+      "source": "adjustment"
     }
   ],
   "meta": {
