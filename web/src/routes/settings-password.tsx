@@ -52,7 +52,7 @@ export function PasswordPage() {
               }}
             />
           </Field>
-          <Field label="New password" hint="At least 12 characters.">
+          <Field label="New password">
             <PasswordInput
               name="new-password"
               autoComplete="new-password"
@@ -64,7 +64,7 @@ export function PasswordPage() {
           </Field>
           <div className="space-y-2 sm:col-span-2">
             <Button type="submit" loading={rotate.isPending} disabled={next.length < 12}>
-              {rotate.isPending ? 'Saving…' : 'Rotate password'}
+              {rotate.isPending ? 'Saving' : 'Rotate password'}
             </Button>
             {rotate.isSuccess ? (
               <Text as="p" tone="caption" className="text-success">

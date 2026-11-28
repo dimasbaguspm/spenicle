@@ -52,9 +52,7 @@ export function EditRecurringPage() {
 
           {rule === undefined ? (
             <Text as="p" tone="muted" className="mt-3">
-              {held.isPending
-                ? 'Loading…'
-                : (held.error?.message ?? 'No rule with that reference.')}
+              {held.isPending ? 'Loading' : (held.error?.message ?? 'No rule with that reference.')}
             </Text>
           ) : (
             <Form<RecurringFormValues>

@@ -9,7 +9,6 @@ import { Slider } from '@/components/primitives/slider'
 type SliderFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   min?: number | undefined
   max?: number | undefined
   step?: number | undefined
@@ -23,7 +22,6 @@ type SliderFieldProps<Schema extends FieldValues> = {
 export function SliderField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   min,
   max,
   step,
@@ -35,7 +33,7 @@ export function SliderField<Schema extends FieldValues>({
   const value = useMemo(() => [typeof current === 'number' ? current : 0], [current])
 
   return (
-    <Field label={label} hint={hint} error={fieldState.error?.message}>
+    <Field label={label} error={fieldState.error?.message}>
       <Slider
         value={value}
         min={min}

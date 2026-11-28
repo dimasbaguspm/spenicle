@@ -6,8 +6,7 @@ import { cn } from '@/lib/cn'
 
 type FieldProps = {
   label: string
-  /** shown under the control, replaced by the error when there is one */
-  hint?: string | undefined
+  /** accepted and ignored: this screen has no field hints, so a form may still carry one */
   error?: string | undefined
   /** layout only, for a field that spans two columns of a form grid */
   className?: string | undefined
@@ -21,7 +20,7 @@ type FieldProps = {
  * association stays Ark's and the type scale stays ours. The brass hairline that
  * appears on the label when the field is focused is the only state the label shows.
  */
-export function Field({ label, hint, error, className, children }: FieldProps) {
+export function Field({ label, error, className, children }: FieldProps) {
   return (
     <ArkField.Root
       invalid={error !== undefined}
@@ -43,13 +42,6 @@ export function Field({ label, hint, error, className, children }: FieldProps) {
             {error}
           </Text>
         </ArkField.ErrorText>
-      )}
-      {hint === undefined || error !== undefined ? null : (
-        <ArkField.HelperText asChild>
-          <Text as="p" tone="caption" className="text-text-muted leading-relaxed">
-            {hint}
-          </Text>
-        </ArkField.HelperText>
       )}
     </ArkField.Root>
   )

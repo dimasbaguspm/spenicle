@@ -96,7 +96,7 @@ export function ImportReviewPage() {
 
           {detail === undefined ? (
             <Text as="p" tone="muted" className="mt-4">
-              Loading the rows…
+              Loading the rows
             </Text>
           ) : null}
 
@@ -140,7 +140,7 @@ export function ImportReviewPage() {
         <Panel>
           <div className="p-5 sm:p-6">
             <Text as="p" tone="muted">
-              Loading…
+              Loading
             </Text>
           </div>
         </Panel>

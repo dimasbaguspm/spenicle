@@ -60,7 +60,7 @@ export function NewRulePage() {
             </Form>
           ) : (
             <Text as="p" tone="muted" className="mt-3">
-              Loading the categories to point at…
+              Loading the categories to point at
             </Text>
           )}
 

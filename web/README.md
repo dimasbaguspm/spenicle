@@ -149,6 +149,22 @@ migrate. A screen writes the shape once and never wires a `Controller`:
   It never accepts a value, an onChange, a `control` or a form. Outside a `Form` it throws, so a
   misplacement is a stack trace rather than a silently orphaned input.
 
+## The two gates — sign in and claim
+
+`/` and `/setup` are the only screens a visitor without a credential can open, and both are one
+component: `components/layouts/gate`. The statement sits on the left (what this screen is, and the
+three decisions a claim makes), the plate that answers it on the right; below `lg` the statement
+shrinks to a heading and the plate is the page. The public shell is as wide as the plate needs, so
+the two columns have room; the wordmark lives in its footer and is not repeated inside the gate.
+
+## The dashboard — one call, four readings
+
+`/dashboard` reads `GET /api/dashboard` once. The plate at the top is this month: net as the big
+figure, spent and received beside it, and six months of spend as bars to the right of the divider.
+Under it, two cards that are links rather than statistics — captures waiting for review, and the
+biggest category of the window (which opens that category). The register's own ticker closes the
+page with the last six entries.
+
 ## Filters live in the URL
 
 One abstraction, four parts, and every list shares it:
@@ -244,9 +260,19 @@ other entry.
 
 `/ledger/new` is one screen with two modes: type it, or scan it. The mode lives in the URL
 (`?mode=scan`), a segmented strip on a phone and two cards on a desk, so the camera shortcut is
-still one link. The manual form is ordered the way a decision is made, not the way a form usually
-is: category first (it decides the direction), then the account, then who was paid, then the
-amount, the day and the note. There is no panel preamble and no field hints; the labels carry it.
+still one link.
+
+The manual form reads from the top as one sentence: **Kind** (money out or money in), **Category**,
+**What was it**, **Paid to** / **Received from**, **Paid from** / **Received in**, **Amount**, **Day**.
+The first switch is what groups the categories: an expense entry only ever offers the expense half
+of the ledger, an income entry the income half, and the two ref labels flip with it. The account
+list spells the kind it is (`Cash (asset)`, `Visa (liability)`), because "paid from Savings" does
+not say whether that account is money you had or money you owe.
+
+Typing the note asks the rule engine the same question the rules screen does: `GET
+/api/categorization/suggest` answers a category and the sentence that justifies it, the category is
+filled in until a person picks one themselves, and the reason stays under the field. The suggestion
+is advice — posting is still the button.
 
 Nothing is deleted. `/ledger/$ref` offers Reverse, which asks for an optional reason and sends
 `PATCH /api/entries/{ref}` with `reverse: true`: the postings are mirrored, both rows stay in the
@@ -487,6 +513,12 @@ structure.
   of truncating a name to five characters.
 - **Motion is one pixel.** A press moves a button down by 1px; `prefers-reduced-motion` kills
   every transition.
+- **A field is a label and a control.** No field hints anywhere: if a label cannot carry the rule,
+  the rule belongs in the copy that owns the form, not under every input. `Field` accepts `hint`
+  and ignores it, so an old call site compiles and shows nothing.
+- **No trailing ellipsis.** A placeholder names what goes there (`coffee, taxi, salary`), it does
+  not trail off; a loading state says `Loading` and stops. The one glyph kept is the pagination's
+  single `⋯`, which is a symbol, not three typed dots.
 
 ## The three decisions this scaffold encodes
 

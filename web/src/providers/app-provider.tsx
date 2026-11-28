@@ -41,7 +41,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <Splash
-      title={bootstrap.isPending ? 'Opening the ledger…' : 'This instance did not answer'}
+      title={bootstrap.isPending ? 'Opening the ledger' : 'This instance did not answer'}
       detail={bootstrap.error?.message}
       onRetry={
         bootstrap.isPending

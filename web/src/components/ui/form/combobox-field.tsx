@@ -12,7 +12,6 @@ type ComboboxFieldOption = {
 type ComboboxFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   options: ComboboxFieldOption[]
   placeholder?: string | undefined
   emptyText?: string | undefined
@@ -25,7 +24,6 @@ type ComboboxFieldProps<Schema extends FieldValues> = {
 export function ComboboxField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   options,
   placeholder,
   emptyText,
@@ -37,7 +35,7 @@ export function ComboboxField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <Combobox
             items={options}
             value={field.value === undefined || field.value === null ? '' : String(field.value)}

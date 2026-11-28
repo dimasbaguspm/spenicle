@@ -18,8 +18,9 @@ import { EntryTicker, MonthSeries, accountIndex, monthLabel, monthsBack } from '
 const overviewCrumbs = [{ label: 'Overview' }] as const
 
 /**
- * The landing screen: the month's three figures, the year as a row of bars, and the last few
- * entries. Every number comes from one `/api/dashboard` call, so the tiles cannot disagree.
+ * The landing screen: this month's three figures on one plate, the year beside them, the two
+ * things that are waiting, and the last few entries. Every number comes from one `/api/dashboard`
+ * call, so the tiles cannot disagree with each other.
  */
 export function DashboardPage() {
   const { from, to } = monthsBack(6)
@@ -33,6 +34,7 @@ export function DashboardPage() {
   const rows = latest.data?.entries ?? []
   const accounts = accountIndex(meta.data?.accounts ?? [])
   const monthOf = data?.month === undefined ? '' : monthLabel(data.month, DateFormat.MonthLong)
+  const net = data?.net_minor === undefined ? undefined : BigInt(data.net_minor)
   const fresh = latest.isSuccess && rows.length === 0
 
   return (
@@ -80,8 +82,11 @@ export function DashboardPage() {
                 <Plus className="size-3.5" aria-hidden="true" strokeWidth={2} />
                 Log an entry
               </Link>
-              <Link to="/setup" className={cn(buttonStyles({ tone: 'ghost', size: 'sm' }))}>
-                Instance setup
+              <Link
+                to="/manage/accounts/new"
+                className={cn(buttonStyles({ tone: 'ghost', size: 'sm' }))}
+              >
+                Add an account
                 <ArrowRight className="size-3.5" aria-hidden="true" strokeWidth={2} />
               </Link>
             </div>
@@ -89,70 +94,112 @@ export function DashboardPage() {
         </Panel>
       ) : (
         <>
-          <Panel className="divide-border grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-            {[
-              { label: 'Spent', minor: data?.spend_minor, tone: 'text-text' },
-              { label: 'Income', minor: data?.income_minor, tone: 'text-success' },
-              { label: 'Net', minor: data?.net_minor, tone: 'text-text' },
-            ].map((tile) => (
-              <div key={tile.label} className="space-y-1 px-5 py-4 sm:px-6 sm:py-5">
-                <Text as="p" tone="section">
-                  {tile.label}, {monthOf}
+          <Panel className="grid divide-y divide-border lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0">
+            <div className="space-y-5 p-5 sm:p-6">
+              <Text as="p" tone="section">
+                {monthOf === '' ? 'This month' : monthOf}
+              </Text>
+
+              <div className="space-y-1">
+                <Text as="p" tone="caption" className="text-text-faint">
+                  Net
                 </Text>
-                <Text as="p" tone="figure" className={`text-2xl ${tile.tone}`}>
-                  {tile.minor === undefined ? absent : money.figure(tile.minor)}
+                <Text
+                  as="p"
+                  tone="figure"
+                  className={cn(
+                    'text-3xl',
+                    net === undefined ? 'text-text' : net > 0n ? 'text-success' : 'text-text',
+                  )}
+                >
+                  {data?.net_minor === undefined ? absent : money.figure(data.net_minor)}
+                  <span className="text-text-faint ml-2 text-sm">{money.scale.currency}</span>
                 </Text>
               </div>
-            ))}
-          </Panel>
 
-          <div className="grid gap-6 lg:grid-cols-12">
-            <Panel className="space-y-5 p-5 sm:p-6 lg:col-span-7">
+              <dl className="grid grid-cols-2 gap-4">
+                <Figure
+                  label="Spent"
+                  value={data?.spend_minor === undefined ? absent : money.figure(data.spend_minor)}
+                />
+                <Figure
+                  label="Received"
+                  value={
+                    data?.income_minor === undefined ? absent : money.figure(data.income_minor)
+                  }
+                />
+              </dl>
+            </div>
+
+            <div className="space-y-4 p-5 sm:p-6">
               <div className="flex items-baseline justify-between gap-4">
                 <Text as="p" tone="section">
-                  Spend, month by month
+                  Six months
                 </Text>
                 <Link to="/analytics" className="text-text-muted hover:text-accent text-xs">
                   Analytics
                 </Link>
               </div>
-
               <MonthSeries months={months} scale={money.scale} height="h-28" />
-            </Panel>
+            </div>
+          </Panel>
 
-            <Panel className="space-y-4 p-5 sm:p-6 lg:col-span-5">
-              <Text as="p" tone="section">
-                Waiting for you
-              </Text>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Panel className="p-5 sm:p-6">
               <Link
                 to="/manage/captures"
-                className="group flex items-baseline justify-between gap-4 rounded focus-visible:outline-offset-4"
+                className="group flex items-baseline justify-between gap-4"
               >
-                <div>
+                <span className="space-y-1">
+                  <Text as="p" tone="section">
+                    Waiting for you
+                  </Text>
                   <Text as="p" tone="figure" className="text-2xl">
                     {data?.pending_captures ?? 0}
                   </Text>
                   <Text as="p" tone="muted">
                     captures to review
                   </Text>
-                </div>
+                </span>
                 <ArrowRight
-                  className="text-text-faint group-hover:text-accent size-4"
+                  className="text-text-faint group-hover:text-accent size-4 shrink-0"
                   aria-hidden="true"
                 />
               </Link>
-              {data?.top_category === undefined ? null : (
-                <div className="border-border space-y-1 border-t pt-4">
+            </Panel>
+
+            <Panel className="p-5 sm:p-6">
+              {data?.top_category === undefined ? (
+                <div className="space-y-1">
                   <Text as="p" tone="section">
-                    Biggest category, six months
+                    Biggest category
                   </Text>
-                  <Text as="p" tone="body">
-                    {data.top_category.account_name}
-                  </Text>
-                  <Text as="p" tone="figure" className="text-text-muted">
-                    {money.figure(data.top_category.amount_minor)}
+                  <Text as="p" tone="muted">
+                    Nothing categorised in six months.
                   </Text>
                 </div>
+              ) : (
+                <Link
+                  to="/manage/categories/$ref"
+                  params={{ ref: data.top_category.account_ref }}
+                  className="group flex items-baseline justify-between gap-4"
+                >
+                  <span className="space-y-1">
+                    <Text as="p" tone="section">
+                      Biggest category, six months
+                    </Text>
+                    <Text as="p" tone="body">
+                      {data.top_category.account_name}
+                    </Text>
+                    <Text as="p" tone="figure" className="text-text-muted">
+                      {money.figure(data.top_category.amount_minor)}
+                    </Text>
+                  </span>
+                  <ArrowRight
+                    className="text-text-faint group-hover:text-accent size-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                </Link>
               )}
             </Panel>
           </div>
@@ -178,6 +225,15 @@ export function DashboardPage() {
           </Panel>
         </>
       )}
+    </div>
+  )
+}
+
+function Figure({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="space-y-0.5">
+      <dt className="text-text-faint text-[0.5625rem] tracking-[0.16em] uppercase">{label}</dt>
+      <dd className="text-text font-mono text-sm">{value}</dd>
     </div>
   )
 }

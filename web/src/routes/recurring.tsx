@@ -58,7 +58,7 @@ export function RecurringPage() {
           setQuery(values.q)
         }}
       >
-        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="Search payees…" />}
+        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="Search payees" />}
       </DebounceForm>
 
       {rules.error === null ? null : (
@@ -72,7 +72,7 @@ export function RecurringPage() {
           <div className="space-y-3 p-5 sm:p-6">
             <Text as="p" tone="muted">
               {rules.isPending
-                ? 'Loading…'
+                ? 'Loading'
                 : 'Nothing repeats yet. A rule needs a payee, an account, an amount and a day.'}
             </Text>
             {rules.isPending ? null : (

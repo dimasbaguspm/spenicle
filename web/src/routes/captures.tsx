@@ -53,7 +53,7 @@ export function CapturesPage() {
           setQuery(values.q)
         }}
       >
-        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="text or ref…" />}
+        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="text or ref" />}
       </DebounceForm>
 
       {captures.error === null ? null : (

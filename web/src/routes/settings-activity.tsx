@@ -83,7 +83,7 @@ export function ActivityPage() {
         <Panel>
           <div className="p-5 sm:p-6">
             <Text as="p" tone="muted">
-              {activity.isPending ? 'Loading…' : 'Nothing has been written yet.'}
+              {activity.isPending ? 'Loading' : 'Nothing has been written yet.'}
             </Text>
           </div>
         </Panel>

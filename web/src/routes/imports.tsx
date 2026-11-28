@@ -53,7 +53,7 @@ export function ImportsPage() {
           setQuery(values.q)
         }}
       >
-        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="file name or ref…" />}
+        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="file name or ref" />}
       </DebounceForm>
 
       {batches.error === null ? null : (
@@ -67,7 +67,7 @@ export function ImportsPage() {
           <div className="space-y-3 p-5 sm:p-6">
             <Text as="p" tone="muted">
               {batches.isPending
-                ? 'Loading…'
+                ? 'Loading'
                 : needle === ''
                   ? 'No statements yet. A CSV needs the columns occurred_on, amount_minor and description.'
                   : 'No statement matches that name or ref.'}

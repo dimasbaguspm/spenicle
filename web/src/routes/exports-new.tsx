@@ -85,16 +85,8 @@ export function NewExportPage() {
                   options={formatOptions}
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <DateField<ExportFormValues>
-                    name="from"
-                    label="From"
-                    hint="Optional. The first day the document covers."
-                  />
-                  <DateField<ExportFormValues>
-                    name="to"
-                    label="To"
-                    hint="Optional. Leave both empty for the whole ledger."
-                  />
+                  <DateField<ExportFormValues> name="from" label="From" />
+                  <DateField<ExportFormValues> name="to" label="To" />
                 </div>
               </>
             )}

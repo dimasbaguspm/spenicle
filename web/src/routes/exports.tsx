@@ -67,7 +67,7 @@ export function ExportsPage() {
         }}
       >
         {() => (
-          <TextField<{ q: string }> name="q" label="Search" placeholder="format, status or ref…" />
+          <TextField<{ q: string }> name="q" label="Search" placeholder="format, status or ref" />
         )}
       </DebounceForm>
 
@@ -82,7 +82,7 @@ export function ExportsPage() {
           <div className="space-y-3 p-5 sm:p-6">
             <Text as="p" tone="muted">
               {exports.isPending
-                ? 'Loading…'
+                ? 'Loading'
                 : needle === ''
                   ? 'No exports yet. A job renders the ledger and keeps the file for a month.'
                   : 'No job matches that search.'}

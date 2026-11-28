@@ -7,7 +7,6 @@ import { Text } from '@/components/primitives/text'
 type CheckboxFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   disabled?: boolean | undefined
 }
 
@@ -18,7 +17,6 @@ type CheckboxFieldProps<Schema extends FieldValues> = {
 export function CheckboxField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   disabled,
 }: CheckboxFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
@@ -36,7 +34,6 @@ export function CheckboxField<Schema extends FieldValues>({
             onCheckedChange={(checked) => {
               field.onChange(checked)
             }}
-            {...(fieldState.error === undefined ? { description: hint } : {})}
           />
           {fieldState.error?.message === undefined ? null : (
             <Text as="p" tone="caption" className="text-danger">

@@ -77,20 +77,16 @@ function RatesLookup() {
                   name="base"
                   label="From"
                   options={options}
-                  placeholder="pick a currency…"
+                  placeholder="pick a currency"
                 />
                 <SelectField<RateFormValues>
                   name="quote"
                   label="To"
                   options={options}
-                  placeholder="pick a currency…"
+                  placeholder="pick a currency"
                 />
               </div>
-              <DateField<RateFormValues>
-                name="on"
-                label="Day"
-                hint="Optional. Empty prices today, in the instance timezone."
-              />
+              <DateField<RateFormValues> name="on" label="Day" />
               <Result base={form.watch('base')} quote={form.watch('quote')} on={form.watch('on')} />
             </>
           )}
@@ -114,7 +110,7 @@ function Result({ base, quote, on }: { base: string; quote: string; on: string }
   if (rate.data === undefined) {
     return (
       <Text as="p" tone="caption" className="text-text-faint">
-        {rate.isFetching ? 'Pricing…' : 'Pick two currencies.'}
+        {rate.isFetching ? 'Pricing' : 'Pick two currencies.'}
       </Text>
     )
   }

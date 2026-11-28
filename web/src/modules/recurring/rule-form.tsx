@@ -60,7 +60,7 @@ export function RecurringFields({
         name="payeeRef"
         label="Paid to"
         options={payees.map((payee) => ({ label: payee.name, value: payee.ref }))}
-        placeholder="pick a payee…"
+        placeholder="pick a payee"
       />
       <SelectField<RecurringFormValues>
         name="categoryRef"
@@ -71,15 +71,11 @@ export function RecurringFields({
         name="accountRef"
         label="Paid from"
         options={accountOptions}
-        placeholder="pick an account…"
+        placeholder="pick an account"
       />
       <TextField<RecurringFormValues> name="amount" label="Amount" placeholder="0" />
       <SelectField<RecurringFormValues> name="cadence" label="Every" options={cadenceOptions} />
-      <DateField<RecurringFormValues>
-        name="nextDueOn"
-        label="Next due"
-        hint="A monthly rule takes its day of the month from this date."
-      />
+      <DateField<RecurringFormValues> name="nextDueOn" label="Next due" />
     </>
   )
 }

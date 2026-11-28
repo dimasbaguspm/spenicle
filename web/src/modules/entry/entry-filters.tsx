@@ -29,8 +29,7 @@ function FilterFields({ accounts, payees }: Pick<FilterProps, 'accounts' | 'paye
       <MultiSelectField<EntrySearch>
         name="account"
         label="Account"
-        hint="Where the money sat. Either one of these."
-        placeholder="add an account…"
+        placeholder="add an account"
         options={accounts
           .filter((account) => isMoneyKind(account.kind))
           .map((account) => ({ label: accountName(account), value: account.ref }))}
@@ -38,8 +37,7 @@ function FilterFields({ accounts, payees }: Pick<FilterProps, 'accounts' | 'paye
       <MultiSelectField<EntrySearch>
         name="category"
         label="Category"
-        hint="What it was for. Either one of these."
-        placeholder="add a category…"
+        placeholder="add a category"
         options={accounts
           .filter((account) => isCategoryKind(account.kind))
           .map((account) => ({ label: accountName(account), value: account.ref }))}
@@ -47,15 +45,10 @@ function FilterFields({ accounts, payees }: Pick<FilterProps, 'accounts' | 'paye
       <MultiSelectField<EntrySearch>
         name="payee"
         label="Payee"
-        placeholder="add a payee…"
+        placeholder="add a payee"
         options={payees.map((payee) => ({ label: payee.name, value: payee.ref }))}
       />
-      <TextField<EntrySearch>
-        name="q"
-        label="Text"
-        hint="Matches the note or the payee name."
-        placeholder="coffee, rent, taxi…"
-      />
+      <TextField<EntrySearch> name="q" label="Text" placeholder="coffee, rent, taxi" />
     </div>
   )
 }

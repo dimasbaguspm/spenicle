@@ -43,10 +43,7 @@ export function MailboxPage() {
           <Text as="p" tone="section">
             Password
           </Text>
-          <Field
-            label="Instance password"
-            hint="Connections, intake and the mail list are root-only. It is used for this page and never stored."
-          >
+          <Field label="Instance password">
             <PasswordInput
               name="root-password"
               autoComplete="current-password"
@@ -105,7 +102,7 @@ function Mailbox({ root }: { root: string }) {
 
           {connection.data === undefined ? (
             <Text as="p" tone="muted">
-              {connection.isPending ? 'Reading the connection…' : (connection.error?.message ?? '')}
+              {connection.isPending ? 'Reading the connection' : (connection.error?.message ?? '')}
             </Text>
           ) : (
             <Text as="p" tone="muted">
@@ -172,7 +169,7 @@ function Mailbox({ root }: { root: string }) {
                 />
               </Field>
               <div className="sm:col-span-2">
-                <Field label="Redirect URL" hint="Paste this into the Google client, verbatim.">
+                <Field label="Redirect URL">
                   <TextInput name="google-redirect" value={redirectUrl} readOnly />
                 </Field>
               </div>
@@ -237,16 +234,12 @@ function Mailbox({ root }: { root: string }) {
           <SwitchInput
             checked={enabled}
             label="Poll the mailbox"
-            hint="The worker reads it on its interval; nothing reaches the ledger until a capture is approved."
             onCheckedChange={(next) => {
               setEnabled(next)
             }}
           />
 
-          <Field
-            label="Allowed senders"
-            hint="Substrings of the sender address. Empty means every sender is accepted."
-          >
+          <Field label="Allowed senders">
             <TagsInput
               value={allowlist}
               placeholder="bank.example"
@@ -304,7 +297,7 @@ function Mailbox({ root }: { root: string }) {
           {rows.length === 0 ? (
             <Text as="p" tone="muted">
               {messages.isPending
-                ? 'Loading…'
+                ? 'Loading'
                 : (messages.error?.message ??
                   'No mail yet. Poll the mailbox once the grant is in.')}
             </Text>

@@ -55,7 +55,7 @@ export function Pagination({ page, count, pageSize, onPageChange }: PaginationPr
                 className="text-text-muted px-1"
               >
                 <Text as="span" tone="caption">
-                  …
+                  ⋯
                 </Text>
               </ArkPagination.Ellipsis>
             )

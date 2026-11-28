@@ -80,7 +80,7 @@ export function NewRecurringPage() {
             </Form>
           ) : (
             <Text as="p" tone="muted" className="mt-3">
-              Loading the payees and accounts to pick from…
+              Loading the payees and accounts to pick from
             </Text>
           )}
 

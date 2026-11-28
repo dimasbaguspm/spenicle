@@ -133,10 +133,10 @@ function ReverseAction({ entryRef }: { entryRef: string }) {
       }
     >
       <div className="space-y-3">
-        <Field label="Reason" hint="Optional, and kept in the journal beside the reversal.">
+        <Field label="Reason">
           <TextInput
             value={reason}
-            placeholder="wrong amount, duplicate, refunded…"
+            placeholder="wrong amount, duplicate, refunded"
             autoComplete="off"
             onChange={(event) => {
               setReason(event.target.value)

@@ -7,7 +7,6 @@ import { TextAreaInput } from '@/components/primitives/text-area-input'
 type TextAreaFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   placeholder?: string | undefined
   rows?: number | undefined
   disabled?: boolean | undefined
@@ -17,7 +16,6 @@ type TextAreaFieldProps<Schema extends FieldValues> = {
 export function TextAreaField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   placeholder,
   rows,
   disabled,
@@ -29,7 +27,7 @@ export function TextAreaField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <TextAreaInput
             name={field.name}
             rows={rows}

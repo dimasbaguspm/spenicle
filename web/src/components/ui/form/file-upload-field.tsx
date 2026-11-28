@@ -7,7 +7,6 @@ import { Text } from '@/components/primitives/text'
 type FileUploadFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   accept?: Record<string, string[]> | undefined
   multiple?: boolean | undefined
 }
@@ -19,7 +18,6 @@ type FileUploadFieldProps<Schema extends FieldValues> = {
 export function FileUploadField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   accept,
   multiple,
 }: FileUploadFieldProps<Schema>) {
@@ -39,11 +37,6 @@ export function FileUploadField<Schema extends FieldValues>({
               field.onChange(files)
             }}
           />
-          {hint === undefined || fieldState.error !== undefined ? null : (
-            <Text as="p" tone="caption">
-              {hint}
-            </Text>
-          )}
           {fieldState.error?.message === undefined ? null : (
             <Text as="p" tone="caption" className="text-danger">
               {fieldState.error.message}

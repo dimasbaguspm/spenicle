@@ -32,7 +32,7 @@ type SelectInputProps = {
 export function SelectInput({
   value,
   options,
-  placeholder = 'choose…',
+  placeholder = 'choose',
   onChange,
   id,
   'aria-describedby': describedBy,

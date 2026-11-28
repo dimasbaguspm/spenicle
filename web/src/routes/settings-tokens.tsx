@@ -62,7 +62,7 @@ export function TokensPage() {
           {rows.length === 0 ? (
             <Text as="p" tone="muted">
               {tokens.isPending
-                ? 'Loading…'
+                ? 'Loading'
                 : tokens.error === null
                   ? 'No token yet. Mint one below and hand it to a script instead of the password.'
                   : tokens.error.message}
@@ -93,14 +93,14 @@ export function TokensPage() {
             <Field label="Name" error={mint.error?.message}>
               <TextInput
                 name="token-name"
-                placeholder="script, cron, phone…"
+                placeholder="script, cron, phone"
                 value={name}
                 onChange={(event) => {
                   setName(event.target.value)
                 }}
               />
             </Field>
-            <Field label="Scopes" hint="Comma separated; admin covers all.">
+            <Field label="Scopes">
               <TextInput
                 name="token-scopes"
                 value={scopes}
@@ -110,10 +110,7 @@ export function TokensPage() {
               />
             </Field>
             <div className="sm:col-span-2">
-              <Field
-                label="Password"
-                hint="The token list is root-only: the instance password reads it and mints from it, and is never stored."
-              >
+              <Field label="Password">
                 <PasswordInput
                   name="root-password"
                   autoComplete="current-password"

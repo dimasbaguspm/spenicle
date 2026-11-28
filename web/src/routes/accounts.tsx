@@ -101,7 +101,7 @@ function ScopePage({
           setQuery(values.q)
         }}
       >
-        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="Search…" />}
+        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="Search" />}
       </DebounceForm>
 
       {accounts.error === null ? null : (
@@ -114,7 +114,7 @@ function ScopePage({
         <Panel>
           <div className="space-y-3 p-5 sm:p-6">
             <Text as="p" tone="muted">
-              {accounts.isPending ? 'Loading…' : emptyLabel}
+              {accounts.isPending ? 'Loading' : emptyLabel}
             </Text>
             {accounts.isPending ? null : (
               <Link to={newTo} className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}>

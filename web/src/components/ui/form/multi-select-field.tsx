@@ -13,7 +13,6 @@ type MultiOption = {
 type MultiSelectFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   options: MultiOption[]
   placeholder?: string | undefined
 }
@@ -26,9 +25,8 @@ type MultiSelectFieldProps<Schema extends FieldValues> = {
 export function MultiSelectField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   options,
-  placeholder = 'add…',
+  placeholder = 'add',
 }: MultiSelectFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
 
@@ -43,7 +41,7 @@ export function MultiSelectField<Schema extends FieldValues>({
           options.find((option) => option.value === value)?.label ?? value
 
         return (
-          <Field label={label} hint={hint} error={fieldState.error?.message}>
+          <Field label={label} error={fieldState.error?.message}>
             <div className="space-y-2">
               <SelectInput
                 value=""

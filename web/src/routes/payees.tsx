@@ -45,7 +45,7 @@ export function PayeesPage() {
           setQuery(values.q)
         }}
       >
-        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="Search payees…" />}
+        {() => <TextField<{ q: string }> name="q" label="Search" placeholder="Search payees" />}
       </DebounceForm>
 
       {payees.error === null ? null : (
@@ -58,7 +58,7 @@ export function PayeesPage() {
         <Panel>
           <div className="space-y-3 p-5 sm:p-6">
             <Text as="p" tone="muted">
-              {payees.isPending ? 'Loading…' : 'No payees yet. A name is all one needs.'}
+              {payees.isPending ? 'Loading' : 'No payees yet. A name is all one needs.'}
             </Text>
             {payees.isPending ? null : (
               <Link

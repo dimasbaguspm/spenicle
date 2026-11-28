@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { Camera, Keyboard } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, type UseFormReturn } from 'react-hook-form'
 
 import { createCapture } from '@/api/captures'
@@ -17,9 +17,10 @@ import { SegmentGroup } from '@/components/primitives/segment-group'
 import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
-import { DateField, Form, SelectField, TextField } from '@/components/ui/form'
+import { DateField, Form, TextField } from '@/components/ui/form'
 import { useCreateEntry } from '@/hooks/queries/use-entries'
 import { useMeta } from '@/hooks/queries/use-meta'
+import { useSuggestion } from '@/hooks/queries/use-rules'
 import { useMoney } from '@/hooks/use-money'
 import { cn } from '@/lib/cn'
 import { parseMoney } from '@/lib/money'
@@ -32,6 +33,7 @@ import {
 } from '@/modules'
 
 type Mode = 'manual' | 'scan'
+type Direction = 'expense' | 'income'
 
 /**
  * Writing an entry starts with a choice, not an amount: type it, or hand over the receipt and let
@@ -125,13 +127,17 @@ function ModeCards({ mode }: { mode: Mode }) {
   )
 }
 
+/** The two kinds a person can mean, in the words the ledger files them under. */
+const directions = [
+  { label: 'Money out', value: 'expense' },
+  { label: 'Money in', value: 'income' },
+]
+
 /**
- * The manual form is only mounted once the meta read lands: its opening values are the two refs it
- * offers, and a form is the wrong place to discover that the list arrived late.
- *
- * The direction is not a field. A category either files money going out or money coming in, so
- * picking an income category is what turns the entry around: the account gains and the category
- * gives, instead of the other way about.
+ * The manual form reads top to bottom as one sentence: money out or in, what it was for, what it
+ * was, who it was with, where it came from, how much and when. A category only ever offers the
+ * half of the ledger the first switch names, so the direction is decided once and the two labels
+ * below follow it.
  */
 function ManualEntry({
   accounts,
@@ -145,23 +151,23 @@ function ManualEntry({
   const navigate = useNavigate()
   const money = useMoney()
   const post = useCreateEntry()
+  const [direction, setDirection] = useState<Direction>('expense')
 
-  const categoryOptions = accounts
-    .filter((account) => isCategoryKind(account.kind))
-    .map((account) => ({ label: account.name, value: account.ref }))
+  const categoriesOf = (kind: Direction) =>
+    accounts
+      .filter((account) => account.kind === kind)
+      .map((account) => ({ label: account.name, value: account.ref }))
 
+  // the account carries its kind: "Savings (asset)" says more than "Savings"
   const accountOptions = accounts
     .filter((account) => isMoneyKind(account.kind))
-    .map((account) => ({ label: account.name, value: account.ref }))
-
-  const isIncome = (ref: string) =>
-    accounts.find((account) => account.ref === ref)?.kind === 'income'
+    .map((account) => ({ label: `${account.name} (${account.kind})`, value: account.ref }))
 
   if (!ready) {
     return (
       <Panel>
         <Text as="p" tone="muted" className="p-5 sm:p-6">
-          Loading the accounts to pick from…
+          Loading the accounts to pick from.
         </Text>
       </Panel>
     )
@@ -174,7 +180,7 @@ function ManualEntry({
           className="mt-4"
           defaultValues={emptyEntryForm(undefined, {
             accountRef: accountOptions[0]?.value,
-            categoryRef: categoryOptions[0]?.value,
+            categoryRef: categoriesOf('expense')[0]?.value,
           })}
           resolver={entryResolver}
           submitLabel="Post entry"
@@ -186,7 +192,7 @@ function ManualEntry({
               return
             }
 
-            const income = isIncome(values.categoryRef)
+            const income = accounts.find((row) => row.ref === values.categoryRef)?.kind === 'income'
             const signed = income ? amount : amount.negate()
 
             post.mutate(
@@ -209,34 +215,22 @@ function ManualEntry({
             )
           }}
         >
-          {(form) => {
-            const income = isIncome(form.watch('categoryRef'))
-
-            return (
-              <>
-                <SelectField<EntryFormValues>
-                  name="categoryRef"
-                  label="Category"
-                  options={categoryOptions}
-                  placeholder="pick a category…"
-                />
-                <SelectField<EntryFormValues>
-                  name="accountRef"
-                  label={income ? 'Received in' : 'Paid from'}
-                  options={accountOptions}
-                  placeholder="pick an account…"
-                />
-                <PayeeField form={form} payees={payees} />
-                <TextField<EntryFormValues> name="amount" label="Amount" placeholder="0" />
-                <DateField<EntryFormValues> name="occurredOn" label="Day" />
-                <TextField<EntryFormValues>
-                  name="note"
-                  label="What was it"
-                  placeholder="coffee, taxi, salary…"
-                />
-              </>
-            )
-          }}
+          {(form) => (
+            <ManualFields
+              form={form}
+              accounts={accounts}
+              payees={payees}
+              direction={direction}
+              onDirection={(next) => {
+                setDirection(next)
+                form.setValue('categoryRef', categoriesOf(next)[0]?.value ?? '', {
+                  shouldDirty: true,
+                })
+              }}
+              categoryOptions={categoriesOf(direction)}
+              accountOptions={accountOptions}
+            />
+          )}
         </Form>
 
         {post.error === null ? null : (
@@ -249,6 +243,140 @@ function ManualEntry({
   )
 }
 
+function ManualFields({
+  form,
+  accounts,
+  payees,
+  direction,
+  onDirection,
+  categoryOptions,
+  accountOptions,
+}: {
+  form: UseFormReturn<EntryFormValues>
+  accounts: readonly Account[]
+  payees: readonly Payee[]
+  direction: Direction
+  onDirection: (next: Direction) => void
+  categoryOptions: { label: string; value: string }[]
+  accountOptions: { label: string; value: string }[]
+}) {
+  const income = direction === 'income'
+
+  return (
+    <>
+      <Field label="Kind">
+        <SegmentGroup
+          block
+          value={direction}
+          options={directions}
+          onValueChange={(next) => {
+            onDirection(next === 'income' ? 'income' : 'expense')
+          }}
+        />
+      </Field>
+
+      <CategoryField
+        form={form}
+        accounts={accounts}
+        direction={direction}
+        options={categoryOptions}
+      />
+
+      <TextField<EntryFormValues>
+        name="note"
+        label="What was it"
+        placeholder="coffee, taxi, salary"
+      />
+
+      <PayeeField form={form} payees={payees} label={income ? 'Received from' : 'Paid to'} />
+
+      <Controller
+        control={form.control}
+        name="accountRef"
+        render={({ field, fieldState }) => (
+          <Field label={income ? 'Received in' : 'Paid from'} error={fieldState.error?.message}>
+            <SelectInput
+              value={field.value}
+              options={accountOptions}
+              placeholder="pick an account"
+              onChange={(next) => {
+                field.onChange(next)
+              }}
+            />
+          </Field>
+        )}
+      />
+
+      <TextField<EntryFormValues> name="amount" label="Amount" placeholder="0" />
+
+      <DateField<EntryFormValues> name="occurredOn" label="Day" />
+    </>
+  )
+}
+
+/**
+ * The category, half at a time, with the rule engine answering underneath: the line says which
+ * rule would decide this, and typing a note fills the category in until a person picks one.
+ */
+function CategoryField({
+  form,
+  accounts,
+  direction,
+  options,
+}: {
+  form: UseFormReturn<EntryFormValues>
+  accounts: readonly Account[]
+  direction: Direction
+  options: { label: string; value: string }[]
+}) {
+  const note = form.watch('note')
+  const [picked, setPicked] = useState(false)
+  const answer = useSuggestion(note.trim().length < 3 ? {} : { text: note.trim(), kind: direction })
+
+  useEffect(() => {
+    const suggestion = answer.data
+
+    if (suggestion === undefined || picked) {
+      return
+    }
+
+    const known = accounts.some(
+      (account) => account.ref === suggestion.account_ref && isCategoryKind(account.kind),
+    )
+
+    if (known) {
+      form.setValue('categoryRef', suggestion.account_ref, { shouldDirty: false })
+    }
+  }, [answer.data, accounts, form, picked])
+
+  return (
+    <Controller
+      control={form.control}
+      name="categoryRef"
+      render={({ field, fieldState }) => (
+        <Field label="Category" error={fieldState.error?.message}>
+          <div className="space-y-1.5">
+            <SelectInput
+              value={field.value}
+              options={options}
+              placeholder="pick a category"
+              onChange={(next) => {
+                setPicked(true)
+                field.onChange(next)
+              }}
+            />
+            {answer.data === undefined ? null : (
+              <Text as="p" tone="caption" className="text-text-muted">
+                {answer.data.why}
+              </Text>
+            )}
+          </div>
+        </Field>
+      )}
+    />
+  )
+}
+
 /**
  * The payee is the shortcut: picking one writes the defaults it carries into the two refs below,
  * and both stay editable, because a default is a starting point and not a decision.
@@ -256,9 +384,11 @@ function ManualEntry({
 function PayeeField({
   form,
   payees,
+  label,
 }: {
   form: UseFormReturn<EntryFormValues>
   payees: readonly Payee[]
+  label: string
 }) {
   const options = [
     { label: 'No payee', value: '' },
@@ -270,11 +400,7 @@ function PayeeField({
       control={form.control}
       name="payeeRef"
       render={({ field, fieldState }) => (
-        <Field
-          label="Paid to"
-          error={fieldState.error?.message}
-          hint="Picking one fills in the defaults it carries."
-        >
+        <Field label={label} error={fieldState.error?.message}>
           <SelectInput
             value={field.value}
             options={options}
@@ -327,12 +453,9 @@ function ScanPanel({ onQueued }: { onQueued: () => void }) {
           upload.mutate()
         }}
       >
-        <PanelHead
-          eyebrow="Scan"
-          description="Nothing posts itself: the file lands in captures, and you approve what it was."
-        />
+        <PanelHead eyebrow="Scan" />
 
-        <Field label="Receipt" hint="A photo or a PDF, up to the artifact size cap.">
+        <Field label="Receipt">
           <input
             type="file"
             accept="image/*,application/pdf"
@@ -343,7 +466,7 @@ function ScanPanel({ onQueued }: { onQueued: () => void }) {
           />
         </Field>
 
-        <Field label="Note" hint="Optional: what this is, while you still remember.">
+        <Field label="Note">
           <TextInput
             value={note}
             placeholder="lunch with the team"
@@ -361,7 +484,7 @@ function ScanPanel({ onQueued }: { onQueued: () => void }) {
           loading={upload.isPending}
           disabled={file === undefined}
         >
-          {upload.isPending ? 'Queueing…' : 'Queue capture'}
+          {upload.isPending ? 'Queueing' : 'Queue capture'}
         </Button>
 
         {upload.error === null ? null : (

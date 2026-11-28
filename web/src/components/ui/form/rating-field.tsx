@@ -7,7 +7,6 @@ import { RatingGroup } from '@/components/primitives/rating-group'
 type RatingFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   count?: number | undefined
 }
 
@@ -18,7 +17,6 @@ type RatingFieldProps<Schema extends FieldValues> = {
 export function RatingField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   count,
 }: RatingFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
@@ -28,7 +26,7 @@ export function RatingField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <RatingGroup
             value={typeof field.value === 'number' ? field.value : 0}
             count={count}

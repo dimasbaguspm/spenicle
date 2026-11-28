@@ -7,7 +7,7 @@ type Schemas = components['schemas']
 
 /**
  * A schema as the API sends it: `openapi-typescript` marks every field optional because the
- * Go struct carries no `required`, so `-?` and `Exclude<…, undefined>` put the value back,
+ * Go struct carries no `required`, so `-?` and `Exclude<, undefined>` put the value back,
  * recursing through objects and arrays.
  */
 export type Fixed<T> = T extends readonly (infer Item)[]

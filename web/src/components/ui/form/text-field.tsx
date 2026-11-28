@@ -7,7 +7,6 @@ import { TextInput } from '@/components/primitives/text-input'
 type TextFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   placeholder?: string | undefined
   autoComplete?: string | undefined
   disabled?: boolean | undefined
@@ -21,7 +20,6 @@ type TextFieldProps<Schema extends FieldValues> = {
 export function TextField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   placeholder,
   autoComplete,
   disabled,
@@ -33,7 +31,7 @@ export function TextField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <TextInput
             name={field.name}
             value={field.value === undefined || field.value === null ? '' : String(field.value)}

@@ -199,7 +199,6 @@ function ApprovePanel({
                 <SwitchInput
                   checked={learn}
                   label="Remember this"
-                  hint="Teaches a rule from this approval, so the next capture from the same payee arrives pre-filled."
                   onCheckedChange={(next) => {
                     setLearn(next)
                   }}
@@ -208,13 +207,13 @@ function ApprovePanel({
                   name="categoryRef"
                   label="Category"
                   options={categoryOptions}
-                  placeholder="pick a category…"
+                  placeholder="pick a category"
                 />
                 <SelectField<EntryFormValues>
                   name="accountRef"
                   label="Account"
                   options={accountOptions}
-                  placeholder="pick an account…"
+                  placeholder="pick an account"
                 />
                 <SelectField<EntryFormValues>
                   name="payeeRef"
@@ -245,10 +244,10 @@ function ApprovePanel({
             eyebrow="Or"
             description="A rejection keeps the file and the reason, and posts nothing."
           />
-          <Field label="Reason" hint="Optional, and kept beside the rejection.">
+          <Field label="Reason">
             <TextInput
               value={reason}
-              placeholder="not a receipt, already logged…"
+              placeholder="not a receipt, already logged"
               autoComplete="off"
               onChange={(event) => {
                 setReason(event.target.value)

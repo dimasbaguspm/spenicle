@@ -9,7 +9,6 @@ const NO_TAGS: string[] = []
 type TagsFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   placeholder?: string | undefined
 }
 
@@ -20,7 +19,6 @@ type TagsFieldProps<Schema extends FieldValues> = {
 export function TagsField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   placeholder,
 }: TagsFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
@@ -30,7 +28,7 @@ export function TagsField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <TagsInput
             value={Array.isArray(field.value) ? field.value : NO_TAGS}
             placeholder={placeholder}

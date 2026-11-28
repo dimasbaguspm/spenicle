@@ -12,7 +12,6 @@ type RadioFieldOption = {
 type RadioFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   options: RadioFieldOption[]
 }
 
@@ -23,7 +22,6 @@ type RadioFieldProps<Schema extends FieldValues> = {
 export function RadioField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   options,
 }: RadioFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
@@ -33,7 +31,7 @@ export function RadioField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <RadioGroup
             value={field.value === undefined || field.value === null ? '' : String(field.value)}
             options={options}

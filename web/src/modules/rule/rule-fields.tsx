@@ -45,14 +45,14 @@ export function RuleFields({ accounts }: { accounts: readonly Account[] }) {
 
   return (
     <>
-      <TextField<RuleFormValues> name="pattern" label="Pattern" placeholder="indomaret, grab…" />
+      <TextField<RuleFormValues> name="pattern" label="Pattern" placeholder="indomaret, grab" />
       <SelectField<RuleFormValues> name="field" label="Look in" options={ruleFieldOptions} />
       <SelectField<RuleFormValues> name="matchKind" label="Match" options={ruleMatchOptions} />
       <SelectField<RuleFormValues>
         name="categoryRef"
         label="Category"
         options={categoryOptions}
-        placeholder="pick a category…"
+        placeholder="pick a category"
       />
       <TextField<RuleFormValues> name="priority" label="Priority" placeholder="0" />
     </>

@@ -6,11 +6,10 @@ type SwitchInputProps = {
   checked: boolean
   onCheckedChange: (checked: boolean) => void
   label: string
-  hint?: string | undefined
 }
 
 /** Ark owns the checkbox semantics and the hidden input; the brass pill is ours. */
-export function SwitchInput({ checked, onCheckedChange, label, hint }: SwitchInputProps) {
+export function SwitchInput({ checked, onCheckedChange, label }: SwitchInputProps) {
   return (
     <ArkSwitch.Root
       checked={checked}
@@ -28,11 +27,6 @@ export function SwitchInput({ checked, onCheckedChange, label, hint }: SwitchInp
             {label}
           </Text>
         </ArkSwitch.Label>
-        {hint === undefined ? null : (
-          <Text as="span" tone="caption" className="block">
-            {hint}
-          </Text>
-        )}
       </span>
       <ArkSwitch.HiddenInput />
     </ArkSwitch.Root>

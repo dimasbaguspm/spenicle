@@ -63,7 +63,7 @@ export function RecurringDetailPage() {
         <Panel>
           <div className="p-5 sm:p-6">
             <Text as="p" tone="muted">
-              Loading…
+              Loading
             </Text>
           </div>
         </Panel>

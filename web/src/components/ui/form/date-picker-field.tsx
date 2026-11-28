@@ -7,7 +7,6 @@ import { useFormProvider } from '@/components/ui/form/use-form-provider'
 type DatePickerFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   placeholder?: string | undefined
 }
 
@@ -18,7 +17,6 @@ type DatePickerFieldProps<Schema extends FieldValues> = {
 export function DatePickerField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   placeholder,
 }: DatePickerFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
@@ -28,7 +26,7 @@ export function DatePickerField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <DatePicker
             value={field.value === undefined || field.value === null ? '' : String(field.value)}
             placeholder={placeholder}

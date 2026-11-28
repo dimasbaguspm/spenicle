@@ -1,7 +1,7 @@
 import type { Account, AuditRow } from '@/api/types'
 import { DateFormat, formatDate } from '@/lib/date'
 
-/** The five ref-carrying pages an activity line can jump to; each one is `/…/$ref`. */
+/** The five ref-carrying pages an activity line can jump to; each one is `//$ref`. */
 type EntityTo =
   | '/ledger/$ref'
   | '/manage/accounts/$ref'

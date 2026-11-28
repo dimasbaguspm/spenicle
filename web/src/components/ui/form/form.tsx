@@ -69,7 +69,7 @@ export function Form<Schema extends FieldValues>({
               </Button>
             )}
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Saving…' : submitLabel}
+              {form.formState.isSubmitting ? 'Saving' : submitLabel}
             </Button>
           </div>
         )}

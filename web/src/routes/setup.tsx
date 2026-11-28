@@ -1,15 +1,14 @@
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 
 import { api } from '@/api/client'
 import { apiError } from '@/api/error'
 import { openLedger } from '@/api/setup'
-import { Brand } from '@/components/layouts/brand'
+import { Gate } from '@/components/layouts'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
-import { Panel } from '@/components/primitives/panel'
 import { PasswordInput } from '@/components/primitives/password-input'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
@@ -19,13 +18,11 @@ import { useApp, useAuth } from '@/providers'
 const currencyCode = /^[A-Z]{3}$/
 
 /**
- * The claim screen. A fresh instance boots open — there is no password to recover and no
- * generated one to read — so this one form is what closes it: choose the password, choose the
- * currency, and the instance is yours.
+ * The claim screen. A fresh instance boots open, so this form is what closes it: a password, the
+ * currency the ledger will be kept in, and optionally one account to start from.
  *
- * `GET /api/bootstrap` is the whole input: it is the one read that needs no credential, and it
- * carries `claimable` and the server's default currency. Nothing here reads `/api/meta` — that
- * route sits behind a token, and a moment before the claim there is none to send.
+ * `GET /api/bootstrap` is the whole input: the one read that needs no credential. Nothing here
+ * reads `/api/meta` — that route sits behind a token, and a moment before the claim there is none.
  */
 export function SetupPage() {
   const navigate = useNavigate()
@@ -81,14 +78,14 @@ export function SetupPage() {
   // password but no completion row, and the API refuses the claim all the same.
   if (!bootstrap.claimable) {
     return (
-      <Shell
+      <Gate
         title="Already claimed"
-        description="This instance has its own password. Sign in with it."
+        description="This instance has its own password, so there is nothing left to set up here."
       >
-        <Button size="lg" block onClick={() => void navigate({ to: '/' })}>
+        <Button size="lg" onClick={() => void navigate({ to: '/' })}>
           Go to sign in
         </Button>
-      </Shell>
+      </Gate>
     )
   }
 
@@ -97,46 +94,42 @@ export function SetupPage() {
   const ready = password.length >= 12 && currencyCode.test(currency) && openingOk && opening !== '0'
 
   return (
-    <Shell
+    <Gate
       title="Claim this instance"
-      description="Nobody has set this instance up yet, so it is open. Choose a password and the currency the ledger will be kept in. That closes it."
+      description="Nobody has set this instance up, so it is open to whoever gets here first. Name a password, pick the currency the ledger is kept in, and it is yours."
+      aside={
+        <ol className="text-text-muted max-w-xs space-y-2 text-xs">
+          <li>1. The password becomes the root credential.</li>
+          <li>2. The currency is locked: every balance is reported in it.</li>
+          <li>3. The account is optional and can be added later.</li>
+        </ol>
+      }
     >
       <form
-        className="space-y-6"
+        className="space-y-7"
         onSubmit={(event) => {
           event.preventDefault()
           finish.mutate()
         }}
       >
-        <div className="space-y-5">
-          <Text as="p" tone="section">
-            Your password
-          </Text>
-          <Field
-            label="Instance password"
-            hint="At least 12 characters. It is the root credential; a token is minted from it after this."
-            error={finish.error?.message}
-          >
+        <section className="space-y-4">
+          <Step label="Password" />
+          <Field label="Instance password" error={finish.error?.message}>
             <PasswordInput
               name="new-password"
               value={password}
               autoComplete="new-password"
-              placeholder="Twelve characters or more…"
+              placeholder="Twelve characters or more"
               onChange={(event) => {
                 setPassword(event.target.value)
               }}
             />
           </Field>
-        </div>
+        </section>
 
-        <div className="border-border space-y-5 border-t pt-6">
-          <Text as="p" tone="section">
-            The ledger
-          </Text>
-          <Field
-            label="Base currency"
-            hint="An ISO 4217 code such as USD or IDR. Set once: every balance is reported in it, and no request can change it later."
-          >
+        <section className="border-border space-y-4 border-t pt-6">
+          <Step label="The ledger" />
+          <Field label="Base currency">
             <TextInput
               name="base-currency"
               value={currency}
@@ -151,16 +144,16 @@ export function SetupPage() {
               }}
             />
           </Field>
+        </section>
 
-          <Field
-            label="An account to start with"
-            hint="Optional. Leave it empty and add accounts later from Manage."
-          >
+        <section className="border-border space-y-4 border-t pt-6">
+          <Step label="An account to start with" optional />
+          <Field label="Name">
             <TextInput
               name="opening-account"
               value={account}
               autoComplete="off"
-              placeholder="Cash, Main account…"
+              placeholder="Cash"
               onChange={(event) => {
                 setAccount(event.target.value)
               }}
@@ -169,7 +162,6 @@ export function SetupPage() {
 
           <Field
             label="Opening balance"
-            hint="Whole minor units, signed: 100000 is 1,000.00 in a two-decimal currency and 100000 in one without decimals."
             error={openingOk ? undefined : 'digits only, with a leading minus when it is a debt'}
           >
             <TextInput
@@ -184,7 +176,10 @@ export function SetupPage() {
               }}
             />
           </Field>
-        </div>
+          <Text as="p" tone="caption" className="text-text-faint">
+            In minor units: 100000 is 1,000.00 in a two-decimal currency.
+          </Text>
+        </section>
 
         <Button
           type="submit"
@@ -194,37 +189,25 @@ export function SetupPage() {
           trailingIcon={ArrowRight}
           disabled={!ready}
         >
-          {finish.isPending ? 'Claiming…' : 'Claim and open'}
+          {finish.isPending ? 'Claiming' : 'Claim and open'}
         </Button>
       </form>
-    </Shell>
+    </Gate>
   )
 }
 
-/** The header, the plate and the footer line every state of this screen shares. */
-function Shell({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description: string
-  children: ReactNode
-}) {
+/** A numbered step: the plate is one form, but the claim is three decisions in order. */
+function Step({ label, optional = false }: { label: string; optional?: boolean }) {
   return (
-    <div className="mx-auto my-auto flex w-full max-w-lg flex-col gap-7 py-4">
-      <div className="space-y-5 text-center">
-        <Brand />
-        <div className="space-y-3">
-          <Text as="h1" tone="display">
-            {title}
-          </Text>
-          <Text as="p" tone="muted" className="mx-auto max-w-md leading-relaxed">
-            {description}
-          </Text>
-        </div>
-      </div>
-      <Panel className="p-5 sm:p-7">{children}</Panel>
+    <div className="flex items-baseline justify-between gap-3">
+      <Text as="p" tone="section">
+        {label}
+      </Text>
+      {optional ? (
+        <Text as="p" tone="caption" className="text-text-faint">
+          optional
+        </Text>
+      ) : null}
     </div>
   )
 }

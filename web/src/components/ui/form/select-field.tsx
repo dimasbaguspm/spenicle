@@ -12,7 +12,6 @@ type SelectFieldOption = {
 type SelectFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   options: SelectFieldOption[]
   placeholder?: string | undefined
 }
@@ -24,7 +23,6 @@ type SelectFieldProps<Schema extends FieldValues> = {
 export function SelectField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   options,
   placeholder,
 }: SelectFieldProps<Schema>) {
@@ -35,7 +33,7 @@ export function SelectField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <SelectInput
             value={field.value === undefined || field.value === null ? '' : String(field.value)}
             options={options}

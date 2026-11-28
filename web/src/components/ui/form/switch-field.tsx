@@ -7,18 +7,13 @@ import { Text } from '@/components/primitives/text'
 type SwitchFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
 }
 
 /**
  * Joins the form to a switch that carries its own label, so no `Field` wraps it; the message sits
  * under it and only an explicit `true` reads as on, so an unset field stays off.
  */
-export function SwitchField<Schema extends FieldValues>({
-  name,
-  label,
-  hint,
-}: SwitchFieldProps<Schema>) {
+export function SwitchField<Schema extends FieldValues>({ name, label }: SwitchFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
 
   return (
@@ -33,7 +28,6 @@ export function SwitchField<Schema extends FieldValues>({
             onCheckedChange={(checked) => {
               field.onChange(checked)
             }}
-            {...(fieldState.error === undefined ? { hint } : {})}
           />
           {fieldState.error?.message === undefined ? null : (
             <Text as="p" tone="caption" className="text-danger">

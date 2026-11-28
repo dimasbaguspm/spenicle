@@ -70,10 +70,7 @@ export function NewImportPage() {
               )
             }}
           >
-            <Field
-              label="Statement"
-              hint="Columns: occurred_on, amount_minor, description, and optionally currency."
-            >
+            <Field label="Statement">
               <input
                 type="file"
                 accept="text/csv,.csv"
@@ -87,7 +84,7 @@ export function NewImportPage() {
               />
             </Field>
 
-            <Field label="Paid from" hint="Every row of this statement moves through one account.">
+            <Field label="Paid from">
               <SelectInput
                 value={accountRef}
                 options={options}
@@ -105,7 +102,7 @@ export function NewImportPage() {
                 loading={create.isPending}
                 disabled={file === undefined}
               >
-                {create.isPending ? 'Uploading…' : 'Upload statement'}
+                {create.isPending ? 'Uploading' : 'Upload statement'}
               </Button>
             </div>
           </form>

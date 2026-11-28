@@ -109,11 +109,6 @@ function ScopeCreate({
                   name="kind"
                   label="Kind"
                   options={kindOptions(scope)}
-                  hint={
-                    scope === 'category'
-                      ? 'Expense files a payment; income files what came in.'
-                      : 'Assets hold what you have, liabilities what you owe, equity what is left over.'
-                  }
                 />
               </>
             )}

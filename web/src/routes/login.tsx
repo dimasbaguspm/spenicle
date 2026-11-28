@@ -5,17 +5,16 @@ import { useState } from 'react'
 
 import { api } from '@/api/client'
 import { apiError, isApiError } from '@/api/error'
-import { Brand } from '@/components/layouts/brand'
+import { Gate } from '@/components/layouts'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
-import { Panel } from '@/components/primitives/panel'
 import { PasswordInput } from '@/components/primitives/password-input'
 import { Text } from '@/components/primitives/text'
 import { useApp, useAuth } from '@/providers'
 
 /**
- * The password never leaves this form: it is exchanged for a scoped token, and only
- * the token is kept. A leaked browser credential is therefore revocable, not root.
+ * The password never leaves this form: it is exchanged for a scoped token, and only the token is
+ * kept. A leaked browser credential is therefore revocable, not root.
  */
 export function LoginPage() {
   const navigate = useNavigate()
@@ -37,8 +36,7 @@ export function LoginPage() {
       return data
     },
     onError: (error) => {
-      // a fresh instance refuses every credential until its generated password is replaced:
-      // that is not a failed sign-in, it is the setup wizard's job, and it is one link away
+      // an instance claimed by an earlier build answers with its own code: the fix is the wizard
       if (isApiError(error) && error.code === 'password_change_required') {
         void navigate({ to: '/setup' })
       }
@@ -53,72 +51,71 @@ export function LoginPage() {
     },
   })
 
-  const claimable = bootstrap.claimable
-
   return (
-    <div className="mx-auto my-auto flex w-full max-w-md flex-col gap-7 py-4">
-      <div className="space-y-5 text-center">
-        <Brand />
-        <div className="space-y-3">
-          <Text as="h1" tone="display">
-            Sign in
-          </Text>
-          <Text as="p" tone="muted" className="mx-auto max-w-sm leading-relaxed">
-            One password opens this instance. It is exchanged for a scoped token and never stored.
-          </Text>
-        </div>
-      </div>
-
-      <Panel className="p-6 sm:p-8">
-        <form
-          className="space-y-5"
-          onSubmit={(event) => {
-            event.preventDefault()
-            signIn.mutate(password.trim())
-          }}
+    <Gate
+      title="Sign in"
+      description="One password opens this instance. It buys a scoped token for this tab and is never stored, so signing out is enough to end the session."
+      aside={
+        <dl className="text-text-muted grid max-w-xs grid-cols-2 gap-3 text-xs">
+          <Fact label="Currency" value={bootstrap.base_currency} />
+          <Fact label="Timezone" value={bootstrap.timezone} />
+        </dl>
+      }
+    >
+      <form
+        className="space-y-5"
+        onSubmit={(event) => {
+          event.preventDefault()
+          signIn.mutate(password.trim())
+        }}
+      >
+        <Field label="Instance password" error={signIn.error?.message}>
+          <PasswordInput
+            name="password"
+            placeholder="Instance password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value)
+            }}
+          />
+        </Field>
+        <Button
+          type="submit"
+          size="lg"
+          block
+          loading={signIn.isPending}
+          trailingIcon={ArrowRight}
+          disabled={password.trim() === ''}
         >
-          <Field
-            label="Instance password"
-            hint="Only the token is kept, and only in this tab."
-            error={signIn.error?.message}
-          >
-            <PasswordInput
-              name="password"
-              placeholder="Your instance password…"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value)
-              }}
-            />
-          </Field>
-          <Button
-            type="submit"
-            size="lg"
-            block
-            loading={signIn.isPending}
-            trailingIcon={ArrowRight}
-          >
-            {signIn.isPending ? 'Unlocking…' : 'Unlock'}
-          </Button>
-        </form>
-      </Panel>
+          {signIn.isPending ? 'Unlocking' : 'Unlock'}
+        </Button>
+      </form>
 
-      <Text as="p" tone="caption" className="text-center">
-        {claimable ? (
+      <Text as="p" tone="caption" className="mt-5 block text-center">
+        {bootstrap.claimable ? (
           <>
             This instance has never been set up.{' '}
             <Link
               to="/setup"
-              className="text-text underline decoration-ink-600 underline-offset-4 hover:text-accent"
+              className="text-text decoration-border hover:text-accent underline underline-offset-4"
             >
-              Claim it…
+              Claim it
             </Link>
           </>
         ) : (
           'The ledger is local. Nothing leaves this container.'
         )}
       </Text>
+    </Gate>
+  )
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="space-y-0.5">
+      <dt className="text-text-faint text-[0.5625rem] tracking-[0.16em] uppercase">{label}</dt>
+      <dd className="text-text font-mono text-xs">{value}</dd>
     </div>
   )
 }

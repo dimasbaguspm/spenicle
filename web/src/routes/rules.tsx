@@ -59,7 +59,7 @@ export function RulesPage() {
           <div className="space-y-3 p-5 sm:p-6">
             <Text as="p" tone="muted">
               {rules.isPending
-                ? 'Loading…'
+                ? 'Loading'
                 : 'No rules yet. One pattern and one category is enough to stop filing the same shop twice.'}
             </Text>
             {rules.isPending ? null : (

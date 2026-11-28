@@ -240,7 +240,7 @@ function SavedViews() {
         )}
 
         <div className="flex flex-wrap items-end gap-2 border-t border-border pt-4">
-          <Field label="Open by ref" hint="A view saved from another browser, if you kept its ref.">
+          <Field label="Open by ref">
             <TextInput
               name="view-ref"
               placeholder="32 hex"

@@ -36,13 +36,11 @@ export function PayeeFields({
         name="accountRef"
         label="Default account"
         options={accountOptions}
-        hint="Where this payee is usually paid from."
       />
       <SelectField<PayeeFormValues>
         name="categoryRef"
         label="Default category"
         options={categoryOptions}
-        hint="What this payee's payments are usually filed under."
       />
     </>
   )

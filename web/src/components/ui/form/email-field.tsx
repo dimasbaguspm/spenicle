@@ -7,7 +7,6 @@ import { useFormProvider } from '@/components/ui/form/use-form-provider'
 type EmailFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   placeholder?: string | undefined
   autoComplete?: string | undefined
   disabled?: boolean | undefined
@@ -20,7 +19,6 @@ type EmailFieldProps<Schema extends FieldValues> = {
 export function EmailField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   placeholder,
   autoComplete,
   disabled,
@@ -32,7 +30,7 @@ export function EmailField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <EmailInput
             name={field.name}
             value={field.value === undefined || field.value === null ? '' : String(field.value)}

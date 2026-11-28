@@ -12,7 +12,6 @@ type SegmentFieldOption = {
 type SegmentFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   options: SegmentFieldOption[]
 }
 
@@ -23,7 +22,6 @@ type SegmentFieldProps<Schema extends FieldValues> = {
 export function SegmentField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   options,
 }: SegmentFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
@@ -33,7 +31,7 @@ export function SegmentField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <SegmentGroup
             value={field.value === undefined || field.value === null ? '' : String(field.value)}
             options={options}

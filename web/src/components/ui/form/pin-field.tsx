@@ -9,7 +9,6 @@ const NO_DIGITS: string[] = []
 type PinFieldProps<Schema extends FieldValues> = {
   name: FieldPath<Schema>
   label: string
-  hint?: string | undefined
   length?: number | undefined
 }
 
@@ -20,7 +19,6 @@ type PinFieldProps<Schema extends FieldValues> = {
 export function PinField<Schema extends FieldValues>({
   name,
   label,
-  hint,
   length,
 }: PinFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
@@ -30,7 +28,7 @@ export function PinField<Schema extends FieldValues>({
       control={form.control}
       name={name}
       render={({ field, fieldState }) => (
-        <Field label={label} hint={hint} error={fieldState.error?.message}>
+        <Field label={label} error={fieldState.error?.message}>
           <PinInput
             value={Array.isArray(field.value) ? field.value : NO_DIGITS}
             length={length}
