@@ -251,6 +251,23 @@ date and derives the rest. The row says `Every month on day 28`; pause and resum
 are immutable after creation. A rule never posts an entry: when it comes due the worker queues a
 capture and `/manage/captures` is where it becomes one.
 
+## Mailbox — the password is the key
+
+`/settings/intake` is the only screen whose every route is root-only: `GET /api/connections`,
+`POST /api/connections/google`, the revoke, `GET`/`PATCH /api/intake`, `POST /api/intake/run` and
+`GET /api/intake/messages`. A scoped token answers `403`, so the page opens with one password field
+and passes that credential per request (`api/connections.ts`, `api/intake.ts` take it as an
+argument, the way `createToken` does). Nothing is stored: leave the field and the panels go with it.
+
+The screen is three panels in the order the wiring has to happen. **Google mailbox**: the client id,
+the secret and the redirect URL (`<origin>/api/connections/google/callback`) are posted once and the
+answer is the authorise URL to follow; once a grant exists the panel says who it belongs to and
+offers Revoke. **Polling**: `enabled` and the sender allowlist, saved in one `PATCH`; an empty
+list means every sender. Poll now runs the same call the worker makes and prints
+`created / skipped / unchanged / failed`. **Seen**: `GET /api/intake/messages`, one line per mail
+reference with its status, the capture it became, and Re-read, which asks the provider for that mail
+again.
+
 ## Statements — a draft, not a backlog
 
 `/manage/imports` takes one CSV (`occurred_on`, `amount_minor`, `description`, optional

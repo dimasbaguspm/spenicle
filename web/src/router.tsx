@@ -29,6 +29,7 @@ import { RatesPage } from '@/routes/rates'
 import { RecurringPage } from '@/routes/recurring'
 import { SettingsPage } from '@/routes/settings'
 import { AppearancePage } from '@/routes/settings-appearance'
+import { MailboxPage } from '@/routes/settings-intake'
 import { PasswordPage } from '@/routes/settings-password'
 import { TokensPage } from '@/routes/settings-tokens'
 import { SetupPage } from '@/routes/setup'
@@ -229,6 +230,12 @@ const settingsTokensRoute = createRoute({
   component: TokensPage,
 })
 
+const settingsIntakeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/intake',
+  component: MailboxPage,
+})
+
 const exportsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/manage/exports',
@@ -280,6 +287,7 @@ export const routeTree = rootRoute.addChildren([
   settingsAppearanceRoute,
   settingsPasswordRoute,
   settingsTokensRoute,
+  settingsIntakeRoute,
 ])
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' })

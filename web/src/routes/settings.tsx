@@ -23,6 +23,12 @@ export function SettingsPage() {
 
   const sections = [
     {
+      to: '/settings/intake',
+      label: 'Mailbox',
+      caption: 'The Google grant, what intake polls, and what it has seen.',
+      count: '',
+    },
+    {
       to: '/settings/appearance',
       label: 'Appearance',
       caption: 'Light, dark, or whatever this client asks for.',

@@ -122,8 +122,8 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        (the rules, plus pause and resume), `/manage/captures` (+
                        `/{ref}` to review one), `/manage/imports` (+ `/{ref}` to review a statement's
                        draft), `/manage/exports`, `/manage/rates`), plus
-                       `/settings` (an index over `/settings/appearance`, `/settings/password` and
-                       `/settings/tokens`). The shell has
+                       `/settings` (an index over `/settings/intake`, `/settings/appearance`,
+                       `/settings/password` and `/settings/tokens`). The shell has
                        two shapes: from `lg` a header with Register, Analytics and Manage on the
                        left and Settings plus Log out on the right; below `lg` no header at all,
                        and a five-slot bottom bar: register, analytics, a new entry in the middle,

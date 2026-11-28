@@ -131,6 +131,25 @@ export type ImportRow = Omitted<
 >
 export type ImportDetail = ImportBatch & { rows: ImportRow[] }
 export type ImportEvent = Omitted<Fixed<Schemas['importEventResponse']>, 'payload' | 'row_index'>
+
+/** The mailbox grant: secrets never leave the server, so the screen reads state, account and scopes. */
+export type Connection = Omitted<
+  Fixed<Schemas['connectionResponse']>,
+  'ref' | 'account' | 'scopes' | 'access_expires_at' | 'last_refreshed_at' | 'revoked_at'
+>
+export type ConnectionStart = Fixed<Schemas['connectionStartResponse']>
+export type IntakeConfig = Fixed<Schemas['intakeConfigResponse']>
+export type IntakeResult = Fixed<Schemas['intakeResultResponse']>
+/** One polled mail: the reference, never the body, which stays sealed in the capture. */
+export type MailMessage = Omitted<
+  Fixed<Schemas['mailMessageResponse']>,
+  | 'capture_ref'
+  | 'message_id_header'
+  | 'provider_revision'
+  | 'skip_reason'
+  | 'superseded_by'
+  | 'thread_ref'
+>
 export type ExportJob = Omitted<
   Fixed<Schemas['exportResponse']>,
   'counts' | 'error_message' | 'expires_at' | 'finished_at' | 'from' | 'started_at' | 'to'
