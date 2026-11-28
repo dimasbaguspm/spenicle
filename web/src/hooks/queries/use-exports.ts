@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 
 import {
   createExport,
+  getExport,
   listExportEvents,
   listExports,
   type ExportCreate,
@@ -26,6 +27,15 @@ export function useExportEvents(ref: string) {
   return useQuery({
     queryKey: ['exports', ref, 'events'],
     queryFn: () => listExportEvents(ref),
+    enabled: ref !== '',
+  })
+}
+
+/** One job, by ref: the detail page reads what the list only summarises. */
+export function useExport(ref: string) {
+  return useQuery({
+    queryKey: ['exports', ref],
+    queryFn: () => getExport(ref),
     enabled: ref !== '',
   })
 }

@@ -163,17 +163,25 @@ One abstraction, four parts, and every list shares it:
 - The screen never spells a query param: it hands `query` to the hook that fetches, and `apply`
   to the controls.
 
-The rail applies as you change it; the phone's sheet edits a draft and stamps it with Apply, so a
-half-typed date costs no request. Because the state is the URL, a narrowed view is a link:
+The rail applies as you change it — through a 300 ms debounce, so typing a date costs one request
+and not eight; the phone's sheet edits a draft and stamps it with Apply, so a half-typed date costs
+none. Because the state is the URL, a narrowed view is a link:
 
 | URL                                     | means                                                   |
 | --------------------------------------- | ------------------------------------------------------- |
 | `/ledger?from=2026-11-01&to=2026-11-30` | one month of entries                                    |
 | `/ledger?account=<ref>&q=coffee`        | one account, notes or payee matching coffee             |
+| `/ledger?account=a,b&category=c`        | anything touching a, b or c — the API widens a list     |
 | `/accounts/<ref>?from=…`                | one account's movements, with a running balance per row |
 
 The route validates the search (`validateSearch: entrySearch`), so an unknown or empty param is
 dropped rather than sent, and `/manage/accounts/$ref` pins `account_ref` to the account in the path.
+
+An account and a category are both accounts on the wire, so the rail keeps them apart and the
+query joins them: `account_ref=a,b,c` means "touching any of these", never "all of them", because
+that is the only semantics `GET /api/entries` has. Both fields are multi-selects
+(`MultiSelectField`: the listbox adds, a chip takes away), and the chip strip says one name or a
+count, so a filter never reads as a hash.
 
 Every screen's top is one component, `components/primitives/page-header`: breadcrumb, title,
 action. The title is desktop-only — a phone spends its first line on the breadcrumb instead of a
@@ -188,6 +196,21 @@ component draws them (`modules/entry/entry-movements.tsx`) and one hook feeds it
 (`hooks/use-entry-movements.ts`) — a module may not reach for a hook, which is why the read lives
 outside the module. `BreakpointTablet` and `BreakpointDesktop` are the two named halves of `lg`:
 the rail and the sheet are never both rendered.
+
+## Four pages per thing you keep
+
+Every entity in `/manage` — account, category, payee, recurring rule, rule — has the same four
+routes: `/manage/<thing>` lists and searches, `/new` creates, `/<ref>` shows one, `/<ref>/edit`
+changes it. The list is a list: its action buttons live on the detail page, so a stray click cannot
+pause a schedule or archive a rule. Captures, imports and exports follow the same shape with the
+route the API actually has — a capture's `/new` signs posts to `/ledger/new?mode=scan` (the file
+picker is already there) and its `/<ref>/edit` is the review, because approving is the only edit a
+capture has; an export's `/<ref>` is the job plus its event log.
+
+Saving a thing lands on its detail page, cancelling goes back to the list, and adding a second thing
+is one click from the list's action. A list that cannot search on the server filters what it
+fetched — the captures page matches the text the intake sent, the imports page the file name, the
+exports page the format and status — and says so when nothing matches.
 
 ## Accounts and categories — one table, two screens
 
@@ -292,6 +315,15 @@ Between the form and the list is **Try a line**: type a payee name or a raw stat
 `GET /api/categorization/suggest` answers the category, the `why` sentence and the tier
 (`payee_default`, `rule_exact`, `rule_contains`, `none`). It writes nothing, which is what makes it
 safe to poke at while tuning a pattern.
+
+## Activity — one journal for the instance
+
+`/settings/activity` is `GET /api/audit` with no entity pinned: every create, update, reverse,
+approve, reject and revoke, newest first, filterable by kind and action. Each line links to the row
+it changed — an entry, an account (or a category, chosen by the account's kind), a payee, a rule, a
+token — so reading the log ends in fixing the thing. The entity pages keep their own timeline; the
+history panel that used to sit on every account, category and payee is gone, because three copies
+of one journal is three places to look.
 
 ## Statements — a draft, not a backlog
 

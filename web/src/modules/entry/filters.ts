@@ -6,6 +6,7 @@ export type EntrySearch = {
   from?: string | undefined
   to?: string | undefined
   account?: string | undefined
+  category?: string | undefined
   payee?: string | undefined
   q?: string | undefined
   reversed?: 'true' | 'false' | undefined
@@ -24,6 +25,7 @@ export function entrySearch(raw: Record<string, unknown>): EntrySearch {
     from: text(raw.from),
     to: text(raw.to),
     account: text(raw.account),
+    category: text(raw.category),
     payee: text(raw.payee),
     q: text(raw.q),
     reversed: reversed === 'true' || reversed === 'false' ? reversed : undefined,
@@ -42,8 +44,12 @@ export function entryQuery(search: EntrySearch, limit: number): EntryFilters {
     query.to = search.to
   }
 
-  if (search.account !== undefined) {
-    query.account_ref = search.account
+  // an account and a category are both accounts on the wire, and the API widens a list:
+  // "cash or groceries" is one `account_ref`, never two filters that could contradict
+  const touching = [search.account, search.category].filter((list) => list !== undefined)
+
+  if (touching.length > 0) {
+    query.account_ref = touching.join(',')
   }
 
   if (search.payee !== undefined) {
@@ -62,9 +68,15 @@ export function entryQuery(search: EntrySearch, limit: number): EntryFilters {
 }
 
 export function filterCount(search: EntrySearch): number {
-  return [search.from, search.to, search.account, search.payee, search.q, search.reversed].filter(
-    (value) => value !== undefined,
-  ).length
+  return [
+    search.from,
+    search.to,
+    search.account,
+    search.category,
+    search.payee,
+    search.q,
+    search.reversed,
+  ].filter((value) => value !== undefined).length
 }
 
 /**

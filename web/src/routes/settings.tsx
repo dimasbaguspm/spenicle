@@ -23,6 +23,12 @@ export function SettingsPage() {
 
   const sections = [
     {
+      to: '/settings/activity',
+      label: 'Activity',
+      caption: 'One journal for the whole instance, each line a link to the row it changed.',
+      count: '',
+    },
+    {
       to: '/settings/intake',
       label: 'Mailbox',
       caption: 'The Google grant, what intake polls, and what it has seen.',

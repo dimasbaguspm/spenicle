@@ -11,6 +11,17 @@ type Chip = {
   label: string
 }
 
+/** A list reads as one name when it holds one, and as a count when it holds more. */
+function names(list: string, accounts: readonly Account[], fallback: string): string {
+  const refs = list.split(',')
+
+  if (refs.length === 1) {
+    return accountName(accounts.find((row) => row.ref === refs[0]))
+  }
+
+  return `${String(refs.length)} ${fallback}s`
+}
+
 /** The applied filter, said out loud: each chip is one field, and it can be taken back. */
 function chipsOf(
   value: EntrySearch,
@@ -28,13 +39,21 @@ function chipsOf(
   }
 
   if (value.account !== undefined) {
-    const account = accounts.find((row) => row.ref === value.account)
-    chips.push({ key: 'account', label: accountName(account) })
+    chips.push({ key: 'account', label: names(value.account, accounts, 'account') })
+  }
+
+  if (value.category !== undefined) {
+    chips.push({ key: 'category', label: names(value.category, accounts, 'category') })
   }
 
   if (value.payee !== undefined) {
-    const payee = payees.find((row) => row.ref === value.payee)
-    chips.push({ key: 'payee', label: payee?.name ?? 'payee' })
+    const refs = value.payee.split(',')
+    const named = refs.map((ref) => payees.find((row) => row.ref === ref)?.name ?? 'payee')
+
+    chips.push({
+      key: 'payee',
+      label: named.length === 1 ? (named[0] ?? 'payee') : `${String(named.length)} payees`,
+    })
   }
 
   if (value.q !== undefined) {

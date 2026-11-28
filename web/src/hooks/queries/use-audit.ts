@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { listAudit } from '@/api/audit'
+import { listAudit, type AuditFilters } from '@/api/audit'
 
 /** One row's own history, by ref: precise, any age, one request. */
 export function useEntityAudit(kind: string, ref: string) {
@@ -19,5 +19,13 @@ export function useLedgerAudit() {
   return useQuery({
     queryKey: ['audit', 'ledger_entry', 'scan'],
     queryFn: () => listAudit({ entity_kind: 'ledger_entry', limit: 200 }),
+  })
+}
+
+/** The whole journal, filtered: what the activity screen reads, with no entity pinned. */
+export function useActivity(filters: AuditFilters) {
+  return useQuery({
+    queryKey: ['audit', 'activity', filters],
+    queryFn: () => listAudit(filters),
   })
 }

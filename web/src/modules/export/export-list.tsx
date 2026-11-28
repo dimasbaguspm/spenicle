@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router'
+
 import { buttonStyles } from '@/components/primitives/button'
 import { Text } from '@/components/primitives/text'
 import { cn } from '@/lib/cn'
@@ -27,7 +29,13 @@ export function ExportList({
         return (
           <li key={row.ref} className="flex items-center justify-between gap-4 px-5 py-3.5 sm:px-6">
             <span className="min-w-0 space-y-0.5">
-              <span className="text-text block truncate text-sm">{row.label}</span>
+              <Link
+                to="/manage/exports/$ref"
+                params={{ ref: row.ref }}
+                className="text-text hover:text-accent block truncate text-sm underline-offset-4 hover:underline"
+              >
+                {row.label}
+              </Link>
               <Text as="span" tone="caption" className="text-text-faint block">
                 {caption}
               </Text>

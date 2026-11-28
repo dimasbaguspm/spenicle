@@ -114,17 +114,20 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        is the whole switch. Screens: `/` sign in, `/setup` the claim
                        wizard (password, base currency, one optional opening account),
                        `/dashboard`, `/ledger` (+ `/ledger/new`, `/ledger/{ref}`), `/analytics`,
-                       and `/manage` (the index plus everything it owns: `/manage/accounts` (+
-                       `/new`, `/{ref}`, `/{ref}/edit`: asset, liability, equity),
-                       `/manage/categories` (the same four routes, for expense and income accounts:
-                       a category is an account, not a table), `/manage/payees` (the same four: a
-                       name plus an optional default account and category), `/manage/recurring`
-                       (the rules, plus pause and resume), `/manage/captures` (+
-                       `/{ref}` to review one), `/manage/imports` (+ `/{ref}` to review a statement's
-                       draft), `/manage/rules` (the categorization patterns), `/manage/exports`,
-                       `/manage/rates`), plus
-                       `/settings` (an index over `/settings/intake`, `/settings/appearance`,
-                       `/settings/password` and `/settings/tokens`). The shell has
+                      and `/manage` (the index plus everything it owns: `/manage/accounts` (+
+                      `/new`, `/{ref}`, `/{ref}/edit`: asset, liability, equity),
+                      `/manage/categories` (the same four routes, for expense and income accounts:
+                      a category is an account, not a table), `/manage/payees` (the same four: a
+                      name plus an optional default account and category), `/manage/recurring`
+                      (the same four: a schedule, pausable on its detail page), `/manage/rules`
+                      (the same four, plus a playground dialog over `suggest`), `/manage/captures`
+                      (+ `/new`, which signs posts to `/ledger/new?mode=scan`, and `/{ref}` to
+                      review one), `/manage/imports` (+ `/new`, and `/{ref}` to review a statement's
+                      draft), `/manage/exports` (+ `/new`, and `/{ref}` for one job and its events),
+                      `/manage/rates`), plus
+                      `/settings` (an index over `/settings/activity` — the instance-wide journal,
+                      each line a link to the row that changed — `/settings/intake`,
+                      `/settings/appearance`, `/settings/password` and `/settings/tokens`). The shell has
                        two shapes: from `lg` a header with Register, Analytics and Manage on the
                        left and Settings plus Log out on the right; below `lg` no header at all,
                        and a five-slot bottom bar: register, analytics, a new entry in the middle,

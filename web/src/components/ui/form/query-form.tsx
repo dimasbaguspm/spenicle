@@ -1,3 +1,4 @@
+import { debounce } from 'radash'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { FormProvider, useForm, type DefaultValues, type FieldValues } from 'react-hook-form'
 
@@ -17,6 +18,8 @@ type QueryFormProps<Schema extends FieldValues> = {
   normalize?: ((values: Schema) => Schema) | undefined
   submitLabel?: string | undefined
   className?: string | undefined
+  /** milliseconds of quiet before a live form writes; typing a date should cost one request */
+  delay?: number | undefined
   children: ReactNode
 }
 
@@ -36,17 +39,38 @@ export function QueryForm<Schema extends FieldValues>({
   normalize,
   submitLabel = 'Apply',
   className,
+  delay = 300,
   children,
 }: QueryFormProps<Schema>) {
   const form = useForm<Schema>({ defaultValues: values as DefaultValues<Schema> })
   const apply = useRef(onApply)
   const tidy = useRef(normalize)
+  const queue = useRef<((next: Schema) => void) | null>(null)
 
   // the subscription below is opened once; the refs keep it pointing at the current callbacks
   useEffect(() => {
     apply.current = onApply
     tidy.current = normalize
   }, [onApply, normalize])
+
+  // a live form types as fast as a person: the write waits for the pause, and a remount (the
+  // parent keys this by the URL) cancels the pending tick instead of firing it twice
+  useEffect(() => {
+    if (!live) {
+      return
+    }
+
+    const write = debounce<[Schema]>({ delay }, (next) => {
+      apply.current(next)
+    })
+
+    queue.current = write
+
+    return () => {
+      write.cancel()
+      queue.current = null
+    }
+  }, [live, delay])
 
   useEffect(() => {
     if (!live) {
@@ -57,7 +81,13 @@ export function QueryForm<Schema extends FieldValues>({
       formState: { values: true },
       callback: ({ values: draft }) => {
         const next = draft as Schema
-        apply.current(tidy.current === undefined ? next : tidy.current(next))
+        const tidyNext = tidy.current === undefined ? next : tidy.current(next)
+
+        if (queue.current === null) {
+          apply.current(tidyNext)
+        } else {
+          queue.current(tidyNext)
+        }
       },
     })
 

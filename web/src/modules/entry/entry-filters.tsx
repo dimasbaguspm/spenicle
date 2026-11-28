@@ -5,13 +5,10 @@ import { Button } from '@/components/primitives/button'
 import { Drawer } from '@/components/primitives/drawer'
 import { Panel } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
-import { DateField, QueryForm, SelectField, TextField } from '@/components/ui/form'
-import { accountName } from '@/modules/account'
+import { DateField, MultiSelectField, QueryForm, TextField } from '@/components/ui/form'
+import { accountName, isCategoryKind, isMoneyKind } from '@/modules/account'
 
 import { entryDraft, filterCount, type EntrySearch } from './filters'
-
-const anyAccount = { label: 'Any account', value: '' }
-const anyPayee = { label: 'Any payee', value: '' }
 
 type FilterProps = {
   value: EntrySearch
@@ -29,23 +26,29 @@ function FilterFields({ accounts, payees }: Pick<FilterProps, 'accounts' | 'paye
         <DateField<EntrySearch> name="from" label="From" />
         <DateField<EntrySearch> name="to" label="To" />
       </div>
-      <SelectField<EntrySearch>
+      <MultiSelectField<EntrySearch>
         name="account"
         label="Account"
-        placeholder="Any account"
-        options={[
-          anyAccount,
-          ...accounts.map((account) => ({
-            label: `${accountName(account)} (${account.kind})`,
-            value: account.ref,
-          })),
-        ]}
+        hint="Where the money sat. Either one of these."
+        placeholder="add an account…"
+        options={accounts
+          .filter((account) => isMoneyKind(account.kind))
+          .map((account) => ({ label: accountName(account), value: account.ref }))}
       />
-      <SelectField<EntrySearch>
+      <MultiSelectField<EntrySearch>
+        name="category"
+        label="Category"
+        hint="What it was for. Either one of these."
+        placeholder="add a category…"
+        options={accounts
+          .filter((account) => isCategoryKind(account.kind))
+          .map((account) => ({ label: accountName(account), value: account.ref }))}
+      />
+      <MultiSelectField<EntrySearch>
         name="payee"
         label="Payee"
-        placeholder="Any payee"
-        options={[anyPayee, ...payees.map((payee) => ({ label: payee.name, value: payee.ref }))]}
+        placeholder="add a payee…"
+        options={payees.map((payee) => ({ label: payee.name, value: payee.ref }))}
       />
       <TextField<EntrySearch>
         name="q"

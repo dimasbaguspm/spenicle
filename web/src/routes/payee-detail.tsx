@@ -12,7 +12,6 @@ import { useMoney } from '@/hooks/use-money'
 import { cn } from '@/lib/cn'
 import { DateFormat, formatDate } from '@/lib/date'
 import { absent } from '@/lib/text'
-import { EntityHistory } from '@/components/ui/entity-history'
 import { accountIndex, EntryMovements, payeeRows } from '@/modules'
 
 /** One payee: the defaults it carries, and everything paid to it, narrowed like the register. */
@@ -77,8 +76,6 @@ export function PayeeDetailPage() {
         index={accountIndex(accounts)}
         scale={money.scale}
       />
-
-      <EntityHistory kind="payee" ref={ref} />
     </div>
   )
 }

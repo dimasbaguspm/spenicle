@@ -91,7 +91,7 @@ export function EntryDetail({
           </div>
         </div>
 
-        <dl className="border-border grid gap-x-6 gap-y-2 border-t px-5 py-4 text-sm sm:grid-cols-2 sm:px-6">
+        <dl className="border-border grid gap-y-2 border-t px-5 py-4 text-sm sm:px-6">
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-text-faint text-xs">Day</dt>
             <dd className="text-text font-mono text-xs">

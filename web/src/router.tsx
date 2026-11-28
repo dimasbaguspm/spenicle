@@ -9,14 +9,19 @@ import { NewAccountPage, NewCategoryPage } from '@/routes/account-new'
 import { AccountsPage, CategoriesPage } from '@/routes/accounts'
 import { AnalyticsPage } from '@/routes/analytics'
 import { CapturesPage } from '@/routes/captures'
+import { editCaptureRedirect } from '@/routes/captures-edit'
+import { newCaptureRedirect } from '@/routes/captures-new'
 import { CaptureReviewPage } from '@/routes/capture-detail'
 import { CategoryDetailPage } from '@/routes/category-detail'
 import { DashboardPage } from '@/routes/dashboard'
 import { EntryDetailPage } from '@/routes/entry-detail'
 import { EntryEditPage } from '@/routes/entry-edit'
+import { ExportDetailPage } from '@/routes/exports-detail'
 import { ExportsPage } from '@/routes/exports'
+import { NewExportPage } from '@/routes/exports-new'
 import { ImportReviewPage } from '@/routes/import-detail'
 import { ImportsPage } from '@/routes/imports'
+import { NewImportPage } from '@/routes/imports-new'
 import { LedgerPage } from '@/routes/ledger'
 import { NewEntryPage } from '@/routes/ledger-new'
 import { LoginPage } from '@/routes/login'
@@ -27,8 +32,15 @@ import { NewPayeePage } from '@/routes/payee-new'
 import { PayeesPage } from '@/routes/payees'
 import { RatesPage } from '@/routes/rates'
 import { RecurringPage } from '@/routes/recurring'
+import { RecurringDetailPage } from '@/routes/recurring-detail'
+import { EditRecurringPage } from '@/routes/recurring-edit'
+import { NewRecurringPage } from '@/routes/recurring-new'
 import { RulesPage } from '@/routes/rules'
+import { RuleDetailPage } from '@/routes/rules-detail'
+import { EditRulePage } from '@/routes/rules-edit'
+import { NewRulePage } from '@/routes/rules-new'
 import { SettingsPage } from '@/routes/settings'
+import { ActivityPage } from '@/routes/settings-activity'
 import { AppearancePage } from '@/routes/settings-appearance'
 import { MailboxPage } from '@/routes/settings-intake'
 import { PasswordPage } from '@/routes/settings-password'
@@ -219,6 +231,12 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 })
 
+const settingsActivityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/activity',
+  component: ActivityPage,
+})
+
 const settingsAppearanceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings/appearance',
@@ -261,6 +279,74 @@ const importRoute = createRoute({
   component: ImportReviewPage,
 })
 
+const newRecurringRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/recurring/new',
+  component: NewRecurringPage,
+})
+
+const recurringDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/recurring/$ref',
+  component: RecurringDetailPage,
+})
+
+const editRecurringRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/recurring/$ref/edit',
+  component: EditRecurringPage,
+})
+
+const newRuleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/rules/new',
+  component: NewRulePage,
+})
+
+const ruleDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/rules/$ref',
+  component: RuleDetailPage,
+})
+
+const editRuleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/rules/$ref/edit',
+  component: EditRulePage,
+})
+
+const newCaptureRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/captures/new',
+  beforeLoad: newCaptureRedirect,
+})
+
+const editCaptureRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/captures/$ref/edit',
+  beforeLoad: ({ params }) => {
+    editCaptureRedirect(params.ref)
+  },
+})
+
+const newImportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/imports/new',
+  component: NewImportPage,
+})
+
+const newExportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/exports/new',
+  component: NewExportPage,
+})
+
+const exportDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/exports/$ref',
+  component: ExportDetailPage,
+})
+
 export const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
@@ -284,14 +370,26 @@ export const routeTree = rootRoute.addChildren([
   payeeEditRoute,
   analyticsRoute,
   capturesRoute,
+  newCaptureRoute,
   captureRoute,
+  editCaptureRoute,
   exportsRoute,
+  newExportRoute,
+  exportDetailRoute,
   importsRoute,
+  newImportRoute,
   importRoute,
   recurringRoute,
+  newRecurringRoute,
+  recurringDetailRoute,
+  editRecurringRoute,
   rulesRoute,
+  newRuleRoute,
+  ruleDetailRoute,
+  editRuleRoute,
   ratesRoute,
   settingsRoute,
+  settingsActivityRoute,
   settingsAppearanceRoute,
   settingsPasswordRoute,
   settingsTokensRoute,
