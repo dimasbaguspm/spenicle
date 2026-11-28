@@ -6,8 +6,10 @@ type TokensBody = Paths['/api/tokens']['get']['responses'][200]['content']['appl
 
 export type TokenList = Paged<TokensBody, 'tokens', Token>
 
-export async function listTokens(): Promise<TokenList> {
-  const { data, error, response } = await api.GET('/api/tokens')
+export async function listTokens(credential = ''): Promise<TokenList> {
+  const { data, error, response } = await api.GET('/api/tokens', {
+    headers: credential === '' ? {} : { Authorization: `Bearer ${credential}` },
+  })
   if (error !== undefined) {
     throw apiError(response.status, error)
   }

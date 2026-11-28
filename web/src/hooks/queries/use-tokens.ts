@@ -4,8 +4,13 @@ import { queryClient } from '@/api/query'
 import { createToken, listTokens, revokeToken } from '@/api/tokens'
 import type { TokenCreate } from '@/api/types'
 
-export function useTokenList() {
-  return useQuery({ queryKey: ['tokens'], queryFn: listTokens })
+/** Reading the token list is root-only, so the instance password is what opens it. */
+export function useTokenList(credential: string) {
+  return useQuery({
+    queryKey: ['tokens', credential],
+    queryFn: () => listTokens(credential),
+    enabled: credential !== '',
+  })
 }
 
 export function useRevokeToken() {

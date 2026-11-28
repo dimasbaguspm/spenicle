@@ -25,6 +25,9 @@ import { NewPayeePage } from '@/routes/payee-new'
 import { PayeesPage } from '@/routes/payees'
 import { RatesPage } from '@/routes/rates'
 import { SettingsPage } from '@/routes/settings'
+import { AppearancePage } from '@/routes/settings-appearance'
+import { PasswordPage } from '@/routes/settings-password'
+import { TokensPage } from '@/routes/settings-tokens'
 import { SetupPage } from '@/routes/setup'
 
 /** The two screens a visitor without a credential is allowed to see. */
@@ -199,6 +202,24 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 })
 
+const settingsAppearanceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/appearance',
+  component: AppearancePage,
+})
+
+const settingsPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/password',
+  component: PasswordPage,
+})
+
+const settingsTokensRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/tokens',
+  component: TokensPage,
+})
+
 const exportsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/manage/exports',
@@ -232,6 +253,9 @@ export const routeTree = rootRoute.addChildren([
   exportsRoute,
   ratesRoute,
   settingsRoute,
+  settingsAppearanceRoute,
+  settingsPasswordRoute,
+  settingsTokensRoute,
 ])
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' })
