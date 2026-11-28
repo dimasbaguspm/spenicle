@@ -32,6 +32,7 @@ export type EntryCreate = Schemas['postEntryRequest']
 export type EntryPatch = Schemas['entryPatchRequest']
 export type CaptureReview = Schemas['capturePatchRequest']
 export type PayeeCreate = Schemas['payeeCreateRequest']
+export type PayeePatch = Schemas['payeePatchRequest']
 export type TokenCreate = Schemas['tokenCreateRequest']
 
 /** A list envelope: `next_cursor` is the one pagination field a full page still omits. */

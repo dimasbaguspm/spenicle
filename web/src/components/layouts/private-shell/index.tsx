@@ -17,10 +17,12 @@ import { useAuth } from '@/providers'
 import { queryClient } from '@/api/query'
 import { cn } from '@/lib/cn'
 
-/** The three screens the desk nav carries; everything else is one click from the bar below. */
+/** The five screens the desk nav carries; everything else is one click from the bar below. */
 const deskSections = [
   { to: '/ledger', label: 'Register' },
   { to: '/accounts', label: 'Accounts' },
+  { to: '/categories', label: 'Categories' },
+  { to: '/payees', label: 'Payees' },
   { to: '/analytics', label: 'Analytics' },
 ] as const
 
@@ -155,6 +157,8 @@ function ThumbBar() {
             align="end"
             items={[
               { label: 'Captures', onSelect: () => void navigate({ to: '/captures' }) },
+              { label: 'Categories', onSelect: () => void navigate({ to: '/categories' }) },
+              { label: 'Payees', onSelect: () => void navigate({ to: '/payees' }) },
               { label: 'Settings', onSelect: () => void navigate({ to: '/settings' }) },
               {
                 label: 'Sign out',

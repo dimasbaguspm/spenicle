@@ -4,16 +4,22 @@ import { hasToken } from '@/api/token'
 import { entrySearch } from '@/modules'
 import { AppShell } from '@/components/layouts/app-shell'
 import { AccountDetailPage } from '@/routes/account-detail'
-import { AccountEditPage } from '@/routes/account-edit'
-import { AccountsPage } from '@/routes/accounts'
+import { AccountEditPage, CategoryEditPage } from '@/routes/account-edit'
+import { NewAccountPage, NewCategoryPage } from '@/routes/account-new'
+import { AccountsPage, CategoriesPage } from '@/routes/accounts'
 import { AnalyticsPage } from '@/routes/analytics'
 import { CapturesPage } from '@/routes/captures'
+import { CategoryDetailPage } from '@/routes/category-detail'
 import { DashboardPage } from '@/routes/dashboard'
 import { EntryDetailPage } from '@/routes/entry-detail'
 import { EntryEditPage } from '@/routes/entry-edit'
 import { LedgerPage } from '@/routes/ledger'
 import { NewEntryPage } from '@/routes/ledger-new'
 import { LoginPage } from '@/routes/login'
+import { PayeeDetailPage } from '@/routes/payee-detail'
+import { PayeeEditPage } from '@/routes/payee-edit'
+import { NewPayeePage } from '@/routes/payee-new'
+import { PayeesPage } from '@/routes/payees'
 import { SettingsPage } from '@/routes/settings'
 import { SetupPage } from '@/routes/setup'
 
@@ -79,6 +85,12 @@ const accountsRoute = createRoute({
   component: AccountsPage,
 })
 
+const newAccountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accounts/new',
+  component: NewAccountPage,
+})
+
 const accountRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/accounts/$ref',
@@ -90,6 +102,54 @@ const accountEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/accounts/$ref/edit',
   component: AccountEditPage,
+})
+
+const categoriesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/categories',
+  component: CategoriesPage,
+})
+
+const newCategoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/categories/new',
+  component: NewCategoryPage,
+})
+
+const categoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/categories/$ref',
+  component: CategoryDetailPage,
+})
+
+const categoryEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/categories/$ref/edit',
+  component: CategoryEditPage,
+})
+
+const payeesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/payees',
+  component: PayeesPage,
+})
+
+const newPayeeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/payees/new',
+  component: NewPayeePage,
+})
+
+const payeeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/payees/$ref',
+  component: PayeeDetailPage,
+})
+
+const payeeEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/payees/$ref/edit',
+  component: PayeeEditPage,
 })
 
 const analyticsRoute = createRoute({
@@ -119,8 +179,17 @@ export const routeTree = rootRoute.addChildren([
   entryRoute,
   entryEditRoute,
   accountsRoute,
+  newAccountRoute,
   accountRoute,
   accountEditRoute,
+  categoriesRoute,
+  newCategoryRoute,
+  categoryRoute,
+  categoryEditRoute,
+  payeesRoute,
+  newPayeeRoute,
+  payeeRoute,
+  payeeEditRoute,
   analyticsRoute,
   capturesRoute,
   settingsRoute,

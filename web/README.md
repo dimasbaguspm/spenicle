@@ -175,6 +175,22 @@ half-typed date costs no request. Because the state is the URL, a narrowed view 
 The route validates the search (`validateSearch: entrySearch`), so an unknown or empty param is
 dropped rather than sent, and `/accounts/$ref` pins `account_ref` to the account in the path.
 
+## Accounts and categories — one table, two screens
+
+A category is an account of kind `expense` or `income`; there is no separate table and no
+separate endpoint. The screens are still split, because they answer different questions:
+`/accounts` is the balance sheet (asset, liability, equity) and `/categories` names what the
+money was for. `modules/account/kinds.ts` holds the split (`moneyGroups`, `categoryGroups`,
+`accountScope`), `AccountBalances` takes the scope and draws whichever groups it names, and each
+screen keeps its own create, detail and edit route so a category URL never reads `/accounts/`.
+`/accounts/$ref` carries the register's filters; `/categories/$ref` is lighter, since a category
+has one useful question: what got filed here.
+
+Payees are the third list: `/payees`, `/payees/new`, `/payees/$ref`, `/payees/$ref/edit`. A payee
+is a name plus two optional defaults (`default_account_ref`, `default_category_ref`); the form
+sends a ref only when one was picked, which is also how a patch leaves the other default alone.
+`modules/payee/row.ts` resolves both refs to words once per page instead of once per row.
+
 ## `api/` and `hooks/queries/` — one shape, one door
 
 The generated contract (`src/types/generated/openapi.ts`) marks every field optional, which is
@@ -352,7 +368,8 @@ src/providers/        AppProvider (the bootstrap gate), AuthProvider (the token)
 src/styles.css        the tokens: palette, three faces, one base layer
 src/router.tsx        code-based routes + the auth guard in beforeLoad
 src/routes/           AppShell's outlet: login, setup, dashboard, ledger, ledger/new,
-                      ledger/$ref, accounts, accounts/$ref, analytics, captures, settings.
+                      ledger/$ref, accounts (+new, $ref, $ref/edit), categories (same four),
+                      payees (same four), analytics, captures, settings.
                       Composition only; a form lives here, a row lives in modules/.
 src/lib/money.ts      formatMoney/parseMoney, the dotted scale chain
 src/lib/date.ts       formatDate + the DateFormat templates, dayjs underneath
@@ -362,4 +379,4 @@ src/lib/date.ts       formatDate + the DateFormat templates, dayjs underneath
 
 Capture approval, statement import review, exports and offline capture queueing. Each is a
 screen over an endpoint that already exists; the router and the typed client do not change
-to add them. Overview, register, accounts, analytics and settings are live.
+to add them. Overview, register, accounts, categories, payees, analytics and settings are live.

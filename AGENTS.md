@@ -114,14 +114,17 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        is the whole switch. Screens: `/` sign in, `/setup` the claim
                        wizard (password, base currency, one optional opening account),
                        `/dashboard`, `/ledger` (+ `/ledger/new`, `/ledger/{ref}`),
-                       `/accounts` (+ `/accounts/{ref}`), `/analytics`, `/captures`,
-                       `/settings`. The shell has two shapes: from `lg` a header with
-                       Register, Accounts and Analytics on the left and New entry plus
-                       Settings on the right; below `lg` no header at all, and a five-slot
-                       bottom bar with the register in the middle and a More menu
-                       (captures, settings, theme, sign out). A screen opens with a
-                       breadcrumb, not an eyebrow repeating its title; the claim screen at
-                       `/setup` is two fields: password and currency.
+                       `/accounts` (+ `/new`, `/{ref}`, `/{ref}/edit`: asset, liability,
+                       equity), `/categories` (the same four routes, for expense and income
+                       accounts: a category is an account, not a table), `/payees` (the same
+                       four routes: a name plus an optional default account and category),
+                       `/analytics`, `/captures`, `/settings`. The shell has two shapes: from
+                       `lg` a header with Register, Accounts, Categories, Payees and Analytics
+                       on the left and Settings plus Log out on the right; below `lg` no header
+                       at all, and a five-slot bottom bar with the register in the middle and a
+                       More menu (captures, categories, payees, settings, sign out). A screen
+                       opens with a breadcrumb, not an eyebrow repeating its title; the claim
+                       screen at `/setup` is two fields: password and currency.
                        palette ramps, two self-hosted fonts (Inter for everything, JetBrains
                        Mono for every figure) behind a semantic token layer, light and dark
                        theme blocks whose default follows the client, and the base layer. A screen composes `Panel`, `Field`,

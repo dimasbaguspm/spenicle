@@ -1,6 +1,6 @@
 import { api } from './client'
 import { apiError } from './error'
-import type { Paged, Payee, PayeeCreate, Paths } from './types'
+import type { Paged, Payee, PayeeCreate, PayeePatch, Paths } from './types'
 
 type PayeesPage = Paths['/api/payees']['get']['responses'][200]['content']['application/json']
 
@@ -19,6 +19,18 @@ export async function listPayees(filters: PayeeFilters = {}): Promise<PayeeList>
 
 export async function createPayee(body: PayeeCreate): Promise<Payee> {
   const { data, error, response } = await api.POST('/api/payees', { body })
+  if (error !== undefined) {
+    throw apiError(response.status, error)
+  }
+
+  return data as Payee
+}
+
+export async function patchPayee(ref: string, body: PayeePatch): Promise<Payee> {
+  const { data, error, response } = await api.PATCH('/api/payees/{ref}', {
+    params: { path: { ref } },
+    body,
+  })
   if (error !== undefined) {
     throw apiError(response.status, error)
   }

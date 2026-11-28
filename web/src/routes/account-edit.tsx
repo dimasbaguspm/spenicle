@@ -11,11 +11,44 @@ type AccountEditValues = {
   name: string
 }
 
+type RenameProps = {
+  accountRef: string
+  listLabel: string
+  listTo: '/accounts' | '/categories'
+  detailTo: '/accounts/$ref' | '/categories/$ref'
+}
+
 /** An account's name is the field a person owns; its kind and balance are the ledger's. */
 export function AccountEditPage() {
   const { ref } = useParams({ from: '/accounts/$ref/edit' })
+
+  return (
+    <RenameAccount
+      accountRef={ref}
+      listLabel="Accounts"
+      listTo="/accounts"
+      detailTo="/accounts/$ref"
+    />
+  )
+}
+
+export function CategoryEditPage() {
+  const { ref } = useParams({ from: '/categories/$ref/edit' })
+
+  return (
+    <RenameAccount
+      accountRef={ref}
+      listLabel="Categories"
+      listTo="/categories"
+      detailTo="/categories/$ref"
+    />
+  )
+}
+
+/** A category is an account, so renaming one is the same form with a different trail home. */
+function RenameAccount({ accountRef, listLabel, listTo, detailTo }: RenameProps) {
   const navigate = useNavigate()
-  const held = useAccounts({ refs: ref, limit: 1 })
+  const held = useAccounts({ refs: accountRef, limit: 1 })
   const patch = usePatchAccount()
 
   const account = held.data?.accounts[0]
@@ -25,16 +58,16 @@ export function AccountEditPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       <Breadcrumb
         items={[
-          { label: 'Accounts', to: '/accounts' },
-          { label: account?.name ?? 'Account', to: `/accounts/${ref}` },
+          { label: listLabel, to: listTo },
+          { label: account?.name ?? 'Account', to: `${listTo}/${accountRef}` },
           { label: 'Edit' },
         ]}
       />
       <Text as="h1" tone="display">
-        Rename account
+        Rename
       </Text>
 
       {values === undefined ? null : (
@@ -44,14 +77,14 @@ export function AccountEditPage() {
             <Form<AccountEditValues>
               className="mt-4"
               defaultValues={values}
-              submitLabel="Save account"
-              onCancel={() => void navigate({ to: '/accounts/$ref', params: { ref } })}
+              submitLabel="Save"
+              onCancel={() => void navigate({ to: detailTo, params: { ref: accountRef } })}
               onSubmit={(next) => {
                 patch.mutate(
-                  { ref, body: { name: next.name } },
+                  { ref: accountRef, body: { name: next.name } },
                   {
                     onSuccess: () => {
-                      void navigate({ to: '/accounts/$ref', params: { ref } })
+                      void navigate({ to: detailTo, params: { ref: accountRef } })
                     },
                   },
                 )
