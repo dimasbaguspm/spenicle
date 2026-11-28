@@ -84,7 +84,7 @@ func TestPayeeTotalsGroupByWhoWasPaid(t *testing.T) {
 
 	totals, err := fixture.store.PayeeTotals(t.Context(),
 		time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-		time.Date(2026, 2, 28, 0, 0, 0, 0, time.UTC))
+		time.Date(2026, 2, 28, 0, 0, 0, 0, time.UTC), "expense")
 	if err != nil {
 		t.Fatalf("payee totals: %v", err)
 	}
@@ -99,6 +99,50 @@ func TestPayeeTotalsGroupByWhoWasPaid(t *testing.T) {
 
 	if totals[1].PayeeRef != "" || totals[1].AmountMinor != 5_000 {
 		t.Fatalf("second payee = %v, want the unnamed row with 5000", totals[1])
+	}
+}
+
+func TestPayeeTotalsReadTheIncomeSide(t *testing.T) {
+	fixture := newOverviewFixture(t)
+	salary := createAccountNamed(t, fixture.store, "Employer", "income")
+	on := time.Date(2026, 1, 25, 0, 0, 0, 0, time.UTC)
+
+	entry, err := entity.NewEntry(entity.Entry{
+		OccurredOn: on,
+		Currency:   "IDR",
+		PayeeRef:   fixture.payee.Ref,
+		Postings: []entity.Posting{
+			{AccountRef: salary.Ref, AmountMinor: -900_000, BaseAmountMinor: -900_000},
+			{AccountRef: fixture.cash.Ref, AmountMinor: 900_000, BaseAmountMinor: 900_000},
+		},
+	})
+	if err != nil {
+		t.Fatalf("new entry: %v", err)
+	}
+
+	if _, err = fixture.store.InsertEntry(t.Context(), entry); err != nil {
+		t.Fatalf("insert entry: %v", err)
+	}
+
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+
+	income, err := fixture.store.PayeeTotals(t.Context(), from, to, "income")
+	if err != nil {
+		t.Fatalf("income payee totals: %v", err)
+	}
+
+	if len(income) != 1 || income[0].PayeeRef != fixture.payee.Ref || income[0].AmountMinor != -900_000 {
+		t.Fatalf("income payees = %v, want the salary with its credit side", income)
+	}
+
+	spend, err := fixture.store.PayeeTotals(t.Context(), from, to, "expense")
+	if err != nil {
+		t.Fatalf("expense payee totals: %v", err)
+	}
+
+	if len(spend) != 0 {
+		t.Fatalf("expense payees = %v, want none", spend)
 	}
 }
 

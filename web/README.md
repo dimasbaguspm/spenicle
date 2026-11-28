@@ -400,8 +400,11 @@ made them), all from `modules/analytics/overview.ts`, integer minor units the wh
 window's day count as the divisor; **the shape of the year**, spend and income as two washes on one
 scale so they are read against each other; **where it went**, a ring of the six largest category
 roots plus "N more" in plate grey, with the exact figures beside it; **who you paid**, six payees as
-horizontal bars, the spend that named nobody keeping its own bar; **where the money sat**, per asset
-and liability account, inflow and outflow summed apart and the net keeping the ledger's sign.
+horizontal bars, the spend that named nobody keeping its own bar; **where it came from** and **who
+paid you**, the same two blocks on the income side, shown only once something has actually been
+received — the API sends income as a magnitude, so a salary reads the way a person says it;
+**where the money sat**, per asset and liability account, inflow and outflow summed apart and the net
+keeping the ledger's sign.
 
 Every block stops at six rows and says how many it left behind: the ring's seventh arc is "N more"
 in plate grey with its own total, the payees end with "N more payees", and the money accounts end

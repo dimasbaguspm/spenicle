@@ -320,10 +320,13 @@ type analyticsOverviewResponse struct {
 	Payees     []payeeTotalResponse    `json:"payees"`
 	Accounts   []accountFlowResponse   `json:"accounts"`
 	Stats      analyticsStatsResponse  `json:"stats"`
+
+	IncomeCategories []categoryTotalResponse `json:"income_categories"`
+	IncomePayees     []payeeTotalResponse    `json:"income_payees"`
 }
 
 // @Summary     The whole brief in one read
-// @Description Twelve months in one round trip: the month series, the category roots, the payees, the money accounts and two stats. Every part is also readable route by route; this is the one call the screen makes.
+// @Description Twelve months in one round trip: the month series, the category roots and payees on both sides of the ledger, the money accounts and two stats. Every part is also readable route by route; this is the one call the screen makes.
 // @Tags        analytics
 // @Produce     json
 // @Param       from query string false "window start, RFC3339 or date"
@@ -362,63 +365,87 @@ func (s *Server) OverviewAnalytics(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
-// overviewOf loads the five blocks; the handler above owns the request, this owns the reads.
+// overviewBlocks is what the five reads hand the builder: one per question, no request in sight.
+type overviewBlocks struct {
+	months       []entity.MonthTotal
+	roots        []entity.CategoryTotal
+	payees       []entity.PayeeTotal
+	flows        []entity.AccountFlow
+	stats        entity.LedgerStats
+	incomeRoots  []entity.CategoryTotal
+	incomePayees []entity.PayeeTotal
+}
+
+// overviewOf loads every block; the handler above owns the request, this owns the reads.
 func (s *Server) overviewOf(
 	ctx context.Context,
 	from, to time.Time,
 ) (analyticsOverviewResponse, error) {
-	months, err := s.deps.Analytics.MonthlyTotals(ctx, from, to)
-	if err != nil {
+	var blocks overviewBlocks
+
+	var err error
+
+	if blocks.months, err = s.deps.Analytics.MonthlyTotals(ctx, from, to); err != nil {
 		return analyticsOverviewResponse{}, err
 	}
 
-	roots, err := s.deps.Analytics.CategoryTotalsByRoot(ctx, from, to, constant.AccountKindExpense)
-	if err != nil {
+	if blocks.roots, err = s.deps.Analytics.CategoryTotalsByRoot(
+		ctx, from, to, constant.AccountKindExpense,
+	); err != nil {
 		return analyticsOverviewResponse{}, err
 	}
 
-	payees, err := s.deps.Analytics.PayeeTotals(ctx, from, to)
-	if err != nil {
+	if blocks.incomeRoots, err = s.deps.Analytics.CategoryTotalsByRoot(
+		ctx, from, to, constant.AccountKindIncome,
+	); err != nil {
 		return analyticsOverviewResponse{}, err
 	}
 
-	flows, err := s.deps.Analytics.AccountFlows(ctx, from, to)
-	if err != nil {
+	if blocks.payees, err = s.deps.Analytics.PayeeTotals(
+		ctx, from, to, constant.AccountKindExpense,
+	); err != nil {
 		return analyticsOverviewResponse{}, err
 	}
 
-	stats, err := s.deps.Analytics.LedgerStats(ctx, from, to)
-	if err != nil {
+	if blocks.incomePayees, err = s.deps.Analytics.PayeeTotals(
+		ctx, from, to, constant.AccountKindIncome,
+	); err != nil {
 		return analyticsOverviewResponse{}, err
 	}
 
-	return newOverviewResponse(from, to, months, roots, payees, flows, stats), nil
+	if blocks.flows, err = s.deps.Analytics.AccountFlows(ctx, from, to); err != nil {
+		return analyticsOverviewResponse{}, err
+	}
+
+	if blocks.stats, err = s.deps.Analytics.LedgerStats(ctx, from, to); err != nil {
+		return analyticsOverviewResponse{}, err
+	}
+
+	return newOverviewResponse(from, to, blocks), nil
 }
 
 func newOverviewResponse(
 	from, to time.Time,
-	months []entity.MonthTotal,
-	roots []entity.CategoryTotal,
-	payees []entity.PayeeTotal,
-	flows []entity.AccountFlow,
-	stats entity.LedgerStats,
+	blocks overviewBlocks,
 ) analyticsOverviewResponse {
 	out := analyticsOverviewResponse{
-		From:       from.Format(constant.DateLayout),
-		To:         to.Format(constant.DateLayout),
-		Months:     make([]monthTotalResponse, 0, len(months)),
-		Categories: make([]categoryTotalResponse, 0, len(roots)),
-		Payees:     make([]payeeTotalResponse, 0, len(payees)),
-		Accounts:   make([]accountFlowResponse, 0, len(flows)),
-		Stats:      analyticsStatsResponse{Entries: stats.Entries},
+		From:             from.Format(constant.DateLayout),
+		To:               to.Format(constant.DateLayout),
+		Months:           make([]monthTotalResponse, 0, len(blocks.months)),
+		Categories:       make([]categoryTotalResponse, 0, len(blocks.roots)),
+		Payees:           make([]payeeTotalResponse, 0, len(blocks.payees)),
+		Accounts:         make([]accountFlowResponse, 0, len(blocks.flows)),
+		IncomeCategories: make([]categoryTotalResponse, 0, len(blocks.incomeRoots)),
+		IncomePayees:     make([]payeeTotalResponse, 0, len(blocks.incomePayees)),
+		Stats:            analyticsStatsResponse{Entries: blocks.stats.Entries},
 	}
 
-	if stats.BusiestOn != "" {
-		out.Stats.BusiestOn = stats.BusiestOn
-		out.Stats.BusiestSpendMinor = strconv.FormatInt(stats.BusiestSpend, 10)
+	if blocks.stats.BusiestOn != "" {
+		out.Stats.BusiestOn = blocks.stats.BusiestOn
+		out.Stats.BusiestSpendMinor = strconv.FormatInt(blocks.stats.BusiestSpend, 10)
 	}
 
-	for _, total := range months {
+	for _, total := range blocks.months {
 		out.Months = append(out.Months, monthTotalResponse{
 			Month:       total.Month,
 			SpendMinor:  strconv.FormatInt(total.SpendMinor, 10),
@@ -427,25 +454,12 @@ func newOverviewResponse(
 		})
 	}
 
-	for _, total := range roots {
-		out.Categories = append(out.Categories, categoryTotalResponse{
-			AccountRef:      total.AccountRef,
-			AccountName:     total.AccountName,
-			AmountMinor:     strconv.FormatInt(total.AmountMinor, 10),
-			FirstOccurredOn: total.FirstOccurredOn,
-			LastOccurredOn:  total.LastOccurredOn,
-		})
-	}
+	out.Categories = categoryRows(blocks.roots, 1)
+	out.IncomeCategories = categoryRows(blocks.incomeRoots, -1)
+	out.Payees = payeeRows(blocks.payees, 1)
+	out.IncomePayees = payeeRows(blocks.incomePayees, -1)
 
-	for _, total := range payees {
-		out.Payees = append(out.Payees, payeeTotalResponse{
-			PayeeRef:    total.PayeeRef,
-			PayeeName:   total.PayeeName,
-			AmountMinor: strconv.FormatInt(total.AmountMinor, 10),
-		})
-	}
-
-	for _, flow := range flows {
+	for _, flow := range blocks.flows {
 		out.Accounts = append(out.Accounts, accountFlowResponse{
 			AccountRef:   flow.AccountRef,
 			AccountName:  flow.AccountName,
@@ -457,4 +471,37 @@ func newOverviewResponse(
 	}
 
 	return out
+}
+
+// categoryRows spells a category total for the wire. The sign says which side of the ledger it is
+// on: spend keeps the debit sign the store returns, income is negated into the magnitude a person
+// means when they say they were paid.
+func categoryRows(totals []entity.CategoryTotal, sign int64) []categoryTotalResponse {
+	rows := make([]categoryTotalResponse, 0, len(totals))
+
+	for _, total := range totals {
+		rows = append(rows, categoryTotalResponse{
+			AccountRef:      total.AccountRef,
+			AccountName:     total.AccountName,
+			AmountMinor:     strconv.FormatInt(sign*total.AmountMinor, 10),
+			FirstOccurredOn: total.FirstOccurredOn,
+			LastOccurredOn:  total.LastOccurredOn,
+		})
+	}
+
+	return rows
+}
+
+func payeeRows(totals []entity.PayeeTotal, sign int64) []payeeTotalResponse {
+	rows := make([]payeeTotalResponse, 0, len(totals))
+
+	for _, total := range totals {
+		rows = append(rows, payeeTotalResponse{
+			PayeeRef:    total.PayeeRef,
+			PayeeName:   total.PayeeName,
+			AmountMinor: strconv.FormatInt(sign*total.AmountMinor, 10),
+		})
+	}
+
+	return rows
 }

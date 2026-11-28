@@ -3,9 +3,9 @@
     {
       "account_name": "Cash",
       "account_ref": "<ref>",
-      "inflow_minor": "50000",
+      "inflow_minor": "100000",
       "kind": "asset",
-      "net_minor": "40000",
+      "net_minor": "90000",
       "outflow_minor": "10000"
     }
   ],
@@ -19,6 +19,25 @@
     }
   ],
   "from": "2026-01-01",
+  "income_categories": [
+    {
+      "account_name": "Salary",
+      "account_ref": "<ref>",
+      "amount_minor": "100000",
+      "first_occurred_on": "2026-02-05",
+      "last_occurred_on": "2026-02-11"
+    }
+  ],
+  "income_payees": [
+    {
+      "amount_minor": "50000",
+      "payee_name": "Employer",
+      "payee_ref": "<ref>"
+    },
+    {
+      "amount_minor": "50000"
+    }
+  ],
   "months": [
     {
       "income_minor": "0",
@@ -27,9 +46,9 @@
       "spend_minor": "10000"
     },
     {
-      "income_minor": "50000",
+      "income_minor": "100000",
       "month": "2026-02",
-      "net_minor": "50000",
+      "net_minor": "100000",
       "spend_minor": "0"
     }
   ],
@@ -43,7 +62,7 @@
   "stats": {
     "busiest_on": "2026-01-10",
     "busiest_spend_minor": "10000",
-    "entries": 2
+    "entries": 3
   },
   "to": "2026-02-28"
 }

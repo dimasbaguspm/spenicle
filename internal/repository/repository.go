@@ -121,7 +121,7 @@ type Analytics interface {
 		kind string,
 	) ([]entity.CategoryMonthlyTotal, error)
 	CaptureCount(ctx context.Context, from, to time.Time, status string) (int, error)
-	PayeeTotals(ctx context.Context, from, to time.Time) ([]entity.PayeeTotal, error)
+	PayeeTotals(ctx context.Context, from, to time.Time, kind string) ([]entity.PayeeTotal, error)
 	AccountFlows(ctx context.Context, from, to time.Time) ([]entity.AccountFlow, error)
 	LedgerStats(ctx context.Context, from, to time.Time) (entity.LedgerStats, error)
 }

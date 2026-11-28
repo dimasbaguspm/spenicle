@@ -31,7 +31,7 @@ export function AnalyticsPage() {
       <PageHeader
         items={analyticsCrumbs}
         title="A year in view"
-        subtitle="Twelve months: what moved, where it went, who was paid, where the money sat."
+        subtitle="Twelve months: what moved, where it went and came from, and where the money sat."
       />
 
       {overview.data === undefined ? (
@@ -54,6 +54,9 @@ export function AnalyticsPage() {
 function Brief({ overview }: { overview: AnalyticsOverview }) {
   const money = useMoney()
   const figures = overviewFigures(overview, money.scale)
+
+  // a household that only spends does not need two empty panels explaining that nothing came in
+  const cameIn = overview.months.some((month) => month.income_minor !== '0')
 
   const cells = [
     { label: 'Spent', value: figures.spent },
@@ -144,6 +147,28 @@ function Brief({ overview }: { overview: AnalyticsOverview }) {
           <PayeeBars payees={overview.payees} scale={money.scale} />
         </Panel>
       </div>
+
+      {cameIn ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Panel className="space-y-4 p-5 sm:p-6">
+            <Text as="p" tone="section">
+              Where it came from
+            </Text>
+            <CategoryDonut
+              categories={overview.income_categories}
+              scale={money.scale}
+              label="received"
+            />
+          </Panel>
+
+          <Panel className="space-y-4 p-5 sm:p-6">
+            <Text as="p" tone="section">
+              Who paid you
+            </Text>
+            <PayeeBars payees={overview.income_payees} scale={money.scale} />
+          </Panel>
+        </div>
+      ) : null}
 
       <Panel className="space-y-4 p-5 sm:p-6">
         <Text as="p" tone="section">

@@ -201,6 +201,20 @@
             "format": "date",
             "type": "string"
           },
+          "income_categories": {
+            "items": {
+              "$ref": "#/components/schemas/categoryTotalResponse"
+            },
+            "type": "array",
+            "uniqueItems": false
+          },
+          "income_payees": {
+            "items": {
+              "$ref": "#/components/schemas/payeeTotalResponse"
+            },
+            "type": "array",
+            "uniqueItems": false
+          },
           "months": {
             "items": {
               "$ref": "#/components/schemas/monthTotalResponse"
@@ -2855,7 +2869,7 @@
     },
     "/api/analytics/overview": {
       "get": {
-        "description": "Twelve months in one round trip: the month series, the category roots, the payees, the money accounts and two stats. Every part is also readable route by route; this is the one call the screen makes.",
+        "description": "Twelve months in one round trip: the month series, the category roots and payees on both sides of the ledger, the money accounts and two stats. Every part is also readable route by route; this is the one call the screen makes.",
         "operationId": "getApiAnalyticsOverview",
         "parameters": [
           {

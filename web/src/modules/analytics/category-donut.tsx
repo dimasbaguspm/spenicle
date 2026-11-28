@@ -20,14 +20,17 @@ type Slice = {
 export function CategoryDonut({
   categories,
   scale,
+  label = 'spent',
 }: {
   categories: readonly CategoryTotal[]
   scale: MoneyScale
+  /** the word in the hole: spent for the expense side, received for the income side */
+  label?: string | undefined
 }) {
   if (categories.length === 0) {
     return (
       <Text as="p" tone="muted">
-        No categorised spend in this window.
+        Nothing on this side of the ledger in this window.
       </Text>
     )
   }
@@ -80,7 +83,7 @@ export function CategoryDonut({
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <Text as="span" tone="caption" className="text-text-faint">
-            spent
+            {label}
           </Text>
           <Text as="span" tone="figure" className="text-text text-sm">
             {formatMoney(total, scale.units).toDisplay()}

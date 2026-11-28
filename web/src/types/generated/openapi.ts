@@ -141,7 +141,7 @@ export interface paths {
     }
     /**
      * The whole brief in one read
-     * @description Twelve months in one round trip: the month series, the category roots, the payees, the money accounts and two stats. Every part is also readable route by route; this is the one call the screen makes.
+     * @description Twelve months in one round trip: the month series, the category roots and payees on both sides of the ledger, the money accounts and two stats. Every part is also readable route by route; this is the one call the screen makes.
      */
     get: operations['getApiAnalyticsOverview']
     put?: never
@@ -1062,6 +1062,8 @@ export interface components {
       categories?: components['schemas']['categoryTotalResponse'][]
       /** Format: date */
       from?: string
+      income_categories?: components['schemas']['categoryTotalResponse'][]
+      income_payees?: components['schemas']['payeeTotalResponse'][]
       months?: components['schemas']['monthTotalResponse'][]
       payees?: components['schemas']['payeeTotalResponse'][]
       stats?: components['schemas']['analyticsStatsResponse']

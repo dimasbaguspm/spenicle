@@ -22,6 +22,17 @@ Feature: GET /api/analytics/overview
     And I send a POST to "/api/entries" with headers/query:
       | type   | key          | value            |
       | header | Content-Type | application/json |
+    And I send a POST to "/api/payees" with:
+      """json
+      {"name":"Employer"}
+      """
+    And the request body is:
+      """json
+      {"occurred_on":"2026-02-11","currency":"IDR","payee_ref":"{{ref}}","note":"salary","postings":[{"account_ref":"{{account:Cash}}","amount_minor":"50000"},{"account_ref":"{{account:Salary}}","amount_minor":"-50000"}]}
+      """
+    And I send a POST to "/api/entries" with headers/query:
+      | type   | key          | value            |
+      | header | Content-Type | application/json |
     When I send a GET to "/api/analytics/overview" with headers/query:
       | type  | key  | value      |
       | query | from | 2026-01-01 |

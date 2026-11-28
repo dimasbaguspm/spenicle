@@ -117,13 +117,15 @@ export type AnalyticsStats = Omit<
 }
 export type AnalyticsOverview = Omit<
   Fixed<Schemas['analyticsOverviewResponse']>,
-  'months' | 'categories' | 'payees' | 'accounts' | 'stats'
+  'months' | 'categories' | 'payees' | 'accounts' | 'stats' | 'income_categories' | 'income_payees'
 > & {
   months: MonthTotal[]
   categories: CategoryTotal[]
   payees: PayeeReport[]
   accounts: AccountFlow[]
   stats: AnalyticsStats
+  income_categories: CategoryTotal[]
+  income_payees: PayeeReport[]
 }
 export type Bootstrap = Fixed<Schemas['bootstrapResponse']>
 export type LedgerSetup = Schemas['setupRequest']

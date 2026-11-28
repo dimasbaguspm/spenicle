@@ -259,7 +259,7 @@ const payeeTotalsQuery = `
 	LEFT JOIN payees py ON py.ref = e.payee_ref
 	WHERE e.reversed_at IS NULL AND e.reversal_of_ref IS NULL
 	  AND e.occurred_on BETWEEN ? AND ?
-	  AND a.kind = 'expense'
+	  AND a.kind = ?
 	GROUP BY e.payee_ref
 	HAVING SUM(p.base_amount_minor) <> 0
 	ORDER BY SUM(p.base_amount_minor) DESC`
@@ -267,12 +267,13 @@ const payeeTotalsQuery = `
 func (s *Store) PayeeTotals(
 	ctx context.Context,
 	from, to time.Time,
+	kind string,
 ) ([]entity.PayeeTotal, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.PayeeTotals")
 	defer endSpan()
 
 	rows, err := s.db.QueryContext(ctx, payeeTotalsQuery,
-		from.Format(constant.DateLayout), to.Format(constant.DateLayout))
+		from.Format(constant.DateLayout), to.Format(constant.DateLayout), kind)
 	if err != nil {
 		return nil, fmt.Errorf("select payee totals: %w", err)
 	}
