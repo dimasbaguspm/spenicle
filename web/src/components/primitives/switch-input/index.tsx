@@ -19,8 +19,8 @@ export function SwitchInput({ checked, onCheckedChange, label, hint }: SwitchInp
       }}
       className="flex items-start gap-3"
     >
-      <ArkSwitch.Control className="bg-ink-700 data-[state=checked]:bg-primary mt-0.5 h-5 w-9 shrink-0 rounded-full p-0.5 transition-colors">
-        <ArkSwitch.Thumb className="bg-porcelain-100 block size-4 rounded-full transition-transform data-[state=checked]:translate-x-4" />
+      <ArkSwitch.Control className="bg-border data-[state=checked]:bg-primary mt-0.5 h-5 w-9 shrink-0 rounded-full p-0.5 transition-colors">
+        <ArkSwitch.Thumb className="bg-surface block size-4 rounded-full transition-transform data-[state=checked]:translate-x-4" />
       </ArkSwitch.Control>
       <span className="space-y-0.5">
         <ArkSwitch.Label asChild>

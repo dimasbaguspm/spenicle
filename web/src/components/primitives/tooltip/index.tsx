@@ -16,7 +16,7 @@ export function Tooltip({ content, children }: TooltipProps) {
     <ArkTooltip.Root openDelay={200} closeDelay={100} positioning={{ placement: 'top' }}>
       <ArkTooltip.Trigger asChild>{children}</ArkTooltip.Trigger>
       <ArkTooltip.Positioner>
-        <ArkTooltip.Content className="border-brass-700 bg-surface-raised text-text max-w-64 rounded border px-2 py-1 text-xs shadow-lg">
+        <ArkTooltip.Content className="border-accent bg-surface-raised text-text max-w-64 rounded border px-2 py-1 text-xs shadow-lg">
           {content}
         </ArkTooltip.Content>
       </ArkTooltip.Positioner>

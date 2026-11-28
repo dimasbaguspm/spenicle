@@ -11,7 +11,7 @@ export function JsonTreeView({ data, expandDepth = 1 }: JsonTreeViewProps) {
     <ArkJsonTreeView.Root
       data={data}
       defaultExpandedDepth={expandDepth}
-      className="text-text [&_[data-kind=key]]:text-brass-300 [&_[data-kind=string]]:text-jade-300 [&_[data-kind=number]]:text-tertiary [&_[data-kind=boolean]]:text-amber-400 [&_[data-kind=null]]:text-ink-400 min-w-0"
+      className="text-text [&_[data-kind=key]]:text-accent [&_[data-kind=string]]:text-success [&_[data-kind=number]]:text-tertiary [&_[data-kind=boolean]]:text-warning [&_[data-kind=null]]:text-text-muted min-w-0"
     >
       <ArkJsonTreeView.Tree indentGuide className="font-mono text-xs leading-5" />
     </ArkJsonTreeView.Root>

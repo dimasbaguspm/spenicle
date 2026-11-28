@@ -1,29 +1,26 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
-import { useMemo } from 'react'
-
 import { buttonStyles } from '@/components/primitives/button'
 import { Panel, PanelHead } from '@/components/primitives/panel'
+import { Breadcrumb } from '@/components/primitives/breadcrumb'
 import { Text } from '@/components/primitives/text'
 import { useCaptures } from '@/hooks/queries/use-captures'
 import { cn } from '@/lib/cn'
 import { CaptureList } from '@/modules'
 
+/** Stable crumbs: a new array on every render would re-render the trail for nothing. */
+const captureCrumbs = [{ label: 'Captures' }] as const
+
 export function CapturesPage() {
   const captures = useCaptures({ limit: 20 })
-  const rows = useMemo(() => captures.data?.captures ?? [], [captures.data])
+  const rows = captures.data?.captures ?? []
 
   return (
     <div className="space-y-8">
       <header className="max-w-prose space-y-2.5">
-        <Text as="p" tone="section">
-          Intake
-        </Text>
+        <Breadcrumb items={captureCrumbs} />
         <Text as="h1" tone="display">
           Captures
-        </Text>
-        <Text as="p" tone="muted">
-          What arrived without being confirmed. Nothing here has touched the ledger yet.
         </Text>
       </header>
 
@@ -37,7 +34,7 @@ export function CapturesPage() {
               Empty queue
             </Text>
             <Text as="p" tone="muted" className="leading-relaxed">
-              A receipt photo, a share sheet, a forwarded mail — it lands here until you decide what
+              A receipt photo, a share sheet, a forwarded mail. It lands here until you decide what
               it was. Nothing posts itself.
             </Text>
             <div className="pt-3">
@@ -56,13 +53,13 @@ export function CapturesPage() {
 
         {captures.isPending ? (
           <div className="space-y-3 pt-6" aria-hidden="true">
-            <div className="bg-ink-800/60 h-3 w-1/3 animate-pulse rounded" />
-            <div className="bg-ink-800/60 h-3 w-2/3 animate-pulse rounded" />
+            <div className="bg-surface-raised/60 h-3 w-1/3 animate-pulse rounded" />
+            <div className="bg-surface-raised/60 h-3 w-2/3 animate-pulse rounded" />
           </div>
         ) : null}
 
         {captures.error === null ? null : (
-          <Text as="p" tone="caption" className="text-oxblood-300 pt-6" role="alert">
+          <Text as="p" tone="caption" className="text-danger pt-6" role="alert">
             {captures.error.message}
           </Text>
         )}

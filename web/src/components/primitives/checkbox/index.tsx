@@ -29,7 +29,7 @@ export function Checkbox({
       className="flex items-start gap-3"
     >
       <ArkCheckbox.Control className="border-border bg-surface-sunken data-[state=checked]:border-primary data-[state=checked]:bg-primary mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition-colors">
-        <ArkCheckbox.Indicator className="text-brass-400">
+        <ArkCheckbox.Indicator className="text-on-primary">
           <Check className="size-3" aria-hidden="true" strokeWidth={1.75} />
         </ArkCheckbox.Indicator>
       </ArkCheckbox.Control>

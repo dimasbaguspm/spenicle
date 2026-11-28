@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router'
+
 import type { Entry } from '@/api/types'
 import { Text } from '@/components/primitives/text'
 import type { MoneyScale } from '@/lib/money'
@@ -21,15 +23,18 @@ export function EntryTicker({
   return (
     <ul>
       {rows.map((row) => (
-        <li
-          key={row.ref}
-          className="border-ink-800/70 flex items-center gap-4 border-t px-5 py-3 text-sm first:border-t-0 sm:px-6"
-        >
-          <Text as="span" tone="figure" className="text-ink-400 w-16 shrink-0 text-xs">
-            {row.day}
-          </Text>
-          <span className="text-porcelain-100 min-w-0 flex-1 truncate">{row.title}</span>
-          <EntryAmount row={row} className="shrink-0 text-xs" />
+        <li key={row.ref} className="border-border/70 border-t first:border-t-0">
+          <Link
+            to="/ledger/$ref"
+            params={{ ref: row.ref }}
+            className="hover:bg-surface-raised/60 flex items-center gap-4 px-5 py-3 text-sm transition-colors sm:px-6"
+          >
+            <Text as="span" tone="figure" className="text-text-muted w-16 shrink-0 text-xs">
+              {row.day}
+            </Text>
+            <span className="text-text min-w-0 flex-1 truncate">{row.title}</span>
+            <EntryAmount row={row} className="shrink-0 text-xs" />
+          </Link>
         </li>
       ))}
     </ul>

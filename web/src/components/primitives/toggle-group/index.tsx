@@ -27,7 +27,7 @@ export function ToggleGroup({ value, items, onValueChange, multiple }: ToggleGro
         <ArkToggleGroup.Item
           key={item.value}
           value={item.value}
-          className="text-text-muted data-[state=on]:bg-primary-soft data-[state=on]:text-porcelain-50 focus-visible:ring-accent/40 cursor-pointer rounded px-3 py-1 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          className="text-text-muted data-[state=on]:bg-primary-soft data-[state=on]:text-text focus-visible:ring-accent/40 cursor-pointer rounded px-3 py-1 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           {item.label}
         </ArkToggleGroup.Item>

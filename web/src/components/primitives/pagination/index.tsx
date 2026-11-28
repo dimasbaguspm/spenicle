@@ -52,7 +52,7 @@ export function Pagination({ page, count, pageSize, onPageChange }: PaginationPr
               <ArkPagination.Ellipsis
                 key={`gap-${gapKey(pagination.pages[index - 1])}`}
                 index={index}
-                className="text-ink-400 px-1"
+                className="text-text-muted px-1"
               >
                 <Text as="span" tone="caption">
                   …

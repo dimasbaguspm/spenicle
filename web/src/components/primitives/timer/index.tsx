@@ -21,7 +21,7 @@ export function Timer({ targetMs }: TimerProps) {
       targetMs={0}
       className="border-border bg-surface-sunken inline-flex flex-col gap-3 rounded-md border p-4"
     >
-      <ArkTimer.Area className="text-porcelain-50 font-mono text-2xl tabular-nums">
+      <ArkTimer.Area className="text-text font-mono text-2xl tabular-nums">
         <ArkTimer.Item type="minutes" />
         <ArkTimer.Separator className="px-1">:</ArkTimer.Separator>
         <ArkTimer.Item type="seconds" />

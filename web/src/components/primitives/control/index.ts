@@ -11,14 +11,14 @@ import { cva, type VariantProps } from 'class-variance-authority'
  */
 export const control = cva(
   [
-    'w-full rounded-md border bg-transparent text-porcelain-100',
-    'placeholder:text-ink-500',
-    'border-ink-700 hover:border-ink-600',
+    'w-full rounded-md border bg-transparent text-text',
+    'placeholder:text-text-faint',
+    'border-border hover:border-border-strong',
     'transition-colors duration-150',
-    'focus:border-brass-600 focus:bg-ink-950/40 focus:outline-none',
-    'focus:ring-1 focus:ring-brass-600/40',
-    'data-[invalid]:border-oxblood-500 data-[invalid]:focus:border-oxblood-400',
-    'data-[invalid]:focus:ring-oxblood-500/30',
+    'focus:border-accent focus:bg-surface-sunken/40 focus:outline-none',
+    'focus:ring-1 focus:ring-accent/40',
+    'data-[invalid]:border-danger data-[invalid]:focus:border-danger',
+    'data-[invalid]:focus:ring-danger/30',
     'disabled:cursor-not-allowed disabled:opacity-50',
   ].join(' '),
   {

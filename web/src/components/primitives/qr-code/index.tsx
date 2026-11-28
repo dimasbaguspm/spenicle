@@ -13,12 +13,8 @@ type QrCodeProps = {
  */
 export function QrCode({ value, size }: QrCodeProps) {
   return (
-    <ArkQrCode.Root
-      value={value}
-      pixelSize={size}
-      className="bg-porcelain-50 inline-flex rounded-md p-3"
-    >
-      <ArkQrCode.Frame className="text-ink-950 h-[var(--qrcode-height)] w-[var(--qrcode-width)] fill-current">
+    <ArkQrCode.Root value={value} pixelSize={size} className="bg-text inline-flex rounded-md p-3">
+      <ArkQrCode.Frame className="text-on-accent h-[var(--qrcode-height)] w-[var(--qrcode-width)] fill-current">
         <ArkQrCode.Pattern />
       </ArkQrCode.Frame>
     </ArkQrCode.Root>

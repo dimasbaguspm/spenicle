@@ -33,7 +33,7 @@ export function Toc({ items }: TocProps) {
             <ArkToc.Item
               key={entry.value}
               item={entry}
-              className="border-border text-text-muted data-[active]:border-accent data-[active]:text-porcelain-50 border-l-2 pl-3 transition-colors"
+              className="border-border text-text-muted data-[active]:border-accent data-[active]:text-text border-l-2 pl-3 transition-colors"
             >
               <ArkToc.Link href={entry.url} className="block py-0.5">
                 <Text as="span" tone="muted" className="text-inherit">

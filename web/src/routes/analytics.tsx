@@ -1,32 +1,29 @@
-import { useMemo } from 'react'
-
 import { Panel } from '@/components/primitives/panel'
+import { Breadcrumb } from '@/components/primitives/breadcrumb'
 import { Text } from '@/components/primitives/text'
 import { useCategories, useMonths } from '@/hooks/queries/use-analytics'
 import { useMoney } from '@/hooks/use-money'
 import { CategoryBreakdown, categoryTotal, MonthSeries, monthsBack } from '@/modules'
 
 /** Twelve months of spend, and where it went: bars for time, proportional rows for categories. */
+/** Stable crumbs: a new array on every render would re-render the trail for nothing. */
+const analyticsCrumbs = [{ label: 'Analytics' }] as const
+
 export function AnalyticsPage() {
   const { from, to } = monthsBack(12)
   const months = useMonths(from, to)
   const categories = useCategories({ from, to, kind: 'expense', rollup: 'parent' })
   const money = useMoney()
 
-  const series = useMemo(() => months.data ?? [], [months.data])
-  const rows = useMemo(() => categories.data?.categories ?? [], [categories.data])
+  const series = months.data ?? []
+  const rows = categories.data?.categories ?? []
 
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <Text as="p" tone="section">
-          Analytics
-        </Text>
+        <Breadcrumb items={analyticsCrumbs} />
         <Text as="h1" tone="display">
           A year in view
-        </Text>
-        <Text as="p" tone="muted">
-          Spend against time, then the categories behind it. Minor units, no rounding.
         </Text>
       </header>
 
@@ -42,7 +39,7 @@ export function AnalyticsPage() {
           <Text as="p" tone="section">
             Where it went
           </Text>
-          <Text as="p" tone="figure" className="text-ink-400 text-xs">
+          <Text as="p" tone="figure" className="text-text-muted text-xs">
             {categoryTotal(rows, money.scale)}
           </Text>
         </div>

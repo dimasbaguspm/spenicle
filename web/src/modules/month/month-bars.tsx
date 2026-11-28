@@ -23,7 +23,7 @@ export function MonthBars({
           <div className="flex w-full flex-1 items-end justify-center">
             <div
               className={`w-full max-w-6 rounded-sm transition-[height,background-color] duration-300 ${
-                bar.value === 0 ? 'bg-ink-700' : 'bg-brass-600/70 hover:bg-brass-500'
+                bar.value === 0 ? 'bg-border' : 'bg-accent-soft/70 hover:bg-accent'
               }`}
               style={{
                 height:
@@ -35,7 +35,7 @@ export function MonthBars({
           <Text
             as="span"
             tone="caption"
-            className="text-ink-500 w-full truncate text-center text-[0.5rem]"
+            className="text-text-faint w-full truncate text-center text-[0.5rem]"
           >
             {bar.label}
           </Text>

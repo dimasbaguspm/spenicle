@@ -25,17 +25,17 @@ export function TokenList({
         return (
           <li
             key={row.ref}
-            className="border-ink-800/70 flex flex-wrap items-baseline gap-3 border-t py-3 text-sm first:border-t-0"
+            className="border-border/70 flex flex-wrap items-baseline gap-3 border-t py-3 text-sm first:border-t-0"
           >
-            <span className="text-porcelain-100 min-w-0 flex-1 truncate">{row.name}</span>
-            <Text as="span" tone="code" className="text-ink-400">
+            <span className="text-text min-w-0 flex-1 truncate">{row.name}</span>
+            <Text as="span" tone="code" className="text-text-muted">
               {row.preview}
             </Text>
-            <Text as="span" tone="caption" className="text-ink-500">
+            <Text as="span" tone="caption" className="text-text-faint">
               {row.scopes}
             </Text>
             {row.isRevoked ? (
-              <Text as="span" tone="caption" className="text-ink-500">
+              <Text as="span" tone="caption" className="text-text-faint">
                 revoked
               </Text>
             ) : (

@@ -17,7 +17,7 @@ type TreeViewProps = {
 }
 
 const row =
-  'group text-text-muted hover:text-porcelain-50 flex items-center gap-1 rounded px-2 py-1 text-sm data-[selected]:bg-primary-soft data-[selected]:text-porcelain-50 data-[focus]:ring-accent/40 data-[focus]:ring-1 data-[focus]:outline-none'
+  'group text-text-muted hover:text-text flex items-center gap-1 rounded px-2 py-1 text-sm data-[selected]:bg-primary-soft data-[selected]:text-text data-[focus]:ring-accent/40 data-[focus]:ring-1 data-[focus]:outline-none'
 
 /** Ark owns the tree model, the roving focus and the selection; the recursion and the palette are ours. */
 export function TreeView({ items, value, onValueChange }: TreeViewProps) {
@@ -63,7 +63,7 @@ function renderNodes(nodes: TreeNode[], indexPath: number[]): ReactNode {
         ) : (
           <ArkTreeView.Branch>
             <ArkTreeView.BranchControl className={row}>
-              <ArkTreeView.BranchIndicator className="text-ink-400 transition-transform data-[state=open]:rotate-90">
+              <ArkTreeView.BranchIndicator className="text-text-muted transition-transform data-[state=open]:rotate-90">
                 <ChevronRight className="size-4" aria-hidden="true" strokeWidth={1.75} />
               </ArkTreeView.BranchIndicator>
               <ArkTreeView.BranchText asChild>

@@ -1,34 +1,30 @@
-import { useMemo } from 'react'
-
 import { Panel } from '@/components/primitives/panel'
+import { Breadcrumb } from '@/components/primitives/breadcrumb'
 import { Text } from '@/components/primitives/text'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useMoney } from '@/hooks/use-money'
 import { AccountBalances } from '@/modules'
 
 /** Every account the ledger knows, grouped the way accounting groups them, with its balance. */
+/** Stable crumbs: a new array on every render would re-render the trail for nothing. */
+const accountCrumbs = [{ label: 'Accounts' }] as const
+
 export function AccountsPage() {
   const accounts = useAccounts({ limit: 200 })
   const money = useMoney()
-  const rows = useMemo(() => accounts.data?.accounts ?? [], [accounts.data])
+  const rows = accounts.data?.accounts ?? []
 
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <Text as="p" tone="section">
-          Accounts
-        </Text>
+        <Breadcrumb items={accountCrumbs} />
         <Text as="h1" tone="display">
           Balances
-        </Text>
-        <Text as="p" tone="muted">
-          What each account holds, in {money.scale.currency}. Derived from the postings, never from
-          a stored column.
         </Text>
       </header>
 
       {accounts.error === null ? null : (
-        <Text as="p" tone="caption" className="text-oxblood-300" role="alert">
+        <Text as="p" tone="caption" className="text-danger" role="alert">
           {accounts.error.message}
         </Text>
       )}

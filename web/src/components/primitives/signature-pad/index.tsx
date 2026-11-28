@@ -21,10 +21,10 @@ export function SignaturePad({ onEnd }: SignaturePadProps) {
           Sign here
         </Text>
       </ArkSignaturePad.Label>
-      <ArkSignaturePad.Control className="border-border-strong bg-porcelain-50 text-ink-950 relative h-32 w-full overflow-hidden rounded border">
+      <ArkSignaturePad.Control className="border-border-strong bg-text text-on-accent relative h-32 w-full overflow-hidden rounded border">
         <ArkSignaturePad.Segment className="h-full w-full" />
         <ArkSignaturePad.Guide className="border-border-strong pointer-events-none absolute inset-x-4 bottom-6 border-b border-dashed" />
-        <ArkSignaturePad.ClearTrigger className="text-ink-500 hover:text-ink-900 absolute end-2 top-2 rounded transition-colors">
+        <ArkSignaturePad.ClearTrigger className="text-text-faint hover:text-text absolute end-2 top-2 rounded transition-colors">
           <Eraser className="size-4" aria-hidden="true" strokeWidth={1.75} />
         </ArkSignaturePad.ClearTrigger>
       </ArkSignaturePad.Control>

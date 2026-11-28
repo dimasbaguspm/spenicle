@@ -27,7 +27,7 @@ export function TagsInput({ value, onValueChange, placeholder }: TagsInputProps)
           >
             <ArkTagsInput.ItemPreview className="inline-flex items-center gap-1">
               <ArkTagsInput.ItemText />
-              <ArkTagsInput.ItemDeleteTrigger className="text-ink-400 hover:text-danger leading-none">
+              <ArkTagsInput.ItemDeleteTrigger className="text-text-muted hover:text-danger leading-none">
                 <X className="size-3" aria-hidden="true" strokeWidth={1.75} />
               </ArkTagsInput.ItemDeleteTrigger>
             </ArkTagsInput.ItemPreview>
@@ -36,7 +36,7 @@ export function TagsInput({ value, onValueChange, placeholder }: TagsInputProps)
         ))}
         <ArkTagsInput.Input
           placeholder={placeholder}
-          className="text-text placeholder:text-ink-400 min-w-24 flex-1 bg-transparent text-sm outline-none"
+          className="text-text placeholder:text-text-muted min-w-24 flex-1 bg-transparent text-sm outline-none"
         />
       </ArkTagsInput.Control>
       <ArkTagsInput.HiddenInput />

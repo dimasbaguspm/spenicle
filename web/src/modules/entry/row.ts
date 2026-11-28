@@ -10,7 +10,9 @@ export type EntryRow = {
   iso: string
   day: string
   title: string
+  note: string
   category: string
+  account: string
   amount: string
   outgoing: boolean
   isReversed: boolean
@@ -25,7 +27,7 @@ function entryTitle(entry: Entry): string {
     return note ?? absent
   }
 
-  return note === undefined ? payee : `${payee} · ${note}`
+  return note === undefined ? payee : `${payee}: ${note}`
 }
 
 /**
@@ -40,13 +42,16 @@ export function entryRow(entry: Entry, accounts: AccountIndex, scale: MoneyScale
   )
   const shown = moneySide ?? postings[0]
   const figure = formatMoney(shown?.amount_minor ?? '0', scale.units)
+  const moneyAccount = moneySide === undefined ? undefined : accounts.get(moneySide.account_ref)
 
   return {
     ref: entry.ref,
     iso: entry.occurred_on,
     day: formatDate(entry.occurred_on, DateFormat.Day),
     title: entryTitle(entry),
+    note: entry.note ?? '',
     category: accountName(accounts.get(categorySide?.account_ref ?? '')),
+    account: moneyAccount === undefined ? absent : accountName(moneyAccount),
     amount: figure.absolute().toDisplay(),
     outgoing: figure.isNegative(),
     isReversed: entry.reversed_at !== undefined,

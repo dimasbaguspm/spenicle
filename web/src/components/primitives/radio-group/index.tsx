@@ -30,7 +30,7 @@ export function RadioGroup({ value, options, onValueChange }: RadioGroupProps) {
           className="flex cursor-pointer items-center gap-2"
         >
           <ArkRadioGroup.ItemControl className="group border-border bg-surface-sunken data-[state=checked]:border-primary data-[state=checked]:bg-primary flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors">
-            <span className="bg-brass-400 hidden size-1.5 rounded-full group-data-[state=checked]:block" />
+            <span className="bg-on-primary hidden size-1.5 rounded-full group-data-[state=checked]:block" />
           </ArkRadioGroup.ItemControl>
           <ArkRadioGroup.ItemText asChild>
             <Text as="span" tone="body">

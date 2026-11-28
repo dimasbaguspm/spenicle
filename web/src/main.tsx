@@ -4,7 +4,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { queryClient } from '@/api/query'
-import { AppProvider, AuthProvider } from '@/providers'
+import { AppProvider, AuthProvider, ThemeProvider } from '@/providers'
 import { router } from '@/router'
 
 import './styles.css'
@@ -17,12 +17,14 @@ if (container === null) {
 createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      {/* bootstrap is the gate: nothing below it renders before the instance answered */}
-      <AppProvider>
-        <AuthProvider>
-          <RouterProvider router={router} />
-        </AuthProvider>
-      </AppProvider>
+      <ThemeProvider>
+        {/* bootstrap is the gate: nothing below it renders before the instance answered */}
+        <AppProvider>
+          <AuthProvider>
+            <RouterProvider router={router} />
+          </AuthProvider>
+        </AppProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

@@ -4,11 +4,11 @@ export function Brand({ size = 'md' }: { size?: 'sm' | 'md' }) {
 
   return (
     <span
-      className={`font-display text-porcelain-50 inline-flex items-baseline font-semibold tracking-[-0.01em] ${scale}`}
+      className={`font-display text-text inline-flex items-baseline font-semibold tracking-[-0.01em] ${scale}`}
       translate="no"
     >
       Spenicle
-      <span aria-hidden="true" className="text-brass-400">
+      <span aria-hidden="true" className="text-accent">
         .
       </span>
     </span>

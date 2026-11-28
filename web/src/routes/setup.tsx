@@ -81,7 +81,7 @@ export function SetupPage() {
   return (
     <Shell
       title="Claim this instance"
-      description="Nobody has set this instance up yet, so it is open. Choose a password and the currency the ledger will be kept in — that closes it."
+      description="Nobody has set this instance up yet, so it is open. Choose a password and the currency the ledger will be kept in. That closes it."
     >
       <form
         className="space-y-6"
@@ -111,7 +111,7 @@ export function SetupPage() {
           </Field>
         </div>
 
-        <div className="border-ink-800 space-y-5 border-t pt-6">
+        <div className="border-border space-y-5 border-t pt-6">
           <Text as="p" tone="section">
             The ledger
           </Text>

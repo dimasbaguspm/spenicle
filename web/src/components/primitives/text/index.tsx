@@ -28,16 +28,16 @@ type TextProps = HTMLAttributes<HTMLElement> & {
 const tones: Record<NonNullable<TextProps['tone']>, string> = {
   // the one serif: a wordmark, a screen title, an empty state — nothing else
   display:
-    'font-display text-porcelain-50 text-[2.125rem] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-[2.625rem]',
-  title: 'font-display text-porcelain-50 text-xl leading-tight font-semibold',
+    'font-display text-text text-[2.125rem] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-[2.625rem]',
+  title: 'font-display text-text text-xl leading-tight font-semibold',
   // a quiet eyebrow above a panel: mono, wide-tracked, never a heading by itself
-  section: 'text-ink-400 font-mono text-[0.625rem] leading-none tracking-[0.18em] uppercase',
-  body: 'text-porcelain-200 text-sm',
-  muted: 'text-ink-300 text-sm',
-  caption: 'text-ink-400 text-xs leading-relaxed',
-  code: 'text-porcelain-300 font-mono text-[0.8125rem] tracking-tight',
+  section: 'text-text-muted font-mono text-[0.625rem] leading-none tracking-[0.18em] uppercase',
+  body: 'text-text text-sm',
+  muted: 'text-text-muted text-sm',
+  caption: 'text-text-muted text-xs leading-relaxed',
+  code: 'text-text-muted font-mono text-[0.8125rem] tracking-tight',
   // every money amount and every date: one width per digit, in a column
-  figure: 'text-porcelain-100 font-mono text-sm tabular-nums tracking-tight',
+  figure: 'text-text font-mono text-sm tabular-nums tracking-tight',
 }
 
 /**

@@ -1,6 +1,7 @@
 export * from './accordion'
 export * from './angle-slider'
 export * from './avatar'
+export * from './breadcrumb'
 export * from './button'
 export * from './button-group'
 export * from './carousel'

@@ -32,14 +32,14 @@ export function CategoryBreakdown({
         return (
           <li key={row.account_ref} className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-4 text-sm">
-              <span className="text-porcelain-100 min-w-0 truncate">{row.account_name}</span>
-              <Text as="span" tone="figure" className="text-ink-300 shrink-0 text-xs">
+              <span className="text-text min-w-0 truncate">{row.account_name}</span>
+              <Text as="span" tone="figure" className="text-text-muted shrink-0 text-xs">
                 {amount.toDisplay()}
               </Text>
             </div>
-            <div className="bg-ink-800/80 h-[3px] rounded-full">
+            <div className="bg-surface-raised/80 h-[3px] rounded-full">
               <div
-                className="bg-brass-600/70 h-[3px] rounded-full"
+                className="bg-accent-soft/70 h-[3px] rounded-full"
                 style={{ width: `${String(Math.max(width, 1))}%` }}
                 aria-hidden="true"
               />

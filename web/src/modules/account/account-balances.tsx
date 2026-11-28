@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router'
+
 import type { Account } from '@/api/types'
 import { Panel } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
@@ -14,7 +16,7 @@ export function AccountBalances({
   scale: MoneyScale
 }) {
   return (
-    <Panel className="divide-ink-800 divide-y">
+    <Panel className="divide-border divide-y">
       {accountGroups.map((group) => {
         const held = accounts.filter((account) => account.kind === group.kind)
         if (held.length === 0) {
@@ -32,22 +34,28 @@ export function AccountBalances({
               <Text as="p" tone="section">
                 {group.label}
               </Text>
-              <Text as="p" tone="figure" className="text-ink-400 text-xs">
+              <Text as="p" tone="figure" className="text-text-muted text-xs">
                 {total}
               </Text>
             </div>
             <ul className="mt-1">
               {held.map((account) => (
-                <li key={account.ref} className="flex items-baseline gap-4 py-1.5 text-sm">
-                  <span className="text-porcelain-100 min-w-0 flex-1 truncate">{account.name}</span>
-                  {account.parent_ref === undefined ? null : (
-                    <Text as="span" tone="caption" className="text-ink-500">
-                      sub-account
+                <li key={account.ref} className="text-sm">
+                  <Link
+                    to="/accounts/$ref"
+                    params={{ ref: account.ref }}
+                    className="hover:bg-surface-raised/50 -mx-2 flex items-baseline gap-4 rounded px-2 py-1.5"
+                  >
+                    <span className="text-text min-w-0 flex-1 truncate">{account.name}</span>
+                    {account.parent_ref === undefined ? null : (
+                      <Text as="span" tone="caption" className="text-text-faint">
+                        sub-account
+                      </Text>
+                    )}
+                    <Text as="span" tone="figure" className="w-32 shrink-0 text-right">
+                      {formatMoney(account.base_amount_minor, scale.units).toDisplay()}
                     </Text>
-                  )}
-                  <Text as="span" tone="figure" className="w-32 shrink-0 text-right">
-                    {formatMoney(account.base_amount_minor, scale.units).toDisplay()}
-                  </Text>
+                  </Link>
                 </li>
               ))}
             </ul>

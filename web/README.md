@@ -43,6 +43,13 @@ means and a module never learns to fetch.
 | `modules/`    | (a sibling of `components/`) one folder per entity: the component a page drops in, plus the fallbacks, flags and tone it answers with | `entry`, `account`, `capture`, `month`, `analytics`, `token`, `settings` |
 | `layouts/`    | structure only: chrome, navigation, the outlet                                                                                        | `AppShell`                                                               |
 
+The shell is one of two shapes, not one that shrinks: from `lg` up a header carries the three
+working sections (Register, Accounts, Analytics) on the left and New entry plus Settings on the
+right; below `lg` there is no header at all, and a five-slot bottom bar carries Overview, Accounts,
+the register in the middle, Analytics, and a More menu (Captures, Settings, theme, sign out). Each
+screen opens with a breadcrumb instead of an eyebrow, so "Ledger / Register" says where you are
+without repeating the title underneath it.
+
 `oxlint`'s `no-restricted-imports` carries one override per layer, so an upward import (`ui/` into
 `primitives/`, `modules/` into `ui/`) is a lint error with a message saying why, `@ark-ui/*` stays
 unreachable outside `primitives/`, and a module cannot reach for a route or a hook. The boundary is
@@ -142,6 +149,32 @@ migrate. A screen writes the shape once and never wires a `Controller`:
   It never accepts a value, an onChange, a `control` or a form. Outside a `Form` it throws, so a
   misplacement is a stack trace rather than a silently orphaned input.
 
+## Filters live in the URL
+
+One abstraction, four parts, and every list shares it:
+
+- `lib/filter.ts` is the contract: `FilterSpec<State, Query>` says how to `parse` a URL, how to
+  `toQuery` a spec for the API, and how to count the `active` fields.
+- `modules/entry/filters.ts` is the one implementation for entries (`entryFilterSpec`), so
+  `/ledger` and `/accounts/$ref` cannot drift.
+- `hooks/use-filter-query.ts` joins it to the route: give it `search`, an `onChange` that writes
+  the URL, the spec, a `limit` and the fields the route **pins** (an account page pins its
+  account), and it returns `{ value, query, active, apply, clear }`.
+- The screen never spells a query param: it hands `query` to the hook that fetches, and `apply`
+  to the controls.
+
+The rail applies as you change it; the phone's sheet edits a draft and stamps it with Apply, so a
+half-typed date costs no request. Because the state is the URL, a narrowed view is a link:
+
+| URL                                     | means                                                   |
+| --------------------------------------- | ------------------------------------------------------- |
+| `/ledger?from=2026-11-01&to=2026-11-30` | one month of entries                                    |
+| `/ledger?account=<ref>&q=coffee`        | one account, notes or payee matching coffee             |
+| `/accounts/<ref>?from=…`                | one account's movements, with a running balance per row |
+
+The route validates the search (`validateSearch: entrySearch`), so an unknown or empty param is
+dropped rather than sent, and `/accounts/$ref` pins `account_ref` to the account in the path.
+
 ## `api/` and `hooks/queries/` — one shape, one door
 
 The generated contract (`src/types/generated/openapi.ts`) marks every field optional, which is
@@ -217,29 +250,40 @@ Two contexts, in the order `main.tsx` nests them: `AppProvider` outside, `AuthPr
 
 ## The theme
 
-One file owns the look: `src/styles.css`. Four brand ramps — **ink black** (the paper),
-**porcelain cream** (the ink), **lacquer cherry** (primary), **brass glow** (accent) — plus
-**jade** success, **amber** warning, **oxblood** danger, **verdigris** tertiary and **lapis**
-info, each as a real scale so a hover or a border has a shade to reach for.
+One file owns the look: `src/styles.css`, and it holds three layers in that order.
 
-Screens use the semantic tokens only (`bg-surface`, `text-text-muted`, `border-border`,
-`bg-primary`, `text-accent`, `text-success`…), so a re-theme is that file and nothing else.
+1. **Brand ramps** (`@theme`): ink, porcelain, cherry, brass, jade, amber, lapis and oxblood, each
+   a real scale so a hover or a border has a shade to reach for.
+2. **Semantic tokens** (`@theme inline`): `surface`, `surface-raised`, `surface-sunken`, `border`,
+   `border-strong`, `text`, `text-muted`, `text-faint`, `primary`, `on-primary`, `accent`,
+   `accent-soft`, `on-accent`, `success`, `warning`, `info`, `danger`. Every utility in `src/`
+   names one of these; a ramp class in a component is a bug, because it cannot follow the theme.
+3. **Two theme blocks**: `:root[data-theme='dark']` and `:root[data-theme='light']`, each a flat
+   list of `--app-*` values. That is the whole light/dark difference.
 
-### Three faces, three jobs
+`ThemeProvider` (`src/providers/theme-provider.tsx`) owns the choice: no stored choice means the
+client's `prefers-color-scheme` and follows it live, an explicit Light or Dark pins
+`localStorage['spenicle.theme']`, and `index.html` paints the same rule in a four-line script
+before the first frame so nothing flashes. `ThemeToggle` in the shell header (signed in) and the
+footer (anonymous) sets it.
 
-The fonts are self-hosted (`@fontsource-variable/*`, bundled by Vite) and mapped to the three
+### Two faces, two jobs
+
+The fonts are self-hosted (`@fontsource-variable/*`, bundled by Vite) and mapped to the
 `--font-*` tokens, so nothing waits on a third-party CDN and the app renders offline:
 
-| token            | face                        | where it is allowed                                                            |
-| ---------------- | --------------------------- | ------------------------------------------------------------------------------ |
-| `--font-display` | **Fraunces Variable**       | the wordmark, a screen title, a panel title — never a label, never a paragraph |
-| `--font-sans`    | **Inter Variable**          | everything a person reads or types                                             |
-| `--font-mono`    | **JetBrains Mono Variable** | every figure: amounts, days in the register, refs, the `.env` hint             |
+| token         | face                        | where it is allowed                                                |
+| ------------- | --------------------------- | ------------------------------------------------------------------ |
+| `--font-sans` | **Inter Variable**          | everything: wordmark, titles, prose, labels                        |
+| `--font-mono` | **JetBrains Mono Variable** | every figure: amounts, days in the register, refs, the `.env` hint |
 
-Figures are tabular everywhere (`font-variant-numeric: tabular-nums` on `body`), because a
-register is a column that has to line up. Eyebrows are mono and wide-tracked; headings are the
-one serif in the product, with `text-wrap: balance`; body copy is `text-wrap: pretty`, so a
-paragraph never ends on a stranded word.
+`--font-display` is an alias of the sans face, so a heading is the same Inter with tighter
+tracking rather than a second typeface. Figures are tabular everywhere
+(`font-variant-numeric: tabular-nums` on `body`), because a register is a column that has to line
+up. Eyebrows are wide-tracked and uppercase; headings get `text-wrap: balance`, body copy
+`text-wrap: pretty`, so a paragraph never ends on a stranded word. Copy avoids em dashes and
+middle dots: a separator is a comma, a full stop or a column, never a glyph standing in for
+structure.
 
 ### The rules a screen follows
 
@@ -299,14 +343,17 @@ src/api/error.ts      ApiError: status, code, traceId, one message
 src/api/query.ts      the one QueryClient
 src/hooks/queries/    TanStack queries and mutations over those callers
 src/types/generated/  generated contract — never edit; run `make web-types`
-src/components/       primitives → ui → layouts (see above)
+src/components/       primitives → ui → layouts (see above); the shell turns into a
+                      Drawer with the same sections under `sm`
 src/modules/          one folder per entity: <entity>/<component>.tsx plus the function behind
-                      it, re-exported by <entity>/index.ts — the only place a fallback lives
-src/providers/        AppProvider (the bootstrap gate) and AuthProvider (the token), see above
+                      it, re-exported by <entity>/index.ts, the only place a fallback lives
+src/providers/        AppProvider (the bootstrap gate), AuthProvider (the token) and
+                      ThemeProvider (light/dark), see above
 src/styles.css        the tokens: palette, three faces, one base layer
 src/router.tsx        code-based routes + the auth guard in beforeLoad
-src/routes/           AppShell's outlet: login, setup, dashboard, ledger, accounts,
-                      analytics, captures, settings — composition only
+src/routes/           AppShell's outlet: login, setup, dashboard, ledger, ledger/new,
+                      ledger/$ref, accounts, accounts/$ref, analytics, captures, settings.
+                      Composition only; a form lives here, a row lives in modules/.
 src/lib/money.ts      formatMoney/parseMoney, the dotted scale chain
 src/lib/date.ts       formatDate + the DateFormat templates, dayjs underneath
 ```

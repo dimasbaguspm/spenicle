@@ -71,7 +71,7 @@ function Splash({
           {title}
         </Text>
         {detail === undefined ? null : (
-          <Text as="p" tone="caption" className="text-oxblood-300" role="alert">
+          <Text as="p" tone="caption" className="text-danger" role="alert">
             {detail}
           </Text>
         )}

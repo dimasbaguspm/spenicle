@@ -1,10 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 
 import { changePassword } from '@/api/settings'
 import { queryClient } from '@/api/query'
 import type { TokenIssued } from '@/api/types'
 import { Button } from '@/components/primitives/button'
+import { ThemeToggle } from '@/components/layouts/theme-toggle'
+import { Breadcrumb } from '@/components/primitives/breadcrumb'
 import { Field } from '@/components/primitives/field'
 import { Panel } from '@/components/primitives/panel'
 import { PasswordInput } from '@/components/primitives/password-input'
@@ -12,10 +15,16 @@ import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
 import { useSettings } from '@/hooks/queries/use-settings'
 import { useCreateToken, useRevokeToken, useTokenList } from '@/hooks/queries/use-tokens'
+import { useAuth } from '@/providers'
 import { SettingsFacts, TokenList } from '@/modules'
 
 /** The instance itself: what the ledger is kept in, who holds a credential, and how to rotate it. */
+/** Stable crumbs: a new array on every render would re-render the trail for nothing. */
+const settingsCrumbs = [{ label: 'Settings' }] as const
+
 export function SettingsPage() {
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
   const settings = useSettings()
   const tokens = useTokenList()
   const remove = useRevokeToken()
@@ -55,24 +64,28 @@ export function SettingsPage() {
     },
   })
 
-  const rows = useMemo(() => tokens.data?.tokens ?? [], [tokens.data])
+  const rows = tokens.data?.tokens ?? []
 
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <Text as="p" tone="section">
-          Settings
-        </Text>
-        <Text as="h1" tone="display">
-          This instance
-        </Text>
-        <Text as="p" tone="muted">
-          One household, one ledger, one password. Nothing here is shared with anyone else.
-        </Text>
+        <Breadcrumb items={settingsCrumbs} />
       </header>
 
-      <Panel className="divide-ink-800 divide-y">
+      <Panel className="divide-border divide-y">
         <SettingsFacts settings={settings.data} />
+
+        <section className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+          <div className="space-y-1">
+            <Text as="p" tone="section">
+              Appearance
+            </Text>
+            <Text as="p" tone="muted" className="text-sm">
+              Light, dark, or whatever this client asks for. The choice is kept in this browser.
+            </Text>
+          </div>
+          <ThemeToggle />
+        </section>
 
         <section className="space-y-4 p-5 sm:p-6">
           <Text as="p" tone="section">
@@ -110,7 +123,7 @@ export function SettingsPage() {
                 {rotate.isPending ? 'Saving…' : 'Rotate password'}
               </Button>
               {rotate.isSuccess ? (
-                <Text as="p" tone="caption" className="text-jade-300 pt-2">
+                <Text as="p" tone="caption" className="text-success pt-2">
                   Password replaced. Every token minted from the old one keeps working; this tab
                   still uses the token it already holds.
                 </Text>
@@ -189,7 +202,7 @@ export function SettingsPage() {
           </form>
 
           {issued?.token === undefined ? null : (
-            <div className="border-ink-800 space-y-1 rounded-md border p-4">
+            <div className="border-border space-y-1 rounded-md border p-4">
               <Text as="p" tone="section">
                 Copy it now
               </Text>
@@ -201,6 +214,27 @@ export function SettingsPage() {
               </Text>
             </div>
           )}
+        </section>
+
+        <section className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+          <div className="space-y-1">
+            <Text as="p" tone="section">
+              Session
+            </Text>
+            <Text as="p" tone="muted" className="text-sm">
+              Signing out drops this tab's token. The tokens above keep working.
+            </Text>
+          </div>
+          <Button
+            tone="danger"
+            size="sm"
+            onClick={() => {
+              signOut()
+              void navigate({ to: '/' })
+            }}
+          >
+            Sign out
+          </Button>
         </section>
       </Panel>
     </div>

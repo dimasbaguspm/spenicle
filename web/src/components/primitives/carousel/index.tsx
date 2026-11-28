@@ -36,7 +36,7 @@ export function Carousel({ items, loop }: CarouselProps) {
               key={item.key}
               index={index}
               type="button"
-              className="bg-ink-700 data-[current]:bg-accent size-1.5 rounded-full transition-colors"
+              className="bg-border data-[current]:bg-accent size-1.5 rounded-full transition-colors"
             />
           ))}
         </ArkCarousel.IndicatorGroup>

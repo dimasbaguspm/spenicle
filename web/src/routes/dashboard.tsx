@@ -1,20 +1,23 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
-import { useMemo } from 'react'
-
 import { Panel } from '@/components/primitives/panel'
+import { Breadcrumb } from '@/components/primitives/breadcrumb'
 import { Text } from '@/components/primitives/text'
 import { useDashboard } from '@/hooks/queries/use-dashboard'
 import { useEntries } from '@/hooks/queries/use-entries'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useMoney } from '@/hooks/use-money'
 import { DateFormat } from '@/lib/date'
+import { absent } from '@/lib/text'
 import { EntryTicker, MonthSeries, accountIndex, monthLabel, monthsBack } from '@/modules'
 
 /**
  * The landing screen: the month's three figures, the year as a row of bars, and the last few
  * entries. Every number comes from one `/api/dashboard` call, so the tiles cannot disagree.
  */
+/** Stable crumbs: a new array on every render would re-render the trail for nothing. */
+const overviewCrumbs = [{ label: 'Overview' }] as const
+
 export function DashboardPage() {
   const { from, to } = monthsBack(6)
   const dashboard = useDashboard(from, to)
@@ -23,43 +26,38 @@ export function DashboardPage() {
   const money = useMoney()
 
   const data = dashboard.data
-  const months = useMemo(() => data?.months ?? [], [data?.months])
-  const rows = useMemo(() => latest.data?.entries ?? [], [latest.data])
+  const months = data?.months ?? []
+  const rows = latest.data?.entries ?? []
   const accounts = accountIndex(meta.data?.accounts ?? [])
   const monthOf = data?.month === undefined ? '' : monthLabel(data.month, DateFormat.MonthLong)
 
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <Text as="p" tone="section">
-          Overview
-        </Text>
+        <Breadcrumb items={overviewCrumbs} />
         <Text as="h1" tone="display">
-          The last six months
-        </Text>
-        <Text as="p" tone="muted">
-          {from} — {to} · {money.scale.currency}
+          Overview
         </Text>
       </header>
 
       {dashboard.error === null ? null : (
-        <Text as="p" tone="caption" className="text-oxblood-300" role="alert">
+        <Text as="p" tone="caption" className="text-danger" role="alert">
           {dashboard.error.message}
         </Text>
       )}
 
-      <Panel className="divide-ink-800 grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      <Panel className="divide-border grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {[
-          { label: 'Spent', minor: data?.spend_minor, tone: 'text-porcelain-100' },
-          { label: 'Income', minor: data?.income_minor, tone: 'text-jade-300' },
-          { label: 'Net', minor: data?.net_minor, tone: 'text-porcelain-100' },
+          { label: 'Spent', minor: data?.spend_minor, tone: 'text-text' },
+          { label: 'Income', minor: data?.income_minor, tone: 'text-success' },
+          { label: 'Net', minor: data?.net_minor, tone: 'text-text' },
         ].map((tile) => (
           <div key={tile.label} className="space-y-1 px-5 py-4 sm:px-6 sm:py-5">
             <Text as="p" tone="section">
-              {tile.label} · {monthOf}
+              {tile.label}, {monthOf}
             </Text>
             <Text as="p" tone="figure" className={`text-2xl ${tile.tone}`}>
-              {tile.minor === undefined ? '—' : money.figure(tile.minor)}
+              {tile.minor === undefined ? absent : money.figure(tile.minor)}
             </Text>
           </div>
         ))}
@@ -71,7 +69,7 @@ export function DashboardPage() {
             <Text as="p" tone="section">
               Spend, month by month
             </Text>
-            <Link to="/analytics" className="text-ink-400 hover:text-brass-300 text-xs">
+            <Link to="/analytics" className="text-text-muted hover:text-accent text-xs">
               Analytics
             </Link>
           </div>
@@ -96,19 +94,19 @@ export function DashboardPage() {
               </Text>
             </div>
             <ArrowRight
-              className="text-ink-500 group-hover:text-brass-300 size-4"
+              className="text-text-faint group-hover:text-accent size-4"
               aria-hidden="true"
             />
           </Link>
           {data?.top_category === undefined ? null : (
-            <div className="border-ink-800 space-y-1 border-t pt-4">
+            <div className="border-border space-y-1 border-t pt-4">
               <Text as="p" tone="section">
-                Biggest category · six months
+                Biggest category, six months
               </Text>
               <Text as="p" tone="body">
                 {data.top_category.account_name}
               </Text>
-              <Text as="p" tone="figure" className="text-ink-300">
+              <Text as="p" tone="figure" className="text-text-muted">
                 {money.figure(data.top_category.amount_minor)}
               </Text>
             </div>
@@ -121,7 +119,7 @@ export function DashboardPage() {
           <Text as="p" tone="section">
             Latest entries
           </Text>
-          <Link to="/ledger" className="text-ink-400 hover:text-brass-300 text-xs">
+          <Link to="/ledger" className="text-text-muted hover:text-accent text-xs">
             Register
           </Link>
         </div>

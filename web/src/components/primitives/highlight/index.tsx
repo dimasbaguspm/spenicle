@@ -15,7 +15,7 @@ export function Highlight({ text, query }: HighlightProps) {
         text={text}
         query={query}
         matchAll
-        className="bg-brass-500/25 text-brass-200 rounded-sm px-0.5"
+        className="bg-accent/25 text-accent rounded-sm px-0.5"
       />
     </Text>
   )

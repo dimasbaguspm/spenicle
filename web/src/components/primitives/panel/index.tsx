@@ -28,7 +28,7 @@ export function Panel({
     <Tag
       className={cn(
         'rounded-lg border',
-        tone === 'raised' ? 'border-ink-800 bg-ink-900/40' : 'border-ink-800/60 border-dashed',
+        tone === 'raised' ? 'border-border bg-surface/40' : 'border-border/60 border-dashed',
         className,
       )}
       {...rest}

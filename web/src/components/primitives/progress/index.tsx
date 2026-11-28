@@ -21,7 +21,7 @@ export function Progress({ value, max = 100, label, shape = 'linear' }: Progress
         </ArkProgress.Label>
       )}
       {shape === 'linear' ? (
-        <ArkProgress.Track className="bg-ink-800 h-1.5 w-full overflow-hidden rounded-full">
+        <ArkProgress.Track className="bg-surface-raised h-1.5 w-full overflow-hidden rounded-full">
           <ArkProgress.Range className="bg-accent block h-full transition-[width]" />
         </ArkProgress.Track>
       ) : (

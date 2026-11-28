@@ -31,7 +31,7 @@ export function Field({ label, hint, error, className, children }: FieldProps) {
         <Text
           as="label"
           tone="caption"
-          className="text-ink-300 group-focus-within/field:text-brass-400 block text-[0.6875rem] font-medium tracking-[0.14em] uppercase transition-colors"
+          className="text-text-muted group-focus-within/field:text-accent block text-[0.6875rem] font-medium tracking-[0.14em] uppercase transition-colors"
         >
           {label}
         </Text>
@@ -39,14 +39,14 @@ export function Field({ label, hint, error, className, children }: FieldProps) {
       {children}
       {error === undefined ? null : (
         <ArkField.ErrorText asChild>
-          <Text as="p" tone="caption" className="text-oxblood-300 flex items-start gap-1.5">
+          <Text as="p" tone="caption" className="text-danger flex items-start gap-1.5">
             {error}
           </Text>
         </ArkField.ErrorText>
       )}
       {hint === undefined || error !== undefined ? null : (
         <ArkField.HelperText asChild>
-          <Text as="p" tone="caption" className="text-ink-400 leading-relaxed">
+          <Text as="p" tone="caption" className="text-text-muted leading-relaxed">
             {hint}
           </Text>
         </ArkField.HelperText>

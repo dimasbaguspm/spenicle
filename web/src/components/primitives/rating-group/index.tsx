@@ -25,7 +25,7 @@ export function RatingGroup({ value, count = 5, onValueChange }: RatingGroupProp
           <ArkRatingGroup.Item
             key={star}
             index={star}
-            className="text-ink-600 data-highlighted:text-accent data-[half]:text-brass-600 cursor-pointer transition-colors"
+            className="text-text-faint data-highlighted:text-accent data-[half]:text-accent cursor-pointer transition-colors"
           >
             <Star className="size-4 fill-current" aria-hidden="true" strokeWidth={1.75} />
           </ArkRatingGroup.Item>

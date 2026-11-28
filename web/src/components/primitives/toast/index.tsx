@@ -16,7 +16,7 @@ export function Toaster() {
         <ArkToast.Root className="border-border-strong bg-surface-raised pointer-events-auto flex w-80 items-start gap-3 rounded-lg border p-4 shadow-xl">
           <div className="flex flex-1 flex-col gap-1">
             <ArkToast.Title asChild>
-              <Text as="p" tone="body" className="text-porcelain-50 font-medium">
+              <Text as="p" tone="body" className="text-text font-medium">
                 {item.title}
               </Text>
             </ArkToast.Title>
@@ -32,7 +32,7 @@ export function Toaster() {
             <button
               type="button"
               aria-label="Dismiss"
-              className="text-text-muted hover:text-porcelain-50 rounded text-sm transition-colors"
+              className="text-text-muted hover:text-text rounded text-sm transition-colors"
             >
               <X className="size-4" aria-hidden="true" strokeWidth={1.75} />
             </button>

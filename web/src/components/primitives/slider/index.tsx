@@ -44,7 +44,7 @@ export function Slider({
         ))}
       </ArkSlider.Control>
       {markers === undefined ? null : (
-        <ArkSlider.MarkerGroup className="text-ink-400 flex justify-between text-xs">
+        <ArkSlider.MarkerGroup className="text-text-muted flex justify-between text-xs">
           {markers.map((marker) => (
             <ArkSlider.Marker key={marker} value={marker} className="tabular-nums">
               {marker}

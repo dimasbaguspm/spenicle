@@ -27,7 +27,7 @@ export function Tabs({ value, items, onValueChange }: TabsProps) {
           <ArkTabs.Trigger
             key={item.value}
             value={item.value}
-            className="text-text-muted -mb-px border-b-2 border-transparent pb-2 text-sm transition-colors data-[selected]:border-accent data-[selected]:text-porcelain-50"
+            className="text-text-muted -mb-px border-b-2 border-transparent pb-2 text-sm transition-colors data-[selected]:border-accent data-[selected]:text-text"
           >
             {item.label}
           </ArkTabs.Trigger>

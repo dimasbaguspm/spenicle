@@ -22,7 +22,7 @@ export function Clipboard({ value, label }: ClipboardProps) {
           </Text>
         </ArkClipboard.Label>
       )}
-      <ArkClipboard.Trigger className="border-border text-text-muted hover:border-border-strong hover:text-porcelain-50 inline-flex items-center gap-1 rounded border px-3 py-1.5 text-sm transition-colors">
+      <ArkClipboard.Trigger className="border-border text-text-muted hover:border-border-strong hover:text-text inline-flex items-center gap-1 rounded border px-3 py-1.5 text-sm transition-colors">
         <ArkClipboard.Indicator
           copied={
             <>

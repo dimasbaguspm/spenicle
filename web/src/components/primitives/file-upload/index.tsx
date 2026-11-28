@@ -44,7 +44,7 @@ export function FileUpload({ accept, multiple, onFilesChange, label }: FileUploa
                   className="border-border bg-surface flex items-center justify-between gap-2 rounded border px-2 py-1"
                 >
                   <ArkFileUpload.ItemName className="text-text truncate text-sm" />
-                  <ArkFileUpload.ItemDeleteTrigger className="text-ink-400 hover:text-danger leading-none">
+                  <ArkFileUpload.ItemDeleteTrigger className="text-text-muted hover:text-danger leading-none">
                     <X className="size-3" aria-hidden="true" strokeWidth={1.75} />
                   </ArkFileUpload.ItemDeleteTrigger>
                 </ArkFileUpload.Item>

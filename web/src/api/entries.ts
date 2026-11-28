@@ -1,6 +1,6 @@
 import { api } from './client'
 import { apiError } from './error'
-import type { Entry, EntryCreate, Paged, Paths } from './types'
+import type { Entry, EntryCreate, EntryPatch, Paged, Paths } from './types'
 
 type EntriesPage = Paths['/api/entries']['get']['responses'][200]['content']['application/json']
 
@@ -15,6 +15,29 @@ export async function listEntries(filters: EntryFilters = {}): Promise<EntryList
   }
 
   return data as EntryList
+}
+
+export async function getEntry(ref: string): Promise<Entry> {
+  const { data, error, response } = await api.GET('/api/entries/{ref}', {
+    params: { path: { ref } },
+  })
+  if (error !== undefined) {
+    throw apiError(response.status, error)
+  }
+
+  return data as Entry
+}
+
+export async function patchEntry(ref: string, body: EntryPatch): Promise<Entry> {
+  const { data, error, response } = await api.PATCH('/api/entries/{ref}', {
+    params: { path: { ref } },
+    body,
+  })
+  if (error !== undefined) {
+    throw apiError(response.status, error)
+  }
+
+  return data as Entry
 }
 
 export async function createEntry(body: EntryCreate): Promise<Entry> {

@@ -15,23 +15,23 @@ export const buttonStyles = cva(
     'relative inline-flex items-center justify-center gap-2 rounded-md font-medium',
     'select-none whitespace-nowrap',
     'transition-colors duration-150',
-    'focus-visible:ring-2 focus-visible:ring-brass-400/70 focus-visible:ring-offset-2',
+    'focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:ring-offset-2',
     'focus-visible:ring-offset-ink-950 focus-visible:outline-none',
     // a disabled button is not a faded button: it loses its lacquer entirely
-    'disabled:pointer-events-none disabled:border-ink-800 disabled:bg-ink-900 disabled:text-ink-500',
+    'disabled:pointer-events-none disabled:border-border disabled:bg-surface disabled:text-text-faint',
   ].join(' '),
   {
     variants: {
       tone: {
-        primary: 'text-porcelain-50 border border-cherry-600 bg-cherry-600 hover:bg-cherry-500',
+        primary: 'text-on-primary border border-primary bg-primary hover:bg-primary-hover',
         quiet:
-          'text-porcelain-200 border border-ink-700 bg-transparent hover:border-ink-600 hover:bg-ink-900 hover:text-porcelain-50',
+          'text-text border border-border bg-transparent hover:border-border-strong hover:bg-surface hover:text-text',
         ghost:
-          'text-text-muted hover:bg-ink-800/70 hover:text-porcelain-100 border border-transparent',
+          'text-text-muted hover:bg-surface-raised/70 hover:text-text border border-transparent',
         danger: [
-          'text-oxblood-300 hover:text-oxblood-200',
-          'bg-oxblood-600/10 hover:bg-oxblood-600/20',
-          'border border-oxblood-600/60 hover:border-oxblood-500',
+          'text-danger hover:text-danger',
+          'bg-danger/10 hover:bg-danger/20',
+          'border border-danger/60 hover:border-danger',
         ].join(' '),
       },
       size: {

@@ -8,9 +8,9 @@ export function EntryAmount({ row, className }: { row: EntryRow; className: stri
     <Text
       as="span"
       tone="figure"
-      className={`${className} ${row.outgoing ? 'text-porcelain-200' : 'text-jade-300'}`}
+      className={`${className} ${row.outgoing ? 'text-text' : 'text-success'}`}
     >
-      {row.outgoing ? '−' : '+'}
+      {row.outgoing ? '-' : '+'}
       {row.amount}
     </Text>
   )

@@ -32,9 +32,9 @@ export function Listbox({ items, value, onValueChange }: ListboxProps) {
           <ArkListbox.Item
             key={item.value}
             item={item}
-            className="data-highlighted:bg-brass-800/40 data-highlighted:text-porcelain-50 cursor-pointer rounded px-2 py-1.5 text-sm transition-colors"
+            className="data-highlighted:bg-accent-soft/40 data-highlighted:text-text cursor-pointer rounded px-2 py-1.5 text-sm transition-colors"
           >
-            <ArkListbox.ItemText className="text-text-muted data-[state=checked]:text-porcelain-50">
+            <ArkListbox.ItemText className="text-text-muted data-[state=checked]:text-text">
               {item.label}
             </ArkListbox.ItemText>
             <ArkListbox.ItemIndicator className="text-accent">

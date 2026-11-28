@@ -13,7 +13,7 @@ type NavigationMenuProps = {
   items: NavGroup[]
 }
 
-const link = 'text-text-muted hover:text-porcelain-50 rounded px-2 py-1 text-sm transition-colors'
+const link = 'text-text-muted hover:text-text rounded px-2 py-1 text-sm transition-colors'
 
 /**
  * Ark owns the delay-group logic, the hover and focus bridge to the panel, and the aria for

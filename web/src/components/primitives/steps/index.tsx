@@ -28,9 +28,9 @@ export function Steps({ step, items }: StepsProps) {
           >
             <ArkSteps.Indicator
               className={cn(
-                'border-border text-ink-300 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border text-xs transition-colors',
-                'group-data-[current]:border-accent group-data-[current]:bg-accent group-data-[current]:text-ink-950',
-                'group-data-[complete]:border-jade-500 group-data-[complete]:bg-jade-500 group-data-[complete]:text-ink-950',
+                'border-border text-text-muted mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border text-xs transition-colors',
+                'group-data-[current]:border-accent group-data-[current]:bg-accent group-data-[current]:text-on-accent',
+                'group-data-[complete]:border-success group-data-[complete]:bg-success group-data-[complete]:text-on-accent',
               )}
             >
               <Text as="span" tone="caption" className="text-inherit group-data-[complete]:hidden">
@@ -47,7 +47,7 @@ export function Steps({ step, items }: StepsProps) {
                 <Text
                   as="span"
                   tone="body"
-                  className="text-text-muted group-data-[current]:text-porcelain-50 group-data-[complete]:text-jade-300"
+                  className="text-text-muted group-data-[current]:text-text group-data-[complete]:text-success"
                 >
                   {item.title}
                 </Text>

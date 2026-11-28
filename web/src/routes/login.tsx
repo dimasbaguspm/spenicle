@@ -110,7 +110,7 @@ export function LoginPage() {
             This instance has never been set up.{' '}
             <Link
               to="/setup"
-              className="text-porcelain-200 underline decoration-ink-600 underline-offset-4 hover:text-brass-300"
+              className="text-text underline decoration-ink-600 underline-offset-4 hover:text-accent"
             >
               Claim it…
             </Link>

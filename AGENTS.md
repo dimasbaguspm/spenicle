@@ -113,13 +113,18 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        it was compiled with `-tags web` (the `latest` image); `web/assets_*.go`
                        is the whole switch. Screens: `/` sign in, `/setup` the claim
                        wizard (password, base currency, one optional opening account),
-                       `/dashboard`, `/ledger`, `/accounts`, `/analytics`,
-                       `/captures`, `/settings`. The shell is a masthead (wordmark,
-                       session) plus a route strip that follows the page; the claim
-                       screen at `/setup` is two fields: password and currency.
-                       palette ramps, the three self-hosted fonts (Fraunces for the
-                       wordmark and screen titles, Inter for text, JetBrains Mono for every
-                       figure), and the base layer. A screen composes `Panel`, `Field`,
+                       `/dashboard`, `/ledger` (+ `/ledger/new`, `/ledger/{ref}`),
+                       `/accounts` (+ `/accounts/{ref}`), `/analytics`, `/captures`,
+                       `/settings`. The shell has two shapes: from `lg` a header with
+                       Register, Accounts and Analytics on the left and New entry plus
+                       Settings on the right; below `lg` no header at all, and a five-slot
+                       bottom bar with the register in the middle and a More menu
+                       (captures, settings, theme, sign out). A screen opens with a
+                       breadcrumb, not an eyebrow repeating its title; the claim screen at
+                       `/setup` is two fields: password and currency.
+                       palette ramps, two self-hosted fonts (Inter for everything, JetBrains
+                       Mono for every figure) behind a semantic token layer, light and dark
+                       theme blocks whose default follows the client, and the base layer. A screen composes `Panel`, `Field`,
                        `Button` and `Text`, and `src/modules/<entity>` for everything it
                        says about a row: a module owns its entity's component, fallbacks,
                        flags and tone, so a `routes/*` page composes modules and never reads

@@ -33,7 +33,7 @@ export function monthBar(month: MonthTotal, scale: MoneyScale): MonthBar {
     key: month.month,
     label: monthLabel(month.month),
     value: Number(figure.toMinor()),
-    title: `${monthLabel(month.month, DateFormat.MonthLong)} · ${figure.toDisplay(scale.currency)}`,
+    title: `${monthLabel(month.month, DateFormat.MonthLong)}, ${figure.toDisplay(scale.currency)}`,
   }
 }
 

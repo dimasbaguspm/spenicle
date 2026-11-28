@@ -42,20 +42,20 @@ export function Combobox({ items, value, onValueChange, placeholder, emptyText }
     >
       <ArkCombobox.Control className="relative flex items-center">
         <ArkCombobox.Input placeholder={placeholder} className={control()} />
-        <ArkCombobox.Trigger className="text-brass-500 absolute right-2">
+        <ArkCombobox.Trigger className="text-accent absolute right-2">
           <ChevronDown className="size-4" aria-hidden="true" strokeWidth={1.75} />
         </ArkCombobox.Trigger>
       </ArkCombobox.Control>
       <ArkCombobox.Positioner>
         <ArkCombobox.Content className="border-border-strong bg-surface-raised z-20 mt-1 max-h-64 overflow-auto rounded border p-1 text-sm shadow-xl">
-          <ArkCombobox.Empty className="text-ink-400 px-2 py-1.5 text-xs">
+          <ArkCombobox.Empty className="text-text-muted px-2 py-1.5 text-xs">
             {emptyText ?? 'nothing found'}
           </ArkCombobox.Empty>
           {collection.items.map((item) => (
             <ArkCombobox.Item
               key={item.value}
               item={item}
-              className="data-highlighted:bg-brass-800/40 data-highlighted:text-porcelain-50 cursor-pointer rounded px-2 py-1.5"
+              className="data-highlighted:bg-accent-soft/40 data-highlighted:text-text cursor-pointer rounded px-2 py-1.5"
             >
               <ArkCombobox.ItemText>{item.label}</ArkCombobox.ItemText>
             </ArkCombobox.Item>

@@ -20,14 +20,14 @@ export function Avatar({ name, src, size = 'md' }: AvatarProps) {
   return (
     <ArkAvatar.Root
       className={cn(
-        'bg-cherry-800 relative inline-flex shrink-0 overflow-hidden rounded-full select-none',
+        'bg-primary-soft relative inline-flex shrink-0 overflow-hidden rounded-full select-none',
         box[size],
       )}
     >
       {src === undefined ? null : (
         <ArkAvatar.Image src={src} alt={name} className="size-full object-cover" />
       )}
-      <ArkAvatar.Fallback className="bg-cherry-800 text-porcelain-100 flex size-full items-center justify-center font-medium tracking-wide">
+      <ArkAvatar.Fallback className="bg-primary-soft text-text flex size-full items-center justify-center font-medium tracking-wide">
         <Text as="span" tone="caption" className="text-inherit">
           {initials(name)}
         </Text>

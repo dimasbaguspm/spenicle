@@ -29,6 +29,7 @@ type Omitted<T, Key extends keyof T> = Omit<T, Key> & { [Field in Key]?: T[Field
 export type AccountCreate = Schemas['accountCreateRequest']
 export type AccountPatch = Schemas['accountPatchRequest']
 export type EntryCreate = Schemas['postEntryRequest']
+export type EntryPatch = Schemas['entryPatchRequest']
 export type CaptureReview = Schemas['capturePatchRequest']
 export type PayeeCreate = Schemas['payeeCreateRequest']
 export type TokenCreate = Schemas['tokenCreateRequest']

@@ -25,7 +25,7 @@ export function SegmentGroup({ value, options, onValueChange }: SegmentGroupProp
         <ArkSegmentGroup.Item
           key={item.value}
           value={item.value}
-          className="text-text-muted data-[state=checked]:bg-primary-soft data-[state=checked]:text-porcelain-50 cursor-pointer rounded px-3 py-1 text-xs transition-colors"
+          className="text-text-muted data-[state=checked]:bg-primary-soft data-[state=checked]:text-text cursor-pointer rounded px-3 py-1 text-xs transition-colors"
         >
           <ArkSegmentGroup.ItemText>{item.label}</ArkSegmentGroup.ItemText>
           <ArkSegmentGroup.ItemHiddenInput />

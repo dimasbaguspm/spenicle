@@ -37,7 +37,7 @@ export function DatePicker({ value, onValueChange, placeholder }: DatePickerProp
     >
       <ArkDatePicker.Control className="flex items-center gap-2">
         <ArkDatePicker.Input placeholder={placeholder} className={control()} />
-        <ArkDatePicker.Trigger className="border-border text-brass-500 hover:border-border-strong rounded border px-2 py-2 text-xs transition-colors">
+        <ArkDatePicker.Trigger className="border-border text-accent hover:border-border-strong rounded border px-2 py-2 text-xs transition-colors">
           <ChevronDown className="size-4" aria-hidden="true" strokeWidth={1.75} />
         </ArkDatePicker.Trigger>
       </ArkDatePicker.Control>
@@ -64,7 +64,7 @@ export function DatePicker({ value, onValueChange, placeholder }: DatePickerProp
                         {datePicker.weekDays.map((weekDay) => (
                           <ArkDatePicker.TableHeader
                             key={weekDay.value.toString()}
-                            className="text-ink-400 pb-1 font-normal"
+                            className="text-text-muted pb-1 font-normal"
                           >
                             {weekDay.narrow}
                           </ArkDatePicker.TableHeader>
@@ -76,7 +76,7 @@ export function DatePicker({ value, onValueChange, placeholder }: DatePickerProp
                         <ArkDatePicker.TableRow key={week[0]?.toString() ?? ''}>
                           {week.map((day) => (
                             <ArkDatePicker.TableCell key={day.toString()} value={day}>
-                              <ArkDatePicker.TableCellTrigger className="text-porcelain-200 data-outside-range:text-ink-600 data-selected:bg-primary hover:bg-brass-800/40 data-today:text-accent block size-7 rounded transition-colors data-selected:text-porcelain-50">
+                              <ArkDatePicker.TableCellTrigger className="text-text data-outside-range:text-text-faint data-selected:bg-primary hover:bg-accent-soft/40 data-today:text-accent block size-7 rounded transition-colors data-selected:text-on-primary">
                                 {day.day}
                               </ArkDatePicker.TableCellTrigger>
                             </ArkDatePicker.TableCell>

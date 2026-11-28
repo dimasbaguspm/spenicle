@@ -1,15 +1,21 @@
 import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router'
 
 import { hasToken } from '@/api/token'
+import { entrySearch } from '@/modules'
+import { AppShell } from '@/components/layouts/app-shell'
+import { AccountDetailPage } from '@/routes/account-detail'
+import { AccountEditPage } from '@/routes/account-edit'
 import { AccountsPage } from '@/routes/accounts'
 import { AnalyticsPage } from '@/routes/analytics'
 import { CapturesPage } from '@/routes/captures'
 import { DashboardPage } from '@/routes/dashboard'
+import { EntryDetailPage } from '@/routes/entry-detail'
+import { EntryEditPage } from '@/routes/entry-edit'
 import { LedgerPage } from '@/routes/ledger'
+import { NewEntryPage } from '@/routes/ledger-new'
 import { LoginPage } from '@/routes/login'
 import { SettingsPage } from '@/routes/settings'
 import { SetupPage } from '@/routes/setup'
-import { AppShell } from '@/components/layouts/app-shell'
 
 /** The two screens a visitor without a credential is allowed to see. */
 const openPaths = new Set(['/', '/setup'])
@@ -24,22 +30,101 @@ const rootRoute = createRootRoute({
   },
 })
 
-const routes = [
-  { path: '/', component: LoginPage },
-  { path: '/setup', component: SetupPage },
-  { path: '/dashboard', component: DashboardPage },
-  { path: '/ledger', component: LedgerPage },
-  { path: '/accounts', component: AccountsPage },
-  { path: '/analytics', component: AnalyticsPage },
-  { path: '/captures', component: CapturesPage },
-  { path: '/settings', component: SettingsPage },
-] as const
+// one declaration per route, so a path with params does not loosen the type of every other link
+const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: LoginPage })
 
-const children = routes.map((entry) =>
-  createRoute({ getParentRoute: () => rootRoute, path: entry.path, component: entry.component }),
-)
+const setupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/setup',
+  component: SetupPage,
+})
 
-export const routeTree = rootRoute.addChildren(children)
+const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard',
+  component: DashboardPage,
+})
+
+const ledgerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ledger',
+  validateSearch: entrySearch,
+  component: LedgerPage,
+})
+
+const newEntryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ledger/new',
+  validateSearch: (raw: Record<string, unknown>) => ({
+    mode: raw.mode === 'scan' ? ('scan' as const) : ('manual' as const),
+  }),
+  component: NewEntryPage,
+})
+
+const entryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ledger/$ref',
+  component: EntryDetailPage,
+})
+
+const entryEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ledger/$ref/edit',
+  component: EntryEditPage,
+})
+
+const accountsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accounts',
+  component: AccountsPage,
+})
+
+const accountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accounts/$ref',
+  validateSearch: entrySearch,
+  component: AccountDetailPage,
+})
+
+const accountEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accounts/$ref/edit',
+  component: AccountEditPage,
+})
+
+const analyticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/analytics',
+  component: AnalyticsPage,
+})
+
+const capturesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/captures',
+  component: CapturesPage,
+})
+
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: SettingsPage,
+})
+
+export const routeTree = rootRoute.addChildren([
+  loginRoute,
+  setupRoute,
+  dashboardRoute,
+  ledgerRoute,
+  newEntryRoute,
+  entryRoute,
+  entryEditRoute,
+  accountsRoute,
+  accountRoute,
+  accountEditRoute,
+  analyticsRoute,
+  capturesRoute,
+  settingsRoute,
+])
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' })
 

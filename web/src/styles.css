@@ -1,16 +1,14 @@
-@import '@fontsource-variable/fraunces/full.css';
 @import '@fontsource-variable/inter/index.css';
 @import '@fontsource-variable/jetbrains-mono/index.css';
 @import 'tailwindcss';
 
 /*
- * The Spenicle palette: lacquer cherry on ink black, warmed by porcelain text and
- * brass highlights. Every ramp is a real scale so a component can pick a shade for
- * hover, focus or a border instead of inventing one; the semantic tokens at the end
- * are what screens should use, so a re-theme touches this file and nothing else.
+ * The Spenicle palette. One brand scale per colour, then a semantic layer: screens wear the
+ * semantic tokens only, and the two theme blocks at the bottom swap their values, so a re-theme
+ * is this file and nothing else.
  */
 @theme {
-  /* ink black — the paper. Warm-shifted neutral, never pure #000 */
+  /* ink — the paper scale in dark, the ink scale in light */
   --color-ink-100: #ecebe8;
   --color-ink-200: #d6d4cf;
   --color-ink-300: #b3b1ab;
@@ -23,14 +21,14 @@
   --color-ink-900: #121110;
   --color-ink-950: #0a0908;
 
-  /* porcelain cream — the ink. Slightly yellow, so it reads as paper not as #fff */
+  /* porcelain cream — warm paper, never pure #fff */
   --color-porcelain-50: #fdfbf6;
   --color-porcelain-100: #f8f3e8;
   --color-porcelain-200: #efe6d4;
   --color-porcelain-300: #ded0b6;
   --color-porcelain-400: #c2ad8c;
 
-  /* lacquer cherry — the primary. Deep enough to sit on ink without glowing */
+  /* lacquer cherry — the primary action */
   --color-cherry-200: #f3cdcb;
   --color-cherry-300: #e5a19f;
   --color-cherry-400: #d2706f;
@@ -40,7 +38,7 @@
   --color-cherry-800: #56171a;
   --color-cherry-900: #3b0f12;
 
-  /* brass glow — the accent: focus rings, selected rows, the one gold line */
+  /* brass glow — the accent: focus rings, the selected row, the one gold mark */
   --color-brass-100: #fbf3dc;
   --color-brass-200: #f4e4bd;
   --color-brass-300: #e8ce93;
@@ -50,7 +48,7 @@
   --color-brass-700: #7f6429;
   --color-brass-800: #5a461c;
 
-  /* jade — success, and the colour of money that came in */
+  /* jade — money in, success */
   --color-jade-300: #8cc4ad;
   --color-jade-400: #63a98b;
   --color-jade-500: #3f8a6c;
@@ -62,65 +60,119 @@
   --color-amber-500: #c77c1e;
   --color-amber-600: #a3631a;
 
-  /* verdigris — tertiary, the patina green of brass left alone */
-  --color-verdigris-300: #93c7c1;
-  --color-verdigris-400: #5fa8a0;
-  --color-verdigris-500: #3e8781;
-  --color-verdigris-600: #2e6a66;
-
-  /* lapis — info, a quiet blue that never fights the cherry */
+  /* lapis — info, quiet enough not to fight the cherry */
   --color-lapis-300: #a8bcd8;
   --color-lapis-400: #7c95b8;
   --color-lapis-500: #4a6fa5;
   --color-lapis-600: #3a5784;
 
-  /* oxblood — danger, deliberately duller than the brand cherry */
+  /* oxblood — danger, duller than the brand cherry on purpose */
   --color-oxblood-300: #dda3a3;
   --color-oxblood-400: #c25555;
   --color-oxblood-500: #a33a3a;
   --color-oxblood-600: #7f2a2a;
 
-  /* semantics: screens use these, not the ramps */
-  --color-surface: var(--color-ink-900);
-  --color-surface-raised: var(--color-ink-850);
-  --color-surface-sunken: var(--color-ink-950);
-  --color-border: var(--color-ink-700);
-  --color-border-strong: var(--color-ink-600);
-  --color-text: var(--color-porcelain-100);
-  --color-text-muted: var(--color-porcelain-400);
-  --color-primary: var(--color-cherry-500);
-  --color-primary-hover: var(--color-cherry-400);
-  --color-primary-soft: var(--color-cherry-800);
-  --color-accent: var(--color-brass-400);
-  --color-tertiary: var(--color-verdigris-500);
-  --color-success: var(--color-jade-500);
-  --color-warning: var(--color-amber-500);
-  --color-info: var(--color-lapis-500);
-  --color-danger: var(--color-oxblood-500);
-
-  /* type: a serif for the one place a ledger should feel expensive, a grotesque for
-     the work, and a mono for every figure that has to line up in a column */
-  --font-display:
-    'Fraunces Variable', ui-serif, 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  /* Inter carries the whole product: the wordmark, a title and body are the same face */
+  --font-display: var(--font-sans);
   --font-sans:
     'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
     Arial, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
+/*
+ * The semantic layer. Neighbours are the theme blocks below: the utilities inline these vars, so
+ * swapping one block of values re-themes every screen.
+ */
+@theme inline {
+  --color-surface: var(--app-surface);
+  --color-surface-raised: var(--app-surface-raised);
+  --color-surface-sunken: var(--app-surface-sunken);
+  --color-border: var(--app-border);
+  --color-border-strong: var(--app-border-strong);
+  --color-text: var(--app-text);
+  --color-text-muted: var(--app-text-muted);
+  --color-text-faint: var(--app-text-faint);
+  --color-primary: var(--app-primary);
+  --color-primary-hover: var(--app-primary-hover);
+  --color-primary-soft: var(--app-primary-soft);
+  --color-on-primary: var(--app-on-primary);
+  --color-accent: var(--app-accent);
+  --color-accent-soft: var(--app-accent-soft);
+  --color-on-accent: var(--app-on-accent);
+  --color-success: var(--app-success);
+  --color-warning: var(--app-warning);
+  --color-info: var(--app-info);
+  --color-danger: var(--app-danger);
+}
+
+/* dark: ink paper, porcelain ink. The default, and what `data-theme="dark"` pins. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --app-surface: #121110;
+  --app-surface-raised: #191817;
+  --app-surface-sunken: #0a0908;
+  --app-border: #33322e;
+  --app-border-strong: #47453f;
+  --app-text: #f8f3e8;
+  --app-text-muted: #b3b1ab;
+  --app-text-faint: #8b8983;
+  --app-primary: #b23a3f;
+  --app-primary-hover: #d2706f;
+  --app-primary-soft: #56171a;
+  --app-on-primary: #fdfbf6;
+  --app-accent: #d9b96b;
+  --app-accent-soft: #a8853b;
+  --app-on-accent: #0a0908;
+  --app-success: #8cc4ad;
+  --app-warning: #e0a24a;
+  --app-info: #a8bcd8;
+  --app-danger: #dda3a3;
+  --app-selection: #7f6429;
+  --app-picker-filter: invert(78%) sepia(28%) saturate(560%) hue-rotate(348deg) brightness(96%);
+}
+
+/* light: the same ledger on paper. Accents darken until they pass on cream. */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --app-surface: #fbf8f1;
+  --app-surface-raised: #efe9db;
+  --app-surface-sunken: #f5f0e4;
+  --app-border: #e0d7c5;
+  --app-border-strong: #c4b9a1;
+  --app-text: #17150f;
+  --app-text-muted: #5b5548;
+  --app-text-faint: #857e6d;
+  --app-primary: #94292e;
+  --app-primary-hover: #751e23;
+  --app-primary-soft: #f6e0de;
+  --app-on-primary: #fffdf7;
+  --app-accent: #7f6429;
+  --app-accent-soft: #c7a252;
+  --app-on-accent: #17150f;
+  --app-success: #2f6e55;
+  --app-warning: #a3631a;
+  --app-info: #3a5784;
+  --app-danger: #7f2a2a;
+  --app-selection: #f4e4bd;
+  --app-picker-filter: none;
+}
+
 @layer base {
   html {
-    color-scheme: dark;
-    /* no double-tap zoom on a phone, and no blue tap flash on a dark plate */
+    /* no double-tap zoom on a phone, and no blue tap flash on a plate */
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    scrollbar-color: var(--color-ink-700) transparent;
+    scrollbar-color: var(--color-border) transparent;
   }
 
   body {
     margin: 0;
     min-height: 100dvh;
-    background-color: var(--color-ink-950);
+    background-color: var(--color-surface-sunken);
     color: var(--color-text);
     font-family: var(--font-sans);
     font-size: 0.9375rem;
@@ -141,12 +193,8 @@
   h2,
   h3 {
     font-family: var(--font-display);
-    font-optical-sizing: auto;
-    font-variation-settings:
-      'SOFT' 24,
-      'WONK' 0;
     font-weight: 600;
-    letter-spacing: -0.012em;
+    letter-spacing: -0.02em;
     line-height: 1.1;
     text-wrap: balance;
   }
@@ -170,17 +218,17 @@
     }
   }
 
-  /* a single brass hairline is the whole decoration budget */
+  /* a single accent hairline is the whole decoration budget */
   ::selection {
-    background-color: var(--color-brass-700);
-    color: var(--color-porcelain-50);
+    background-color: var(--app-selection);
+    color: var(--color-text);
   }
 
-  /* the native date picker is drawn by the browser; tint it instead of hiding it */
+  /* the native date picker is drawn by the browser; tint it to match the theme */
   input[type='date']::-webkit-calendar-picker-indicator {
     cursor: pointer;
     opacity: 0.75;
-    filter: invert(78%) sepia(28%) saturate(560%) hue-rotate(348deg) brightness(96%);
+    filter: var(--app-picker-filter);
   }
 
   input[type='date']::-webkit-calendar-picker-indicator:hover {

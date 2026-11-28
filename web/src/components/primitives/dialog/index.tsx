@@ -37,7 +37,7 @@ export function Dialog({
       }}
     >
       <ArkDialog.Trigger asChild>{trigger}</ArkDialog.Trigger>
-      <ArkDialog.Backdrop className="bg-ink-950/70 fixed inset-0 z-40 backdrop-blur-sm" />
+      <ArkDialog.Backdrop className="bg-surface-sunken/70 fixed inset-0 z-40 backdrop-blur-sm" />
       <ArkDialog.Positioner className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <ArkDialog.Content className="border-border-strong bg-surface-raised flex w-full max-w-md flex-col gap-4 rounded-lg border p-5 shadow-xl">
           <ArkDialog.Title asChild>

@@ -25,7 +25,7 @@ export function SettingsFacts({ settings }: { settings: Settings | undefined }) 
           <Text as="p" tone="section">
             {fact.label}
           </Text>
-          <Text as="p" tone="figure" className="text-porcelain-100">
+          <Text as="p" tone="figure" className="text-text">
             {fact.value}
           </Text>
           <Text as="p" tone="caption">

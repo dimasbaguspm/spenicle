@@ -24,7 +24,7 @@ export function ColorPicker({ value, onValueChange }: ColorPickerProps) {
       }}
       className="inline-flex"
     >
-      <ArkColorPicker.Trigger className="border-border-strong bg-surface-raised hover:border-brass-700 inline-flex items-center gap-2 rounded border p-1 pr-3 transition-colors">
+      <ArkColorPicker.Trigger className="border-border-strong bg-surface-raised hover:border-accent inline-flex items-center gap-2 rounded border p-1 pr-3 transition-colors">
         <ArkColorPicker.ValueSwatch className="border-border h-5 w-5 rounded-sm border" />
         <Text as="span" tone="code">
           {value}
@@ -34,7 +34,7 @@ export function ColorPicker({ value, onValueChange }: ColorPickerProps) {
         <ArkColorPicker.Content className="border-border-strong bg-surface-raised z-50 flex w-64 flex-col gap-3 rounded border p-3 shadow-xl">
           <ArkColorPicker.Area className="relative h-40 w-full">
             <ArkColorPicker.AreaBackground className="h-full w-full rounded" />
-            <ArkColorPicker.AreaThumb className="border-porcelain-50 h-3 w-3 rounded-full border-2 shadow" />
+            <ArkColorPicker.AreaThumb className="border-text h-3 w-3 rounded-full border-2 shadow" />
           </ArkColorPicker.Area>
           <ArkColorPicker.EyeDropperTrigger asChild>
             <Button tone="quiet" size="sm">

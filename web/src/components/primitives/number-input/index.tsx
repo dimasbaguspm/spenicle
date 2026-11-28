@@ -45,10 +45,10 @@ export function NumberInput({
           className={cn(control({ size }), 'tabular-nums', className)}
         />
         <div className="flex flex-col">
-          <ArkNumberInput.IncrementTrigger className="text-brass-500 hover:text-accent px-1">
+          <ArkNumberInput.IncrementTrigger className="text-accent hover:text-accent px-1">
             <ChevronUp className="size-3" aria-hidden="true" strokeWidth={1.75} />
           </ArkNumberInput.IncrementTrigger>
-          <ArkNumberInput.DecrementTrigger className="text-brass-500 hover:text-accent px-1">
+          <ArkNumberInput.DecrementTrigger className="text-accent hover:text-accent px-1">
             <ChevronDown className="size-3" aria-hidden="true" strokeWidth={1.75} />
           </ArkNumberInput.DecrementTrigger>
         </div>
