@@ -170,11 +170,6 @@ function ManualEntry({
   return (
     <Panel>
       <div className="p-5 sm:p-6">
-        <PanelHead
-          eyebrow="Manual entry"
-          description="Two postings, one amount: one side takes what the other gives up."
-        />
-
         <Form<EntryFormValues>
           className="mt-4"
           defaultValues={emptyEntryForm(undefined, {
@@ -219,37 +214,26 @@ function ManualEntry({
 
             return (
               <>
-                <TextField<EntryFormValues>
-                  name="amount"
-                  label="Amount"
-                  hint={`In ${money.scale.currency}, the currency the ledger is kept in.`}
-                  placeholder="0"
+                <SelectField<EntryFormValues>
+                  name="categoryRef"
+                  label="Category"
+                  options={categoryOptions}
+                  placeholder="pick a category…"
                 />
-                <TextField<EntryFormValues>
-                  name="note"
-                  label="What was it"
-                  placeholder="coffee, taxi, salary…"
-                />
-                <DateField<EntryFormValues> name="occurredOn" label="Day" />
-                <PayeeField form={form} payees={payees} />
                 <SelectField<EntryFormValues>
                   name="accountRef"
                   label={income ? 'Received in' : 'Paid from'}
                   options={accountOptions}
                   placeholder="pick an account…"
                 />
-                <SelectField<EntryFormValues>
-                  name="categoryRef"
-                  label="Category"
-                  options={categoryOptions}
-                  placeholder="pick a category…"
-                  hint="An income category turns the entry around."
+                <PayeeField form={form} payees={payees} />
+                <TextField<EntryFormValues> name="amount" label="Amount" placeholder="0" />
+                <DateField<EntryFormValues> name="occurredOn" label="Day" />
+                <TextField<EntryFormValues>
+                  name="note"
+                  label="What was it"
+                  placeholder="coffee, taxi, salary…"
                 />
-                <Text as="p" tone="caption" className="text-text-faint">
-                  {income
-                    ? 'Money in: the account gains, the category gives.'
-                    : 'Money out: the category takes, the account gives up.'}
-                </Text>
               </>
             )
           }}

@@ -208,19 +208,22 @@ sends a ref only when one was picked, which is also how a patch leaves the other
 
 `/ledger/new` is one screen with two modes: type it, or scan it. The mode lives in the URL
 (`?mode=scan`), a segmented strip on a phone and two cards on a desk, so the camera shortcut is
-still one link. The manual form reads in the order a person remembers a purchase: amount, what it
-was, the day, who was paid, which account, which category.
-
-There is no "income" switch. A category either files money going out (`expense`) or money coming
-in (`income`), so picking an income category turns the entry around: the account gains and the
-category gives, the label over the account reads "Received in", and a line under the fields says
-which way the money moved. A salary is an `income` category and an asset account; nothing else
-changes.
+still one link. The manual form is ordered the way a decision is made, not the way a form usually
+is: category first (it decides the direction), then the account, then who was paid, then the
+amount, the day and the note. There is no panel preamble and no field hints; the labels carry it.
 
 Nothing is deleted. `/ledger/$ref` offers Reverse, which asks for an optional reason and sends
 `PATCH /api/entries/{ref}` with `reverse: true`: the postings are mirrored, both rows stay in the
 journal, `reversed_at` marks the original, and the screen replaces the button with a `reversed`
-chip once the API confirms.
+chip once the API confirms. Under the entry is its **timeline**, read straight from `GET /api/audit`
+with `entity_kind=entry`: created, edited, reversed, each line saying who and when. The API does
+not publish `reversal_of_ref`, so the chain is shown as history rather than as a parent link.
+
+`/captures/{ref}` is the review screen: the capture's own text, then one form that becomes the
+entry (`PATCH /api/captures/{ref}` with `action: approve` and two postings) or a rejection with an
+optional reason. Nothing posts itself. `/exports` queues a JSON or CSV export, lists the jobs with
+their status, and downloads a ready file: the bytes arrive through `fetch` with the bearer header
+and are saved from a blob, because the download route is not public.
 
 ## `api/` and `hooks/queries/` — one shape, one door
 

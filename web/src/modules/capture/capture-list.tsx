@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router'
+
 import { Text } from '@/components/primitives/text'
 
 import { captureRow, type CaptureLike } from './row'
@@ -10,19 +12,22 @@ export function CaptureList({ rows }: { rows: readonly CaptureLike[] }) {
         const row = captureRow(capture)
 
         return (
-          <li
-            key={row.ref}
-            className="hover:bg-surface-raised/40 flex items-center gap-3 px-1 py-3 text-sm transition-colors"
-          >
-            <Text as="span" tone="figure" className="text-text-muted w-32 shrink-0 text-xs">
-              {row.time}
-            </Text>
-            <Text as="span" tone="body" className="min-w-0 flex-1 truncate">
-              {row.kind}
-            </Text>
-            <Text as="span" tone="caption" className={row.statusTone}>
-              {row.status}
-            </Text>
+          <li key={row.ref}>
+            <Link
+              to="/captures/$ref"
+              params={{ ref: row.ref }}
+              className="hover:bg-surface-raised/40 flex items-center gap-3 px-1 py-3 text-sm transition-colors"
+            >
+              <Text as="span" tone="figure" className="text-text-muted w-32 shrink-0 text-xs">
+                {row.time}
+              </Text>
+              <Text as="span" tone="body" className="min-w-0 flex-1 truncate">
+                {row.kind}
+              </Text>
+              <Text as="span" tone="caption" className={row.statusTone}>
+                {row.status}
+              </Text>
+            </Link>
           </li>
         )
       })}

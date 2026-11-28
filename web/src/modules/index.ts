@@ -6,8 +6,10 @@
  */
 export * from './account'
 export * from './analytics'
+export * from './audit'
 export * from './capture'
 export * from './entry'
+export * from './export'
 export * from './month'
 export * from './payee'
 export * from './settings'

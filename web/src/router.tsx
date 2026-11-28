@@ -9,10 +9,12 @@ import { NewAccountPage, NewCategoryPage } from '@/routes/account-new'
 import { AccountsPage, CategoriesPage } from '@/routes/accounts'
 import { AnalyticsPage } from '@/routes/analytics'
 import { CapturesPage } from '@/routes/captures'
+import { CaptureReviewPage } from '@/routes/capture-detail'
 import { CategoryDetailPage } from '@/routes/category-detail'
 import { DashboardPage } from '@/routes/dashboard'
 import { EntryDetailPage } from '@/routes/entry-detail'
 import { EntryEditPage } from '@/routes/entry-edit'
+import { ExportsPage } from '@/routes/exports'
 import { LedgerPage } from '@/routes/ledger'
 import { NewEntryPage } from '@/routes/ledger-new'
 import { LoginPage } from '@/routes/login'
@@ -32,6 +34,11 @@ const rootRoute = createRootRoute({
     // the guard lives in the router, not in each screen
     if (!hasToken() && !openPaths.has(location.pathname)) {
       throw redirect({ to: '/' })
+    }
+
+    // a credential already in hand has nothing to do on the sign-in screen
+    if (hasToken() && location.pathname === '/') {
+      throw redirect({ to: '/dashboard' })
     }
   },
 })
@@ -166,10 +173,22 @@ const capturesRoute = createRoute({
   component: CapturesPage,
 })
 
+const captureRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/captures/$ref',
+  component: CaptureReviewPage,
+})
+
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
   component: SettingsPage,
+})
+
+const exportsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/exports',
+  component: ExportsPage,
 })
 
 export const routeTree = rootRoute.addChildren([
@@ -194,6 +213,8 @@ export const routeTree = rootRoute.addChildren([
   payeeEditRoute,
   analyticsRoute,
   capturesRoute,
+  captureRoute,
+  exportsRoute,
   settingsRoute,
 ])
 

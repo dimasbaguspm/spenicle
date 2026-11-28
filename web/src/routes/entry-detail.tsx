@@ -9,11 +9,12 @@ import { Field } from '@/components/primitives/field'
 import { Panel } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
+import { useLedgerAudit } from '@/hooks/queries/use-audit'
 import { useEntry, usePatchEntry } from '@/hooks/queries/use-entries'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useMoney } from '@/hooks/use-money'
 import { cn } from '@/lib/cn'
-import { accountIndex, EntryDetail } from '@/modules'
+import { accountIndex, EntryDetail, EntryTimeline, timelineRows } from '@/modules'
 
 /** Stable crumbs: a new array on every render would re-render the trail for nothing. */
 const entryCrumbs = [
@@ -33,6 +34,7 @@ export function EntryDetailPage() {
   const entry = useEntry(ref)
   const meta = useMeta()
   const money = useMoney()
+  const audit = useLedgerAudit()
 
   const accounts = accountIndex(meta.data?.accounts ?? [])
   const reversed = entry.data?.reversed_at !== undefined
@@ -68,7 +70,18 @@ export function EntryDetailPage() {
           </Panel>
         ) : null
       ) : (
-        <EntryDetail entry={entry.data} accounts={accounts} scale={money.scale} />
+        <>
+          <EntryDetail entry={entry.data} accounts={accounts} scale={money.scale} />
+
+          <Panel>
+            <div className="border-border border-b px-5 py-4 sm:px-6">
+              <Text as="p" tone="section">
+                Timeline
+              </Text>
+            </div>
+            <EntryTimeline rows={timelineRows(audit.data?.audit ?? [], ref)} />
+          </Panel>
+        </>
       )}
     </div>
   )

@@ -159,6 +159,7 @@ function ThumbBar() {
               { label: 'Captures', onSelect: () => void navigate({ to: '/captures' }) },
               { label: 'Categories', onSelect: () => void navigate({ to: '/categories' }) },
               { label: 'Payees', onSelect: () => void navigate({ to: '/payees' }) },
+              { label: 'Exports', onSelect: () => void navigate({ to: '/exports' }) },
               { label: 'Settings', onSelect: () => void navigate({ to: '/settings' }) },
               {
                 label: 'Sign out',
