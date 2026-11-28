@@ -1,4 +1,10 @@
-import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router'
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  lazyRouteComponent,
+  redirect,
+} from '@tanstack/react-router'
 
 import { hasToken } from '@/api/token'
 import { entrySearch } from '@/modules'
@@ -7,7 +13,6 @@ import { AccountDetailPage } from '@/routes/account-detail'
 import { AccountEditPage, CategoryEditPage } from '@/routes/account-edit'
 import { NewAccountPage, NewCategoryPage } from '@/routes/account-new'
 import { AccountsPage, CategoriesPage } from '@/routes/accounts'
-import { AnalyticsPage } from '@/routes/analytics'
 import { CapturesPage } from '@/routes/captures'
 import { editCaptureRedirect } from '@/routes/captures-edit'
 import { newCaptureRedirect } from '@/routes/captures-new'
@@ -191,6 +196,10 @@ const payeeEditRoute = createRoute({
   path: '/manage/payees/$ref/edit',
   component: PayeeEditPage,
 })
+
+// the charts are a third of the bundle and only one screen wants them: the route fetches its own
+// chunk, so the register never pays for Recharts
+const AnalyticsPage = lazyRouteComponent(() => import('@/routes/analytics'), 'AnalyticsPage')
 
 const analyticsRoute = createRoute({
   getParentRoute: () => rootRoute,
