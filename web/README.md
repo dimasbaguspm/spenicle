@@ -391,8 +391,10 @@ the event log under it is `GET /api/imports/{ref}/events`: `uploaded`, the row v
 ## Analytics — a year in one read
 
 `/analytics` is one call: `GET /api/analytics/overview?from&to` answers the whole brief, so the page
-draws every block from one response. The window is the twelve months ending today
-(`monthsBack(12)`).
+draws every block from one response. The window is picked from five — past 10 years, 12 months,
+6, 3, or 1 — and lives in the URL as `?range=10y|12m|6m|3m|1m`, so a window is a link. The bare
+route means twelve months; each window also names the screen ("A decade in view", "This month in
+view"), because a heading that says "A year" over ten years is a lie.
 
 The page reads top to bottom as four answers:
 
@@ -400,11 +402,12 @@ The page reads top to bottom as four answers:
   ("26% of it stayed", "459 entries") under it, and three numbers a person recognises beside it:
   money in, money out, average month. `modules/analytics/overview.ts` does the integer arithmetic;
   only percentages and bar widths become floats.
-- **The year in cash** (`year-flow.tsx`). A jade bar up for what came in, a brass bar down for what
-  went out, a hairline at zero, and the gap between the pair is what the month kept. Two filled
-  areas on one scale looked like a flat band once a salary dwarfed the spend; a diverging pair
-  reads the same whether the income is ten thousand or a hundred million. The tooltip carries in,
-  out and kept for the month.
+- **Cash in and out** (`year-flow.tsx`, also the dashboard's six-month card). A jade bar up for what
+  came in, a brass bar down for what went out, a hairline at zero, and the gap between the pair is
+  what the month kept. Two filled areas on one scale looked like a flat band once a salary dwarfed
+  the spend; a diverging pair reads the same whether the income is ten thousand or a hundred
+  million. The tooltip carries in, out and kept for the month. It is the same component on both
+  screens, fed by `flowFromMonths`, so a dashboard card and an analytics panel cannot drift.
 - **Where it went and came from**, and **who moved the money** (`money-ranks.tsx`). One ranking per
   question, not one tile per side: expense rows bend left, income rows bend right, and a single
   sorted list answers both directions without repeating itself upside down. Each side is scaled to

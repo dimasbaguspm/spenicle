@@ -201,9 +201,19 @@ const payeeEditRoute = createRoute({
 // chunk, so the register never pays for Recharts
 const AnalyticsPage = lazyRouteComponent(() => import('@/routes/analytics'), 'AnalyticsPage')
 
+/** The windows the analytics screen offers, spelled once: the URL carries one of these. */
+const analyticsRanges = ['10y', '12m', '6m', '3m', '1m'] as const
+
 const analyticsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/analytics',
+  // optional on purpose: a nav tab and a dashboard link carry no range, and the screen falls back
+  // to the year. The parameter only appears once someone picks another window.
+  validateSearch: (raw: Record<string, unknown>): { range?: (typeof analyticsRanges)[number] } => {
+    const range = analyticsRanges.find((value) => value === raw.range)
+
+    return range === undefined ? {} : { range }
+  },
   component: AnalyticsPage,
 })
 

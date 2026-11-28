@@ -12,7 +12,14 @@ import { useMoney } from '@/hooks/use-money'
 import { cn } from '@/lib/cn'
 import { DateFormat } from '@/lib/date'
 import { absent } from '@/lib/text'
-import { EntryTicker, MonthSeries, accountIndex, monthLabel, monthsBack } from '@/modules'
+import {
+  EntryTicker,
+  YearFlow,
+  accountIndex,
+  flowFromMonths,
+  monthLabel,
+  monthsBack,
+} from '@/modules'
 
 /** Stable crumbs: a new array on every render would re-render the trail for nothing. */
 const overviewCrumbs = [{ label: 'Overview' }] as const
@@ -42,7 +49,7 @@ export function DashboardPage() {
       <PageHeader
         items={overviewCrumbs}
         title="Your month"
-        subtitle="This month's net, six months of bars, and the last few entries."
+        subtitle="This month's net, six months in cash, and the last few entries."
         action={
           <Link
             to="/ledger/new"
@@ -135,13 +142,17 @@ export function DashboardPage() {
             <div className="space-y-4 p-5 sm:p-6">
               <div className="flex items-baseline justify-between gap-4">
                 <Text as="p" tone="section">
-                  Six months
+                  Six months in cash
                 </Text>
                 <Link to="/analytics" className="text-text-muted hover:text-accent text-xs">
                   Analytics
                 </Link>
               </div>
-              <MonthSeries months={months} scale={money.scale} height="h-28" />
+              <YearFlow
+                months={flowFromMonths(months, money.scale, (month) => monthLabel(month))}
+                scale={money.scale}
+                height="h-40"
+              />
             </div>
           </Panel>
 

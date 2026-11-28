@@ -20,7 +20,15 @@ import type { FlowMonth } from './overview'
  * dwarfed everything else; a diverging pair reads the same whether the income is ten thousand or
  * a hundred million.
  */
-export function YearFlow({ months, scale }: { months: readonly FlowMonth[]; scale: MoneyScale }) {
+export function YearFlow({
+  months,
+  scale,
+  height = 'h-56',
+}: {
+  months: readonly FlowMonth[]
+  scale: MoneyScale
+  height?: string | undefined
+}) {
   if (months.every((month) => month.earned === 0 && month.spent === 0)) {
     return (
       <Text as="p" tone="muted">
@@ -30,7 +38,7 @@ export function YearFlow({ months, scale }: { months: readonly FlowMonth[]; scal
   }
 
   return (
-    <div className="h-56 w-full">
+    <div className={`${height} w-full`}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={[...months]} margin={{ top: 8, right: 4, bottom: 0, left: 4 }} barGap={2}>
           <CartesianGrid vertical={false} stroke="var(--color-border)" strokeDasharray="2 4" />

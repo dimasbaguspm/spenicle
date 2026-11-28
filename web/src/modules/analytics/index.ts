@@ -2,6 +2,7 @@ export { AccountFlows } from './account-flows'
 export { MoneyRanks, type RankLabels } from './money-ranks'
 export {
   categoryRanks,
+  flowFromMonths,
   monthlyFlow,
   overviewFigures,
   payeeRanks,

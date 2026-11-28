@@ -68,7 +68,23 @@ export function monthlyFlow(
   scale: MoneyScale,
   label: (month: string) => string,
 ): FlowMonth[] {
-  return overview.months.map((month) => ({
+  return flowFromMonths(overview.months, scale, label)
+}
+
+type MonthTotals = {
+  month: string
+  spend_minor: string
+  income_minor: string
+  net_minor: string
+}
+
+/** The same conversion for any month series — the dashboard hands its own six months in. */
+export function flowFromMonths(
+  months: readonly MonthTotals[],
+  scale: MoneyScale,
+  label: (month: string) => string,
+): FlowMonth[] {
+  return months.map((month) => ({
     month: month.month,
     label: label(month.month),
     earned: Number(formatMoney(month.income_minor, scale.units).toMinor()),

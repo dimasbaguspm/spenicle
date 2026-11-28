@@ -1,6 +1,10 @@
+import { useNavigate, useSearch } from '@tanstack/react-router'
+
 import type { AnalyticsOverview } from '@/api/types'
+import { Field } from '@/components/primitives/field'
 import { PageHeader } from '@/components/primitives/page-header'
 import { Panel } from '@/components/primitives/panel'
+import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
 import { useOverview } from '@/hooks/queries/use-analytics'
 import { useMoney } from '@/hooks/use-money'
@@ -20,21 +24,49 @@ import {
 /** Stable crumbs: a new array on every render would re-render the trail for nothing. */
 const analyticsCrumbs = [{ label: 'Analytics' }] as const
 
+/** The five windows, and the title each one earns. `months` is what `monthsBack` turns into a range. */
+const windows = [
+  { value: '10y', label: 'Past 10 years', months: 120, title: 'A decade in view' },
+  { value: '12m', label: 'Past 12 months', months: 12, title: 'A year in view' },
+  { value: '6m', label: 'Past 6 months', months: 6, title: 'Six months in view' },
+  { value: '3m', label: 'Past 3 months', months: 3, title: 'Three months in view' },
+  { value: '1m', label: 'Past month', months: 1, title: 'This month in view' },
+] as const
+
+type Window = (typeof windows)[number]
+
+const windowOf = (range: string): Window =>
+  windows.find((window) => window.value === range) ?? windows[1]
+
 /**
  * Twelve months as a brief, from one call: what the year left, the rhythm it left it in, one
  * ranking that covers both directions of the ledger, another by counterparty, and where the money
  * sat. `GET /api/analytics/overview` answers all of it in one round trip.
  */
 export function AnalyticsPage() {
-  const { from, to } = monthsBack(12)
+  const { range } = useSearch({ from: '/analytics' })
+  const navigate = useNavigate({ from: '/analytics' })
+  const window = windowOf(range ?? '12m')
+  const { from, to } = monthsBack(window.months)
   const overview = useOverview(from, to)
 
   return (
     <div className="space-y-6">
       <PageHeader
         items={analyticsCrumbs}
-        title="A year in view"
-        subtitle="Twelve months: what came in, what went out, and who moved it."
+        title={window.title}
+        subtitle="What came in, what went out, and who moved it."
+        action={
+          <Field label="Range">
+            <SelectInput
+              value={window.value}
+              options={windows.map((option) => ({ label: option.label, value: option.value }))}
+              onChange={(next) => {
+                void navigate({ to: '/analytics', search: { range: windowOf(next).value } })
+              }}
+            />
+          </Field>
+        }
       />
 
       {overview.data === undefined ? (
@@ -80,8 +112,9 @@ function Brief({ overview }: { overview: AnalyticsOverview }) {
             {figures.netAbs}
           </Text>
           <Text as="p" tone="caption" className="text-text-faint">
-            {formatDate(overview.from, DateFormat.Month)} to{' '}
-            {formatDate(overview.to, DateFormat.Month)}
+            {overview.from.slice(0, 7) === overview.to.slice(0, 7)
+              ? formatDate(overview.to, DateFormat.MonthLong)
+              : `${formatDate(overview.from, DateFormat.Month)} to ${formatDate(overview.to, DateFormat.Month)}`}
             {figures.keptShare === null ? '' : ` · ${String(figures.keptShare)}% of it stayed`}
             {` · ${String(figures.entries)} entries`}
           </Text>
@@ -108,7 +141,7 @@ function Brief({ overview }: { overview: AnalyticsOverview }) {
       <Panel className="space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <Text as="p" tone="section">
-            The year in cash
+            Cash in and out
           </Text>
           <Text as="p" tone="caption" className="text-text-faint">
             {figures.busiestOn === ''
