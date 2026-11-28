@@ -27,6 +27,7 @@ import { NewPayeePage } from '@/routes/payee-new'
 import { PayeesPage } from '@/routes/payees'
 import { RatesPage } from '@/routes/rates'
 import { RecurringPage } from '@/routes/recurring'
+import { RulesPage } from '@/routes/rules'
 import { SettingsPage } from '@/routes/settings'
 import { AppearancePage } from '@/routes/settings-appearance'
 import { MailboxPage } from '@/routes/settings-intake'
@@ -200,6 +201,12 @@ const recurringRoute = createRoute({
   component: RecurringPage,
 })
 
+const rulesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/rules',
+  component: RulesPage,
+})
+
 const ratesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/manage/rates',
@@ -282,6 +289,7 @@ export const routeTree = rootRoute.addChildren([
   importsRoute,
   importRoute,
   recurringRoute,
+  rulesRoute,
   ratesRoute,
   settingsRoute,
   settingsAppearanceRoute,

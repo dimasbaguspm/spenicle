@@ -268,6 +268,25 @@ list means every sender. Poll now runs the same call the worker makes and prints
 reference with its status, the capture it became, and Re-read, which asks the provider for that mail
 again.
 
+## Rules — a suggestion with a reason
+
+`/manage/rules` is the categorization table, and it is the one screen whose copy says outright what
+the API means: a rule **suggests**, it never posts. The create form is four fields — pattern, the
+field it is read from (`payee` or `note`), the match kind (`contains`, `starts with`, `is exactly`)
+and the category — because those four are the identity of a rule; `field` and `match_kind` are not
+patchable, so a rule that should look elsewhere is a new rule. `exact` is only offered for a payee,
+since the API refuses `note` + `exact`.
+
+The list carries every rule, archived ones included (`?include_archived=true`), dimmed: Archive
+sends `PATCH /api/categorization/rules/{ref}` with `{archived: true}`, Restore sends `false`, and
+nothing is deleted. The row reads `indomaret | payee contains | Unsorted` — pattern first, in mono,
+because it is the thing being matched literally.
+
+Between the form and the list is **Try a line**: type a payee name or a raw statement line and
+`GET /api/categorization/suggest` answers the category, the `why` sentence and the tier
+(`payee_default`, `rule_exact`, `rule_contains`, `none`). It writes nothing, which is what makes it
+safe to poke at while tuning a pattern.
+
 ## Statements — a draft, not a backlog
 
 `/manage/imports` takes one CSV (`occurred_on`, `amount_minor`, `description`, optional

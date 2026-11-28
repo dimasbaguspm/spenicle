@@ -150,6 +150,11 @@ export type MailMessage = Omitted<
   | 'superseded_by'
   | 'thread_ref'
 >
+/** A rule is a pattern, where to look and which category answers; it suggests, it never posts. */
+export type Rule = Fixed<Schemas['ruleResponse']>
+export type RuleCreate = Schemas['ruleCreateRequest']
+export type RulePatch = Schemas['rulePatchRequest']
+export type Suggestion = Omitted<Fixed<Schemas['suggestResponse']>, 'rule_ref'>
 export type ExportJob = Omitted<
   Fixed<Schemas['exportResponse']>,
   'counts' | 'error_message' | 'expires_at' | 'finished_at' | 'from' | 'started_at' | 'to'

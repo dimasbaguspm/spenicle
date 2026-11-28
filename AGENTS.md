@@ -121,7 +121,8 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        name plus an optional default account and category), `/manage/recurring`
                        (the rules, plus pause and resume), `/manage/captures` (+
                        `/{ref}` to review one), `/manage/imports` (+ `/{ref}` to review a statement's
-                       draft), `/manage/exports`, `/manage/rates`), plus
+                       draft), `/manage/rules` (the categorization patterns), `/manage/exports`,
+                       `/manage/rates`), plus
                        `/settings` (an index over `/settings/intake`, `/settings/appearance`,
                        `/settings/password` and `/settings/tokens`). The shell has
                        two shapes: from `lg` a header with Register, Analytics and Manage on the

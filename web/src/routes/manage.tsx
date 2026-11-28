@@ -56,6 +56,12 @@ export function ManagePage() {
       count: recurring.isSuccess ? String(recurring.data.recurring.length) : '',
     },
     {
+      to: '/manage/rules',
+      label: 'Rules',
+      caption: 'What the ledger pre-fills, and why: a pattern, a field, a category.',
+      count: '',
+    },
+    {
       to: '/manage/captures',
       label: 'Captures',
       caption: 'The review queue. Nothing posts itself.',
