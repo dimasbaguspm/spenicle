@@ -27,13 +27,20 @@ export function monthLabel(month: string, template: DateFormat = DateFormat.Mont
 
 /** `2026-11` as a bar: its label, the value the height comes from, and the figure behind it. */
 export function monthBar(month: MonthTotal, scale: MoneyScale): MonthBar {
-  const figure = formatMoney(month.spend_minor, scale.units)
+  const spend = formatMoney(month.spend_minor, scale.units)
+  const income = formatMoney(month.income_minor, scale.units)
+  const net = formatMoney(month.net_minor, scale.units)
 
   return {
     key: month.month,
     label: monthLabel(month.month),
-    value: Number(figure.toMinor()),
-    title: `${monthLabel(month.month, DateFormat.MonthLong)}, ${figure.toDisplay(scale.currency)}`,
+    value: Number(spend.toMinor()),
+    title: [
+      monthLabel(month.month, DateFormat.MonthLong),
+      `spent ${spend.toDisplay(scale.currency)}`,
+      `received ${income.toDisplay(scale.currency)}`,
+      `net ${net.toDisplay(scale.currency)}`,
+    ].join(' - '),
   }
 }
 

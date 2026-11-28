@@ -311,6 +311,25 @@ panel's two actions close the batch: `commit` posts the accepted rows (each with
 the event log under it is `GET /api/imports/{ref}/events`: `uploaded`, the row verdicts, one
 `committing` per chunk, then `committed` or `rejected`.
 
+## Analytics — a year, and the views you saved
+
+`/analytics` opens on twelve months: `GET /api/analytics/months` for the series, whose
+`spend_minor`, `income_minor` and `net_minor` all reach the screen — the bars are the spend, the
+line under the heading is all three, and a bar's tooltip names them per month rather than throwing
+two of the three away. `GET /api/analytics/categories` fills the breakdown, and each row keeps the
+window it covers (`first_occurred_on` / `last_occurred_on`) in its title.
+
+Below that is **Saved views**, the three custom routes end to end. The form posts
+`name`, `namespace` and `chart`; the answer is a ref, and because the API has no list route the ref
+this browser created is kept in `localStorage` (`lib/saved-views.ts`) — lose the browser and you
+lose the shortcut, never the view. A view saved elsewhere is opened by pasting its ref.
+
+Running one is `GET /api/analytics/custom/{ref}?from&to`, which echoes the query, so the drawing
+follows what was stored: `months` + `bar` is the bar chart, `months` + `line` is a polyline over the
+same points, `categories` + `pie` is a conic-gradient with the amounts beside it, `categories` +
+`bar` is the proportional rows. The picker offers only those pairs, and changing one sends
+`PATCH /api/analytics/custom/{ref}` with `{chart}` and re-renders from the answer.
+
 ## `api/` and `hooks/queries/` — one shape, one door
 
 The generated contract (`src/types/generated/openapi.ts`) marks every field optional, which is

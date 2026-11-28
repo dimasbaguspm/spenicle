@@ -155,6 +155,18 @@ export type Rule = Fixed<Schemas['ruleResponse']>
 export type RuleCreate = Schemas['ruleCreateRequest']
 export type RulePatch = Schemas['rulePatchRequest']
 export type Suggestion = Omitted<Fixed<Schemas['suggestResponse']>, 'rule_ref'>
+
+/** A saved analytics view: what to ask (namespace) and how to draw the answer (chart). */
+export type CustomQuery = Fixed<Schemas['customQueryResponse']>
+export type CustomQueryCreate = Schemas['customQueryCreateRequest']
+export type CustomQueryPatch = Schemas['customQueryPatchRequest']
+export type CustomRun = Omitted<
+  Fixed<Schemas['customQueryRunResponse']>,
+  'months' | 'categories'
+> & {
+  months?: MonthTotal[]
+  categories?: CategoryTotal[]
+}
 export type ExportJob = Omitted<
   Fixed<Schemas['exportResponse']>,
   'counts' | 'error_message' | 'expires_at' | 'finished_at' | 'from' | 'started_at' | 'to'

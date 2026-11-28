@@ -32,7 +32,12 @@ export function CategoryBreakdown({
         return (
           <li key={row.account_ref} className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-4 text-sm">
-              <span className="text-text min-w-0 truncate">{row.account_name}</span>
+              <span
+                className="text-text min-w-0 truncate"
+                title={`first ${row.first_occurred_on}, last ${row.last_occurred_on}`}
+              >
+                {row.account_name}
+              </span>
               <Text as="span" tone="figure" className="text-text-muted shrink-0 text-xs">
                 {amount.toDisplay()}
               </Text>
