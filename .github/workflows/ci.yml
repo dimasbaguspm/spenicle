@@ -27,6 +27,17 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # `make web` shells out to pnpm, so the runner needs the same pair `mise.toml` pins.
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.34.5
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26.5.1
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
       - name: Build
         run: go build ./...
 
@@ -34,6 +45,27 @@ jobs:
       # works on every push instead of discovering it during a release.
       - name: Build with the SPA embedded
         run: make web && go build -tags web ./...
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.34.5
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26.5.1
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      # The same gate the pre-commit hook runs: build, then tsgo + oxlint + oxfmt --check
+      # + vitest. Without this job a PR could typecheck nowhere but a laptop.
+      - name: Build and check the SPA
+        run: make web web-check
 
   test:
     name: test
