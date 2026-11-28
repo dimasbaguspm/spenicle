@@ -186,6 +186,9 @@ make dev        # go run -tags web . all (SPA on :8080, writes to ./data)
 make dev-api    # the API alone, SPA embedded, ./data
 make dev-worker # the worker alone, same database
 make dev-web    # the SPA dev server on :5173, proxying /api to :8080
+make stop       # kill whatever owns :8080, printing its pid and cwd
+make fresh      # stop, rm -rf ./data, rebuild the SPA, then make dev
+make check-fresh # assert GET /api/bootstrap answers setup_completed:false
 make test       # unit and integration tests (UAT has its own target)
 make uat        # the Gherkin suite plus the containerised mock services (needs Docker)
 make uat-snapshots   # rewrite snapshot files, then review the diff
@@ -634,6 +637,13 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   bundle and a sprite of the API it no longer matches. `make dev` now rebuilds `web/dist`
   whenever a source is newer than the built index; `make web` forces it. A browser holding
   the old service-worker shell needs one hard reload after a rebuild.
+- `rm -rf ./data` does not reset a running process: `make dev` already holds the SQLite
+  inode, so the instance keeps answering from a deleted (or foreign) database and
+  `/api/bootstrap` still says `setup_completed: true` — "already claimed" for a directory
+  that no longer has a database. `make fresh` stops the listener first, wipes `./data`,
+  rebuilds the SPA and starts a new instance; `make check-fresh` is the assertion, not the
+  browser. Two data directories on one port is the same trap with a different cwd, which is
+  why `make stop` prints where the process it killed was running.
 - A database created by an earlier build of this tree is not migrated into the new setup
   flow: it still carries a password and no `setup_completed_at`, so `/api/bootstrap` says
   "not opened" while every route demands that old password. There is no v2 release yet, so

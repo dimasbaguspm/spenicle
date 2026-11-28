@@ -38,7 +38,17 @@ make dev-web      # the SPA with HMR on :5173, proxying /api to that process
 # or, one process per service, on the same database:
 make dev-api      #   the only listener
 make dev-worker   #   recurring captures, retention/GC, exports, intake
+make fresh        # back to the unclaimed starting point: stop :8080, rm -rf ./data, rebuild
+the SPA, start again
+make check-fresh  # assert GET /api/bootstrap says setup_completed:false
 ```
+
+Deleting `./data` on its own resets nothing while a process still runs: `spenicle all` holds
+the SQLite file open, so it keeps answering from the deleted database and the SPA shows
+"already claimed". `make stop` frees :8080 and prints where the process it killed was
+running, which is how a second checkout on the same port is caught. A rebuilt SPA needs one
+hard reload in the browser, because the service worker keeps the old shell until the new one
+takes over.
 
 `make` with no target lists every entry point.
 

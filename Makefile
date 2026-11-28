@@ -2,6 +2,8 @@ GO     := go
 LINT   := golangci-lint
 BIN    := bin/spenicle
 WEB    := web
+DATA   := data
+PORT   := 8080
 DIST   := $(WEB)/dist/index.html
 SECRET := .dev-secret
 SRC    := $(WEB)/src $(WEB)/public $(WEB)/index.html $(WEB)/package.json \
@@ -10,7 +12,8 @@ SRC    := $(WEB)/src $(WEB)/public $(WEB)/index.html $(WEB)/package.json \
 .DEFAULT_GOAL := help
 .PHONY: help hooks build dev dev-api dev-worker dev-web web web-dist web-check \
 	web-types test uat uat-snapshots cover fmt openapi mocks lint lint-fix \
-	lint-correctness lint-style lint-security lint-performance dev-secret
+	lint-correctness lint-style lint-security lint-performance dev-secret \
+	stop fresh check-fresh
 
 help:
 	@grep -oE '^[a-z][a-z-]+:' $(MAKEFILE_LIST) | tr -d : \
@@ -21,6 +24,29 @@ hooks:
 
 build:
 	$(GO) build -o $(BIN) .
+
+# the listener is a single process on a single port: a stale one from another checkout
+# keeps answering with its own database, so free the port and prove the state first
+stop:
+	@ss -ltnpH "sport = :$(PORT)" 2>/dev/null | grep -oE 'pid=[0-9]+' | cut -d= -f2 | sort -u \
+		| while read -r pid; do \
+			echo "stopping pid $$pid on :$(PORT) (cwd $$(readlink /proc/$$pid/cwd 2>/dev/null))" >&2; \
+			kill $$pid 2>/dev/null || true; \
+		done; true
+
+fresh: stop web
+	rm -rf $(DATA)
+	@echo "fresh: $(DATA) removed and web/dist rebuilt, starting the unclaimed instance" >&2
+	@$(MAKE) -s dev
+
+check-fresh:
+	@body=$$(curl -fsS --noproxy '*' --max-time 5 http://127.0.0.1:$(PORT)/api/bootstrap) || { \
+		echo "FAIL: no API on :$(PORT) — start make dev first" >&2; exit 1; }; \
+	printf '%s\n' "$$body"; \
+	case "$$body" in \
+		*'"setup_completed":false'*) echo "ok: unclaimed starting point";; \
+		*) echo "FAIL: this instance is claimed; the listener is not the fresh $(DATA)" >&2; exit 1;; \
+	esac
 
 dev: web-dist dev-secret
 	@APP_SECRET="$${APP_SECRET:-$$(cat $(SECRET))}" $(GO) run -tags web . all
