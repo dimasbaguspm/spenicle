@@ -73,3 +73,31 @@ export async function createCapture(input: CaptureUpload): Promise<Capture> {
 
   return payload as Capture
 }
+
+/** A download is a blob and the name the API put on it: `<a download>` would arrive unauthenticated. */
+export type ArtifactFile = {
+  blob: Blob
+  filename: string
+}
+
+/**
+ * The document behind a capture, byte for byte as it was uploaded. The file is the reviewer's only
+ * source of truth, so a capture with no artifact answers `404` and a reclaimed one `410`, and both
+ * reach the screen as the API worded them.
+ */
+export async function downloadArtifact(ref: string): Promise<ArtifactFile> {
+  const credential = token()
+  const response = await fetch(`/api/captures/${ref}/artifact`, {
+    headers: credential === undefined ? {} : { Authorization: `Bearer ${credential}` },
+  })
+
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null)
+    throw apiError(response.status, payload)
+  }
+
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const named = /filename="([^"]+)"/.exec(disposition)
+
+  return { blob: await response.blob(), filename: named?.[1] ?? `capture-${ref}` }
+}

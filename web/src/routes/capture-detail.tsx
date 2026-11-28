@@ -1,5 +1,7 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
+import { useMutation } from '@tanstack/react-query'
 
+import { downloadArtifact } from '@/api/captures'
 import type { Account, Payee } from '@/api/types'
 import { Button } from '@/components/primitives/button'
 import { PageHeader } from '@/components/primitives/page-header'
@@ -12,6 +14,7 @@ import { useCaptures, useReviewCapture } from '@/hooks/queries/use-captures'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useMoney } from '@/hooks/use-money'
 import { DateFormat, formatDate } from '@/lib/date'
+import { saveBlob } from '@/lib/download'
 import { parseMoney } from '@/lib/money'
 import { absent } from '@/lib/text'
 import {
@@ -73,6 +76,8 @@ export function CaptureReviewPage() {
           </Text>
         </div>
       </Panel>
+
+      <SourcePanel captureRef={ref} />
 
       {pending ? (
         <ApprovePanel
@@ -246,5 +251,48 @@ function ApprovePanel({
         </div>
       </Panel>
     </div>
+  )
+}
+
+/**
+ * The document itself, before anything the intake guessed about it. It is fetched with the
+ * credential and handed to the browser as a blob, because an `<a href>` would arrive unauthenticated.
+ */
+function SourcePanel({ captureRef }: { captureRef: string }) {
+  const save = useMutation({
+    mutationFn: () => downloadArtifact(captureRef),
+    onSuccess: (file) => {
+      saveBlob(file.blob, file.filename)
+    },
+  })
+
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+        <div className="space-y-0.5">
+          <Text as="p" tone="section">
+            Source
+          </Text>
+          <Text as="p" tone="muted" className="text-sm">
+            The receipt, the statement or the screenshot as it was uploaded.
+          </Text>
+        </div>
+        <Button
+          tone="quiet"
+          size="sm"
+          loading={save.isPending}
+          onClick={() => {
+            save.mutate()
+          }}
+        >
+          Download file
+        </Button>
+      </div>
+      {save.error === null ? null : (
+        <Text as="p" tone="caption" className="text-danger px-5 pb-4 sm:px-6" role="alert">
+          {save.error.message}
+        </Text>
+      )}
+    </Panel>
   )
 }

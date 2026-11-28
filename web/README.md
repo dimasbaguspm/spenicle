@@ -238,6 +238,12 @@ optional reason. Nothing posts itself. `/exports` queues a JSON or CSV export, l
 their status, and downloads a ready file: the bytes arrive through `fetch` with the bearer header
 and are saved from a blob, because the download route is not public.
 
+Above the form sits the **source**: `GET /api/captures/{ref}/artifact` streams the uploaded bytes
+with the content type and `Content-Disposition` recorded at upload, so the button fetches it with the
+bearer header and saves the blob under the name the API sent. No artifact answers `404` and a
+reclaimed one `410`, both shown as the API worded them — the file is the reviewer's only evidence,
+so a missing one is said out loud rather than hidden.
+
 ## Recurring — a rule is a schedule, not an entry
 
 `/manage/recurring` lists what comes back around, soonest first, and one form creates a rule: the
