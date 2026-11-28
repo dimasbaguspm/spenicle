@@ -1,40 +1,41 @@
-/** A local-day `YYYY-MM-DD`, the only date shape the API accepts. */
-export function isoDay(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+import dayjs, { type Dayjs } from 'dayjs'
 
-  return `${date.getFullYear()}-${month}-${day}`
-}
+import { absent } from '@/lib/text'
 
-/** The current calendar month: first day to today. */
-export function monthWindow(today = new Date()): { from: string; to: string } {
-  return { from: isoDay(new Date(today.getFullYear(), today.getMonth(), 1)), to: isoDay(today) }
-}
+/**
+ * Every date on screen is one of these, so a screen never writes a token string and two
+ * screens cannot disagree about what a day looks like. `Iso` is the only shape the API accepts.
+ */
+export const DateFormat = {
+  /** the wire: a local day, `YYYY-MM-DD` */
+  Iso: 'YYYY-MM-DD',
+  /** a register cell: `02 Nov` */
+  Day: 'DD MMM',
+  /** a chart axis or a month tile: `Nov 26` */
+  Month: 'MMM YY',
+  /** a sentence or a tooltip: `November 2026` */
+  MonthLong: 'MMMM YYYY',
+  /** a list row that carries a moment: `2026-11-02 09:41` */
+  Timestamp: 'YYYY-MM-DD HH:mm',
+  /** a clock alone: `09:41` */
+  Time: 'HH:mm',
+} as const
 
-/** The first day of the month `months - 1` back, up to today. */
-export function windowMonths(months: number, today = new Date()): { from: string; to: string } {
-  return {
-    from: isoDay(new Date(today.getFullYear(), today.getMonth() - (months - 1), 1)),
-    to: isoDay(today),
+export type DateFormat = (typeof DateFormat)[keyof typeof DateFormat]
+
+export type DateInput = string | number | Date | Dayjs | null | undefined
+
+/**
+ * The one date formatter: a value the API sent, a form field or a `Date`, rendered with the
+ * named template. A missing value is `absent`; one that does not parse is shown as it came,
+ * because a wrong date on screen beats a blank row.
+ */
+export function formatDate(value: DateInput, template: DateFormat): string {
+  if (value === null || value === undefined || value === '') {
+    return absent
   }
-}
 
-/** Twelve months back, which is the cap the analytics routes enforce. */
-export function yearWindow(today = new Date()): { from: string; to: string } {
-  return {
-    from: isoDay(new Date(today.getFullYear(), today.getMonth() - 11, 1)),
-    to: isoDay(today),
-  }
-}
+  const parsed = dayjs(value)
 
-/** `2026-11` reads as `Nov 26`; the register and the charts use the same shape. */
-const monthFormat = new Intl.DateTimeFormat(undefined, { month: 'short', year: '2-digit' })
-
-export function monthLabel(month: string): string {
-  const parsed = new Date(`${month}-01T00:00:00`)
-  if (Number.isNaN(parsed.getTime())) {
-    return month
-  }
-
-  return monthFormat.format(parsed)
+  return parsed.isValid() ? parsed.format(template) : String(value)
 }

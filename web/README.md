@@ -7,16 +7,17 @@ Tailwind v4 and typed from the API's own `openapi.json`.
 ```bash
 make dev-web     # :5173, proxying /api to a local `make dev` on :8080
 make web         # install (frozen lockfile) and build into web/dist
-make web-check   # typecheck + lint + format check + tests — the gate
+make web-check   # typecheck + lint + format check + the test harness — the gate
 make web-types   # regenerate src/api/schema.d.ts from ../openapi.json
 ```
 
-Six runtime dependencies beyond React, each earning its place: **Ark UI** (behaviour — focus
+Seven runtime dependencies beyond React, each earning its place: **Ark UI** (behaviour — focus
 trap, listbox, calendar, dismissable layers), **TanStack Router/Query** (typed routes, cache),
 **react-hook-form** + **Effect Schema** (field state, one parse that is both validation and
 type), **radash** (the debounce in `DebounceForm`, plus the odd `group`/`pick`), **lucide-react**
-(the only icon source), **openapi-fetch** + **tailwind-merge**/`clsx`. Nothing else gets added
-without a reason stronger than convenience.
+(the only icon source), **openapi-fetch** + **tailwind-merge**/`clsx`, and **dayjs** (the one
+date parser behind `lib/date.ts`). Nothing else gets added without a reason stronger than
+convenience.
 
 ## Toolchain
 
@@ -28,23 +29,24 @@ without a reason stronger than convenience.
 | **tsgo** (`@typescript/native-preview`) | TypeScript's native compiler: the same `tsc` semantics, ~10x faster on this tree. It already rejected a `baseUrl` that `tsc` still tolerates, so the config is future-proof                                                     |
 | **mise**                                | `node` + `pnpm` are pinned in `mise.toml` next to `go`, so a clone is one `mise install`                                                                                                                                        |
 
-## `components/` — four layers, one direction
+## Layers — four under `components/`, one above it
 
-Composition runs one way and the linter holds the line: **primitives → ui → widgets → layouts →
-a page**. A layer may import the layers below it and never the ones above, so a primitive can
-never grow a page's idea of what an amount means.
+Composition runs one way and the linter holds the line: **primitives → ui → layouts**, and above
+them **modules/**, one folder per entity, which a page composes. A layer may import the layers
+below it and never the ones above, so a primitive can never grow a page's idea of what an amount
+means and a module never learns to fetch.
 
-| layer         | what it is                                                                                                                    | example                                              |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `primitives/` | the lowest UI layer: Ark headless wiring + our palette. One props type of our own, one export per file, wiring and theme only | `Button`, `TextInput`, `Dialog`, `Text`              |
-| `ui/`         | domain-agnostic presentation, composed from primitives                                                                        | `Form`, `DebounceForm`, the twenty `*Field` bindings |
-| `widgets/`    | page-level composition: a section a page drops in, given its data                                                             | `CaptureList`                                        |
-| `layouts/`    | structure only: chrome, navigation, the outlet                                                                                | `AppShell`                                           |
+| layer         | what it is                                                                                                                            | example                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `primitives/` | the lowest UI layer: Ark headless wiring + our palette. One props type of our own, one export per file, wiring and theme only         | `Button`, `TextInput`, `Dialog`, `Text`                                  |
+| `ui/`         | domain-agnostic presentation, composed from primitives                                                                                | `Form`, `DebounceForm`, the twenty `*Field` bindings                     |
+| `modules/`    | (a sibling of `components/`) one folder per entity: the component a page drops in, plus the fallbacks, flags and tone it answers with | `entry`, `account`, `capture`, `month`, `analytics`, `token`, `settings` |
+| `layouts/`    | structure only: chrome, navigation, the outlet                                                                                        | `AppShell`                                                               |
 
 `oxlint`'s `no-restricted-imports` carries one override per layer, so an upward import (`ui/` into
-`primitives/`, `layouts/` into `widgets/`) is a lint error with a message saying why, and `@ark-ui/*`
-stays unreachable outside `primitives/`. The boundary is enforced, not documented. 66 primitives,
-by the job a screen hires them for:
+`primitives/`, `modules/` into `ui/`) is a lint error with a message saying why, `@ark-ui/*` stays
+unreachable outside `primitives/`, and a module cannot reach for a route or a hook. The boundary is
+enforced, not documented.
 
 66 primitives, by the job a screen hires them for:
 
@@ -66,8 +68,8 @@ the type scale lives in one file instead of in twenty `className` strings.
 Two files break "one component per export" on purpose: `control.ts` is the shared cva every
 input wears, and `toaster.ts` is the imperative `toast` store `Toaster` reads.
 
-`render.test.tsx` mounts every component once, so a wrapper that reaches for a browser API jsdom
-does not have fails here instead of in a screen.
+There is no test file in this tree: the vitest harness (jsdom, the same config, `passWithNoTests`)
+stays wired so the first test runs as written, and the gate still calls it.
 
 cva variants are merged by `tailwind-merge` through `lib/cn.ts`, so a caller's `className` wins
 on conflict. `TextInput` and not `NumberInput` represents an amount: an amount is a string of
@@ -87,9 +89,13 @@ src/components/
     form/index.ts       Form, DebounceForm, useFormProvider and the twenty `*Field` bindings
     form/form.tsx
     form/text-field.tsx
-  widgets/
-    index.ts
-    capture-list/index.tsx
+  ../modules/
+    entry/index.ts      one folder per entity, outside `components/`: the barrel a page imports
+    entry/row.ts        the pure function behind the row — the fallbacks, the flags, the tone
+    entry/entry-register.tsx
+    entry/entry-ticker.tsx
+    entry/entry-amount.tsx   one component per file, named for what it renders
+    entry/schema.ts     the form's Effect schema and its empty value
   layouts/
     index.ts
     app-shell/index.tsx
@@ -97,7 +103,8 @@ src/components/
 
 The folder is the identity: a file that needs a helper or a test sits next to its component
 instead of in a shared bag, and `@/components/primitives/button` resolves to the folder's
-`index.tsx`, so no call site has to know the layout.
+`index.tsx`, so no call site has to know the layout. `modules/` keeps that shape one level up, with
+`index.ts` as the barrel and one component per file.
 
 ### Icons
 
@@ -160,20 +167,53 @@ fetching, caching, retry and invalidation. An Effect `Runtime` on the request pa
 nothing here — no resource scopes, no per-query concurrency — and bridging it to `useQuery`'s
 promise contract would only re-implement `useQuery`.
 
-## `lib/format/` — the fallbacks live with the data
+## `modules/` — the fallbacks live with the entity
 
-A component should not decide what a missing field looks like. `lib/format/<entity>.ts` holds one
-pure module per entity (`capture`, `entry`, `account`), and it answers both questions a screen
-asks:
+A page should not decide what a missing field looks like. `src/modules/<entity>/` is one folder per
+entity, and it answers every question a page asks of a row:
 
-- **what to show** — `captureTime(row)`, `entryTitle(row)`, `accountBalance(row)`, each already
-  carrying the fallback (`absent`, exported once) so JSX never writes `?? '—'`;
-- **what is true** — `isReversed(entry)`, `needsAttention(capture)`, `isArchived(account)`,
-  `hasNote(entry)`, so a branch reads as a fact instead of a field comparison.
+- **what to show** — `entryRow(entry, accounts, scale)` returns the day, the joined title, the
+  category and the signed figure, each already carrying its fallback (`absent`, declared once in
+  `lib/text.ts`) so JSX never writes `?? '—'`;
+- **what is true** — `isReversed`, `outgoing`, `needsAttention`, `isRevoked`, so a branch reads as a
+  fact instead of a field comparison;
+- **what it looks like** — `EntryRegister`, `EntryTicker`, `AccountBalances`, `CaptureList`,
+  `MonthSeries`, `CategoryBreakdown`, `TokenList`, `SettingsFacts`: each a component a route drops
+  in with its rows and a `MoneyScale`.
 
-No React, no hooks, no `text-*` class except the data-driven tone a status earns. The input types
-are all-optional field shapes, so a partial row formats instead of throwing, and a `Fixed<>` row
-satisfies them. Table-driven tests live next to it (`format.test.ts`).
+Every module is `<entity>/<component-name>.tsx` next to the pure function it renders —
+`account-balances.tsx` beside `kinds.ts`, `entry-register.tsx` beside `row.ts`, `month-bars.tsx`
+beside `series.ts` — and `index.ts` re-exports them, so `@/modules` is the one import a page needs.
+A module owns its component and the function behind it, imports `components/` and `lib/`, and may
+not import a route or a hook: the linter says so, not this file. So `routes/*` composes modules — no
+`?? '—'`, no `Number()` on an amount, no `text-*` tone picked from a status string. A window is a
+module's own fact too: `monthsBack(12)` belongs to `month/`, not to a date helper.
+
+## `lib/` — three primitives, one promise each
+
+- **`money.ts`** — minor units are integers. `formatMoney(minor, units)` opens a chain:
+  `.toMinor()`, `.toDecimal()`, `.toDisplay('USD')`, `.sign()`, `.absolute()`, `.negate()`,
+  `.add()`. A caller names the scale it wants instead of re-deriving one. `parseMoney(text, units)`
+  is the same chain for what a person typed, and `sumMinor` gives an exact total without ever
+  making a float.
+- **`date.ts`** — one job: `formatDate(value, DateFormat.Day)` renders a wire day, a form field, a
+  `Date` or a dayjs through one set of named templates (`Iso`, `Day`, `Month`, `MonthLong`,
+  `Timestamp`, `Time`). dayjs underneath; nothing else parses a date, and nothing here decides which
+  window to ask the API for.
+- **`text.ts`** (`absent`) and **`cn.ts`** (the cva merge).
+
+## `providers/` — what the app needs before a screen renders
+
+Two contexts, in the order `main.tsx` nests them: `AppProvider` outside, `AuthProvider` inside.
+
+- **`AppProvider`** is the gate. It reads `GET /api/bootstrap` once and renders nothing below it
+  until that answers: a splash while it loads, the message plus a retry button when the instance
+  does not answer, and then `useApp()` hands every screen `{ bootstrap }` — `setup_completed`, the
+  base currency, the capability flags. It deliberately never reads `/api/meta`: that one sits
+  behind a token, a fresh instance has none, and meta belongs to the screen that holds one.
+- **`AuthProvider`** is the token. `useAuth()` answers `token`, `isAuthenticated`, `signIn(spl_…)`
+  and `signOut()`. `api/token.ts` stays the store (`sessionStorage`) and this is the React view of
+  it, so a screen never reaches for storage and the instance password never reaches either.
 
 ## The theme
 
@@ -237,16 +277,16 @@ form sends one `POST /api/setup` carrying the password, the base currency and an
 opening account, then exchanges that password for a scoped token. The password is never
 written to `sessionStorage`; only the token is.
 
-**One schema for a form and its types.** `src/lib/capture.ts` declares the capture fields as
+**One schema for a form and its types.** `src/modules/entry/schema.ts` declares the entry fields as
 an Effect `Schema.Struct`; react-hook-form parses the submitted values through it
-(`Schema.decodeUnknownSync`), so the field rules and the value type cannot drift. Ark UI's
-headless `Select` (`src/components/account-select.tsx`) supplies keyboard, typeahead and
-aria while Tailwind owns the look.
+(`Schema.decodeUnknownSync`), so the field rules and the value type cannot drift. The headless
+`SelectInput` primitive supplies keyboard, typeahead and aria while Tailwind owns the look.
 
 **Money never becomes a float.** Every amount on the wire is a string of minor units.
-`src/lib/money.ts` parses and renders it with string arithmetic — no `Number()`, no
-`toFixed()` — because a ledger that rounds is a ledger that lies. `minor_units` comes from
-`GET /api/meta`, so JPY (0), IDR (2) and BHD (3) all render correctly.
+`src/lib/money.ts` parses and renders it with integer arithmetic — `BigInt` for a total, string
+splitting for a scale, never `Number()` on an amount and never `toFixed()` — because a ledger that
+rounds is a ledger that lies. `minor_units` comes from `GET /api/meta`, so JPY (0), IDR (2) and BHD
+(3) all render correctly, and `MoneyScale` is how a page hands both facts down.
 
 ## Layout
 
@@ -258,13 +298,16 @@ src/api/error.ts      ApiError: status, code, traceId, one message
 src/api/query.ts      the one QueryClient
 src/hooks/queries/    TanStack queries and mutations over those callers
 src/types/generated/  generated contract — never edit; run `make web-types`
-src/components/       primitives → ui → widgets → layouts (see above)
+src/components/       primitives → ui → layouts (see above)
+src/modules/          one folder per entity: <entity>/<component>.tsx plus the function behind
+                      it, re-exported by <entity>/index.ts — the only place a fallback lives
+src/providers/        AppProvider (the bootstrap gate) and AuthProvider (the token), see above
 src/styles.css        the tokens: palette, three faces, one base layer
 src/router.tsx        code-based routes + the auth guard in beforeLoad
 src/routes/           AppShell's outlet: login, setup, dashboard, ledger, accounts,
-                      analytics, captures, settings
-src/lib/money.ts      minor-unit string arithmetic
-src/lib/format/       per-entity display: fallbacks and flags, so JSX has no `??`
+                      analytics, captures, settings — composition only
+src/lib/money.ts      formatMoney/parseMoney, the dotted scale chain
+src/lib/date.ts       formatDate + the DateFormat templates, dayjs underneath
 ```
 
 ## What is deliberately not here yet

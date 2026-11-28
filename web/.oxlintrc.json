@@ -123,7 +123,7 @@
           {
             "patterns": [
               {
-                "group": ["@/components/ui/*", "@/components/widgets/*", "@/components/layouts/*"],
+                "group": ["@/components/ui/*", "@/components/layouts/*", "@/modules/*"],
                 "message": "primitives are the bottom layer: Ark plus the palette, nothing above it"
               }
             ]
@@ -146,8 +146,8 @@
             "patterns": [
               { "group": ["@ark-ui/*"], "message": "compose a primitives component instead" },
               {
-                "group": ["@/components/widgets/*", "@/components/layouts/*"],
-                "message": "ui sits above primitives and below widgets: it may not reach up"
+                "group": ["@/components/layouts/*", "@/modules/*"],
+                "message": "ui sits above primitives and below layouts and modules: it may not reach up"
               }
             ]
           }
@@ -155,7 +155,7 @@
       }
     },
     {
-      "files": ["src/components/widgets/**/*.tsx", "src/components/widgets/**/*.ts"],
+      "files": ["src/modules/**/*.tsx", "src/modules/**/*.ts"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -169,8 +169,31 @@
             "patterns": [
               { "group": ["@ark-ui/*"], "message": "compose a primitives component instead" },
               {
-                "group": ["@/components/layouts/*"],
-                "message": "a widget is placed by a layout; it may not import one"
+                "group": ["@/routes/*", "@/router", "@/hooks/*"],
+                "message": "a module owns its entity and is placed by a route; it never reaches for one"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/providers/**/*.tsx", "src/providers/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@ark-ui/react",
+                "message": "compose a primitives component instead of importing Ark directly"
+              }
+            ],
+            "patterns": [
+              { "group": ["@ark-ui/*"], "message": "compose a primitives component instead" },
+              {
+                "group": ["@/routes/*", "@/router"],
+                "message": "a provider wraps the router and its pages; it may not reach into them"
               }
             ]
           }

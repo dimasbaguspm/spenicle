@@ -1,23 +1,19 @@
 import { Text } from '@/components/primitives/text'
 
-type Bar = {
-  key: string
-  label: string
-  value: number
-  title: string
-}
-
-type MonthBarsProps = {
-  bars: Bar[]
-  /** the track height; two charts side by side pass the same value */
-  height?: string
-}
+import type { MonthBar } from './series'
 
 /**
  * A month series as bars. Every month gets a slot, so a zero month still sits on the
  * baseline as a muted tick instead of vanishing; only the peak fills its column.
  */
-export function MonthBars({ bars, height = 'h-32' }: MonthBarsProps) {
+export function MonthBars({
+  bars,
+  height = 'h-32',
+}: {
+  bars: readonly MonthBar[]
+  /** the track height; two charts side by side pass the same value */
+  height?: string | undefined
+}) {
   const peak = Math.max(1, ...bars.map((bar) => bar.value))
 
   return (

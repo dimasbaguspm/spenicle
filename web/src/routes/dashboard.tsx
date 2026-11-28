@@ -2,45 +2,31 @@ import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { useMemo } from 'react'
 
+import { Panel } from '@/components/primitives/panel'
+import { Text } from '@/components/primitives/text'
 import { useDashboard } from '@/hooks/queries/use-dashboard'
 import { useEntries } from '@/hooks/queries/use-entries'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useMoney } from '@/hooks/use-money'
-import { monthLabel, windowMonths } from '@/lib/date'
-import { formatDay } from '@/lib/format'
-import { Panel } from '@/components/primitives/panel'
-import { Text } from '@/components/primitives/text'
-import { MonthBars } from '@/components/widgets/month-bars'
+import { DateFormat } from '@/lib/date'
+import { EntryTicker, MonthSeries, accountIndex, monthLabel, monthsBack } from '@/modules'
 
 /**
  * The landing screen: the month's three figures, the year as a row of bars, and the last few
  * entries. Every number comes from one `/api/dashboard` call, so the tiles cannot disagree.
  */
 export function DashboardPage() {
-  const { from, to } = windowMonths(6)
+  const { from, to } = monthsBack(6)
   const dashboard = useDashboard(from, to)
   const latest = useEntries({ limit: 6 })
   const meta = useMeta()
   const money = useMoney()
 
-  // a posting is money only on an asset or a liability; the other side is the category
-  const kinds = new Map(
-    (meta.data?.accounts ?? []).map((account) => [account.ref ?? '', account.kind ?? '']),
-  )
-
   const data = dashboard.data
-  const months = data?.months ?? []
-  const bars = useMemo(
-    () =>
-      (data?.months ?? []).map((month) => ({
-        key: month.month,
-        label: monthLabel(month.month),
-        value: Number(month.spend_minor ?? '0'),
-        title: `${month.month} · ${money.figure(month.spend_minor ?? '0')}`,
-      })),
-    [data?.months, money],
-  )
-  const rows = latest.data?.entries ?? []
+  const months = useMemo(() => data?.months ?? [], [data?.months])
+  const rows = useMemo(() => latest.data?.entries ?? [], [latest.data])
+  const accounts = accountIndex(meta.data?.accounts ?? [])
+  const monthOf = data?.month === undefined ? '' : monthLabel(data.month, DateFormat.MonthLong)
 
   return (
     <div className="space-y-6">
@@ -52,7 +38,7 @@ export function DashboardPage() {
           The last six months
         </Text>
         <Text as="p" tone="muted">
-          {from} — {to} · {money.currency}
+          {from} — {to} · {money.scale.currency}
         </Text>
       </header>
 
@@ -70,7 +56,7 @@ export function DashboardPage() {
         ].map((tile) => (
           <div key={tile.label} className="space-y-1 px-5 py-4 sm:px-6 sm:py-5">
             <Text as="p" tone="section">
-              {tile.label} · {data?.month === undefined ? '' : monthLabel(data.month)}
+              {tile.label} · {monthOf}
             </Text>
             <Text as="p" tone="figure" className={`text-2xl ${tile.tone}`}>
               {tile.minor === undefined ? '—' : money.figure(tile.minor)}
@@ -90,13 +76,7 @@ export function DashboardPage() {
             </Link>
           </div>
 
-          {months.every((month) => Number(month.spend_minor ?? '0') === 0) ? (
-            <Text as="p" tone="muted">
-              Nothing has moved yet.
-            </Text>
-          ) : (
-            <MonthBars height="h-28" bars={bars} />
-          )}
+          <MonthSeries months={months} scale={money.scale} height="h-28" />
         </Panel>
 
         <Panel className="space-y-4 p-5 sm:p-6 lg:col-span-5">
@@ -129,7 +109,7 @@ export function DashboardPage() {
                 {data.top_category.account_name}
               </Text>
               <Text as="p" tone="figure" className="text-ink-300">
-                {money.figure(data.top_category.amount_minor ?? '0')}
+                {money.figure(data.top_category.amount_minor)}
               </Text>
             </div>
           )}
@@ -150,39 +130,9 @@ export function DashboardPage() {
             No entries yet.
           </Text>
         ) : (
-          <ul className="mt-3">
-            {rows.map((entry) => {
-              const shown =
-                (entry.postings ?? []).find((row) =>
-                  ['asset', 'liability'].includes(kinds.get(row.account_ref ?? '') ?? ''),
-                ) ?? entry.postings?.[0]
-              const minor = shown?.amount_minor ?? '0'
-              const outgoing = minor.startsWith('-')
-
-              return (
-                <li
-                  key={entry.ref}
-                  className="border-ink-800/70 flex items-center gap-4 border-t px-5 py-3 text-sm first:border-t-0 sm:px-6"
-                >
-                  <Text as="span" tone="figure" className="text-ink-400 w-16 shrink-0 text-xs">
-                    {formatDay(entry.occurred_on ?? '')}
-                  </Text>
-                  <span className="text-porcelain-100 min-w-0 flex-1 truncate">
-                    {entry.note === undefined || entry.note === ''
-                      ? (entry.payee?.name ?? '—')
-                      : entry.note}
-                  </span>
-                  <Text
-                    as="span"
-                    tone="figure"
-                    className={`shrink-0 text-xs ${outgoing ? 'text-porcelain-200' : 'text-jade-300'}`}
-                  >
-                    {outgoing ? `−${money.figure(minor.slice(1))}` : `+${money.figure(minor)}`}
-                  </Text>
-                </li>
-              )
-            })}
-          </ul>
+          <div className="mt-3">
+            <EntryTicker entries={rows} accounts={accounts} scale={money.scale} />
+          </div>
         )}
       </Panel>
     </div>

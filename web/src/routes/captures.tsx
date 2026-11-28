@@ -4,10 +4,10 @@ import { useMemo } from 'react'
 
 import { buttonStyles } from '@/components/primitives/button'
 import { Panel, PanelHead } from '@/components/primitives/panel'
-import { cn } from '@/lib/cn'
 import { Text } from '@/components/primitives/text'
-import { CaptureList } from '@/components/widgets/capture-list'
 import { useCaptures } from '@/hooks/queries/use-captures'
+import { cn } from '@/lib/cn'
+import { CaptureList } from '@/modules'
 
 export function CapturesPage() {
   const captures = useCaptures({ limit: 20 })

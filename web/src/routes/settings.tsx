@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { changePassword } from '@/api/settings'
 import { queryClient } from '@/api/query'
@@ -10,14 +10,15 @@ import { Panel } from '@/components/primitives/panel'
 import { PasswordInput } from '@/components/primitives/password-input'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
-import { useCreateToken, useRevokeToken, useTokenList } from '@/hooks/queries/use-tokens'
 import { useSettings } from '@/hooks/queries/use-settings'
+import { useCreateToken, useRevokeToken, useTokenList } from '@/hooks/queries/use-tokens'
+import { SettingsFacts, TokenList } from '@/modules'
 
 /** The instance itself: what the ledger is kept in, who holds a credential, and how to rotate it. */
 export function SettingsPage() {
   const settings = useSettings()
   const tokens = useTokenList()
-  const revoke = useRevokeToken()
+  const remove = useRevokeToken()
   const create = useCreateToken()
 
   const [current, setCurrent] = useState('')
@@ -54,7 +55,7 @@ export function SettingsPage() {
     },
   })
 
-  const rows = tokens.data?.tokens ?? []
+  const rows = useMemo(() => tokens.data?.tokens ?? [], [tokens.data])
 
   return (
     <div className="space-y-6">
@@ -71,33 +72,7 @@ export function SettingsPage() {
       </header>
 
       <Panel className="divide-ink-800 divide-y">
-        <section className="grid gap-4 p-5 sm:grid-cols-3 sm:p-6">
-          {[
-            {
-              label: 'Base currency',
-              value: settings.data?.base_currency ?? '—',
-              locked: 'locked',
-            },
-            { label: 'Timezone', value: settings.data?.timezone ?? '—', locked: 'set at boot' },
-            {
-              label: 'Extraction',
-              value: settings.data?.extraction_enabled === true ? 'wired' : 'manual entry',
-              locked: 'from the environment',
-            },
-          ].map((item) => (
-            <div key={item.label} className="space-y-1">
-              <Text as="p" tone="section">
-                {item.label}
-              </Text>
-              <Text as="p" tone="figure" className="text-porcelain-100">
-                {item.value}
-              </Text>
-              <Text as="p" tone="caption">
-                {item.locked}
-              </Text>
-            </div>
-          ))}
-        </section>
+        <SettingsFacts settings={settings.data} />
 
         <section className="space-y-4 p-5 sm:p-6">
           <Text as="p" tone="section">
@@ -154,37 +129,13 @@ export function SettingsPage() {
               No token yet. Mint one below and hand it to a script instead of the password.
             </Text>
           ) : (
-            <ul>
-              {rows.map((row) => (
-                <li
-                  key={row.ref}
-                  className="border-ink-800/70 flex flex-wrap items-baseline gap-3 border-t py-3 text-sm first:border-t-0"
-                >
-                  <span className="text-porcelain-100 min-w-0 flex-1 truncate">{row.name}</span>
-                  <Text as="span" tone="code" className="text-ink-400">
-                    {row.preview}
-                  </Text>
-                  <Text as="span" tone="caption" className="text-ink-500">
-                    {row.scopes?.join(', ') ?? ''}
-                  </Text>
-                  {row.revoked_at === undefined ? (
-                    <Button
-                      tone="danger"
-                      size="sm"
-                      onClick={() => {
-                        revoke.mutate(row.ref ?? '')
-                      }}
-                    >
-                      Revoke
-                    </Button>
-                  ) : (
-                    <Text as="span" tone="caption" className="text-ink-500">
-                      revoked
-                    </Text>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <TokenList
+              tokens={rows}
+              revoking={remove.isPending}
+              onRevoke={(ref) => {
+                remove.mutate(ref)
+              }}
+            />
           )}
 
           <form

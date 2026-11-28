@@ -120,7 +120,14 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        palette ramps, the three self-hosted fonts (Fraunces for the
                        wordmark and screen titles, Inter for text, JetBrains Mono for every
                        figure), and the base layer. A screen composes `Panel`, `Field`,
-                       `Button` and `Text`; it never writes its own card or focus ring
+                       `Button` and `Text`, and `src/modules/<entity>` for everything it
+                       says about a row: a module owns its entity's component, fallbacks,
+                       flags and tone, so a `routes/*` page composes modules and never reads
+                       a field to decide how a row looks. Each module keeps one component per
+                       file (`entry-register.tsx`, `account-balances.tsx`) with an `index.ts`
+                       barrel, and `src/providers/` holds the two contexts the shell needs:
+                       `AppProvider` gates on `/api/bootstrap` before any screen renders and
+                       never reads `/api/meta`; `AuthProvider` owns the scoped token
 ```
 
 The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` stages

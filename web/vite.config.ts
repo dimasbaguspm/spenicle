@@ -58,5 +58,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // no test files today: the harness stays wired so the first one runs as written
+    passWithNoTests: true,
   },
 })

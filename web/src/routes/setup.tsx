@@ -7,7 +7,6 @@ import { api } from '@/api/client'
 import { apiError, isApiError } from '@/api/error'
 import { fetchMeta } from '@/api/meta'
 import { openLedger } from '@/api/setup'
-import { setToken } from '@/api/token'
 import { Brand } from '@/components/layouts/brand'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
@@ -15,7 +14,7 @@ import { Panel } from '@/components/primitives/panel'
 import { PasswordInput } from '@/components/primitives/password-input'
 import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
-import { useBootstrap } from '@/hooks/queries/use-bootstrap'
+import { useApp, useAuth } from '@/providers'
 
 /**
  * The claim screen. A fresh instance boots open — there is no password to recover and
@@ -27,7 +26,8 @@ import { useBootstrap } from '@/hooks/queries/use-bootstrap'
  */
 export function SetupPage() {
   const navigate = useNavigate()
-  const boot = useBootstrap()
+  const { bootstrap } = useApp()
+  const auth = useAuth()
 
   const [password, setPassword] = useState('')
   const [currency, setCurrency] = useState('')
@@ -38,7 +38,7 @@ export function SetupPage() {
   // A password without a completed setup reaches the same answer through the 401 below.
   // Any other failure is not a claim: the form stays and shows what the API said.
   const unauthorized = isApiError(meta.error) && meta.error.status === 401
-  const claimed = boot.data?.setup_completed === true || unauthorized
+  const claimed = bootstrap.setup_completed === true || unauthorized
 
   const chooseCurrency = useMemo(
     () =>
@@ -71,7 +71,7 @@ export function SetupPage() {
         throw new Error('the API issued no token')
       }
 
-      setToken(data.token)
+      auth.signIn(data.token)
     },
     onSuccess: () => {
       void navigate({ to: '/dashboard' })

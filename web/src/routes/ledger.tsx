@@ -1,10 +1,7 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
 import { Schema } from 'effect'
 import { useEffect, useMemo } from 'react'
 import { Controller, useForm, type Resolver } from 'react-hook-form'
 
-import { api, errorMessage } from '@/api/client'
-import { queryClient } from '@/api/query'
 import { Button } from '@/components/primitives/button'
 import { DateInput } from '@/components/primitives/date-input'
 import { Field } from '@/components/primitives/field'
@@ -12,9 +9,19 @@ import { Panel, PanelHead } from '@/components/primitives/panel'
 import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
-import { CaptureForm, today, type CaptureValues } from '@/lib/capture'
-import { formatDay } from '@/lib/format'
-import { formatMoney, toMinor } from '@/lib/money'
+import { useCreateEntry, useEntries } from '@/hooks/queries/use-entries'
+import { useMeta } from '@/hooks/queries/use-meta'
+import { useMoney } from '@/hooks/use-money'
+import { parseMoney } from '@/lib/money'
+import {
+  accountIndex,
+  emptyEntryForm,
+  EntryForm,
+  EntryRegister,
+  isCategoryKind,
+  isMoneyKind,
+  type EntryFormValues,
+} from '@/modules'
 
 const listLimit = 50
 
@@ -23,9 +30,9 @@ const listLimit = 50
  * on submit answers both "is this valid" and "what is its type", so the form and the
  * API can never disagree about what an amount or a day looks like.
  */
-const resolver: Resolver<CaptureValues> = (values) => {
+const resolver: Resolver<EntryFormValues> = (values) => {
   try {
-    return { values: Schema.decodeUnknownSync(CaptureForm)(values), errors: {} }
+    return { values: Schema.decodeUnknownSync(EntryForm)(values), errors: {} }
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'the form is not valid'
 
@@ -33,73 +40,29 @@ const resolver: Resolver<CaptureValues> = (values) => {
   }
 }
 
-async function fetchMeta() {
-  const { data, error, response } = await api.GET('/api/meta')
-  if (error !== undefined) {
-    throw new Error(errorMessage(error, response.status))
-  }
-
-  return data
-}
-
-async function fetchEntries() {
-  const { data, error, response } = await api.GET('/api/entries', {
-    params: { query: { limit: listLimit } },
-  })
-  if (error !== undefined) {
-    throw new Error(errorMessage(error, response.status))
-  }
-
-  return data
-}
-
 export function LedgerPage() {
-  const meta = useQuery({ queryKey: ['meta'], queryFn: fetchMeta })
-  const entries = useQuery({ queryKey: ['entries'], queryFn: fetchEntries })
+  const meta = useMeta()
+  const entries = useEntries({ limit: listLimit })
+  const money = useMoney()
 
-  const form = useForm<CaptureValues>({
-    resolver,
-    defaultValues: {
-      amount: '',
-      note: '',
-      occurredOn: today(),
-      categoryRef: '',
-      accountRef: '',
-    },
-  })
+  const form = useForm<EntryFormValues>({ resolver, defaultValues: emptyEntryForm() })
 
   const accounts = useMemo(() => meta.data?.accounts ?? [], [meta.data])
-  const baseCurrency = meta.data?.settings?.base_currency ?? 'USD'
-  const units =
-    (meta.data?.currencies ?? []).find((row) => row.code === baseCurrency)?.minor_units ?? 2
+  const index = useMemo(() => accountIndex(accounts), [accounts])
 
   const categoryOptions = useMemo(
     () =>
       accounts
-        .filter((row) => row.kind === 'expense' || row.kind === 'income')
-        .map((row) => ({ label: row.name ?? '—', value: row.ref ?? '' }))
-        .filter((option) => option.value !== ''),
+        .filter((row) => isCategoryKind(row.kind))
+        .map((row) => ({ label: row.name, value: row.ref })),
     [accounts],
   )
 
   const accountOptions = useMemo(
     () =>
       accounts
-        .filter((row) => row.kind === 'asset' || row.kind === 'liability')
-        .map((row) => ({ label: row.name ?? '—', value: row.ref ?? '' }))
-        .filter((option) => option.value !== ''),
-    [accounts],
-  )
-
-  const names = useMemo(
-    () => new Map(accounts.map((row) => [row.ref ?? '', row.name ?? ''])),
-    [accounts],
-  )
-
-  // a posting is money only if it lands on an asset or a liability; the other side is
-  // the category. Reading the sign off the money side is what keeps an expense negative.
-  const kinds = useMemo(
-    () => new Map(accounts.map((row) => [row.ref ?? '', row.kind ?? ''])),
+        .filter((row) => isMoneyKind(row.kind))
+        .map((row) => ({ label: row.name, value: row.ref })),
     [accounts],
   )
 
@@ -117,47 +80,37 @@ export function LedgerPage() {
     }
   }, [accountOptions, categoryOptions, form])
 
-  const post = useMutation({
-    mutationFn: async (values: CaptureValues) => {
-      const minor = toMinor(values.amount, units)
-      if (minor === '0') {
-        throw new Error('enter an amount')
-      }
-
-      const { error, response } = await api.POST('/api/entries', {
-        body: {
-          occurred_on: values.occurredOn,
-          currency: baseCurrency,
-          note: values.note,
-          postings: [
-            { account_ref: values.categoryRef, amount_minor: minor },
-            {
-              account_ref: values.accountRef,
-              amount_minor: minor.startsWith('-') ? minor.slice(1) : `-${minor}`,
-            },
-          ],
-        },
-      })
-
-      if (error !== undefined) {
-        throw new Error(errorMessage(error, response.status))
-      }
-    },
-    onSuccess: async () => {
-      form.resetField('amount')
-      form.resetField('note')
-      await queryClient.invalidateQueries({ queryKey: ['entries'] })
-      await queryClient.invalidateQueries({ queryKey: ['meta'] })
-    },
-  })
+  const post = useCreateEntry()
 
   const submit = form.handleSubmit((values) => {
-    post.mutate(values)
+    const amount = parseMoney(values.amount, money.scale.units)
+
+    if (amount.sign() === 0) {
+      form.setError('root', { type: 'validate', message: 'enter an amount' })
+      return
+    }
+
+    post.mutate(
+      {
+        occurred_on: values.occurredOn,
+        currency: money.scale.currency,
+        note: values.note,
+        postings: [
+          { account_ref: values.categoryRef, amount_minor: amount.toMinor() },
+          { account_ref: values.accountRef, amount_minor: amount.negate().toMinor() },
+        ],
+      },
+      {
+        onSuccess: () => {
+          form.resetField('amount')
+          form.resetField('note')
+        },
+      },
+    )
   })
 
   const errors = form.formState.errors
-
-  const rows = entries.data?.entries ?? []
+  const rows = useMemo(() => entries.data?.entries ?? [], [entries.data])
   const count = rows.length
 
   return (
@@ -175,7 +128,7 @@ export function LedgerPage() {
           </Text>
         </div>
         <Text as="p" tone="figure" className="text-ink-400 text-xs sm:pb-1">
-          {count === 0 ? 'no entries' : `${count} entries`} · {baseCurrency}
+          {count === 0 ? 'no entries' : `${String(count)} entries`} · {money.scale.currency}
         </Text>
       </header>
 
@@ -198,7 +151,7 @@ export function LedgerPage() {
                     {...form.register('amount')}
                   />
                   <span className="text-ink-400 pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-[0.6875rem] uppercase">
-                    {baseCurrency}
+                    {money.scale.currency}
                   </span>
                 </div>
               </Field>
@@ -297,75 +250,7 @@ export function LedgerPage() {
           )}
 
           {count === 0 ? null : (
-            <>
-              <div className="text-ink-500 border-ink-800/80 font-mono hidden items-center gap-3 border-t px-6 py-2.5 text-[0.5625rem] font-medium tracking-[0.16em] uppercase sm:flex">
-                <span className="w-[5.5rem] shrink-0">Day</span>
-                <span className="min-w-0 flex-1">Entry</span>
-                <span className="w-20 shrink-0">Category</span>
-                <span className="w-28 shrink-0 text-right">Amount · {baseCurrency}</span>
-              </div>
-              <ul>
-                {rows.map((entry) => {
-                  const postings = entry.postings ?? []
-                  const money = postings.find((row) =>
-                    ['asset', 'liability'].includes(kinds.get(row.account_ref ?? '') ?? ''),
-                  )
-                  const category = postings.find((row) =>
-                    ['expense', 'income'].includes(kinds.get(row.account_ref ?? '') ?? ''),
-                  )
-                  const shown = money ?? postings[0]
-                  const label =
-                    entry.note === undefined || entry.note === ''
-                      ? (entry.payee?.name ?? '—')
-                      : entry.note
-                  const minor = shown?.amount_minor ?? '0'
-                  const outgoing = minor.startsWith('-')
-                  const amount = formatMoney(
-                    outgoing ? minor.slice(1) : minor,
-                    units,
-                    entry.currency ?? baseCurrency,
-                    false,
-                  )
-
-                  return (
-                    <li
-                      key={entry.ref}
-                      className="border-ink-800/70 hover:bg-ink-800/30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-t px-4 py-3.5 text-sm transition-colors first:border-t-0 sm:grid-cols-[5.5rem_minmax(0,1fr)_5rem_7rem] sm:px-6"
-                    >
-                      <Text
-                        as="span"
-                        tone="figure"
-                        className="text-ink-400 order-3 text-xs sm:order-none"
-                      >
-                        <time dateTime={entry.occurred_on ?? ''} title={entry.occurred_on}>
-                          {formatDay(entry.occurred_on ?? '')}
-                        </time>
-                      </Text>
-                      <span
-                        className="text-porcelain-100 order-1 min-w-0 truncate sm:order-none"
-                        title={label}
-                      >
-                        {label}
-                      </span>
-                      <Text
-                        as="span"
-                        tone="caption"
-                        className="text-ink-400 order-4 hidden min-w-0 truncate sm:order-none sm:block"
-                      >
-                        {names.get(category?.account_ref ?? '') ?? ''}
-                      </Text>
-                      <Text
-                        as="span"
-                        tone="figure"
-                        className={`order-2 text-right sm:order-none ${outgoing ? 'text-porcelain-200' : 'text-jade-300'}`}
-                      >
-                        {outgoing ? `−${amount}` : `+${amount}`}
-                      </Text>
-                    </li>
-                  )
-                })}
-              </ul>
-            </>
+            <EntryRegister entries={rows} accounts={index} scale={money.scale} />
           )}
         </Panel>
       </div>

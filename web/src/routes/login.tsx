@@ -5,14 +5,13 @@ import { useState } from 'react'
 
 import { api } from '@/api/client'
 import { apiError, isApiError } from '@/api/error'
-import { setToken } from '@/api/token'
 import { Brand } from '@/components/layouts/brand'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
 import { Panel } from '@/components/primitives/panel'
 import { PasswordInput } from '@/components/primitives/password-input'
 import { Text } from '@/components/primitives/text'
-import { useBootstrap } from '@/hooks/queries/use-bootstrap'
+import { useApp, useAuth } from '@/providers'
 
 /**
  * The password never leaves this form: it is exchanged for a scoped token, and only
@@ -20,7 +19,8 @@ import { useBootstrap } from '@/hooks/queries/use-bootstrap'
  */
 export function LoginPage() {
   const navigate = useNavigate()
-  const boot = useBootstrap()
+  const { bootstrap } = useApp()
+  const auth = useAuth()
   const [password, setPassword] = useState('')
 
   const signIn = useMutation({
@@ -48,12 +48,12 @@ export function LoginPage() {
         throw new Error('the API issued no token')
       }
 
-      setToken(issued.token)
+      auth.signIn(issued.token)
       void navigate({ to: '/dashboard' })
     },
   })
 
-  const claimable = boot.data?.setup_completed === false
+  const claimable = bootstrap.setup_completed === false
 
   return (
     <div className="mx-auto my-auto flex w-full max-w-md flex-col gap-7 py-4">
