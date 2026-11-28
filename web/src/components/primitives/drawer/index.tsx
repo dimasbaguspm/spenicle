@@ -51,14 +51,14 @@ export function Drawer({
       }}
     >
       <ArkDrawer.Trigger asChild>{trigger}</ArkDrawer.Trigger>
-      <ArkDrawer.Backdrop className="bg-surface-sunken/80 fixed inset-0 z-40 backdrop-blur-sm" />
+      <ArkDrawer.Backdrop className="bg-surface-sunken/55 fixed inset-0 z-40" />
       <ArkDrawer.Positioner
         className={`fixed inset-0 z-50 flex ${side === 'bottom' ? 'items-end' : 'items-stretch'}`}
       >
         <ArkDrawer.Content
           className={
             side === 'bottom'
-              ? 'bg-surface border-border flex max-h-[85dvh] w-full flex-col gap-4 overflow-y-auto rounded-t-xl border-t p-5 shadow-[0_-18px_40px_-24px_rgba(0,0,0,0.8)]'
+              ? 'bg-surface border-border sheet-in flex max-h-[85dvh] w-full flex-col gap-4 overflow-y-auto rounded-t-xl border-t px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(0,0,0,0.6)]'
               : 'bg-surface border-border overscroll-contain flex h-full w-[min(20rem,85vw)] flex-col gap-6 border-r p-5 shadow-[18px_0_40px_-24px_rgba(0,0,0,0.95)]'
           }
         >

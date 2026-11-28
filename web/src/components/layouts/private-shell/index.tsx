@@ -1,10 +1,10 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
-  BookOpen,
   ChartLine,
   LayoutDashboard,
   LogOut,
   Minus,
+  Plus,
   Settings as SettingsIcon,
   Wallet,
 } from 'lucide-react'
@@ -28,7 +28,6 @@ const deskSections = [
 const thumbSections = [
   { to: '/dashboard', label: 'Overview', Icon: LayoutDashboard },
   { to: '/accounts', label: 'Accounts', Icon: Wallet },
-  { to: '/ledger', label: 'Register', Icon: BookOpen },
   { to: '/analytics', label: 'Analytics', Icon: ChartLine },
 ] as const
 
@@ -41,7 +40,7 @@ const tab = 'relative shrink-0 py-3 text-sm text-text-faint transition-colors ho
 const activeTab =
   'text-text after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-accent'
 
-const thumbItem = 'flex flex-col items-center justify-center gap-1 py-2 text-[0.625rem]'
+const thumbItem = 'flex items-center justify-center py-4'
 
 /**
  * The signed-in shell. From `lg` a header carries the three working sections and the two actions;
@@ -142,8 +141,15 @@ function ThumbBar() {
       <div className="grid grid-cols-5 items-center">
         <ThumbLink {...thumbSections[0]} active={active(thumbSections[0].to)} />
         <ThumbLink {...thumbSections[1]} active={active(thumbSections[1].to)} />
-        <ThumbLink {...thumbSections[2]} active={active('/ledger')} center />
-        <ThumbLink {...thumbSections[3]} active={active(thumbSections[3].to)} />
+        <Link
+          to="/ledger/new"
+          search={{ mode: 'manual' }}
+          aria-label="Add entry"
+          className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_20px_-10px_rgba(0,0,0,0.9)] transition-colors hover:bg-primary-hover"
+        >
+          <Plus className="size-5" aria-hidden="true" strokeWidth={2} />
+        </Link>
+        <ThumbLink {...thumbSections[2]} active={active(thumbSections[2].to)} />
         <div className="flex items-center justify-center">
           <Menu
             align="end"
@@ -175,34 +181,15 @@ function ThumbBar() {
   )
 }
 
-function ThumbLink({
-  to,
-  label,
-  Icon,
-  active,
-  center = false,
-}: ThumbSection & { active: boolean; center?: boolean }) {
-  if (center) {
-    return (
-      <Link
-        to={to}
-        aria-label={label}
-        aria-current={active ? 'page' : undefined}
-        className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_20px_-10px_rgba(0,0,0,0.9)] transition-colors hover:bg-primary-hover"
-      >
-        <Icon className="size-5" aria-hidden="true" strokeWidth={1.9} />
-      </Link>
-    )
-  }
-
+function ThumbLink({ to, label, Icon, active }: ThumbSection & { active: boolean }) {
   return (
     <Link
       to={to}
       className={cn(thumbItem, active ? 'text-accent' : 'text-text-faint hover:text-text')}
+      aria-label={label}
       aria-current={active ? 'page' : undefined}
     >
-      <Icon className="size-4" aria-hidden="true" strokeWidth={1.75} />
-      {label}
+      <Icon className="size-5" aria-hidden="true" strokeWidth={1.75} />
     </Link>
   )
 }

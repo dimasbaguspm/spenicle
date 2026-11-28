@@ -8,7 +8,7 @@ import { Button, buttonStyles } from '@/components/primitives/button'
 import { Panel } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { useAccounts } from '@/hooks/queries/use-accounts'
-import { useEntryPages, usePatchEntry } from '@/hooks/queries/use-entries'
+import { useEntryPages } from '@/hooks/queries/use-entries'
 import { useFilterQuery } from '@/hooks/use-filter-query'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useMoney } from '@/hooks/use-money'
@@ -18,6 +18,7 @@ import { absent } from '@/lib/text'
 import {
   AccountRegister,
   accountIndex,
+  EntryFilterChips,
   EntryFilterRail,
   EntryFilterSheet,
   entryFilterSpec,
@@ -49,7 +50,6 @@ export function AccountDetailPage() {
   })
 
   const entries = useEntryPages({ ...filters.query, with_balance: 'true' })
-  const rename = usePatchEntry()
   const held = useAccounts({ refs: ref, limit: 1 })
 
   const accounts = meta.data?.accounts ?? []
@@ -98,7 +98,6 @@ export function AccountDetailPage() {
           <EntryFilterRail
             value={filters.value}
             onApply={filters.apply}
-            onClear={filters.clear}
             accounts={accounts}
             payees={payeeRows}
             total={rows.length}
@@ -118,6 +117,16 @@ export function AccountDetailPage() {
               {rows.length === 0 ? 'nothing matched' : `${String(rows.length)} movements`}
             </Text>
           </div>
+
+          <EntryFilterChips
+            value={filters.value}
+            accounts={accounts}
+            payees={payeeRows}
+            onDismiss={(key) => {
+              filters.apply({ ...filters.value, [key]: undefined })
+            }}
+            onClearAll={filters.clear}
+          />
 
           {entries.error === null ? null : (
             <Text as="p" tone="caption" className="text-danger" role="alert">
@@ -140,14 +149,7 @@ export function AccountDetailPage() {
             ) : null}
 
             {rows.length === 0 ? null : (
-              <AccountRegister
-                entries={rows}
-                accounts={index}
-                scale={money.scale}
-                onEditNote={(entryRef, note) => {
-                  rename.mutate({ ref: entryRef, body: { note } })
-                }}
-              />
+              <AccountRegister entries={rows} accounts={index} scale={money.scale} />
             )}
 
             {entries.hasNextPage ? (

@@ -1,7 +1,6 @@
 import type { Entry } from '@/api/types'
 import { Panel, PanelHead } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
-import { InlineEdit } from '@/components/ui/form'
 import { DateFormat, formatDate } from '@/lib/date'
 import { formatMoney, type MoneyScale } from '@/lib/money'
 import { absent } from '@/lib/text'
@@ -38,7 +37,6 @@ export function EntryDetail({
   entry,
   accounts,
   scale,
-  onEditNote,
 }: {
   entry: Entry
   accounts: AccountIndex
@@ -58,16 +56,7 @@ export function EntryDetail({
                 {row.day}
               </Text>
               <Text as="h1" tone="display">
-                {onEditNote === undefined ? (
-                  row.title
-                ) : (
-                  <InlineEdit
-                    value={row.note}
-                    onSave={(next) => {
-                      onEditNote(entry.ref, next)
-                    }}
-                  />
-                )}
+                <span className="text-text block truncate">{row.title}</span>
               </Text>
             </div>
             <div className="flex items-baseline gap-2">

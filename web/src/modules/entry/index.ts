@@ -1,6 +1,7 @@
 export { AccountRegister } from './account-register'
 export { EntryAmount } from './entry-amount'
 export { EntryDetail } from './entry-detail'
+export { EntryFilterChips } from './entry-filter-chips'
 export { EntryFilterRail, EntryFilterSheet } from './entry-filters'
 export {
   entryFilterSpec,

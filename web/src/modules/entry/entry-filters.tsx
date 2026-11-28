@@ -24,9 +24,11 @@ type FilterProps = {
 /** The three controls, as a form: the same provider a record form uses, over a query. */
 function FilterFields({ accounts, payees }: Pick<FilterProps, 'accounts' | 'payees'>) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <DateField<EntrySearch> name="from" label="From" />
-      <DateField<EntrySearch> name="to" label="To" />
+    <div className="grid gap-4">
+      <div className="grid grid-cols-2 gap-4">
+        <DateField<EntrySearch> name="from" label="From" />
+        <DateField<EntrySearch> name="to" label="To" />
+      </div>
       <SelectField<EntrySearch>
         name="account"
         label="Account"
@@ -59,11 +61,10 @@ function FilterFields({ accounts, payees }: Pick<FilterProps, 'accounts' | 'paye
 export function EntryFilterRail({
   value,
   onApply,
-  onClear,
   accounts,
   payees,
   total,
-}: FilterProps & { total: number }) {
+}: Omit<FilterProps, 'onClear'> & { total: number }) {
   const active = filterCount(value)
 
   return (
@@ -82,7 +83,6 @@ export function EntryFilterRail({
         key={JSON.stringify(value)}
         values={value}
         onApply={onApply}
-        onClear={onClear}
         normalize={entryDraft}
         live
       >

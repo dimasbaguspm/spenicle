@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react'
 
 import { Panel, PanelHead } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
-import { useEntryPages, usePatchEntry } from '@/hooks/queries/use-entries'
+import { useEntryPages } from '@/hooks/queries/use-entries'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useMoney } from '@/hooks/use-money'
 import { usePayees } from '@/hooks/queries/use-payees'
@@ -13,6 +13,7 @@ import { useFilterQuery } from '@/hooks/use-filter-query'
 import { cn } from '@/lib/cn'
 import {
   accountIndex,
+  EntryFilterChips,
   EntryFilterRail,
   EntryFilterSheet,
   entryFilterSpec,
@@ -46,7 +47,6 @@ export function LedgerPage() {
   })
 
   const entries = useEntryPages(filters.query)
-  const rename = usePatchEntry()
 
   const accounts = meta.data?.accounts ?? []
   const index = accountIndex(accounts)
@@ -73,7 +73,6 @@ export function LedgerPage() {
           <EntryFilterRail
             value={filters.value}
             onApply={filters.apply}
-            onClear={filters.clear}
             accounts={accounts}
             payees={payeeRows}
             total={rows.length}
@@ -93,6 +92,16 @@ export function LedgerPage() {
               {rows.length === 0 ? 'nothing matched' : `${String(rows.length)} entries`}
             </Text>
           </div>
+
+          <EntryFilterChips
+            value={filters.value}
+            accounts={accounts}
+            payees={payeeRows}
+            onDismiss={(key) => {
+              filters.apply({ ...filters.value, [key]: undefined })
+            }}
+            onClearAll={filters.clear}
+          />
 
           {entries.error === null ? null : (
             <Text as="p" tone="caption" className="text-danger" role="alert">
@@ -118,14 +127,7 @@ export function LedgerPage() {
             ) : null}
 
             {rows.length === 0 ? null : (
-              <EntryRegister
-                entries={rows}
-                accounts={index}
-                scale={money.scale}
-                onEditNote={(ref, note) => {
-                  rename.mutate({ ref, body: { note } })
-                }}
-              />
+              <EntryRegister entries={rows} accounts={index} scale={money.scale} />
             )}
 
             {entries.hasNextPage ? (

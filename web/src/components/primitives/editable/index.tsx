@@ -8,12 +8,10 @@ type EditableProps = {
   value: string
   onValueChange: (value: string) => void
   label?: string | undefined
-  /** the chrome-free shape: the text itself is the control, double click to edit, no pencil */
-  plain?: boolean
 }
 
 /** Ark owns the edit/submit/cancel states and hides the input until editing; the field chrome is ours. */
-export function Editable({ value, onValueChange, label, plain = false }: EditableProps) {
+export function Editable({ value, onValueChange, label }: EditableProps) {
   return (
     <ArkEditable.Root
       value={value}
@@ -31,35 +29,29 @@ export function Editable({ value, onValueChange, label, plain = false }: Editabl
       )}
       <div className="flex items-start gap-2">
         <ArkEditable.Area className="min-w-0 flex-1">
-          <ArkEditable.Input
-            className={
-              plain ? 'border-border bg-surface h-8 rounded border px-2 text-sm' : control()
-            }
-          />
-          <ArkEditable.Preview className="text-text hover:text-accent focus-visible:ring-accent/40 cursor-text rounded px-0.5 focus-visible:ring-2 focus-visible:outline-none" />
+          <ArkEditable.Input className={control()} />
+          <ArkEditable.Preview className="text-text hover:text-accent focus-visible:ring-accent/40 cursor-text rounded px-1 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none" />
         </ArkEditable.Area>
-        {plain ? null : (
-          <ArkEditable.Control className="flex items-center gap-1">
-            <ArkEditable.EditTrigger
-              aria-label="Edit"
-              className="text-text-muted hover:text-accent rounded px-1.5 py-1 transition-colors"
-            >
-              <Pencil className="size-4" aria-hidden="true" strokeWidth={1.75} />
-            </ArkEditable.EditTrigger>
-            <ArkEditable.SubmitTrigger
-              aria-label="Save"
-              className="text-success rounded px-1.5 py-1 transition-colors"
-            >
-              <Check className="size-4" aria-hidden="true" strokeWidth={1.75} />
-            </ArkEditable.SubmitTrigger>
-            <ArkEditable.CancelTrigger
-              aria-label="Cancel"
-              className="text-text-muted hover:text-danger rounded px-1.5 py-1 transition-colors"
-            >
-              <X className="size-4" aria-hidden="true" strokeWidth={1.75} />
-            </ArkEditable.CancelTrigger>
-          </ArkEditable.Control>
-        )}
+        <ArkEditable.Control className="flex items-center gap-1">
+          <ArkEditable.EditTrigger
+            aria-label="Edit"
+            className="text-text-muted hover:text-accent rounded px-1.5 py-1 transition-colors"
+          >
+            <Pencil className="size-4" aria-hidden="true" strokeWidth={1.75} />
+          </ArkEditable.EditTrigger>
+          <ArkEditable.SubmitTrigger
+            aria-label="Save"
+            className="text-success rounded px-1.5 py-1 transition-colors"
+          >
+            <Check className="size-4" aria-hidden="true" strokeWidth={1.75} />
+          </ArkEditable.SubmitTrigger>
+          <ArkEditable.CancelTrigger
+            aria-label="Cancel"
+            className="text-text-muted hover:text-danger rounded px-1.5 py-1 transition-colors"
+          >
+            <X className="size-4" aria-hidden="true" strokeWidth={1.75} />
+          </ArkEditable.CancelTrigger>
+        </ArkEditable.Control>
       </div>
     </ArkEditable.Root>
   )

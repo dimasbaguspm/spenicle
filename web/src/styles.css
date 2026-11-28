@@ -218,6 +218,22 @@
     }
   }
 
+  /* a sheet arrives from the edge it belongs to, once */
+  .sheet-in {
+    animation: sheet-in 180ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  @keyframes sheet-in {
+    from {
+      transform: translateY(12px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
   /* a single accent hairline is the whole decoration budget */
   ::selection {
     background-color: var(--app-selection);

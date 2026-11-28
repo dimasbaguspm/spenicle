@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router'
 
 import type { Entry } from '@/api/types'
 import { Text } from '@/components/primitives/text'
-import { InlineEdit } from '@/components/ui/form'
 import type { MoneyScale } from '@/lib/money'
 import type { AccountIndex } from '@/modules/account'
 
@@ -17,7 +16,6 @@ export function EntryRegister({
   entries,
   accounts,
   scale,
-  onEditNote,
 }: {
   entries: readonly Entry[]
   accounts: AccountIndex
@@ -52,16 +50,7 @@ export function EntryRegister({
                 </time>
               </Text>
               <span className="order-1 min-w-0 sm:order-none">
-                {onEditNote === undefined ? (
-                  <span className="text-text block truncate">{row.title}</span>
-                ) : (
-                  <InlineEdit
-                    value={row.note}
-                    onSave={(next) => {
-                      onEditNote(row.ref, next)
-                    }}
-                  />
-                )}
+                <span className="text-text block truncate">{row.title}</span>
                 <span className="text-text-faint block truncate text-[0.6875rem]">
                   {row.account}
                 </span>

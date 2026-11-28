@@ -7,7 +7,7 @@ import { Breadcrumb } from '@/components/primitives/breadcrumb'
 import { buttonStyles } from '@/components/primitives/button'
 import { Panel } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
-import { useEntry, usePatchEntry } from '@/hooks/queries/use-entries'
+import { useEntry } from '@/hooks/queries/use-entries'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useMoney } from '@/hooks/use-money'
 import { accountIndex, EntryDetail } from '@/modules'
@@ -23,7 +23,6 @@ const entryCrumbs = [
 export function EntryDetailPage() {
   const { ref } = useParams({ from: '/ledger/$ref' })
   const entry = useEntry(ref)
-  const rename = usePatchEntry()
   const meta = useMeta()
   const money = useMoney()
 
@@ -57,14 +56,7 @@ export function EntryDetailPage() {
           </Panel>
         ) : null
       ) : (
-        <EntryDetail
-          entry={entry.data}
-          accounts={accounts}
-          scale={money.scale}
-          onEditNote={(entryRef, note) => {
-            rename.mutate({ ref: entryRef, body: { note } })
-          }}
-        />
+        <EntryDetail entry={entry.data} accounts={accounts} scale={money.scale} />
       )}
     </div>
   )
