@@ -4,7 +4,7 @@ import { ArrowRight } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 
 import { api } from '@/api/client'
-import { apiError } from '@/api/error'
+import { apiError, isApiError } from '@/api/error'
 import { fetchMeta } from '@/api/meta'
 import { openLedger } from '@/api/setup'
 import { setToken } from '@/api/token'
@@ -44,8 +44,9 @@ export function SetupPage() {
 
   const meta = useQuery({ queryKey: ['meta'], queryFn: () => fetchMeta() })
 
-  // a claimed instance has nothing to set up: the screen is a dead end, so it says so
-  const claimed = boot.data?.setup_completed === true
+  // a claimed instance has nothing to set up: the screen is a dead end, so it says so.
+  // A password without a completed setup reaches the same answer through the 401 below.
+  const claimed = boot.data?.setup_completed === true || isApiError(meta.error)
 
   const chooseCurrency = useMemo(
     () =>
