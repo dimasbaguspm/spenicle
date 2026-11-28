@@ -10,5 +10,12 @@ type TextAreaInputProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'cla
 }
 
 export function TextAreaInput({ size, className, rows = 3, ...rest }: TextAreaInputProps) {
-  return <Field.Textarea rows={rows} className={cn(control({ size }), className)} {...rest} />
+  // a textarea sizes itself by its rows: the control's fixed height is for single-line inputs
+  return (
+    <Field.Textarea
+      rows={rows}
+      className={cn(control({ size }), 'h-auto min-h-20 resize-y py-2', className)}
+      {...rest}
+    />
+  )
 }

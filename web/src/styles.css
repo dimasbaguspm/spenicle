@@ -240,6 +240,23 @@
     }
   }
 
+  /* the dictation meter: five bars breathing while the microphone is open */
+  .listening-bar {
+    height: 100%;
+    transform-origin: bottom;
+    animation: listening 900ms ease-in-out infinite;
+  }
+
+  @keyframes listening {
+    0%,
+    100% {
+      transform: scaleY(0.25);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+
   /* a single accent hairline is the whole decoration budget */
   ::selection {
     background-color: var(--app-selection);

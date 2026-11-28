@@ -271,9 +271,23 @@ reviewed before it can post. The answer lives in the URL (`?mode=manual|photo|vo
 opens the form and keeps the three intakes in a rail beside it; a phone has no room for both, so it
 asks first, with cards big enough for a thumb, and the chosen intake replaces the question.
 
-Voice is a text box with the keyboard's dictation behind it, not a recorder: `OPENAI_API_KEY` is
-reserved and `config.SelectRail` builds no chat rail, so nothing would transcribe a recording. The
-capture it queues is `kind: manual`, and the entry an approval posts reads `source: manual`.
+**Photo is the phone as a scanner.** `getUserMedia` with `facingMode: 'environment'` paints a
+full-height preview behind a hairline frame; the shutter draws the frame onto a canvas and hands
+back a JPEG, and the shot then offers "take another" or "queue capture". The stream opens only when
+asked for and stops on close, on capture and on unmount — a camera left running is a lens light and
+a battery drain nobody asked for. No camera, or a denied one, leaves the Ark dropzone: photos and
+PDFs, tagged `image` or `statement`, the kind deciding the `source` the approved entry is filed
+under.
+
+**Voice is the browser's own recogniser**, not a recorder: `modules/capture/dictation.ts` starts
+`SpeechRecognition` (or `webkitSpeechRecognition`), interim words land in the box as they are
+spoken, a final word settles them, and the record button wears a five-bar meter while the
+microphone is open. The audio is never kept — what the queue receives is the sentence, editable —
+and a browser without a recogniser (Firefox) gets no button and keeps typing. That is also why
+there is no third-party recorder here: every one of them records audio this API cannot store, and
+the extraction rails have no transcription to send it to (`OPENAI_API_KEY` is reserved and
+`config.SelectRail` builds no chat rail). The capture it queues is `kind: manual`, and the entry an
+approval posts reads `source: manual`.
 
 The manual form reads from the top as one sentence: **Kind** (money out or money in), **Category**,
 **What was it**, **Paid to** / **Received from**, **Paid from** / **Received in**, **Amount**, **Day**.

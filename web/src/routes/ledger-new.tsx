@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Camera, Keyboard, Mic } from 'lucide-react'
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Controller, type UseFormReturn } from 'react-hook-form'
 
 import { createCapture, parkCapture } from '@/api/captures'
@@ -28,10 +28,15 @@ import { cn } from '@/lib/cn'
 import { clearDraft, readDraft, writeDraft } from '@/lib/draft'
 import { parseMoney } from '@/lib/money'
 import {
+  CameraShot,
+  cameraSupported,
+  canDictate,
+  dictate,
   emptyEntryForm,
   entryResolver,
   isCategoryKind,
   isMoneyKind,
+  type Dictation,
   type EntryFormValues,
 } from '@/modules'
 
@@ -520,24 +525,46 @@ function PayeeField({
 }
 
 /**
- * The photo path: one file, an optional line beside it, and the intake queue does the rest. A
- * picture becomes an `image` capture and a PDF a `statement`, which is the kind the entry it
- * becomes is filed under later.
+ * The photo path: the camera when the device has one, a chosen file when it does not, and one note
+ * beside either. The frame comes back as a JPEG through a canvas, so what was on screen is what
+ * reaches the queue; a PDF picked from disk stays a `statement` capture, a photo an `image` one.
  */
 function PhotoPanel({ onQueued }: { onQueued: () => void }) {
-  const [files, setFiles] = useState<File[]>([])
+  const [shot, setShot] = useState<File>()
+  const [preview, setPreview] = useState('')
   const [note, setNote] = useState('')
-  const file = files[0]
+
+  useEffect(() => {
+    return () => {
+      if (preview !== '') {
+        URL.revokeObjectURL(preview)
+      }
+    }
+  }, [preview])
+
+  const take = (file: File) => {
+    setShot(file)
+    setPreview(URL.createObjectURL(file))
+  }
+
+  const discard = () => {
+    if (preview !== '') {
+      URL.revokeObjectURL(preview)
+    }
+
+    setPreview('')
+    setShot(undefined)
+  }
 
   const upload = useMutation({
     mutationFn: async () => {
-      if (file === undefined) {
-        throw new Error('choose a receipt or a statement first')
+      if (shot === undefined) {
+        throw new Error('take a photo or choose a file first')
       }
 
       return createCapture({
-        file,
-        kind: file.type.startsWith('image/') ? 'image' : 'statement',
+        file: shot,
+        kind: shot.type.startsWith('image/') ? 'image' : 'statement',
         ...(note.trim() === '' ? {} : { rawText: note.trim() }),
       })
     },
@@ -556,14 +583,40 @@ function PhotoPanel({ onQueued }: { onQueued: () => void }) {
           upload.mutate()
         }}
       >
-        <FileUpload
-          accept={{
-            'image/*': ['.png', '.jpg', '.jpeg', '.heic', '.webp'],
-            'application/pdf': ['.pdf'],
-          }}
-          label="Drop a receipt or a statement, or choose a file"
-          onFilesChange={setFiles}
-        />
+        {shot === undefined || preview === '' ? (
+          <div className="space-y-3">
+            {cameraSupported() ? <CameraShot onCapture={take} /> : null}
+            <FileUpload
+              accept={{
+                'image/*': ['.png', '.jpg', '.jpeg', '.heic', '.webp'],
+                'application/pdf': ['.pdf'],
+              }}
+              label={
+                cameraSupported()
+                  ? 'Or pick a photo, or a PDF statement'
+                  : 'Take a photo, or pick a photo or a PDF'
+              }
+              onFilesChange={(files) => {
+                const file = files[0]
+
+                if (file !== undefined) {
+                  take(file)
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <img
+              src={preview}
+              alt="The receipt you took"
+              className="bg-surface-sunken max-h-[58dvh] w-full rounded-lg object-contain sm:max-h-96"
+            />
+            <Button tone="quiet" size="sm" onClick={discard}>
+              Take another
+            </Button>
+          </div>
+        )}
 
         <Field label="Note">
           <TextInput
@@ -581,7 +634,7 @@ function PhotoPanel({ onQueued }: { onQueued: () => void }) {
           size="lg"
           block
           loading={upload.isPending}
-          disabled={file === undefined}
+          disabled={shot === undefined}
         >
           {upload.isPending ? 'Queueing' : 'Queue capture'}
         </Button>
@@ -597,11 +650,55 @@ function PhotoPanel({ onQueued }: { onQueued: () => void }) {
 }
 
 /**
- * The voice path until a transcription rail exists: a line the keyboard dictates. It is a capture,
- * not an entry, so it is reviewed before it can post — the same queue a photo lands in.
+ * The voice path: a record button that dictates into the box below, with the words arriving as you
+ * speak and settling when you pause. The audio is never kept — the recogniser lives in the browser,
+ * and what the queue receives is the sentence, editable, exactly like something typed. A device
+ * without a recogniser simply does not get the button; the box still works.
  */
 function VoicePanel({ onQueued }: { onQueued: () => void }) {
   const [line, setLine] = useState('')
+  const [listening, setListening] = useState(false)
+  const session = useRef<Dictation | undefined>(undefined)
+  const settled = useRef('')
+
+  useEffect(() => {
+    return () => {
+      session.current?.stop()
+      session.current = undefined
+    }
+  }, [])
+
+  const stop = () => {
+    session.current?.stop()
+    session.current = undefined
+    setListening(false)
+  }
+
+  const start = () => {
+    settled.current = line === '' ? '' : `${line} `
+
+    const started = dictate({
+      onText: (text, final) => {
+        if (final) {
+          settled.current = `${settled.current}${text} `.replace(/\s+/g, ' ')
+          setLine(settled.current)
+        } else {
+          setLine(`${settled.current}${text}`)
+        }
+      },
+      onEnd: () => {
+        session.current = undefined
+        setListening(false)
+      },
+    })
+
+    if (started === undefined) {
+      return
+    }
+
+    session.current = started
+    setListening(true)
+  }
 
   const park = useMutation({
     mutationFn: () => parkCapture({ kind: 'manual', rawText: line.trim() }),
@@ -631,15 +728,39 @@ function VoicePanel({ onQueued }: { onQueued: () => void }) {
           />
         </Field>
 
-        <Button
-          type="submit"
-          size="lg"
-          block
-          loading={park.isPending}
-          disabled={line.trim().length < 3}
-        >
-          {park.isPending ? 'Queueing' : 'Queue it'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {canDictate() ? (
+            <Button
+              tone={listening ? 'danger' : 'quiet'}
+              aria-pressed={listening}
+              onClick={listening ? stop : start}
+            >
+              {listening ? (
+                <>
+                  <span className="flex h-3.5 items-end gap-0.5" aria-hidden="true">
+                    {[0, 1, 2, 3, 4].map((bar) => (
+                      <span
+                        key={bar}
+                        className="listening-bar bg-current w-0.5 rounded-full"
+                        style={{ animationDelay: `${String(bar * 110)}ms` }}
+                      />
+                    ))}
+                  </span>
+                  Stop
+                </>
+              ) : (
+                <>
+                  <Mic className="size-4" aria-hidden="true" strokeWidth={1.75} />
+                  Record
+                </>
+              )}
+            </Button>
+          ) : null}
+
+          <Button type="submit" loading={park.isPending} disabled={line.trim().length < 3}>
+            {park.isPending ? 'Queueing' : 'Queue it'}
+          </Button>
+        </div>
 
         {park.error === null ? null : (
           <Text as="p" tone="caption" className="text-danger" role="alert">
