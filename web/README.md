@@ -204,6 +204,18 @@ is a name plus two optional defaults (`default_account_ref`, `default_category_r
 sends a ref only when one was picked, which is also how a patch leaves the other default alone.
 `modules/payee/row.ts` resolves both refs to words once per page instead of once per row.
 
+The three lists share the register's row: an uppercase column strip, the same grid, the same hover,
+so a page of accounts, categories or payees reads like a page of entries. Each has a search box in
+front of it (`?query=` on `/api/accounts` and `/api/payees`); the term is local state today, not a
+URL parameter, so a filtered list cannot be linked yet. `/manage` is the index over Accounts,
+Categories, Payees, Captures and Exports, and the desk header carries one tab for it.
+
+Every row also has a history: `<EntityHistory kind ref />` (an `account`, a `payee`, a
+`ledger_entry`) renders `GET /api/audit?entity_kind=…&entity_ref=…` as a timeline. An entry merges
+that with one page of `ledger_entry` rows, because the journal keys a reversal to the mirror it
+wrote and only names the parent inside `to.reversal_of_ref`; the matching line links through to the
+other entry.
+
 ## Writing an entry — direction is the category
 
 `/ledger/new` is one screen with two modes: type it, or scan it. The mode lives in the URL

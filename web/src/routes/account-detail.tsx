@@ -12,6 +12,7 @@ import { useMoney } from '@/hooks/use-money'
 import { cn } from '@/lib/cn'
 import { formatMoney } from '@/lib/money'
 import { absent } from '@/lib/text'
+import { EntityHistory } from '@/components/ui/entity-history'
 import { accountIndex, EntryMovements } from '@/modules'
 
 /**
@@ -74,6 +75,8 @@ export function AccountDetailPage() {
         index={accountIndex(accounts)}
         scale={money.scale}
       />
+
+      <EntityHistory kind="account" ref={ref} />
     </div>
   )
 }

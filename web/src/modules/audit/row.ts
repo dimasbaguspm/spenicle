@@ -1,11 +1,13 @@
 import type { AuditRow } from '@/api/types'
 import { DateFormat, formatDate } from '@/lib/date'
 
-/** A journal line as a screen reads it: what happened, who did it, when, and what it points at. */
+/** A journal line as a screen reads it: what happened, what it points at, who and when. */
 export type TimelineRow = {
   ref: string
   label: string
   detail: string | undefined
+  /** the other row this line is about, so the timeline can link instead of printing a hash */
+  related: string | undefined
   actor: string
   when: string
 }
@@ -19,42 +21,47 @@ const labels: Record<string, string> = {
   revoke: 'Revoked',
 }
 
-const first = (ref: string | undefined): string =>
-  ref === undefined ? 'an entry' : ref.slice(0, 8)
-
 /** The reversal rows carry the two refs that make a chain; everything else is a plain event. */
 type ReversalSnapshot = {
   reversal_of_ref?: string
   reversal_entry_ref?: string
 }
 
+const words = (kind: string): string => (kind === 'ledger_entry' ? 'entry' : kind.replace('_', ' '))
+
 /**
- * One entry's own history, newest first. Rows are matched two ways, because the journal keys a
- * reversal to the mirror entry it wrote and only names the original in its snapshot: a row belongs
- * here when it happened to this entry, or when this entry is the parent it points at.
+ * One row's history. With a ref, only the lines that concern that entry are kept - its own events,
+ * plus a reversal that names it as the parent, which the journal keys to the mirror instead.
+ * Without a ref the caller already asked for one entity, so every row belongs.
  */
-export function timelineRows(rows: readonly AuditRow[], ref: string): TimelineRow[] {
+export function timelineRows(rows: readonly AuditRow[], ref?: string): TimelineRow[] {
+  const seen = new Set<string>()
+
   return rows.flatMap((row) => {
     const snapshot = (row.to ?? {}) as ReversalSnapshot
-    const mine = row.entity_ref === ref
-    const reversalOfMe = snapshot.reversal_of_ref === ref
+    const mine = ref === undefined || row.entity_ref === ref
+    const reversalOfMe = ref !== undefined && snapshot.reversal_of_ref === ref
 
-    if (!mine && !reversalOfMe) {
+    if ((!mine && !reversalOfMe) || seen.has(row.ref)) {
       return []
     }
 
+    seen.add(row.ref)
+
+    const other = mine ? snapshot.reversal_of_ref : snapshot.reversal_entry_ref
     const detail =
-      row.action === 'reverse'
-        ? mine
-          ? `Reverses ${first(snapshot.reversal_of_ref)}`
-          : `Reversed by ${first(snapshot.reversal_entry_ref)}`
-        : undefined
+      row.action !== 'reverse'
+        ? undefined
+        : mine
+          ? `Reverses ${words(row.entity_kind)} ${other?.slice(0, 8) ?? ''}`.trim()
+          : `Reversed by ${words(row.entity_kind)} ${other?.slice(0, 8) ?? ''}`.trim()
 
     return [
       {
         ref: row.ref,
         label: labels[row.action] ?? row.action,
         detail,
+        related: row.action === 'reverse' ? other : undefined,
         actor: row.actor_kind === 'worker' ? 'the worker' : 'you',
         when: formatDate(row.at, DateFormat.Timestamp),
       },

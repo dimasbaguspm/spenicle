@@ -12,6 +12,7 @@ import { useMoney } from '@/hooks/use-money'
 import { cn } from '@/lib/cn'
 import { formatMoney } from '@/lib/money'
 import { absent } from '@/lib/text'
+import { EntityHistory } from '@/components/ui/entity-history'
 import { accountIndex, EntryMovements } from '@/modules'
 
 /** One category and what it filed, with the register's filters: the month question lives here. */
@@ -71,6 +72,8 @@ export function CategoryDetailPage() {
         index={accountIndex(accounts)}
         scale={money.scale}
       />
+
+      <EntityHistory kind="account" ref={ref} />
     </div>
   )
 }

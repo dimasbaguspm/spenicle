@@ -17,12 +17,10 @@ import { useAuth } from '@/providers'
 import { queryClient } from '@/api/query'
 import { cn } from '@/lib/cn'
 
-/** The five screens the desk nav carries; everything else is one click from the bar below. */
+/** The three screens the desk nav carries; everything else is one click from Manage. */
 const deskSections = [
   { to: '/ledger', label: 'Register' },
-  { to: '/accounts', label: 'Accounts' },
-  { to: '/categories', label: 'Categories' },
-  { to: '/payees', label: 'Payees' },
+  { to: '/manage', label: 'Manage' },
   { to: '/analytics', label: 'Analytics' },
 ] as const
 
@@ -86,7 +84,7 @@ function DeskHeader() {
   return (
     <header className="border-border bg-surface-sunken/90 sticky top-0 z-30 hidden border-b backdrop-blur-sm lg:block">
       <div className={`${shellWidth} flex h-14 items-center gap-6`}>
-        <Link to="/ledger" className="shrink-0 rounded focus-visible:outline-offset-4">
+        <Link to="/dashboard" className="shrink-0 rounded focus-visible:outline-offset-4">
           <Brand size="sm" />
         </Link>
 
@@ -156,6 +154,7 @@ function ThumbBar() {
           <Menu
             align="end"
             items={[
+              { label: 'Manage', onSelect: () => void navigate({ to: '/manage' }) },
               { label: 'Captures', onSelect: () => void navigate({ to: '/captures' }) },
               { label: 'Categories', onSelect: () => void navigate({ to: '/categories' }) },
               { label: 'Payees', onSelect: () => void navigate({ to: '/payees' }) },

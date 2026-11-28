@@ -1,10 +1,12 @@
 import { Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
+import { useState } from 'react'
 
 import { Panel } from '@/components/primitives/panel'
 import { PageHeader } from '@/components/primitives/page-header'
 import { buttonStyles } from '@/components/primitives/button'
 import { Text } from '@/components/primitives/text'
+import { TextInput } from '@/components/primitives/text-input'
 import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useMoney } from '@/hooks/use-money'
 import { cn } from '@/lib/cn'
@@ -68,7 +70,11 @@ function ScopePage({
   otherLabel,
   otherTo,
 }: ScopePageProps) {
-  const accounts = useAccounts({ limit: 200 })
+  const [query, setQuery] = useState('')
+  const accounts = useAccounts({
+    limit: 200,
+    ...(query.trim() === '' ? {} : { query: query.trim() }),
+  })
   const money = useMoney()
 
   const rows = (accounts.data?.accounts ?? []).filter(
@@ -87,6 +93,22 @@ function ScopePage({
           </Link>
         }
       />
+
+      <div className="relative max-w-sm">
+        <Search
+          className="text-text-faint pointer-events-none absolute inset-y-0 left-3 my-auto size-4"
+          aria-hidden="true"
+        />
+        <TextInput
+          value={query}
+          className="pl-9"
+          placeholder="Search…"
+          aria-label={`Search ${title.toLowerCase()}`}
+          onChange={(event) => {
+            setQuery(event.target.value)
+          }}
+        />
+      </div>
 
       {accounts.error === null ? null : (
         <Text as="p" tone="caption" className="text-danger" role="alert">

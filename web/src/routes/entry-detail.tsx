@@ -9,7 +9,7 @@ import { Field } from '@/components/primitives/field'
 import { Panel } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
-import { useLedgerAudit } from '@/hooks/queries/use-audit'
+import { useEntityAudit, useLedgerAudit } from '@/hooks/queries/use-audit'
 import { useEntry, usePatchEntry } from '@/hooks/queries/use-entries'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useMoney } from '@/hooks/use-money'
@@ -34,7 +34,8 @@ export function EntryDetailPage() {
   const entry = useEntry(ref)
   const meta = useMeta()
   const money = useMoney()
-  const audit = useLedgerAudit()
+  const audit = useEntityAudit('ledger_entry', ref)
+  const scan = useLedgerAudit()
 
   const accounts = accountIndex(meta.data?.accounts ?? [])
   const reversed = entry.data?.reversed_at !== undefined
@@ -79,7 +80,9 @@ export function EntryDetailPage() {
                 Timeline
               </Text>
             </div>
-            <EntryTimeline rows={timelineRows(audit.data?.audit ?? [], ref)} />
+            <EntryTimeline
+              rows={timelineRows([...(audit.data?.audit ?? []), ...(scan.data?.audit ?? [])], ref)}
+            />
           </Panel>
         </>
       )}

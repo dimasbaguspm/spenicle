@@ -16,6 +16,7 @@ import { EntryDetailPage } from '@/routes/entry-detail'
 import { EntryEditPage } from '@/routes/entry-edit'
 import { ExportsPage } from '@/routes/exports'
 import { LedgerPage } from '@/routes/ledger'
+import { ManagePage } from '@/routes/manage'
 import { NewEntryPage } from '@/routes/ledger-new'
 import { LoginPage } from '@/routes/login'
 import { PayeeDetailPage } from '@/routes/payee-detail'
@@ -56,6 +57,12 @@ const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard',
   component: DashboardPage,
+})
+
+const manageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage',
+  component: ManagePage,
 })
 
 const ledgerRoute = createRoute({
@@ -195,6 +202,7 @@ export const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
   dashboardRoute,
+  manageRoute,
   ledgerRoute,
   newEntryRoute,
   entryRoute,

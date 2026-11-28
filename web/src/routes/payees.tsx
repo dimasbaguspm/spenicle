@@ -1,10 +1,12 @@
 import { Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
+import { useState } from 'react'
 
 import { PageHeader } from '@/components/primitives/page-header'
 import { buttonStyles } from '@/components/primitives/button'
 import { Panel } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
+import { TextInput } from '@/components/primitives/text-input'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { usePayees } from '@/hooks/queries/use-payees'
 import { cn } from '@/lib/cn'
@@ -14,7 +16,11 @@ import { PayeeList, payeeRows } from '@/modules'
 const payeeCrumbs = [{ label: 'Payees' }] as const
 
 export function PayeesPage() {
-  const payees = usePayees({ limit: 200 })
+  const [query, setQuery] = useState('')
+  const payees = usePayees({
+    limit: 200,
+    ...(query.trim() === '' ? {} : { query: query.trim() }),
+  })
   const meta = useMeta()
 
   const rows = payeeRows(payees.data?.payees ?? [], meta.data?.accounts ?? [])
@@ -31,6 +37,22 @@ export function PayeesPage() {
           </Link>
         }
       />
+
+      <div className="relative max-w-sm">
+        <Search
+          className="text-text-faint pointer-events-none absolute inset-y-0 left-3 my-auto size-4"
+          aria-hidden="true"
+        />
+        <TextInput
+          value={query}
+          className="pl-9"
+          placeholder="Search payees…"
+          aria-label="Search payees"
+          onChange={(event) => {
+            setQuery(event.target.value)
+          }}
+        />
+      </div>
 
       {payees.error === null ? null : (
         <Text as="p" tone="caption" className="text-danger" role="alert">
