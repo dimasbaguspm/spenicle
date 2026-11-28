@@ -1,249 +1,59 @@
-import { Schema } from 'effect'
+import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { Camera, Keyboard } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useState } from 'react'
+import { Controller, type UseFormReturn } from 'react-hook-form'
 
-import { useMutation } from '@tanstack/react-query'
 import { createCapture } from '@/api/captures'
 import { queryClient } from '@/api/query'
+import type { Account, Payee } from '@/api/types'
 import { Button } from '@/components/primitives/button'
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
 import { control } from '@/components/primitives/control'
-import { DateInput } from '@/components/primitives/date-input'
 import { Field } from '@/components/primitives/field'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Panel, PanelHead } from '@/components/primitives/panel'
 import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
+import { DateField, Form, SelectField, TextField } from '@/components/ui/form'
 import { useCreateEntry } from '@/hooks/queries/use-entries'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useMoney } from '@/hooks/use-money'
 import { cn } from '@/lib/cn'
 import { parseMoney } from '@/lib/money'
 import {
-  accountIndex,
   emptyEntryForm,
-  EntryForm,
+  entryResolver,
   isCategoryKind,
   isMoneyKind,
   type EntryFormValues,
 } from '@/modules'
-
-const resolver: Resolver<EntryFormValues> = (values) => {
-  try {
-    return { values: Schema.decodeUnknownSync(EntryForm)(values), errors: {} }
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : 'the form is not valid'
-
-    return { values: {}, errors: { root: { type: 'validate', message } } }
-  }
-}
 
 /**
  * Writing an entry starts with a choice, not an amount: type it, or hand over the receipt and let
  * the intake queue it. `/ledger/new?mode=scan` is the same page with the other mode open, so a
  * phone's camera shortcut is one URL away.
  */
-/** Stable crumbs: a new array on every render would re-render the trail for nothing. */
-const newEntryCrumbs = [{ label: 'Ledger', to: '/ledger' }, { label: 'New entry' }] as const
-
 export function NewEntryPage() {
   const { mode } = useSearch({ from: '/ledger/new' })
   const navigate = useNavigate({ from: '/ledger/new' })
   const meta = useMeta()
-  const money = useMoney()
-
-  const accounts = meta.data?.accounts ?? []
-  const index = accountIndex(accounts)
-  const categoryOptions = accounts
-    .filter((row) => isCategoryKind(row.kind))
-    .map((row) => ({ label: row.name, value: row.ref }))
-  const accountOptions = accounts
-    .filter((row) => isMoneyKind(row.kind))
-    .map((row) => ({ label: row.name, value: row.ref }))
-
-  const form = useForm<EntryFormValues>({ resolver, defaultValues: emptyEntryForm() })
-
-  useEffect(() => {
-    const firstCategory = categoryOptions[0]
-    const firstAccount = accountOptions[0]
-
-    if (firstCategory !== undefined && form.getValues('categoryRef') === '') {
-      form.setValue('categoryRef', firstCategory.value)
-    }
-
-    if (firstAccount !== undefined && form.getValues('accountRef') === '') {
-      form.setValue('accountRef', firstAccount.value)
-    }
-  }, [accountOptions, categoryOptions, form])
-
-  const post = useCreateEntry()
-
-  const submit = form.handleSubmit((values) => {
-    const amount = parseMoney(values.amount, money.scale.units)
-
-    if (amount.sign() === 0) {
-      form.setError('root', { type: 'validate', message: 'enter an amount' })
-      return
-    }
-
-    post.mutate(
-      {
-        occurred_on: values.occurredOn,
-        currency: money.scale.currency,
-        note: values.note,
-        postings: [
-          { account_ref: values.categoryRef, amount_minor: amount.toMinor() },
-          { account_ref: values.accountRef, amount_minor: amount.negate().toMinor() },
-        ],
-      },
-      {
-        onSuccess: async () => {
-          await queryClient.invalidateQueries({ queryKey: ['entries'] })
-          void navigate({ to: '/ledger' })
-        },
-      },
-    )
-  })
-
-  const errors = form.formState.errors
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <header className="space-y-2">
-        <Breadcrumb items={newEntryCrumbs} />
-        <Text as="h1" tone="display">
-          New entry
-        </Text>
-      </header>
+      <PageHeader
+        items={[{ label: 'Ledger', to: '/ledger' }, { label: 'New entry' }]}
+        title="New entry"
+      />
 
-      <div className="border-border bg-surface-sunken grid gap-1 rounded-lg border p-1 sm:grid-cols-2">
-        <Link
-          to="/ledger/new"
-          search={{ mode: 'manual' }}
-          className={cn(
-            'flex items-center gap-3 rounded-md px-4 py-3 text-sm transition-colors',
-            mode === 'manual'
-              ? 'bg-surface text-text border-border-strong border'
-              : 'text-text-muted hover:text-text',
-          )}
-        >
-          <Keyboard className="size-4" aria-hidden="true" strokeWidth={1.75} />
-          <span className="space-y-0.5">
-            <span className="block font-medium">Type it</span>
-            <span className="text-text-faint block text-xs">Amount, what it was, paid from.</span>
-          </span>
-        </Link>
-        <Link
-          to="/ledger/new"
-          search={{ mode: 'scan' }}
-          className={cn(
-            'flex items-center gap-3 rounded-md px-4 py-3 text-sm transition-colors',
-            mode === 'scan'
-              ? 'bg-surface text-text border-border-strong border'
-              : 'text-text-muted hover:text-text',
-          )}
-        >
-          <Camera className="size-4" aria-hidden="true" strokeWidth={1.75} />
-          <span className="space-y-0.5">
-            <span className="block font-medium">Scan a receipt</span>
-            <span className="text-text-faint block text-xs">
-              A photo or a PDF, queued as a capture.
-            </span>
-          </span>
-        </Link>
-      </div>
+      <ModeSwitch mode={mode} />
 
       {mode === 'manual' ? (
-        <Panel>
-          <form className="space-y-5 p-5 sm:p-6" onSubmit={submit}>
-            <PanelHead
-              eyebrow="Manual entry"
-              description="It posts straight to the ledger, balanced against the category you pick."
-            />
-
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Amount" error={errors.amount?.message} className="sm:col-span-2">
-                <div className="relative">
-                  <TextInput
-                    inputMode="decimal"
-                    placeholder="0"
-                    autoComplete="off"
-                    aria-label="Amount"
-                    className="h-14 pr-14 font-mono text-2xl tracking-tight"
-                    {...form.register('amount')}
-                  />
-                  <span className="text-text-muted pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-[0.6875rem] uppercase">
-                    {money.scale.currency}
-                  </span>
-                </div>
-              </Field>
-
-              <Field label="What was it" error={errors.note?.message} className="sm:col-span-2">
-                <TextInput
-                  placeholder="coffee, taxi, rent…"
-                  autoComplete="off"
-                  {...form.register('note')}
-                />
-              </Field>
-
-              <Field label="Day" error={errors.occurredOn?.message}>
-                <DateInput {...form.register('occurredOn')} />
-              </Field>
-
-              <Controller
-                control={form.control}
-                name="categoryRef"
-                render={({ field, fieldState }) => (
-                  <Field label="Category" error={fieldState.error?.message}>
-                    <SelectInput
-                      value={field.value}
-                      options={categoryOptions}
-                      placeholder="pick a category…"
-                      onChange={field.onChange}
-                    />
-                  </Field>
-                )}
-              />
-
-              <Controller
-                control={form.control}
-                name="accountRef"
-                render={({ field, fieldState }) => (
-                  <Field
-                    label="Paid from"
-                    error={fieldState.error?.message}
-                    className="sm:col-span-2"
-                  >
-                    <SelectInput
-                      value={field.value}
-                      options={accountOptions}
-                      placeholder="pick an account…"
-                      onChange={field.onChange}
-                    />
-                  </Field>
-                )}
-              />
-            </div>
-
-            <div className="space-y-3 pt-1">
-              <Button type="submit" size="lg" block loading={post.isPending}>
-                {post.isPending ? 'Posting…' : 'Post entry'}
-              </Button>
-              {errors.root === undefined ? null : (
-                <Text as="p" tone="caption" className="text-danger" role="alert">
-                  {errors.root.message}
-                </Text>
-              )}
-              {post.error === null ? null : (
-                <Text as="p" tone="caption" className="text-danger" role="alert">
-                  {post.error.message}
-                </Text>
-              )}
-            </div>
-          </form>
-        </Panel>
+        <ManualEntry
+          accounts={meta.data?.accounts ?? []}
+          payees={meta.data?.payees ?? []}
+          ready={meta.isSuccess}
+        />
       ) : (
         <ScanPanel
           onQueued={() => {
@@ -251,13 +61,213 @@ export function NewEntryPage() {
           }}
         />
       )}
-
-      <Text as="p" tone="caption" className="text-text-faint">
-        An account holds money. A category says what the money was for. Every entry touches one of
-        each:{' '}
-        {accounts.length === 0 ? 'no accounts yet' : `${String(index.size)} accounts to pick from`}.
-      </Text>
     </div>
+  )
+}
+
+/** Two ways in, one control: the shape of the page, not a route of its own. */
+function ModeSwitch({ mode }: { mode: 'manual' | 'scan' }) {
+  const tab = 'flex items-center gap-3 rounded-md px-4 py-3 text-sm transition-colors'
+  const on = 'bg-surface text-text border-border-strong border'
+  const off = 'text-text-muted hover:text-text'
+
+  return (
+    <div className="border-border bg-surface-sunken grid gap-1 rounded-lg border p-1 sm:grid-cols-2">
+      <Link
+        to="/ledger/new"
+        search={{ mode: 'manual' }}
+        className={cn(tab, mode === 'manual' ? on : off)}
+      >
+        <Keyboard className="size-4" aria-hidden="true" strokeWidth={1.75} />
+        <span className="space-y-0.5">
+          <span className="block font-medium">Type it</span>
+          <span className="text-text-faint block text-xs">Amount, who, what for, paid from.</span>
+        </span>
+      </Link>
+      <Link
+        to="/ledger/new"
+        search={{ mode: 'scan' }}
+        className={cn(tab, mode === 'scan' ? on : off)}
+      >
+        <Camera className="size-4" aria-hidden="true" strokeWidth={1.75} />
+        <span className="space-y-0.5">
+          <span className="block font-medium">Scan a receipt</span>
+          <span className="text-text-faint block text-xs">
+            A photo or a PDF, queued as a capture.
+          </span>
+        </span>
+      </Link>
+    </div>
+  )
+}
+
+/**
+ * The manual form is only mounted once the meta read lands: its opening values are the two refs it
+ * offers, and a form is the wrong place to discover that the list arrived late.
+ */
+function ManualEntry({
+  accounts,
+  payees,
+  ready,
+}: {
+  accounts: readonly Account[]
+  payees: readonly Payee[]
+  ready: boolean
+}) {
+  const navigate = useNavigate()
+  const money = useMoney()
+  const post = useCreateEntry()
+
+  const categoryOptions = accounts
+    .filter((account) => isCategoryKind(account.kind))
+    .map((account) => ({ label: account.name, value: account.ref }))
+
+  const accountOptions = accounts
+    .filter((account) => isMoneyKind(account.kind))
+    .map((account) => ({ label: account.name, value: account.ref }))
+
+  if (!ready) {
+    return (
+      <Panel>
+        <Text as="p" tone="muted" className="p-5 sm:p-6">
+          Loading the accounts to pick from…
+        </Text>
+      </Panel>
+    )
+  }
+
+  return (
+    <Panel>
+      <div className="p-5 sm:p-6">
+        <PanelHead
+          eyebrow="Manual entry"
+          description="Two postings, one amount: the category takes what the account gives up."
+        />
+
+        <Form<EntryFormValues>
+          className="mt-4"
+          defaultValues={emptyEntryForm(undefined, {
+            accountRef: accountOptions[0]?.value,
+            categoryRef: categoryOptions[0]?.value,
+          })}
+          resolver={entryResolver}
+          submitLabel="Post entry"
+          onCancel={() => void navigate({ to: '/ledger' })}
+          onSubmit={(values) => {
+            const amount = parseMoney(values.amount, money.scale.units)
+
+            if (amount.sign() === 0) {
+              return
+            }
+
+            post.mutate(
+              {
+                occurred_on: values.occurredOn,
+                currency: money.scale.currency,
+                note: values.note,
+                ...(values.payeeRef === '' ? {} : { payee_ref: values.payeeRef }),
+                postings: [
+                  { account_ref: values.categoryRef, amount_minor: amount.toMinor() },
+                  { account_ref: values.accountRef, amount_minor: amount.negate().toMinor() },
+                ],
+              },
+              {
+                onSuccess: async () => {
+                  await queryClient.invalidateQueries({ queryKey: ['entries'] })
+                  void navigate({ to: '/ledger' })
+                },
+              },
+            )
+          }}
+        >
+          {(form) => (
+            <>
+              <TextField<EntryFormValues>
+                name="amount"
+                label="Amount"
+                hint={`In ${money.scale.currency}, the currency the ledger is kept in.`}
+                placeholder="0"
+              />
+              <TextField<EntryFormValues>
+                name="note"
+                label="What was it"
+                placeholder="coffee, taxi, rent…"
+              />
+              <DateField<EntryFormValues> name="occurredOn" label="Day" />
+              <PayeeField form={form} payees={payees} />
+              <SelectField<EntryFormValues>
+                name="categoryRef"
+                label="Category"
+                options={categoryOptions}
+                placeholder="pick a category…"
+              />
+              <SelectField<EntryFormValues>
+                name="accountRef"
+                label="Paid from"
+                options={accountOptions}
+                placeholder="pick an account…"
+              />
+            </>
+          )}
+        </Form>
+
+        {post.error === null ? null : (
+          <Text as="p" tone="caption" className="text-danger pt-3" role="alert">
+            {post.error.message}
+          </Text>
+        )}
+      </div>
+    </Panel>
+  )
+}
+
+/**
+ * The payee is the shortcut: picking one writes the defaults it carries into the two refs below,
+ * and both stay editable, because a default is a starting point and not a decision.
+ */
+function PayeeField({
+  form,
+  payees,
+}: {
+  form: UseFormReturn<EntryFormValues>
+  payees: readonly Payee[]
+}) {
+  const options = [
+    { label: 'No payee', value: '' },
+    ...payees.map((payee) => ({ label: payee.name, value: payee.ref })),
+  ]
+
+  return (
+    <Controller
+      control={form.control}
+      name="payeeRef"
+      render={({ field, fieldState }) => (
+        <Field
+          label="Paid to"
+          error={fieldState.error?.message}
+          hint="Picking one fills in the defaults it carries."
+        >
+          <SelectInput
+            value={field.value}
+            options={options}
+            placeholder="nobody in particular"
+            onChange={(next) => {
+              field.onChange(next)
+
+              const payee = payees.find((row) => row.ref === next)
+
+              if (payee?.default_account_ref !== undefined) {
+                form.setValue('accountRef', payee.default_account_ref, { shouldDirty: true })
+              }
+
+              if (payee?.default_category_ref !== undefined) {
+                form.setValue('categoryRef', payee.default_category_ref, { shouldDirty: true })
+              }
+            }}
+          />
+        </Field>
+      )}
+    />
   )
 }
 

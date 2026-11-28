@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Button, buttonStyles } from '@/components/primitives/button'
 import { Plus } from 'lucide-react'
 
@@ -55,18 +55,20 @@ export function LedgerPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <Breadcrumb items={registerCrumbs} />
-          <Text as="h1" tone="display">
-            Register
-          </Text>
-        </div>
-        <Link to="/ledger/new" search={{ mode: 'manual' }} className={cn(buttonStyles())}>
-          <Plus className="size-4" aria-hidden="true" strokeWidth={1.75} />
-          New entry
-        </Link>
-      </header>
+      <PageHeader
+        items={registerCrumbs}
+        title="Register"
+        action={
+          <Link
+            to="/ledger/new"
+            search={{ mode: 'manual' }}
+            className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}
+          >
+            <Plus className="size-4" aria-hidden="true" strokeWidth={1.75} />
+            New entry
+          </Link>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[20%_minmax(0,1fr)]">
         <aside className="hidden lg:block">

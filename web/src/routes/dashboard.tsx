@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { Panel } from '@/components/primitives/panel'
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Text } from '@/components/primitives/text'
 import { useDashboard } from '@/hooks/queries/use-dashboard'
 import { useEntries } from '@/hooks/queries/use-entries'
@@ -33,12 +33,7 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <Breadcrumb items={overviewCrumbs} />
-        <Text as="h1" tone="display">
-          Overview
-        </Text>
-      </header>
+      <PageHeader items={overviewCrumbs} title="Overview" />
 
       {dashboard.error === null ? null : (
         <Text as="p" tone="caption" className="text-danger" role="alert">

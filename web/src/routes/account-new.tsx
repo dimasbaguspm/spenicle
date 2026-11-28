@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { Schema } from 'effect'
 import type { Resolver } from 'react-hook-form'
 
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Panel, PanelHead } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { Form, SelectField, TextField } from '@/components/ui/form'
@@ -66,20 +66,16 @@ function ScopeCreate({
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <header className="space-y-2">
-        <Breadcrumb
-          items={[
-            {
-              label: listLabel,
-              to: scope === 'category' ? '/categories' : '/accounts',
-            },
-            { label: title },
-          ]}
-        />
-        <Text as="h1" tone="display">
-          {title}
-        </Text>
-      </header>
+      <PageHeader
+        items={[
+          {
+            label: listLabel,
+            to: scope === 'category' ? '/categories' : '/accounts',
+          },
+          { label: title },
+        ]}
+        title={title}
+      />
 
       <Panel>
         <div className="p-5 sm:p-6">

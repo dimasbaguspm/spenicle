@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Panel, PanelHead } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { Form } from '@/components/ui/form'
@@ -21,12 +21,10 @@ export function NewPayeePage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'Payees', to: '/payees' }, { label: 'New payee' }]} />
-        <Text as="h1" tone="display">
-          New payee
-        </Text>
-      </header>
+      <PageHeader
+        items={[{ label: 'Payees', to: '/payees' }, { label: 'New payee' }]}
+        title="New payee"
+      />
 
       <Panel>
         <div className="p-5 sm:p-6">

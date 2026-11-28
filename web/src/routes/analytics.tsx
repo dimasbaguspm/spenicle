@@ -1,5 +1,5 @@
 import { Panel } from '@/components/primitives/panel'
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Text } from '@/components/primitives/text'
 import { useCategories, useMonths } from '@/hooks/queries/use-analytics'
 import { useMoney } from '@/hooks/use-money'
@@ -20,12 +20,7 @@ export function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <Breadcrumb items={analyticsCrumbs} />
-        <Text as="h1" tone="display">
-          A year in view
-        </Text>
-      </header>
+      <PageHeader items={analyticsCrumbs} title="A year in view" />
 
       <Panel className="space-y-5 p-5 sm:p-6">
         <Text as="p" tone="section">

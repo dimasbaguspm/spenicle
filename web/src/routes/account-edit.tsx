@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Panel, PanelHead } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { Form, TextField } from '@/components/ui/form'
@@ -59,16 +59,14 @@ function RenameAccount({ accountRef, listLabel, listTo, detailTo }: RenameProps)
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <Breadcrumb
+      <PageHeader
         items={[
           { label: listLabel, to: listTo },
           { label: account?.name ?? 'Account', to: `${listTo}/${accountRef}` },
           { label: 'Edit' },
         ]}
+        title="Rename"
       />
-      <Text as="h1" tone="display">
-        Rename
-      </Text>
 
       {values === undefined ? null : (
         <Panel>

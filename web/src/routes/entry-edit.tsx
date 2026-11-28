@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Panel, PanelHead } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { DateField, Form, TextField } from '@/components/ui/form'
@@ -32,16 +32,14 @@ export function EntryEditPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb
+      <PageHeader
         items={[
           { label: 'Ledger', to: '/ledger' },
           { label: 'Entry', to: `/ledger/${ref}` },
           { label: 'Edit' },
         ]}
+        title="Edit entry"
       />
-      <Text as="h1" tone="display">
-        Edit entry
-      </Text>
 
       {entry.error === null ? null : (
         <Text as="p" tone="caption" className="text-danger" role="alert">

@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Panel, PanelHead } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { Form } from '@/components/ui/form'
@@ -31,16 +31,14 @@ export function PayeeEditPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <Breadcrumb
+      <PageHeader
         items={[
           { label: 'Payees', to: '/payees' },
           { label: payee?.name ?? 'Payee', to: `/payees/${ref}` },
           { label: 'Edit' },
         ]}
+        title="Edit payee"
       />
-      <Text as="h1" tone="display">
-        Edit payee
-      </Text>
 
       {values === undefined ? null : (
         <Panel>

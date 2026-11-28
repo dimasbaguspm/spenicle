@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { buttonStyles } from '@/components/primitives/button'
 import { Panel, PanelHead } from '@/components/primitives/panel'
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { Text } from '@/components/primitives/text'
 import { useCaptures } from '@/hooks/queries/use-captures'
 import { cn } from '@/lib/cn'
@@ -17,12 +17,7 @@ export function CapturesPage() {
 
   return (
     <div className="space-y-8">
-      <header className="max-w-prose space-y-2.5">
-        <Breadcrumb items={captureCrumbs} />
-        <Text as="h1" tone="display">
-          Captures
-        </Text>
-      </header>
+      <PageHeader items={captureCrumbs} title="Captures" />
 
       <Panel className={rows.length === 0 ? 'p-6 sm:p-8' : 'p-5 sm:p-6'}>
         {rows.length === 0 ? (

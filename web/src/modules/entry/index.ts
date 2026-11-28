@@ -14,4 +14,5 @@ export {
 export { EntryRegister } from './entry-register'
 export { EntryTicker } from './entry-ticker'
 export { entryRow, type EntryRow } from './row'
-export { EntryForm, emptyEntryForm, type EntryFormValues } from './schema'
+export { EntryForm, emptyEntryForm, entryResolver, type EntryFormValues } from './schema'
+export { EntryMovements, type EntryMovementView, type MovementsMode } from './entry-movements'

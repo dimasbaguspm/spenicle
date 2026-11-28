@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 
 import { Panel } from '@/components/primitives/panel'
-import { Breadcrumb } from '@/components/primitives/breadcrumb'
+import { PageHeader } from '@/components/primitives/page-header'
 import { buttonStyles } from '@/components/primitives/button'
 import { Text } from '@/components/primitives/text'
 import { useAccounts } from '@/hooks/queries/use-accounts'
@@ -21,7 +21,6 @@ export function AccountsPage() {
       scope="money"
       title="Accounts"
       crumbs={accountCrumbs}
-      description="What the money sits in. A balance here is derived from the postings, never typed in."
       emptyLabel="No accounts yet: an entry needs one to be paid from."
       newLabel="New account"
       newTo="/accounts/new"
@@ -38,7 +37,6 @@ export function CategoriesPage() {
       scope="category"
       title="Categories"
       crumbs={categoryCrumbs}
-      description="What money was for, not where it sits. Every entry touches one account and one of these."
       emptyLabel="No categories yet: nothing can be filed without one."
       newLabel="New category"
       newTo="/categories/new"
@@ -52,7 +50,6 @@ type ScopePageProps = {
   scope: AccountScope
   title: string
   crumbs: readonly { label: string }[]
-  description: string
   emptyLabel: string
   newLabel: string
   newTo: '/accounts/new' | '/categories/new'
@@ -65,7 +62,6 @@ function ScopePage({
   scope,
   title,
   crumbs,
-  description,
   emptyLabel,
   newLabel,
   newTo,
@@ -81,21 +77,16 @@ function ScopePage({
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <Breadcrumb items={crumbs} />
-          <Text as="h1" tone="display">
-            {title}
-          </Text>
-          <Text as="p" tone="muted" className="max-w-prose">
-            {description}
-          </Text>
-        </div>
-        <Link to={newTo} className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}>
-          <Plus className="size-3.5" aria-hidden="true" strokeWidth={2} />
-          {newLabel}
-        </Link>
-      </header>
+      <PageHeader
+        items={crumbs}
+        title={title}
+        action={
+          <Link to={newTo} className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}>
+            <Plus className="size-3.5" aria-hidden="true" strokeWidth={2} />
+            {newLabel}
+          </Link>
+        }
+      />
 
       {accounts.error === null ? null : (
         <Text as="p" tone="caption" className="text-danger" role="alert">

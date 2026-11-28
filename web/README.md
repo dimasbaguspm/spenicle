@@ -175,6 +175,19 @@ half-typed date costs no request. Because the state is the URL, a narrowed view 
 The route validates the search (`validateSearch: entrySearch`), so an unknown or empty param is
 dropped rather than sent, and `/accounts/$ref` pins `account_ref` to the account in the path.
 
+Every screen's top is one component, `components/primitives/page-header`: breadcrumb, title,
+action. The title is desktop-only — a phone spends its first line on the breadcrumb instead of a
+42px word above the list — and there is no subtitle, because a sentence belongs on the panel that
+owns what it describes. Page actions are the transparent `quiet` button, never a filled one.
+
+The same filter layer sits under `/accounts/$ref`, `/categories/$ref` and `/payees/$ref`, so the
+question "what did I spend last month" is answerable on any of them: the route pins the ref it is
+about (`account` or `payee`), the rest is the register's own rail, sheet and chips. One presentational
+component draws them (`modules/entry/entry-movements.tsx`) and one hook feeds it
+(`hooks/use-entry-movements.ts`) — a module may not reach for a hook, which is why the read lives
+outside the module. `BreakpointTablet` and `BreakpointDesktop` are the two named halves of `lg`:
+the rail and the sheet are never both rendered.
+
 ## Accounts and categories — one table, two screens
 
 A category is an account of kind `expense` or `income`; there is no separate table and no

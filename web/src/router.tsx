@@ -119,6 +119,7 @@ const newCategoryRoute = createRoute({
 const categoryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/categories/$ref',
+  validateSearch: entrySearch,
   component: CategoryDetailPage,
 })
 
@@ -143,6 +144,7 @@ const newPayeeRoute = createRoute({
 const payeeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/payees/$ref',
+  validateSearch: entrySearch,
   component: PayeeDetailPage,
 })
 
