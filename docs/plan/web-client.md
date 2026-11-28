@@ -27,7 +27,9 @@ and there is no second origin to allow. Development gets the same shape from Vit
 
 ## The credential
 
-1. The operator types the instance password.
+0. A fresh boot writes the generated password to `./data/first-boot.txt` on the data
+   volume; the operator reads it there, not from the log stream.
+1. The operator types that password into `/setup`, then chooses their own.
 2. The SPA sends it once, as `Authorization: Bearer`, to `POST /api/tokens` and receives a
    scoped `spl_…` token.
 3. Only the token is stored (`sessionStorage`); the password lives in one form's state.
@@ -55,7 +57,8 @@ always server-side, so the browser stays on one origin even when the two contain
 
 | screen | route | endpoints |
 | --- | --- | --- |
-| sign in | `/` | `POST /api/tokens` |
+| sign in | `/` | `GET /api/bootstrap`, `POST /api/tokens` |
+| first run: claim, password, currency | `/setup` | `GET /api/bootstrap`, `GET /api/meta` (with the generated password), `POST /api/password` (+ `token`), `POST /api/setup` |
 | register + quick capture | `/ledger` | `GET /api/meta`, `GET /api/entries`, `POST /api/entries` |
 | capture inbox | `/captures` | `GET /api/captures` (approve/reject next) |
 | import review | `/imports` | `POST /api/imports`, `PATCH /api/imports/{ref}`, `…/rows/{index}` |

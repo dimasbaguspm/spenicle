@@ -137,15 +137,23 @@ Every variable is listed with defaults in [`.env.example`](./.env.example); copy
 to `.env` and fill in `APP_SECRET`.
 
 The base currency and the login password are **not** environment variables. They live
-in the app's settings table: a fresh boot generates the first password and prints it
-once, the login screen accepts it, and you are asked to change it. The base currency
-is chosen once by `POST /api/setup`, which can also create accounts with opening
-balances. Completing setup locks it, even with an empty ledger. `PATCH /api/settings` refuses it.
+in the app's settings table: a fresh boot generates the first password and writes it to
+`./data/first-boot.txt` on the data volume (mode `0600`), the setup screen claims it and
+replaces it, and the file is deleted once you set your own. The base currency is chosen
+once by `POST /api/setup`, which can also create accounts with opening balances.
+Completing setup locks it, even with an empty ledger. `PATCH /api/settings` refuses it.
 
 ## First run
 
-The wizard asks for the base currency and can create accounts with their opening
-balances in the same call. Each nonzero balance posts a double-entry `adjustment`
+Open the instance, paste the password from `./data/first-boot.txt`:
+
+```bash
+docker exec <container> cat /data/first-boot.txt
+```
+
+The setup screen then asks for your own password, the base currency and optionally one
+opening account, and it can create accounts with their opening balances in the same
+call. Each nonzero balance posts a double-entry `adjustment`
 against an `Opening balance` equity account; currency-only setup is also valid.
 
 Base currency is locked when setup completes. Changing it later would rewrite

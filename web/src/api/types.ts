@@ -82,6 +82,11 @@ export type RecurringRule = Omitted<
 >
 
 export type Settings = Fixed<Schemas['settingsResponse']>
+export type Bootstrap = Fixed<Schemas['bootstrapResponse']>
+export type LedgerSetup = Schemas['setupRequest']
+export type PasswordChange = Omitted<Fixed<Schemas['passwordChangeResponse']>, 'token'> & {
+  token?: TokenIssued
+}
 export type Meta = Omit<Fixed<Schemas['metaResponse']>, 'accounts' | 'payees' | 'recurring'> & {
   accounts: Account[]
   payees: Payee[]

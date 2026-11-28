@@ -4,13 +4,17 @@ import { hasToken } from '@/api/token'
 import { CapturesPage } from '@/routes/captures'
 import { LedgerPage } from '@/routes/ledger'
 import { LoginPage } from '@/routes/login'
+import { SetupPage } from '@/routes/setup'
 import { AppShell } from '@/components/layouts/app-shell'
+
+/** The two screens a visitor without a credential is allowed to see. */
+const openPaths = new Set(['/', '/setup'])
 
 const rootRoute = createRootRoute({
   component: AppShell,
   beforeLoad: ({ location }) => {
     // the guard lives in the router, not in each screen
-    if (!hasToken() && location.pathname !== '/') {
+    if (!hasToken() && !openPaths.has(location.pathname)) {
       throw redirect({ to: '/' })
     }
   },
@@ -20,6 +24,12 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: LoginPage,
+})
+
+const setupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/setup',
+  component: SetupPage,
 })
 
 const ledgerRoute = createRoute({
@@ -34,7 +44,7 @@ const capturesRoute = createRoute({
   component: CapturesPage,
 })
 
-export const routeTree = rootRoute.addChildren([loginRoute, ledgerRoute, capturesRoute])
+export const routeTree = rootRoute.addChildren([loginRoute, setupRoute, ledgerRoute, capturesRoute])
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' })
 

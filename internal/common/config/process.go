@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
+	"github.com/dimasbaguspm/spenicle/internal/common/firstboot"
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
@@ -215,8 +216,7 @@ func prepare(
 	}
 
 	if created && freshPassword != "" {
-		logger.Warn(ctx, "generated the initial password; change it after the first sign-in",
-			slog.String("password", freshPassword))
+		claim(ctx, cfg, freshPassword, logger)
 	}
 
 	appSettings, err := service.EnsureTimezone(ctx, cfg.Timezone)
@@ -280,6 +280,22 @@ func flushTelemetry(
 }
 
 const passwordBytes = 18
+
+// claim puts the generated password where the operator can still read it after the
+// container's log stream is gone, and falls back to the log only when the data volume
+// refuses the write: a read-only volume must not cost the only copy of the credential.
+func claim(ctx context.Context, cfg entity.AppConfig, password string, logger *logging.Logger) {
+	path, err := firstboot.Write(ctx, cfg.DataDir, password)
+	if err != nil {
+		logger.Warn(ctx, "could not write the first-boot secret; read the password here",
+			slog.String("error", err.Error()), slog.String("password", password))
+
+		return
+	}
+
+	logger.Warn(ctx, "wrote the generated password to the data volume; change it after the first sign-in",
+		slog.String("path", path))
+}
 
 func generatePassword() (string, error) {
 	raw := make([]byte, passwordBytes)

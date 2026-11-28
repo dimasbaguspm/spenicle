@@ -41,6 +41,7 @@ type Deps struct {
 	ExportFiles       repository.ArtifactFiles
 	Exports           exports.Contract
 	Sealer            seal.Sealer
+	DataDir           string
 	Timezone          string
 	Version           string
 	StartedAt         time.Time

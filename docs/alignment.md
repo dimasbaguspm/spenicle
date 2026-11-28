@@ -18,11 +18,12 @@ Append a row per check; never rewrite a past one.
 | 2026-11-27T20:05Z | `d61a15b` + the frozen-rate test and the suggestion memo | `main` | Dimas Mukti (PI-Desktop agent) | a locked posting keeps its rate; one lookup per draft for the fallback category | **GO** |
 | 2026-11-27T22:05Z | uncommitted (the OpenAPI document in this change) | `main` | Dimas Mukti (PI-Desktop agent) | `openapi.json` against the 59 routes in `cmd/http/handler.go`, the group and scope of each, and the `validate`, `pattern`, `format` and `enums` tags on the structs it publishes | **GO** |
 | 2026-11-27T17:40Z | `2e3b59d` + the rename, balance and `Match`-fold pass in this change | `main` | Dimas Mukti (PI-Desktop agent) | every page that names a table, column, query parameter or body action: `entries`/`postings`/`entry_balances`, `reversed_at`/`reversal_of_ref`, `group_label`, `?reversed=`, `{"reverse":true}`, `accounts.balance_minor` as a derived column, and `match` as an `Approve` with an `entry_ref` | **GO** |
+| 2026-11-28T02:20Z | uncommitted (the first-boot claim pass in this change) | `main` | Dimas Mukti (PI-Desktop agent) | the new public `GET /api/bootstrap` page and route row, the `token` field and deletion note on `POST /api/password`, the claim file in `README.md`/`AGENTS.md`/F1, and the SPA `/setup` screen | **GO** |
 
 ## What a check covers
 
-1. **Routes, one by one.** The 59 patterns in `cmd/http/handler.go` (`routes` and
-   `credentialRoutes`) against `docs/endpoints/README.md` and the 59 pages: same method,
+1. **Routes, one by one.** The 60 patterns in `cmd/http/handler.go` (`routes` and
+   `credentialRoutes`) against `docs/endpoints/README.md` and the 60 pages: same method,
    same path, same group, same scope. No phantom route, no undocumented one.
 2. **Request shapes.** Every body, query and path field against the `validate:"…"` tags
    on the structs the handlers bind — names, required-ness, minima, maxima, enums.

@@ -1,7 +1,7 @@
 # F1 — Open the instance, then keep it closed
 
-**Status** partial (bootstrap and tokens live; password change returns settings, not a token; OAuth state is stateless HMAC+TTL with no replay guard) · **Client** first-run wizard, sign-in screen, token screen, audit drawer
-**Routes** `GET /healthz` · `POST /api/setup` · `GET /api/settings` · `GET /api/meta` · `POST /api/password` · `POST /api/tokens` · `GET /api/tokens` · `POST /api/tokens/{ref}/revoke` · `GET /api/audit` · `GET /api/connections` · `POST /api/connections/google` · `GET /api/connections/google/callback` · `POST /api/connections/{ref}/revoke`
+**Status** partial (bootstrap, the public boot probe and tokens live; OAuth state is stateless HMAC+TTL with no replay guard) · **Client** first-run wizard, sign-in screen, token screen, audit drawer
+**Routes** `GET /healthz` · `GET /api/bootstrap` · `POST /api/setup` · `GET /api/settings` · `GET /api/meta` · `POST /api/password` · `POST /api/tokens` · `GET /api/tokens` · `POST /api/tokens/{ref}/revoke` · `GET /api/audit` · `GET /api/connections` · `POST /api/connections/google` · `GET /api/connections/google/callback` · `POST /api/connections/{ref}/revoke`
 
 ## 1. The job the user has
 
@@ -15,11 +15,13 @@ still has a credential?" and "who reversed that entry?".
 
 | # | call | why it cannot be skipped |
 | --- | --- | --- |
+| 0 | read `./data/first-boot.txt` | the boot wrote the generated password into the data volume, mode `0600`; the log stream carries the path, not the secret, so the credential survives a rotated or lost log |
 | 1 | `GET /healthz` | proves the process booted, migrated, and which build this is |
+| 1b | `GET /api/bootstrap` | public: `setup_completed` and `password_must_change`, so the client knows which screen to show before it holds anything |
 | 2 | `GET /api/meta` | the bootstrap exception: reachable during the forced password change, so the shell can read the `settings` block (`base_currency`, `timezone`, `password_must_change`, the capability flags: `extraction_enabled` drives SnapToJSON; `ai_assistance` is informational only and must not gate a feature ([F9](./09-gaps-and-next.md) G11)) plus accounts, payees, recurring rules and currencies |
-| 3 | `POST /api/setup {"base_currency":"IDR","accounts":[{"name":"Cash","kind":"asset","opening_balance_minor":"500000"}]}` | the wizard's only write; optional opening balances post atomically, then `200` returns the settings payload |
-| 4 | `POST /api/password {current_password, new_password}` | closes the instance; the caller sends the new password as the Bearer credential on the next request — the response carries no token |
-| 5 | `GET /api/settings` | after the password change: `password_must_change` is now false; before it, this route answers `409 password_change_required` |
+| 3 | `POST /api/password {current_password, new_password, token}` | closes the instance first, because the gate still refuses every other write; with `token` it answers the browser credential in the same call, the generated password is dead and `./data/first-boot.txt` is deleted |
+| 4 | `POST /api/setup {"base_currency":"IDR","accounts":[{"name":"Cash","kind":"asset","opening_balance_minor":"500000"}]}` | the wizard's only ledger write, now that the gate is clear; optional opening balances post atomically, then `200` returns the settings payload |
+| 5 | `GET /api/settings` | after the password change `password_must_change` is false; before it, this route answers `409 password_change_required` |
 
 Step 1 and step 2 are separate on purpose: `/healthz` is public and answers even when
 the credential is wrong, so a client can distinguish "server down" from "server says no".
@@ -29,14 +31,17 @@ authenticated routes that still answer: every other one answers `409
 password_change_required`. That is why step 2 comes before step 4 and step 5 comes after
 it.
 
-Step 3 is root-only: `/api/setup` locks the base currency and seeds balances, so no
-token can reach it, even one minted with `admin` or `*`. The wizard normally runs in
-open mode, before any credential exists.
+Step 4 is root-only: `/api/setup` locks the base currency and seeds balances, so no
+token can reach it, even one minted with `admin` or `*`. A fresh boot runs it in gate
+mode: the generated password is the credential, the gate refuses `/api/setup` until step
+3 has cleared it, and a legacy database with entries is already locked, so `setup` may
+answer `422 base_currency_locked` and the wizard goes straight to the ledger.
 
-Step 4 is the one call that invalidates every credential at once: the root credential
-is derived from the password hash, so the new password is the client's next header
-value. `POST /api/password` returns settings only — no token — so a client that keeps
-the old header locks itself out.
+Step 3 is the one call that invalidates every credential at once: the root credential
+is derived from the password hash, so the old password and every token minted from it
+stop working. Without `token` the client must send the new password as the next header;
+with it, `POST /api/password` answers settings plus the plaintext token once, and the
+password never leaves the form.
 
 ### 2.2 Issue a credential for an agent
 
@@ -162,7 +167,7 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
 | a client keeps the *old* password after rotation | every request starts answering `401 invalid_password` → "unauthorized" | the caller sends the new password as the Bearer credential on the next request; `POST /api/password` returns no token, so the client must update its header before it paints the success screen |
-| open mode reaches a public host | until a password is set, every request is root; `POST /api/setup` and `POST /api/password` are the only gates | the fresh boot prints the generated password once, `password_must_change` is in every settings payload, and the rollout checklist in the [README](./README.md) treats `true` as a blocker |
+| open mode reaches a public host | until a password is set, every request is root; `POST /api/setup` and `POST /api/password` are the only gates | the fresh boot writes the generated password to `./data/first-boot.txt` instead of the log (the log carries the path), `password_must_change` is in every settings payload and in public `GET /api/bootstrap`, and the rollout checklist in the [README](./README.md) treats `true` as a blocker |
 | token sprawl | a leaked shortcut token can dump receipts or post entries | scopes are a closed set, the handler checks action scopes before side effects (`approve` needs `entries:write`), `last_used_at` makes an unused token visible, and revoke keeps the row so the history is intact |
 | password is the only root credential | no "sign out other devices" | rotation kills every derived credential at once; this is the design, and the client must not present a per-device session model |
 | OAuth callback is a public route | the provider redirect carries no bearer header, so the route skips auth entirely | `state` is a Unix stamp with an `APP_SECRET`-derived HMAC; the callback checks the signature and ±10-minute TTL and answers `401 invalid_state` on a bad or expired stamp. There is no pending-authorisation or nonce store and no one-time replay guard; a valid `state` can be replayed inside the TTL |

@@ -18,8 +18,9 @@ by hand, and change the page here when you change the block.
 | `GET` | `/api/connections/google/callback` | finish the Google grant from the browser redirect (public) | [`GET_api_connections_google_callback.md`](./GET_api_connections_google_callback.md) |
 | `POST` | `/api/connections/google` | store OAuth client credentials and start authorisation | [`POST_api_connections_google.md`](./POST_api_connections_google.md) |
 | `POST` | `/api/connections/{ref}/revoke` | disconnect the stored grant, keep the row | [`POST_api_connections_ref_revoke.md`](./POST_api_connections_ref_revoke.md) |
+| `GET` | `/api/bootstrap` | public mode: ledger opened, password still the generated one | [`GET_api_bootstrap.md`](./GET_api_bootstrap.md) |
 | `GET` | `/healthz` | liveness, build and schema fingerprint | [`GET_healthz.md`](./GET_healthz.md) |
-| `POST` | `/api/password` | replace the generated password | [`POST_api_password.md`](./POST_api_password.md) |
+| `POST` | `/api/password` | replace the generated password, optionally minting a token | [`POST_api_password.md`](./POST_api_password.md) |
 | `GET` | `/api/settings` | the in-app settings the shell reads | [`GET_api_settings.md`](./GET_api_settings.md) |
 | `PATCH` | `/api/settings` | discover that no setting is patchable | [`PATCH_api_settings.md`](./PATCH_api_settings.md) |
 | `GET` | `/api/meta` | bootstrap payload: settings, accounts, payees, recurring rules, currencies | [`GET_api_meta.md`](./GET_api_meta.md) |

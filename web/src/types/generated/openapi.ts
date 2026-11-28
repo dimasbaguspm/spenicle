@@ -152,6 +152,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/bootstrap': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Public boot state: is the ledger opened, is the password still the generated one?
+     * @description The one read a client needs before it holds a credential. It answers in open mode, in gate mode and in normal mode, and it never carries a credential, an account, an amount or a secret. `setup_completed` says whether `POST /api/setup` still has to run, `password_must_change` whether the first-boot password still has to be replaced.
+     */
+    get: operations['getApiBootstrap']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/captures': {
     parameters: {
       query?: never
@@ -735,7 +755,7 @@ export interface paths {
     put?: never
     /**
      * Replace the instance password
-     * @description Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row.
+     * @description Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row. An optional `token` mints the browser credential in the same call, so a first boot costs one request instead of two; like `POST /api/tokens`, the plaintext exists exactly once, in this response. The first-boot secret file is removed once the change lands.
      */
     post: operations['postApiPassword']
     delete?: never
@@ -1020,6 +1040,14 @@ export interface components {
       from?: Record<string, never>
       ref?: string
       to?: Record<string, never>
+    }
+    bootstrapResponse: {
+      ai_assistance?: boolean
+      base_currency?: string
+      extraction_enabled?: boolean
+      password_must_change?: boolean
+      setup_completed?: boolean
+      timezone?: string
     }
     captureApprovedResponse: {
       capture?: components['schemas']['captureResponse']
@@ -1342,6 +1370,15 @@ export interface components {
     passwordChangeRequest: {
       current_password: string
       new_password: string
+      token?: components['schemas']['tokenCreateRequest']
+    }
+    passwordChangeResponse: {
+      ai_assistance?: boolean
+      base_currency?: string
+      extraction_enabled?: boolean
+      password_must_change?: boolean
+      timezone?: string
+      token?: components['schemas']['tokenIssuedResponse']
     }
     payeeCreateRequest: {
       default_account_ref?: string
@@ -2160,6 +2197,35 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ErrorBody']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorBody']
+        }
+      }
+    }
+  }
+  getApiBootstrap: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['bootstrapResponse']
         }
       }
       /** @description Internal Server Error */
@@ -4550,7 +4616,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['settingsResponse']
+          'application/json': components['schemas']['passwordChangeResponse']
         }
       }
       /** @description Unauthorized */

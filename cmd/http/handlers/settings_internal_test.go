@@ -147,3 +147,50 @@ func TestPatchSettingsRefusesTheBaseCurrency(t *testing.T) {
 		})
 	}
 }
+
+func TestThePasswordChangeAnswersATokenOnlyWhenItWasAsked(t *testing.T) {
+	appSettings := entity.Settings{BaseCurrency: testBaseCurrency, Timezone: testTimezone}
+
+	cases := []struct {
+		name  string
+		token *tokenIssuedResponse
+		want  bool
+	}{
+		{name: "a plain password change carries no credential", token: nil, want: false},
+		{
+			name:  "the wizard mints the browser credential in the same call",
+			token: &tokenIssuedResponse{Token: "spl_0123456789abcdef0123456789abcdef"},
+			want:  true,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			body, err := json.Marshal(passwordChangeResponse{
+				settingsResponse: toSettingsResponse(appSettings, false, false),
+				Token:            testCase.token,
+			})
+			if err != nil {
+				t.Fatalf("encode payload: %v", err)
+			}
+
+			var fields map[string]any
+			if decodeErr := json.Unmarshal(body, &fields); decodeErr != nil {
+				t.Fatalf("decode payload: %v", decodeErr)
+			}
+
+			if _, ok := fields["token"]; ok != testCase.want {
+				t.Fatalf("token present = %v, want %v in %s", ok, testCase.want, body)
+			}
+
+			// the settings block rides along either way: the client reads it before it signs in
+			if fields["base_currency"] != testBaseCurrency {
+				t.Fatalf("base_currency = %v, want %q in %s", fields["base_currency"], testBaseCurrency, body)
+			}
+
+			if fields["password_must_change"] != false {
+				t.Fatalf("a completed change must clear the gate, got %v", fields["password_must_change"])
+			}
+		})
+	}
+}

@@ -33,7 +33,7 @@ place to defer a decision. v2 fixes all three.
 | history | fresh start; statement import commits accepted CSV rows, and extraction is not part of import |
 | deletions | no row deletes. Reverse and reject instead; `audit_log` records state changes. File reclamation is allowed |
 | configuration | eight environment variables; every other default lives in `internal/common/config/config.go`, no viper, no config file |
-| first boot | adapter seeds `Cash` and `Unsorted`; `POST /api/setup` locks the currency and optional opening balances in one transaction |
+| first boot | the boot writes the generated password to `./data/first-boot.txt`; the adapter seeds `Cash` and `Unsorted`; `POST /api/setup` locks the currency and optional opening balances in one transaction, and the first password change deletes that file |
 
 ## Layout
 

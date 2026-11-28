@@ -10,7 +10,6 @@ import (
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
-	"github.com/dimasbaguspm/spenicle/internal/module/tokens"
 )
 
 type tokenCreateRequest struct {
@@ -64,21 +63,14 @@ func (s *Server) CreateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, plain, err := s.deps.Tokens.Create(ctx, tokens.CreateInput{
-		Name:      request.Name,
-		Scopes:    request.Scopes,
-		ExpiresAt: request.ExpiresAt,
-	})
+	issued, err := s.issueToken(ctx, request)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusCreated, tokenIssuedResponse{
-		tokenResponse: toTokenResponse(token),
-		Token:         plain,
-	})
+	httpx.WriteJSON(w, http.StatusCreated, issued)
 }
 
 // @Summary     Every issued token, never its secret

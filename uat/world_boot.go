@@ -183,6 +183,7 @@ func (w *world) boot(ctx context.Context) error {
 		Settings:          settingsService,
 		Rates:             built.rates,
 		Sealer:            sealer,
+		DataDir:           w.dir,
 		Timezone:          w.zone().String(),
 		Version:           "uat",
 		StartedAt:         startedAt,

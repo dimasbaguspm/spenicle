@@ -166,6 +166,7 @@ func (s *server) routes() routeGroups {
 
 	// open to everyone
 	groups.public.route("", "GET /healthz", s.api.Health)
+	groups.public.route("", "GET /api/bootstrap", s.api.Bootstrap)
 	groups.public.route("", "GET /api/connections/google/callback", s.api.CompleteConnection)
 
 	// root credential only
@@ -470,6 +471,7 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		Connections:       connector,
 		Intake:            intaker,
 		Sealer:            process.Sealer,
+		DataDir:           process.Cfg.DataDir,
 		Timezone:          process.Cfg.Timezone,
 		Version:           config.Version,
 		StartedAt:         process.StartedAt,

@@ -1,12 +1,16 @@
 package config_test
 
 import (
+	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/config"
+	"github.com/dimasbaguspm/spenicle/internal/common/firstboot"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
@@ -106,5 +110,95 @@ func TestStartRecordsDurableReleaseEvidence(t *testing.T) {
 	}
 	if _, err := time.Parse(time.RFC3339, payload.StartedAt); err != nil {
 		t.Fatalf("started_at %q is not RFC3339: %v", payload.StartedAt, err)
+	}
+}
+
+func TestAFirstBootClaimsThroughTheVolumeNotTheLog(t *testing.T) {
+	clearEnv(t)
+
+	t.Setenv(config.EnvAppSecret, "0123456789abcdef")
+	t.Chdir(t.TempDir())
+
+	process, err := config.Start(t.Context(), "spenicle-test")
+	if err != nil {
+		t.Fatalf("first boot: %v", err)
+	}
+
+	t.Cleanup(func() { process.Close(t.Context()) })
+
+	path := filepath.Join(process.Cfg.DataDir, firstboot.FileName)
+
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read the claim file: %v", err)
+	}
+
+	secret := strings.TrimSpace(string(body))
+	if len(secret) < 20 {
+		t.Fatalf("claim file carries %q, want a generated password", body)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat the claim file: %v", err)
+	}
+
+	if mode := info.Mode().Perm(); mode != 0o600 {
+		t.Fatalf("claim file mode = %o, want 600", mode)
+	}
+
+	settings, err := process.Settings.Load(t.Context())
+	if err != nil {
+		t.Fatalf("load settings: %v", err)
+	}
+
+	if !settings.PasswordMustChange {
+		t.Fatal("a fresh instance must demand the generated password be replaced")
+	}
+
+	root, err := process.Settings.Root(t.Context(), secret)
+	if err != nil {
+		t.Fatalf("verify the claim file: %v", err)
+	}
+
+	if !root {
+		t.Fatal("the claim file must carry the password the instance accepts")
+	}
+}
+
+func TestASecondBootKeepsTheClaimFileAndThePassword(t *testing.T) {
+	clearEnv(t)
+
+	t.Setenv(config.EnvAppSecret, "0123456789abcdef")
+	t.Chdir(t.TempDir())
+
+	first, err := config.Start(t.Context(), "spenicle-test")
+	if err != nil {
+		t.Fatalf("first boot: %v", err)
+	}
+
+	path := filepath.Join(first.Cfg.DataDir, firstboot.FileName)
+
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read the claim file: %v", err)
+	}
+
+	first.Close(t.Context())
+
+	second, err := config.Start(t.Context(), "spenicle-test")
+	if err != nil {
+		t.Fatalf("second boot: %v", err)
+	}
+
+	t.Cleanup(func() { second.Close(t.Context()) })
+
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read the claim file after the second boot: %v", err)
+	}
+
+	if !bytes.Equal(before, after) {
+		t.Fatal("a second boot must not mint a second password over the claimed one")
 	}
 }

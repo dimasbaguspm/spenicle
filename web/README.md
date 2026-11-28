@@ -199,6 +199,15 @@ password once as a Bearer credential to `POST /api/tokens`, receives a scoped `s
 and keeps only that in `sessionStorage` (`src/api/token.ts`). A leaked browser credential is
 revocable from the settings screen; the root password is not in the browser at all.
 
+**A fresh instance is claimed in one screen.** `src/routes/setup.tsx` is public, and
+`src/api/bootstrap.ts` is the one read it needs before anything else: `GET /api/bootstrap`
+says `password_must_change` and `setup_completed` without a credential. The wizard proves
+the generated password by reading `GET /api/meta` with it, replaces it through
+`POST /api/password` (which mints the browser token in the same call, so the password never
+reaches `sessionStorage`), then opens the ledger with `POST /api/setup`. The password the
+boot wrote lives in `./data/first-boot.txt` on the data volume — never in the log stream,
+and it is deleted by that same password change.
+
 **One schema for a form and its types.** `src/lib/capture.ts` declares the capture fields as
 an Effect `Schema.Struct`; react-hook-form parses the submitted values through it
 (`Schema.decodeUnknownSync`), so the field rules and the value type cannot drift. Ark UI's
@@ -222,7 +231,7 @@ src/hooks/queries/    TanStack queries and mutations over those callers
 src/types/generated/  generated contract — never edit; run `make web-types`
 src/components/       primitives → ui → widgets → layouts (see above)
 src/router.tsx        code-based routes + the auth guard in beforeLoad
-src/routes/           AppShell's outlet: login, ledger, captures
+src/routes/           AppShell's outlet: login, setup, ledger, captures
 src/lib/money.ts      minor-unit string arithmetic
 src/lib/format/       per-entity display: fallbacks and flags, so JSX has no `??`
 ```

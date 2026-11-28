@@ -1,15 +1,15 @@
 import { useMutation } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { api } from '@/api/client'
 import { apiError, isApiError } from '@/api/error'
-import { changePassword } from '@/api/settings'
 import { setToken } from '@/api/token'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
 import { PasswordInput } from '@/components/primitives/password-input'
 import { Text } from '@/components/primitives/text'
+import { useBootstrap } from '@/hooks/queries/use-bootstrap'
 
 /**
  * The password never leaves this form: it is exchanged for a scoped token, and only
@@ -17,8 +17,8 @@ import { Text } from '@/components/primitives/text'
  */
 export function LoginPage() {
   const navigate = useNavigate()
+  const boot = useBootstrap()
   const [password, setPassword] = useState('')
-  const [next, setNext] = useState('')
 
   const signIn = useMutation({
     mutationFn: async (secret: string) => {
@@ -33,6 +33,13 @@ export function LoginPage() {
 
       return data
     },
+    onError: (error) => {
+      // a fresh instance refuses every credential until its generated password is replaced:
+      // that is not a failed sign-in, it is the setup wizard's job, and it is one link away
+      if (isApiError(error) && error.code === 'password_change_required') {
+        void navigate({ to: '/setup' })
+      }
+    },
     onSuccess: (issued) => {
       if (issued.token === undefined) {
         throw new Error('the API issued no token')
@@ -43,58 +50,7 @@ export function LoginPage() {
     },
   })
 
-  const swap = useMutation({
-    mutationFn: async (values: { current: string; next: string }) =>
-      changePassword(values.current, values.next),
-    onSuccess: () => {
-      signIn.mutate(next)
-    },
-  })
-
-  // a fresh instance refuses every credential until its generated password is replaced: that is
-  // not a failed sign-in, it is the first thing this screen has to ask for
-  if (isApiError(signIn.error) && signIn.error.code === 'password_change_required') {
-    return (
-      <form
-        className="border-border bg-surface-raised mx-auto mt-20 max-w-sm space-y-5 rounded-lg border p-8 shadow-[0_1px_0_0_var(--color-brass-800)]"
-        onSubmit={(event) => {
-          event.preventDefault()
-          swap.mutate({ current: password, next })
-        }}
-      >
-        <div className="space-y-2">
-          <Text as="h1" tone="display">
-            Set a password
-          </Text>
-          <Text as="p" tone="muted" className="leading-relaxed">
-            This instance still uses the password it generated on first boot. Replace it to continue
-            — at least 12 characters.
-          </Text>
-        </div>
-        <Field label="Generated password" hint="It is in the first boot log line.">
-          <PasswordInput
-            value={password}
-            autoComplete="current-password"
-            onChange={(event) => {
-              setPassword(event.target.value)
-            }}
-          />
-        </Field>
-        <Field label="New password" error={swap.error?.message}>
-          <PasswordInput
-            value={next}
-            autoComplete="new-password"
-            onChange={(event) => {
-              setNext(event.target.value)
-            }}
-          />
-        </Field>
-        <Button type="submit" block disabled={swap.isPending || next.length < 12}>
-          {swap.isPending ? 'Saving…' : 'Save and sign in'}
-        </Button>
-      </form>
-    )
-  }
+  const claimable = boot.data?.password_must_change === true || boot.data?.setup_completed === false
 
   return (
     <form
@@ -125,9 +81,18 @@ export function LoginPage() {
           }}
         />
       </Field>
-      <Button type="submit" block disabled={signIn.isPending}>
+      <Button type="submit" block loading={signIn.isPending}>
         {signIn.isPending ? 'Signing in…' : 'Sign in'}
       </Button>
+      {claimable ? (
+        <Text as="p" tone="muted">
+          A fresh instance? <Link to="/setup">Claim it</Link> with the password in{' '}
+          <Text as="code" tone="code">
+            ./data/first-boot.txt
+          </Text>
+          .
+        </Text>
+      ) : null}
     </form>
   )
 }

@@ -189,6 +189,31 @@
         },
         "type": "object"
       },
+      "bootstrapResponse": {
+        "properties": {
+          "ai_assistance": {
+            "type": "boolean"
+          },
+          "base_currency": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          },
+          "extraction_enabled": {
+            "type": "boolean"
+          },
+          "password_must_change": {
+            "type": "boolean"
+          },
+          "setup_completed": {
+            "type": "boolean"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "captureApprovedResponse": {
         "properties": {
           "capture": {
@@ -1192,12 +1217,40 @@
             "maxLength": 200,
             "minLength": 12,
             "type": "string"
+          },
+          "token": {
+            "$ref": "#/components/schemas/tokenCreateRequest"
           }
         },
         "required": [
           "current_password",
           "new_password"
         ],
+        "type": "object"
+      },
+      "passwordChangeResponse": {
+        "properties": {
+          "ai_assistance": {
+            "type": "boolean"
+          },
+          "base_currency": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          },
+          "extraction_enabled": {
+            "type": "boolean"
+          },
+          "password_must_change": {
+            "type": "boolean"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "token": {
+            "$ref": "#/components/schemas/tokenIssuedResponse"
+          }
+        },
         "type": "object"
       },
       "payeeCreateRequest": {
@@ -2845,6 +2898,41 @@
         ],
         "x-spenicle-group": "scoped",
         "x-spenicle-scope": "audit:read"
+      }
+    },
+    "/api/bootstrap": {
+      "get": {
+        "description": "The one read a client needs before it holds a credential. It answers in open mode, in gate mode and in normal mode, and it never carries a credential, an account, an amount or a secret. `setup_completed` says whether `POST /api/setup` still has to run, `password_must_change` whether the first-boot password still has to be replaced.",
+        "operationId": "getApiBootstrap",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bootstrapResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [],
+        "summary": "Public boot state: is the ledger opened, is the password still the generated one?",
+        "tags": [
+          "system"
+        ],
+        "x-spenicle-group": "public",
+        "x-spenicle-scope": ""
       }
     },
     "/api/captures": {
@@ -6270,7 +6358,7 @@
     },
     "/api/password": {
       "post": {
-        "description": "Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row.",
+        "description": "Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row. An optional `token` mints the browser credential in the same call, so a first boot costs one request instead of two; like `POST /api/tokens`, the plaintext exists exactly once, in this response. The first-boot secret file is removed once the change lands.",
         "operationId": "postApiPassword",
         "requestBody": {
           "content": {
@@ -6290,7 +6378,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/settingsResponse"
+                  "$ref": "#/components/schemas/passwordChangeResponse"
                 }
               }
             },

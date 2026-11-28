@@ -1,16 +1,27 @@
 package handlers
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 
+	"github.com/dimasbaguspm/spenicle/internal/common/firstboot"
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
+	"github.com/dimasbaguspm/spenicle/internal/module/tokens"
 )
 
 type passwordChangeRequest struct {
-	CurrentPassword string `json:"current_password" validate:"required"`
-	NewPassword     string `json:"new_password"     validate:"required,min=12,max=200"`
+	CurrentPassword string              `json:"current_password" validate:"required"`
+	NewPassword     string              `json:"new_password"     validate:"required,min=12,max=200"`
+	Token           *tokenCreateRequest `json:"token,omitempty"`
+}
+
+type passwordChangeResponse struct {
+	settingsResponse
+
+	Token *tokenIssuedResponse `json:"token,omitempty"`
 }
 
 type settingsPatchRequest struct{}
@@ -24,12 +35,12 @@ type settingsResponse struct {
 }
 
 // @Summary     Replace the instance password
-// @Description Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row.
+// @Description Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row. An optional `token` mints the browser credential in the same call, so a first boot costs one request instead of two; like `POST /api/tokens`, the plaintext exists exactly once, in this response. The first-boot secret file is removed once the change lands.
 // @Tags        settings
 // @Accept      json
 // @Param       body body passwordChangeRequest true "the request body"
 // @Produce     json
-// @Success     200 {object} settingsResponse
+// @Success     200 {object} passwordChangeResponse
 // @Failure     401 {object} httpx.ErrorBody
 // @Failure     403 {object} httpx.ErrorBody
 // @Failure     422 {object} httpx.ErrorBody
@@ -51,7 +62,39 @@ func (s *Server) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.writeSettings(w, settings)
+	response := passwordChangeResponse{
+		settingsResponse: toSettingsResponse(settings, s.deps.ExtractionEnabled, s.deps.AIAssistance),
+	}
+
+	if request.Token != nil {
+		issued, tokenErr := s.issueToken(ctx, *request.Token)
+		if tokenErr != nil {
+			s.writeClassified(ctx, w, tokenErr)
+
+			return
+		}
+
+		response.Token = &issued
+	}
+
+	if err := firstboot.Remove(ctx, s.deps.DataDir); err != nil {
+		s.deps.Logger.Warn(ctx, "could not remove the first-boot secret", slog.String("error", err.Error()))
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) issueToken(ctx context.Context, request tokenCreateRequest) (tokenIssuedResponse, error) {
+	token, plain, err := s.deps.Tokens.Create(ctx, tokens.CreateInput{
+		Name:      request.Name,
+		Scopes:    request.Scopes,
+		ExpiresAt: request.ExpiresAt,
+	})
+	if err != nil {
+		return tokenIssuedResponse{}, err
+	}
+
+	return tokenIssuedResponse{tokenResponse: toTokenResponse(token), Token: plain}, nil
 }
 
 // @Summary     Discover that no setting is patchable

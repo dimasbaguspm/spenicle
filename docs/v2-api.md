@@ -2,7 +2,7 @@
 
 Companion to [`v2-design.md`](./v2-design.md). Operational docs: [`../README.md`](../README.md).
 
-**25 tables plus `schema_migrations`, 59 routes** (one of them `/healthz`).
+**25 tables plus `schema_migrations`, 60 routes** (two of them public: `/healthz` and `/api/bootstrap`).
 
 Base path `/api`. No version prefix: we are the only consumer, and an agent can adapt to a
 change faster than a `/v2` namespace can justify itself. Dates `YYYY-MM-DD`, timestamps ISO
@@ -32,10 +32,11 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
 | 14 | `PATCH /api/captures/{ref}` | live: `approve`, `reject`, `retry`, `match`; an approved recurring capture resolves its rule from the sealed draft |
 | 21 | `GET /healthz` | live |
+| — | `GET /api/bootstrap` | live, public: `setup_completed` + `password_must_change`, so a client picks the setup wizard or the sign-in screen before it holds a credential |
 | 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `idempotency_key` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `idempotency_key` |
 | 1 | `POST /api/setup` | live: chooses the base currency once and optionally posts opening balances before setup completes |
-| 2 | `POST /api/password` | live: password rotation; the password itself is the root credential |
+| 2 | `POST /api/password` | live: password rotation; the password itself is the root credential, and an optional `token` body mints the browser credential in the same call |
 | 4 | `GET/PATCH /api/settings` | `GET` is live; `PATCH` accepts no field yet — `base_currency` is not patchable |
 | 5, 6 | accounts create/patch | live |
 | 7, 8 | payees | live |
@@ -579,7 +580,9 @@ sequenceDiagram
 ```
 
 The settings block is shared with `GET /api/settings`, so the first-boot
-`password_must_change` flag arrives with the shell. Every account, payee and recurring
+`password_must_change` flag arrives with the shell — and `GET /api/bootstrap` carries the
+same flag before any credential exists, which is what lets a client choose between the
+wizard and the sign-in screen. Every account, payee and recurring
 rule is returned by following repository cursors internally; the list routes' 200-row
 page cap does not truncate this payload. Empty collections are `[]`, and every entity
 identifier is a 32-character lowercase hex ref.
