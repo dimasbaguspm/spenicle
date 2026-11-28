@@ -34,37 +34,45 @@ export function PayeeBars({
   }))
 
   return (
-    <div className="w-full" style={{ height: Math.max(132, bars.length * 40) }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={bars}
-          layout="vertical"
-          margin={{ top: 0, right: 12, bottom: 0, left: 0 }}
-          barCategoryGap={8}
-        >
-          <YAxis
-            type="category"
-            dataKey="name"
-            width={132}
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
-          />
-          <XAxis type="number" hide />
-          <Tooltip
-            cursor={{ fill: 'var(--color-surface-sunken)' }}
-            content={<PayeeTooltip units={scale.units} />}
-          />
-          <Bar
-            dataKey="value"
-            fill="var(--color-accent)"
-            fillOpacity={0.62}
-            radius={[0, 3, 3, 0]}
-            barSize={10}
-            isAnimationActive={false}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="space-y-3">
+      <div className="w-full" style={{ height: Math.max(132, bars.length * 40) }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={bars}
+            layout="vertical"
+            margin={{ top: 0, right: 12, bottom: 0, left: 0 }}
+            barCategoryGap={8}
+          >
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={132}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
+            />
+            <XAxis type="number" hide />
+            <Tooltip
+              cursor={{ fill: 'var(--color-surface-sunken)' }}
+              content={<PayeeTooltip units={scale.units} />}
+            />
+            <Bar
+              dataKey="value"
+              fill="var(--color-accent)"
+              fillOpacity={0.62}
+              radius={[0, 3, 3, 0]}
+              barSize={10}
+              isAnimationActive={false}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {payees.length > bars.length ? (
+        <Text as="p" tone="caption" className="text-text-faint">
+          {String(payees.length - bars.length)} more payees
+        </Text>
+      ) : null}
     </div>
   )
 }

@@ -403,6 +403,12 @@ roots plus "N more" in plate grey, with the exact figures beside it; **who you p
 horizontal bars, the spend that named nobody keeping its own bar; **where the money sat**, per asset
 and liability account, inflow and outflow summed apart and the net keeping the ledger's sign.
 
+Every block stops at six rows and says how many it left behind: the ring's seventh arc is "N more"
+in plate grey with its own total, the payees end with "N more payees", and the money accounts end
+with "N more accounts, net …". Someone with a hundred wallets and a hundred payees still reads a
+brief, and the register is one click away for the rest. The account rows are ranked by movement,
+not by net, so an account that took fifty thousand and paid it all out is still where the money sat.
+
 The three charts are **Recharts 3** (`AreaChart`, `PieChart`, `BarChart`), coloured with the CSS
 tokens themselves (`stroke="var(--color-accent)"`), so a theme switch re-draws them without a second
 palette to keep in sync. Every point's geometry is a float; every figure under it is still a string

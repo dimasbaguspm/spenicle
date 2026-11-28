@@ -70,7 +70,7 @@ export function CategoryDonut({
                 <Cell
                   key={row.name}
                   fill={row.rest ? 'var(--color-border-strong)' : 'var(--color-accent)'}
-                  fillOpacity={row.rest ? 0.6 : Math.max(0.28, 1 - index * 0.14)}
+                  fillOpacity={row.rest ? 0.35 : Math.max(0.32, 1 - index * 0.12)}
                 />
               ))}
             </Pie>
