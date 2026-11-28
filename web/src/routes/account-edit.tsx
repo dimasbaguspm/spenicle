@@ -58,7 +58,7 @@ function RenameAccount({ accountRef, listLabel, listTo, detailTo }: RenameProps)
   )
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="space-y-6">
       <PageHeader
         items={[
           { label: 'Manage', to: '/manage' },

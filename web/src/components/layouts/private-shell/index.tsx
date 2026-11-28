@@ -25,7 +25,10 @@ const thumbSections = [
 
 type ThumbSection = (typeof thumbSections)[number]
 
+// the chrome spans the window; the content column is one width everywhere, so a five-row list
+// and a two-field form sit on the same measure
 const shellWidth = 'mx-auto w-full max-w-[96rem] px-4 sm:px-8'
+const contentWidth = 'mx-auto w-full max-w-6xl px-4 sm:px-8'
 
 const tab = 'relative shrink-0 py-3 text-sm text-text-faint transition-colors hover:text-text'
 
@@ -45,7 +48,7 @@ export function PrivateShell() {
 
       <main
         id="content"
-        className={`${shellWidth} flex flex-1 flex-col py-6 pb-24 sm:py-8 lg:pb-10`}
+        className={`${contentWidth} flex flex-1 flex-col py-6 pb-24 sm:py-8 lg:pb-10`}
       >
         <Outlet />
       </main>
