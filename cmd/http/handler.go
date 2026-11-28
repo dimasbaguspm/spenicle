@@ -331,15 +331,9 @@ func (s *server) identify(w http.ResponseWriter, r *http.Request) (credential, b
 	}
 
 	if !current.HasPassword() {
-		// open mode: the instance is not protected yet, every request is the root
+		// open mode: `POST /api/setup` has not run yet, so there is nothing to protect.
+		// Every request is the root credential until the first setup sets a password.
 		return credential{root: true, actor: userActor("")}, true
-	}
-
-	if passwordChangeRequired(current, r.URL.Path) {
-		httpx.WriteError(w, http.StatusConflict, "password_change_required",
-			"sign in with the generated password, then set your own at /api/password")
-
-		return credential{}, false
 	}
 
 	presented := handlers.Bearer(r)
@@ -383,10 +377,6 @@ func (s *server) identify(w http.ResponseWriter, r *http.Request) (credential, b
 	httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", "unknown or revoked credential")
 
 	return credential{}, false
-}
-
-func passwordChangeRequired(current entity.Settings, path string) bool {
-	return current.PasswordMustChange && path != "/api/password" && path != "/api/meta"
 }
 
 func (who credential) mayReach(group routeGroup, pattern string) bool {
@@ -471,7 +461,6 @@ func buildDeps(ctx context.Context, process *config.Process) (handlers.Deps, err
 		Connections:       connector,
 		Intake:            intaker,
 		Sealer:            process.Sealer,
-		DataDir:           process.Cfg.DataDir,
 		Timezone:          process.Cfg.Timezone,
 		Version:           config.Version,
 		StartedAt:         process.StartedAt,

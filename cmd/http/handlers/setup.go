@@ -16,12 +16,13 @@ type setupAccountRequest struct {
 }
 
 type setupRequest struct {
-	BaseCurrency string                `json:"base_currency" maxLength:"3"                     minLength:"3" validate:"omitempty,currency"`
+	Password     string                `json:"password"      maxLength:"200"                   minLength:"12"`
+	BaseCurrency string                `json:"base_currency" maxLength:"3"                     minLength:"3"  validate:"omitempty,currency"`
 	Accounts     []setupAccountRequest `json:"accounts"      validate:"omitempty,max=100,dive"`
 }
 
-// @Summary     Open the ledger with a base currency and optional opening balances
-// @Description Completes once: it locks the base currency and every opening balance. Opening balances are posted as one balanced entry per account.
+// @Summary     Claim the instance: set the password, choose the base currency, post the opening balances
+// @Description Completes once, and it is the only write a fresh instance accepts: until it lands there is no password, so every request is the root credential. It sets the PBKDF2 hash, locks the base currency and every opening balance, and posts each opening balance as one balanced entry against an `Opening balance` equity account.
 // @Tags        settings
 // @Accept      json
 // @Param       body body setupRequest true "the request body"
@@ -29,7 +30,7 @@ type setupRequest struct {
 // @Success     200 {object} settingsResponse
 // @Failure     401 {object} httpx.ErrorBody
 // @Failure     403 {object} httpx.ErrorBody
-// @Failure     422 {object} httpx.ErrorBody "empty_setup, unknown_currency"
+// @Failure     422 {object} httpx.ErrorBody "empty_setup, unknown_currency, weak_password"
 // @Failure     500 {object} httpx.ErrorBody
 // @Router      /api/setup [post]
 func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +62,7 @@ func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	settings, err := s.deps.Settings.Setup(ctx, request.BaseCurrency, accounts)
+	settings, err := s.deps.Settings.Setup(ctx, request.Password, request.BaseCurrency, accounts)
 	if err != nil {
 		s.writeClassified(ctx, w, err)
 

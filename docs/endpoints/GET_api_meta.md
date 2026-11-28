@@ -1,7 +1,7 @@
 # GET /api/meta
 
 **Auth.** `Authorization: Bearer <credential>`: the instance password, or a token carrying all four scopes for the embedded collections: `settings:read`, `accounts:read`, `payees:read` and `recurring:read`. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`, and a token missing any required scope is `403 forbidden` before any collection is read.
-During the forced first-boot password change, this route remains reachable with the root credential so the client can render the shell and `password_must_change`; every other authenticated route stays blocked.
+A fresh instance answers this route without a credential, because none exists yet; once setup has set one, the root credential (or a token with the four read scopes) is required.
 
 ## Purpose
 
@@ -35,7 +35,6 @@ None.
   "settings": {
     "base_currency": "IDR",
     "timezone": "UTC",
-    "password_must_change": false,
     "extraction_enabled": false,
     "ai_assistance": false
   },
@@ -74,7 +73,7 @@ None.
 ```
 
 The settings block is the same shape as `GET /api/settings`, including
-`password_must_change`. `settings.extraction_enabled` is true when the SnapToJSON rail
+`timezone`. `settings.extraction_enabled` is true when the SnapToJSON rail
 is configured (`SNAPTOJSON_API_KEY` set). `settings.ai_assistance` is true only when
 `OPENAI_HOST`, `OPENAI_API_KEY` and `OPENAI_MODEL` are all set. The two flags are
 independent: OpenAI is reserved for a future chat endpoint and does not run extraction

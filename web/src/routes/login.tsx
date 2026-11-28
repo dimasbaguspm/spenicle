@@ -53,7 +53,7 @@ export function LoginPage() {
     },
   })
 
-  const claimable = boot.data?.password_must_change === true || boot.data?.setup_completed === false
+  const claimable = boot.data?.setup_completed === false
 
   return (
     <div className="mx-auto my-auto flex w-full max-w-md flex-col gap-7 py-4">
@@ -110,16 +110,12 @@ export function LoginPage() {
             First boot
           </Text>
           <Text as="p" tone="muted" className="leading-relaxed">
-            Claim this instance with the password the boot wrote to{' '}
-            <Text as="code" tone="code">
-              ./data/first-boot.txt
-            </Text>
-            , then choose your own.{' '}
+            This instance has never been set up, so it is open.{' '}
             <Link
               to="/setup"
               className="text-brass-300 decoration-brass-700 underline underline-offset-4 hover:text-brass-200"
             >
-              Open setup…
+              Choose a password and open the ledger…
             </Link>
           </Text>
         </div>

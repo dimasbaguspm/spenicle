@@ -42,9 +42,8 @@ Feature: GET /api/meta
     Then the response status is 200
     And the response JSON matches the snapshot "get_api_meta__payees_and_recurring_rules_arrive_with_the_bootstrap_payload"
 
-  Scenario: The bootstrap payload carries the first-boot password requirement
+  Scenario: The bootstrap payload carries the settings block
     Given the instance password is "uat-password-1234"
-    And the instance password must be changed
     And a running API
     And I sign in with the instance password
     When I send a GET to "/api/meta"

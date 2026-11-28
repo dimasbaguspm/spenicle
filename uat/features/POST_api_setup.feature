@@ -1,23 +1,59 @@
 Feature: POST /api/setup
   One file per route: every scenario here calls POST /api/setup.
 
+  Scenario: A fresh instance is open until the setup closes it
+    Given a running API
+    When I send a GET to "/api/entries"
+    Then the response status is 200
+    When I send a POST to "/api/setup" with:
+      """json
+      {"password":"chosen-password-123","base_currency":"IDR"}
+      """
+    Then the response status is 200
+    When I send a GET to "/api/entries" with headers/query:
+      | type   | key           | value          |
+      | header | Authorization | Bearer nothing |
+    Then the response status is 401
+    And the response JSON matches the snapshot "post_api_setup__a_claimed_instance_refuses_a_stranger"
+
   Scenario: The base currency is chosen before the first entry
+    Given a running API
+    When I send a POST to "/api/setup" with:
+      """json
+      {"password":"chosen-password-123","base_currency":"usd"}
+      """
+    Then the response status is 200
+    And the response JSON matches the snapshot "post_api_setup__the_base_currency_is_chosen_before_the_first_entry"
+
+  Scenario: A setup without a password is refused before it touches the database
     Given a running API
     When I send a POST to "/api/setup" with:
       """json
       {"base_currency":"usd"}
       """
-    Then the response status is 200
-    And the response JSON matches the snapshot "post_api_setup__the_base_currency_is_chosen_before_the_first_entry"
+    Then the response status is 422
+    And the response JSON matches the snapshot "post_api_setup__a_setup_without_a_password_is_refused"
+    And the store holds:
+      | table    | count |
+      | settings | 2     |
 
-  Scenario: An empty setup is refused
+  Scenario: A weak password is refused before the ledger locks
     Given a running API
     When I send a POST to "/api/setup" with:
       """json
-      {}
+      {"password":"short","base_currency":"usd"}
       """
     Then the response status is 422
-    And the response JSON matches the snapshot "post_api_setup__an_empty_setup_is_refused"
+    And the response JSON matches the snapshot "post_api_setup__a_weak_password_is_refused"
+
+  Scenario: A currency-less setup is refused
+    Given a running API
+    When I send a POST to "/api/setup" with:
+      """json
+      {"password":"chosen-password-123"}
+      """
+    Then the response status is 422
+    And the response JSON matches the snapshot "post_api_setup__a_currency_less_setup_is_refused"
 
   Scenario: The currency is locked after the first entry
     Given a running API
@@ -30,7 +66,7 @@ Feature: POST /api/setup
       | header | Content-Type | application/json |
     And the request body is:
       """json
-      {"base_currency":"USD"}
+      {"password":"chosen-password-123","base_currency":"USD"}
       """
     When I send a POST to "/api/setup" with headers/query:
       | type   | key          | value            |
@@ -43,7 +79,7 @@ Feature: POST /api/setup
     Given a running API
     When I send a POST to "/api/setup" with:
       """json
-      {"base_currency":"USD","accounts":[{"name":"Cash","kind":"asset","opening_balance_minor":"125000"},{"name":"Card","kind":"liability","opening_balance_minor":"-50000"}]}
+      {"password":"chosen-password-123","base_currency":"USD","accounts":[{"name":"Cash","kind":"asset","opening_balance_minor":"125000"},{"name":"Card","kind":"liability","opening_balance_minor":"-50000"}]}
       """
     Then the response status is 200
     And the response JSON matches the snapshot "post_api_setup__opening_balances_create_a_locked_ledger_in_one_write"
@@ -62,12 +98,13 @@ Feature: POST /api/setup
     Given a running API
     When I send a POST to "/api/setup" with:
       """json
-      {"base_currency":"USD"}
+      {"password":"chosen-password-123","base_currency":"USD"}
       """
     Then the response status is 200
+    When the bearer credential is "chosen-password-123"
     And the request body is:
       """json
-      {"base_currency":"EUR"}
+      {"password":"chosen-password-123","base_currency":"EUR"}
       """
     When I send a POST to "/api/setup" with headers/query:
       | type   | key          | value            |
@@ -79,7 +116,7 @@ Feature: POST /api/setup
     Given a running API
     When I send a POST to "/api/setup" with:
       """json
-      {"base_currency":"USD","accounts":<accounts>}
+      {"password":"chosen-password-123","base_currency":"USD","accounts":<accounts>}
       """
     Then the response status is 422
     And the response JSON matches the snapshot "post_api_setup__invalid_opening_account_<name>"
@@ -106,7 +143,7 @@ Feature: POST /api/setup
       | header | Content-Type | application/json |
     And the request body is:
       """json
-      {"base_currency":"USD","accounts":[{"name":"New bank","kind":"asset","opening_balance_minor":"100"},{"name":"Cash","kind":"asset","opening_balance_minor":"200"}]}
+      {"password":"chosen-password-123","base_currency":"USD","accounts":[{"name":"New bank","kind":"asset","opening_balance_minor":"100"},{"name":"Cash","kind":"asset","opening_balance_minor":"200"}]}
       """
     When I send a POST to "/api/setup" with headers/query:
       | type   | key          | value            |

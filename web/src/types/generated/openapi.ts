@@ -160,8 +160,8 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Public boot state: is the ledger opened, is the password still the generated one?
-     * @description The one read a client needs before it holds a credential. It answers in open mode, in gate mode and in normal mode, and it never carries a credential, an account, an amount or a secret. `setup_completed` says whether `POST /api/setup` still has to run, `password_must_change` whether the first-boot password still has to be replaced.
+     * Public boot state: has this instance been claimed yet?
+     * @description The one read a client needs before it holds a credential. A fresh instance boots open and unprotected until `POST /api/setup` sets its password and base currency, so `setup_completed` is the whole answer: false means the setup screen, true means the sign-in screen. No credential, no account, no amount and no secret is read.
      */
     get: operations['getApiBootstrap']
     put?: never
@@ -755,7 +755,7 @@ export interface paths {
     put?: never
     /**
      * Replace the instance password
-     * @description Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row. An optional `token` mints the browser credential in the same call, so a first boot costs one request instead of two; like `POST /api/tokens`, the plaintext exists exactly once, in this response. The first-boot secret file is removed once the change lands.
+     * @description Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row. An optional `token` mints the browser credential in the same call; like `POST /api/tokens`, the plaintext exists exactly once, in this response.
      */
     post: operations['postApiPassword']
     delete?: never
@@ -906,8 +906,8 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Open the ledger with a base currency and optional opening balances
-     * @description Completes once: it locks the base currency and every opening balance. Opening balances are posted as one balanced entry per account.
+     * Claim the instance: set the password, choose the base currency, post the opening balances
+     * @description Completes once, and it is the only write a fresh instance accepts: until it lands there is no password, so every request is the root credential. It sets the PBKDF2 hash, locks the base currency and every opening balance, and posts each opening balance as one balanced entry against an `Opening balance` equity account.
      */
     post: operations['postApiSetup']
     delete?: never
@@ -1045,7 +1045,6 @@ export interface components {
       ai_assistance?: boolean
       base_currency?: string
       extraction_enabled?: boolean
-      password_must_change?: boolean
       setup_completed?: boolean
       timezone?: string
     }
@@ -1376,7 +1375,6 @@ export interface components {
       ai_assistance?: boolean
       base_currency?: string
       extraction_enabled?: boolean
-      password_must_change?: boolean
       timezone?: string
       token?: components['schemas']['tokenIssuedResponse']
     }
@@ -1517,7 +1515,6 @@ export interface components {
       ai_assistance?: boolean
       base_currency?: string
       extraction_enabled?: boolean
-      password_must_change?: boolean
       timezone?: string
     }
     setupAccountRequest: {
@@ -1528,6 +1525,7 @@ export interface components {
     setupRequest: {
       accounts?: components['schemas']['setupAccountRequest'][]
       base_currency?: string
+      password?: string
     }
     suggestResponse: {
       account_name?: string
@@ -5283,7 +5281,7 @@ export interface operations {
           'application/json': components['schemas']['ErrorBody']
         }
       }
-      /** @description empty_setup, unknown_currency */
+      /** @description empty_setup, unknown_currency, weak_password */
       422: {
         headers: {
           [name: string]: unknown

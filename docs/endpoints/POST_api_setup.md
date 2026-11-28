@@ -1,13 +1,14 @@
 # POST /api/setup
 
-**Auth.** `Authorization: Bearer <credential>`: the instance password only. This route is root-only and cannot be delegated: a token is `403 forbidden` ("this route needs the root credential"), even with `admin` or `*`. Open mode passes everything through; with a password set, a missing or wrong credential is `401 unauthorized`.
+**Auth.** Root only: the instance password, or nothing at all while the instance is open. A fresh database has **no password** — this route is what creates it — so the first call needs no header. Once a password is set, a missing or wrong credential is `401 unauthorized`, and a token is `403 forbidden` ("this route needs the root credential"), even with `admin` or `*`.
 
 ## Purpose
 
-Open the ledger once: choose the base currency and optionally seed accounts with
-opening balances. The currency, accounts, balanced entries, settings and completion
-marker commit together; a second call is `409 base_currency_locked` even when the
-first call created no entries.
+Claim the instance: set its password, choose the base currency and optionally seed
+accounts with opening balances. The password hash, the currency, the accounts, the
+balanced entries, the settings and the completion marker commit together, so a
+half-claimed instance cannot exist; a second call is `409 base_currency_locked` even
+when the first call created no entries.
 
 ## Upstream
 
@@ -27,6 +28,7 @@ None.
 
 | field | type | required | notes |
 | --- | --- | --- | --- |
+| `password` | string | yes | 12–200 characters, trimmed; becomes the root credential as a PBKDF2 hash inside the sealed settings row |
 | `base_currency` | string | yes | ISO 4217, case-insensitive; `empty_setup` when absent |
 | `accounts` | array | no | at most 100 opening accounts |
 | `accounts[].name` | string | yes | trimmed, ≤ 80 characters; unique per `kind` in the request |
@@ -40,10 +42,14 @@ Opening entries are dated today in `APP_TIMEZONE`; the client cannot backdate th
 
 ## Response
 
-**200** `{"base_currency":"USD","timezone":"UTC","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
+**200** `{"base_currency":"USD","timezone":"UTC","extraction_enabled":false,"ai_assistance":false}`
+
+The response carries no credential: the caller sends the password it just chose as its
+next `Authorization: Bearer`, or exchanges it for a token at [`POST /api/tokens`](./POST_api_tokens.md).
 
 ## Errors
 
+`422 weak_password` when the password is absent, under 12 characters or over 200;
 `422 empty_setup` when `base_currency` is absent; `422 invalid_request` for a currency
 code this build does not know (binding rejects it before the module runs), for an invalid account, duplicate
 `name` + `kind`, zero balance or the reserved account name; `409 base_currency_locked`
@@ -52,6 +58,12 @@ when a matching account is archived; `409 setup_conflict` when settings changed 
 the request was being saved.
 
 ## Limitations
+
+**A fresh instance is open until this call lands.** There is no generated password and
+no claim file: `GET /api/bootstrap` answers `setup_completed: false`, and every request
+is the root credential until the first setup sets one. Start the container on a network
+you trust, or complete this call before exposing the port — that window is the price of
+never having a password nobody chose.
 
 Accounts are optional: currency-only setup remains valid and still locks the ledger.
 Each requested account receives one `adjustment` entry with two postings, against the
@@ -70,10 +82,10 @@ sequenceDiagram
     participant H as Setup handler
     participant S as Settings module
     participant DB as SQLite
-    C->>H: POST /api/setup {base_currency, accounts?}
-    H->>S: Setup(code, accounts)
+    C->>H: POST /api/setup {password, base_currency, accounts?}
+    H->>S: Setup(password, code, accounts)
     S->>DB: read app_settings and current settings
-    S->>S: validate, date today, seal settings
+    S->>S: hash the password, validate, date today, seal settings
     S->>DB: BEGIN IMMEDIATE
     S->>DB: check completion marker, existing entries, expected settings
     alt setup is closed or settings changed

@@ -170,12 +170,6 @@ func (w *world) seedSettings(ctx context.Context, service *settings.Service) err
 		return fmt.Errorf("settings: %w", err)
 	}
 
-	if w.password != "" && !w.passwordMustChange {
-		if _, err := service.ChangePassword(ctx, w.password, w.password); err != nil {
-			return fmt.Errorf("password: %w", err)
-		}
-	}
-
 	if _, err := service.EnsureTimezone(ctx, ""); err != nil {
 		return fmt.Errorf("timezone: %w", err)
 	}

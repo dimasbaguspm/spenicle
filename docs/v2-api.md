@@ -32,7 +32,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
 | 14 | `PATCH /api/captures/{ref}` | live: `approve`, `reject`, `retry`, `match`; an approved recurring capture resolves its rule from the sealed draft |
 | 21 | `GET /healthz` | live |
-| — | `GET /api/bootstrap` | live, public: `setup_completed` + `password_must_change`, so a client picks the setup wizard or the sign-in screen before it holds a credential |
+| — | `GET /api/bootstrap` | live, public: `setup_completed`, so a client picks the claim screen or the sign-in screen before it holds a credential |
 | 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `idempotency_key` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `idempotency_key` |
 | 1 | `POST /api/setup` | live: chooses the base currency once and optionally posts opening balances before setup completes |
@@ -183,7 +183,7 @@ entry stays), and the credential answers `401 unauthorized` at once.
 | `v` | TEXT | raw; JSON when structured |
 
 Keys: `app_settings` (a sealed JSON row with `base_currency`, `timezone`,
-`password_hash`, `password_must_change` and `extraction_enabled`), `secret_fingerprint`,
+`password_hash` and `extraction_enabled`), `secret_fingerprint`,
 `setup_completed_at`, `worker_last_run_at` and `google_client`. `setup_completed_at` is
 the authoritative one-shot marker: once set, the base currency is locked even when the
 ledger is empty. A legacy database with ledger entries but no marker is also locked.
@@ -561,7 +561,7 @@ sequenceDiagram
 ## 3.2 `GET /api/meta`
 
 ```json
-{ "settings": { "base_currency":"IDR", "timezone":"UTC", "password_must_change":false,
+{ "settings": { "base_currency":"IDR", "timezone":"UTC",
                 "extraction_enabled":false, "ai_assistance":false },
   "accounts": [{ "ref":"00000000000000000000000000000003", "name":"BCA Tahapan",
                 "kind":"asset", "currency":"IDR", "base_amount_minor":"9540000",
@@ -579,10 +579,10 @@ sequenceDiagram
   "currencies": [{ "code":"IDR", "minor_units":0, "symbol":"Rp" }] }
 ```
 
-The settings block is shared with `GET /api/settings`, so the first-boot
-`password_must_change` flag arrives with the shell — and `GET /api/bootstrap` carries the
-same flag before any credential exists, which is what lets a client choose between the
-wizard and the sign-in screen. Every account, payee and recurring
+The settings block is shared with `GET /api/settings`. Whether the instance has been
+claimed at all is not a setting: `GET /api/bootstrap` carries `setup_completed` before any
+credential exists, which is what lets a client choose between the claim screen and the
+sign-in screen. Every account, payee and recurring
 rule is returned by following repository cursors internally; the list routes' 200-row
 page cap does not truncate this payload. Empty collections are `[]`, and every entity
 identifier is a 32-character lowercase hex ref.

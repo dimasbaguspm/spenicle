@@ -900,7 +900,6 @@
     "ai_assistance": false,
     "base_currency": "IDR",
     "extraction_enabled": false,
-    "password_must_change": false,
     "timezone": "UTC"
   }
 }

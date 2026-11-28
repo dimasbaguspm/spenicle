@@ -15,33 +15,30 @@ still has a credential?" and "who reversed that entry?".
 
 | # | call | why it cannot be skipped |
 | --- | --- | --- |
-| 0 | read `./data/first-boot.txt` | the boot wrote the generated password into the data volume, mode `0600`; the log stream carries the path, not the secret, so the credential survives a rotated or lost log |
 | 1 | `GET /healthz` | proves the process booted, migrated, and which build this is |
-| 1b | `GET /api/bootstrap` | public: `setup_completed` and `password_must_change`, so the client knows which screen to show before it holds anything |
-| 2 | `GET /api/meta` | the bootstrap exception: reachable during the forced password change, so the shell can read the `settings` block (`base_currency`, `timezone`, `password_must_change`, the capability flags: `extraction_enabled` drives SnapToJSON; `ai_assistance` is informational only and must not gate a feature ([F9](./09-gaps-and-next.md) G11)) plus accounts, payees, recurring rules and currencies |
-| 3 | `POST /api/password {current_password, new_password, token}` | closes the instance first, because the gate still refuses every other write; with `token` it answers the browser credential in the same call, the generated password is dead and `./data/first-boot.txt` is deleted |
-| 4 | `POST /api/setup {"base_currency":"IDR","accounts":[{"name":"Cash","kind":"asset","opening_balance_minor":"500000"}]}` | the wizard's only ledger write, now that the gate is clear; optional opening balances post atomically, then `200` returns the settings payload |
-| 5 | `GET /api/settings` | after the password change `password_must_change` is false; before it, this route answers `409 password_change_required` |
+| 2 | `GET /api/bootstrap` | public, no credential: `setup_completed` says whether this is a claim screen or a sign-in screen. A fresh database has **no password** — the boot generates nothing to find |
+| 3 | `GET /api/meta` | reachable without a credential while the instance is open, so the claim form can offer the real currency list and the seeded accounts |
+| 4 | `POST /api/setup {"password":"…","base_currency":"IDR","accounts":[…]}` | the one write that closes the instance and opens the ledger: the password hash, the currency lock and the optional opening balances commit in one transaction. Optional opening balances post atomically; `200` returns the settings payload |
+| 5 | `POST /api/tokens {"name":"spenicle web","scopes":["admin"]}` | the instance has a password now, so the browser exchanges it — once — for a revocable token and never keeps the password |
+| 6 | `GET /api/settings` | confirms `base_currency` and `timezone`; whether the instance is claimed lives in `/api/bootstrap`, not here |
 
-Step 1 and step 2 are separate on purpose: `/healthz` is public and answers even when
-the credential is wrong, so a client can distinguish "server down" from "server says no".
+Step 2 is the only decision the shell has to make before it holds anything: a claimed
+instance shows the sign-in screen, an unclaimed one shows the claim form.
 
-While `password_must_change` is true, `/api/meta` and `/api/password` are the only
-authenticated routes that still answer: every other one answers `409
-password_change_required`. That is why step 2 comes before step 4 and step 5 comes after
-it.
+**The tradeoff, stated once.** While `setup_completed` is false the instance is open:
+every request is the root credential. There is no generated password and no claim file,
+so a container started on a reachable port can be claimed by whoever gets there first.
+Start it on a trusted network, or claim it before exposing the port; the alternative —
+a password nobody chose, printed into a log or a volume — is a credential that can be
+lost and a gate that blocks the very call that would fix it.
 
-Step 4 is root-only: `/api/setup` locks the base currency and seeds balances, so no
-token can reach it, even one minted with `admin` or `*`. A fresh boot runs it in gate
-mode: the generated password is the credential, the gate refuses `/api/setup` until step
-3 has cleared it, and a legacy database with entries is already locked, so `setup` may
-answer `422 base_currency_locked` and the wizard goes straight to the ledger.
+Step 4 is root-only: no token can lock the base currency or post an opening balance, and
+a legacy database that already has entries answers `409 base_currency_locked`, so the
+claim form goes straight to the sign-in screen.
 
-Step 3 is the one call that invalidates every credential at once: the root credential
-is derived from the password hash, so the old password and every token minted from it
-stop working. Without `token` the client must send the new password as the next header;
-with it, `POST /api/password` answers settings plus the plaintext token once, and the
-password never leaves the form.
+Step 5 is why the password is typed once: the token is scoped and revocable, the password
+is not. `POST /api/password` rotates the password later, optionally minting a fresh token
+in the same call.
 
 ### 2.2 Issue a credential for an agent
 
@@ -126,8 +123,8 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
   hold one that rolled back.
 - **Boot order is a contract.** `config.Start` loads config (fails without
   `APP_SECRET`), opens SQLite (WAL retry, `busy_timeout`), migrates, seals, loads
-  settings, then `EnsureBaseline` (fingerprint check, seed `Cash` + `Unsorted`,
-  generated password on a fresh database) and records the `system`/`start` evidence.
+  settings, then `EnsureBaseline` (fingerprint check, seed `Cash` + `Unsorted`, no
+  password) and records the `system`/`start` evidence.
   If any step fails the process exits instead of serving a half-ready API, so
   `/healthz` answering `ok` means all of it happened.
 
@@ -143,8 +140,8 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 3. `timezone` is never writable through the API. It comes from `APP_TIMEZONE` at the
    first boot; a later boot that disagrees with the stored value refuses to start.
 4. `GET /api/settings` and the `settings` object in `GET /api/meta` always carry
-   `base_currency`, `timezone`, `password_must_change`, `extraction_enabled` and
-   `ai_assistance` — no `omitempty`, so a client never guesses a default.
+   `base_currency`, `timezone`, `extraction_enabled` and `ai_assistance` — no
+   `omitempty`, so a client never guesses a default.
    `extraction_enabled` is the flag that matters: it says SnapToJSON is wired.
    `ai_assistance` is computed from the `OPENAI_*` variables but the OpenAI adapter
    is reserved for the future chat endpoint ([F9](./09-gaps-and-next.md) G11), so a
@@ -167,7 +164,7 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
 | a client keeps the *old* password after rotation | every request starts answering `401 invalid_password` → "unauthorized" | the caller sends the new password as the Bearer credential on the next request; `POST /api/password` returns no token, so the client must update its header before it paints the success screen |
-| open mode reaches a public host | until a password is set, every request is root; `POST /api/setup` and `POST /api/password` are the only gates | the fresh boot writes the generated password to `./data/first-boot.txt` instead of the log (the log carries the path), `password_must_change` is in every settings payload and in public `GET /api/bootstrap`, and the rollout checklist in the [README](./README.md) treats `true` as a blocker |
+| open mode reaches a public host | until `POST /api/setup` lands there is no password, so every request is root and the first caller can claim the instance | public `GET /api/bootstrap` publishes `setup_completed`, the [README](../../../README.md) tells the operator to claim it before exposing the port, and the rollout checklist treats a reachable unclaimed instance as a hole |
 | token sprawl | a leaked shortcut token can dump receipts or post entries | scopes are a closed set, the handler checks action scopes before side effects (`approve` needs `entries:write`), `last_used_at` makes an unused token visible, and revoke keeps the row so the history is intact |
 | password is the only root credential | no "sign out other devices" | rotation kills every derived credential at once; this is the design, and the client must not present a per-device session model |
 | OAuth callback is a public route | the provider redirect carries no bearer header, so the route skips auth entirely | `state` is a Unix stamp with an `APP_SECRET`-derived HMAC; the callback checks the signature and ±10-minute TTL and answers `401 invalid_state` on a bad or expired stamp. There is no pending-authorisation or nonce store and no one-time replay guard; a valid `state` can be replayed inside the TTL |

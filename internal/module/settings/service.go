@@ -113,6 +113,8 @@ func (s *Service) EnsureInitial(
 		settings.Timezone = trimmed
 	}
 
+	// A fixture can create an instance that already answers to a password; a real boot
+	// never does, so the first setup is the only place a production password is born.
 	if initialPassword != "" {
 		encoded, hashErr := hashPassword(initialPassword)
 		if hashErr != nil {
@@ -120,7 +122,6 @@ func (s *Service) EnsureInitial(
 		}
 
 		settings.PasswordHash = encoded
-		settings.PasswordMustChange = true
 	}
 
 	created, err := s.create(ctx, settings)
@@ -193,7 +194,6 @@ func (s *Service) ChangePassword(
 	}
 
 	settings.PasswordHash = encoded
-	settings.PasswordMustChange = false
 
 	if err := s.save(ctx, settings); err != nil {
 		return entity.Settings{}, err
@@ -204,11 +204,23 @@ func (s *Service) ChangePassword(
 
 func (s *Service) Setup(
 	ctx context.Context,
-	code string,
+	password, code string,
 	accounts []entity.OpeningAccount,
 ) (entity.Settings, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Settings.Setup")
 	defer endSpan()
+
+	trimmed := strings.TrimSpace(password)
+	chosen := passwordChange{Current: trimmed, Next: trimmed}
+
+	if err := validate.Struct(chosen); err != nil {
+		return entity.Settings{}, entity.ErrWeakPassword
+	}
+
+	encoded, err := hashPassword(trimmed)
+	if err != nil {
+		return entity.Settings{}, err
+	}
 
 	expectedSettings, _, err := s.store.Setting(ctx, constant.SettingAppSettings)
 	if err != nil {
@@ -234,6 +246,7 @@ func (s *Service) Setup(
 	}
 
 	settings.BaseCurrency = setup.BaseCurrency
+	settings.PasswordHash = encoded
 
 	sealed, err := s.encode(ctx, settings)
 	if err != nil {

@@ -67,30 +67,6 @@ func TestEverySettingsPayloadCarriesTheBaseCurrencyAndTheTimezone(t *testing.T) 
 	}
 }
 
-func TestSettingsResponseCarriesPasswordChange(t *testing.T) {
-	cases := []struct {
-		name string
-		flag bool
-	}{
-		{name: "the generated password must change", flag: true},
-		{name: "the password is current"},
-	}
-
-	for _, testCase := range cases {
-		t.Run(testCase.name, func(t *testing.T) {
-			payload := toSettingsResponse(entity.Settings{
-				BaseCurrency:       testBaseCurrency,
-				Timezone:           testTimezone,
-				PasswordMustChange: testCase.flag,
-			}, false, false)
-
-			if payload.PasswordMustChange != testCase.flag {
-				t.Fatalf("password_must_change = %v, want %v", payload.PasswordMustChange, testCase.flag)
-			}
-		})
-	}
-}
-
 func TestPatchSettingsRefusesTheBaseCurrency(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -188,8 +164,8 @@ func TestThePasswordChangeAnswersATokenOnlyWhenItWasAsked(t *testing.T) {
 				t.Fatalf("base_currency = %v, want %q in %s", fields["base_currency"], testBaseCurrency, body)
 			}
 
-			if fields["password_must_change"] != false {
-				t.Fatalf("a completed change must clear the gate, got %v", fields["password_must_change"])
+			if _, ok := fields["password_must_change"]; ok {
+				t.Fatalf("the gate is gone: password_must_change must not be published in %s", body)
 			}
 		})
 	}

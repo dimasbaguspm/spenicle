@@ -48,7 +48,7 @@ func newServiceWithStore(t *testing.T) (*settings.Service, *sqlite.Store) {
 	return settings.New(store, sealer, clock.System{}), store
 }
 
-func TestEnsureInitialDefaultsToIDRAndHashesThePassword(t *testing.T) {
+func TestEnsureInitialDefaultsToIDRAndSeedsThePasswordForAFixture(t *testing.T) {
 	service := newService(t)
 
 	seeded, created, err := service.EnsureInitial(t.Context(), "initial-password-123", "")
@@ -62,10 +62,6 @@ func TestEnsureInitialDefaultsToIDRAndHashesThePassword(t *testing.T) {
 
 	if seeded.BaseCurrency != "IDR" {
 		t.Fatalf("base currency = %q, want IDR", seeded.BaseCurrency)
-	}
-
-	if !seeded.PasswordMustChange {
-		t.Fatal("a generated password must be flagged for change")
 	}
 
 	if !strings.HasPrefix(seeded.PasswordHash, "pbkdf2-sha256$") {
@@ -127,13 +123,8 @@ func TestChangePasswordInvalidatesTheOldCredential(t *testing.T) {
 		t.Fatalf("the seeded password must be the root credential: ok=%v err=%v", ok, err)
 	}
 
-	changed, err := service.ChangePassword(ctx, "initial-password-123", "my-own-password-456")
-	if err != nil {
+	if _, err := service.ChangePassword(ctx, "initial-password-123", "my-own-password-456"); err != nil {
 		t.Fatalf("change: %v", err)
-	}
-
-	if changed.PasswordMustChange {
-		t.Fatal("choosing your own password clears the flag")
 	}
 
 	if ok, err := service.Root(ctx, "initial-password-123"); err != nil || ok {
@@ -365,7 +356,7 @@ func TestSetupPersistsCurrencyAndOpeningEntries(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			service, store := newSetupService(t)
-			got, err := service.Setup(t.Context(), "usd", test.accounts)
+			got, err := service.Setup(t.Context(), "chosen-password-123", "usd", test.accounts)
 			if !errors.Is(err, test.wantErr) {
 				t.Fatalf("setup error = %v, want %v", err, test.wantErr)
 			}
@@ -426,7 +417,7 @@ func assertSetupCurrencyLocked(t *testing.T, service *settings.Service, got enti
 		t.Fatalf("stored currency = %q err=%v", stored.BaseCurrency, err)
 	}
 
-	if _, err := service.Setup(t.Context(), "EUR", nil); !errors.Is(err, entity.ErrBaseCurrencyLocked) {
+	if _, err := service.Setup(t.Context(), "chosen-password-123", "EUR", nil); !errors.Is(err, entity.ErrBaseCurrencyLocked) {
 		t.Fatalf("second setup error = %v, want ErrBaseCurrencyLocked", err)
 	}
 }
@@ -444,7 +435,7 @@ func TestSetupDatesOpeningEntriesInTheConfiguredTimezone(t *testing.T) {
 	}
 
 	before := time.Now().In(location).Format(constant.DateLayout)
-	if _, setupErr := service.Setup(ctx, "IDR", []entity.OpeningAccount{
+	if _, setupErr := service.Setup(ctx, "chosen-password-123", "IDR", []entity.OpeningAccount{
 		{Name: "Cash", Kind: constant.AccountKindAsset, AmountMinor: 100_000},
 	}); setupErr != nil {
 		t.Fatalf("setup: %v", setupErr)

@@ -20,7 +20,7 @@ by hand, and change the page here when you change the block.
 | `POST` | `/api/connections/{ref}/revoke` | disconnect the stored grant, keep the row | [`POST_api_connections_ref_revoke.md`](./POST_api_connections_ref_revoke.md) |
 | `GET` | `/api/bootstrap` | public mode: ledger opened, password still the generated one | [`GET_api_bootstrap.md`](./GET_api_bootstrap.md) |
 | `GET` | `/healthz` | liveness, build and schema fingerprint | [`GET_healthz.md`](./GET_healthz.md) |
-| `POST` | `/api/password` | replace the generated password, optionally minting a token | [`POST_api_password.md`](./POST_api_password.md) |
+| `POST` | `/api/password` | rotate the instance password, optionally minting a token | [`POST_api_password.md`](./POST_api_password.md) |
 | `GET` | `/api/settings` | the in-app settings the shell reads | [`GET_api_settings.md`](./GET_api_settings.md) |
 | `PATCH` | `/api/settings` | discover that no setting is patchable | [`PATCH_api_settings.md`](./PATCH_api_settings.md) |
 | `GET` | `/api/meta` | bootstrap payload: settings, accounts, payees, recurring rules, currencies | [`GET_api_meta.md`](./GET_api_meta.md) |
@@ -83,13 +83,11 @@ needs no credential. `root` needs the instance password as `Authorization: Beare
 on that route's own line in `cmd/http/handler.go` — a root credential may reach it too,
 a token without the scope is `403 forbidden`.
 
-- **Open mode.** Until a password is seeded the instance is unprotected: every request is
-  the root credential and every scope check passes.
-- **Password change gate.** While `password_must_change` is true — the generated first
-  password nobody has replaced yet — every route except `POST /api/password` and
-  `GET /api/meta` answers `409 password_change_required` before the handler runs.
-  `/healthz` and `GET /api/connections/google/callback` sit outside it: they need no
-  credential at all.
+- **Open mode.** A fresh database has no password: [`POST /api/setup`](./POST_api_setup.md)
+  is what creates it. Until that call lands the instance is unprotected — every request
+  is the root credential and every scope check passes — and
+  [`GET /api/bootstrap`](./GET_api_bootstrap.md) answers `setup_completed: false` so a
+  client knows to show the claim screen. Claim it before exposing the port.
 - **Two refusals, in order.** No header at all is `401 unauthorized`; a credential that
   exists but lacks the group or the scope is `403 forbidden`.
 

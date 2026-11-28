@@ -9,16 +9,15 @@ import (
 )
 
 type bootstrapResponse struct {
-	SetupCompleted     bool   `json:"setup_completed"`
-	PasswordMustChange bool   `json:"password_must_change"`
-	BaseCurrency       string `json:"base_currency"        maxLength:"3" minLength:"3"`
-	Timezone           string `json:"timezone"`
-	ExtractionEnabled  bool   `json:"extraction_enabled"`
-	AIAssistance       bool   `json:"ai_assistance"`
+	SetupCompleted    bool   `json:"setup_completed"`
+	BaseCurrency      string `json:"base_currency"      maxLength:"3" minLength:"3"`
+	Timezone          string `json:"timezone"`
+	ExtractionEnabled bool   `json:"extraction_enabled"`
+	AIAssistance      bool   `json:"ai_assistance"`
 }
 
-// @Summary     Public boot state: is the ledger opened, is the password still the generated one?
-// @Description The one read a client needs before it holds a credential. It answers in open mode, in gate mode and in normal mode, and it never carries a credential, an account, an amount or a secret. `setup_completed` says whether `POST /api/setup` still has to run, `password_must_change` whether the first-boot password still has to be replaced.
+// @Summary     Public boot state: has this instance been claimed yet?
+// @Description The one read a client needs before it holds a credential. A fresh instance boots open and unprotected until `POST /api/setup` sets its password and base currency, so `setup_completed` is the whole answer: false means the setup screen, true means the sign-in screen. No credential, no account, no amount and no secret is read.
 // @Tags        system
 // @Produce     json
 // @Success     200 {object} bootstrapResponse
@@ -43,11 +42,10 @@ func (s *Server) Bootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, bootstrapResponse{
-		SetupCompleted:     completed,
-		PasswordMustChange: settings.PasswordMustChange,
-		BaseCurrency:       settings.BaseCurrency,
-		Timezone:           settings.Timezone,
-		ExtractionEnabled:  s.deps.ExtractionEnabled,
-		AIAssistance:       s.deps.AIAssistance,
+		SetupCompleted:    completed,
+		BaseCurrency:      settings.BaseCurrency,
+		Timezone:          settings.Timezone,
+		ExtractionEnabled: s.deps.ExtractionEnabled,
+		AIAssistance:      s.deps.AIAssistance,
 	})
 }

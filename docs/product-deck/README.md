@@ -66,11 +66,10 @@ instance password** (the root credential, answers every route) or **an API token
 `401 unauthorized`; a token reaching a route outside its scopes is `403 forbidden`
 and the message names the route and the scope it wants.
 
-**Open mode:** while no password is set, every request is treated as root. A fresh
-container prints its generated password once at boot, so open mode is the first
-minutes of a development instance, not a deployment mode. A client must treat
-`GET /api/settings` → `password_must_change: true` as "show the change-password
-screen before anything else".
+**Open mode:** a fresh database has no password — `POST /api/setup` is what creates
+one — so until that call lands every request is treated as root. A client must treat
+`GET /api/bootstrap` → `setup_completed: false` as "show the claim screen before
+anything else", and an operator must claim the instance before publishing the port.
 
 ### One error envelope
 
@@ -179,7 +178,7 @@ tell "the worker never finished a run" from "work is still in progress".
 | risk | why it hurts | what we do |
 | --- | --- | --- |
 | `APP_SECRET` loss | capture payloads, receipt files and export blobs become unreadable; the ledger survives | boot refuses a changed secret (`secret_mismatch`) rather than silently re-keying; the docs tell the operator to back the secret up next to the database |
-| open mode on a public host | with no password set, every request is root | the first boot generates and prints a password once; the client shows the change-password screen first, and the readiness checklist below treats `password_must_change: true` as a blocker |
+| open mode on a public host | with no password set, every request is root, so the first caller can claim the instance | `GET /api/bootstrap` publishes `setup_completed`, the client shows the claim screen first, and the readiness checklist below treats a reachable unclaimed instance as a blocker |
 | no push channel | a recurring capture or a finished export waits up to `WorkerInterval` | every job route exposes its status and its event log, so the client can explain the wait instead of guessing; `worker_last_run_at` names the last completed run |
 | one writer at a time | SQLite `BEGIN IMMEDIATE` serialises writes; a long import commit blocks every other write | commits run in chunks of `ImportCommitChunk` (500) and are resumable, so a blocked writer is a slow writer, never a lost one |
 | retention sweeps | a rejected capture loses its receipt after 720h; a ready export 410s after 720h | the row survives with `deleted_at`/`status = expired`, and the UI is told to say "the file was reclaimed", never "not found" |
@@ -205,8 +204,8 @@ Before a client ships a feature that touches money, the readiness checklist is:
       `/api/audit?entity_kind=system&action=start`.
 - [ ] `worker_last_run_at` is non-empty: the worker process completed a run, so a
       recurring capture or an export will not stall forever.
-- [ ] The instance is closed: `password_must_change: false` on `GET /api/settings`,
-      and the client holds a credential, not an open-mode session.
+- [ ] The instance is claimed: `setup_completed: true` on `GET /api/bootstrap`, and the
+      client holds a credential, not an open-mode session.
 - [ ] `APP_SECRET` is backed up next to `spenicle.db` (captures and exports are sealed
       with it).
 - [ ] Retention values are understood by the UI: artifacts `720h`, export blobs

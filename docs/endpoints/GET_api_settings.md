@@ -24,7 +24,7 @@ None.
 
 ## Response
 
-`{"base_currency":"IDR","timezone":"UTC","password_must_change":false,"extraction_enabled":false,"ai_assistance":false}`
+`{"base_currency":"IDR","timezone":"UTC","extraction_enabled":false,"ai_assistance":false}`
 
 ## Errors
 
@@ -49,7 +49,8 @@ of the worker and the calendar the client reads can never drift apart.
 `base_currency` and `timezone` are always in the body — no `omitempty` — in this route and
 in every other payload that carries them (`GET /api/meta`, `POST /api/setup`,
 `POST /api/password`, `GET /healthz`), so a client never has to guess a
-missing default.
+missing default. Whether the instance has been claimed yet is not a setting: read
+[`GET /api/bootstrap`](./GET_api_bootstrap.md) for that.
 
 
 
@@ -66,5 +67,5 @@ sequenceDiagram
     UI->>H: GET /api/settings
     H->>S: Load()
     S-->>H: settings
-    H-->>UI: 200 base_currency, timezone, password_must_change, extraction_enabled, ai_assistance
+    H-->>UI: 200 base_currency, timezone, extraction_enabled, ai_assistance
 ```

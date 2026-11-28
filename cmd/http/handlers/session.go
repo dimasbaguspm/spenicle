@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 
-	"github.com/dimasbaguspm/spenicle/internal/common/firstboot"
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/entity"
@@ -27,15 +25,14 @@ type passwordChangeResponse struct {
 type settingsPatchRequest struct{}
 
 type settingsResponse struct {
-	BaseCurrency       string `json:"base_currency"        maxLength:"3" minLength:"3"`
-	Timezone           string `json:"timezone"`
-	PasswordMustChange bool   `json:"password_must_change"`
-	ExtractionEnabled  bool   `json:"extraction_enabled"`
-	AIAssistance       bool   `json:"ai_assistance"`
+	BaseCurrency      string `json:"base_currency"      maxLength:"3" minLength:"3"`
+	Timezone          string `json:"timezone"`
+	ExtractionEnabled bool   `json:"extraction_enabled"`
+	AIAssistance      bool   `json:"ai_assistance"`
 }
 
 // @Summary     Replace the instance password
-// @Description Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row. An optional `token` mints the browser credential in the same call, so a first boot costs one request instead of two; like `POST /api/tokens`, the plaintext exists exactly once, in this response. The first-boot secret file is removed once the change lands.
+// @Description Root credential only. The old password must match; the new one is at least 12 characters and is stored as a PBKDF2 hash inside the sealed settings row. An optional `token` mints the browser credential in the same call; like `POST /api/tokens`, the plaintext exists exactly once, in this response.
 // @Tags        settings
 // @Accept      json
 // @Param       body body passwordChangeRequest true "the request body"
@@ -75,10 +72,6 @@ func (s *Server) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		}
 
 		response.Token = &issued
-	}
-
-	if err := firstboot.Remove(ctx, s.deps.DataDir); err != nil {
-		s.deps.Logger.Warn(ctx, "could not remove the first-boot secret", slog.String("error", err.Error()))
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, response)
@@ -150,10 +143,9 @@ func (s *Server) writeSettings(w http.ResponseWriter, settings entity.Settings) 
 
 func toSettingsResponse(settings entity.Settings, extraction, ai bool) settingsResponse {
 	return settingsResponse{
-		BaseCurrency:       settings.BaseCurrency,
-		Timezone:           settings.Timezone,
-		PasswordMustChange: settings.PasswordMustChange,
-		ExtractionEnabled:  extraction,
-		AIAssistance:       ai,
+		BaseCurrency:      settings.BaseCurrency,
+		Timezone:          settings.Timezone,
+		ExtractionEnabled: extraction,
+		AIAssistance:      ai,
 	}
 }

@@ -28,25 +28,6 @@ func theInstancePasswordIs(ctx context.Context, password string) (context.Contex
 	return ctx, nil
 }
 
-func theInstancePasswordMustBeChanged(ctx context.Context) (context.Context, error) {
-	w, err := worldFrom(ctx)
-	if err != nil {
-		return ctx, err
-	}
-
-	if w.server != nil {
-		return ctx, errors.New("set the password change requirement before starting the API")
-	}
-
-	if w.password == "" {
-		return ctx, errors.New(`set the instance password before requiring a change`)
-	}
-
-	w.passwordMustChange = true
-
-	return ctx, nil
-}
-
 func iSignInWithTheInstancePassword(ctx context.Context) (context.Context, error) {
 	w, err := worldFrom(ctx)
 	if err != nil {

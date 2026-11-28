@@ -2,8 +2,6 @@ package config
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,7 +10,6 @@ import (
 	"time"
 
 	"github.com/dimasbaguspm/spenicle/internal/common/clock"
-	"github.com/dimasbaguspm/spenicle/internal/common/firstboot"
 	"github.com/dimasbaguspm/spenicle/internal/common/logging"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/seal"
@@ -128,7 +125,7 @@ func boot(ctx context.Context, cfg entity.AppConfig, logger *logging.Logger) (*P
 		return nil, fmt.Errorf("sealer: %w", err)
 	}
 
-	settingsService, appSettings, baseCurrency, err := prepare(ctx, cfg, store, sealer, logger)
+	settingsService, appSettings, baseCurrency, err := prepare(ctx, cfg, store, sealer)
 	if err != nil {
 		_ = store.Close(ctx)
 		return nil, err
@@ -201,22 +198,14 @@ func prepare(
 	cfg entity.AppConfig,
 	store *sqlite.Store,
 	sealer seal.Sealer,
-	logger *logging.Logger,
 ) (*settings.Service, entity.Settings, string, error) {
 	service := settings.New(store, sealer, clock.System{})
 
-	freshPassword, err := generatePassword()
-	if err != nil {
-		return nil, entity.Settings{}, "", err
-	}
-
-	_, created, err := service.EnsureInitial(ctx, freshPassword, cfg.Timezone)
-	if err != nil {
+	// A fresh instance boots open: the password does not exist until the first setup
+	// completes, which is what makes `GET /api/bootstrap` the only thing a client needs
+	// to know whether to show the setup screen or the sign-in screen.
+	if _, _, err := service.EnsureInitial(ctx, "", cfg.Timezone); err != nil {
 		return nil, entity.Settings{}, "", fmt.Errorf("settings: %w", err)
-	}
-
-	if created && freshPassword != "" {
-		claim(ctx, cfg, freshPassword, logger)
 	}
 
 	appSettings, err := service.EnsureTimezone(ctx, cfg.Timezone)
@@ -277,32 +266,4 @@ func flushTelemetry(
 	if err := shutdown(shutdownCtx); err != nil {
 		logger.Error(shutdownCtx, "telemetry shutdown", slog.Any("error", err))
 	}
-}
-
-const passwordBytes = 18
-
-// claim puts the generated password where the operator can still read it after the
-// container's log stream is gone, and falls back to the log only when the data volume
-// refuses the write: a read-only volume must not cost the only copy of the credential.
-func claim(ctx context.Context, cfg entity.AppConfig, password string, logger *logging.Logger) {
-	path, err := firstboot.Write(ctx, cfg.DataDir, password)
-	if err != nil {
-		logger.Warn(ctx, "could not write the first-boot secret; read the password here",
-			slog.String("error", err.Error()), slog.String("password", password))
-
-		return
-	}
-
-	logger.Warn(ctx, "wrote the generated password to the data volume; change it after the first sign-in",
-		slog.String("path", path))
-}
-
-func generatePassword() (string, error) {
-	raw := make([]byte, passwordBytes)
-
-	if _, err := rand.Read(raw); err != nil {
-		return "", fmt.Errorf("entropy: %w", err)
-	}
-
-	return base64.RawURLEncoding.EncodeToString(raw), nil
 }

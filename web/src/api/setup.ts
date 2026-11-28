@@ -3,14 +3,12 @@ import { apiError } from './error'
 import type { LedgerSetup, Settings } from './types'
 
 /**
- * The wizard's one write. Root credential only, so the caller brings the password it
- * just set: a token can never lock the base currency or post an opening balance.
+ * The claim write. A fresh instance is open, so there is no credential to send: the
+ * body carries the password the instance is being closed with, in the same transaction
+ * that locks the base currency and posts the opening balances.
  */
-export async function openLedger(password: string, body: LedgerSetup): Promise<Settings> {
-  const { data, error, response } = await api.POST('/api/setup', {
-    headers: { Authorization: `Bearer ${password}` },
-    body,
-  })
+export async function openLedger(body: LedgerSetup): Promise<Settings> {
+  const { data, error, response } = await api.POST('/api/setup', { body })
 
   if (error !== undefined) {
     throw apiError(response.status, error)

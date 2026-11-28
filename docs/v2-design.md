@@ -33,7 +33,7 @@ place to defer a decision. v2 fixes all three.
 | history | fresh start; statement import commits accepted CSV rows, and extraction is not part of import |
 | deletions | no row deletes. Reverse and reject instead; `audit_log` records state changes. File reclamation is allowed |
 | configuration | eight environment variables; every other default lives in `internal/common/config/config.go`, no viper, no config file |
-| first boot | the boot writes the generated password to `./data/first-boot.txt`; the adapter seeds `Cash` and `Unsorted`; `POST /api/setup` locks the currency and optional opening balances in one transaction, and the first password change deletes that file |
+| first boot | no password exists yet: the instance boots open and `GET /api/bootstrap` reports `setup_completed: false`; the adapter seeds `Cash` and `Unsorted`; `POST /api/setup` sets the password, locks the currency and posts the optional opening balances in one transaction |
 
 ## Layout
 
@@ -90,7 +90,7 @@ Invalid input or a failed write rolls back the whole setup.
 ### Cold-start payload
 
 `GET /api/meta` is the authenticated shell bootstrap. It returns the same settings
-shape as `GET /api/settings` (including `password_must_change`), every account with its
+shape as `GET /api/settings`, every account with its
 all-time derived base balance, every payee, every recurring rule and the embedded ISO
 currency list. Collections are complete: the handler follows repository cursors
 internally instead of exposing the normal 200-row page cap, and an empty collection is

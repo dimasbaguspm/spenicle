@@ -34,10 +34,6 @@ func TestCapabilitiesAreIndependent(t *testing.T) {
 			if payload.Timezone != "UTC" {
 				t.Fatalf("timezone = %q, want the stored value", payload.Timezone)
 			}
-
-			if payload.PasswordMustChange {
-				t.Fatal("password_must_change = true, want false")
-			}
 		})
 	}
 }

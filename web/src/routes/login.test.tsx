@@ -42,6 +42,10 @@ describe('login', () => {
     renderAt('/setup')
 
     expect(await screen.findByRole('heading', { name: 'Claim this instance' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Twelve characters or more…')).toHaveAttribute(
+      'type',
+      'password',
+    )
+    expect(screen.getByRole('button', { name: 'Claim and open' })).toBeInTheDocument()
   })
 })

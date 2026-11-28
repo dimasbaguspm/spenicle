@@ -1,11 +1,11 @@
 # GET /api/bootstrap
 
-**Auth.** None. This is a public route in the public mux: no `Authorization` header is read, no credential is resolved, and the gate that forces the password change does not apply to it. It answers in open mode, in gate mode and in normal mode alike.
+**Auth.** None. This is a public route in the public mux: no `Authorization` header is read and no credential is resolved.
 
 ## Purpose
 
-The one read a client needs before it holds a credential: it says whether the ledger is
-opened yet and whether the password is still the one the boot generated.
+The one read a client needs before it holds a credential: it says whether the instance
+has been claimed yet. `false` means the setup screen, `true` means the sign-in screen.
 
 ## Upstream
 
@@ -27,7 +27,7 @@ None.
 
 ## Response
 
-`{"setup_completed":false,"password_must_change":true,"base_currency":"IDR","timezone":"UTC","extraction_enabled":false,"ai_assistance":false}`
+`{"setup_completed":false,"base_currency":"IDR","timezone":"UTC","extraction_enabled":false,"ai_assistance":false}`
 
 ## Errors
 
@@ -36,14 +36,15 @@ read; the body is the generic message and the cause goes to the log.
 
 ## Limitations
 
-It is a mode, not a secret, and it is deliberately narrow: there is no account count, no
-ledger size and no credential here, so a scanner learns only what `/healthz` already
-publishes plus the two mode flags. `password_must_change` is the gate, not the password:
-a client still needs the generated password (written to `./data/first-boot.txt` at the
-first boot) to open it, and `setup_completed` is `false` on a database that has entries
-but never completed `POST /api/setup` — a legacy instance, whose base currency is locked
-anyway. `base_currency` before setup is the default (`IDR`), so a client must not treat it
-as the chosen one when `setup_completed` is `false`.
+It is a mode, not a secret, and it is deliberately narrow: no account, no amount, no
+credential. `setup_completed: false` also means the instance is **open** — a fresh
+database has no password until [`POST /api/setup`](./POST_api_setup.md) sets one, so
+anyone who can reach the port can claim it. That window is documented, not hidden:
+start the container on a trusted network or claim it before exposing the port.
+`setup_completed` is `false` on a database that has entries but never completed setup
+too — a legacy instance, whose base currency is locked anyway. `base_currency` before
+setup is the default (`IDR`), so a client must not treat it as the chosen one while
+`setup_completed` is `false`.
 
 
 
@@ -60,8 +61,8 @@ sequenceDiagram
     participant R as Sqlite store
     UI->>H: GET /api/bootstrap
     H->>S: Load()
-    S-->>H: settings (base_currency, timezone, password_must_change)
+    S-->>H: settings (base_currency, timezone)
     H->>R: Setting(setup_completed_at)
     R-->>H: found or absent
-    H-->>UI: 200 setup_completed, password_must_change, base_currency, timezone, flags
+    H-->>UI: 200 setup_completed, base_currency, timezone, flags
 ```

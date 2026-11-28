@@ -19,6 +19,7 @@ Append a row per check; never rewrite a past one.
 | 2026-11-27T22:05Z | uncommitted (the OpenAPI document in this change) | `main` | Dimas Mukti (PI-Desktop agent) | `openapi.json` against the 59 routes in `cmd/http/handler.go`, the group and scope of each, and the `validate`, `pattern`, `format` and `enums` tags on the structs it publishes | **GO** |
 | 2026-11-27T17:40Z | `2e3b59d` + the rename, balance and `Match`-fold pass in this change | `main` | Dimas Mukti (PI-Desktop agent) | every page that names a table, column, query parameter or body action: `entries`/`postings`/`entry_balances`, `reversed_at`/`reversal_of_ref`, `group_label`, `?reversed=`, `{"reverse":true}`, `accounts.balance_minor` as a derived column, and `match` as an `Approve` with an `entry_ref` | **GO** |
 | 2026-11-28T02:20Z | uncommitted (the first-boot claim pass in this change) | `main` | Dimas Mukti (PI-Desktop agent) | the new public `GET /api/bootstrap` page and route row, the `token` field and deletion note on `POST /api/password`, the claim file in `README.md`/`AGENTS.md`/F1, and the SPA `/setup` screen | **GO** |
+| 2026-11-28T08:10Z | uncommitted (the open-boot pass in this change) | `main` | Dimas Mukti (PI-Desktop agent) | the generated password and the claim file are gone: `POST /api/setup` carries `password`, `GET /api/bootstrap` carries only `setup_completed`, and every page that described the gate, the claim file or `password_must_change` was rewritten — endpoints, `v2-api`, `v2-design`, the deck, `README.md`, `AGENTS.md` | **GO** |
 
 ## What a check covers
 

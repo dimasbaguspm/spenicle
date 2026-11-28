@@ -40,7 +40,7 @@ func newHealthSettings(t *testing.T, store *sqlite.Store, sealer seal.Sealer, cu
 	}
 
 	if currency != "IDR" {
-		if _, err := service.Setup(t.Context(), currency, nil); err != nil {
+		if _, err := service.Setup(t.Context(), "health-password-1234", currency, nil); err != nil {
 			t.Fatalf("setup %s: %v", currency, err)
 		}
 	}

@@ -88,8 +88,7 @@ cmd/worker/handlers/   `Runner`: the recurring rules, the catch-up cap and the h
 config/runit/          the two runit services the image supervises: run + finish each
 uat/                   godog suite: uat.go, steps_*.go, world_*.go, snapshot*.go, features/
 internal/common/       no business logic: config (also the process graph), clock, seal,
-                       firstboot (the one-time claim file on the data volume), otel,
-                       logging, httpx, uuid, binding, validating, list, access,
+                       otel, logging, httpx, uuid, binding, validating, list, access,
                        actor (who the current change belongs to, for the journal)
 internal/constant/     every fixed value shared by more than one package: enums, the
                        audit kinds/actions/actors, the token scopes
@@ -114,7 +113,8 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        it was compiled with `-tags web` (the `latest` image); `web/assets_*.go`
                        is the whole switch. Screens: `/` sign in, `/setup` the claim
                        wizard (password, base currency, one optional opening account),
-                       `/ledger`, `/captures`. The look is one file, `web/src/styles.css`:
+                       `/ledger`, `/captures`. The claim screen is one form:
+                       password, currency, one optional opening account.
                        palette ramps, the three self-hosted fonts (Fraunces for the
                        wordmark and screen titles, Inter for text, JetBrains Mono for every
                        figure), and the base layer. A screen composes `Panel`, `Field`,
@@ -247,15 +247,16 @@ sealed capture payloads are unrecoverable without the old key; the ledger is
 plaintext and survives either way.
 
 The base currency and the login password are **not** environment variables: they are
-the sealed JSON row in `settings` (`entity.Settings`), owned by `module/settings`. A
-fresh boot generates the first password, writes it to `./data/first-boot.txt` on the
-data volume (`0600`, through `internal/common/firstboot`), logs the path rather than the
-secret, and requires a change after the first sign-in; that first change deletes the
-file. A data volume that refuses the write falls back to logging the password, because a
-read-only volume must not cost the only copy of the credential. The password is stored as a PBKDF2-SHA256 hash inside that sealed
-row. `POST /api/setup` chooses the base currency and optionally creates accounts with
-nonzero opening balances in one transaction. Completion locks both, even when the
-request carries no opening accounts; a legacy database with entries is already locked.
+the sealed JSON row in `settings` (`entity.Settings`), owned by `module/settings`. The
+password is a PBKDF2-SHA256 hash inside that row and **does not exist until
+`POST /api/setup` sets it**: a fresh database boots open, with no generated password and
+no claim file, and `GET /api/bootstrap` publishes `setup_completed: false` so a client
+knows to show the claim screen. `POST /api/setup` sets the password, chooses the base
+currency and optionally creates accounts with nonzero opening balances in one
+transaction. Completion locks the currency, even when the request carries no opening
+accounts; a legacy database with entries is already locked. The open window is a
+documented tradeoff: a container on a reachable port can be claimed by whoever gets
+there first, so claim it before exposing the port.
 
 **One credential header, two kinds.** There is no cookie and no exchange route: every
 request carries `Authorization: Bearer <credential>`, and the **instance password** *is*
@@ -337,8 +338,8 @@ chain nobody can predict. A new knob means a new constant and field in those two
 nothing else; removing one means deleting the constant, the read and the field.
 
 `GET /api/bootstrap` is the other public read, and the one a client uses before it holds a
-credential: `setup_completed`, `password_must_change`, `base_currency`, `timezone` and the
-capability flags, no account and no secret. That is how the SPA's `/setup` route decides
+credential: `setup_completed`, `base_currency`, `timezone` and the capability flags, no
+account and no secret. That is how the SPA's `/setup` route decides
 between the claim wizard and the sign-in screen — `/healthz` stays liveness only.
 
 `/healthz` returns `status`, `version` (`<tag>+<sha7>`), `started_at`, `schema_version`,
@@ -623,12 +624,11 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   artifact directory in (`./data/artifacts`) and the next boot silently records every
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
-- The first-boot claim file is the only copy of a generated password: it survives log
-  rotation, `--rm` and a lost terminal, but it lives on the data volume, so a container
-  started without the volume writes it into the container filesystem and the next boot
-  mints a different password for a different database. `docker exec <c> cat
-  /data/first-boot.txt` is the supported way to read it; the file disappears after the
-  first password change and never comes back for that database.
+- A fresh database has no password, which means the API is open until `POST /api/setup`
+  lands: every request is the root credential. That is the one window a self-hoster has to
+  think about — claim the instance before publishing the port, and remember that deleting
+  `spenicle.db` re-opens it. `GET /api/bootstrap` reports `setup_completed: false` while
+  the window is open.
 - Migrations are embedded and applied on boot (`internal/repository/sqlite/migrations`).
   There is exactly one file, `0001_init.sql`, so `schema_version` is 1. The former
   `0002`-`0006` changes were merged into it because no v2 release exists yet; a

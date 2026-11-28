@@ -137,24 +137,21 @@ Every variable is listed with defaults in [`.env.example`](./.env.example); copy
 to `.env` and fill in `APP_SECRET`.
 
 The base currency and the login password are **not** environment variables. They live
-in the app's settings table: a fresh boot generates the first password and writes it to
-`./data/first-boot.txt` on the data volume (mode `0600`), the setup screen claims it and
-replaces it, and the file is deleted once you set your own. The base currency is chosen
-once by `POST /api/setup`, which can also create accounts with opening balances.
-Completing setup locks it, even with an empty ledger. `PATCH /api/settings` refuses it.
+in the app's settings table and are both chosen by `POST /api/setup`, which can also
+create accounts with opening balances; completing it locks the currency, even with an
+empty ledger, and `PATCH /api/settings` refuses it.
+
+**A fresh instance has no password, so it is open.** `GET /api/bootstrap` answers
+`setup_completed: false` and anyone who can reach the port can claim it by calling
+`POST /api/setup` with a password. Start the container on a network you trust, or claim
+it before you expose the port.
 
 ## First run
 
-Open the instance, paste the password from `./data/first-boot.txt`:
-
-```bash
-docker exec <container> cat /data/first-boot.txt
-```
-
-The setup screen then asks for your own password, the base currency and optionally one
-opening account, and it can create accounts with their opening balances in the same
-call. Each nonzero balance posts a double-entry `adjustment`
-against an `Opening balance` equity account; currency-only setup is also valid.
+Open the instance and claim it: the setup screen asks for the password you want, the
+base currency and optionally one opening account, and creates the opening balances in
+the same call. Each nonzero balance posts a double-entry `adjustment` against an
+`Opening balance` equity account; currency-only setup is also valid.
 
 Base currency is locked when setup completes. Changing it later would rewrite
 history, and history is the only thing worth protecting here.
