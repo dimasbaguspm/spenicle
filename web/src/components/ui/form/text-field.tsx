@@ -10,6 +10,8 @@ type TextFieldProps<Schema extends FieldValues> = {
   placeholder?: string | undefined
   autoComplete?: string | undefined
   disabled?: boolean | undefined
+  /** the phone keyboard a field deserves: an amount opens digits, not letters */
+  inputMode?: 'decimal' | 'numeric' | undefined
 }
 
 /**
@@ -23,6 +25,7 @@ export function TextField<Schema extends FieldValues>({
   placeholder,
   autoComplete,
   disabled,
+  inputMode,
 }: TextFieldProps<Schema>) {
   const form = useFormProvider<Schema>()
 
@@ -38,6 +41,7 @@ export function TextField<Schema extends FieldValues>({
             placeholder={placeholder}
             autoComplete={autoComplete}
             disabled={disabled}
+            inputMode={inputMode}
             onChange={(event) => {
               field.onChange(event.target.value)
             }}

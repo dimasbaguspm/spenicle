@@ -225,7 +225,7 @@ Every entity in `/manage` — account, category, payee, recurring rule, rule —
 routes: `/manage/<thing>` lists and searches, `/new` creates, `/<ref>` shows one, `/<ref>/edit`
 changes it. The list is a list: its action buttons live on the detail page, so a stray click cannot
 pause a schedule or archive a rule. Captures, imports and exports follow the same shape with the
-route the API actually has — a capture's `/new` signs posts to `/ledger/new?mode=scan` (the file
+route the API actually has — a capture's `/new` signs posts to `/ledger/new?mode=photo` (the file
 picker is already there) and its `/<ref>/edit` is the review, because approving is the only edit a
 capture has; an export's `/<ref>` is the job plus its event log.
 
@@ -264,16 +264,28 @@ other entry.
 
 ## Writing an entry — direction is the category
 
-`/ledger/new` is one screen with two modes: type it, or scan it. The mode lives in the URL
-(`?mode=scan`), a segmented strip on a phone and two cards on a desk, so the camera shortcut is
-still one link.
+`/ledger/new` is one question with three answers: **Type it**, **Hand over a photo**, **Say it**.
+Typing posts an entry now; a photo, a PDF or a dictated line becomes a capture in the intake queue,
+reviewed before it can post. The answer lives in the URL (`?mode=manual|photo|voice`, and
+`?mode=choose` when nothing is chosen yet), so a phone's camera shortcut is still one link. A desk
+opens the form and keeps the three intakes in a rail beside it; a phone has no room for both, so it
+asks first, with cards big enough for a thumb, and the chosen intake replaces the question.
+
+Voice is a text box with the keyboard's dictation behind it, not a recorder: `OPENAI_API_KEY` is
+reserved and `config.SelectRail` builds no chat rail, so nothing would transcribe a recording. The
+capture it queues is `kind: manual`, and the entry an approval posts reads `source: manual`.
 
 The manual form reads from the top as one sentence: **Kind** (money out or money in), **Category**,
 **What was it**, **Paid to** / **Received from**, **Paid from** / **Received in**, **Amount**, **Day**.
-The first switch is what groups the categories: an expense entry only ever offers the expense half
-of the ledger, an income entry the income half, and the two ref labels flip with it. The account
-list spells the kind it is (`Cash (asset)`, `Visa (liability)`), because "paid from Savings" does
-not say whether that account is money you had or money you owe.
+A phone leads with **Amount** on a digit keyboard, because that is the one thing a person already
+knows when they reach for the screen; both orders are the same seven fields, so it is a reordering
+and never a second form. The first switch is what groups the categories: an expense entry only ever
+offers the expense half of the ledger, an income entry the income half, and the two ref labels flip
+with it. The account list spells the kind it is (`Cash (asset)`, `Visa (liability)`), because "paid
+from Savings" does not say whether that account is money you had or money you owe.
+
+What is typed is kept in `sessionStorage` under `spenicle.entry-draft`, so a reload, a back gesture
+or a crash restores the half-typed entry; posting or cancelling throws it away.
 
 Typing the note asks the rule engine the same question the rules screen does: `GET
 /api/categorization/suggest` answers a category and the sentence that justifies it, the category is
@@ -284,8 +296,9 @@ Nothing is deleted. `/ledger/$ref` offers Reverse, which asks for an optional re
 `PATCH /api/entries/{ref}` with `reverse: true`: the postings are mirrored, both rows stay in the
 journal, `reversed_at` marks the original, and the screen replaces the button with a `reversed`
 chip once the API confirms. Under the entry is its **timeline**, read straight from `GET /api/audit`
-with `entity_kind=entry`: created, edited, reversed, each line saying who and when. The API does
-not publish `reversal_of_ref`, so the chain is shown as history rather than as a parent link.
+with `entity_kind=entry`: created, edited, reversed, each line saying who and when — and the facts
+list carries the correction chain itself, `Replaces` and `Replaced by`, read from `reversal_of_ref`
+and `reversed_by_ref`.
 
 `/captures/{ref}` is the review screen: the capture's own text, then one form that becomes the
 entry (`PATCH /api/captures/{ref}` with `action: approve` and two postings) or a rejection with an

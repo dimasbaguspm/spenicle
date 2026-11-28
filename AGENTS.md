@@ -113,7 +113,9 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        it was compiled with `-tags web` (the `latest` image); `web/assets_*.go`
                        is the whole switch. Screens: `/` sign in, `/setup` the claim
                        wizard (password, base currency, one optional opening account),
-                       `/dashboard`, `/ledger` (+ `/ledger/new`, `/ledger/{ref}`), `/analytics`,
+                       `/dashboard`, `/ledger` (+ `/ledger/new`: one form and three intakes —
+                       type it, hand over a photo or a PDF, say it — behind `?mode=`),
+                       `/ledger/{ref}`, `/analytics`,
                       and `/manage` (the index plus everything it owns: `/manage/accounts` (+
                       `/new`, `/{ref}`, `/{ref}/edit`: asset, liability, equity),
                       `/manage/categories` (the same four routes, for expense and income accounts:
@@ -121,7 +123,7 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                       name plus an optional default account and category), `/manage/recurring`
                       (the same four: a schedule, pausable on its detail page), `/manage/rules`
                       (the same four, plus a playground dialog over `suggest`), `/manage/captures`
-                      (+ `/new`, which signs posts to `/ledger/new?mode=scan`, and `/{ref}` to
+                      (+ `/new`, which signs posts to `/ledger/new?mode=photo`, and `/{ref}` to
                       review one), `/manage/imports` (+ `/new`, and `/{ref}` to review a statement's
                       draft), `/manage/exports` (+ `/new`, and `/{ref}` for one job and its events),
                       `/manage/rates`), plus

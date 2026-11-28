@@ -1,28 +1,31 @@
 import { useMutation } from '@tanstack/react-query'
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { Camera, Keyboard } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { Camera, Keyboard, Mic } from 'lucide-react'
+import { Fragment, useEffect, useState } from 'react'
 import { Controller, type UseFormReturn } from 'react-hook-form'
 
-import { createCapture } from '@/api/captures'
+import { createCapture, parkCapture } from '@/api/captures'
 import { queryClient } from '@/api/query'
 import type { Account, Payee } from '@/api/types'
-import { BreakpointDesktop, BreakpointTablet } from '@/components/primitives/breakpoint'
+import { BreakpointDesktop } from '@/components/primitives/breakpoint'
 import { Button } from '@/components/primitives/button'
-import { control } from '@/components/primitives/control'
 import { Field } from '@/components/primitives/field'
+import { FileUpload } from '@/components/primitives/file-upload'
 import { PageHeader } from '@/components/primitives/page-header'
-import { Panel, PanelHead } from '@/components/primitives/panel'
+import { Panel } from '@/components/primitives/panel'
 import { SegmentGroup } from '@/components/primitives/segment-group'
 import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
+import { TextAreaInput } from '@/components/primitives/text-area-input'
 import { TextInput } from '@/components/primitives/text-input'
 import { DateField, Form, TextField } from '@/components/ui/form'
 import { useCreateEntry } from '@/hooks/queries/use-entries'
 import { useMeta } from '@/hooks/queries/use-meta'
 import { useSuggestion } from '@/hooks/queries/use-rules'
+import { useDesktop } from '@/hooks/use-desktop'
 import { useMoney } from '@/hooks/use-money'
 import { cn } from '@/lib/cn'
+import { clearDraft, readDraft, writeDraft } from '@/lib/draft'
 import { parseMoney } from '@/lib/money'
 import {
   emptyEntryForm,
@@ -32,21 +35,56 @@ import {
   type EntryFormValues,
 } from '@/modules'
 
-type Mode = 'manual' | 'scan'
+type Mode = 'choose' | 'manual' | 'photo' | 'voice'
 type Direction = 'expense' | 'income'
 
 /**
- * Writing an entry starts with a choice, not an amount: type it, or hand over the receipt and let
- * the intake queue it. `/ledger/new?mode=scan` is the same page with the other mode open, so a
- * phone's camera shortcut is one URL away.
+ * Three ways in, and a fourth that is not built yet. The list is the screen: typing posts an entry
+ * now, a photo or a statement and a dictated line go to the intake queue where a person reviews
+ * them, and voice is a text box with the keyboard's own dictation behind it until a transcription
+ * rail exists. Nothing here writes a ledger entry on its own except the form.
+ */
+const intakes = [
+  {
+    mode: 'manual',
+    label: 'Type it',
+    note: 'The amount, who, and what for. Posts now.',
+    Icon: Keyboard,
+  },
+  {
+    mode: 'photo',
+    label: 'Hand over a photo',
+    note: 'A receipt or a PDF, queued for review.',
+    Icon: Camera,
+  },
+  {
+    mode: 'voice',
+    label: 'Say it',
+    note: 'Dictate a line, sort it out later.',
+    Icon: Mic,
+  },
+] as const
+
+/**
+ * A desk opens the form and keeps the three intakes in a rail beside it, so switching is one click
+ * and never a page change. A phone has no room for both: it asks which way in first, big enough to
+ * hit with a thumb, and the chosen intake replaces the question. The choice lives in the URL either
+ * way, so a camera shortcut is still one link.
  */
 export function NewEntryPage() {
   const { mode } = useSearch({ from: '/ledger/new' })
   const navigate = useNavigate({ from: '/ledger/new' })
   const meta = useMeta()
+  const desktop = useDesktop()
 
-  const go = (next: Mode) => {
+  const active: Mode = mode === 'choose' && desktop ? 'manual' : mode
+
+  const pick = (next: Mode) => {
     void navigate({ to: '/ledger/new', search: { mode: next } })
+  }
+
+  const queued = () => {
+    void navigate({ to: '/manage/captures' })
   }
 
   return (
@@ -54,76 +92,89 @@ export function NewEntryPage() {
       <PageHeader
         items={[{ label: 'Ledger', to: '/ledger' }, { label: 'New entry' }]}
         title="Log something"
-        subtitle="Two ways in: type it, or hand over the receipt and let intake queue it."
+        subtitle="Type it now, or hand it over and sort it out later."
       />
 
-      <BreakpointTablet>
-        <SegmentGroup
-          block
-          value={mode}
-          options={[
-            { label: 'Type it', value: 'manual' },
-            { label: 'Scan', value: 'scan' },
-          ]}
-          onValueChange={(next) => {
-            go(next === 'scan' ? 'scan' : 'manual')
-          }}
-        />
-      </BreakpointTablet>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+        <div className="min-w-0 space-y-3">
+          {mode === 'choose' ? null : (
+            <Button
+              tone="quiet"
+              size="sm"
+              onClick={() => {
+                pick('choose')
+              }}
+            >
+              Pick another way in
+            </Button>
+          )}
 
-      <BreakpointDesktop>
-        <ModeCards mode={mode} />
-      </BreakpointDesktop>
+          {active === 'choose' ? <IntakeChooser active={active} onPick={pick} big /> : null}
 
-      {mode === 'manual' ? (
-        <ManualEntry
-          accounts={meta.data?.accounts ?? []}
-          payees={meta.data?.payees ?? []}
-          ready={meta.isSuccess}
-        />
-      ) : (
-        <ScanPanel
-          onQueued={() => {
-            void navigate({ to: '/manage/captures' })
-          }}
-        />
-      )}
+          {active === 'manual' ? (
+            <ManualEntry
+              accounts={meta.data?.accounts ?? []}
+              payees={meta.data?.payees ?? []}
+              ready={meta.isSuccess}
+            />
+          ) : null}
+
+          {active === 'photo' ? <PhotoPanel onQueued={queued} /> : null}
+          {active === 'voice' ? <VoicePanel onQueued={queued} /> : null}
+        </div>
+
+        <BreakpointDesktop>
+          <div className="space-y-2">
+            <Text as="p" tone="caption" className="text-text-faint uppercase tracking-[0.14em]">
+              Hand it over
+            </Text>
+            <IntakeChooser active={active} onPick={pick} />
+          </div>
+        </BreakpointDesktop>
+      </div>
     </div>
   )
 }
 
-/** Two ways in, spelled out once: the desk has the room for what each one does. */
-function ModeCards({ mode }: { mode: Mode }) {
-  const tab = 'flex items-center gap-3 rounded-md px-4 py-3 text-sm transition-colors'
-  const on = 'bg-surface text-text border-border-strong border'
-  const off = 'text-text-muted hover:text-text'
-
+/** The three ways in, as cards: a phone gets the page, a desk gets the rail. */
+function IntakeChooser({
+  active,
+  onPick,
+  big,
+}: {
+  active: Mode
+  onPick: (mode: Mode) => void
+  big?: boolean
+}) {
   return (
-    <div className="border-border bg-surface-sunken grid gap-1 rounded-lg border p-1 sm:grid-cols-2">
-      <Link
-        to="/ledger/new"
-        search={{ mode: 'manual' }}
-        className={cn(tab, mode === 'manual' ? on : off)}
-      >
-        <Keyboard className="size-4" aria-hidden="true" strokeWidth={1.75} />
-        <span className="space-y-0.5">
-          <span className="block font-medium">Type it</span>
-          <span className="text-text-faint block text-xs">Amount, who, what for, paid from.</span>
-        </span>
-      </Link>
-      <Link
-        to="/ledger/new"
-        search={{ mode: 'scan' }}
-        className={cn(tab, mode === 'scan' ? on : off)}
-      >
-        <Camera className="size-4" aria-hidden="true" strokeWidth={1.75} />
-        <span className="space-y-0.5">
-          <span className="block font-medium">Scan a receipt</span>
-          <span className="text-text-faint block text-xs">
-            A photo or a PDF, queued as a capture.
+    <div className="grid gap-2">
+      {intakes.map((intake) => (
+        <button
+          key={intake.mode}
+          type="button"
+          aria-label={intake.label}
+          onClick={() => {
+            onPick(intake.mode)
+          }}
+          className={cn(
+            'border-border flex items-start gap-3 rounded-lg border text-left transition-colors',
+            big === true ? 'p-5' : 'p-4',
+            active === intake.mode
+              ? 'border-border-strong bg-surface'
+              : 'bg-surface-sunken hover:border-border-strong',
+          )}
+        >
+          <intake.Icon
+            className="text-text-muted mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+            strokeWidth={1.75}
+          />
+          <span className="min-w-0 space-y-0.5">
+            <span className="block text-sm font-medium">{intake.label}</span>
+            <span className="text-text-faint block text-xs">{intake.note}</span>
           </span>
-        </span>
-      </Link>
+        </button>
+      ))}
     </div>
   )
 }
@@ -136,9 +187,12 @@ const directions = [
 
 /**
  * The manual form reads top to bottom as one sentence: money out or in, what it was for, what it
- * was, who it was with, where it came from, how much and when. A category only ever offers the
- * half of the ledger the first switch names, so the direction is decided once and the two labels
- * below follow it.
+ * was, who it was with, where it came from, how much and when. A phone leads with the amount and
+ * opens a digit keyboard, because that is the one thing a person already knows when they reach for
+ * the screen; a desk keeps the sentence in order, since the keyboard is not the bottleneck there.
+ *
+ * The draft is the tab's: a reload, a back gesture or a crash restores what was typed, and posting
+ * or cancelling throws it away.
  */
 function ManualEntry({
   accounts,
@@ -152,7 +206,7 @@ function ManualEntry({
   const navigate = useNavigate()
   const money = useMoney()
   const post = useCreateEntry()
-  const [direction, setDirection] = useState<Direction>('expense')
+  const [draft] = useState(() => readDraft<EntryFormValues>())
 
   const categoriesOf = (kind: Direction) =>
     accounts
@@ -178,14 +232,19 @@ function ManualEntry({
     <Panel>
       <div className="p-5 sm:p-6">
         <Form<EntryFormValues>
-          className="mt-4"
-          defaultValues={emptyEntryForm(undefined, {
-            accountRef: accountOptions[0]?.value,
-            categoryRef: categoriesOf('expense')[0]?.value,
-          })}
+          defaultValues={{
+            ...emptyEntryForm(undefined, {
+              accountRef: accountOptions[0]?.value,
+              categoryRef: categoriesOf('expense')[0]?.value,
+            }),
+            ...draft,
+          }}
           resolver={entryResolver}
           submitLabel="Post entry"
-          onCancel={() => void navigate({ to: '/ledger' })}
+          onCancel={() => {
+            clearDraft()
+            void navigate({ to: '/ledger' })
+          }}
           onSubmit={(values) => {
             const amount = parseMoney(values.amount, money.scale.units)
 
@@ -209,6 +268,7 @@ function ManualEntry({
               },
               {
                 onSuccess: async () => {
+                  clearDraft()
                   await queryClient.invalidateQueries({ queryKey: ['entries'] })
                   void navigate({ to: '/ledger' })
                 },
@@ -216,22 +276,7 @@ function ManualEntry({
             )
           }}
         >
-          {(form) => (
-            <ManualFields
-              form={form}
-              accounts={accounts}
-              payees={payees}
-              direction={direction}
-              onDirection={(next) => {
-                setDirection(next)
-                form.setValue('categoryRef', categoriesOf(next)[0]?.value ?? '', {
-                  shouldDirty: true,
-                })
-              }}
-              categoryOptions={categoriesOf(direction)}
-              accountOptions={accountOptions}
-            />
-          )}
+          {(form) => <ManualFields form={form} accounts={accounts} payees={payees} />}
         </Form>
 
         {post.error === null ? null : (
@@ -244,53 +289,92 @@ function ManualEntry({
   )
 }
 
+/**
+ * The fields, in the order the device deserves. Both orders are the same seven elements, so this
+ * is a reordering and never a second form; `kind` and `amount` are the two that move.
+ */
 function ManualFields({
   form,
   accounts,
   payees,
-  direction,
-  onDirection,
-  categoryOptions,
-  accountOptions,
 }: {
   form: UseFormReturn<EntryFormValues>
   accounts: readonly Account[]
   payees: readonly Payee[]
-  direction: Direction
-  onDirection: (next: Direction) => void
-  categoryOptions: { label: string; value: string }[]
-  accountOptions: { label: string; value: string }[]
 }) {
+  const desktop = useDesktop()
+
+  const categoriesOf = (kind: Direction) =>
+    accounts
+      .filter((account) => account.kind === kind)
+      .map((account) => ({ label: account.name, value: account.ref }))
+
+  const accountOptions = accounts
+    .filter((account) => isMoneyKind(account.kind))
+    .map((account) => ({ label: `${account.name} (${account.kind})`, value: account.ref }))
+
+  // the category is the direction: an expense category means money out, automatically
+  const categoryRef = form.watch('categoryRef')
+  const direction: Direction =
+    accounts.find((account) => account.ref === categoryRef)?.kind === 'income'
+      ? 'income'
+      : 'expense'
   const income = direction === 'income'
 
-  return (
-    <>
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      writeDraft(values)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [form])
+
+  const fields = {
+    amount: (
+      <TextField<EntryFormValues>
+        name="amount"
+        label="Amount"
+        placeholder="0"
+        inputMode="decimal"
+      />
+    ),
+    kind: (
       <Field label="Kind">
         <SegmentGroup
           block
           value={direction}
           options={directions}
           onValueChange={(next) => {
-            onDirection(next === 'income' ? 'income' : 'expense')
+            form.setValue(
+              'categoryRef',
+              categoriesOf(next === 'income' ? 'income' : 'expense')[0]?.value ?? '',
+              {
+                shouldDirty: true,
+              },
+            )
           }}
         />
       </Field>
-
+    ),
+    category: (
       <CategoryField
         form={form}
         accounts={accounts}
         direction={direction}
-        options={categoryOptions}
+        options={categoriesOf(direction)}
       />
-
+    ),
+    note: (
       <TextField<EntryFormValues>
         name="note"
         label="What was it"
         placeholder="coffee, taxi, salary"
       />
-
-      <PayeeField form={form} payees={payees} label={income ? 'Received from' : 'Paid to'} />
-
+    ),
+    payee: <PayeeField form={form} payees={payees} label={income ? 'Received from' : 'Paid to'} />,
+    account: (
       <Controller
         control={form.control}
         name="accountRef"
@@ -307,10 +391,19 @@ function ManualFields({
           </Field>
         )}
       />
+    ),
+    day: <DateField<EntryFormValues> name="occurredOn" label="Day" />,
+  }
 
-      <TextField<EntryFormValues> name="amount" label="Amount" placeholder="0" />
+  const order: readonly (keyof typeof fields)[] = desktop
+    ? ['kind', 'category', 'note', 'payee', 'account', 'amount', 'day']
+    : ['amount', 'kind', 'category', 'note', 'payee', 'account', 'day']
 
-      <DateField<EntryFormValues> name="occurredOn" label="Day" />
+  return (
+    <>
+      {order.map((name) => (
+        <Fragment key={name}>{fields[name]}</Fragment>
+      ))}
     </>
   )
 }
@@ -426,18 +519,27 @@ function PayeeField({
   )
 }
 
-/** The photo path: one file, an optional note beside it, and the intake queue does the rest. */
-function ScanPanel({ onQueued }: { onQueued: () => void }) {
-  const [file, setFile] = useState<File>()
+/**
+ * The photo path: one file, an optional line beside it, and the intake queue does the rest. A
+ * picture becomes an `image` capture and a PDF a `statement`, which is the kind the entry it
+ * becomes is filed under later.
+ */
+function PhotoPanel({ onQueued }: { onQueued: () => void }) {
+  const [files, setFiles] = useState<File[]>([])
   const [note, setNote] = useState('')
+  const file = files[0]
 
   const upload = useMutation({
     mutationFn: async () => {
       if (file === undefined) {
-        throw new Error('choose a photo or a PDF first')
+        throw new Error('choose a receipt or a statement first')
       }
 
-      return createCapture({ file, kind: 'image', rawText: note === '' ? undefined : note })
+      return createCapture({
+        file,
+        kind: file.type.startsWith('image/') ? 'image' : 'statement',
+        ...(note.trim() === '' ? {} : { rawText: note.trim() }),
+      })
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['captures'] })
@@ -448,24 +550,20 @@ function ScanPanel({ onQueued }: { onQueued: () => void }) {
   return (
     <Panel>
       <form
-        className="space-y-5 p-5 sm:p-6"
+        className="space-y-4 p-5 sm:p-6"
         onSubmit={(event) => {
           event.preventDefault()
           upload.mutate()
         }}
       >
-        <PanelHead eyebrow="Scan" />
-
-        <Field label="Receipt">
-          <input
-            type="file"
-            accept="image/*,application/pdf"
-            className={cn(control(), 'file:text-text-muted py-2 file:mr-3 file:border-0')}
-            onChange={(event) => {
-              setFile(event.target.files?.[0])
-            }}
-          />
-        </Field>
+        <FileUpload
+          accept={{
+            'image/*': ['.png', '.jpg', '.jpeg', '.heic', '.webp'],
+            'application/pdf': ['.pdf'],
+          }}
+          label="Drop a receipt or a statement, or choose a file"
+          onFilesChange={setFiles}
+        />
 
         <Field label="Note">
           <TextInput
@@ -491,6 +589,61 @@ function ScanPanel({ onQueued }: { onQueued: () => void }) {
         {upload.error === null ? null : (
           <Text as="p" tone="caption" className="text-danger" role="alert">
             {upload.error.message}
+          </Text>
+        )}
+      </form>
+    </Panel>
+  )
+}
+
+/**
+ * The voice path until a transcription rail exists: a line the keyboard dictates. It is a capture,
+ * not an entry, so it is reviewed before it can post — the same queue a photo lands in.
+ */
+function VoicePanel({ onQueued }: { onQueued: () => void }) {
+  const [line, setLine] = useState('')
+
+  const park = useMutation({
+    mutationFn: () => parkCapture({ kind: 'manual', rawText: line.trim() }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['captures'] })
+      onQueued()
+    },
+  })
+
+  return (
+    <Panel>
+      <form
+        className="space-y-4 p-5 sm:p-6"
+        onSubmit={(event) => {
+          event.preventDefault()
+          park.mutate()
+        }}
+      >
+        <Field label="Say it">
+          <TextAreaInput
+            rows={4}
+            value={line}
+            placeholder="25k coffee at the corner shop"
+            onChange={(event) => {
+              setLine(event.target.value)
+            }}
+          />
+        </Field>
+
+        <Button
+          type="submit"
+          size="lg"
+          block
+          loading={park.isPending}
+          disabled={line.trim().length < 3}
+        >
+          {park.isPending ? 'Queueing' : 'Queue it'}
+        </Button>
+
+        {park.error === null ? null : (
+          <Text as="p" tone="caption" className="text-danger" role="alert">
+            {park.error.message}
           </Text>
         )}
       </form>

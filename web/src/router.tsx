@@ -93,11 +93,14 @@ const ledgerRoute = createRoute({
   component: LedgerPage,
 })
 
+/** The ways into a new entry: ask first, or open one of the three intakes the chooser names. */
+const entryModes = ['choose', 'manual', 'photo', 'voice'] as const
+
 const newEntryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/ledger/new',
   validateSearch: (raw: Record<string, unknown>) => ({
-    mode: raw.mode === 'scan' ? ('scan' as const) : ('manual' as const),
+    mode: entryModes.find((mode) => mode === raw.mode) ?? 'choose',
   }),
   component: NewEntryPage,
 })

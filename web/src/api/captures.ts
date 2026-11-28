@@ -74,6 +74,23 @@ export async function createCapture(input: CaptureUpload): Promise<Capture> {
   return payload as Capture
 }
 
+/**
+ * A line with no file behind it: dictated, pasted, or typed into the intake queue instead of the
+ * ledger. It is still a capture, so it is reviewed before it can post, and `kind: 'manual'` is
+ * what makes the entry it becomes read `source: manual`.
+ */
+export async function parkCapture(input: { kind: string; rawText: string }): Promise<Capture> {
+  const { data, error, response } = await api.POST('/api/captures', {
+    body: { kind: input.kind, raw_text: input.rawText },
+  })
+
+  if (error !== undefined) {
+    throw apiError(response.status, error)
+  }
+
+  return data as Capture
+}
+
 /** A download is a blob and the name the API put on it: `<a download>` would arrive unauthenticated. */
 export type ArtifactFile = {
   blob: Blob
