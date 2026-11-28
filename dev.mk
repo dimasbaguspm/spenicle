@@ -17,10 +17,16 @@ SECRET_FILE ?= .dev-secret
 
 .PHONY: dev dev-api dev-worker dev-web dev-build web-dist dev-secret
 
-# The SPA is embedded only with `-tags web`, so the dev binary needs web/dist to exist. Built
-# once here; after a UI change either `make dev-web` (HMR) or `make web-dist` again.
-web-dist: ## build web/dist if it is missing (the embed needs it)
-	@test -f web/dist/index.html || (cd web && pnpm install --frozen-lockfile && pnpm run build)
+# The SPA is embedded only with `-tags web`, so the dev binary needs web/dist to exist — and
+# a stale web/dist is a stale UI with no warning: `go run -tags web` happily embeds yesterday's
+# bundle. Rebuild whenever a source is newer than the built index, not only when it is missing.
+WEB_SOURCES ?= web/src web/public web/index.html web/package.json web/pnpm-lock.yaml \
+	web/vite.config.ts web/tsconfig.json
+
+web-dist: ## build web/dist when a source is newer than the bundle (the embed needs it)
+	@sh -c 'test -f web/dist/index.html \
+		&& test -z "$$(find $(WEB_SOURCES) -newer web/dist/index.html -print -quit 2>/dev/null)" \
+		|| { echo "web/dist is stale: rebuilding the SPA"; cd web && pnpm install --frozen-lockfile && pnpm run build; }'
 
 dev-secret: ## create the stable dev APP_SECRET once (.dev-secret)
 	@test -s $(SECRET_FILE) || (openssl rand -base64 32 > $(SECRET_FILE) && chmod 600 $(SECRET_FILE) && echo "wrote $(SECRET_FILE)")

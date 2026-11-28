@@ -624,6 +624,15 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   artifact directory in (`./data/artifacts`) and the next boot silently records every
   capture as having a document that no longer opens — the row is metadata, the file is
   the document, and nothing cross-checks the two.
+- The SPA is embedded at **compile** time (`-tags web` reads `web/dist`), so a stale
+  `web/dist` is a stale UI with no warning: `go run -tags web .` happily serves yesterday's
+  bundle and a sprite of the API it no longer matches. `make dev` now rebuilds `web/dist`
+  whenever a source is newer than the built index; `make web` forces it. A browser holding
+  the old service-worker shell needs one hard reload after a rebuild.
+- A database created by an earlier build of this tree is not migrated into the new setup
+  flow: it still carries a password and no `setup_completed_at`, so `/api/bootstrap` says
+  "not opened" while every route demands that old password. There is no v2 release yet, so
+  the rule is the documented one — delete `spenicle.db` and claim the fresh instance.
 - A fresh database has no password, which means the API is open until `POST /api/setup`
   lands: every request is the root credential. That is the one window a self-hoster has to
   think about — claim the instance before publishing the port, and remember that deleting
