@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import type { AnalyticsOverview } from '@/api/types'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
 import { PageHeader } from '@/components/primitives/page-header'
@@ -8,16 +9,24 @@ import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
 import {
-  useCategories,
   useCreateCustomQuery,
   useCustomRun,
-  useMonths,
+  useOverview,
   usePatchCustomQuery,
 } from '@/hooks/queries/use-analytics'
 import { useMoney } from '@/hooks/use-money'
-import { formatMoney, sumMinor } from '@/lib/money'
+import { DateFormat, formatDate } from '@/lib/date'
 import { readViews, rememberView, type SavedView } from '@/lib/saved-views'
-import { CategoryBreakdown, categoryTotal, MonthSeries, monthsBack, SavedChart } from '@/modules'
+import {
+  AccountFlows,
+  CategoryBreakdown,
+  categoryTotal,
+  MonthArea,
+  monthsBack,
+  overviewFigures,
+  PayeeBreakdown,
+  SavedChart,
+} from '@/modules'
 
 /** Stable crumbs: a new array on every render would re-render the trail for nothing. */
 const analyticsCrumbs = [{ label: 'Analytics' }] as const
@@ -41,56 +50,108 @@ const asChart = (value: string): Chart =>
 const chartsFor = (namespace: Namespace): readonly Chart[] =>
   namespace === 'months' ? ['bar', 'line'] : ['bar', 'pie']
 
-/** Twelve months of spend, and where it went: bars for time, proportional rows for categories. */
+/**
+ * Twelve months as a brief, from one call: five figures, the shape of the year, what the money was
+ * for, who it went to, and where it sat. `GET /api/analytics/overview` answers all of it in one
+ * round trip, so the page draws one page instead of stitching four answers together.
+ */
 export function AnalyticsPage() {
   const { from, to } = monthsBack(12)
-  const months = useMonths(from, to)
-  const categories = useCategories({ from, to, kind: 'expense', rollup: 'parent' })
-  const money = useMoney()
-
-  const series = months.data ?? []
-  const rows = categories.data?.categories ?? []
-  const spend = sumMinor(series.map((month) => month.spend_minor))
-  const income = sumMinor(series.map((month) => month.income_minor))
-  const net = sumMinor(series.map((month) => month.net_minor))
+  const overview = useOverview(from, to)
 
   return (
     <div className="space-y-6">
       <PageHeader
         items={analyticsCrumbs}
         title="A year in view"
-        subtitle="Twelve months of spend, where it went, and the views you saved."
+        subtitle="Twelve months in one read: what moved, where it went, who was paid, and where the money sat."
       />
 
-      <Panel className="space-y-5 p-5 sm:p-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <Text as="p" tone="section">
-            Spend per month
+      {overview.data === undefined ? (
+        <Panel>
+          <Text as="p" tone="muted" className="p-5 sm:p-6">
+            {overview.error === null ? 'Reading the year.' : overview.error.message}
           </Text>
-          <Text as="p" tone="caption" className="text-text-faint">
-            spent {formatMoney(spend, money.scale.units).toDisplay(money.scale.currency)}, received{' '}
-            {formatMoney(income, money.scale.units).toDisplay(money.scale.currency)}, net{' '}
-            {formatMoney(net, money.scale.units).toDisplay(money.scale.currency)}
-          </Text>
-        </div>
-        <MonthSeries months={series} scale={money.scale} height="h-40" />
-      </Panel>
-
-      <Panel className="space-y-4 p-5 sm:p-6">
-        <div className="flex items-baseline justify-between gap-4">
-          <Text as="p" tone="section">
-            Where it went
-          </Text>
-          <Text as="p" tone="figure" className="text-text-muted text-xs">
-            {categoryTotal(rows, money.scale)}
-          </Text>
-        </div>
-
-        <CategoryBreakdown categories={rows} scale={money.scale} />
-      </Panel>
+        </Panel>
+      ) : (
+        <Brief overview={overview.data} />
+      )}
 
       <SavedViews />
     </div>
+  )
+}
+
+/** The five blocks. Each one answers a question about the same window, so they share one response. */
+function Brief({ overview }: { overview: AnalyticsOverview }) {
+  const money = useMoney()
+  const figures = overviewFigures(overview, money.scale)
+
+  const cells = [
+    { label: 'Spent', value: figures.spent },
+    { label: 'Received', value: figures.received },
+    { label: 'Net', value: figures.net },
+    { label: 'A day', value: figures.aDay },
+    { label: 'Entries', value: String(figures.entries) },
+  ]
+
+  return (
+    <>
+      <Panel className="grid grid-cols-2 gap-5 p-5 sm:grid-cols-3 sm:p-6 lg:grid-cols-5">
+        {cells.map((cell) => (
+          <div key={cell.label} className="space-y-1">
+            <Text as="p" tone="caption" className="text-text-faint uppercase tracking-[0.14em]">
+              {cell.label}
+            </Text>
+            <Text as="p" tone="figure" className="text-text text-base">
+              {cell.value}
+            </Text>
+          </div>
+        ))}
+      </Panel>
+
+      <Panel className="space-y-4 p-5 sm:p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <Text as="p" tone="section">
+            How the year moved
+          </Text>
+          <Text as="p" tone="caption" className="text-text-faint">
+            {figures.busiestOn === ''
+              ? 'nothing spent in this window'
+              : `busiest day ${formatDate(figures.busiestOn, DateFormat.Day)} at ${figures.busiest}`}
+          </Text>
+        </div>
+        <MonthArea months={overview.months} scale={money.scale} />
+      </Panel>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel className="space-y-4 p-5 sm:p-6">
+          <div className="flex items-baseline justify-between gap-4">
+            <Text as="p" tone="section">
+              Where it went
+            </Text>
+            <Text as="p" tone="figure" className="text-text-muted text-xs">
+              {categoryTotal(overview.categories, money.scale)}
+            </Text>
+          </div>
+          <CategoryBreakdown categories={overview.categories} scale={money.scale} />
+        </Panel>
+
+        <Panel className="space-y-4 p-5 sm:p-6">
+          <Text as="p" tone="section">
+            Who you paid
+          </Text>
+          <PayeeBreakdown payees={overview.payees} scale={money.scale} />
+        </Panel>
+      </div>
+
+      <Panel className="space-y-4 p-5 sm:p-6">
+        <Text as="p" tone="section">
+          Where the money sat
+        </Text>
+        <AccountFlows accounts={overview.accounts} scale={money.scale} />
+      </Panel>
+    </>
   )
 }
 

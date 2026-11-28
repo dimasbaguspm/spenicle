@@ -31,6 +31,7 @@ func TestCustomQueryWritesNeedWriteScope(t *testing.T) {
 		{pattern: "POST /api/analytics/custom", scope: constant.ScopeAnalyticsWrite},
 		{pattern: "PATCH /api/analytics/custom/{ref}", scope: constant.ScopeAnalyticsWrite},
 		{pattern: "GET /api/analytics/custom/{ref}", scope: constant.ScopeAnalyticsRead},
+		{pattern: "GET /api/analytics/overview", scope: constant.ScopeAnalyticsRead},
 	}
 
 	for _, tc := range tests {

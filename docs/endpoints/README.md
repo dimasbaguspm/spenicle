@@ -49,6 +49,7 @@ by hand, and change the page here when you change the block.
 | `GET` | `/api/imports/{ref}/events` | the append-only log of one batch | [`GET_api_imports_ref_events.md`](./GET_api_imports_ref_events.md) |
 | `GET` | `/api/analytics/months` | spend and income per calendar month | [`GET_api_analytics_months.md`](./GET_api_analytics_months.md) |
 | `GET` | `/api/analytics/categories` | spend per category for a range, optional parent roll-up | [`GET_api_analytics_categories.md`](./GET_api_analytics_categories.md) |
+| `GET` | `/api/analytics/overview` | the whole brief in one read: months, roots, payees, money accounts, stats | [`GET_api_analytics_overview.md`](./GET_api_analytics_overview.md) |
 | `POST` | `/api/analytics/custom` | save a named analytics view | [`POST_api_analytics_custom.md`](./POST_api_analytics_custom.md) |
 | `PATCH` | `/api/analytics/custom/{ref}` | rename or re-chart a saved view | [`PATCH_api_analytics_custom_ref.md`](./PATCH_api_analytics_custom_ref.md) |
 | `GET` | `/api/analytics/custom/{ref}` | run a saved view over a window | [`GET_api_analytics_custom_ref.md`](./GET_api_analytics_custom_ref.md) |

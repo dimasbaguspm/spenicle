@@ -132,6 +132,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/analytics/overview': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * The whole brief in one read
+     * @description Twelve months in one round trip: the month series, the category roots, the payees, the money accounts and two stats. Every part is also readable route by route; this is the one call the screen makes.
+     */
+    get: operations['getApiAnalyticsOverview']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/audit': {
     parameters: {
       query?: never
@@ -1007,6 +1027,14 @@ export interface components {
       parent_ref?: string
       ref?: string
     }
+    accountFlowResponse: {
+      account_name?: string
+      account_ref?: string
+      inflow_minor?: string
+      kind?: string
+      net_minor?: string
+      outflow_minor?: string
+    }
     accountPatchRequest: {
       archived?: boolean
       icon?: string
@@ -1028,6 +1056,23 @@ export interface components {
       kind?: 'asset' | 'liability' | 'equity' | 'expense' | 'income'
       name?: string
       ref?: string
+    }
+    analyticsOverviewResponse: {
+      accounts?: components['schemas']['accountFlowResponse'][]
+      categories?: components['schemas']['categoryTotalResponse'][]
+      /** Format: date */
+      from?: string
+      months?: components['schemas']['monthTotalResponse'][]
+      payees?: components['schemas']['payeeTotalResponse'][]
+      stats?: components['schemas']['analyticsStatsResponse']
+      /** Format: date */
+      to?: string
+    }
+    analyticsStatsResponse: {
+      /** Format: date */
+      busiest_on?: string
+      busiest_spend_minor?: string
+      entries?: number
     }
     auditResponse: {
       action?: string
@@ -1403,6 +1448,11 @@ export interface components {
     payeeSummary: {
       name?: string
       ref?: string
+    }
+    payeeTotalResponse: {
+      amount_minor?: string
+      payee_name?: string
+      payee_ref?: string
     }
     postEntryRequest: {
       currency: string
@@ -2092,6 +2142,67 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['monthlyAnalyticsResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorBody']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorBody']
+        }
+      }
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorBody']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorBody']
+        }
+      }
+    }
+  }
+  getApiAnalyticsOverview: {
+    parameters: {
+      query?: {
+        /** @description window start, RFC3339 or date */
+        from?: string
+        /** @description window end */
+        to?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['analyticsOverviewResponse']
         }
       }
       /** @description Unauthorized */

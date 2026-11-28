@@ -455,6 +455,7 @@ because the provider redirects a browser there; the signed `state` is its capabi
 | GET | `/api/meta` | `settings:read` + collection reads | shell bootstrap |
 | GET | `/api/analytics/months` | `analytics:read` | spend and income per month |
 | GET | `/api/analytics/categories` | `analytics:read` | spend per category |
+| GET | `/api/analytics/overview` | `analytics:read` | months, categories, payees, money accounts and stats in one read |
 | POST | `/api/analytics/custom` | `analytics:write` | save a named query |
 | PATCH | `/api/analytics/custom/{ref}` | `analytics:write` | edit a saved query |
 | GET | `/api/analytics/custom/{ref}` | `analytics:read` | run a saved query |

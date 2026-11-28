@@ -156,6 +156,18 @@ func Routes() []Route {
 	return routes
 }
 
+// analyticsRoutes are the five analytics patterns: one read scope for the two reports and the
+// brief, one write scope for the saved query that can be created or renamed.
+func (s *server) analyticsRoutes(group *routeGroup) {
+	group.route(constant.ScopeAnalyticsRead, "GET /api/analytics/months", s.api.MonthlyAnalytics)
+	group.route(constant.ScopeAnalyticsRead, "GET /api/analytics/categories", s.api.CategoryAnalytics)
+	group.route(constant.ScopeAnalyticsRead, "GET /api/analytics/overview", s.api.OverviewAnalytics)
+	group.route(constant.ScopeAnalyticsWrite, "POST /api/analytics/custom", s.api.CreateCustomQuery)
+	group.route(constant.ScopeAnalyticsWrite,
+		"PATCH /api/analytics/custom/{ref}", s.api.PatchCustomQuery)
+	group.route(constant.ScopeAnalyticsRead, "GET /api/analytics/custom/{ref}", s.api.RunCustomQuery)
+}
+
 // routes declares each route exactly once, next to the scope it asks for.
 func (s *server) routes() routeGroups {
 	groups := routeGroups{
@@ -176,12 +188,7 @@ func (s *server) routes() routeGroups {
 	groups.scoped.route(constant.ScopeSettingsRead, "GET /api/settings", s.api.GetSettings)
 	groups.scoped.route(constant.ScopeSettingsRead, "GET /api/meta", s.api.GetMeta)
 
-	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/months", s.api.MonthlyAnalytics)
-	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/categories", s.api.CategoryAnalytics)
-	groups.scoped.route(constant.ScopeAnalyticsWrite, "POST /api/analytics/custom", s.api.CreateCustomQuery)
-	groups.scoped.route(constant.ScopeAnalyticsWrite,
-		"PATCH /api/analytics/custom/{ref}", s.api.PatchCustomQuery)
-	groups.scoped.route(constant.ScopeAnalyticsRead, "GET /api/analytics/custom/{ref}", s.api.RunCustomQuery)
+	s.analyticsRoutes(&groups.scoped)
 	groups.scoped.route(constant.ScopeDashboardRead, "GET /api/dashboard", s.api.GetDashboard)
 	groups.scoped.route(constant.ScopeCategorizationRead,
 		"GET /api/categorization/rules", s.api.ListCategorizationRules)

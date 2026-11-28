@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -248,4 +249,138 @@ func (s *Store) CaptureCount(
 	}
 
 	return count, nil
+}
+
+const payeeTotalsQuery = `
+	SELECT COALESCE(e.payee_ref, ''), COALESCE(py.name, ''), SUM(p.base_amount_minor)
+	FROM postings p
+	JOIN entries e ON e.ref = p.entry_ref
+	JOIN accounts a ON a.ref = p.account_ref
+	LEFT JOIN payees py ON py.ref = e.payee_ref
+	WHERE e.reversed_at IS NULL AND e.reversal_of_ref IS NULL
+	  AND e.occurred_on BETWEEN ? AND ?
+	  AND a.kind = 'expense'
+	GROUP BY e.payee_ref
+	HAVING SUM(p.base_amount_minor) <> 0
+	ORDER BY SUM(p.base_amount_minor) DESC`
+
+func (s *Store) PayeeTotals(
+	ctx context.Context,
+	from, to time.Time,
+) ([]entity.PayeeTotal, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.PayeeTotals")
+	defer endSpan()
+
+	rows, err := s.db.QueryContext(ctx, payeeTotalsQuery,
+		from.Format(constant.DateLayout), to.Format(constant.DateLayout))
+	if err != nil {
+		return nil, fmt.Errorf("select payee totals: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	var out []entity.PayeeTotal
+
+	for rows.Next() {
+		var total entity.PayeeTotal
+
+		if err := rows.Scan(&total.PayeeRef, &total.PayeeName, &total.AmountMinor); err != nil {
+			return nil, fmt.Errorf("scan payee total: %w", err)
+		}
+
+		out = append(out, total)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate payee totals: %w", err)
+	}
+
+	return out, nil
+}
+
+// The money side of the ledger: an expense or income account says what the money was for,
+// not where it sat, so those two kinds are left out of the flow on purpose.
+const accountFlowsQuery = `
+	SELECT a.ref, a.name, a.kind,
+	       SUM(CASE WHEN p.base_amount_minor > 0 THEN p.base_amount_minor ELSE 0 END),
+	       SUM(CASE WHEN p.base_amount_minor < 0 THEN -p.base_amount_minor ELSE 0 END),
+	       SUM(p.base_amount_minor)
+	FROM postings p
+	JOIN entries e ON e.ref = p.entry_ref
+	JOIN accounts a ON a.ref = p.account_ref
+	WHERE e.reversed_at IS NULL AND e.reversal_of_ref IS NULL
+	  AND e.occurred_on BETWEEN ? AND ?
+	  AND a.kind IN ('asset', 'liability')
+	GROUP BY a.ref
+	ORDER BY SUM(p.base_amount_minor) DESC`
+
+func (s *Store) AccountFlows(
+	ctx context.Context,
+	from, to time.Time,
+) ([]entity.AccountFlow, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.AccountFlows")
+	defer endSpan()
+
+	rows, err := s.db.QueryContext(ctx, accountFlowsQuery,
+		from.Format(constant.DateLayout), to.Format(constant.DateLayout))
+	if err != nil {
+		return nil, fmt.Errorf("select account flows: %w", err)
+	}
+
+	defer func() { _ = rows.Close() }()
+
+	var out []entity.AccountFlow
+
+	for rows.Next() {
+		var flow entity.AccountFlow
+
+		if err := rows.Scan(&flow.AccountRef, &flow.AccountName, &flow.Kind,
+			&flow.InflowMinor, &flow.OutflowMinor, &flow.NetMinor); err != nil {
+			return nil, fmt.Errorf("scan account flow: %w", err)
+		}
+
+		out = append(out, flow)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate account flows: %w", err)
+	}
+
+	return out, nil
+}
+
+func (s *Store) LedgerStats(
+	ctx context.Context,
+	from, to time.Time,
+) (entity.LedgerStats, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.LedgerStats")
+	defer endSpan()
+
+	start, end := from.Format(constant.DateLayout), to.Format(constant.DateLayout)
+
+	var stats entity.LedgerStats
+
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM entries e
+		WHERE e.reversed_at IS NULL AND e.reversal_of_ref IS NULL
+		  AND e.occurred_on BETWEEN ? AND ?`, start, end).Scan(&stats.Entries); err != nil {
+		return entity.LedgerStats{}, fmt.Errorf("count entries: %w", err)
+	}
+
+	err := s.db.QueryRowContext(ctx, `
+		SELECT e.occurred_on, SUM(p.base_amount_minor)
+		FROM postings p
+		JOIN entries e ON e.ref = p.entry_ref
+		JOIN accounts a ON a.ref = p.account_ref
+		WHERE e.reversed_at IS NULL AND e.reversal_of_ref IS NULL
+		  AND e.occurred_on BETWEEN ? AND ?
+		  AND a.kind = 'expense'
+		GROUP BY e.occurred_on
+		ORDER BY SUM(p.base_amount_minor) DESC
+		LIMIT 1`, start, end).Scan(&stats.BusiestOn, &stats.BusiestSpend)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return entity.LedgerStats{}, fmt.Errorf("select busiest day: %w", err)
+	}
+
+	return stats, nil
 }

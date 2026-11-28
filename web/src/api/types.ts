@@ -103,8 +103,27 @@ export type Dashboard = Omitted<Fixed<Schemas['dashboardResponse']>, 'top_catego
 }
 export type MonthTotal = Fixed<Schemas['monthTotalResponse']>
 export type CategoryTotal = Fixed<Schemas['categoryTotalResponse']>
-export type CategoryReport = Omitted<Fixed<Schemas['categoryAnalyticsResponse']>, 'categories'> & {
+export type PayeeReport = Omit<Fixed<Schemas['payeeTotalResponse']>, 'payee_ref' | 'payee_name'> & {
+  payee_ref?: string
+  payee_name?: string
+}
+export type AccountFlow = Fixed<Schemas['accountFlowResponse']>
+export type AnalyticsStats = Omit<
+  Fixed<Schemas['analyticsStatsResponse']>,
+  'busiest_on' | 'busiest_spend_minor'
+> & {
+  busiest_on?: string
+  busiest_spend_minor?: string
+}
+export type AnalyticsOverview = Omit<
+  Fixed<Schemas['analyticsOverviewResponse']>,
+  'months' | 'categories' | 'payees' | 'accounts' | 'stats'
+> & {
+  months: MonthTotal[]
   categories: CategoryTotal[]
+  payees: PayeeReport[]
+  accounts: AccountFlow[]
+  stats: AnalyticsStats
 }
 export type Bootstrap = Fixed<Schemas['bootstrapResponse']>
 export type LedgerSetup = Schemas['setupRequest']

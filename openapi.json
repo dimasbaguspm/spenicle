@@ -78,6 +78,33 @@
         },
         "type": "object"
       },
+      "accountFlowResponse": {
+        "properties": {
+          "account_name": {
+            "type": "string"
+          },
+          "account_ref": {
+            "pattern": "^[0-9a-f]{32}$",
+            "type": "string"
+          },
+          "inflow_minor": {
+            "pattern": "^[+-]?[0-9]+$",
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "net_minor": {
+            "pattern": "^[+-]?[0-9]+$",
+            "type": "string"
+          },
+          "outflow_minor": {
+            "pattern": "^[+-]?[0-9]+$",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "accountPatchRequest": {
         "properties": {
           "archived": {
@@ -150,6 +177,66 @@
           "ref": {
             "pattern": "^[0-9a-f]{32}$",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "analyticsOverviewResponse": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/accountFlowResponse"
+            },
+            "type": "array",
+            "uniqueItems": false
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/categoryTotalResponse"
+            },
+            "type": "array",
+            "uniqueItems": false
+          },
+          "from": {
+            "format": "date",
+            "type": "string"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/monthTotalResponse"
+            },
+            "type": "array",
+            "uniqueItems": false
+          },
+          "payees": {
+            "items": {
+              "$ref": "#/components/schemas/payeeTotalResponse"
+            },
+            "type": "array",
+            "uniqueItems": false
+          },
+          "stats": {
+            "$ref": "#/components/schemas/analyticsStatsResponse"
+          },
+          "to": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "analyticsStatsResponse": {
+        "properties": {
+          "busiest_on": {
+            "format": "date",
+            "type": "string"
+          },
+          "busiest_spend_minor": {
+            "pattern": "^[+-]?[0-9]+$",
+            "type": "string"
+          },
+          "entries": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -1326,6 +1413,22 @@
             "type": "string"
           },
           "ref": {
+            "pattern": "^[0-9a-f]{32}$",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "payeeTotalResponse": {
+        "properties": {
+          "amount_minor": {
+            "pattern": "^[+-]?[0-9]+$",
+            "type": "string"
+          },
+          "payee_name": {
+            "type": "string"
+          },
+          "payee_ref": {
             "pattern": "^[0-9a-f]{32}$",
             "type": "string"
           }
@@ -2743,6 +2846,93 @@
           }
         ],
         "summary": "Spend and income per calendar month",
+        "tags": [
+          "analytics"
+        ],
+        "x-spenicle-group": "scoped",
+        "x-spenicle-scope": "analytics:read"
+      }
+    },
+    "/api/analytics/overview": {
+      "get": {
+        "description": "Twelve months in one round trip: the month series, the category roots, the payees, the money accounts and two stats. Every part is also readable route by route; this is the one call the screen makes.",
+        "operationId": "getApiAnalyticsOverview",
+        "parameters": [
+          {
+            "description": "window start, RFC3339 or date",
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "window end",
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/analyticsOverviewResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "The whole brief in one read",
         "tags": [
           "analytics"
         ],

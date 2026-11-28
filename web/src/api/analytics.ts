@@ -1,24 +1,22 @@
 import { api } from './client'
 import { apiError } from './error'
 import type {
-  CategoryReport,
+  AnalyticsOverview,
   CustomQuery,
   CustomQueryCreate,
   CustomQueryPatch,
   CustomRun,
-  MonthTotal,
   Paths,
 } from './types'
 
-type MonthsBody =
-  Paths['/api/analytics/months']['get']['responses'][200]['content']['application/json']
-type CategoriesBody =
-  Paths['/api/analytics/categories']['get']['responses'][200]['content']['application/json']
-type CategoryQuery = NonNullable<Paths['/api/analytics/categories']['get']['parameters']['query']>
 type RunQuery = NonNullable<Paths['/api/analytics/custom/{ref}']['get']['parameters']['query']>
 
-export async function fetchMonths(from: string, to: string): Promise<MonthTotal[]> {
-  const { data, error, response } = await api.GET('/api/analytics/months', {
+type OverviewBody =
+  Paths['/api/analytics/overview']['get']['responses'][200]['content']['application/json']
+
+/** The brief, once: months, category roots, payees, money accounts and two stats. */
+export async function fetchOverview(from: string, to: string): Promise<AnalyticsOverview> {
+  const { data, error, response } = await api.GET('/api/analytics/overview', {
     params: { query: { from, to } },
   })
 
@@ -26,19 +24,7 @@ export async function fetchMonths(from: string, to: string): Promise<MonthTotal[
     throw apiError(response.status, error)
   }
 
-  return ((data as MonthsBody).months ?? []) as MonthTotal[]
-}
-
-export async function fetchCategories(query: CategoryQuery): Promise<CategoryReport> {
-  const { data, error, response } = await api.GET('/api/analytics/categories', {
-    params: { query },
-  })
-
-  if (error !== undefined) {
-    throw apiError(response.status, error)
-  }
-
-  return data as CategoriesBody as CategoryReport
+  return data as OverviewBody as AnalyticsOverview
 }
 
 /** Save the question, not the answer: a name, a namespace and the chart to draw. */

@@ -390,11 +390,21 @@ the event log under it is `GET /api/imports/{ref}/events`: `uploaded`, the row v
 
 ## Analytics — a year, and the views you saved
 
-`/analytics` opens on twelve months: `GET /api/analytics/months` for the series, whose
-`spend_minor`, `income_minor` and `net_minor` all reach the screen — the bars are the spend, the
-line under the heading is all three, and a bar's tooltip names them per month rather than throwing
-two of the three away. `GET /api/analytics/categories` fills the breakdown, and each row keeps the
-window it covers (`first_occurred_on` / `last_occurred_on`) in its title.
+`/analytics` is one call: `GET /api/analytics/overview?from&to` answers the whole brief, so the
+page draws five blocks from one response instead of stitching four answers together. The window
+is the twelve months ending today (`monthsBack(12)`).
+
+The five blocks, top to bottom: **five figures** (spent, received, net, what a day costs, how many
+entries made them — `modules/analytics/overview.ts`, integer minor units all the way, the window's
+day count is the divisor); **how the year moved**, two filled areas on one scale so spend and income
+are comparable rather than each normalised to itself (`month-area.tsx`); **where it went**, the
+category roots with share bars and the window each row covers in its title (`CategoryBreakdown`);
+**who you paid**, expense grouped by payee, and the row the API sends without a ref is shown as
+"Nobody in particular" rather than hidden; **where the money sat**, per asset and liability account,
+with inflow and outflow summed apart and the net keeping the ledger's sign.
+
+The per-window routes are still there for a client that wants one block — `/api/analytics/months`
+and `/api/analytics/categories` — and the SPA stopped calling them directly.
 
 Below that is **Saved views**, the three custom routes end to end. The form posts
 `name`, `namespace` and `chart`; the answer is a ref, and because the API has no list route the ref

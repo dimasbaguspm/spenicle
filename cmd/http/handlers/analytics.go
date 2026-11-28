@@ -11,6 +11,7 @@ import (
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
 	"github.com/dimasbaguspm/spenicle/internal/common/validating"
 	"github.com/dimasbaguspm/spenicle/internal/constant"
+	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
 const analyticsWindowMonths = 12
@@ -288,4 +289,172 @@ func (s *Server) writeCategoryMonths(
 func writeBucketRollup(w http.ResponseWriter) {
 	httpx.WriteError(w, http.StatusUnprocessableEntity, "invalid_request",
 		"bucket and rollup cannot be combined: send bucket=month or rollup=parent, not both")
+}
+
+type payeeTotalResponse struct {
+	PayeeRef    string `json:"payee_ref,omitempty"  pattern:"^[0-9a-f]{32}$"`
+	PayeeName   string `json:"payee_name,omitempty"`
+	AmountMinor string `json:"amount_minor"         pattern:"^[+-]?[0-9]+$"`
+}
+
+type accountFlowResponse struct {
+	AccountRef   string `json:"account_ref"   pattern:"^[0-9a-f]{32}$"`
+	AccountName  string `json:"account_name"`
+	Kind         string `json:"kind"`
+	InflowMinor  string `json:"inflow_minor"  pattern:"^[+-]?[0-9]+$"`
+	OutflowMinor string `json:"outflow_minor" pattern:"^[+-]?[0-9]+$"`
+	NetMinor     string `json:"net_minor"     pattern:"^[+-]?[0-9]+$"`
+}
+
+type analyticsStatsResponse struct {
+	Entries           int    `json:"entries"`
+	BusiestOn         string `format:"date"                        json:"busiest_on,omitempty"`
+	BusiestSpendMinor string `json:"busiest_spend_minor,omitempty" pattern:"^[+-]?[0-9]+$"`
+}
+
+type analyticsOverviewResponse struct {
+	From       string                  `format:"date"     json:"from"`
+	To         string                  `format:"date"     json:"to"`
+	Months     []monthTotalResponse    `json:"months"`
+	Categories []categoryTotalResponse `json:"categories"`
+	Payees     []payeeTotalResponse    `json:"payees"`
+	Accounts   []accountFlowResponse   `json:"accounts"`
+	Stats      analyticsStatsResponse  `json:"stats"`
+}
+
+// @Summary     The whole brief in one read
+// @Description Twelve months in one round trip: the month series, the category roots, the payees, the money accounts and two stats. Every part is also readable route by route; this is the one call the screen makes.
+// @Tags        analytics
+// @Produce     json
+// @Param       from query string false "window start, RFC3339 or date"
+// @Param       to query string false "window end"
+// @Success     200 {object} analyticsOverviewResponse
+// @Failure     401 {object} httpx.ErrorBody
+// @Failure     403 {object} httpx.ErrorBody
+// @Failure     422 {object} httpx.ErrorBody
+// @Failure     500 {object} httpx.ErrorBody
+// @Router      /api/analytics/overview [get]
+func (s *Server) OverviewAnalytics(w http.ResponseWriter, r *http.Request) {
+	ctx, endSpan := telemetry.StartSpan(r.Context(), "Handler.Analytics.Overview")
+	defer endSpan()
+
+	var query analyticsRangeQuery
+	if err := bindQuery(r, &query); err != nil {
+		writeInvalid(w, err)
+
+		return
+	}
+
+	from, to, err := analyticsWindow(query, s.location)
+	if err != nil {
+		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput, err.Error())
+
+		return
+	}
+
+	out, err := s.overviewOf(ctx, from, to)
+	if err != nil {
+		s.writeClassified(ctx, w, err)
+
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+// overviewOf loads the five blocks; the handler above owns the request, this owns the reads.
+func (s *Server) overviewOf(
+	ctx context.Context,
+	from, to time.Time,
+) (analyticsOverviewResponse, error) {
+	months, err := s.deps.Analytics.MonthlyTotals(ctx, from, to)
+	if err != nil {
+		return analyticsOverviewResponse{}, err
+	}
+
+	roots, err := s.deps.Analytics.CategoryTotalsByRoot(ctx, from, to, constant.AccountKindExpense)
+	if err != nil {
+		return analyticsOverviewResponse{}, err
+	}
+
+	payees, err := s.deps.Analytics.PayeeTotals(ctx, from, to)
+	if err != nil {
+		return analyticsOverviewResponse{}, err
+	}
+
+	flows, err := s.deps.Analytics.AccountFlows(ctx, from, to)
+	if err != nil {
+		return analyticsOverviewResponse{}, err
+	}
+
+	stats, err := s.deps.Analytics.LedgerStats(ctx, from, to)
+	if err != nil {
+		return analyticsOverviewResponse{}, err
+	}
+
+	return newOverviewResponse(from, to, months, roots, payees, flows, stats), nil
+}
+
+func newOverviewResponse(
+	from, to time.Time,
+	months []entity.MonthTotal,
+	roots []entity.CategoryTotal,
+	payees []entity.PayeeTotal,
+	flows []entity.AccountFlow,
+	stats entity.LedgerStats,
+) analyticsOverviewResponse {
+	out := analyticsOverviewResponse{
+		From:       from.Format(constant.DateLayout),
+		To:         to.Format(constant.DateLayout),
+		Months:     make([]monthTotalResponse, 0, len(months)),
+		Categories: make([]categoryTotalResponse, 0, len(roots)),
+		Payees:     make([]payeeTotalResponse, 0, len(payees)),
+		Accounts:   make([]accountFlowResponse, 0, len(flows)),
+		Stats:      analyticsStatsResponse{Entries: stats.Entries},
+	}
+
+	if stats.BusiestOn != "" {
+		out.Stats.BusiestOn = stats.BusiestOn
+		out.Stats.BusiestSpendMinor = strconv.FormatInt(stats.BusiestSpend, 10)
+	}
+
+	for _, total := range months {
+		out.Months = append(out.Months, monthTotalResponse{
+			Month:       total.Month,
+			SpendMinor:  strconv.FormatInt(total.SpendMinor, 10),
+			IncomeMinor: strconv.FormatInt(total.IncomeMinor, 10),
+			NetMinor:    strconv.FormatInt(total.NetMinor, 10),
+		})
+	}
+
+	for _, total := range roots {
+		out.Categories = append(out.Categories, categoryTotalResponse{
+			AccountRef:      total.AccountRef,
+			AccountName:     total.AccountName,
+			AmountMinor:     strconv.FormatInt(total.AmountMinor, 10),
+			FirstOccurredOn: total.FirstOccurredOn,
+			LastOccurredOn:  total.LastOccurredOn,
+		})
+	}
+
+	for _, total := range payees {
+		out.Payees = append(out.Payees, payeeTotalResponse{
+			PayeeRef:    total.PayeeRef,
+			PayeeName:   total.PayeeName,
+			AmountMinor: strconv.FormatInt(total.AmountMinor, 10),
+		})
+	}
+
+	for _, flow := range flows {
+		out.Accounts = append(out.Accounts, accountFlowResponse{
+			AccountRef:   flow.AccountRef,
+			AccountName:  flow.AccountName,
+			Kind:         flow.Kind,
+			InflowMinor:  strconv.FormatInt(flow.InflowMinor, 10),
+			OutflowMinor: strconv.FormatInt(flow.OutflowMinor, 10),
+			NetMinor:     strconv.FormatInt(flow.NetMinor, 10),
+		})
+	}
+
+	return out
 }

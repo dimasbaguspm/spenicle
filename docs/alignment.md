@@ -21,10 +21,12 @@ Append a row per check; never rewrite a past one.
 | 2026-11-28T02:20Z | uncommitted (the first-boot claim pass in this change) | `main` | Dimas Mukti (PI-Desktop agent) | the new public `GET /api/bootstrap` page and route row, the `token` field and deletion note on `POST /api/password`, the claim file in `README.md`/`AGENTS.md`/F1, and the SPA `/setup` screen | **GO** |
 | 2026-11-28T08:10Z | uncommitted (the open-boot pass in this change) | `main` | Dimas Mukti (PI-Desktop agent) | the generated password and the claim file are gone: `POST /api/setup` carries `password`, `GET /api/bootstrap` carries only `setup_completed`, and every page that described the gate, the claim file or `password_must_change` was rewritten — endpoints, `v2-api`, `v2-design`, the deck, `README.md`, `AGENTS.md` | **GO** |
 
+| 2026-11-28T18:07Z | uncommitted (the analytics brief in this change) | `main` | Dimas Mukti (PI-Desktop agent) | the new `GET /api/analytics/overview` page, its route-table row in `docs/endpoints/README.md` and `docs/v2-api.md`, the three repository reads it added, and the web page that now makes one call instead of four | **GO** |
+
 ## What a check covers
 
-1. **Routes, one by one.** The 60 patterns in `cmd/http/handler.go` (`routes` and
-   `credentialRoutes`) against `docs/endpoints/README.md` and the 60 pages: same method,
+1. **Routes, one by one.** The 61 patterns in `cmd/http/handler.go` (`routes` and
+   `credentialRoutes`) against `docs/endpoints/README.md` and the 61 pages: same method,
    same path, same group, same scope. No phantom route, no undocumented one.
 2. **Request shapes.** Every body, query and path field against the `validate:"…"` tags
    on the structs the handlers bind — names, required-ness, minima, maxima, enums.
