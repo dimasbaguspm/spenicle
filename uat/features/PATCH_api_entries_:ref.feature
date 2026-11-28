@@ -125,7 +125,7 @@ Feature: PATCH /api/entries/{{ref}}
       | table          | count |
       | entries | 3     |
 
-  Scenario: Correcting only the note keeps the money
+  Scenario: Amending only the note keeps the entry in place
     Given a running API
     And I send a POST to "/api/entries" with:
       """json
@@ -136,7 +136,10 @@ Feature: PATCH /api/entries/{{ref}}
       {"note":"coffee and a bun"}
       """
     Then the response status is 200
-    And the response JSON matches the snapshot "patch_api_entries_:ref__correcting_only_the_note_keeps_the_money"
+    And the response JSON matches the snapshot "patch_api_entries_:ref__amending_only_the_note_keeps_the_entry_in_place"
+    And the store holds:
+      | table   | count |
+      | entries | 1     |
 
   Scenario: A correction and a reversal do not travel together
     Given a running API

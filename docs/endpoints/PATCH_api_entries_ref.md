@@ -4,9 +4,10 @@
 
 ## Purpose
 
-Three corrections, one at a time: reverse the entry, set (or clear) its payee, or correct
-it — the date, the note, or the postings — which reverses the original and posts the
-replacement in the same transaction. Nothing is ever deleted.
+Four corrections, one at a time: reverse the entry, set (or clear) its payee, **amend** it
+(the day and the note, edited in place) or **correct** it (the postings you send, which reverses
+the original and posts the replacement). Moving money is a reversal; moving the text is not.
+Nothing is ever deleted.
 
 ## Upstream
 
@@ -26,11 +27,19 @@ resolve the payee through `PayeeSource.PayeeByRef`, `UPDATE entries SET payee_re
 insert `audit_log` action `update` on `entries`, then reload the entry with its
 postings.
 
-`{"occurred_on"|"note"|"postings"}` → `Module.Ledger.Correct` → `Repository.Sqlite.ReplaceEntry`
-in one transaction: stamp `reversed_at` on the original, insert the reversal, insert the
-replacement (source `adjustment`, same currency and payee, the corrected date/note and
-the postings you sent, rebuilt through the normal zero-sum and FX path), and append the
-`reverse` and `create` audit rows.
+`{"occurred_on"|"note"}` with no `postings` → `Module.Ledger.Amend` →
+`Repository.Sqlite.AmendEntry`: `UPDATE entries SET occurred_on, note WHERE reversed_at IS NULL`,
+mark the accounts that touch the entry `balance_dirty` (the day decides where the row sits in every
+running balance), and append one `audit_log` row, action `update`, with the before and after as
+`entry_details`. The row keeps its ref, its postings and its money: this is an edit, not a
+reversal, and `reversed_at` stays null.
+
+`{"postings": [...]}` → `Module.Ledger.Correct` → `Repository.Sqlite.ReplaceEntry` in one
+transaction: stamp `reversed_at` on the original, insert the reversal, insert the replacement
+(source `adjustment`, same currency and payee, the corrected date/note and the postings you sent,
+rebuilt through the normal zero-sum and FX path), and append the `reverse` and `create` audit rows.
+The replacement carries `reversal_of_ref` and the original carries `reversed_by_ref`, so the chain
+is readable from either end.
 
 ## Path / query params
 

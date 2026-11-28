@@ -31,6 +31,7 @@
         }
       ],
       "ref": "<ref>",
+      "reversal_of_ref": "<ref>",
       "source": "adjustment"
     },
     {
@@ -66,6 +67,7 @@
       ],
       "ref": "<ref>",
       "reversed_at": "<timestamp>",
+      "reversed_by_ref": "<ref>",
       "source": "manual"
     }
   ],

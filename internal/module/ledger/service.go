@@ -433,6 +433,50 @@ func (s *Service) UpdatePayee(ctx context.Context, ref, payeeRef string) (entity
 	return updated, nil
 }
 
+// AmendInput is an in-place edit: the day the entry counts for and the note beside it. Postings
+// are absent on purpose — moving money is a reversal, correcting the text is not.
+type AmendInput struct {
+	OccurredOn *time.Time
+	Note       *string
+}
+
+// Amend edits the entry itself. Nothing is reversed and no second row appears, because the money
+// did not move: only the day it is filed under and the words beside it.
+func (s *Service) Amend(ctx context.Context, ref string, in AmendInput) (entity.Entry, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Amend")
+	defer endSpan()
+
+	original, err := s.Get(ctx, ref)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	if original.ReversedAt != nil {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s is reversed", entity.ErrInvalidState, ref)
+	}
+
+	occurredOn := original.OccurredOn
+	if in.OccurredOn != nil {
+		occurredOn = *in.OccurredOn
+	}
+
+	note := original.Note
+	if in.Note != nil {
+		note = *in.Note
+	}
+
+	updated, found, err := s.entries.AmendEntry(ctx, ref, occurredOn, note)
+	if err != nil {
+		return entity.Entry{}, err
+	}
+
+	if !found {
+		return entity.Entry{}, fmt.Errorf("%w: entry %s", entity.ErrNotFound, ref)
+	}
+
+	return updated, nil
+}
+
 func (s *Service) Correct(ctx context.Context, ref string, in CorrectInput) (entity.Entry, error) {
 	ctx, endSpan := telemetry.StartSpan(ctx, "Module.Ledger.Correct")
 	defer endSpan()

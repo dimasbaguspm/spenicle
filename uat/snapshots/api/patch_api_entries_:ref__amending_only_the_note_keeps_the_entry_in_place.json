@@ -1,5 +1,6 @@
 {
   "currency": "IDR",
+  "idempotency_key": "<idempotency_key>",
   "note": "coffee and a bun",
   "occurred_on": "2026-02-14",
   "postings": [
@@ -29,5 +30,5 @@
     }
   ],
   "ref": "<ref>",
-  "source": "adjustment"
+  "source": "manual"
 }

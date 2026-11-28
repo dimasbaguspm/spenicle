@@ -11,6 +11,24 @@ import { accountName, isCategoryKind, isMoneyKind, type AccountIndex } from '@/m
 import { entryRow } from './row'
 
 /** One posting of an entry: which account, whether that account holds money or classifies it. */
+/** One end of a correction chain: the entry this row replaced, or the one that replaced it. */
+function Chain({ label, target }: { label: string; target: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-text-faint text-xs">{label}</dt>
+      <dd className="text-xs">
+        <Link
+          to="/ledger/$ref"
+          params={{ ref: target }}
+          className="text-text-muted hover:text-accent font-mono underline-offset-4 hover:underline"
+        >
+          {target.slice(0, 8)}
+        </Link>
+      </dd>
+    </div>
+  )
+}
+
 function postingLine(
   posting: Entry['postings'][number],
   accounts: AccountIndex,
@@ -120,6 +138,12 @@ export function EntryDetail({
               {entry.source === undefined ? absent : entry.source}
             </dd>
           </div>
+          {typeof entry.reversal_of_ref === 'string' && entry.reversal_of_ref !== '' ? (
+            <Chain label="Replaces" target={entry.reversal_of_ref} />
+          ) : null}
+          {typeof entry.reversed_by_ref === 'string' && entry.reversed_by_ref !== '' ? (
+            <Chain label="Replaced by" target={entry.reversed_by_ref} />
+          ) : null}
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-text-faint text-xs">Ref</dt>
             <dd className="text-text-muted font-mono text-[0.6875rem] break-all">{entry.ref}</dd>

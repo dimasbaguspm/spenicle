@@ -63,7 +63,7 @@ next page (`has_more` false), including a short non-empty page. Send it back as 
 for the next page: the cursor is always a ref, never an integer id.
 
 Each posting carries the account's `name` and `kind` next to its `ref`, and an entry with a
-payee carries its `name` too, so a screen renders a row without a second call. `reversed_at`
+payee carries its `name` too, so a screen renders a row without a second call. `reversal_of_ref` (this entry replaced that one), `reversed_by_ref` (that entry replaced this one) and `reversed_at`
 appears on a reversed entry or its reversal. The handler joins these from
 `Repository.Sqlite.ListAccounts` + `ListPayees` once per request — the store stays a
 pure data adapter, the HTTP layer owns presentation.

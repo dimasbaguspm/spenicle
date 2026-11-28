@@ -48,6 +48,7 @@ type Entry struct {
 	ReversedAt          *time.Time
 	CreatedAt           time.Time
 	ReversalOfRef       string
+	ReversedByRef       string
 	RecurringRuleRef    string
 	RunningBalanceMinor *int64
 }

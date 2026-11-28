@@ -31,5 +31,6 @@
   ],
   "ref": "<ref>",
   "reversed_at": "<timestamp>",
+  "reversed_by_ref": "<ref>",
   "source": "manual"
 }

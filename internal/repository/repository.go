@@ -12,6 +12,7 @@ import (
 	"github.com/dimasbaguspm/spenicle/internal/entity"
 )
 
+//nolint:interfacebloat // one aggregate: the entries, their postings and the chain a correction leaves behind
 type Ledger interface {
 	InsertEntry(ctx context.Context, entry entity.Entry) (entity.Entry, error)
 	EntryByIdempotencyKey(ctx context.Context, clientID string) (entity.Entry, bool, error)
@@ -19,6 +20,7 @@ type Ledger interface {
 	ListEntries(ctx context.Context, filter entity.EntryFilter) ([]entity.Entry, error)
 	ReverseEntry(ctx context.Context, ref, reason string, at time.Time) (entity.Entry, error)
 	UpdateEntryPayee(ctx context.Context, ref, payeeRef string) (entity.Entry, bool, error)
+	AmendEntry(ctx context.Context, ref string, occurredOn time.Time, note string) (entity.Entry, bool, error)
 	EntryRefsByIdempotencyKeys(ctx context.Context, keys []string) (map[string]string, error)
 	ClashCandidates(
 		ctx context.Context,

@@ -57,7 +57,13 @@ export type Currency = Fixed<Schemas['currencyResponse']>
 export type Posting = Fixed<Schemas['postingResponse']>
 export type Entry = Omitted<
   Fixed<Schemas['entryResponse']>,
-  'idempotency_key' | 'note' | 'payee' | 'reversed_at' | 'running_balance_minor'
+  | 'idempotency_key'
+  | 'note'
+  | 'payee'
+  | 'reversed_at'
+  | 'running_balance_minor'
+  | 'reversal_of_ref'
+  | 'reversed_by_ref'
 >
 export type PayeeSummary = Fixed<Schemas['payeeSummary']>
 

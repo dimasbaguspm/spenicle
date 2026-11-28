@@ -15,7 +15,8 @@ import (
 )
 
 const entryColumns = `id, ref, occurred_on, payee_ref, note, currency, source, idempotency_key,
-	reversal_of_ref, reversed_at, created_at`
+	reversal_of_ref, reversed_at, created_at,
+	(SELECT r.ref FROM entries r WHERE r.reversal_of_ref = entries.ref) AS reversed_by_ref`
 
 const entryAccountSubquery = `SELECT p.entry_ref FROM postings p WHERE p.account_ref`
 
@@ -316,7 +317,8 @@ func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool,
 
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
 		SELECT id, ref, occurred_on, payee_ref, note, currency, source, idempotency_key,
-		       reversal_of_ref, reversed_at, created_at
+		       reversal_of_ref, reversed_at, created_at,
+		       (SELECT r.ref FROM entries r WHERE r.reversal_of_ref = entries.ref) AS reversed_by_ref
 		FROM entries WHERE ref = ?`, ref))
 	if errors.Is(err, sql.ErrNoRows) {
 		return entity.Entry{}, false, nil
@@ -331,6 +333,74 @@ func (s *Store) EntryByRef(ctx context.Context, ref string) (entity.Entry, bool,
 	}
 
 	return entry, true, nil
+}
+
+func (s *Store) AmendEntry(
+	ctx context.Context,
+	ref string,
+	occurredOn time.Time,
+	note string,
+) (entity.Entry, bool, error) {
+	ctx, endSpan := telemetry.StartSpan(ctx, "Repository.Sqlite.AmendEntry")
+	defer endSpan()
+
+	original, found, err := s.EntryByRef(ctx, ref)
+	if err != nil {
+		return entity.Entry{}, false, err
+	}
+
+	if !found {
+		return entity.Entry{}, false, nil
+	}
+
+	err = s.WithTx(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		res, execErr := tx.ExecContext(ctx, `
+			UPDATE entries SET occurred_on = ?, note = ?
+			WHERE ref = ? AND reversed_at IS NULL`,
+			occurredOn.Format(constant.DateLayout), nullString(note), original.Ref)
+		if execErr != nil {
+			return fmt.Errorf("amend entry: %w", execErr)
+		}
+
+		affected, rowsErr := res.RowsAffected()
+		if rowsErr != nil {
+			return fmt.Errorf("amend rows: %w", rowsErr)
+		}
+
+		if affected == 0 {
+			return fmt.Errorf("%w: entry %s is reversed", entity.ErrInvalidState, ref)
+		}
+
+		// the day decides where the row sits in every running balance, so the accounts that touch
+		// it rebuild on their next read instead of carrying a number that is no longer true
+		if _, dirtyErr := tx.ExecContext(ctx, `
+			UPDATE accounts SET balance_dirty = 1
+			WHERE ref IN (SELECT account_ref FROM postings WHERE entry_ref = ?)`, ref); dirtyErr != nil {
+			return fmt.Errorf("mark accounts dirty: %w", dirtyErr)
+		}
+
+		return appendAudit(ctx, tx, auditRecord{
+			Kind:   constant.AuditEntityEntry,
+			ID:     original.ID,
+			Ref:    original.Ref,
+			Action: constant.AuditActionUpdate,
+			From: entity.EntryDetails{
+				OccurredOn: original.OccurredOn.Format(constant.DateLayout),
+				Note:       original.Note,
+			},
+			To: entity.EntryDetails{
+				OccurredOn: occurredOn.Format(constant.DateLayout),
+				Note:       note,
+			},
+		})
+	})
+	if err != nil {
+		return entity.Entry{}, false, err
+	}
+
+	updated, found, err := s.EntryByRef(ctx, ref)
+
+	return updated, found, err
 }
 
 func (s *Store) UpdateEntryPayee(
@@ -811,7 +881,8 @@ func insertReversal(ctx context.Context, tx *sql.Tx, reversal entity.Entry) erro
 func (s *Store) reversalByReversalOfRef(ctx context.Context, originalRef string) (entity.Entry, error) {
 	entry, err := s.scanEntry(ctx, s.db.QueryRowContext(ctx, `
 		SELECT id, ref, occurred_on, payee_ref, note, currency, source, idempotency_key,
-		       reversal_of_ref, reversed_at, created_at
+		       reversal_of_ref, reversed_at, created_at,
+		       (SELECT r.ref FROM entries r WHERE r.reversal_of_ref = entries.ref) AS reversed_by_ref
 		FROM entries WHERE reversal_of_ref = ?`, originalRef))
 	if err != nil {
 		return entity.Entry{}, fmt.Errorf("select reversal: %w", err)
@@ -837,13 +908,14 @@ func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, e
 		note          sql.NullString
 		clientID      sql.NullString
 		reversalOfRef sql.NullString
+		reversedByRef sql.NullString
 		reversedRaw   sql.NullString
 		occurredRaw   string
 		createdRaw    string
 	)
 
 	err := scanner.Scan(&entry.ID, &entry.Ref, &occurredRaw, &payeeRef, &note, &entry.Currency,
-		&entry.Source, &clientID, &reversalOfRef, &reversedRaw, &createdRaw)
+		&entry.Source, &clientID, &reversalOfRef, &reversedRaw, &createdRaw, &reversedByRef)
 	if err != nil {
 		return entity.Entry{}, err
 	}
@@ -858,6 +930,7 @@ func scanEntryRow(scanner interface{ Scan(dest ...any) error }) (entity.Entry, e
 
 	entry.PayeeRef = payeeRef.String
 	entry.ReversalOfRef = reversalOfRef.String
+	entry.ReversedByRef = reversedByRef.String
 
 	if reversedRaw.Valid {
 		at, parseErr := time.Parse(constant.TimestampLayout, reversedRaw.String)

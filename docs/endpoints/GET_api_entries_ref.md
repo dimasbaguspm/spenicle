@@ -45,10 +45,12 @@ None.
 Every posting carries its account's `name` and `kind` next to the ref, and an entry with a
 payee carries its `name`, so one call renders the whole screen. `note` is omitted when
 empty, `payee` when the entry has none, and `reversed_at` (RFC3339) appears once the entry
-is reversed. Each posting also carries the rate it was posted with — `fx_rate`, `fx_rate_date`
-and `fx_source` — frozen in the row: re-publishing the ECB sheet never moves a locked entry,
-because the ledger is the source of truth, not today's sheet. There is no `meta`: the page
-envelope belongs to the list route.
+is reversed. `reversal_of_ref` (this entry replaced that one) and `reversed_by_ref` (that
+entry replaced this one) are each absent when the entry has no such neighbour, so a screen
+walks a correction chain one hop per call. Each posting also carries the rate it was posted
+with — `fx_rate`, `fx_rate_date` and `fx_source` — frozen in the row: re-publishing the ECB
+sheet never moves a locked entry, because the ledger is the source of truth, not today's
+sheet. There is no `meta`: the page envelope belongs to the list route.
 
 ## Errors
 
@@ -59,13 +61,13 @@ envelope belongs to the list route.
 
 ## Limitations
 
-- A reversal writes a second entry; this route answers the original carrying `reversed_at` and
-  never follows `reversal_of_ref`, so the reversal is found through the list route
-  (`?source=adjustment`).
+- A reversal writes a second entry: this route answers the row you asked for and names its
+  neighbours by ref, so a chain is read one hop per call; `GET /api/entries` is how a whole
+  chain arrives in one page.
 - Display names cost two extra reads per request (`ListAccounts`, `ListPayees`), the same
   cost the list route pays. Acceptable at one user's volume.
-- No ETag and no `If-None-Match`: an entry only changes when it is reversed or its payee is
-  reassigned, both of which are user actions in the same screen.
+- No ETag and no `If-None-Match`: an entry only changes when it is amended, reversed or its
+  payee is reassigned, all of which are user actions in the same screen.
 - Read-only. Every mutation stays on `POST /api/entries` and `PATCH /api/entries/{ref}`.
 
 ## Sequence

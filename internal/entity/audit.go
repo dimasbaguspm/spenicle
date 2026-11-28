@@ -46,6 +46,13 @@ type EntryPayee struct {
 	PayeeRef string `json:"payee_ref,omitempty" validate:"omitempty,ref"`
 }
 
+// EntryDetails records an in-place edit: the day an entry counts for and the note beside it. The
+// postings are absent on purpose — moving money is a reversal, moving the text is not.
+type EntryDetails struct {
+	OccurredOn string `json:"occurred_on"    validate:"required,datestr"`
+	Note       string `json:"note,omitempty" validate:"max=2000"`
+}
+
 // EntryReversed records a reversal: the original and the entry that reversed it.
 type EntryReversed struct {
 	ReversalOfRef    string `json:"reversal_of_ref"    validate:"required,ref"`

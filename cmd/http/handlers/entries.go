@@ -64,6 +64,8 @@ type entryResponse struct {
 	Note                string            `json:"note,omitempty"`
 	Payee               *payeeSummary     `json:"payee,omitempty"`
 	ReversedAt          string            `format:"date-time"                                        json:"reversed_at,omitempty"`
+	ReversalOfRef       string            `json:"reversal_of_ref,omitempty"                          pattern:"^[0-9a-f]{32}$"`
+	ReversedByRef       string            `json:"reversed_by_ref,omitempty"                          pattern:"^[0-9a-f]{32}$"`
 	Postings            []postingResponse `json:"postings"`
 	RunningBalanceMinor string            `json:"running_balance_minor,omitempty"                    pattern:"^[+-]?[0-9]+$"`
 }
@@ -239,6 +241,13 @@ func (s *Server) applyEntryPatch(
 		entry, err = s.deps.Ledger.Reverse(ctx, ref, request.Reason)
 	case entryPatchPayee:
 		entry, err = s.deps.Ledger.UpdatePayee(ctx, ref, *request.PayeeRef)
+	case entryPatchAmend:
+		input, ok := amendInput(w, request)
+		if !ok {
+			return entity.Entry{}, false
+		}
+
+		entry, err = s.deps.Ledger.Amend(ctx, ref, input)
 	default:
 		input, ok := correctionInput(w, request)
 		if !ok {
@@ -409,6 +418,9 @@ func toEntryResponse(entry entity.Entry, names displayNames) entryResponse {
 		out.ReversedAt = entry.ReversedAt.Format(constant.TimestampLayout)
 	}
 
+	out.ReversalOfRef = entry.ReversalOfRef
+	out.ReversedByRef = entry.ReversedByRef
+
 	if entry.PayeeRef != "" {
 		if payee, ok := names.payees[entry.PayeeRef]; ok {
 			out.Payee = &payeeSummary{Ref: payee.Ref, Name: payee.Name}
@@ -485,6 +497,25 @@ var errorMappings = []errorMapping{ //nolint:gochecknoglobals // read-only table
 	{intake.ErrNotConfigured, http.StatusConflict, "intake_disabled"},
 }
 
+// amendInput reads the two fields an in-place edit may carry. A day that does not parse is a 422
+// and nothing is written.
+func amendInput(w http.ResponseWriter, request entryPatchRequest) (ledger.AmendInput, bool) {
+	input := ledger.AmendInput{Note: request.Note}
+
+	if request.OccurredOn != "" {
+		occurredOn, err := validating.Day(request.OccurredOn, "occurred_on")
+		if err != nil {
+			writeInvalid(w, err)
+
+			return ledger.AmendInput{}, false
+		}
+
+		input.OccurredOn = &occurredOn
+	}
+
+	return input, true
+}
+
 func correctionInput(w http.ResponseWriter, request entryPatchRequest) (ledger.CorrectInput, bool) {
 	input := ledger.CorrectInput{Note: request.Note, Reason: request.Reason}
 
@@ -535,11 +566,12 @@ const (
 	entryPatchReverse = "reverse"
 	entryPatchPayee   = "payee"
 	entryPatchCorrect = "correct"
+	entryPatchAmend   = "amend"
 )
 
-func entryPatchAction(w http.ResponseWriter, request entryPatchRequest) (string, bool) {
-	corrects := request.OccurredOn != "" || request.Note != nil || len(request.Postings) > 0
-
+// singleAction refuses a body that asks for nothing or for two things at once: a patch is one
+// decision, and a reversal that also carries a correction is how a ledger loses an entry.
+func singleAction(w http.ResponseWriter, request entryPatchRequest, corrects bool) bool {
 	actions := 0
 
 	for _, present := range []bool{request.Reverse != nil, request.PayeeRef != nil, corrects} {
@@ -553,16 +585,26 @@ func entryPatchAction(w http.ResponseWriter, request entryPatchRequest) (string,
 		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput,
 			`send {"reverse": true}, {"payee_ref": "..."} or the corrected occurred_on/note/postings`)
 
-		return "", false
+		return false
 	case actions > 1:
 		httpx.WriteError(w, http.StatusUnprocessableEntity, codeInvalidInput,
 			"reverse, payee_ref and a correction are separate actions")
 
-		return "", false
+		return false
 	case request.Reverse != nil && !*request.Reverse:
 		httpx.WriteError(w, http.StatusUnprocessableEntity, "unsupported_patch",
 			`only {"reverse": true} is supported today`)
 
+		return false
+	}
+
+	return true
+}
+
+func entryPatchAction(w http.ResponseWriter, request entryPatchRequest) (string, bool) {
+	corrects := request.OccurredOn != "" || request.Note != nil || len(request.Postings) > 0
+
+	if !singleAction(w, request, corrects) {
 		return "", false
 	}
 
@@ -571,6 +613,10 @@ func entryPatchAction(w http.ResponseWriter, request entryPatchRequest) (string,
 		return entryPatchReverse, true
 	case request.PayeeRef != nil:
 		return entryPatchPayee, true
+	case len(request.Postings) == 0:
+		// the day and the note are the entry's own text: editing them is an `update`, and the row
+		// it belongs to is the same row. Only moved postings need a reversal.
+		return entryPatchAmend, true
 	default:
 		return entryPatchCorrect, true
 	}
