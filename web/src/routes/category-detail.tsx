@@ -17,9 +17,9 @@ import { accountIndex, EntryMovements } from '@/modules'
 
 /** One category and what it filed, with the register's filters: the month question lives here. */
 export function CategoryDetailPage() {
-  const { ref } = useParams({ from: '/categories/$ref' })
-  const search = useSearch({ from: '/categories/$ref' })
-  const navigate = useNavigate({ from: '/categories/$ref' })
+  const { ref } = useParams({ from: '/manage/categories/$ref' })
+  const search = useSearch({ from: '/manage/categories/$ref' })
+  const navigate = useNavigate({ from: '/manage/categories/$ref' })
   const meta = useMeta()
   const payees = usePayees()
   const money = useMoney()
@@ -41,7 +41,10 @@ export function CategoryDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        items={[{ label: 'Categories', to: '/categories' }, { label: account?.name ?? absent }]}
+        items={[
+          { label: 'Categories', to: '/manage/categories' },
+          { label: account?.name ?? absent },
+        ]}
         title={account?.name ?? absent}
         action={
           <div className="flex items-center gap-3">
@@ -53,7 +56,7 @@ export function CategoryDetailPage() {
                   )}
             </Text>
             <Link
-              to="/categories/$ref/edit"
+              to="/manage/categories/$ref/edit"
               params={{ ref }}
               className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}
             >

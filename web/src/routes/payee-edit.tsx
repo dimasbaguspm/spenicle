@@ -10,7 +10,7 @@ import { usePatchPayee, usePayees } from '@/hooks/queries/use-payees'
 import { PayeeFields, payeeBody, payeeResolver, type PayeeFormValues } from '@/modules'
 
 export function PayeeEditPage() {
-  const { ref } = useParams({ from: '/payees/$ref/edit' })
+  const { ref } = useParams({ from: '/manage/payees/$ref/edit' })
   const navigate = useNavigate()
   const meta = useMeta()
   const held = usePayees({ refs: ref, limit: 1 })
@@ -33,8 +33,8 @@ export function PayeeEditPage() {
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader
         items={[
-          { label: 'Payees', to: '/payees' },
-          { label: payee?.name ?? 'Payee', to: `/payees/${ref}` },
+          { label: 'Payees', to: '/manage/payees' },
+          { label: payee?.name ?? 'Payee', to: `/manage/payees/${ref}` },
           { label: 'Edit' },
         ]}
         title="Edit payee"
@@ -52,13 +52,13 @@ export function PayeeEditPage() {
               defaultValues={values}
               resolver={payeeResolver}
               submitLabel="Save payee"
-              onCancel={() => void navigate({ to: '/payees/$ref', params: { ref } })}
+              onCancel={() => void navigate({ to: '/manage/payees/$ref', params: { ref } })}
               onSubmit={(next) => {
                 patch.mutate(
                   { ref, body: payeeBody(next) },
                   {
                     onSuccess: () => {
-                      void navigate({ to: '/payees/$ref', params: { ref } })
+                      void navigate({ to: '/manage/payees/$ref', params: { ref } })
                     },
                   },
                 )

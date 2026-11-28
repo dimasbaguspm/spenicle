@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn'
 import { CaptureList } from '@/modules'
 
 /** Stable crumbs: a new array on every render would re-render the trail for nothing. */
-const captureCrumbs = [{ label: 'Captures' }] as const
+const captureCrumbs = [{ label: 'Manage', to: '/manage' }, { label: 'Captures' }] as const
 
 export function CapturesPage() {
   const captures = useCaptures({ limit: 20 })

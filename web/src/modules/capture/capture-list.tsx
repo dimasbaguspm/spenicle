@@ -14,7 +14,7 @@ export function CaptureList({ rows }: { rows: readonly CaptureLike[] }) {
         return (
           <li key={row.ref}>
             <Link
-              to="/captures/$ref"
+              to="/manage/captures/$ref"
               params={{ ref: row.ref }}
               className="hover:bg-surface-raised/40 flex items-center gap-3 px-1 py-3 text-sm transition-colors"
             >

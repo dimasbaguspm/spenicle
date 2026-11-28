@@ -22,7 +22,7 @@ export function NewPayeePage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader
-        items={[{ label: 'Payees', to: '/payees' }, { label: 'New payee' }]}
+        items={[{ label: 'Payees', to: '/manage/payees' }, { label: 'New payee' }]}
         title="New payee"
       />
 
@@ -37,11 +37,11 @@ export function NewPayeePage() {
             defaultValues={emptyPayeeForm}
             resolver={payeeResolver}
             submitLabel="Create payee"
-            onCancel={() => void navigate({ to: '/payees' })}
+            onCancel={() => void navigate({ to: '/manage/payees' })}
             onSubmit={(values) => {
               create.mutate(payeeBody(values), {
                 onSuccess: (created) => {
-                  void navigate({ to: '/payees/$ref', params: { ref: created.ref } })
+                  void navigate({ to: '/manage/payees/$ref', params: { ref: created.ref } })
                 },
               })
             }}

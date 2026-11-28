@@ -125,7 +125,7 @@ export function DashboardPage() {
                 Waiting for you
               </Text>
               <Link
-                to="/captures"
+                to="/manage/captures"
                 className="group flex items-baseline justify-between gap-4 rounded focus-visible:outline-offset-4"
               >
                 <div>

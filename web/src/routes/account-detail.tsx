@@ -20,9 +20,9 @@ import { accountIndex, EntryMovements } from '@/modules'
  * the route, the rest comes from the URL, and every row carries the balance it left behind.
  */
 export function AccountDetailPage() {
-  const { ref } = useParams({ from: '/accounts/$ref' })
-  const search = useSearch({ from: '/accounts/$ref' })
-  const navigate = useNavigate({ from: '/accounts/$ref' })
+  const { ref } = useParams({ from: '/manage/accounts/$ref' })
+  const search = useSearch({ from: '/manage/accounts/$ref' })
+  const navigate = useNavigate({ from: '/manage/accounts/$ref' })
   const meta = useMeta()
   const payees = usePayees()
   const money = useMoney()
@@ -44,7 +44,7 @@ export function AccountDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        items={[{ label: 'Accounts', to: '/accounts' }, { label: account?.name ?? absent }]}
+        items={[{ label: 'Accounts', to: '/manage/accounts' }, { label: account?.name ?? absent }]}
         title={account?.name ?? absent}
         action={
           <div className="flex items-center gap-3">
@@ -56,7 +56,7 @@ export function AccountDetailPage() {
                   )}
             </Text>
             <Link
-              to="/accounts/$ref/edit"
+              to="/manage/accounts/$ref/edit"
               params={{ ref }}
               className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}
             >

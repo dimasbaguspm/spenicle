@@ -95,76 +95,76 @@ const entryEditRoute = createRoute({
 
 const accountsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/accounts',
+  path: '/manage/accounts',
   component: AccountsPage,
 })
 
 const newAccountRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/accounts/new',
+  path: '/manage/accounts/new',
   component: NewAccountPage,
 })
 
 const accountRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/accounts/$ref',
+  path: '/manage/accounts/$ref',
   validateSearch: entrySearch,
   component: AccountDetailPage,
 })
 
 const accountEditRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/accounts/$ref/edit',
+  path: '/manage/accounts/$ref/edit',
   component: AccountEditPage,
 })
 
 const categoriesRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/categories',
+  path: '/manage/categories',
   component: CategoriesPage,
 })
 
 const newCategoryRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/categories/new',
+  path: '/manage/categories/new',
   component: NewCategoryPage,
 })
 
 const categoryRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/categories/$ref',
+  path: '/manage/categories/$ref',
   validateSearch: entrySearch,
   component: CategoryDetailPage,
 })
 
 const categoryEditRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/categories/$ref/edit',
+  path: '/manage/categories/$ref/edit',
   component: CategoryEditPage,
 })
 
 const payeesRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/payees',
+  path: '/manage/payees',
   component: PayeesPage,
 })
 
 const newPayeeRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/payees/new',
+  path: '/manage/payees/new',
   component: NewPayeePage,
 })
 
 const payeeRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/payees/$ref',
+  path: '/manage/payees/$ref',
   validateSearch: entrySearch,
   component: PayeeDetailPage,
 })
 
 const payeeEditRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/payees/$ref/edit',
+  path: '/manage/payees/$ref/edit',
   component: PayeeEditPage,
 })
 
@@ -176,13 +176,13 @@ const analyticsRoute = createRoute({
 
 const capturesRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/captures',
+  path: '/manage/captures',
   component: CapturesPage,
 })
 
 const captureRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/captures/$ref',
+  path: '/manage/captures/$ref',
   component: CaptureReviewPage,
 })
 
@@ -194,7 +194,7 @@ const settingsRoute = createRoute({
 
 const exportsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/exports',
+  path: '/manage/exports',
   component: ExportsPage,
 })
 

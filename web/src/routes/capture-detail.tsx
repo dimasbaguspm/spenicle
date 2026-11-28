@@ -30,7 +30,7 @@ import { useState } from 'react'
  * decision.
  */
 export function CaptureReviewPage() {
-  const { ref } = useParams({ from: '/captures/$ref' })
+  const { ref } = useParams({ from: '/manage/captures/$ref' })
   const navigate = useNavigate()
   const held = useCaptures({ refs: ref, limit: 1 })
   const meta = useMeta()
@@ -44,7 +44,7 @@ export function CaptureReviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        items={[{ label: 'Captures', to: '/captures' }, { label: 'Review' }]}
+        items={[{ label: 'Captures', to: '/manage/captures' }, { label: 'Review' }]}
         title="Review a capture"
       />
 
@@ -77,7 +77,7 @@ export function CaptureReviewPage() {
           payees={payees}
           note={capture?.raw_text ?? ''}
           suggested={capture?.suggested_category_ref}
-          onDone={() => void navigate({ to: '/captures' })}
+          onDone={() => void navigate({ to: '/manage/captures' })}
         />
       ) : (
         <Panel>

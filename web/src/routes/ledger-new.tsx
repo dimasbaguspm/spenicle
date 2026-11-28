@@ -81,7 +81,7 @@ export function NewEntryPage() {
       ) : (
         <ScanPanel
           onQueued={() => {
-            void navigate({ to: '/captures' })
+            void navigate({ to: '/manage/captures' })
           }}
         />
       )}

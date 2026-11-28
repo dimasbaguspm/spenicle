@@ -9,8 +9,8 @@ import { categoryGroups, moneyGroups, type AccountScope } from './kinds'
 
 /** One screen per scope: a money row and a category row do not open the same page. */
 const detailPath = {
-  money: '/accounts/$ref',
-  category: '/categories/$ref',
+  money: '/manage/accounts/$ref',
+  category: '/manage/categories/$ref',
 } as const
 
 /**

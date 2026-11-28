@@ -14,33 +14,33 @@ type AccountEditValues = {
 type RenameProps = {
   accountRef: string
   listLabel: string
-  listTo: '/accounts' | '/categories'
-  detailTo: '/accounts/$ref' | '/categories/$ref'
+  listTo: '/manage/accounts' | '/manage/categories'
+  detailTo: '/manage/accounts/$ref' | '/manage/categories/$ref'
 }
 
 /** An account's name is the field a person owns; its kind and balance are the ledger's. */
 export function AccountEditPage() {
-  const { ref } = useParams({ from: '/accounts/$ref/edit' })
+  const { ref } = useParams({ from: '/manage/accounts/$ref/edit' })
 
   return (
     <RenameAccount
       accountRef={ref}
       listLabel="Accounts"
-      listTo="/accounts"
-      detailTo="/accounts/$ref"
+      listTo="/manage/accounts"
+      detailTo="/manage/accounts/$ref"
     />
   )
 }
 
 export function CategoryEditPage() {
-  const { ref } = useParams({ from: '/categories/$ref/edit' })
+  const { ref } = useParams({ from: '/manage/categories/$ref/edit' })
 
   return (
     <RenameAccount
       accountRef={ref}
       listLabel="Categories"
-      listTo="/categories"
-      detailTo="/categories/$ref"
+      listTo="/manage/categories"
+      detailTo="/manage/categories/$ref"
     />
   )
 }

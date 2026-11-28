@@ -30,31 +30,31 @@ export function ManagePage() {
 
   const sections = [
     {
-      to: '/accounts',
+      to: '/manage/accounts',
       label: 'Accounts',
       caption: 'What money sits in: assets, liabilities, equity.',
       count: accounts.isSuccess ? String(money) : '',
     },
     {
-      to: '/categories',
+      to: '/manage/categories',
       label: 'Categories',
       caption: 'What money was for: expense and income.',
       count: accounts.isSuccess ? String(categories) : '',
     },
     {
-      to: '/payees',
+      to: '/manage/payees',
       label: 'Payees',
       caption: 'Who was paid, and the defaults each name carries.',
       count: payees.isSuccess ? String(payees.data.payees.length) : '',
     },
     {
-      to: '/captures',
+      to: '/manage/captures',
       label: 'Captures',
       caption: 'The review queue. Nothing posts itself.',
       count: captures.isSuccess ? String(captures.data.captures.length) : '',
     },
     {
-      to: '/exports',
+      to: '/manage/exports',
       label: 'Exports',
       caption: 'The ledger as a file, rendered by the worker.',
       count: exports.isSuccess ? String(exports.data.exports.length) : '',

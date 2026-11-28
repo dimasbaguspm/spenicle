@@ -62,7 +62,7 @@ function ScopeCreate({
 }) {
   const navigate = useNavigate()
   const create = useCreateAccount()
-  const detail = scope === 'category' ? '/categories/$ref' : '/accounts/$ref'
+  const detail = scope === 'category' ? '/manage/categories/$ref' : '/manage/accounts/$ref'
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -70,7 +70,7 @@ function ScopeCreate({
         items={[
           {
             label: listLabel,
-            to: scope === 'category' ? '/categories' : '/accounts',
+            to: scope === 'category' ? '/manage/categories' : '/manage/accounts',
           },
           { label: title },
         ]}
@@ -86,7 +86,9 @@ function ScopeCreate({
             resolver={resolver}
             submitLabel={scope === 'category' ? 'Create category' : 'Create account'}
             onCancel={() =>
-              void navigate({ to: scope === 'category' ? '/categories' : '/accounts' })
+              void navigate({
+                to: scope === 'category' ? '/manage/categories' : '/manage/accounts',
+              })
             }
             onSubmit={(next) => {
               create.mutate(

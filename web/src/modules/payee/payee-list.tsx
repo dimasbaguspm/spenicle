@@ -20,7 +20,7 @@ export function PayeeList({ rows }: { rows: readonly PayeeRow[] }) {
         {rows.map((row) => (
           <li key={row.ref} className="border-border/70 border-t first:border-t-0">
             <Link
-              to="/payees/$ref"
+              to="/manage/payees/$ref"
               params={{ ref: row.ref }}
               className="hover:bg-surface-raised/60 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-3 text-sm transition-colors sm:grid-cols-[minmax(0,1fr)_8rem] sm:px-6"
             >

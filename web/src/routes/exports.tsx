@@ -37,7 +37,7 @@ const formatOptions = [
 ]
 
 /** Stable crumbs: a new array on every render would re-render the trail for nothing. */
-const exportCrumbs = [{ label: 'Exports' }] as const
+const exportCrumbs = [{ label: 'Manage', to: '/manage' }, { label: 'Exports' }] as const
 
 /** A window the form left empty is simply not sent: the job then covers the whole ledger. */
 function exportBody(values: ExportFormValues): ExportCreate {

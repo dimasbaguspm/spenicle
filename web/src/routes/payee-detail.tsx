@@ -17,9 +17,9 @@ import { accountIndex, EntryMovements, payeeRows } from '@/modules'
 
 /** One payee: the defaults it carries, and everything paid to it, narrowed like the register. */
 export function PayeeDetailPage() {
-  const { ref } = useParams({ from: '/payees/$ref' })
-  const search = useSearch({ from: '/payees/$ref' })
-  const navigate = useNavigate({ from: '/payees/$ref' })
+  const { ref } = useParams({ from: '/manage/payees/$ref' })
+  const search = useSearch({ from: '/manage/payees/$ref' })
+  const navigate = useNavigate({ from: '/manage/payees/$ref' })
   const money = useMoney()
   const meta = useMeta()
   const held = usePayees({ refs: ref, limit: 1 })
@@ -40,11 +40,11 @@ export function PayeeDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        items={[{ label: 'Payees', to: '/payees' }, { label: row?.name ?? absent }]}
+        items={[{ label: 'Payees', to: '/manage/payees' }, { label: row?.name ?? absent }]}
         title={row?.name ?? absent}
         action={
           <Link
-            to="/payees/$ref/edit"
+            to="/manage/payees/$ref/edit"
             params={{ ref }}
             className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}
           >

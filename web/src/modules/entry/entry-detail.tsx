@@ -1,4 +1,6 @@
 import type { Entry } from '@/api/types'
+import { Link } from '@tanstack/react-router'
+
 import { Panel, PanelHead } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { DateFormat, formatDate } from '@/lib/date'
@@ -24,6 +26,11 @@ function postingLine(
     name: accountName(account),
     kind: kind === '' ? absent : kind,
     role,
+    to: isMoneyKind(kind)
+      ? ('/manage/accounts/$ref' as const)
+      : isCategoryKind(kind)
+        ? ('/manage/categories/$ref' as const)
+        : undefined,
     amount: amount.toDisplay(),
     outgoing: amount.isNegative(),
   }
@@ -89,7 +96,19 @@ export function EntryDetail({
           </div>
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-text-faint text-xs">Payee</dt>
-            <dd className="text-text truncate text-xs">{entry.payee?.name ?? absent}</dd>
+            <dd className="text-text truncate text-xs">
+              {entry.payee === undefined ? (
+                absent
+              ) : (
+                <Link
+                  to="/manage/payees/$ref"
+                  params={{ ref: entry.payee.ref }}
+                  className="hover:text-accent underline-offset-4 hover:underline"
+                >
+                  {entry.payee.name}
+                </Link>
+              )}
+            </dd>
           </div>
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-text-faint text-xs">Ref</dt>
@@ -116,7 +135,19 @@ export function EntryDetail({
               key={posting.ref}
               className="border-border/70 flex items-center gap-3 border-t px-5 py-3 text-sm sm:px-6"
             >
-              <span className="text-text min-w-0 flex-1 truncate">{posting.name}</span>
+              <span className="text-text min-w-0 flex-1 truncate">
+                {posting.to === undefined ? (
+                  posting.name
+                ) : (
+                  <Link
+                    to={posting.to}
+                    params={{ ref: posting.ref }}
+                    className="hover:text-accent underline-offset-4 hover:underline"
+                  >
+                    {posting.name}
+                  </Link>
+                )}
+              </span>
               <span className="text-text-faint border-border rounded border px-1.5 py-0.5 text-[0.625rem] tracking-wide uppercase">
                 {posting.kind}
               </span>

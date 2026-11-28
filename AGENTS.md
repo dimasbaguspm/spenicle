@@ -113,20 +113,19 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        it was compiled with `-tags web` (the `latest` image); `web/assets_*.go`
                        is the whole switch. Screens: `/` sign in, `/setup` the claim
                        wizard (password, base currency, one optional opening account),
-                       `/dashboard`, `/ledger` (+ `/ledger/new`, `/ledger/{ref}`),
-                       `/accounts` (+ `/new`, `/{ref}`, `/{ref}/edit`: asset, liability,
-                       equity), `/categories` (the same four routes, for expense and income
-                       accounts: a category is an account, not a table), `/payees` (the same
-                       four routes: a name plus an optional default account and category),
-                       `/analytics`, `/captures` (+ `/{ref}` to review one), `/exports`,
-                       `/manage` (the index of the five), `/settings`. The shell has two
-                       shapes: from `lg` a header with Register, Manage and Analytics on the
-                       left and Settings plus Log out on the right; below `lg` no header
-                       at all, and a five-slot bottom bar with the register in the middle and a
-                       More menu (captures, categories, payees, settings, sign out). A screen
-                       opens with `PageHeader`: a breadcrumb, then its title on `lg` and up
-                       only, then one transparent action. No subtitle. The claim screen at
-                       `/setup` is two fields: password and currency.
+                       `/dashboard`, `/ledger` (+ `/ledger/new`, `/ledger/{ref}`), `/analytics`,
+                       and `/manage` (the index plus everything it owns: `/manage/accounts` (+
+                       `/new`, `/{ref}`, `/{ref}/edit`: asset, liability, equity),
+                       `/manage/categories` (the same four routes, for expense and income accounts:
+                       a category is an account, not a table), `/manage/payees` (the same four: a
+                       name plus an optional default account and category), `/manage/captures` (+
+                       `/{ref}` to review one), `/manage/exports`), plus `/settings`. The shell has
+                       two shapes: from `lg` a header with Register, Analytics and Manage on the
+                       left and Settings plus Log out on the right; below `lg` no header at all,
+                       and a five-slot bottom bar: register, analytics, a new entry in the middle,
+                       manage and settings. A screen opens with `PageHeader`: a breadcrumb, then
+                       its title on `lg` and up only, then one transparent action. No subtitle.
+                       The claim screen at `/setup` is two fields: password and currency.
                        palette ramps, two self-hosted fonts (Inter for everything, JetBrains
                        Mono for every figure) behind a semantic token layer, light and dark
                        theme blocks whose default follows the client, and the base layer. A screen composes `Panel`, `Field`,

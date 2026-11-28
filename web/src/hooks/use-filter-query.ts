@@ -18,7 +18,7 @@ export function useFilterQuery<State extends object, Query>({
   onChange: (next: State) => void
   spec: FilterSpec<State, Query>
   limit: number
-  /** fields the route is about, which a filter may not unsay: `/accounts/$ref` pins the account */
+  /** fields the route is about, which a filter may not unsay: `/manage/accounts/$ref` pins the account */
   pinned?: Partial<State> | undefined
 }): FilterQuery<State, Query> {
   const value = pinned === undefined ? search : { ...search, ...pinned }

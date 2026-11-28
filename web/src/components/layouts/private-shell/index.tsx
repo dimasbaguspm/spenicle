@@ -1,17 +1,8 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import {
-  ChartLine,
-  LayoutDashboard,
-  LogOut,
-  Minus,
-  Plus,
-  Settings as SettingsIcon,
-  Wallet,
-} from 'lucide-react'
+import { BookOpen, ChartLine, Layers, LogOut, Plus, Settings as SettingsIcon } from 'lucide-react'
 
 import { Brand } from '@/components/layouts/brand'
 import { buttonStyles, Button } from '@/components/primitives/button'
-import { Menu } from '@/components/primitives/menu'
 import { Text } from '@/components/primitives/text'
 import { useAuth } from '@/providers'
 import { queryClient } from '@/api/query'
@@ -20,15 +11,16 @@ import { cn } from '@/lib/cn'
 /** The three screens the desk nav carries; everything else is one click from Manage. */
 const deskSections = [
   { to: '/ledger', label: 'Register' },
-  { to: '/manage', label: 'Manage' },
   { to: '/analytics', label: 'Analytics' },
+  { to: '/manage', label: 'Manage' },
 ] as const
 
-/** The thumb bar: five slots, the register in the middle, the menu on the end. */
+/** The thumb bar: five slots, the register in the middle, settings on the end. */
 const thumbSections = [
-  { to: '/dashboard', label: 'Overview', Icon: LayoutDashboard },
-  { to: '/accounts', label: 'Accounts', Icon: Wallet },
-  { to: '/analytics', label: 'Analytics', Icon: ChartLine },
+  { to: '/ledger', label: 'Register', Icon: BookOpen, prefix: true },
+  { to: '/analytics', label: 'Analytics', Icon: ChartLine, prefix: false },
+  { to: '/manage', label: 'Manage', Icon: Layers, prefix: true },
+  { to: '/settings', label: 'Settings', Icon: SettingsIcon, prefix: false },
 ] as const
 
 type ThumbSection = (typeof thumbSections)[number]
@@ -43,7 +35,7 @@ const activeTab =
 const thumbItem = 'flex items-center justify-center py-4'
 
 /**
- * The signed-in shell. From `lg` a header carries the three working sections and the two actions;
+ * The signed-in shell. From `lg` a header carries the working sections and the two actions;
  * below `lg` there is no header at all, and a five-slot thumb bar does the same work.
  */
 export function PrivateShell() {
@@ -128,10 +120,9 @@ function DeskHeader() {
 
 function ThumbBar() {
   const path = useRouterState({ select: (state) => state.location.pathname })
-  const navigate = useNavigate()
-  const { signOut } = useAuth()
 
-  const active = (to: string) => path === to || (to === '/ledger' && path.startsWith('/ledger'))
+  const active = (section: ThumbSection) =>
+    section.prefix ? path === section.to || path.startsWith(`${section.to}/`) : path === section.to
 
   return (
     <nav
@@ -139,47 +130,18 @@ function ThumbBar() {
       className="border-border bg-surface-sunken/95 fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden"
     >
       <div className="grid grid-cols-5 items-center">
-        <ThumbLink {...thumbSections[0]} active={active(thumbSections[0].to)} />
-        <ThumbLink {...thumbSections[1]} active={active(thumbSections[1].to)} />
+        <ThumbLink {...thumbSections[0]} active={active(thumbSections[0])} />
+        <ThumbLink {...thumbSections[1]} active={active(thumbSections[1])} />
         <Link
           to="/ledger/new"
           search={{ mode: 'manual' }}
           aria-label="Add entry"
-          className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_20px_-10px_rgba(0,0,0,0.9)] transition-colors hover:bg-primary-hover"
+          className="bg-primary text-on-primary hover:bg-primary-hover mx-auto flex size-12 items-center justify-center rounded-full shadow-[0_8px_20px_-10px_rgba(0,0,0,0.9)] transition-colors"
         >
           <Plus className="size-5" aria-hidden="true" strokeWidth={2} />
         </Link>
-        <ThumbLink {...thumbSections[2]} active={active(thumbSections[2].to)} />
-        <div className="flex items-center justify-center">
-          <Menu
-            align="end"
-            items={[
-              { label: 'Manage', onSelect: () => void navigate({ to: '/manage' }) },
-              { label: 'Captures', onSelect: () => void navigate({ to: '/captures' }) },
-              { label: 'Categories', onSelect: () => void navigate({ to: '/categories' }) },
-              { label: 'Payees', onSelect: () => void navigate({ to: '/payees' }) },
-              { label: 'Exports', onSelect: () => void navigate({ to: '/exports' }) },
-              { label: 'Settings', onSelect: () => void navigate({ to: '/settings' }) },
-              {
-                label: 'Sign out',
-                onSelect: () => {
-                  signOut()
-                  queryClient.clear()
-                  void navigate({ to: '/' })
-                },
-              },
-            ]}
-            trigger={
-              <button
-                type="button"
-                aria-label="More"
-                className="text-text-faint hover:text-text flex h-14 w-full items-center justify-center transition-colors"
-              >
-                <Minus className="size-5" aria-hidden="true" strokeWidth={2} />
-              </button>
-            }
-          />
-        </div>
+        <ThumbLink {...thumbSections[2]} active={active(thumbSections[2])} />
+        <ThumbLink {...thumbSections[3]} active={active(thumbSections[3])} />
       </div>
     </nav>
   )
