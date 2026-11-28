@@ -1,12 +1,15 @@
 import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 
 import { api } from '@/api/client'
 import { apiError, isApiError } from '@/api/error'
 import { setToken } from '@/api/token'
+import { Brand } from '@/components/layouts/brand'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
+import { Panel } from '@/components/primitives/panel'
 import { PasswordInput } from '@/components/primitives/password-input'
 import { Text } from '@/components/primitives/text'
 import { useBootstrap } from '@/hooks/queries/use-bootstrap'
@@ -53,46 +56,78 @@ export function LoginPage() {
   const claimable = boot.data?.password_must_change === true || boot.data?.setup_completed === false
 
   return (
-    <form
-      className="border-border bg-surface-raised mx-auto mt-20 max-w-sm space-y-5 rounded-lg border p-8 shadow-[0_1px_0_0_var(--color-brass-800)]"
-      onSubmit={(event) => {
-        event.preventDefault()
-        signIn.mutate(password)
-      }}
-    >
-      <div className="space-y-2">
-        <Text as="h1" tone="display">
-          Spenicle
-        </Text>
-        <Text as="p" tone="muted" className="leading-relaxed">
-          Sign in with the instance password. It is exchanged for a scoped token and never stored.
-        </Text>
-      </div>
-      <Field
-        label="Instance password"
-        hint="Only the token is kept, in this tab."
-        error={signIn.error?.message}
-      >
-        <PasswordInput
-          placeholder="Instance password"
-          value={password}
-          onChange={(event) => {
-            setPassword(event.target.value)
-          }}
-        />
-      </Field>
-      <Button type="submit" block loading={signIn.isPending}>
-        {signIn.isPending ? 'Signing in…' : 'Sign in'}
-      </Button>
-      {claimable ? (
-        <Text as="p" tone="muted">
-          A fresh instance? <Link to="/setup">Claim it</Link> with the password in{' '}
-          <Text as="code" tone="code">
-            ./data/first-boot.txt
+    <div className="mx-auto my-auto flex w-full max-w-md flex-col gap-7 py-4">
+      <div className="space-y-5 text-center">
+        <Brand />
+        <div className="space-y-3">
+          <Text as="h1" tone="display">
+            Sign in
           </Text>
-          .
+          <Text as="p" tone="muted" className="mx-auto max-w-sm leading-relaxed">
+            One password opens this instance. It is exchanged for a scoped token and never stored.
+          </Text>
+        </div>
+      </div>
+
+      <Panel className="p-6 sm:p-8">
+        <form
+          className="space-y-5"
+          onSubmit={(event) => {
+            event.preventDefault()
+            signIn.mutate(password.trim())
+          }}
+        >
+          <Field
+            label="Instance password"
+            hint="Only the token is kept, and only in this tab."
+            error={signIn.error?.message}
+          >
+            <PasswordInput
+              name="password"
+              placeholder="Your instance password…"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value)
+              }}
+            />
+          </Field>
+          <Button
+            type="submit"
+            size="lg"
+            block
+            loading={signIn.isPending}
+            trailingIcon={ArrowRight}
+          >
+            {signIn.isPending ? 'Unlocking…' : 'Unlock'}
+          </Button>
+        </form>
+      </Panel>
+
+      {claimable ? (
+        <div className="border-brass-700/50 space-y-2 border-l pl-5">
+          <Text as="p" tone="section">
+            First boot
+          </Text>
+          <Text as="p" tone="muted" className="leading-relaxed">
+            Claim this instance with the password the boot wrote to{' '}
+            <Text as="code" tone="code">
+              ./data/first-boot.txt
+            </Text>
+            , then choose your own.{' '}
+            <Link
+              to="/setup"
+              className="text-brass-300 decoration-brass-700 underline underline-offset-4 hover:text-brass-200"
+            >
+              Open setup…
+            </Link>
+          </Text>
+        </div>
+      ) : (
+        <Text as="p" tone="caption" className="text-center">
+          The ledger is local. Nothing leaves this container.
         </Text>
-      ) : null}
-    </form>
+      )}
+    </div>
   )
 }

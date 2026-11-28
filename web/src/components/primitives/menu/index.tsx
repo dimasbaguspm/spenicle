@@ -22,13 +22,13 @@ export function Menu({ trigger, items, align = 'end' }: MenuProps) {
     <ArkMenu.Root positioning={{ placement: align === 'end' ? 'bottom-end' : 'bottom-start' }}>
       <ArkMenu.Trigger asChild>{trigger}</ArkMenu.Trigger>
       <ArkMenu.Positioner>
-        <ArkMenu.Content className="border-border-strong bg-surface-raised shadow-ink-950/60 z-50 mt-1 min-w-44 rounded border p-1 text-sm shadow-xl">
+        <ArkMenu.Content className="border-ink-600 bg-ink-850/95 z-50 mt-1.5 min-w-48 rounded-lg border p-1 text-sm shadow-[0_18px_40px_-20px_rgba(0,0,0,0.95)] backdrop-blur">
           {items.map((item) => (
             <ArkMenu.Item
               key={item.label}
               value={item.label}
               onSelect={item.onSelect}
-              className="text-porcelain-200 data-highlighted:bg-brass-800/40 data-highlighted:text-porcelain-50 cursor-pointer rounded px-2 py-1.5"
+              className="text-ink-200 data-highlighted:bg-ink-800 data-highlighted:text-porcelain-50 flex min-h-9 cursor-pointer items-center rounded px-2.5 py-2 outline-none transition-colors"
             >
               <ArkMenu.ItemText>{item.label}</ArkMenu.ItemText>
             </ArkMenu.Item>

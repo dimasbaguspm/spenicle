@@ -21,18 +21,23 @@ type TextAs =
 type TextProps = HTMLAttributes<HTMLElement> & {
   /** the element to render; the look comes from `tone`, never from the tag alone */
   as?: TextAs
-  tone?: 'display' | 'title' | 'section' | 'body' | 'muted' | 'caption' | 'code'
+  tone?: 'display' | 'title' | 'section' | 'body' | 'muted' | 'caption' | 'code' | 'figure'
   children: ReactNode
 }
 
 const tones: Record<NonNullable<TextProps['tone']>, string> = {
-  display: 'font-display text-porcelain-50 text-3xl font-semibold tracking-tight',
-  title: 'font-display text-porcelain-50 text-xl font-semibold',
-  section: 'text-brass-500 text-xs font-medium tracking-[0.14em] uppercase',
-  body: 'text-text text-sm',
-  muted: 'text-text-muted text-sm',
-  caption: 'text-ink-300 text-xs',
-  code: 'text-porcelain-200 font-mono text-xs',
+  // the one serif: a wordmark, a screen title, an empty state — nothing else
+  display:
+    'font-display text-porcelain-50 text-[2.125rem] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-[2.625rem]',
+  title: 'font-display text-porcelain-50 text-xl leading-tight font-semibold',
+  // a brass eyebrow above a panel: small, wide-tracked, never a heading by itself
+  section: 'text-brass-500 text-[0.6875rem] leading-none font-semibold tracking-[0.18em] uppercase',
+  body: 'text-porcelain-200 text-sm',
+  muted: 'text-ink-300 text-sm',
+  caption: 'text-ink-400 text-xs leading-relaxed',
+  code: 'text-porcelain-300 font-mono text-[0.8125rem] tracking-tight',
+  // every money amount and every date: one width per digit, in a column
+  figure: 'text-porcelain-100 font-mono text-sm tabular-nums tracking-tight',
 }
 
 /**

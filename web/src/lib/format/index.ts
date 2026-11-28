@@ -4,4 +4,4 @@
  */
 export { formatAccountData, type FormattedAccount } from './account'
 export { formatCaptureData, type FormattedCapture } from './capture'
-export { formatEntryData, type FormattedEntry } from './entry'
+export { formatDay, formatEntryData, type FormattedEntry } from './entry'

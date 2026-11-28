@@ -114,7 +114,11 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        it was compiled with `-tags web` (the `latest` image); `web/assets_*.go`
                        is the whole switch. Screens: `/` sign in, `/setup` the claim
                        wizard (password, base currency, one optional opening account),
-                       `/ledger`, `/captures`
+                       `/ledger`, `/captures`. The look is one file, `web/src/styles.css`:
+                       palette ramps, the three self-hosted fonts (Fraunces for the
+                       wordmark and screen titles, Inter for text, JetBrains Mono for every
+                       figure), and the base layer. A screen composes `Panel`, `Field`,
+                       `Button` and `Text`; it never writes its own card or focus ring
 ```
 
 The binary is a cobra CLI. `spenicle http` serves the API, `spenicle worker` stages

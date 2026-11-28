@@ -184,7 +184,38 @@ info, each as a real scale so a hover or a border has a shade to reach for.
 
 Screens use the semantic tokens only (`bg-surface`, `text-text-muted`, `border-border`,
 `bg-primary`, `text-accent`, `text-success`…), so a re-theme is that file and nothing else.
-Headings are the one serif in the product; everything numeric is tabular.
+
+### Three faces, three jobs
+
+The fonts are self-hosted (`@fontsource-variable/*`, bundled by Vite) and mapped to the three
+`--font-*` tokens, so nothing waits on a third-party CDN and the app renders offline:
+
+| token            | face                        | where it is allowed                                                            |
+| ---------------- | --------------------------- | ------------------------------------------------------------------------------ |
+| `--font-display` | **Fraunces Variable**       | the wordmark, a screen title, a panel title — never a label, never a paragraph |
+| `--font-sans`    | **Inter Variable**          | everything a person reads or types                                             |
+| `--font-mono`    | **JetBrains Mono Variable** | every figure: amounts, days in the register, refs, the `.env` hint             |
+
+Figures are tabular everywhere (`font-variant-numeric: tabular-nums` on `body`), because a
+register is a column that has to line up. Eyebrows are mono and wide-tracked; headings are the
+one serif in the product, with `text-wrap: balance`; body copy is `text-wrap: pretty`, so a
+paragraph never ends on a stranded word.
+
+### The rules a screen follows
+
+- **One plate per region.** `Panel` owns the border, the lit top edge and the brass hairline.
+  A screen never writes its own card.
+- **One control surface.** `control()` owns every input's height, border, inset shadow and
+  focus ring; a new widget reuses it instead of looking like itself.
+- **A state is never colour alone.** The selected select row carries brass text _and_ a check;
+  a disabled button loses its lacquer instead of fading; errors carry the code as text.
+- **Radii are small on purpose** (6px controls, 8px plates): lacquer and brass read as
+  expensive, a pill-shaped SaaS card does not.
+- **Mobile first for hit targets.** Controls are 44px tall and 16px text under `sm` (the moment
+  an iOS field focuses at 12px the page zooms); the register row reflows to two lines instead
+  of truncating a name to five characters.
+- **Motion is one pixel.** A press moves a button down by 1px; `prefers-reduced-motion` kills
+  every transition.
 
 ## The three decisions this scaffold encodes
 
@@ -230,6 +261,7 @@ src/api/query.ts      the one QueryClient
 src/hooks/queries/    TanStack queries and mutations over those callers
 src/types/generated/  generated contract — never edit; run `make web-types`
 src/components/       primitives → ui → widgets → layouts (see above)
+src/styles.css        the tokens: palette, three faces, one base layer
 src/router.tsx        code-based routes + the auth guard in beforeLoad
 src/routes/           AppShell's outlet: login, setup, ledger, captures
 src/lib/money.ts      minor-unit string arithmetic

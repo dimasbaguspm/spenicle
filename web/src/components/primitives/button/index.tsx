@@ -5,20 +5,49 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Icon } from '@/components/primitives/icon'
 import { cn } from '@/lib/cn'
 
-const button = cva(
-  'inline-flex items-center justify-center gap-2 rounded font-medium transition-colors focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50',
+/**
+ * A button is a lacquered plate: a solid fill, a lit top edge and a shadow that
+ * makes it sit above the paper. Pressing it moves it down by a pixel, not by a
+ * scale, because a ledger should not wobble.
+ */
+export const buttonStyles = cva(
+  [
+    'relative inline-flex items-center justify-center gap-2 rounded-md font-medium',
+    'select-none whitespace-nowrap',
+    'transition-[background-color,border-color,color,box-shadow,transform] duration-150',
+    'focus-visible:ring-2 focus-visible:ring-brass-400/70 focus-visible:ring-offset-2',
+    'focus-visible:ring-offset-ink-950 focus-visible:outline-none',
+    // a disabled button is not a faded button: it loses its lacquer entirely
+    'disabled:pointer-events-none disabled:border-ink-700 disabled:bg-ink-800 disabled:text-ink-400 disabled:shadow-none',
+    'active:translate-y-px',
+  ].join(' '),
   {
     variants: {
       tone: {
-        primary: 'bg-primary text-porcelain-50 hover:bg-primary-hover',
-        quiet: 'border-border text-text hover:border-border-strong border hover:text-porcelain-50',
-        danger: 'border-oxblood-600 text-oxblood-300 hover:bg-oxblood-600/15 border',
-        ghost: 'text-text-muted hover:text-accent',
+        primary: [
+          'text-porcelain-50',
+          'bg-cherry-600 hover:bg-cherry-500',
+          'border border-cherry-700 hover:border-cherry-500',
+          'shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_20px_-12px_rgba(178,58,63,0.9)]',
+        ].join(' '),
+        quiet: [
+          'text-porcelain-200',
+          'bg-ink-850 hover:bg-ink-800 hover:text-porcelain-50',
+          'border border-ink-700 hover:border-ink-600',
+          'shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]',
+        ].join(' '),
+        ghost:
+          'text-text-muted hover:bg-ink-800/70 hover:text-porcelain-100 border border-transparent',
+        danger: [
+          'text-oxblood-300 hover:text-oxblood-200',
+          'bg-oxblood-600/10 hover:bg-oxblood-600/20',
+          'border border-oxblood-600/60 hover:border-oxblood-500',
+        ].join(' '),
       },
       size: {
-        sm: 'px-3 py-1.5 text-sm',
-        md: 'px-4 py-2 text-sm',
-        lg: 'px-5 py-2.5 text-base',
+        sm: 'h-9 px-3 text-[0.8125rem]',
+        md: 'h-10 px-4 text-sm',
+        lg: 'h-11 px-5 text-sm',
       },
       block: {
         true: 'w-full',
@@ -30,7 +59,7 @@ const button = cva(
 )
 
 type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'> &
-  VariantProps<typeof button> & {
+  VariantProps<typeof buttonStyles> & {
     children: ReactNode
     className?: string | undefined
     leadingIcon?: LucideIcon | undefined
@@ -60,7 +89,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={cn(button({ tone, size, block }), className)}
+      className={cn(buttonStyles({ tone, size, block }), className)}
       disabled={disabled === true || loading}
       aria-busy={loading ? true : undefined}
       {...rest}

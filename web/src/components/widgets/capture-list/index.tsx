@@ -18,16 +18,19 @@ type CaptureListProps = {
  */
 export function CaptureList({ rows }: CaptureListProps) {
   return (
-    <ul className="divide-ink-800 divide-y">
+    <ul className="border-ink-800/70 divide-ink-800/70 divide-y border-t">
       {rows.map((capture) => {
         const row = formatCaptureData(capture)
 
         return (
-          <li key={capture.ref} className="flex items-baseline gap-3 py-2.5 text-sm">
-            <Text as="span" tone="body" className="text-text-muted w-32 shrink-0 tabular-nums">
+          <li
+            key={capture.ref}
+            className="hover:bg-ink-800/40 flex items-center gap-3 px-1 py-3 text-sm transition-colors"
+          >
+            <Text as="span" tone="figure" className="text-ink-400 w-32 shrink-0 text-xs">
               {row.time}
             </Text>
-            <Text as="span" tone="body" className="flex-1 truncate">
+            <Text as="span" tone="body" className="min-w-0 flex-1 truncate">
               {row.kind}
             </Text>
             <Text as="span" tone="caption" className={row.statusTone}>

@@ -27,11 +27,20 @@ export function fromMinor(minor: string, units: number): string {
 }
 
 /** the display form: grouped whole part, exact fraction, the code beside it. */
-export function formatMoney(minor: string, units: number, currency: string): string {
+export function formatMoney(
+  minor: string,
+  units: number,
+  currency: string,
+  withCurrency = true,
+): string {
   const plain = fromMinor(minor, units)
   const negative = plain.startsWith('-')
   const [whole = '0', fraction] = (negative ? plain.slice(1) : plain).split('.')
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
-  return `${negative ? '-' : ''}${grouped}${fraction === undefined ? '' : `.${fraction}`} ${currency}`
+  const figure = `${negative ? '-' : ''}${grouped}${fraction === undefined ? '' : `.${fraction}`}`
+
+  // a register column carries the code once, in its heading: repeating it on every row
+  // is noise, and noise is what makes a ledger look like a spreadsheet
+  return withCurrency ? `${figure} ${currency}` : figure
 }

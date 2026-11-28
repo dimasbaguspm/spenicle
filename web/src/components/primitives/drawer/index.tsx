@@ -28,12 +28,12 @@ export function Drawer({ label, trigger, children }: DrawerProps) {
       }}
     >
       <ArkDrawer.Trigger asChild>{trigger}</ArkDrawer.Trigger>
-      <ArkDrawer.Backdrop className="bg-ink-950/70 fixed inset-0 z-40 backdrop-blur-sm" />
+      <ArkDrawer.Backdrop className="bg-ink-950/80 fixed inset-0 z-40 backdrop-blur-sm" />
       <ArkDrawer.Positioner className="fixed inset-0 z-50 flex">
-        <ArkDrawer.Content className="bg-surface border-border flex h-full w-72 flex-col gap-5 border-r p-5">
+        <ArkDrawer.Content className="bg-surface border-ink-700 overscroll-contain flex h-full w-[min(20rem,85vw)] flex-col gap-6 border-r p-5 shadow-[18px_0_40px_-24px_rgba(0,0,0,0.95)]">
           <div className="flex items-center justify-between">
-            <ArkDrawer.Title className="text-porcelain-50 font-display text-lg tracking-wide">
-              {label}
+            <ArkDrawer.Title asChild>
+              <span className="font-display text-porcelain-50 text-xl font-semibold">{label}</span>
             </ArkDrawer.Title>
             <ArkDrawer.CloseTrigger asChild>
               <Button tone="ghost" size="sm" aria-label="Close">

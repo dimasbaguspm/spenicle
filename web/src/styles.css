@@ -1,3 +1,6 @@
+@import '@fontsource-variable/fraunces/full.css';
+@import '@fontsource-variable/inter/index.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';
 @import 'tailwindcss';
 
 /*
@@ -95,42 +98,110 @@
   --color-info: var(--color-lapis-500);
   --color-danger: var(--color-oxblood-500);
 
-  /* type: a serif for the one place a ledger should feel expensive */
-  --font-display: ui-serif, 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  /* type: a serif for the one place a ledger should feel expensive, a grotesque for
+     the work, and a mono for every figure that has to line up in a column */
+  --font-display:
+    'Fraunces Variable', ui-serif, 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
-html {
-  color-scheme: dark;
-}
+@layer base {
+  html {
+    color-scheme: dark;
+    /* no double-tap zoom on a phone, and no blue tap flash on a dark plate */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    scrollbar-color: var(--color-ink-700) transparent;
+  }
 
-body {
-  margin: 0;
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  /* the register is a column of numbers: make tabular the default */
-  font-variant-numeric: tabular-nums;
-}
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--color-ink-950);
+    /* one lamp: a cherry glow behind the masthead, brass catching the right edge */
+    background-image:
+      radial-gradient(
+        72rem 30rem at 50% -20%,
+        color-mix(in oklab, var(--color-cherry-700) 32%, transparent),
+        transparent 72%
+      ),
+      radial-gradient(
+        44rem 22rem at 88% 2%,
+        color-mix(in oklab, var(--color-brass-700) 18%, transparent),
+        transparent 70%
+      );
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    letter-spacing: -0.006em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* the register is a column of numbers: make tabular the default */
+    font-variant-numeric: tabular-nums;
+  }
 
-/* headings are the one serif in the product: restrained, wide-tracked, small caps feel */
-h1,
-h2 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
+  /* a paragraph never ends on a stranded word */
+  p {
+    text-wrap: pretty;
+  }
 
-/* every amount on the wire is a string of minor units; never let a browser round one */
-input[inputmode='decimal'] {
-  font-variant-numeric: tabular-nums;
-}
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-variation-settings:
+      'SOFT' 24,
+      'WONK' 0;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
 
-/* a single brass hairline is the whole decoration budget */
-::selection {
-  background-color: var(--color-brass-700);
-  color: var(--color-porcelain-50);
+  /* a keyboard user always sees where they are; a mouse user never sees a stray box */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* a single brass hairline is the whole decoration budget */
+  ::selection {
+    background-color: var(--color-brass-700);
+    color: var(--color-porcelain-50);
+  }
+
+  /* the native date picker is drawn by the browser; tint it instead of hiding it */
+  input[type='date']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.75;
+    filter: invert(78%) sepia(28%) saturate(560%) hue-rotate(348deg) brightness(96%);
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
+  /* every amount on the wire is a string of minor units; never let a browser round one */
+  input[inputmode='decimal'],
+  input[inputmode='numeric'] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

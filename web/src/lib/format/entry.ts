@@ -21,6 +21,19 @@ export type FormattedEntry = {
 
 const absent = '—'
 
+/** The register shows the day a reader says out loud; the API's exact ISO string stays in `title`. */
+const dayFormat = new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short' })
+
+/** A malformed date is not worth a crash in a list: the raw string is the honest fallback. */
+export function formatDay(iso: string): string {
+  const parsed = new Date(`${iso}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) {
+    return iso
+  }
+
+  return dayFormat.format(parsed)
+}
+
 /** the payee is what a reader recognises, the note is why: one line holds both when it has them. */
 function formatTitle(entry: EntryFields): string {
   const payee = entry.payee?.name

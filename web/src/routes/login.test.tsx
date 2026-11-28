@@ -24,14 +24,24 @@ describe('login', () => {
   it('asks for the instance password and stores a token, not the password', async () => {
     renderAt('/')
 
-    expect(await screen.findByRole('heading', { name: 'Spenicle' })).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Instance password')).toHaveAttribute('type', 'password')
-    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Your instance password…')).toHaveAttribute(
+      'type',
+      'password',
+    )
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeInTheDocument()
   })
 
   it('sends an unauthenticated visitor to the login screen', async () => {
     renderAt('/ledger')
 
-    expect(await screen.findByRole('heading', { name: 'Spenicle' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+  })
+
+  it('offers the claim screen without a credential', async () => {
+    renderAt('/setup')
+
+    expect(await screen.findByRole('heading', { name: 'Claim this instance' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument()
   })
 })

@@ -2,7 +2,7 @@ import type { Posting } from '@/api/types'
 
 import { formatAccountData, type FormattedAccount } from './account'
 import { formatCaptureData, type FormattedCapture } from './capture'
-import { formatEntryData, type FormattedEntry } from './entry'
+import { formatDay, formatEntryData, type FormattedEntry } from './entry'
 
 const absent = '—'
 
@@ -258,4 +258,17 @@ describe('format/account', () => {
       expect(formatAccountData(input, units)).toEqual(want)
     },
   )
+})
+
+describe('format/day', () => {
+  it.each([
+    { name: 'a real day loses the ISO shape', iso: '2026-11-24', want: /24/ },
+    { name: 'a malformed day is echoed, never thrown', iso: 'not-a-day', want: /not-a-day/ },
+  ])('$name', ({ iso, want }) => {
+    expect(formatDay(iso)).toMatch(want)
+  })
+
+  it('keeps the ISO string out of the register column', () => {
+    expect(formatDay('2026-11-24')).not.toBe('2026-11-24')
+  })
 })

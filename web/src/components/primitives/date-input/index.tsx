@@ -9,7 +9,11 @@ type DateInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'className' | 
   className?: string
 }
 
-/** A native date field: the API speaks `YYYY-MM-DD`, so the widget speaks it too. */
+/**
+ * A native date field: the API speaks `YYYY-MM-DD`, so the widget speaks it too. The
+ * picker glyph is tinted brass in styles.css rather than hidden, because the native
+ * calendar is the one picker that already works on every phone.
+ */
 export function DateInput({ size, className, ...rest }: DateInputProps) {
   return <Field.Input type="date" className={cn(control({ size }), className)} {...rest} />
 }
