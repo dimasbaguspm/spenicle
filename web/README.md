@@ -208,8 +208,8 @@ Two contexts, in the order `main.tsx` nests them: `AppProvider` outside, `AuthPr
 
 - **`AppProvider`** is the gate. It reads `GET /api/bootstrap` once and renders nothing below it
   until that answers: a splash while it loads, the message plus a retry button when the instance
-  does not answer, and then `useApp()` hands every screen `{ bootstrap }` — `setup_completed`, the
-  base currency, the capability flags. It deliberately never reads `/api/meta`: that one sits
+  does not answer, and then `useApp()` hands every screen `{ bootstrap }` — `setup_completed`,
+  `claimable`, the base currency, the capability flags. It deliberately never reads `/api/meta`: that one sits
   behind a token, a fresh instance has none, and meta belongs to the screen that holds one.
 - **`AuthProvider`** is the token. `useAuth()` answers `token`, `isAuthenticated`, `signIn(spl_…)`
   and `signOut()`. `api/token.ts` stays the store (`sessionStorage`) and this is the React view of
@@ -272,7 +272,8 @@ revocable from the settings screen; the root password is not in the browser at a
 
 **A fresh instance is claimed in one screen.** `src/routes/setup.tsx` is public, and
 `src/api/bootstrap.ts` is the one read it needs: `GET /api/bootstrap` answers
-`setup_completed` without a credential, and a fresh database has no password at all. The
+`setup_completed` and `claimable` without a credential, and a fresh database has no password
+at all. The
 form sends one `POST /api/setup` carrying the password, the base currency and an optional
 opening account, then exchanges that password for a scoped token. The password is never
 written to `sessionStorage`; only the token is.

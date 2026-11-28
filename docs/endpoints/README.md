@@ -86,7 +86,7 @@ a token without the scope is `403 forbidden`.
 - **Open mode.** A fresh database has no password: [`POST /api/setup`](./POST_api_setup.md)
   is what creates it. Until that call lands the instance is unprotected — every request
   is the root credential and every scope check passes — and
-  [`GET /api/bootstrap`](./GET_api_bootstrap.md) answers `setup_completed: false` so a
+  [`GET /api/bootstrap`](./GET_api_bootstrap.md) answers `claimable: true` so a
   client knows to show the claim screen. Claim it before exposing the port.
 - **Two refusals, in order.** No header at all is `401 unauthorized`; a credential that
   exists but lacks the group or the scope is `403 forbidden`.

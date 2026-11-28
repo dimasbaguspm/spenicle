@@ -265,8 +265,8 @@ The base currency and the login password are **not** environment variables: they
 the sealed JSON row in `settings` (`entity.Settings`), owned by `module/settings`. The
 password is a PBKDF2-SHA256 hash inside that row and **does not exist until
 `POST /api/setup` sets it**: a fresh database boots open, with no generated password and
-no claim file, and `GET /api/bootstrap` publishes `setup_completed: false` so a client
-knows to show the claim screen. `POST /api/setup` sets the password, chooses the base
+no claim file, and `GET /api/bootstrap` publishes `claimable: true` so a client knows to
+show the claim screen. `POST /api/setup` sets the password, chooses the base
 currency and optionally creates accounts with nonzero opening balances in one
 transaction. Completion locks the currency, even when the request carries no opening
 accounts; a legacy database with entries is already locked. The open window is a
@@ -353,9 +353,10 @@ chain nobody can predict. A new knob means a new constant and field in those two
 nothing else; removing one means deleting the constant, the read and the field.
 
 `GET /api/bootstrap` is the other public read, and the one a client uses before it holds a
-credential: `setup_completed`, `base_currency`, `timezone` and the capability flags, no
-account and no secret. That is how the SPA's `/setup` route decides
-between the claim wizard and the sign-in screen — `/healthz` stays liveness only.
+credential: `setup_completed` (the setup marker), `claimable` (no password stored yet, so the
+instance can still be claimed), `base_currency`, `timezone` and the capability flags, no
+account and no secret. That is how the SPA's `/setup` route decides between the claim wizard
+and the sign-in screen — `/healthz` stays liveness only.
 
 `/healthz` returns `status`, `version` (`<tag>+<sha7>`), `started_at`, `schema_version`,
 `app_secret` fingerprint, `base_currency`, `timezone` and `worker_last_run_at` (RFC3339, empty
@@ -652,9 +653,12 @@ layer-qualified (`Repository.Sqlite.InsertEntry`) and opened directly with
   browser. Two data directories on one port is the same trap with a different cwd, which is
   why `make stop` prints where the process it killed was running.
 - A database created by an earlier build of this tree is not migrated into the new setup
-  flow: it still carries a password and no `setup_completed_at`, so `/api/bootstrap` says
-  "not opened" while every route demands that old password. There is no v2 release yet, so
-  the rule is the documented one — delete `spenicle.db` and claim the fresh instance.
+  flow: it still carries a password and no `setup_completed_at`, so `/api/bootstrap` answers
+  `setup_completed: false` with `claimable: false` — the marker never landed, but the open
+  window is closed, and every route wants that old password. The SPA reads `claimable`, so it
+  shows the sign-in screen instead of a claim form the API refuses with `401`. If nobody
+  remembers that password, delete `spenicle.db` and claim the fresh instance; there is no v2
+  release to migrate.
 - A fresh database has no password, which means the API is open until `POST /api/setup`
   lands: every request is the root credential. That is the one window a self-hoster has to
   think about — claim the instance before publishing the port, and remember that deleting

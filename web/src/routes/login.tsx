@@ -53,7 +53,7 @@ export function LoginPage() {
     },
   })
 
-  const claimable = bootstrap.setup_completed === false
+  const claimable = bootstrap.claimable
 
   return (
     <div className="mx-auto my-auto flex w-full max-w-md flex-col gap-7 py-4">

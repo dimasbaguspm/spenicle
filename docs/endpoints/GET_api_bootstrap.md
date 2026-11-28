@@ -14,8 +14,10 @@ instance is in before it asks for a password.
 
 ## Downstream
 
-`Module.Settings.Load` → the sealed `settings` row, and `Repository.Sqlite.Setting` → the
-`setup_completed_at` row. No account, no entry, no payee and no secret is read.
+`Module.Settings.Load` → the sealed `settings` row (its base currency, and whether a password
+is stored), and `Repository.Sqlite.Setting` → the `setup_completed_at` row. `claimable` is the
+negation of that password check — the same predicate the identity middleware uses to decide
+whether the instance is still open. No account, no entry, no payee and no secret is read.
 
 ## Path / query params
 
@@ -27,7 +29,7 @@ None.
 
 ## Response
 
-`{"setup_completed":false,"base_currency":"IDR","timezone":"UTC","extraction_enabled":false,"ai_assistance":false}`
+`{"setup_completed":false,"claimable":true,"base_currency":"IDR","timezone":"UTC","extraction_enabled":false,"ai_assistance":false}`
 
 ## Errors
 
@@ -37,13 +39,17 @@ read; the body is the generic message and the cause goes to the log.
 ## Limitations
 
 It is a mode, not a secret, and it is deliberately narrow: no account, no amount, no
-credential. `setup_completed: false` also means the instance is **open** — a fresh
-database has no password until [`POST /api/setup`](./POST_api_setup.md) sets one, so
-anyone who can reach the port can claim it. That window is documented, not hidden:
-start the container on a trusted network or claim it before exposing the port.
-`setup_completed` is `false` on a database that has entries but never completed setup
-too — a legacy instance, whose base currency is locked anyway. `base_currency` before
-setup is the default (`IDR`), so a client must not treat it as the chosen one while
+credential. `claimable: true` also means the instance is **open** — a fresh database has no
+password until [`POST /api/setup`](./POST_api_setup.md) sets one, so anyone who can reach the
+port can claim it. That window is documented, not hidden: start the container on a trusted
+network or claim it before exposing the port.
+Two booleans, and they answer different questions. `setup_completed` reports the
+`setup_completed_at` marker itself — whether `POST /api/setup` finished — so an instance
+claimed by an earlier build reads `false` there even though it carries a password.
+`claimable` is the one a client acts on: `false` the moment a password exists, because that
+is when the identity middleware stops treating every request as the root credential. A
+client picks the claim screen on `claimable: true`, not on `setup_completed`. `base_currency`
+before setup is the default (`IDR`), so a client must not treat it as the chosen one while
 `setup_completed` is `false`.
 
 

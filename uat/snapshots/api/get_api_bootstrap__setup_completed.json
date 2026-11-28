@@ -1,6 +1,7 @@
 {
   "ai_assistance": false,
   "base_currency": "USD",
+  "claimable": false,
   "extraction_enabled": false,
   "setup_completed": true,
   "timezone": "UTC"

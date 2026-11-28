@@ -161,7 +161,7 @@ export interface paths {
     }
     /**
      * Public boot state: has this instance been claimed yet?
-     * @description The one read a client needs before it holds a credential. A fresh instance boots open and unprotected until `POST /api/setup` sets its password and base currency, so `setup_completed` is the whole answer: false means the setup screen, true means the sign-in screen. No credential, no account, no amount and no secret is read.
+     * @description The one read a client needs before it holds a credential. `setup_completed` reports the `POST /api/setup` marker itself: false means the setup never finished, true means it did. `claimable` answers the question a client actually acts on — can this instance still be claimed? — and it is false the moment a password is stored, because that is when the identity middleware stops treating every request as the root credential. The two differ on a database claimed by an earlier build: a password, no marker. No credential, no account, no amount and no secret is read.
      */
     get: operations['getApiBootstrap']
     put?: never
@@ -1044,6 +1044,7 @@ export interface components {
     bootstrapResponse: {
       ai_assistance?: boolean
       base_currency?: string
+      claimable?: boolean
       extraction_enabled?: boolean
       setup_completed?: boolean
       timezone?: string

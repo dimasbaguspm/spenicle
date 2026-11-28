@@ -32,7 +32,7 @@ Legend: **live** = shipped and covered by UAT, **partial** = some actions only,
 | 13 | `POST /api/captures` | live: JSON text or multipart `file`, submitted to SnapToJSON when configured |
 | 14 | `PATCH /api/captures/{ref}` | live: `approve`, `reject`, `retry`, `match`; an approved recurring capture resolves its rule from the sealed draft |
 | 21 | `GET /healthz` | live |
-| — | `GET /api/bootstrap` | live, public: `setup_completed`, so a client picks the claim screen or the sign-in screen before it holds a credential |
+| — | `GET /api/bootstrap` | live, public: `claimable` picks the claim screen or the sign-in screen before a client holds a credential, and `setup_completed` is the marker beside it |
 | 22 | `POST/GET /api/exports`, `GET /api/exports/{ref}`, `GET /api/exports/{ref}/events`, `GET /api/exports/{ref}/download` | live: the worker renders a job into one JSON document or a zip of CSV sheets plus `summary.json` and `manifest.json`, an append-only event log records every step, idempotent by `idempotency_key` |
 | 25 | `POST/GET /api/imports`, `GET /api/imports/{ref}`, `PATCH /api/imports/{ref}/rows/{index}`, `PATCH /api/imports/{ref}`, `GET /api/imports/{ref}/events` | live: a CSV statement drafts rows, one review action (`commit` or `reject`) closes it, an append-only event log records every step, idempotent by `idempotency_key` |
 | 1 | `POST /api/setup` | live: chooses the base currency once and optionally posts opening balances before setup completes |
@@ -580,9 +580,10 @@ sequenceDiagram
 ```
 
 The settings block is shared with `GET /api/settings`. Whether the instance has been
-claimed at all is not a setting: `GET /api/bootstrap` carries `setup_completed` before any
-credential exists, which is what lets a client choose between the claim screen and the
-sign-in screen. Every account, payee and recurring
+claimed at all is not a setting: `GET /api/bootstrap` carries `setup_completed` (the setup
+marker) and `claimable` (no password stored yet) before any credential exists. A client
+chooses the claim screen on `claimable`, so an instance claimed by an earlier build — a
+password, no marker — offers the sign-in screen rather than a form the API would refuse. Every account, payee and recurring
 rule is returned by following repository cursors internally; the list routes' 200-row
 page cap does not truncate this payload. Empty collections are `[]`, and every entity
 identifier is a 32-character lowercase hex ref.

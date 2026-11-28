@@ -1,28 +1,31 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { api } from '@/api/client'
-import { apiError, isApiError } from '@/api/error'
-import { fetchMeta } from '@/api/meta'
+import { apiError } from '@/api/error'
 import { openLedger } from '@/api/setup'
 import { Brand } from '@/components/layouts/brand'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
 import { Panel } from '@/components/primitives/panel'
 import { PasswordInput } from '@/components/primitives/password-input'
-import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
+import { TextInput } from '@/components/primitives/text-input'
 import { useApp, useAuth } from '@/providers'
 
+/** An ISO 4217 code as a person types it: three letters, no digits, no dashes. */
+const currencyCode = /^[A-Z]{3}$/
+
 /**
- * The claim screen. A fresh instance boots open — there is no password to recover and
- * no generated one to read — so this one form is what closes it: choose the password,
- * choose the currency, optionally open a first account, and the instance is yours.
+ * The claim screen. A fresh instance boots open — there is no password to recover and no
+ * generated one to read — so this one form is what closes it: choose the password, choose the
+ * currency, and the instance is yours.
  *
- * `GET /api/bootstrap` is the only thing that decides whether this screen or the
- * sign-in screen is shown, and it is the one read that needs no credential.
+ * `GET /api/bootstrap` is the whole input: it is the one read that needs no credential, and it
+ * carries `claimable` and the server's default currency. Nothing here reads `/api/meta` — that
+ * route sits behind a token, and a moment before the claim there is none to send.
  */
 export function SetupPage() {
   const navigate = useNavigate()
@@ -30,32 +33,11 @@ export function SetupPage() {
   const auth = useAuth()
 
   const [password, setPassword] = useState('')
-  const [currency, setCurrency] = useState('')
-
-  const meta = useQuery({ queryKey: ['meta'], queryFn: () => fetchMeta() })
-
-  // a claimed instance has nothing to set up: the screen is a dead end, so it says so.
-  // A password without a completed setup reaches the same answer through the 401 below.
-  // Any other failure is not a claim: the form stays and shows what the API said.
-  const unauthorized = isApiError(meta.error) && meta.error.status === 401
-  const claimed = bootstrap.setup_completed === true || unauthorized
-
-  const chooseCurrency = useMemo(
-    () =>
-      meta.data === undefined
-        ? []
-        : meta.data.currencies.map((entry) => ({
-            label: `${entry.code} — ${entry.symbol}`,
-            value: entry.code,
-          })),
-    [meta.data],
-  )
-
-  const chosenCurrency = currency === '' ? (meta.data?.settings.base_currency ?? '') : currency
+  const [currency, setCurrency] = useState(bootstrap.base_currency)
 
   const finish = useMutation({
     mutationFn: async () => {
-      await openLedger({ password, base_currency: chosenCurrency })
+      await openLedger({ password, base_currency: currency })
 
       // the instance is closed now, so the browser still needs a credential of its own
       const { data, error, response } = await api.POST('/api/tokens', {
@@ -78,7 +60,10 @@ export function SetupPage() {
     },
   })
 
-  if (claimed) {
+  // a claimed instance has nothing to set up: the screen is a dead end, so it says so.
+  // `claimable` is the fact, not the marker: an instance claimed by an earlier build carries a
+  // password but no completion row, and the API refuses the claim all the same.
+  if (!bootstrap.claimable) {
     return (
       <Shell
         title="Already claimed"
@@ -91,7 +76,7 @@ export function SetupPage() {
     )
   }
 
-  const metaError = meta.isError ? meta.error.message : undefined
+  const ready = password.length >= 12 && currencyCode.test(currency)
 
   return (
     <Shell
@@ -132,13 +117,20 @@ export function SetupPage() {
           </Text>
           <Field
             label="Base currency"
-            hint="Set once: every balance is reported in it, and no request can change it later."
+            hint="An ISO 4217 code such as USD or IDR. Set once: every balance is reported in it, and no request can change it later."
           >
-            <SelectInput
-              value={chosenCurrency}
-              options={chooseCurrency}
-              placeholder="choose a currency…"
-              onChange={setCurrency}
+            <TextInput
+              name="base-currency"
+              value={currency}
+              maxLength={3}
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              placeholder="USD"
+              className="font-mono tracking-[0.2em] uppercase"
+              onChange={(event) => {
+                setCurrency(event.target.value.trim().toUpperCase())
+              }}
             />
           </Field>
         </div>
@@ -149,16 +141,10 @@ export function SetupPage() {
           block
           loading={finish.isPending}
           trailingIcon={ArrowRight}
-          disabled={password.length < 12 || chosenCurrency === ''}
+          disabled={!ready}
         >
           {finish.isPending ? 'Claiming…' : 'Claim and open'}
         </Button>
-
-        {metaError === undefined ? null : (
-          <Text as="p" tone="caption" className="text-oxblood-300" role="alert">
-            {metaError}
-          </Text>
-        )}
       </form>
     </Shell>
   )

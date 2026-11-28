@@ -178,7 +178,7 @@ tell "the worker never finished a run" from "work is still in progress".
 | risk | why it hurts | what we do |
 | --- | --- | --- |
 | `APP_SECRET` loss | capture payloads, receipt files and export blobs become unreadable; the ledger survives | boot refuses a changed secret (`secret_mismatch`) rather than silently re-keying; the docs tell the operator to back the secret up next to the database |
-| open mode on a public host | with no password set, every request is root, so the first caller can claim the instance | `GET /api/bootstrap` publishes `setup_completed`, the client shows the claim screen first, and the readiness checklist below treats a reachable unclaimed instance as a blocker |
+| open mode on a public host | with no password set, every request is root, so the first caller can claim the instance | `GET /api/bootstrap` publishes `claimable`, the client shows the claim screen first, and the readiness checklist below treats a reachable unclaimed instance as a blocker |
 | no push channel | a recurring capture or a finished export waits up to `WorkerInterval` | every job route exposes its status and its event log, so the client can explain the wait instead of guessing; `worker_last_run_at` names the last completed run |
 | one writer at a time | SQLite `BEGIN IMMEDIATE` serialises writes; a long import commit blocks every other write | commits run in chunks of `ImportCommitChunk` (500) and are resumable, so a blocked writer is a slow writer, never a lost one |
 | retention sweeps | a rejected capture loses its receipt after 720h; a ready export 410s after 720h | the row survives with `deleted_at`/`status = expired`, and the UI is told to say "the file was reclaimed", never "not found" |

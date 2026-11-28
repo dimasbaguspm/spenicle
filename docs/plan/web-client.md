@@ -27,7 +27,7 @@ and there is no second origin to allow. Development gets the same shape from Vit
 
 ## The credential
 
-0. A fresh instance is open and `GET /api/bootstrap` says `setup_completed: false`;
+0. A fresh instance is open and `GET /api/bootstrap` says `claimable: true`;
    there is no generated password to find.
 1. The operator claims it at `/setup`: choose the password, the currency, and
    optionally one opening account.

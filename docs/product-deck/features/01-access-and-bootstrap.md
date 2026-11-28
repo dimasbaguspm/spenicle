@@ -16,8 +16,8 @@ still has a credential?" and "who reversed that entry?".
 | # | call | why it cannot be skipped |
 | --- | --- | --- |
 | 1 | `GET /healthz` | proves the process booted, migrated, and which build this is |
-| 2 | `GET /api/bootstrap` | public, no credential: `setup_completed` says whether this is a claim screen or a sign-in screen. A fresh database has **no password** — the boot generates nothing to find |
-| 3 | `GET /api/meta` | reachable without a credential while the instance is open, so the claim form can offer the real currency list and the seeded accounts |
+| 2 | `GET /api/bootstrap` | public, no credential: `claimable` says whether this is a claim screen or a sign-in screen (`setup_completed` is the marker beside it, and the two differ on a database claimed by an earlier build). A fresh database has **no password** — the boot generates nothing to find |
+| 3 | `GET /api/meta` | reachable without a credential while the instance is open — open mode treats every request as root — but the claim form does not need it: it takes an ISO code, prefilled from the `base_currency` that `/api/bootstrap` already published |
 | 4 | `POST /api/setup {"password":"…","base_currency":"IDR","accounts":[…]}` | the one write that closes the instance and opens the ledger: the password hash, the currency lock and the optional opening balances commit in one transaction. Optional opening balances post atomically; `200` returns the settings payload |
 | 5 | `POST /api/tokens {"name":"spenicle web","scopes":["admin"]}` | the instance has a password now, so the browser exchanges it — once — for a revocable token and never keeps the password |
 | 6 | `GET /api/settings` | confirms `base_currency` and `timezone`; whether the instance is claimed lives in `/api/bootstrap`, not here |
@@ -25,7 +25,7 @@ still has a credential?" and "who reversed that entry?".
 Step 2 is the only decision the shell has to make before it holds anything: a claimed
 instance shows the sign-in screen, an unclaimed one shows the claim form.
 
-**The tradeoff, stated once.** While `setup_completed` is false the instance is open:
+**The tradeoff, stated once.** While `claimable` is true the instance is open:
 every request is the root credential. There is no generated password and no claim file,
 so a container started on a reachable port can be claimed by whoever gets there first.
 Start it on a trusted network, or claim it before exposing the port; the alternative —
@@ -164,7 +164,7 @@ GET /api/audit      Handler.Audit.List  → Repository.Sqlite.ListAudit
 | risk | why it hurts | mitigation |
 | --- | --- | --- |
 | a client keeps the *old* password after rotation | every request starts answering `401 invalid_password` → "unauthorized" | the caller sends the new password as the Bearer credential on the next request; `POST /api/password` returns no token, so the client must update its header before it paints the success screen |
-| open mode reaches a public host | until `POST /api/setup` lands there is no password, so every request is root and the first caller can claim the instance | public `GET /api/bootstrap` publishes `setup_completed`, the [README](../../../README.md) tells the operator to claim it before exposing the port, and the rollout checklist treats a reachable unclaimed instance as a hole |
+| open mode reaches a public host | until `POST /api/setup` lands there is no password, so every request is root and the first caller can claim the instance | public `GET /api/bootstrap` publishes `claimable`, the [README](../../../README.md) tells the operator to claim it before exposing the port, and the rollout checklist treats a reachable unclaimed instance as a hole |
 | token sprawl | a leaked shortcut token can dump receipts or post entries | scopes are a closed set, the handler checks action scopes before side effects (`approve` needs `entries:write`), `last_used_at` makes an unused token visible, and revoke keeps the row so the history is intact |
 | password is the only root credential | no "sign out other devices" | rotation kills every derived credential at once; this is the design, and the client must not present a per-device session model |
 | OAuth callback is a public route | the provider redirect carries no bearer header, so the route skips auth entirely | `state` is a Unix stamp with an `APP_SECRET`-derived HMAC; the callback checks the signature and ±10-minute TTL and answers `401 invalid_state` on a bad or expired stamp. There is no pending-authorisation or nonce store and no one-time replay guard; a valid `state` can be replayed inside the TTL |

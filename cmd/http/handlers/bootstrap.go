@@ -10,6 +10,7 @@ import (
 
 type bootstrapResponse struct {
 	SetupCompleted    bool   `json:"setup_completed"`
+	Claimable         bool   `json:"claimable"`
 	BaseCurrency      string `json:"base_currency"      maxLength:"3" minLength:"3"`
 	Timezone          string `json:"timezone"`
 	ExtractionEnabled bool   `json:"extraction_enabled"`
@@ -17,7 +18,7 @@ type bootstrapResponse struct {
 }
 
 // @Summary     Public boot state: has this instance been claimed yet?
-// @Description The one read a client needs before it holds a credential. A fresh instance boots open and unprotected until `POST /api/setup` sets its password and base currency, so `setup_completed` is the whole answer: false means the setup screen, true means the sign-in screen. No credential, no account, no amount and no secret is read.
+// @Description The one read a client needs before it holds a credential. `setup_completed` reports the `POST /api/setup` marker itself: false means the setup never finished, true means it did. `claimable` answers the question a client actually acts on — can this instance still be claimed? — and it is false the moment a password is stored, because that is when the identity middleware stops treating every request as the root credential. The two differ on a database claimed by an earlier build: a password, no marker. No credential, no account, no amount and no secret is read.
 // @Tags        system
 // @Produce     json
 // @Success     200 {object} bootstrapResponse
@@ -43,6 +44,7 @@ func (s *Server) Bootstrap(w http.ResponseWriter, r *http.Request) {
 
 	httpx.WriteJSON(w, http.StatusOK, bootstrapResponse{
 		SetupCompleted:    completed,
+		Claimable:         !settings.HasPassword(),
 		BaseCurrency:      settings.BaseCurrency,
 		Timezone:          settings.Timezone,
 		ExtractionEnabled: s.deps.ExtractionEnabled,

@@ -1,6 +1,7 @@
 {
   "ai_assistance": false,
   "base_currency": "IDR",
+  "claimable": true,
   "extraction_enabled": false,
   "setup_completed": false,
   "timezone": "UTC"
