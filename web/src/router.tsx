@@ -23,6 +23,7 @@ import { PayeeDetailPage } from '@/routes/payee-detail'
 import { PayeeEditPage } from '@/routes/payee-edit'
 import { NewPayeePage } from '@/routes/payee-new'
 import { PayeesPage } from '@/routes/payees'
+import { RatesPage } from '@/routes/rates'
 import { SettingsPage } from '@/routes/settings'
 import { SetupPage } from '@/routes/setup'
 
@@ -186,6 +187,12 @@ const captureRoute = createRoute({
   component: CaptureReviewPage,
 })
 
+const ratesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/rates',
+  component: RatesPage,
+})
+
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
@@ -223,6 +230,7 @@ export const routeTree = rootRoute.addChildren([
   capturesRoute,
   captureRoute,
   exportsRoute,
+  ratesRoute,
   settingsRoute,
 ])
 

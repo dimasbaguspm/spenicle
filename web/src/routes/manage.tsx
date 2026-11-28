@@ -59,6 +59,12 @@ export function ManagePage() {
       caption: 'The ledger as a file, rendered by the worker.',
       count: exports.isSuccess ? String(exports.data.exports.length) : '',
     },
+    {
+      to: '/manage/rates',
+      label: 'Rates',
+      caption: 'What one currency is worth in another, on a day.',
+      count: '',
+    },
   ] as const
 
   return (

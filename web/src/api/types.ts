@@ -38,6 +38,9 @@ export type TokenCreate = Schemas['tokenCreateRequest']
 /** The journal's read side: `actor_ref` is absent for the worker's own runs. */
 export type AuditRow = Omitted<Fixed<Schemas['auditResponse']>, 'actor_ref'>
 
+/** One pair on one day, as the rate rail priced it. */
+export type Rate = Fixed<Schemas['rateResponse']>
+
 /** A list envelope: `next_cursor` is the one pagination field a full page still omits. */
 export type Paged<Envelope, Key extends keyof Envelope, Row> = Omit<
   Fixed<Envelope>,

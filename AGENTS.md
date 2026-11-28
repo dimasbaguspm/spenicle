@@ -119,7 +119,8 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        `/manage/categories` (the same four routes, for expense and income accounts:
                        a category is an account, not a table), `/manage/payees` (the same four: a
                        name plus an optional default account and category), `/manage/captures` (+
-                       `/{ref}` to review one), `/manage/exports`), plus `/settings`. The shell has
+                       `/{ref}` to review one), `/manage/exports`, `/manage/rates`), plus
+                       `/settings`. The shell has
                        two shapes: from `lg` a header with Register, Analytics and Manage on the
                        left and Settings plus Log out on the right; below `lg` no header at all,
                        and a five-slot bottom bar: register, analytics, a new entry in the middle,
