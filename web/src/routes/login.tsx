@@ -49,7 +49,7 @@ export function LoginPage() {
       }
 
       setToken(issued.token)
-      void navigate({ to: '/ledger' })
+      void navigate({ to: '/dashboard' })
     },
   })
 
@@ -104,26 +104,21 @@ export function LoginPage() {
         </form>
       </Panel>
 
-      {claimable ? (
-        <div className="border-brass-700/50 space-y-2 border-l pl-5">
-          <Text as="p" tone="section">
-            First boot
-          </Text>
-          <Text as="p" tone="muted" className="leading-relaxed">
-            This instance has never been set up, so it is open.{' '}
+      <Text as="p" tone="caption" className="text-center">
+        {claimable ? (
+          <>
+            This instance has never been set up.{' '}
             <Link
               to="/setup"
-              className="text-brass-300 decoration-brass-700 underline underline-offset-4 hover:text-brass-200"
+              className="text-porcelain-200 underline decoration-ink-600 underline-offset-4 hover:text-brass-300"
             >
-              Choose a password and open the ledger…
+              Claim it…
             </Link>
-          </Text>
-        </div>
-      ) : (
-        <Text as="p" tone="caption" className="text-center">
-          The ledger is local. Nothing leaves this container.
-        </Text>
-      )}
+          </>
+        ) : (
+          'The ledger is local. Nothing leaves this container.'
+        )}
+      </Text>
     </div>
   )
 }

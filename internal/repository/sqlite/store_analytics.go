@@ -53,7 +53,32 @@ func (s *Store) MonthlyTotals(
 		return nil, fmt.Errorf("iterate monthly totals: %w", err)
 	}
 
-	return out, nil
+	// The series is a calendar, not a list of the months that happened to move: a month
+	// with no postings is a zero, which is what a chart and a running total both need.
+	return fillMonths(from, to, out), nil
+}
+
+func fillMonths(from, to time.Time, totals []entity.MonthTotal) []entity.MonthTotal {
+	byMonth := make(map[string]entity.MonthTotal, len(totals))
+	for _, total := range totals {
+		byMonth[total.Month] = total
+	}
+
+	filled := make([]entity.MonthTotal, 0, len(totals)+1)
+
+	first := time.Date(from.Year(), from.Month(), 1, 0, 0, 0, 0, from.Location())
+	for cursor := first; !cursor.After(to); cursor = cursor.AddDate(0, 1, 0) {
+		key := cursor.Format(constant.MonthLayout)
+
+		total, found := byMonth[key]
+		if !found {
+			total = entity.MonthTotal{Month: key}
+		}
+
+		filled = append(filled, total)
+	}
+
+	return filled
 }
 
 const categoryTotalsQuery = `

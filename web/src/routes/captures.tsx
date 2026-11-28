@@ -15,7 +15,7 @@ export function CapturesPage() {
 
   return (
     <div className="space-y-8">
-      <header className="border-ink-800/70 max-w-prose space-y-2.5 border-b pb-7">
+      <header className="max-w-prose space-y-2.5">
         <Text as="p" tone="section">
           Intake
         </Text>

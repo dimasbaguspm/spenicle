@@ -27,15 +27,8 @@ export function Panel({
   return (
     <Tag
       className={cn(
-        'relative rounded-lg border',
-        tone === 'raised'
-          ? [
-              'border-ink-700/70 bg-ink-850/90',
-              'shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_28px_56px_-36px_rgba(0,0,0,1)]',
-              // the brass hairline: one lit edge, inset so it never touches the corner
-              "before:absolute before:inset-x-10 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-brass-500/70 before:to-transparent before:content-['']",
-            ].join(' ')
-          : 'border-ink-800 bg-ink-950/50 shadow-[inset_0_2px_8px_rgba(0,0,0,0.45)]',
+        'rounded-lg border',
+        tone === 'raised' ? 'border-ink-800 bg-ink-900/40' : 'border-ink-800/60 border-dashed',
         className,
       )}
       {...rest}

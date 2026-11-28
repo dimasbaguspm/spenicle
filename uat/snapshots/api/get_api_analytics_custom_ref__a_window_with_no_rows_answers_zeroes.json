@@ -1,0 +1,25 @@
+{
+  "from": "2020-01-01",
+  "months": [
+    {
+      "income_minor": "0",
+      "month": "2020-01",
+      "net_minor": "0",
+      "spend_minor": "0"
+    },
+    {
+      "income_minor": "0",
+      "month": "2020-02",
+      "net_minor": "0",
+      "spend_minor": "0"
+    }
+  ],
+  "query": {
+    "chart": "bar",
+    "created_at": "<timestamp>",
+    "name": "empty-window",
+    "namespace": "months",
+    "ref": "<ref>"
+  },
+  "to": "2020-02-29"
+}

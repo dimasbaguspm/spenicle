@@ -1,6 +1,30 @@
 import { api } from './client'
 import { apiError } from './error'
-import type { TokenCreate, TokenIssued } from './types'
+import type { Paged, Paths, Token, TokenCreate, TokenIssued } from './types'
+
+type TokensBody = Paths['/api/tokens']['get']['responses'][200]['content']['application/json']
+
+export type TokenList = Paged<TokensBody, 'tokens', Token>
+
+export async function listTokens(): Promise<TokenList> {
+  const { data, error, response } = await api.GET('/api/tokens')
+  if (error !== undefined) {
+    throw apiError(response.status, error)
+  }
+
+  return data as TokenList
+}
+
+export async function revokeToken(ref: string): Promise<Token> {
+  const { data, error, response } = await api.POST('/api/tokens/{ref}/revoke', {
+    params: { path: { ref } },
+  })
+  if (error !== undefined) {
+    throw apiError(response.status, error)
+  }
+
+  return data as Token
+}
 
 /**
  * Minting a token is the one call the instance password authorises, so the credential is an

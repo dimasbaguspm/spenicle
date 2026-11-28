@@ -60,8 +60,12 @@ always server-side, so the browser stays on one origin even when the two contain
 | --- | --- | --- |
 | sign in | `/` | `GET /api/bootstrap`, `POST /api/tokens` |
 | first run: claim, password, currency | `/setup` | `GET /api/bootstrap`, `GET /api/meta` (open mode), `POST /api/setup`, `POST /api/tokens` |
+| overview | `/dashboard` | `GET /api/dashboard`, `GET /api/entries` |
 | register + quick capture | `/ledger` | `GET /api/meta`, `GET /api/entries`, `POST /api/entries` |
+| accounts | `/accounts` | `GET /api/accounts` |
+| analytics | `/analytics` | `GET /api/analytics/months`, `…/categories` |
 | capture inbox | `/captures` | `GET /api/captures` (approve/reject next) |
+| instance settings | `/settings` | `GET /api/settings`, `POST /api/password`, `GET /api/tokens`, `POST /api/tokens`, `…/revoke` |
 | import review | `/imports` | `POST /api/imports`, `PATCH /api/imports/{ref}`, `…/rows/{index}` |
 | insights | `/insights` | `GET /api/analytics/months`, `…/categories`, `GET /api/dashboard` |
 | exports | `/exports` | `POST /api/exports`, `GET /api/exports/{ref}`, `…/download` |

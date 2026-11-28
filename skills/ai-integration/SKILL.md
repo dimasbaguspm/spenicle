@@ -64,7 +64,7 @@ directly".
 
 ```bash
 cp .env.example .env  # set APP_SECRET
-make run              # listens on :8080, migrations and seeds run on boot
+make dev              # listens on :8080, migrations and seeds run on boot
 curl -s localhost:8080/healthz
 ```
 

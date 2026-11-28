@@ -48,8 +48,8 @@ None.
 
 `month`, `spend_minor`, `income_minor` and `net_minor` describe the newest month with data
 inside the window; an empty window labels the month of `to` and answers zeroes. `months`
-carries every month in the window that has data, oldest first, with the same four fields
-per row. `pending_captures` counts captures with status `pending` whose `received_at` falls
+carries every month in the window, oldest first, with the same four fields per row — a
+month with no postings is present with zeroes, so a chart drawn from it has no gaps. `pending_captures` counts captures with status `pending` whose `received_at` falls
 in the window. `top_category` is the largest expense category in the window and is omitted
 when there are no expenses.
 

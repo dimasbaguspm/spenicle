@@ -974,7 +974,7 @@ sequenceDiagram
 `from` and `to` are required, inclusive, and echoed in the response. The inclusive window
 must not span more than 366 days. The month tile describes the newest month with data in
 that window; an empty window uses the month of `to`. `months` carries every month in the
-window that has data, oldest first. `top_category` is omitted when the window has no
+window, oldest first, zero-filled for months with no postings. `top_category` is omitted when the window has no
 expense category; when present it carries `account_ref`, `account_name` and `amount_minor`.
 There is no server-side default and no safe-to-spend, forecast or month-pace field.
 

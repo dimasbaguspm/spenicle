@@ -30,8 +30,8 @@ const tones: Record<NonNullable<TextProps['tone']>, string> = {
   display:
     'font-display text-porcelain-50 text-[2.125rem] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-[2.625rem]',
   title: 'font-display text-porcelain-50 text-xl leading-tight font-semibold',
-  // a brass eyebrow above a panel: small, wide-tracked, never a heading by itself
-  section: 'text-brass-500 text-[0.6875rem] leading-none font-semibold tracking-[0.18em] uppercase',
+  // a quiet eyebrow above a panel: mono, wide-tracked, never a heading by itself
+  section: 'text-ink-400 font-mono text-[0.625rem] leading-none tracking-[0.18em] uppercase',
   body: 'text-porcelain-200 text-sm',
   muted: 'text-ink-300 text-sm',
   caption: 'text-ink-400 text-xs leading-relaxed',

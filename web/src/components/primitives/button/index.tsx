@@ -14,28 +14,18 @@ export const buttonStyles = cva(
   [
     'relative inline-flex items-center justify-center gap-2 rounded-md font-medium',
     'select-none whitespace-nowrap',
-    'transition-[background-color,border-color,color,box-shadow,transform] duration-150',
+    'transition-colors duration-150',
     'focus-visible:ring-2 focus-visible:ring-brass-400/70 focus-visible:ring-offset-2',
     'focus-visible:ring-offset-ink-950 focus-visible:outline-none',
     // a disabled button is not a faded button: it loses its lacquer entirely
-    'disabled:pointer-events-none disabled:border-ink-700 disabled:bg-ink-800 disabled:text-ink-400 disabled:shadow-none',
-    'active:translate-y-px',
+    'disabled:pointer-events-none disabled:border-ink-800 disabled:bg-ink-900 disabled:text-ink-500',
   ].join(' '),
   {
     variants: {
       tone: {
-        primary: [
-          'text-porcelain-50',
-          'bg-cherry-600 hover:bg-cherry-500',
-          'border border-cherry-700 hover:border-cherry-500',
-          'shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_20px_-12px_rgba(178,58,63,0.9)]',
-        ].join(' '),
-        quiet: [
-          'text-porcelain-200',
-          'bg-ink-850 hover:bg-ink-800 hover:text-porcelain-50',
-          'border border-ink-700 hover:border-ink-600',
-          'shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]',
-        ].join(' '),
+        primary: 'text-porcelain-50 border border-cherry-600 bg-cherry-600 hover:bg-cherry-500',
+        quiet:
+          'text-porcelain-200 border border-ink-700 bg-transparent hover:border-ink-600 hover:bg-ink-900 hover:text-porcelain-50',
         ghost:
           'text-text-muted hover:bg-ink-800/70 hover:text-porcelain-100 border border-transparent',
         danger: [

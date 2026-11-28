@@ -19,7 +19,7 @@ make hooks                    # git hook: build + lint + test + UAT before every
 make test                     # unit + integration tests, must be green before and after
 make uat                      # Gherkin suite, separate from unit tests
 make lint                     # four groups, all must stay at 0 issues
-make run                      # http://localhost:8080/healthz
+make dev                      # http://localhost:8080/healthz
 ```
 
 Versions come from `mise.toml`: Go from `go.mod`, `golangci-lint` from CI and

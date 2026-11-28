@@ -162,7 +162,7 @@ export function LedgerPage() {
 
   return (
     <div className="space-y-8">
-      <header className="border-ink-800/70 flex flex-wrap items-end justify-between gap-4 border-b pb-7">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-prose space-y-2.5">
           <Text as="p" tone="section">
             The ledger
@@ -330,7 +330,7 @@ export function LedgerPage() {
                   return (
                     <li
                       key={entry.ref}
-                      className="border-ink-800/80 hover:bg-ink-800/40 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-t px-4 py-3.5 text-sm transition-colors first:border-t-0 sm:grid-cols-[5.5rem_minmax(0,1fr)_5rem_7rem] sm:px-6"
+                      className="border-ink-800/70 hover:bg-ink-800/30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-t px-4 py-3.5 text-sm transition-colors first:border-t-0 sm:grid-cols-[5.5rem_minmax(0,1fr)_5rem_7rem] sm:px-6"
                     >
                       <Text
                         as="span"

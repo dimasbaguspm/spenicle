@@ -121,20 +121,6 @@
     margin: 0;
     min-height: 100dvh;
     background-color: var(--color-ink-950);
-    /* one lamp: a cherry glow behind the masthead, brass catching the right edge */
-    background-image:
-      radial-gradient(
-        72rem 30rem at 50% -20%,
-        color-mix(in oklab, var(--color-cherry-700) 32%, transparent),
-        transparent 72%
-      ),
-      radial-gradient(
-        44rem 22rem at 88% 2%,
-        color-mix(in oklab, var(--color-brass-700) 18%, transparent),
-        transparent 70%
-      );
-    background-repeat: no-repeat;
-    background-attachment: fixed;
     color: var(--color-text);
     font-family: var(--font-sans);
     font-size: 0.9375rem;
@@ -169,6 +155,19 @@
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
+  }
+
+  /* the route strip scrolls on a phone; a soft right edge says there is more of it */
+  @layer components {
+    .tab-strip {
+      mask-image: linear-gradient(to right, #000 86%, transparent 100%);
+    }
+
+    @media (min-width: 40rem) {
+      .tab-strip {
+        mask-image: none;
+      }
+    }
   }
 
   /* a single brass hairline is the whole decoration budget */

@@ -22,7 +22,7 @@ export function Menu({ trigger, items, align = 'end' }: MenuProps) {
     <ArkMenu.Root positioning={{ placement: align === 'end' ? 'bottom-end' : 'bottom-start' }}>
       <ArkMenu.Trigger asChild>{trigger}</ArkMenu.Trigger>
       <ArkMenu.Positioner>
-        <ArkMenu.Content className="border-ink-600 bg-ink-850/95 z-50 mt-1.5 min-w-48 rounded-lg border p-1 text-sm shadow-[0_18px_40px_-20px_rgba(0,0,0,0.95)] backdrop-blur">
+        <ArkMenu.Content className="border-ink-700 bg-ink-900 z-50 mt-1.5 min-w-48 rounded-md border p-1 text-sm shadow-[0_16px_32px_-20px_rgba(0,0,0,0.9)]">
           {items.map((item) => (
             <ArkMenu.Item
               key={item.label}

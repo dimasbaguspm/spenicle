@@ -5,7 +5,7 @@ Query, forms on react-hook-form with Effect Schema rules, headless Ark UI, style
 Tailwind v4 and typed from the API's own `openapi.json`.
 
 ```bash
-make web-dev     # :5173, proxying /api to a local `make run` on :8080
+make dev-web     # :5173, proxying /api to a local `make dev` on :8080
 make web         # install (frozen lockfile) and build into web/dist
 make web-check   # typecheck + lint + format check + tests — the gate
 make web-types   # regenerate src/api/schema.d.ts from ../openapi.json
@@ -261,13 +261,14 @@ src/types/generated/  generated contract — never edit; run `make web-types`
 src/components/       primitives → ui → widgets → layouts (see above)
 src/styles.css        the tokens: palette, three faces, one base layer
 src/router.tsx        code-based routes + the auth guard in beforeLoad
-src/routes/           AppShell's outlet: login, setup, ledger, captures
+src/routes/           AppShell's outlet: login, setup, dashboard, ledger, accounts,
+                      analytics, captures, settings
 src/lib/money.ts      minor-unit string arithmetic
 src/lib/format/       per-entity display: fallbacks and flags, so JSX has no `??`
 ```
 
 ## What is deliberately not here yet
 
-Capture approval, statement import review, exports, analytics, settings and offline capture
-queueing. Each is a screen over an endpoint that already exists; the router and the typed
-client do not change to add them.
+Capture approval, statement import review, exports and offline capture queueing. Each is a
+screen over an endpoint that already exists; the router and the typed client do not change
+to add them. Overview, register, accounts, analytics and settings are live.

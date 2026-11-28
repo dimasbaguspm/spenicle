@@ -26,10 +26,11 @@ put a decision you did not feel like making. v2 changes three things:
 
 ## Develop
 
-`dev.mk` is the local loop and works on its own (`make -f dev.mk dev-api`) or through the root
-Makefile. It generates one secret per checkout (`.dev-secret`, gitignored) and reuses it, because
-a new `APP_SECRET` on every run makes the existing database unreadable
-(`cipher: message authentication failed`); an exported one still wins:
+The Makefile is the local loop. `make dev` generates one secret per checkout
+(`.dev-secret`, gitignored) and reuses it, because a new `APP_SECRET` on every run makes the
+existing database unreadable (`cipher: message authentication failed`); an exported one still
+wins. It also rebuilds the SPA when a source is newer than `web/dist`, since the binary embeds
+that directory at compile time.
 
 ```bash
 make dev          # the API and the worker in one process, SPA on :8080, db in ./data
@@ -37,9 +38,9 @@ make dev-web      # the SPA with HMR on :5173, proxying /api to that process
 # or, one process per service, on the same database:
 make dev-api      #   the only listener
 make dev-worker   #   recurring captures, retention/GC, exports, intake
-# and the prod-like single origin:
-make dev-build    #   vite build + go build -tags web, then ./bin/spenicle all
 ```
+
+`make` with no target lists every entry point.
 
 ## Install
 

@@ -21,7 +21,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318           # local, plaintext
   place that decides, and it is unit-tested.
 - A path is dropped; OTLP/HTTP endpoints are scheme + host + port.
 - Empty means the providers are never installed: zero overhead, which is why tests
-  and `make run` need no collector.
+  and `make dev` need no collector.
 - Port 4317 is gRPC. This binary uses **OTLP/HTTP** (`4318`); pointing it at a gRPC
   port fails at export time, not at boot.
 

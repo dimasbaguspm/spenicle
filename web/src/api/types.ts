@@ -82,6 +82,14 @@ export type RecurringRule = Omitted<
 >
 
 export type Settings = Fixed<Schemas['settingsResponse']>
+export type Dashboard = Omitted<Fixed<Schemas['dashboardResponse']>, 'top_category'> & {
+  top_category?: Fixed<Schemas['topCategoryResponse']>
+}
+export type MonthTotal = Fixed<Schemas['monthTotalResponse']>
+export type CategoryTotal = Fixed<Schemas['categoryTotalResponse']>
+export type CategoryReport = Omitted<Fixed<Schemas['categoryAnalyticsResponse']>, 'categories'> & {
+  categories: CategoryTotal[]
+}
 export type Bootstrap = Fixed<Schemas['bootstrapResponse']>
 export type LedgerSetup = Schemas['setupRequest']
 export type PasswordChange = Omitted<Fixed<Schemas['passwordChangeResponse']>, 'token'> & {

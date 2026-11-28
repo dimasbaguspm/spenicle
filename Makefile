@@ -1,84 +1,90 @@
-# spenicle — developer entry points.
-#
-# Lint is split into four groups because they fail for different reasons and
-# deserve different reactions: correctness blocks, security blocks, style asks,
-# performance informs. Each group has its own config in tools/lint/.
-# CI runs them as four steps in one lint job, so each report survives.
+GO     := go
+LINT   := golangci-lint
+BIN    := bin/spenicle
+WEB    := web
+DIST   := $(WEB)/dist/index.html
+SECRET := .dev-secret
+SRC    := $(WEB)/src $(WEB)/public $(WEB)/index.html $(WEB)/package.json \
+	$(WEB)/pnpm-lock.yaml $(WEB)/vite.config.ts $(WEB)/tsconfig.json
 
-GO      ?= go
-GOLANGCI := golangci-lint
-BIN     := bin/spenicle
-LINTDIR := tools/lint
-WEB     := web
+.DEFAULT_GOAL := help
+.PHONY: help hooks build dev dev-api dev-worker dev-web web web-dist web-check \
+	web-types test uat uat-snapshots cover fmt openapi mocks lint lint-fix \
+	lint-correctness lint-style lint-security lint-performance dev-secret
 
-.PHONY: help hooks build build-web run test uat uat-snapshots cover lint lint-correctness lint-style lint-security lint-performance lint-fix fmt openapi web web-dev web-test web-check web-types
+help:
+	@grep -oE '^[a-z][a-z-]+:' $(MAKEFILE_LIST) | tr -d : \
+		| grep -vE '^(help|web-dist|dev-secret)$$' | tr '\n' ' ' | fold -s -w 96; echo
 
-include dev.mk
-
-help: ## show targets
-	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
-
-hooks: ## install the git hooks (lefthook: build, lint, test, UAT before commit)
+hooks:
 	lefthook install
 
-build: ## compile the single binary (no SPA embedded)
+build:
 	$(GO) build -o $(BIN) .
 
-build-web: web ## compile with the SPA embedded: the `latest` image's binary
-	$(GO) build -tags web -o $(BIN) .
+dev: web-dist dev-secret
+	@APP_SECRET="$${APP_SECRET:-$$(cat $(SECRET))}" $(GO) run -tags web . all
 
-run: dev ## alias for `make dev`: the API and the worker in one process
+dev-api: web-dist dev-secret
+	@APP_SECRET="$${APP_SECRET:-$$(cat $(SECRET))}" $(GO) run -tags web . http
 
-test: ## unit and integration tests (UAT has its own target)
-	$(GO) test $$( $(GO) list ./... | grep -v '/uat' ) -count=1
+dev-worker: dev-secret
+	@APP_SECRET="$${APP_SECRET:-$$(cat $(SECRET))}" $(GO) run . worker
 
-uat: ## the Gherkin suite plus the containerised mock services (needs Docker)
-	$(GO) test ./uat/ -count=1 -v
+dev-web:
+	cd $(WEB) && pnpm install --frozen-lockfile && pnpm run dev
 
-uat-snapshots: ## rewrite the UAT golden files, then review the diff
-	UAT_UPDATE_SNAPSHOTS=1 $(GO) test ./uat/ -count=1
+web:
+	cd $(WEB) && pnpm install --frozen-lockfile && pnpm run build
 
-cover: ## coverage over the whole module, UAT and mocks included
+web-dist:
+	@test -f $(DIST) && test -z "$$(find $(SRC) -newer $(DIST) -print -quit)" || $(MAKE) -s web
+
+dev-secret:
+	@test -s $(SECRET) || (openssl rand -base64 32 > $(SECRET) && chmod 600 $(SECRET))
+
+web-check:
+	cd $(WEB) && pnpm run typecheck && pnpm run lint && pnpm run fmt:check && pnpm test
+
+web-types:
+	cd $(WEB) && pnpm run api:types
+
+test:
+	$(GO) test $$($(GO) list ./... | grep -v /uat) -count=1
+
+uat:
+	$(GO) test ./uat -count=1 -v
+
+uat-snapshots:
+	UAT_UPDATE_SNAPSHOTS=1 $(GO) test ./uat -count=1
+
+cover:
 	$(GO) test ./... -count=1 -coverpkg=./... -coverprofile=coverage.out
 	$(GO) tool cover -func=coverage.out | tail -1
 
-fmt: ## gofmt the tree
+fmt:
 	$(GO) fmt ./...
 
-openapi: ## regenerate the API document at the repo root
+openapi:
 	$(GO) run ./tools/openapi
 
-web: ## build the SPA into web/dist
-	cd $(WEB) && pnpm install --frozen-lockfile && pnpm run build
-
-web-dev: dev-web ## alias for `make dev-web`: the SPA on :5173
-
-web-test: ## the SPA's unit tests
-	cd $(WEB) && pnpm test
-
-web-check: ## the SPA's gate: tsgo, oxlint, oxfmt --check, vitest
-	cd $(WEB) && pnpm run typecheck && pnpm run lint && pnpm run fmt:check && pnpm test
-
-web-types: ## regenerate the SPA's typed client from openapi.json
-	cd $(WEB) && pnpm run api:types
-
 mocks:
-	go generate ./...
+	$(GO) generate ./...
 
-lint: lint-correctness lint-style lint-security lint-performance ## run all four groups
+lint: lint-correctness lint-style lint-security lint-performance
 
-lint-correctness: ## does the code do what it says
-	$(GOLANGCI) run -c $(LINTDIR)/correctness.yml ./...
+lint-correctness:
+	$(LINT) run -c tools/lint/correctness.yml ./...
 
-lint-style: ## is the code readable by the next person
-	$(GOLANGCI) run -c $(LINTDIR)/style.yml ./...
+lint-style:
+	$(LINT) run -c tools/lint/style.yml ./...
 
-lint-security: ## what can be abused if it is wrong
-	$(GOLANGCI) run -c $(LINTDIR)/security.yml ./...
+lint-security:
+	$(LINT) run -c tools/lint/security.yml ./...
 
-lint-performance: ## will this hold up at 10x the data
-	$(GOLANGCI) run -c $(LINTDIR)/performance.yml ./...
+lint-performance:
+	$(LINT) run -c tools/lint/performance.yml ./...
 
-lint-fix: ## apply the safe automatic fixes, then re-check
-	$(GOLANGCI) run -c $(LINTDIR)/style.yml --fix ./...
-	$(GOLANGCI) run -c $(LINTDIR)/correctness.yml --fix ./...
+lint-fix:
+	$(LINT) run -c tools/lint/style.yml --fix ./...
+	$(LINT) run -c tools/lint/correctness.yml --fix ./...

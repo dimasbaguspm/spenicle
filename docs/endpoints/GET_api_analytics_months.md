@@ -15,8 +15,9 @@ The charts screen, the month list, an agent summarising the year.
 ## Downstream
 
 `Repository.Sqlite.MonthlyTotals`: one grouped query over `postings` joined to
-`entries` and `accounts`. Reversed entries and their reversal entries are both
-excluded, so a reversal leaves no trace.
+`entries` and `accounts`, then one zero-filled slot per calendar month in the window.
+Reversed entries and their reversal entries are both excluded, so a reversal leaves no
+trace — and a month that never moved is still in the series.
 
 ## Path / query params
 

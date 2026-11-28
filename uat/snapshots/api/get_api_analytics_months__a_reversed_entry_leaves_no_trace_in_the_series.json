@@ -1,5 +1,12 @@
 {
   "from": "2026-03-01",
-  "months": [],
+  "months": [
+    {
+      "income_minor": "0",
+      "month": "2026-03",
+      "net_minor": "0",
+      "spend_minor": "0"
+    }
+  ],
   "to": "2026-03-31"
 }

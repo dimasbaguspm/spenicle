@@ -7,6 +7,7 @@ import "time"
 
 const (
 	DateLayout      = "2006-01-02"
+	MonthLayout     = "2006-01"
 	TimestampLayout = time.RFC3339
 	ISOCodeLength   = 3
 )

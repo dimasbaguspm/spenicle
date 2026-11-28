@@ -113,8 +113,10 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        it was compiled with `-tags web` (the `latest` image); `web/assets_*.go`
                        is the whole switch. Screens: `/` sign in, `/setup` the claim
                        wizard (password, base currency, one optional opening account),
-                       `/ledger`, `/captures`. The claim screen is one form:
-                       password, currency, one optional opening account.
+                       `/dashboard`, `/ledger`, `/accounts`, `/analytics`,
+                       `/captures`, `/settings`. The shell is a masthead (wordmark,
+                       session) plus a route strip that follows the page; the claim
+                       screen at `/setup` is two fields: password and currency.
                        palette ramps, the three self-hosted fonts (Fraunces for the
                        wordmark and screen titles, Inter for text, JetBrains Mono for every
                        figure), and the base layer. A screen composes `Panel`, `Field`,
@@ -179,10 +181,11 @@ Rules that keep it pluggable:
 
 ```bash
 make hooks      # install the git hook (build + lint + test + UAT before commit)
-make build      # bin/spenicle
-make dev        # go run -tags web . all (SPA on :8080, writes to ./data); dev.mk owns the trio:
-                # dev-api, dev-worker, dev-web (:5173) and dev-build (-tags web)
-make run        # alias for make dev
+make build      # bin/spenicle, no SPA
+make dev        # go run -tags web . all (SPA on :8080, writes to ./data)
+make dev-api    # the API alone, SPA embedded, ./data
+make dev-worker # the worker alone, same database
+make dev-web    # the SPA dev server on :5173, proxying /api to :8080
 make test       # unit and integration tests (UAT has its own target)
 make uat        # the Gherkin suite plus the containerised mock services (needs Docker)
 make uat-snapshots   # rewrite snapshot files, then review the diff
@@ -190,13 +193,15 @@ make cover      # coverage over the whole module; -coverpkg makes the UAT count
 make fmt        # gofmt the tree
 make openapi    # regenerate openapi.json from the handler annotations
 make web        # build the SPA into web/dist
-make web-dev    # serve the SPA on :5173, proxying /api to :8080
-make web-test   # the SPA's unit tests (vitest)
 make web-check  # the SPA's gate: tsgo, oxlint, oxfmt --check, vitest
 make web-types  # regenerate the SPA's typed client from openapi.json
 make lint       # all four groups; every one must stay at 0 issues
 make lint-fix   # safe automatic fixes (style, then correctness)
 ```
+
+`make dev` and `dev-api` rebuild `web/dist` when a source is newer than the bundle, because
+`go run -tags web` embeds it at compile time and would otherwise serve the previous UI.
+`make` with no target lists the entry points; `make` is the only build file (`dev.mk` is gone).
 
 `mise.toml` pins the local toolchain: `go` from `go.mod`, `golangci-lint` from CI,
 `lefthook` for the hooks, and `node` + `pnpm` for `web/`. Run `mise install` once per

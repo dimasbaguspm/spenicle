@@ -1,9 +1,13 @@
 import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router'
 
 import { hasToken } from '@/api/token'
+import { AccountsPage } from '@/routes/accounts'
+import { AnalyticsPage } from '@/routes/analytics'
 import { CapturesPage } from '@/routes/captures'
+import { DashboardPage } from '@/routes/dashboard'
 import { LedgerPage } from '@/routes/ledger'
 import { LoginPage } from '@/routes/login'
+import { SettingsPage } from '@/routes/settings'
 import { SetupPage } from '@/routes/setup'
 import { AppShell } from '@/components/layouts/app-shell'
 
@@ -20,31 +24,22 @@ const rootRoute = createRootRoute({
   },
 })
 
-const loginRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: LoginPage,
-})
+const routes = [
+  { path: '/', component: LoginPage },
+  { path: '/setup', component: SetupPage },
+  { path: '/dashboard', component: DashboardPage },
+  { path: '/ledger', component: LedgerPage },
+  { path: '/accounts', component: AccountsPage },
+  { path: '/analytics', component: AnalyticsPage },
+  { path: '/captures', component: CapturesPage },
+  { path: '/settings', component: SettingsPage },
+] as const
 
-const setupRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/setup',
-  component: SetupPage,
-})
+const children = routes.map((entry) =>
+  createRoute({ getParentRoute: () => rootRoute, path: entry.path, component: entry.component }),
+)
 
-const ledgerRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/ledger',
-  component: LedgerPage,
-})
-
-const capturesRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/captures',
-  component: CapturesPage,
-})
-
-export const routeTree = rootRoute.addChildren([loginRoute, setupRoute, ledgerRoute, capturesRoute])
+export const routeTree = rootRoute.addChildren(children)
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' })
 

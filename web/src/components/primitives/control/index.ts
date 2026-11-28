@@ -11,17 +11,15 @@ import { cva, type VariantProps } from 'class-variance-authority'
  */
 export const control = cva(
   [
-    'w-full rounded-md border bg-ink-950/60 text-porcelain-100',
-    'placeholder:text-ink-400',
+    'w-full rounded-md border bg-transparent text-porcelain-100',
+    'placeholder:text-ink-500',
     'border-ink-700 hover:border-ink-600',
-    // camera-obscura inset: the field sits *into* the plate, not on top of it
-    'shadow-[inset_0_1px_2px_rgba(0,0,0,0.55)]',
-    'transition-[border-color,box-shadow,background-color] duration-150',
-    'focus:border-brass-500 focus:bg-ink-950/80 focus:outline-none',
-    'focus:shadow-[inset_0_1px_2px_rgba(0,0,0,0.55),0_0_0_3px_rgba(217,185,107,0.18)]',
+    'transition-colors duration-150',
+    'focus:border-brass-600 focus:bg-ink-950/40 focus:outline-none',
+    'focus:ring-1 focus:ring-brass-600/40',
     'data-[invalid]:border-oxblood-500 data-[invalid]:focus:border-oxblood-400',
-    'data-[invalid]:focus:shadow-[inset_0_1px_2px_rgba(0,0,0,0.55),0_0_0_3px_rgba(194,85,85,0.2)]',
-    'disabled:cursor-not-allowed disabled:opacity-55',
+    'data-[invalid]:focus:ring-oxblood-500/30',
+    'disabled:cursor-not-allowed disabled:opacity-50',
   ].join(' '),
   {
     variants: {

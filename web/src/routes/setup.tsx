@@ -15,14 +15,7 @@ import { Panel } from '@/components/primitives/panel'
 import { PasswordInput } from '@/components/primitives/password-input'
 import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
-import { TextInput } from '@/components/primitives/text-input'
 import { useBootstrap } from '@/hooks/queries/use-bootstrap'
-
-const openableKinds = [
-  { label: 'Asset — cash, bank', value: 'asset' },
-  { label: 'Liability — card, loan', value: 'liability' },
-  { label: 'Equity', value: 'equity' },
-]
 
 /**
  * The claim screen. A fresh instance boots open — there is no password to recover and
@@ -38,9 +31,6 @@ export function SetupPage() {
 
   const [password, setPassword] = useState('')
   const [currency, setCurrency] = useState('')
-  const [accountName, setAccountName] = useState('')
-  const [accountKind, setAccountKind] = useState('asset')
-  const [opening, setOpening] = useState('')
 
   const meta = useQuery({ queryKey: ['meta'], queryFn: () => fetchMeta() })
 
@@ -63,7 +53,7 @@ export function SetupPage() {
 
   const finish = useMutation({
     mutationFn: async () => {
-      await openLedger({ password, base_currency: chosenCurrency, accounts: openingAccounts() })
+      await openLedger({ password, base_currency: chosenCurrency })
 
       // the instance is closed now, so the browser still needs a credential of its own
       const { data, error, response } = await api.POST('/api/tokens', {
@@ -82,20 +72,9 @@ export function SetupPage() {
       setToken(data.token)
     },
     onSuccess: () => {
-      void navigate({ to: '/ledger' })
+      void navigate({ to: '/dashboard' })
     },
   })
-
-  function openingAccounts() {
-    const amount = opening.trim()
-    const name = accountName.trim()
-
-    if (amount === '' || name === '') {
-      return []
-    }
-
-    return [{ name, kind: accountKind, opening_balance_minor: amount }]
-  }
 
   if (claimed) {
     return (
@@ -149,44 +128,15 @@ export function SetupPage() {
           <Text as="p" tone="section">
             The ledger
           </Text>
-          <Field label="Base currency" hint="Every balance is reported in it, and it locks here.">
+          <Field
+            label="Base currency"
+            hint="Set once: every balance is reported in it, and no request can change it later."
+          >
             <SelectInput
               value={chosenCurrency}
               options={chooseCurrency}
               placeholder="choose a currency…"
               onChange={setCurrency}
-            />
-          </Field>
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Opening account" hint="Optional. The account you already hold.">
-              <TextInput
-                name="account-name"
-                value={accountName}
-                placeholder="Cash…"
-                onChange={(event) => {
-                  setAccountName(event.target.value)
-                }}
-              />
-            </Field>
-            <Field label="Kind">
-              <SelectInput value={accountKind} options={openableKinds} onChange={setAccountKind} />
-            </Field>
-          </div>
-
-          <Field
-            label="Opening balance"
-            hint="Minor units, absolute: 500000 is 5,000.00 in a two-decimal currency."
-          >
-            <TextInput
-              name="opening-minor"
-              value={opening}
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="0"
-              onChange={(event) => {
-                setOpening(event.target.value)
-              }}
             />
           </Field>
         </div>

@@ -1,5 +1,25 @@
 {
   "from": "2026-01-01",
+  "months": [
+    {
+      "income_minor": "0",
+      "month": "2026-01",
+      "net_minor": "0",
+      "spend_minor": "0"
+    },
+    {
+      "income_minor": "0",
+      "month": "2026-02",
+      "net_minor": "0",
+      "spend_minor": "0"
+    },
+    {
+      "income_minor": "0",
+      "month": "2026-03",
+      "net_minor": "0",
+      "spend_minor": "0"
+    }
+  ],
   "query": {
     "chart": "line",
     "created_at": "<timestamp>",
