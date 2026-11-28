@@ -2,6 +2,7 @@ import { Outlet } from '@tanstack/react-router'
 
 import { Brand } from '@/components/layouts/brand'
 import { ThemeToggle } from '@/components/layouts/theme-toggle'
+import { Version } from '@/components/layouts/version'
 import { Text } from '@/components/primitives/text'
 
 /**
@@ -25,6 +26,7 @@ export function PublicShell() {
           <Text as="span" tone="caption" className="text-text-faint">
             Self-hosted. One household.
           </Text>
+          <Version />
         </div>
         <ThemeToggle />
       </footer>

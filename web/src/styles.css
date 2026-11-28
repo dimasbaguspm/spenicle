@@ -107,30 +107,36 @@
 }
 
 /* dark: ink paper, porcelain ink. The default, and what `data-theme="dark"` pins. */
+/*
+ * dark: warm charcoal, not black. The paper's warmth survives the inversion — a pure #000 plate
+ * with #f8f3e8 ink is a contrast you feel in your eyes an hour in, so the surfaces sit between
+ * #141210 and #262320, the ink stops just short of white, and the accents keep enough chroma to
+ * stay accusable on a dark ground.
+ */
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --app-surface: #121110;
-  --app-surface-raised: #191817;
-  --app-surface-sunken: #0a0908;
-  --app-border: #33322e;
-  --app-border-strong: #47453f;
-  --app-text: #f8f3e8;
-  --app-text-muted: #b3b1ab;
-  --app-text-faint: #8b8983;
-  --app-primary: #b23a3f;
-  --app-primary-hover: #d2706f;
-  --app-primary-soft: #56171a;
-  --app-on-primary: #fdfbf6;
-  --app-accent: #d9b96b;
-  --app-accent-soft: #a8853b;
-  --app-on-accent: #0a0908;
-  --app-success: #8cc4ad;
-  --app-warning: #e0a24a;
-  --app-info: #a8bcd8;
-  --app-danger: #dda3a3;
-  --app-selection: #7f6429;
+  --app-surface: #1e1b18;
+  --app-surface-raised: #282420;
+  --app-surface-sunken: #15120f;
+  --app-border: #3f3b34;
+  --app-border-strong: #57524a;
+  --app-text: #ece6d8;
+  --app-text-muted: #b8b3a6;
+  --app-text-faint: #938d80;
+  --app-primary: #c25157;
+  --app-primary-hover: #d67a7a;
+  --app-primary-soft: #45201f;
+  --app-on-primary: #fffaf2;
+  --app-accent: #e0c078;
+  --app-accent-soft: #b08f45;
+  --app-on-accent: #14120f;
+  --app-success: #93cbb2;
+  --app-warning: #e8b365;
+  --app-info: #b3c6df;
+  --app-danger: #e0aeae;
+  --app-selection: #6d5624;
   --app-picker-filter: invert(78%) sepia(28%) saturate(560%) hue-rotate(348deg) brightness(96%);
 }
 

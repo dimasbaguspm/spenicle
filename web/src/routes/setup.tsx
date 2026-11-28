@@ -10,8 +10,9 @@ import { Gate } from '@/components/layouts'
 import { Button } from '@/components/primitives/button'
 import { Field } from '@/components/primitives/field'
 import { PasswordInput } from '@/components/primitives/password-input'
+import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
-import { TextInput } from '@/components/primitives/text-input'
+import { claimCurrencies } from '@/lib/currencies'
 import { useApp, useAuth } from '@/providers'
 
 /** An ISO 4217 code as a person types it: three letters, no digits, no dashes. */
@@ -31,26 +32,10 @@ export function SetupPage() {
 
   const [password, setPassword] = useState('')
   const [currency, setCurrency] = useState(bootstrap.base_currency)
-  const [account, setAccount] = useState('')
-  const [opening, setOpening] = useState('')
 
   const finish = useMutation({
     mutationFn: async () => {
-      await openLedger({
-        password,
-        base_currency: currency,
-        ...(account.trim() === ''
-          ? {}
-          : {
-              accounts: [
-                {
-                  kind: 'asset',
-                  name: account.trim(),
-                  opening_balance_minor: opening.trim() === '' ? '0' : opening.trim(),
-                },
-              ],
-            }),
-      })
+      await openLedger({ password, base_currency: currency })
 
       // the instance is closed now, so the browser still needs a credential of its own
       const { data, error, response } = await api.POST('/api/tokens', {
@@ -89,9 +74,13 @@ export function SetupPage() {
     )
   }
 
-  // an account without a balance is not an opening balance: the API wants nonzero minor units
-  const openingOk = account.trim() === '' || /^-?[0-9]+$/.test(opening.trim())
-  const ready = password.length >= 12 && currencyCode.test(currency) && openingOk && opening !== '0'
+  const options = [
+    ...(claimCurrencies.some((row) => row.value === currency)
+      ? []
+      : [{ label: currency, value: currency }]),
+    ...claimCurrencies,
+  ]
+  const ready = password.length >= 12 && currencyCode.test(currency)
 
   return (
     <Gate
@@ -101,7 +90,6 @@ export function SetupPage() {
         <ol className="text-text-muted max-w-xs space-y-2 text-xs">
           <li>1. The password becomes the root credential.</li>
           <li>2. The currency is locked: every balance is reported in it.</li>
-          <li>3. The account is optional and can be added later.</li>
         </ol>
       }
     >
@@ -130,55 +118,15 @@ export function SetupPage() {
         <section className="border-border space-y-4 border-t pt-6">
           <Step label="The ledger" />
           <Field label="Base currency">
-            <TextInput
-              name="base-currency"
+            <SelectInput
               value={currency}
-              maxLength={3}
-              autoComplete="off"
-              autoCapitalize="characters"
-              spellCheck={false}
-              placeholder="USD"
-              className="font-mono tracking-[0.2em] uppercase"
-              onChange={(event) => {
-                setCurrency(event.target.value.trim().toUpperCase())
+              options={options}
+              placeholder="pick a currency"
+              onChange={(next) => {
+                setCurrency(next)
               }}
             />
           </Field>
-        </section>
-
-        <section className="border-border space-y-4 border-t pt-6">
-          <Step label="An account to start with" optional />
-          <Field label="Name">
-            <TextInput
-              name="opening-account"
-              value={account}
-              autoComplete="off"
-              placeholder="Cash"
-              onChange={(event) => {
-                setAccount(event.target.value)
-              }}
-            />
-          </Field>
-
-          <Field
-            label="Opening balance"
-            error={openingOk ? undefined : 'digits only, with a leading minus when it is a debt'}
-          >
-            <TextInput
-              name="opening-balance"
-              value={opening}
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="0"
-              className="font-mono"
-              onChange={(event) => {
-                setOpening(event.target.value.trim())
-              }}
-            />
-          </Field>
-          <Text as="p" tone="caption" className="text-text-faint">
-            In minor units: 100000 is 1,000.00 in a two-decimal currency.
-          </Text>
         </section>
 
         <Button

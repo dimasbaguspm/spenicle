@@ -2,6 +2,8 @@ import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-route
 import { BookOpen, ChartLine, Layers, LogOut, Plus, Settings as SettingsIcon } from 'lucide-react'
 
 import { Brand } from '@/components/layouts/brand'
+import { ThemeToggle } from '@/components/layouts/theme-toggle'
+import { Version } from '@/components/layouts/version'
 import { buttonStyles, Button } from '@/components/primitives/button'
 import { Text } from '@/components/primitives/text'
 import { useAuth } from '@/providers'
@@ -51,10 +53,14 @@ export function PrivateShell() {
       </main>
 
       <footer className="border-border/60 hidden border-t lg:block">
-        <div className={`${shellWidth} py-5`}>
+        <div className={`${shellWidth} flex items-center justify-between gap-4 py-5`}>
           <Text as="span" tone="caption" className="text-text-faint">
             Self-hosted. One household. No telemetry.
           </Text>
+          <div className="flex items-center gap-3">
+            <Version />
+            <ThemeToggle />
+          </div>
         </div>
       </footer>
 
