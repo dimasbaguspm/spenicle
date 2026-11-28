@@ -388,34 +388,31 @@ panel's two actions close the batch: `commit` posts the accepted rows (each with
 the event log under it is `GET /api/imports/{ref}/events`: `uploaded`, the row verdicts, one
 `committing` per chunk, then `committed` or `rejected`.
 
-## Analytics — a year, and the views you saved
+## Analytics — a year in one read
 
 `/analytics` is one call: `GET /api/analytics/overview?from&to` answers the whole brief, so the
-page draws five blocks from one response instead of stitching four answers together. The window
-is the twelve months ending today (`monthsBack(12)`).
+page draws every block from one response instead of stitching four answers together. The window is
+the twelve months ending today (`monthsBack(12)`).
 
-The five blocks, top to bottom: **five figures** (spent, received, net, what a day costs, how many
-entries made them — `modules/analytics/overview.ts`, integer minor units all the way, the window's
-day count is the divisor); **how the year moved**, two filled areas on one scale so spend and income
-are comparable rather than each normalised to itself (`month-area.tsx`); **where it went**, the
-category roots with share bars and the window each row covers in its title (`CategoryBreakdown`);
-**who you paid**, expense grouped by payee, and the row the API sends without a ref is shown as
-"Nobody in particular" rather than hidden; **where the money sat**, per asset and liability account,
-with inflow and outflow summed apart and the net keeping the ledger's sign.
+The page is the brief, in this order: **the figure** — kept, or short by, with the year's date range
+under it — then the four numbers it was made of (spent, received, what a day costs, how many entries
+made them), all from `modules/analytics/overview.ts`, integer minor units the whole way and the
+window's day count as the divisor; **the shape of the year**, spend and income as two washes on one
+scale so they are read against each other; **where it went**, a ring of the six largest category
+roots plus "N more" in plate grey, with the exact figures beside it; **who you paid**, six payees as
+horizontal bars, the spend that named nobody keeping its own bar; **where the money sat**, per asset
+and liability account, inflow and outflow summed apart and the net keeping the ledger's sign.
+
+The three charts are **Recharts 3** (`AreaChart`, `PieChart`, `BarChart`), coloured with the CSS
+tokens themselves (`stroke="var(--color-accent)"`), so a theme switch re-draws them without a second
+palette to keep in sync. Every point's geometry is a float; every figure under it is still a string
+of minor units formatted through `lib/money`. Animations are off: a chart that redraws itself when
+the data has not changed is noise, and `prefers-reduced-motion` users would see none of it anyway.
 
 The per-window routes are still there for a client that wants one block — `/api/analytics/months`
-and `/api/analytics/categories` — and the SPA stopped calling them directly.
-
-Below that is **Saved views**, the three custom routes end to end. The form posts
-`name`, `namespace` and `chart`; the answer is a ref, and because the API has no list route the ref
-this browser created is kept in `localStorage` (`lib/saved-views.ts`) — lose the browser and you
-lose the shortcut, never the view. A view saved elsewhere is opened by pasting its ref.
-
-Running one is `GET /api/analytics/custom/{ref}?from&to`, which echoes the query, so the drawing
-follows what was stored: `months` + `bar` is the bar chart, `months` + `line` is a polyline over the
-same points, `categories` + `pie` is a conic-gradient with the amounts beside it, `categories` +
-`bar` is the proportional rows. The picker offers only those pairs, and changing one sends
-`PATCH /api/analytics/custom/{ref}` with `{chart}` and re-renders from the answer.
+and `/api/analytics/categories` — and the SPA no longer calls them directly. The saved-view routes
+(`POST`/`PATCH`/`GET /api/analytics/custom…`) keep their pages in `docs/endpoints/`; the analytics
+screen no longer carries that shelf.
 
 ## `api/` and `hooks/queries/` — one shape, one door
 
@@ -453,7 +450,7 @@ entity, and it answers every question a page asks of a row:
 - **what is true** — `isReversed`, `outgoing`, `needsAttention`, `isRevoked`, so a branch reads as a
   fact instead of a field comparison;
 - **what it looks like** — `EntryRegister`, `EntryTicker`, `AccountBalances`, `CaptureList`,
-  `MonthSeries`, `CategoryBreakdown`, `TokenList`, `SettingsFacts`: each a component a route drops
+  `MonthSeries`, `CategoryDonut`, `TokenList`, `SettingsFacts`: each a component a route drops
   in with its rows and a `MoneyScale`.
 
 Every module is `<entity>/<component-name>.tsx` next to the pure function it renders —

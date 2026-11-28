@@ -17,6 +17,10 @@ export type OverviewFigures = {
   spent: string
   received: string
   net: string
+  /** the net without its sign, for the figure that says "kept" or "short by" */
+  netAbs: string
+  /** true when the year spent more than it received */
+  short: boolean
   /** what a day cost on average across the window, in minor units */
   aDay: string
   entries: number
@@ -35,10 +39,14 @@ export function overviewFigures(overview: AnalyticsOverview, scale: MoneyScale):
   const net = sumMinor(overview.months.map((month) => month.net_minor))
   const days = BigInt(windowDays(overview.from, overview.to))
 
+  const netAmount = formatMoney(net, scale.units)
+
   return {
     spent: formatMoney(spent, scale.units).toDisplay(),
     received: formatMoney(received, scale.units).toDisplay(),
-    net: formatMoney(net, scale.units).toDisplay(),
+    net: netAmount.toDisplay(),
+    netAbs: netAmount.absolute().toDisplay(),
+    short: netAmount.isNegative(),
     aDay: formatMoney((BigInt(spent) / days).toString(), scale.units).toDisplay(),
     entries: overview.stats.entries,
     busiestOn: overview.stats.busiest_on ?? '',
