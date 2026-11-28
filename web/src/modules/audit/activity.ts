@@ -18,6 +18,8 @@ export type ActivityRow = {
   actor: string
   action: string
   entity: string
+  /** the line as a sentence: "logged an entry", "started the instance" */
+  headline: string
   /** where the row points, when the entity still has a page */
   to?: EntityTo | undefined
   plainTo?: PlainTo | undefined
@@ -32,6 +34,17 @@ const actions: Record<string, string> = {
   reject: 'rejected',
   revoke: 'revoked',
   start: 'started',
+}
+
+/** An article belongs to the noun, not to the action, so the sentence reads like English. */
+const articles: Record<string, string> = {
+  ledger_entry: 'an',
+  account: 'an',
+  payee: 'a',
+  categorization_rule: 'a',
+  recurring_rule: 'a',
+  api_token: 'a',
+  setting: 'a',
 }
 
 const words: Record<string, string> = {
@@ -60,12 +73,21 @@ function accountTo(accounts: readonly Account[], ref: string): EntityTo {
 export function activityRow(row: AuditRow, accounts: readonly Account[]): ActivityRow {
   const kind = row.entity_kind
   const entity = words[kind] ?? kind.replace('_', ' ')
+  const action = actions[row.action] ?? row.action
+  const article = articles[kind]
+  const headline =
+    kind === 'system'
+      ? `${action} the instance`
+      : article === undefined
+        ? `${action} ${entity}`
+        : `${action} ${article} ${entity}`
   const base = {
     ref: row.ref,
     when: formatDate(row.at, DateFormat.Timestamp),
     actor: row.actor_kind === 'worker' ? 'the worker' : 'you',
-    action: actions[row.action] ?? row.action,
+    action,
     entity,
+    headline,
     targetRef: row.entity_ref,
   }
 

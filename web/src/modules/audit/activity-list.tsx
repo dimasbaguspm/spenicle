@@ -28,33 +28,33 @@ export function ActivityList({ rows }: { rows: readonly ActivityRow[] }) {
             </Text>
 
             <span className="min-w-0 space-y-0.5">
-              <span className="text-text block truncate">
-                {row.action} a {row.entity}
-              </span>
-              <span className="block">
-                {row.to === undefined || row.targetRef === undefined ? (
-                  row.plainTo === undefined ? (
-                    <Text as="span" tone="code" className="text-text-faint">
-                      {row.targetRef ?? 'the instance'}
-                    </Text>
+              <span className="text-text block truncate">{row.headline}</span>
+              {row.targetRef === undefined && row.plainTo === undefined ? null : (
+                <span className="block">
+                  {row.to === undefined || row.targetRef === undefined ? (
+                    row.plainTo === undefined ? (
+                      <Text as="span" tone="code" className="text-text-faint">
+                        {row.targetRef ?? ''}
+                      </Text>
+                    ) : (
+                      <Link
+                        to={row.plainTo}
+                        className="text-text-muted hover:text-accent font-mono text-[0.8125rem] underline-offset-4 hover:underline"
+                      >
+                        {row.plainTo}
+                      </Link>
+                    )
                   ) : (
                     <Link
-                      to={row.plainTo}
+                      to={row.to}
+                      params={{ ref: row.targetRef }}
                       className="text-text-muted hover:text-accent font-mono text-[0.8125rem] underline-offset-4 hover:underline"
                     >
-                      {row.plainTo}
+                      {row.targetRef.slice(0, 8)}
                     </Link>
-                  )
-                ) : (
-                  <Link
-                    to={row.to}
-                    params={{ ref: row.targetRef }}
-                    className="text-text-muted hover:text-accent font-mono text-[0.8125rem] underline-offset-4 hover:underline"
-                  >
-                    {row.targetRef.slice(0, 8)}
-                  </Link>
-                )}
-              </span>
+                  )}
+                </span>
+              )}
               <Text as="span" tone="caption" className="text-text-faint block sm:hidden">
                 {row.when}
               </Text>
