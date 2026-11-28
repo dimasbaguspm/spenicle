@@ -15,10 +15,12 @@ import { DashboardPage } from '@/routes/dashboard'
 import { EntryDetailPage } from '@/routes/entry-detail'
 import { EntryEditPage } from '@/routes/entry-edit'
 import { ExportsPage } from '@/routes/exports'
+import { ImportReviewPage } from '@/routes/import-detail'
+import { ImportsPage } from '@/routes/imports'
 import { LedgerPage } from '@/routes/ledger'
-import { ManagePage } from '@/routes/manage'
 import { NewEntryPage } from '@/routes/ledger-new'
 import { LoginPage } from '@/routes/login'
+import { ManagePage } from '@/routes/manage'
 import { PayeeDetailPage } from '@/routes/payee-detail'
 import { PayeeEditPage } from '@/routes/payee-edit'
 import { NewPayeePage } from '@/routes/payee-new'
@@ -233,6 +235,18 @@ const exportsRoute = createRoute({
   component: ExportsPage,
 })
 
+const importsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/imports',
+  component: ImportsPage,
+})
+
+const importRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manage/imports/$ref',
+  component: ImportReviewPage,
+})
+
 export const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
@@ -258,6 +272,8 @@ export const routeTree = rootRoute.addChildren([
   capturesRoute,
   captureRoute,
   exportsRoute,
+  importsRoute,
+  importRoute,
   recurringRoute,
   ratesRoute,
   settingsRoute,

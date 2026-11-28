@@ -31,6 +31,8 @@ export type AccountPatch = Schemas['accountPatchRequest']
 export type EntryCreate = Schemas['postEntryRequest']
 export type EntryPatch = Schemas['entryPatchRequest']
 export type CaptureReview = Schemas['capturePatchRequest']
+export type ImportReview = Schemas['importReviewRequest']
+export type ImportRowPatch = Schemas['importRowPatchRequest']
 export type PayeeCreate = Schemas['payeeCreateRequest']
 export type PayeePatch = Schemas['payeePatchRequest']
 export type TokenCreate = Schemas['tokenCreateRequest']
@@ -118,11 +120,17 @@ export type TokenIssued = Omitted<
   'expires_at' | 'last_used_at' | 'revoked_at'
 >
 
-/** Both are read by a screen that does not exist yet; the aliases are the shape it will take. */
+/** A batch without its rows: the list route never inlines them, so the detail adds them back. */
 export type ImportBatch = Omitted<
   Fixed<Schemas['importBatchResponse']>,
   'committed_at' | 'rejected_at' | 'rows'
 >
+export type ImportRow = Omitted<
+  Fixed<Schemas['importRowResponse']>,
+  'category_ref' | 'clash_entry_ref' | 'clash_kind' | 'payee_ref' | 'suggested_category_ref'
+>
+export type ImportDetail = ImportBatch & { rows: ImportRow[] }
+export type ImportEvent = Omitted<Fixed<Schemas['importEventResponse']>, 'payload' | 'row_index'>
 export type ExportJob = Omitted<
   Fixed<Schemas['exportResponse']>,
   'counts' | 'error_message' | 'expires_at' | 'finished_at' | 'from' | 'started_at' | 'to'

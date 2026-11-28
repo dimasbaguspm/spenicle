@@ -251,6 +251,24 @@ date and derives the rest. The row says `Every month on day 28`; pause and resum
 are immutable after creation. A rule never posts an entry: when it comes due the worker queues a
 capture and `/manage/captures` is where it becomes one.
 
+## Statements — a draft, not a backlog
+
+`/manage/imports` takes one CSV (`occurred_on`, `amount_minor`, `description`, optional
+`currency`), one account the rows move through, and nothing else. The upload answers a **draft**:
+`POST /api/imports` writes `import_batches` plus its rows and posts nothing. The idempotency key is
+minted when the file is chosen (`statement-<base36 clock>`), so a retry of the same upload resumes
+the same draft instead of writing a second one.
+
+`/manage/imports/{ref}` is the review: every row carries the verdict the upload computed
+(`duplicate`, `possible duplicate`, `already imported`, `does not parse`) and its own status, and
+the one button per row flips it between `accepted` and `skipped` through
+`PATCH /api/imports/{ref}/rows/{index}` — absolute values only, so a retry changes nothing. The
+panel's two actions close the batch: `commit` posts the accepted rows (each with
+`idempotency_key = import:<file_hash>:<row_index>`, so a replay resumes instead of duplicating),
+`reject` keeps the rows and the file and posts nothing. A closed batch shows no buttons at all, and
+the event log under it is `GET /api/imports/{ref}/events`: `uploaded`, the row verdicts, one
+`committing` per chunk, then `committed` or `rejected`.
+
 ## `api/` and `hooks/queries/` — one shape, one door
 
 The generated contract (`src/types/generated/openapi.ts`) marks every field optional, which is

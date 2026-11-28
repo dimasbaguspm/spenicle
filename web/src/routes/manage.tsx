@@ -62,6 +62,12 @@ export function ManagePage() {
       count: captures.isSuccess ? String(captures.data.captures.length) : '',
     },
     {
+      to: '/manage/imports',
+      label: 'Imports',
+      caption: 'Statements in, as a draft you approve row by row.',
+      count: '',
+    },
+    {
       to: '/manage/exports',
       label: 'Exports',
       caption: 'The ledger as a file, rendered by the worker.',
