@@ -66,7 +66,8 @@ function RenameAccount({ accountRef, listLabel, listTo, detailTo }: RenameProps)
           { label: account?.name ?? 'Account', to: `${listTo}/${accountRef}` },
           { label: 'Edit' },
         ]}
-        title="Rename"
+        title="Rename this row"
+        subtitle="The kind and the opening balance are history; only the name moves."
       />
 
       {values === undefined ? null : (

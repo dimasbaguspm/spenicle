@@ -42,7 +42,11 @@ export function NewImportPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={crumbs} title="New import" />
+      <PageHeader
+        items={crumbs}
+        title="A statement to import"
+        subtitle="A CSV line per row. The commit on the review page is what posts."
+      />
 
       <Panel>
         <div className="p-5 sm:p-6">

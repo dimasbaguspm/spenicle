@@ -56,7 +56,11 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={settingsCrumbs} title="Settings" />
+      <PageHeader
+        items={settingsCrumbs}
+        title="The instance itself"
+        subtitle="What the ledger is kept in, and the credentials that open it."
+      />
 
       <Panel className="divide-border divide-y">
         <SettingsFacts settings={settings.data} />

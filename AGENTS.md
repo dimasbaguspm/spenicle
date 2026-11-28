@@ -132,8 +132,11 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        left and Settings plus Log out on the right; below `lg` no header at all,
                        and a five-slot bottom bar: register, analytics, a new entry in the middle,
                        manage and settings. A screen opens with `PageHeader`: a breadcrumb, then
-                       its title on `lg` and up only, then one transparent action. No subtitle.
-                       The claim screen at `/setup` is two fields: password and currency.
+                       a title that is not the last crumb read aloud again, then one sentence for
+                       what the screen is for (`lg` and up only), then one transparent action. The
+                       claim screen at `/setup` is two fields: password and currency, the second a
+                       list of codes rather than a typed one. The footer carries the build's
+                       version and a theme toggle, beside the theme control in Settings.
                        palette ramps, two self-hosted fonts (Inter for everything, JetBrains
                        Mono for every figure) behind a semantic token layer, light and dark
                        theme blocks whose default follows the client, and the base layer. A screen composes `Panel`, `Field`,

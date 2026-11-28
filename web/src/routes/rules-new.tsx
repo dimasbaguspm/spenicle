@@ -26,7 +26,11 @@ export function NewRulePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={crumbs} title="New rule" />
+      <PageHeader
+        items={crumbs}
+        title="A rule to teach"
+        subtitle="It suggests a category; approving still decides."
+      />
 
       <Panel>
         <div className="p-5 sm:p-6">

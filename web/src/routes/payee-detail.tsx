@@ -42,9 +42,9 @@ export function PayeeDetailPage() {
         items={[
           { label: 'Manage', to: '/manage' },
           { label: 'Payees', to: '/manage/payees' },
-          { label: row?.name ?? absent },
         ]}
         title={row?.name ?? absent}
+        subtitle="What this payee cost, and at which accounts."
         action={
           <Link
             to="/manage/payees/$ref/edit"

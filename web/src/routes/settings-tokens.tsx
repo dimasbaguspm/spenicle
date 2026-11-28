@@ -52,7 +52,11 @@ export function TokensPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={crumbs} title="API tokens" />
+      <PageHeader
+        items={crumbs}
+        title="Credentials for scripts"
+        subtitle="Named, scoped and revocable: a token never reaches the root routes."
+      />
 
       <Panel className="divide-border divide-y">
         <section className="space-y-3 p-5 sm:p-6">

@@ -39,7 +39,11 @@ export function NewRecurringPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={crumbs} title="New rule" />
+      <PageHeader
+        items={crumbs}
+        title="A schedule to add"
+        subtitle="A due rule becomes a capture, never an entry."
+      />
 
       <Panel>
         <div className="p-5 sm:p-6">

@@ -34,7 +34,11 @@ const resolver: Resolver<RateFormValues> = (values) => {
 export function RatesPage() {
   return (
     <div className="space-y-6">
-      <PageHeader items={[{ label: 'Manage', to: '/manage' }, { label: 'Rates' }]} title="Rates" />
+      <PageHeader
+        items={[{ label: 'Manage', to: '/manage' }, { label: 'Rates' }]}
+        title="What a currency is worth"
+        subtitle="The ECB sheet, crossed from EUR."
+      />
       <RatesLookup />
     </div>
   )

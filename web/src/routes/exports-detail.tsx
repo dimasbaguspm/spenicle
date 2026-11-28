@@ -29,9 +29,9 @@ export function ExportDetailPage() {
         items={[
           { label: 'Manage', to: '/manage' },
           { label: 'Exports', to: '/manage/exports' },
-          { label: data?.format === undefined ? 'job' : data.format.toUpperCase() },
         ]}
         title={data === undefined ? 'Export' : `${data.format?.toUpperCase() ?? ''} export`}
+        subtitle="How far the worker got, and the file when there is one."
       />
 
       {job.error === null ? null : (

@@ -39,7 +39,8 @@ export function RecurringPage() {
     <div className="space-y-6">
       <PageHeader
         items={recurringCrumbs}
-        title="Recurring"
+        title="What repeats"
+        subtitle="A due rule queues a capture; approval is still yours."
         action={
           <Link
             to="/manage/recurring/new"

@@ -30,9 +30,9 @@ export function RuleDetailPage() {
         items={[
           { label: 'Manage', to: '/manage' },
           { label: 'Rules', to: '/manage/rules' },
-          { label: rule?.pattern ?? 'rule' },
         ]}
         title={rule?.pattern ?? 'Rule'}
+        subtitle="Where it looks, and what it answers with."
         action={
           <Link
             to="/manage/rules/$ref/edit"

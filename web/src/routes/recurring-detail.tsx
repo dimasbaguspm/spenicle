@@ -38,9 +38,9 @@ export function RecurringDetailPage() {
         items={[
           { label: 'Manage', to: '/manage' },
           { label: 'Recurring', to: '/manage/recurring' },
-          { label: row?.title ?? 'rule' },
         ]}
         title={row?.title ?? 'Recurring rule'}
+        subtitle="The schedule, and the two things you can do to it."
         action={
           <Link
             to="/manage/recurring/$ref/edit"

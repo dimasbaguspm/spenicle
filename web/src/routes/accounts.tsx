@@ -21,7 +21,8 @@ export function AccountsPage() {
   return (
     <ScopePage
       scope="money"
-      title="Accounts"
+      title="Money you hold"
+      subtitle="Assets, liabilities and equity, with the balance the postings leave."
       crumbs={accountCrumbs}
       emptyLabel="No accounts yet: an entry needs one to be paid from."
       newLabel="New account"
@@ -37,7 +38,8 @@ export function CategoriesPage() {
   return (
     <ScopePage
       scope="category"
-      title="Categories"
+      title="What money was for"
+      subtitle="Expense and income categories, and what each one took."
       crumbs={categoryCrumbs}
       emptyLabel="No categories yet: nothing can be filed without one."
       newLabel="New category"
@@ -51,6 +53,7 @@ export function CategoriesPage() {
 type ScopePageProps = {
   scope: AccountScope
   title: string
+  subtitle: string
   crumbs: readonly { label: string }[]
   emptyLabel: string
   newLabel: string
@@ -63,6 +66,7 @@ type ScopePageProps = {
 function ScopePage({
   scope,
   title,
+  subtitle,
   crumbs,
   emptyLabel,
   newLabel,
@@ -86,6 +90,7 @@ function ScopePage({
       <PageHeader
         items={crumbs}
         title={title}
+        subtitle={subtitle}
         action={
           <Link to={newTo} className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}>
             <Plus className="size-3.5" aria-hidden="true" strokeWidth={2} />

@@ -55,7 +55,11 @@ export function NewExportPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={crumbs} title="New export" />
+      <PageHeader
+        items={crumbs}
+        title="A file to render"
+        subtitle="The worker writes it and keeps it for a month."
+      />
 
       <Panel>
         <div className="p-5 sm:p-6">

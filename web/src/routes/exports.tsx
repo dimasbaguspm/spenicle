@@ -35,7 +35,8 @@ export function ExportsPage() {
     <div className="space-y-6">
       <PageHeader
         items={exportCrumbs}
-        title="Exports"
+        title="Files you asked for"
+        subtitle="The worker renders them, and keeps each one for a month."
         action={
           <div className="flex items-center gap-2">
             <Button

@@ -53,7 +53,8 @@ export function NewEntryPage() {
     <div className="space-y-6">
       <PageHeader
         items={[{ label: 'Ledger', to: '/ledger' }, { label: 'New entry' }]}
-        title="New entry"
+        title="Log something"
+        subtitle="Two ways in: type it, or hand over the receipt and let intake queue it."
       />
 
       <BreakpointTablet>

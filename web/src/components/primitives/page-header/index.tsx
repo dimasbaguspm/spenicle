@@ -9,21 +9,22 @@ type Crumb = {
 }
 
 /**
- * The top of every signed-in screen: where you are, then the word for it, then one action.
+ * The top of every signed-in screen: where you are, then a name for it that is not the last crumb
+ * read aloud again, one sentence under it, and one action.
  *
- * There is no subtitle. A screen that needs a sentence puts it on the panel that owns the thing
- * the sentence is about, where it can be read beside what it describes.
- *
- * The title is desktop-only: a phone already spends its first line on the breadcrumb, and a
- * 42px word above a list of rows is a line of scroll for nothing.
+ * The title and its sentence are desktop-only: a phone already spends its first line on the
+ * breadcrumb, and a 42px word above a list of rows is a line of scroll for nothing.
  */
 export function PageHeader({
   items,
   title,
+  subtitle,
   action,
 }: {
   items: readonly Crumb[]
   title: string
+  /** one sentence, desktop only: what this screen is for, not what the crumb already said */
+  subtitle?: string | undefined
   action?: ReactNode
 }) {
   return (
@@ -33,6 +34,11 @@ export function PageHeader({
         <Text as="h1" tone="display" className="hidden lg:block">
           {title}
         </Text>
+        {subtitle === undefined ? null : (
+          <Text as="p" tone="muted" className="hidden max-w-prose leading-relaxed lg:block">
+            {subtitle}
+          </Text>
+        )}
       </div>
       {action}
     </header>

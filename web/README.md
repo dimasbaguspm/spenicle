@@ -199,10 +199,12 @@ that is the only semantics `GET /api/entries` has. Both fields are multi-selects
 (`MultiSelectField`: the listbox adds, a chip takes away), and the chip strip says one name or a
 count, so a filter never reads as a hash.
 
-Every screen's top is one component, `components/primitives/page-header`: breadcrumb, title,
-action. The title is desktop-only — a phone spends its first line on the breadcrumb instead of a
-42px word above the list — and there is no subtitle, because a sentence belongs on the panel that
-owns what it describes. Page actions are the transparent `quiet` button, never a filled one.
+Every screen's top is one component, `components/primitives/page-header`: breadcrumb, a title, one
+sentence and one action. The title never repeats the last crumb — `PAYEES / Who you pay`, not
+`PAYEES / Payees` — and a detail page drops its own name from the trail so the name is said once, in
+the title. The sentence under it says what the screen is for (`Every entry, newest first. Narrow it
+with the rail.`), is desktop-only like the title, and is a sentence, not a hint. Page actions are
+the transparent `quiet` button, never a filled one.
 
 The same filter layer sits under `/manage/accounts/$ref`, `/manage/categories/$ref` and
 `/manage/payees/$ref`, so the
@@ -464,6 +466,11 @@ Two contexts, in the order `main.tsx` nests them: `AppProvider` outside, `AuthPr
 ## The theme
 
 One file owns the look: `src/styles.css`, and it holds three layers in that order.
+
+Dark is a warm charcoal, not black: `#1e1b18` plates on `#15120f`, ink at `#ece6d8` and accents
+kept chroma enough to stay accusable. A pure black plate under near-white ink is a contrast you
+feel in your eyes an hour in, and the cream palette is the thing that makes this product look
+like a ledger instead of a terminal — the dark theme keeps that warmth rather than inverting it.
 
 1. **Brand ramps** (`@theme`): ink, porcelain, cherry, brass, jade, amber, lapis and oxblood, each
    a real scale so a hover or a border has a shade to reach for.

@@ -52,7 +52,11 @@ export function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={crumbs} title="Activity" />
+      <PageHeader
+        items={crumbs}
+        title="Every change, in order"
+        subtitle="One journal for the instance, each line a link to the row it changed."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:max-w-xl">
         <SelectInput

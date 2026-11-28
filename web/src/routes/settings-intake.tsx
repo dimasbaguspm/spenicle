@@ -36,7 +36,11 @@ export function MailboxPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={crumbs} title="Mailbox" />
+      <PageHeader
+        items={crumbs}
+        title="What the mail turns into"
+        subtitle="The Google grant, what intake polls, and the mail it has seen."
+      />
 
       <Panel>
         <section className="space-y-4 p-5 sm:p-6">

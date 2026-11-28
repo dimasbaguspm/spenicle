@@ -34,7 +34,8 @@ export function CapturesPage() {
     <div className="space-y-6">
       <PageHeader
         items={captureCrumbs}
-        title="Captures"
+        title="Waiting to be reviewed"
+        subtitle="A capture is a file until you say what it was."
         action={
           <Link
             to="/manage/captures/new"

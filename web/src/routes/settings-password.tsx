@@ -32,7 +32,11 @@ export function PasswordPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={crumbs} title="Password" />
+      <PageHeader
+        items={crumbs}
+        title="The root credential"
+        subtitle="Rotating it leaves every token working."
+      />
 
       <Panel>
         <form

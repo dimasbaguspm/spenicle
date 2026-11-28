@@ -43,9 +43,9 @@ export function CategoryDetailPage() {
         items={[
           { label: 'Manage', to: '/manage' },
           { label: 'Categories', to: '/manage/categories' },
-          { label: account?.name ?? absent },
         ]}
         title={account?.name ?? absent}
+        subtitle="What this category took, entry by entry."
         action={
           <div className="flex items-center gap-3">
             <Text as="p" tone="figure" className="text-2xl">

@@ -9,7 +9,7 @@ const crumbs = [{ label: 'Settings', to: '/settings' }, { label: 'Appearance' }]
 export function AppearancePage() {
   return (
     <div className="space-y-6">
-      <PageHeader items={crumbs} title="Appearance" />
+      <PageHeader items={crumbs} title="Light or dark" subtitle="The theme this browser uses." />
 
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-6">

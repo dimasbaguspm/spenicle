@@ -89,7 +89,11 @@ export function ManagePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={manageCrumbs} title="Manage" />
+      <PageHeader
+        items={manageCrumbs}
+        title="Everything you keep"
+        subtitle="Accounts, categories, payees and the queues the worker fills."
+      />
 
       <Panel className="divide-border divide-y">
         {sections.map((section) => (

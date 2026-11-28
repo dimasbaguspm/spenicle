@@ -51,9 +51,9 @@ export function CaptureReviewPage() {
         items={[
           { label: 'Manage', to: '/manage' },
           { label: 'Captures', to: '/manage/captures' },
-          { label: 'Review' },
         ]}
-        title="Review a capture"
+        title="What was this?"
+        subtitle="Approving writes the entry; rejecting keeps the file and the reason."
       />
 
       {held.error === null ? null : (

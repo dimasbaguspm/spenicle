@@ -46,9 +46,9 @@ export function AccountDetailPage() {
         items={[
           { label: 'Manage', to: '/manage' },
           { label: 'Accounts', to: '/manage/accounts' },
-          { label: account?.name ?? absent },
         ]}
         title={account?.name ?? absent}
+        subtitle="Movements, and the balance the postings leave."
         action={
           <div className="flex items-center gap-3">
             <Text as="p" tone="figure" className="text-2xl">

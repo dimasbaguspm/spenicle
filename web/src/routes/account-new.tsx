@@ -73,9 +73,10 @@ function ScopeCreate({
             label: listLabel,
             to: scope === 'category' ? '/manage/categories' : '/manage/accounts',
           },
-          { label: title },
+          { label: 'New' },
         ]}
         title={title}
+        subtitle={desc}
       />
 
       <Panel>

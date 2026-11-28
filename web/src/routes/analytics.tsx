@@ -56,7 +56,11 @@ export function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader items={analyticsCrumbs} title="A year in view" />
+      <PageHeader
+        items={analyticsCrumbs}
+        title="A year in view"
+        subtitle="Twelve months of spend, where it went, and the views you saved."
+      />
 
       <Panel className="space-y-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">

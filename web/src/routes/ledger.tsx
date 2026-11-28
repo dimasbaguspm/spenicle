@@ -57,7 +57,8 @@ export function LedgerPage() {
     <div className="space-y-6">
       <PageHeader
         items={registerCrumbs}
-        title="Register"
+        title="Everything you logged"
+        subtitle="Every entry, newest first. Narrow it with the rail."
         action={
           <Link
             to="/ledger/new"

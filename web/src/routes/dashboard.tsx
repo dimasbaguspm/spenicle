@@ -41,7 +41,8 @@ export function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         items={overviewCrumbs}
-        title="Overview"
+        title="Your month"
+        subtitle="This month's net, six months of bars, and the last few entries."
         action={
           <Link
             to="/ledger/new"

@@ -33,7 +33,8 @@ export function RulesPage() {
     <div className="space-y-6">
       <PageHeader
         items={ruleCrumbs}
-        title="Rules"
+        title="What the ledger pre-fills"
+        subtitle="A pattern, where it looks, and the category it answers with."
         action={
           <div className="flex items-center gap-2">
             <Playground accounts={accounts} />

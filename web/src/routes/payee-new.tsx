@@ -25,9 +25,10 @@ export function NewPayeePage() {
         items={[
           { label: 'Manage', to: '/manage' },
           { label: 'Payees', to: '/manage/payees' },
-          { label: 'New payee' },
+          { label: 'New' },
         ]}
-        title="New payee"
+        title="A payee to add"
+        subtitle="A name, and the defaults it carries into an entry."
       />
 
       <Panel>

@@ -59,8 +59,9 @@ export function ImportReviewPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        items={[...trail, { label: detail?.filename ?? 'statement' }]}
+        items={trail}
         title={detail?.filename ?? 'Statement'}
+        subtitle="The rows, the clash verdicts, and what the commit did."
       />
 
       <Panel>

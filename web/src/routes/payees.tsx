@@ -29,7 +29,8 @@ export function PayeesPage() {
     <div className="space-y-6">
       <PageHeader
         items={payeeCrumbs}
-        title="Payees"
+        title="Who you pay"
+        subtitle="A name, and the account and category it defaults to."
         action={
           <Link to="/manage/payees/new" className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}>
             <Plus className="size-3.5" aria-hidden="true" strokeWidth={2} />

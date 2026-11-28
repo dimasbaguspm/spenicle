@@ -34,7 +34,8 @@ export function ImportsPage() {
     <div className="space-y-6">
       <PageHeader
         items={importCrumbs}
-        title="Imports"
+        title="Statements you brought in"
+        subtitle="Each one is a draft you approve row by row."
         action={
           <Link
             to="/manage/imports/new"

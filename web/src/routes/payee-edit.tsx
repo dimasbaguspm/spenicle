@@ -38,7 +38,8 @@ export function PayeeEditPage() {
           { label: payee?.name ?? 'Payee', to: `/manage/payees/${ref}` },
           { label: 'Edit' },
         ]}
-        title="Edit payee"
+        title="Change this payee"
+        subtitle="Its name, and where an entry should default to."
       />
 
       {values === undefined ? null : (
