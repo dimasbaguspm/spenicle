@@ -390,33 +390,37 @@ the event log under it is `GET /api/imports/{ref}/events`: `uploaded`, the row v
 
 ## Analytics — a year in one read
 
-`/analytics` is one call: `GET /api/analytics/overview?from&to` answers the whole brief, so the
-page draws every block from one response instead of stitching four answers together. The window is
-the twelve months ending today (`monthsBack(12)`).
+`/analytics` is one call: `GET /api/analytics/overview?from&to` answers the whole brief, so the page
+draws every block from one response. The window is the twelve months ending today
+(`monthsBack(12)`).
 
-The page is the brief, in this order: **the figure** — kept, or short by, with the year's date range
-under it — then the four numbers it was made of (spent, received, what a day costs, how many entries
-made them), all from `modules/analytics/overview.ts`, integer minor units the whole way and the
-window's day count as the divisor; **the shape of the year**, spend and income as two washes on one
-scale so they are read against each other; **where it went**, a ring of the six largest category
-roots plus "N more" in plate grey, with the exact figures beside it; **who you paid**, six payees as
-horizontal bars, the spend that named nobody keeping its own bar; **where it came from** and **who
-paid you**, the same two blocks on the income side, shown only once something has actually been
-received — the API sends income as a magnitude, so a salary reads the way a person says it;
-**where the money sat**, per asset and liability account, inflow and outflow summed apart and the net
-keeping the ledger's sign.
+The page reads top to bottom as four answers:
 
-Every block stops at six rows and says how many it left behind: the ring's seventh arc is "N more"
-in plate grey with its own total, the payees end with "N more payees", and the money accounts end
-with "N more accounts, net …". Someone with a hundred wallets and a hundred payees still reads a
-brief, and the register is one click away for the rest. The account rows are ranked by movement,
-not by net, so an account that took fifty thousand and paid it all out is still where the money sat.
+- **What the year left.** One loud figure — kept, or short by — with the range and two captions
+  ("26% of it stayed", "459 entries") under it, and three numbers a person recognises beside it:
+  money in, money out, average month. `modules/analytics/overview.ts` does the integer arithmetic;
+  only percentages and bar widths become floats.
+- **The year in cash** (`year-flow.tsx`). A jade bar up for what came in, a brass bar down for what
+  went out, a hairline at zero, and the gap between the pair is what the month kept. Two filled
+  areas on one scale looked like a flat band once a salary dwarfed the spend; a diverging pair
+  reads the same whether the income is ten thousand or a hundred million. The tooltip carries in,
+  out and kept for the month.
+- **Where it went and came from**, and **who moved the money** (`money-ranks.tsx`). One ranking per
+  question, not one tile per side: expense rows bend left, income rows bend right, and a single
+  sorted list answers both directions without repeating itself upside down. Each side is scaled to
+  its own largest row — one shared scale would draw a year of salary three times longer than a year
+  of rent and collapse the expense rows into pixels — and the panel says so in its corner.
+- **Where the money sat** (`account-flows.tsx`). Per asset and liability account, ranked by
+  movement, capped at six with "N more accounts, net …".
 
-The three charts are **Recharts 3** (`AreaChart`, `PieChart`, `BarChart`), coloured with the CSS
-tokens themselves (`stroke="var(--color-accent)"`), so a theme switch re-draws them without a second
-palette to keep in sync. Every point's geometry is a float; every figure under it is still a string
-of minor units formatted through `lib/money`. Animations are off: a chart that redraws itself when
-the data has not changed is noise, and `prefers-reduced-motion` users would see none of it anyway.
+Every block tops out at ten rows (six for the accounts) and says how many it left behind, so a
+household with a hundred wallets, payees and categories still reads a brief; the register is one
+click away for the rest.
+
+The charts are **Recharts 3** (`BarChart` twice over: the diverging year, the diverging ranking),
+coloured with the CSS tokens themselves (`fill="var(--color-accent)"`), so a theme switch redraws
+them without a second palette to keep in sync. Animations are off: a chart that moves when the data
+did not is noise.
 
 The per-window routes are still there for a client that wants one block — `/api/analytics/months`
 and `/api/analytics/categories` — and the SPA no longer calls them directly. The saved-view routes
