@@ -29,6 +29,7 @@ export type StatementLike = {
   description?: string | undefined
   status?: string | undefined
   clash_kind?: string | undefined
+  clash_entry_ref?: string | undefined
   category_ref?: string | undefined
   suggested_category_ref?: string | undefined
   payee_ref?: string | undefined
@@ -44,6 +45,7 @@ export type StatementRow = {
   status: string
   tone: string
   clash: string
+  clashRef?: string | undefined
   category: string
   suggested: boolean
 }
@@ -106,6 +108,7 @@ export function statementRow(
     status: row.status ?? absent,
     tone: tones[row.status ?? ''] ?? muted,
     clash: clashes[row.clash_kind ?? ''] ?? absent,
+    clashRef: row.clash_entry_ref,
     category:
       payee === undefined
         ? (category?.name ?? absent)

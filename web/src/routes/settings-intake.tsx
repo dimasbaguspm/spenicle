@@ -116,9 +116,17 @@ function Mailbox({ root }: { root: string }) {
                 : status === 'reauth_required'
                   ? 'The grant expired: authorise Google again.'
                   : 'No mailbox is connected. Polling stays off until one is.'}
-              {connection.data.revoked_at === undefined
-                ? ''
-                : ` Revoked ${formatDate(connection.data.revoked_at, DateFormat.Timestamp)}.`}
+              {[
+                connection.data.revoked_at === undefined
+                  ? ''
+                  : ` Revoked ${formatDate(connection.data.revoked_at, DateFormat.Timestamp)}.`,
+                connection.data.access_expires_at === undefined
+                  ? ''
+                  : ` Access until ${formatDate(connection.data.access_expires_at, DateFormat.Timestamp)}.`,
+                connection.data.last_refreshed_at === undefined
+                  ? ''
+                  : ` Refreshed ${formatDate(connection.data.last_refreshed_at, DateFormat.Timestamp)}.`,
+              ].join('')}
             </Text>
           )}
 

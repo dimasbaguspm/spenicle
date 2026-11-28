@@ -31,6 +31,11 @@ export function ExportList({
               <Text as="span" tone="caption" className="text-text-faint block">
                 {caption}
               </Text>
+              {row.error === undefined || row.error === '' ? null : (
+                <Text as="span" tone="caption" className="text-danger block">
+                  {row.error}
+                </Text>
+              )}
             </span>
             <span className="flex shrink-0 items-center gap-3">
               <span

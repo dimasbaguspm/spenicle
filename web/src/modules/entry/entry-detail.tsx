@@ -33,6 +33,10 @@ function postingLine(
         : undefined,
     amount: amount.toDisplay(),
     outgoing: amount.isNegative(),
+    fx:
+      posting.fx_rate === undefined
+        ? undefined
+        : `at ${posting.fx_rate}${posting.fx_source === undefined ? '' : ` (${posting.fx_source})`}`,
   }
 }
 
@@ -111,6 +115,12 @@ export function EntryDetail({
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-4">
+            <dt className="text-text-faint text-xs">Source</dt>
+            <dd className="text-text truncate text-xs">
+              {entry.source === undefined ? absent : entry.source}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4">
             <dt className="text-text-faint text-xs">Ref</dt>
             <dd className="text-text-muted font-mono text-[0.6875rem] break-all">{entry.ref}</dd>
           </div>
@@ -146,6 +156,11 @@ export function EntryDetail({
                   >
                     {posting.name}
                   </Link>
+                )}
+                {posting.fx === undefined ? null : (
+                  <Text as="span" tone="caption" className="text-text-faint block">
+                    {posting.fx}
+                  </Text>
                 )}
               </span>
               <span className="text-text-faint border-border rounded border px-1.5 py-0.5 text-[0.625rem] tracking-wide uppercase">

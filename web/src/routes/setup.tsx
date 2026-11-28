@@ -34,10 +34,26 @@ export function SetupPage() {
 
   const [password, setPassword] = useState('')
   const [currency, setCurrency] = useState(bootstrap.base_currency)
+  const [account, setAccount] = useState('')
+  const [opening, setOpening] = useState('')
 
   const finish = useMutation({
     mutationFn: async () => {
-      await openLedger({ password, base_currency: currency })
+      await openLedger({
+        password,
+        base_currency: currency,
+        ...(account.trim() === ''
+          ? {}
+          : {
+              accounts: [
+                {
+                  kind: 'asset',
+                  name: account.trim(),
+                  opening_balance_minor: opening.trim() === '' ? '0' : opening.trim(),
+                },
+              ],
+            }),
+      })
 
       // the instance is closed now, so the browser still needs a credential of its own
       const { data, error, response } = await api.POST('/api/tokens', {
@@ -76,7 +92,9 @@ export function SetupPage() {
     )
   }
 
-  const ready = password.length >= 12 && currencyCode.test(currency)
+  // an account without a balance is not an opening balance: the API wants nonzero minor units
+  const openingOk = account.trim() === '' || /^-?[0-9]+$/.test(opening.trim())
+  const ready = password.length >= 12 && currencyCode.test(currency) && openingOk && opening !== '0'
 
   return (
     <Shell
@@ -130,6 +148,39 @@ export function SetupPage() {
               className="font-mono tracking-[0.2em] uppercase"
               onChange={(event) => {
                 setCurrency(event.target.value.trim().toUpperCase())
+              }}
+            />
+          </Field>
+
+          <Field
+            label="An account to start with"
+            hint="Optional. Leave it empty and add accounts later from Manage."
+          >
+            <TextInput
+              name="opening-account"
+              value={account}
+              autoComplete="off"
+              placeholder="Cash, Main account…"
+              onChange={(event) => {
+                setAccount(event.target.value)
+              }}
+            />
+          </Field>
+
+          <Field
+            label="Opening balance"
+            hint="Whole minor units, signed: 100000 is 1,000.00 in a two-decimal currency and 100000 in one without decimals."
+            error={openingOk ? undefined : 'digits only, with a leading minus when it is a debt'}
+          >
+            <TextInput
+              name="opening-balance"
+              value={opening}
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="0"
+              className="font-mono"
+              onChange={(event) => {
+                setOpening(event.target.value.trim())
               }}
             />
           </Field>

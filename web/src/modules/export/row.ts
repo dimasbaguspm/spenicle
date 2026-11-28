@@ -6,6 +6,8 @@ import { absent } from '@/lib/text'
 export type ExportLike = Pick<ExportJob, 'ref' | 'format' | 'status' | 'bytes' | 'created_at'> & {
   from?: string | undefined
   to?: string | undefined
+  finished_at?: string | undefined
+  error_message?: string | undefined
 }
 
 /** One export job as a row renders it: what it is, over what, how big and when it was asked for. */
@@ -19,6 +21,7 @@ export type ExportRow = {
   when: string
   tone: string
   downloadable: boolean
+  error?: string | undefined
 }
 
 const muted = 'text-text-muted'
@@ -96,8 +99,12 @@ export function exportRow(job: ExportLike): ExportRow {
     label: labelOf(format),
     window: windowOf(job),
     size: sizeOf(job.bytes),
-    when: formatDate(job.created_at, DateFormat.Timestamp),
+    when:
+      job.finished_at === undefined
+        ? formatDate(job.created_at, DateFormat.Timestamp)
+        : `${formatDate(job.created_at, DateFormat.Timestamp)}, done ${formatDate(job.finished_at, DateFormat.Timestamp)}`,
     tone: tones[status] ?? muted,
     downloadable: status === 'ready',
+    error: job.error_message,
   }
 }

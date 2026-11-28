@@ -81,6 +81,16 @@ export function ImportReviewPage() {
               value={detail?.rows_total === undefined ? absent : String(detail.rows_total)}
             />
             <Fact label="Currency" value={detail?.currency ?? absent} />
+            <Fact
+              label="Closed"
+              value={
+                detail?.committed_at === undefined
+                  ? detail?.rejected_at === undefined
+                    ? absent
+                    : `rejected ${formatDate(detail.rejected_at, DateFormat.Timestamp)}`
+                  : `committed ${formatDate(detail.committed_at, DateFormat.Timestamp)}`
+              }
+            />
             <Fact label="Expires" value={formatDate(detail?.expires_at, DateFormat.Iso)} />
           </dl>
 

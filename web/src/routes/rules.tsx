@@ -220,6 +220,9 @@ function Suggestion({ accounts }: { accounts: readonly Account[] }) {
             </Text>
             <Text as="p" tone="caption" className="text-text-faint">
               {answer.data.tier === 'none' ? 'nothing matched' : answer.data.tier}
+              {answer.data.rule_ref === undefined
+                ? ''
+                : `, rule ${answer.data.rule_ref.slice(0, 8)}`}
             </Text>
           </div>
         )}

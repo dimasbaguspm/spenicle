@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router'
+
 import { buttonStyles } from '@/components/primitives/button'
 import { Text } from '@/components/primitives/text'
 import { cn } from '@/lib/cn'
@@ -63,6 +65,15 @@ export function StatementTable({
                 <Text as="span" tone="caption" className="text-warning">
                   {row.clash}
                 </Text>
+              )}
+              {row.clashRef === undefined ? null : (
+                <Link
+                  to="/ledger/$ref"
+                  params={{ ref: row.clashRef }}
+                  className={cn(buttonStyles({ tone: 'quiet', size: 'sm' }))}
+                >
+                  Entry
+                </Link>
               )}
               <span
                 className={cn(

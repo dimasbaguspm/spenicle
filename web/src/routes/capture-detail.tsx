@@ -9,6 +9,7 @@ import { Panel, PanelHead } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
 import { Field } from '@/components/primitives/field'
+import { SwitchInput } from '@/components/primitives/switch-input'
 import { DateField, Form, SelectField, TextField } from '@/components/ui/form'
 import { useCaptures, useReviewCapture } from '@/hooks/queries/use-captures'
 import { useMeta } from '@/hooks/queries/use-meta'
@@ -73,7 +74,19 @@ export function CaptureReviewPage() {
           </Text>
           <Text as="p" tone="caption" className="text-text-faint">
             Arrived {formatDate(capture?.received_at, DateFormat.Timestamp)}
+            {capture?.extraction_rail === undefined
+              ? ', extracted by hand'
+              : `, extracted by ${capture.extraction_rail}`}
+            {capture?.extraction_model === undefined ? '' : ` (${capture.extraction_model})`}
+            {capture?.resolved_at === undefined
+              ? ''
+              : `, resolved ${formatDate(capture.resolved_at, DateFormat.Timestamp)}`}
           </Text>
+          {capture?.resolution_note === undefined || capture.resolution_note === '' ? null : (
+            <Text as="p" tone="caption" className="text-text-muted">
+              {capture.resolution_note}
+            </Text>
+          )}
         </div>
       </Panel>
 
@@ -126,6 +139,7 @@ function ApprovePanel({
   const money = useMoney()
   const review = useReviewCapture()
   const [reason, setReason] = useState('')
+  const [learn, setLearn] = useState(false)
 
   const categoryOptions = accounts
     .filter((account) => isCategoryKind(account.kind))
@@ -169,6 +183,7 @@ function ApprovePanel({
                     currency: money.scale.currency,
                     note: values.note,
                     ...(values.payeeRef === '' ? {} : { payee_ref: values.payeeRef }),
+                    ...(learn ? { learn: true } : {}),
                     postings: [
                       { account_ref: values.accountRef, amount_minor: signed.toMinor() },
                       { account_ref: values.categoryRef, amount_minor: signed.negate().toMinor() },
@@ -181,6 +196,14 @@ function ApprovePanel({
           >
             {() => (
               <>
+                <SwitchInput
+                  checked={learn}
+                  label="Remember this"
+                  hint="Teaches a rule from this approval, so the next capture from the same payee arrives pre-filled."
+                  onCheckedChange={(next) => {
+                    setLearn(next)
+                  }}
+                />
                 <SelectField<EntryFormValues>
                   name="categoryRef"
                   label="Category"
