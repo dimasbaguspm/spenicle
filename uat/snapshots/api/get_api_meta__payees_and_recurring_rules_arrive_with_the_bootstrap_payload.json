@@ -17,6 +17,7 @@
       "ref": "<ref>"
     }
   ],
+  "app_secret": "<fingerprint>",
   "currencies": [
     {
       "code": "AED",

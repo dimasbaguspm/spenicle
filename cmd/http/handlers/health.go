@@ -6,22 +6,15 @@ import (
 
 	"github.com/dimasbaguspm/spenicle/internal/common/httpx"
 	telemetry "github.com/dimasbaguspm/spenicle/internal/common/otel"
-	"github.com/dimasbaguspm/spenicle/internal/constant"
 )
 
 type healthResponse struct {
-	Status          string `json:"status"`
-	Version         string `json:"version"`
-	StartedAt       string `format:"date-time"    json:"started_at"`
-	SchemaVersion   int    `json:"schema_version"`
-	AppSecret       string `json:"app_secret"`
-	BaseCurrency    string `json:"base_currency"  maxLength:"3"             minLength:"3"`
-	Timezone        string `json:"timezone"`
-	WorkerLastRunAt string `format:"date-time"    json:"worker_last_run_at"`
+	Status  string `json:"status"`
+	Version string `json:"version"`
 }
 
-// @Summary     Liveness, build and schema fingerprint
-// @Description Answers `degraded` when the store cannot be reached. The `app_secret` value is a fingerprint, never the secret. Public route: no credential is read.
+// @Summary     Liveness: ping the store, name the build
+// @Description A probe, not a dashboard: `status` is `ok` while the store answers, and `version` is `<tag>+<sha7>` (or `dev`). Everything else this route used to publish — the schema version, the boot time, the worker heartbeat, the currency and the timezone — is boot state, and boot state lives in `GET /api/bootstrap`; the sealed secret's fingerprint is a credential-owned fact and lives in `GET /api/meta`. Public route: no credential is read.
 // @Tags        system
 // @Produce     json
 // @Success     200 {object} healthResponse
@@ -45,33 +38,9 @@ func (s *Server) Health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) health(ctx context.Context) (healthResponse, error) {
-	schemaVersion, err := s.deps.Health.SchemaVersion(ctx)
-	if err != nil {
+	if err := s.deps.Health.Ping(ctx); err != nil {
 		return healthResponse{}, err
 	}
 
-	if pingErr := s.deps.Health.Ping(ctx); pingErr != nil {
-		return healthResponse{}, pingErr
-	}
-
-	baseCurrency, err := s.deps.Settings.BaseCurrency(ctx)
-	if err != nil {
-		return healthResponse{}, err
-	}
-
-	lastRun, _, err := s.deps.Health.Setting(ctx, constant.SettingWorkerLastRunAt)
-	if err != nil {
-		return healthResponse{}, err
-	}
-
-	return healthResponse{
-		Status:          "ok",
-		Version:         s.deps.Version,
-		StartedAt:       s.deps.StartedAt.UTC().Format(constant.TimestampLayout),
-		SchemaVersion:   schemaVersion,
-		AppSecret:       s.deps.Sealer.Fingerprint(),
-		BaseCurrency:    baseCurrency,
-		Timezone:        s.deps.Timezone,
-		WorkerLastRunAt: lastRun,
-	}, nil
+	return healthResponse{Status: "ok", Version: s.deps.Version}, nil
 }

@@ -374,16 +374,18 @@ nothing else; removing one means deleting the constant, the read and the field.
 
 `GET /api/bootstrap` is the other public read, and the one a client uses before it holds a
 credential: `setup_completed` (the setup marker), `claimable` (no password stored yet, so the
-instance can still be claimed), `base_currency`, `timezone` and the capability flags, no
-account and no secret. That is how the SPA's `/setup` route decides between the claim wizard
-and the sign-in screen — `/healthz` stays liveness only.
+instance can still be claimed), `base_currency`, `timezone`, the capability flags and the boot
+state — `version` (`<tag>+<sha7>`), `started_at`, `schema_version` and `worker_last_run_at`
+(RFC3339, empty until the worker finishes a run). No account and no secret. That is how the
+SPA's `/setup` route decides between the claim wizard and the sign-in screen, and how a
+running container proves it is the build you think it is.
 
-`/healthz` returns `status`, `version` (`<tag>+<sha7>`), `started_at`, `schema_version`,
-`app_secret` fingerprint, `base_currency`, `timezone` and `worker_last_run_at` (RFC3339, empty
-until the worker finishes a run). The heartbeat is the `worker_last_run_at` row the
-worker writes into `settings`, so the `http` process reports it even though it never
-runs the worker itself. Use it to prove a running container is the build you think it
-is, and that both services are alive.
+`/healthz` is a probe and nothing else: `status` and `version`. `200` means the store answered
+its ping, `503` means it did not. Everything else it used to publish moved to `/api/bootstrap`,
+and the sealed secret's fingerprint moved to `GET /api/meta`, where a credential is required —
+an 8-hex fingerprint is not the secret, but it is not a public fact either. The heartbeat is the
+`worker_last_run_at` row the worker writes into `settings`, so the `http` process reports it
+even though it never runs the worker itself.
 
 The way out is a job, not a request. `POST /api/exports` writes a `queued` row and
 answers `201`; the worker claims it, renders the ledger through `internal/module/export`

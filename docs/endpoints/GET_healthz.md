@@ -4,19 +4,19 @@
 
 ## Purpose
 
-Prove the process is alive, which build it is and when this process booted, and that the
-database is reachable — the first call any monitor, agent or release script makes.
+A probe, not a dashboard: `200` while the database answers its ping, `503` when it does not,
+and the build named in the body so a container can prove which image it is running. It is the
+first call any monitor, agent or release script makes.
 
 ## Upstream
 
-Container healthcheck, `skills/release`, an agent's first call.
+Container healthcheck, `skills/release`, an agent's first call, the SPA's footer.
 
 ## Downstream
 
-`Repository.Sqlite.SchemaVersion` (`SELECT MAX(version)`),
-`Repository.Sqlite.Ping` (`SELECT 1`), `Module.Settings.BaseCurrency` (the sealed
-settings row, read on every call) and `Repository.Sqlite.Setting` (`worker_last_run_at`).
-It makes no vendor call.
+`Repository.Sqlite.Ping` (`SELECT 1`). Nothing else: no schema query, no settings read, no
+vendor call. The boot state that used to be read here lives in `GET /api/bootstrap`, and the
+sealed secret's fingerprint in `GET /api/meta`.
 
 ## Path / query params
 
@@ -29,29 +29,24 @@ None.
 ## Response
 
 ```json
-{"status":"ok","version":"v0.1.1+e0d15ce","started_at":"2026-04-15T08:00:00Z","schema_version":1,"app_secret":"41539bfba9c4a1ec","base_currency":"IDR","timezone":"UTC","worker_last_run_at":"2026-04-15T09:00:00Z"}
+{"status":"ok","version":"v0.1.1+e0d15ce"}
 ```
+
+`version` is `<tag>+<sha7>`, or `dev` from a local build.
 
 ## Errors
 
-`503 degraded` with the database error message when either query fails.
+`503 degraded` with the database error message when the ping fails.
 
 ## Limitations
 
-No deep checks (no FX fetch, no vendor ping); `app_secret` is a
-fingerprint, never the secret. `timezone` is the value captured at boot: the IANA name the
-instance was pinned to (`APP_TIMEZONE`, default `UTC`), read-only. `base_currency` is read
-live from the settings row on every call, so it is the current value, not a boot snapshot.
-`started_at` is the UTC RFC3339 time this process booted. It changes on every restart;
-the durable history of earlier boots is in `/api/audit`
+No deep checks (no FX fetch, no vendor ping, no queue state). The facts this route used to
+publish — `started_at`, `schema_version`, `base_currency`, `timezone`, `worker_last_run_at` and
+the `app_secret` fingerprint — moved on purpose: boot state belongs to `/api/bootstrap`, where a
+client already looks before it holds a credential, and the fingerprint belongs to `/api/meta`,
+because an 8-hex digest is not the secret but it is not a public fact either. `started_at`
+changes on every restart; the durable history of earlier boots is in `/api/audit`
 (`entity_kind=system`, `action=start`).
-`worker_last_run_at` is the heartbeat of the recurring worker: RFC3339 for the last run
-that finished every stage, and empty when it never completed a run or when the process
-was started in `http` mode.
-
-
-
----
 
 ## Sequence
 
@@ -62,12 +57,9 @@ sequenceDiagram
     participant H as Health handler
     participant DB as SQLite
     M->>H: GET /healthz
-    H->>DB: SELECT MAX(version) FROM schema_migrations
     H->>DB: SELECT 1
-    H->>DB: SELECT the sealed settings row (base_currency)
-    H->>DB: SELECT v FROM settings WHERE k = worker_last_run_at
     alt reachable
-        H-->>M: 200 status ok, version, started_at, schema_version, fingerprint
+        H-->>M: 200 status ok, version
     else failure
         H-->>M: 503 degraded
     end

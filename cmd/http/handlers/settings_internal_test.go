@@ -35,9 +35,8 @@ func TestEverySettingsPayloadCarriesTheBaseCurrencyAndTheTimezone(t *testing.T) 
 			payload: toSettingsResponse(appSettings, false, false),
 		},
 		{
-			name: "/healthz",
-			payload: healthResponse{
-				Status:       "ok",
+			name: "/api/bootstrap",
+			payload: bootstrapResponse{
 				BaseCurrency: appSettings.BaseCurrency,
 				Timezone:     appSettings.Timezone,
 			},

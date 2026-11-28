@@ -3,6 +3,10 @@
   "base_currency": "IDR",
   "claimable": true,
   "extraction_enabled": false,
+  "schema_version": 1,
   "setup_completed": false,
-  "timezone": "UTC"
+  "started_at": "<timestamp>",
+  "timezone": "UTC",
+  "version": "<version>",
+  "worker_last_run_at": ""
 }

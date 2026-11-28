@@ -29,6 +29,7 @@ type accountResponse struct {
 }
 
 type metaResponse struct {
+	AppSecret  string              `json:"app_secret"`
 	Settings   settingsResponse    `json:"settings"`
 	Accounts   []accountResponse   `json:"accounts"`
 	Payees     []payeeResponse     `json:"payees"`
@@ -103,6 +104,7 @@ func (s *Server) GetMeta(w http.ResponseWriter, r *http.Request) {
 
 	payeeBodies, recurringBodies := toMetaCollections(payees, rules)
 	out := metaResponse{
+		AppSecret:  s.deps.Sealer.Fingerprint(),
 		Settings:   toSettingsResponse(appSettings, s.deps.ExtractionEnabled, s.deps.AIAssistance),
 		Accounts:   accountBodies,
 		Payees:     payeeBodies,

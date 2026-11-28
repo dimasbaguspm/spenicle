@@ -3,6 +3,10 @@
   "base_currency": "USD",
   "claimable": false,
   "extraction_enabled": false,
+  "schema_version": 1,
   "setup_completed": true,
-  "timezone": "UTC"
+  "started_at": "<timestamp>",
+  "timezone": "UTC",
+  "version": "<version>",
+  "worker_last_run_at": ""
 }

@@ -1,10 +1,4 @@
 {
-  "app_secret": "<fingerprint>",
-  "base_currency": "IDR",
-  "schema_version": 1,
-  "started_at": "<timestamp>",
   "status": "ok",
-  "timezone": "UTC",
-  "version": "<version>",
-  "worker_last_run_at": ""
+  "version": "<version>"
 }

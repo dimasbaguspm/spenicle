@@ -9,6 +9,11 @@ One authenticated round trip fills the shell: settings, every account with its d
 all-time balance, every payee, every recurring rule and the embedded currency list.
 Collections are complete, not first pages, and empty collections are `[]`.
 
+It also carries `app_secret`, the 8-hex fingerprint of the key that sealed this database. It is
+not the secret, but it is the fact that proves a restored file matches its `APP_SECRET`, and that
+is a fact for the operator rather than for the internet — which is why it lives here and not on
+`/healthz`.
+
 ## Upstream
 
 PWA bootstrap and agents discovering account, payee and recurring-rule refs.
@@ -32,6 +37,7 @@ None.
 
 ```json
 {
+  "app_secret": "41539bfba9c4a1ec",
   "settings": {
     "base_currency": "IDR",
     "timezone": "UTC",

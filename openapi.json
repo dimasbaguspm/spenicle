@@ -205,10 +205,24 @@
           "extraction_enabled": {
             "type": "boolean"
           },
+          "schema_version": {
+            "type": "integer"
+          },
           "setup_completed": {
             "type": "boolean"
           },
+          "started_at": {
+            "format": "date-time",
+            "type": "string"
+          },
           "timezone": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "worker_last_run_at": {
+            "format": "date-time",
             "type": "string"
           }
         },
@@ -682,8 +696,16 @@
             "pattern": "^[0-9a-f]{32}$",
             "type": "string"
           },
+          "reversal_of_ref": {
+            "pattern": "^[0-9a-f]{32}$",
+            "type": "string"
+          },
           "reversed_at": {
             "format": "date-time",
+            "type": "string"
+          },
+          "reversed_by_ref": {
+            "pattern": "^[0-9a-f]{32}$",
             "type": "string"
           },
           "running_balance_minor": {
@@ -809,32 +831,10 @@
       },
       "healthResponse": {
         "properties": {
-          "app_secret": {
-            "type": "string"
-          },
-          "base_currency": {
-            "maxLength": 3,
-            "minLength": 3,
-            "type": "string"
-          },
-          "schema_version": {
-            "type": "integer"
-          },
-          "started_at": {
-            "format": "date-time",
-            "type": "string"
-          },
           "status": {
             "type": "string"
           },
-          "timezone": {
-            "type": "string"
-          },
           "version": {
-            "type": "string"
-          },
-          "worker_last_run_at": {
-            "format": "date-time",
             "type": "string"
           }
         },
@@ -1140,6 +1140,9 @@
             },
             "type": "array",
             "uniqueItems": false
+          },
+          "app_secret": {
+            "type": "string"
           },
           "currencies": {
             "items": {
@@ -2901,7 +2904,7 @@
     },
     "/api/bootstrap": {
       "get": {
-        "description": "The one read a client needs before it holds a credential. `setup_completed` reports the `POST /api/setup` marker itself: false means the setup never finished, true means it did. `claimable` answers the question a client actually acts on — can this instance still be claimed? — and it is false the moment a password is stored, because that is when the identity middleware stops treating every request as the root credential. The two differ on a database claimed by an earlier build: a password, no marker. No credential, no account, no amount and no secret is read.",
+        "description": "The one read a client needs before it holds a credential. `setup_completed` reports the `POST /api/setup` marker itself: false means the setup never finished, true means it did. `claimable` answers the question a client actually acts on — can this instance still be claimed? — and it is false the moment a password is stored, because that is when the identity middleware stops treating every request as the root credential. It also carries the boot state `/healthz` used to publish: `version`, `started_at`, `schema_version` and the worker's `worker_last_run_at`. No account, no amount and no secret is read; the sealed secret's fingerprint is a credential-owned fact and lives in `GET /api/meta`.",
         "operationId": "getApiBootstrap",
         "responses": {
           "200": {
@@ -7667,7 +7670,7 @@
     },
     "/healthz": {
       "get": {
-        "description": "Answers `degraded` when the store cannot be reached. The `app_secret` value is a fingerprint, never the secret. Public route: no credential is read.",
+        "description": "A probe, not a dashboard: `status` is `ok` while the store answers, and `version` is `\u003ctag\u003e+\u003csha7\u003e` (or `dev`). Everything else this route used to publish — the schema version, the boot time, the worker heartbeat, the currency and the timezone — is boot state, and boot state lives in `GET /api/bootstrap`; the sealed secret's fingerprint is a credential-owned fact and lives in `GET /api/meta`. Public route: no credential is read.",
         "operationId": "getHealthz",
         "responses": {
           "200": {
@@ -7692,7 +7695,7 @@
           }
         },
         "security": [],
-        "summary": "Liveness, build and schema fingerprint",
+        "summary": "Liveness: ping the store, name the build",
         "tags": [
           "system"
         ],

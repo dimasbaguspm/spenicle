@@ -161,7 +161,7 @@ export interface paths {
     }
     /**
      * Public boot state: has this instance been claimed yet?
-     * @description The one read a client needs before it holds a credential. `setup_completed` reports the `POST /api/setup` marker itself: false means the setup never finished, true means it did. `claimable` answers the question a client actually acts on — can this instance still be claimed? — and it is false the moment a password is stored, because that is when the identity middleware stops treating every request as the root credential. The two differ on a database claimed by an earlier build: a password, no marker. No credential, no account, no amount and no secret is read.
+     * @description The one read a client needs before it holds a credential. `setup_completed` reports the `POST /api/setup` marker itself: false means the setup never finished, true means it did. `claimable` answers the question a client actually acts on — can this instance still be claimed? — and it is false the moment a password is stored, because that is when the identity middleware stops treating every request as the root credential. It also carries the boot state `/healthz` used to publish: `version`, `started_at`, `schema_version` and the worker's `worker_last_run_at`. No account, no amount and no secret is read; the sealed secret's fingerprint is a credential-owned fact and lives in `GET /api/meta`.
      */
     get: operations['getApiBootstrap']
     put?: never
@@ -968,8 +968,8 @@ export interface paths {
       cookie?: never
     }
     /**
-     * Liveness, build and schema fingerprint
-     * @description Answers `degraded` when the store cannot be reached. The `app_secret` value is a fingerprint, never the secret. Public route: no credential is read.
+     * Liveness: ping the store, name the build
+     * @description A probe, not a dashboard: `status` is `ok` while the store answers, and `version` is `<tag>+<sha7>` (or `dev`). Everything else this route used to publish — the schema version, the boot time, the worker heartbeat, the currency and the timezone — is boot state, and boot state lives in `GET /api/bootstrap`; the sealed secret's fingerprint is a credential-owned fact and lives in `GET /api/meta`. Public route: no credential is read.
      */
     get: operations['getHealthz']
     put?: never
@@ -1046,8 +1046,14 @@ export interface components {
       base_currency?: string
       claimable?: boolean
       extraction_enabled?: boolean
+      schema_version?: number
       setup_completed?: boolean
+      /** Format: date-time */
+      started_at?: string
       timezone?: string
+      version?: string
+      /** Format: date-time */
+      worker_last_run_at?: string
     }
     captureApprovedResponse: {
       capture?: components['schemas']['captureResponse']
@@ -1193,8 +1199,10 @@ export interface components {
       payee?: components['schemas']['payeeSummary']
       postings?: components['schemas']['postingResponse'][]
       ref?: string
+      reversal_of_ref?: string
       /** Format: date-time */
       reversed_at?: string
+      reversed_by_ref?: string
       running_balance_minor?: string
       /** @enum {string} */
       source?: 'manual' | 'share' | 'email' | 'statement' | 'recurring' | 'adjustment'
@@ -1241,16 +1249,8 @@ export interface components {
       to?: string
     }
     healthResponse: {
-      app_secret?: string
-      base_currency?: string
-      schema_version?: number
-      /** Format: date-time */
-      started_at?: string
       status?: string
-      timezone?: string
       version?: string
-      /** Format: date-time */
-      worker_last_run_at?: string
     }
     importBatchResponse: {
       /** Format: date-time */
@@ -1349,6 +1349,7 @@ export interface components {
     }
     metaResponse: {
       accounts?: components['schemas']['accountResponse'][]
+      app_secret?: string
       currencies?: components['schemas']['currencyResponse'][]
       payees?: components['schemas']['payeeResponse'][]
       recurring?: components['schemas']['recurringResponse'][]

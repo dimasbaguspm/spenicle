@@ -236,7 +236,7 @@ That agent can add captures and read the dashboard. It cannot touch the ledger. 
 | --- | --- |
 | `SNAPTOJSON_API_KEY` env is unset | extraction stays off; captures are typed by hand — set it to enable the vendor |
 | container exits with `app secret mismatch` | `APP_SECRET` differs from the one that sealed this database. Restore the original secret. If it is gone for good, start over: stop the container, delete `spenicle.db`, boot again — the ledger you keep is the one you backed up |
-| `/healthz` returns 503 | schema query, database ping or settings read failed; a secret mismatch stops boot before the API serves |
+| `/healthz` returns 503 | the database ping failed; a secret mismatch stops boot before the API serves, and `/api/bootstrap` carries the schema version and worker heartbeat |
 | captures stay `pending` with no draft | extraction is disabled (no API key); typing the fields works fine |
 | no share target on iPhone | iOS Safari has none; use a Shortcut that POSTs to `/api/captures` |
 | a month looks short of what you spent | nothing derives the gap yet: the month report (unlogged spend, FX movement, price changes, rounding) is planned, and `GET /api/analytics/months` returns ledger totals only — capture the missing spend |
