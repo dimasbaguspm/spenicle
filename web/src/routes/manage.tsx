@@ -8,6 +8,7 @@ import { useAccounts } from '@/hooks/queries/use-accounts'
 import { useCaptures } from '@/hooks/queries/use-captures'
 import { useExports } from '@/hooks/queries/use-exports'
 import { usePayees } from '@/hooks/queries/use-payees'
+import { useRecurring } from '@/hooks/queries/use-recurring'
 import { accountScope } from '@/modules'
 
 /** Stable crumbs: a new array on every render would re-render the trail for nothing. */
@@ -15,13 +16,14 @@ const manageCrumbs = [{ label: 'Manage' }] as const
 
 /**
  * The parent of everything you keep rather than everything you read. The desk header carries one
- * tab for it, and this page is the index: five children, one line each, in the order a household
+ * tab for it, and this page is the index: six children, one line each, in the order a household
  * sets an instance up.
  */
 export function ManagePage() {
   const accounts = useAccounts({ limit: 200 })
   const payees = usePayees({ limit: 200 })
   const captures = useCaptures({ status: 'pending', limit: 50 })
+  const recurring = useRecurring({ limit: 200 })
   const exports = useExports({ limit: 50 })
 
   const held = accounts.data?.accounts ?? []
@@ -46,6 +48,12 @@ export function ManagePage() {
       label: 'Payees',
       caption: 'Who was paid, and the defaults each name carries.',
       count: payees.isSuccess ? String(payees.data.payees.length) : '',
+    },
+    {
+      to: '/manage/recurring',
+      label: 'Recurring',
+      caption: 'What comes back around, and when it is next due.',
+      count: recurring.isSuccess ? String(recurring.data.recurring.length) : '',
     },
     {
       to: '/manage/captures',

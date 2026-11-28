@@ -238,6 +238,19 @@ optional reason. Nothing posts itself. `/exports` queues a JSON or CSV export, l
 their status, and downloads a ready file: the bytes arrive through `fetch` with the bearer header
 and are saved from a blob, because the download route is not public.
 
+## Recurring — a rule is a schedule, not an entry
+
+`/manage/recurring` lists what comes back around, soonest first, and one form creates a rule: the
+payee that names it, the category and account it lands in, the amount, the cadence and the next
+due date. There is no direction switch here either — the category decides whether the rule files
+money out or in, exactly as it does on the entry form.
+
+A monthly rule carries its day of the month as the day of the due date, so the form asks for one
+date and derives the rest. The row says `Every month on day 28`; pause and resume send
+`PATCH /api/recurring/{ref}` with a `state` and nothing else, because payee, account and category
+are immutable after creation. A rule never posts an entry: when it comes due the worker queues a
+capture and `/manage/captures` is where it becomes one.
+
 ## `api/` and `hooks/queries/` — one shape, one door
 
 The generated contract (`src/types/generated/openapi.ts`) marks every field optional, which is

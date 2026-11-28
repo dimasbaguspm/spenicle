@@ -118,7 +118,8 @@ web/                   the SPA: React 19 + Vite + TanStack Router/Query, forms o
                        `/new`, `/{ref}`, `/{ref}/edit`: asset, liability, equity),
                        `/manage/categories` (the same four routes, for expense and income accounts:
                        a category is an account, not a table), `/manage/payees` (the same four: a
-                       name plus an optional default account and category), `/manage/captures` (+
+                       name plus an optional default account and category), `/manage/recurring`
+                       (the rules, plus pause and resume), `/manage/captures` (+
                        `/{ref}` to review one), `/manage/exports`, `/manage/rates`), plus
                        `/settings` (an index over `/settings/appearance`, `/settings/password` and
                        `/settings/tokens`). The shell has
