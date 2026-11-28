@@ -204,6 +204,24 @@ is a name plus two optional defaults (`default_account_ref`, `default_category_r
 sends a ref only when one was picked, which is also how a patch leaves the other default alone.
 `modules/payee/row.ts` resolves both refs to words once per page instead of once per row.
 
+## Writing an entry — direction is the category
+
+`/ledger/new` is one screen with two modes: type it, or scan it. The mode lives in the URL
+(`?mode=scan`), a segmented strip on a phone and two cards on a desk, so the camera shortcut is
+still one link. The manual form reads in the order a person remembers a purchase: amount, what it
+was, the day, who was paid, which account, which category.
+
+There is no "income" switch. A category either files money going out (`expense`) or money coming
+in (`income`), so picking an income category turns the entry around: the account gains and the
+category gives, the label over the account reads "Received in", and a line under the fields says
+which way the money moved. A salary is an `income` category and an asset account; nothing else
+changes.
+
+Nothing is deleted. `/ledger/$ref` offers Reverse, which asks for an optional reason and sends
+`PATCH /api/entries/{ref}` with `reverse: true`: the postings are mirrored, both rows stay in the
+journal, `reversed_at` marks the original, and the screen replaces the button with a `reversed`
+chip once the API confirms.
+
 ## `api/` and `hooks/queries/` — one shape, one door
 
 The generated contract (`src/types/generated/openapi.ts`) marks every field optional, which is

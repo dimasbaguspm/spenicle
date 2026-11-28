@@ -7,11 +7,13 @@ import { Controller, type UseFormReturn } from 'react-hook-form'
 import { createCapture } from '@/api/captures'
 import { queryClient } from '@/api/query'
 import type { Account, Payee } from '@/api/types'
+import { BreakpointDesktop, BreakpointTablet } from '@/components/primitives/breakpoint'
 import { Button } from '@/components/primitives/button'
 import { control } from '@/components/primitives/control'
 import { Field } from '@/components/primitives/field'
 import { PageHeader } from '@/components/primitives/page-header'
 import { Panel, PanelHead } from '@/components/primitives/panel'
+import { SegmentGroup } from '@/components/primitives/segment-group'
 import { SelectInput } from '@/components/primitives/select-input'
 import { Text } from '@/components/primitives/text'
 import { TextInput } from '@/components/primitives/text-input'
@@ -29,6 +31,8 @@ import {
   type EntryFormValues,
 } from '@/modules'
 
+type Mode = 'manual' | 'scan'
+
 /**
  * Writing an entry starts with a choice, not an amount: type it, or hand over the receipt and let
  * the intake queue it. `/ledger/new?mode=scan` is the same page with the other mode open, so a
@@ -39,14 +43,34 @@ export function NewEntryPage() {
   const navigate = useNavigate({ from: '/ledger/new' })
   const meta = useMeta()
 
+  const go = (next: Mode) => {
+    void navigate({ to: '/ledger/new', search: { mode: next } })
+  }
+
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="space-y-6">
       <PageHeader
         items={[{ label: 'Ledger', to: '/ledger' }, { label: 'New entry' }]}
         title="New entry"
       />
 
-      <ModeSwitch mode={mode} />
+      <BreakpointTablet>
+        <SegmentGroup
+          block
+          value={mode}
+          options={[
+            { label: 'Type it', value: 'manual' },
+            { label: 'Scan', value: 'scan' },
+          ]}
+          onValueChange={(next) => {
+            go(next === 'scan' ? 'scan' : 'manual')
+          }}
+        />
+      </BreakpointTablet>
+
+      <BreakpointDesktop>
+        <ModeCards mode={mode} />
+      </BreakpointDesktop>
 
       {mode === 'manual' ? (
         <ManualEntry
@@ -65,8 +89,8 @@ export function NewEntryPage() {
   )
 }
 
-/** Two ways in, one control: the shape of the page, not a route of its own. */
-function ModeSwitch({ mode }: { mode: 'manual' | 'scan' }) {
+/** Two ways in, spelled out once: the desk has the room for what each one does. */
+function ModeCards({ mode }: { mode: Mode }) {
   const tab = 'flex items-center gap-3 rounded-md px-4 py-3 text-sm transition-colors'
   const on = 'bg-surface text-text border-border-strong border'
   const off = 'text-text-muted hover:text-text'
@@ -104,6 +128,10 @@ function ModeSwitch({ mode }: { mode: 'manual' | 'scan' }) {
 /**
  * The manual form is only mounted once the meta read lands: its opening values are the two refs it
  * offers, and a form is the wrong place to discover that the list arrived late.
+ *
+ * The direction is not a field. A category either files money going out or money coming in, so
+ * picking an income category is what turns the entry around: the account gains and the category
+ * gives, instead of the other way about.
  */
 function ManualEntry({
   accounts,
@@ -126,6 +154,9 @@ function ManualEntry({
     .filter((account) => isMoneyKind(account.kind))
     .map((account) => ({ label: account.name, value: account.ref }))
 
+  const isIncome = (ref: string) =>
+    accounts.find((account) => account.ref === ref)?.kind === 'income'
+
   if (!ready) {
     return (
       <Panel>
@@ -141,7 +172,7 @@ function ManualEntry({
       <div className="p-5 sm:p-6">
         <PanelHead
           eyebrow="Manual entry"
-          description="Two postings, one amount: the category takes what the account gives up."
+          description="Two postings, one amount: one side takes what the other gives up."
         />
 
         <Form<EntryFormValues>
@@ -160,6 +191,9 @@ function ManualEntry({
               return
             }
 
+            const income = isIncome(values.categoryRef)
+            const signed = income ? amount : amount.negate()
+
             post.mutate(
               {
                 occurred_on: values.occurredOn,
@@ -167,8 +201,8 @@ function ManualEntry({
                 note: values.note,
                 ...(values.payeeRef === '' ? {} : { payee_ref: values.payeeRef }),
                 postings: [
-                  { account_ref: values.categoryRef, amount_minor: amount.toMinor() },
-                  { account_ref: values.accountRef, amount_minor: amount.negate().toMinor() },
+                  { account_ref: values.accountRef, amount_minor: signed.toMinor() },
+                  { account_ref: values.categoryRef, amount_minor: signed.negate().toMinor() },
                 ],
               },
               {
@@ -180,35 +214,45 @@ function ManualEntry({
             )
           }}
         >
-          {(form) => (
-            <>
-              <TextField<EntryFormValues>
-                name="amount"
-                label="Amount"
-                hint={`In ${money.scale.currency}, the currency the ledger is kept in.`}
-                placeholder="0"
-              />
-              <TextField<EntryFormValues>
-                name="note"
-                label="What was it"
-                placeholder="coffee, taxi, rent…"
-              />
-              <DateField<EntryFormValues> name="occurredOn" label="Day" />
-              <PayeeField form={form} payees={payees} />
-              <SelectField<EntryFormValues>
-                name="categoryRef"
-                label="Category"
-                options={categoryOptions}
-                placeholder="pick a category…"
-              />
-              <SelectField<EntryFormValues>
-                name="accountRef"
-                label="Paid from"
-                options={accountOptions}
-                placeholder="pick an account…"
-              />
-            </>
-          )}
+          {(form) => {
+            const income = isIncome(form.watch('categoryRef'))
+
+            return (
+              <>
+                <TextField<EntryFormValues>
+                  name="amount"
+                  label="Amount"
+                  hint={`In ${money.scale.currency}, the currency the ledger is kept in.`}
+                  placeholder="0"
+                />
+                <TextField<EntryFormValues>
+                  name="note"
+                  label="What was it"
+                  placeholder="coffee, taxi, salary…"
+                />
+                <DateField<EntryFormValues> name="occurredOn" label="Day" />
+                <PayeeField form={form} payees={payees} />
+                <SelectField<EntryFormValues>
+                  name="accountRef"
+                  label={income ? 'Received in' : 'Paid from'}
+                  options={accountOptions}
+                  placeholder="pick an account…"
+                />
+                <SelectField<EntryFormValues>
+                  name="categoryRef"
+                  label="Category"
+                  options={categoryOptions}
+                  placeholder="pick a category…"
+                  hint="An income category turns the entry around."
+                />
+                <Text as="p" tone="caption" className="text-text-faint">
+                  {income
+                    ? 'Money in: the account gains, the category gives.'
+                    : 'Money out: the category takes, the account gives up.'}
+                </Text>
+              </>
+            )
+          }}
         </Form>
 
         {post.error === null ? null : (
