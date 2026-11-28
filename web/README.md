@@ -193,6 +193,10 @@ none. Because the state is the URL, a narrowed view is a link:
 The route validates the search (`validateSearch: entrySearch`), so an unknown or empty param is
 dropped rather than sent, and `/manage/accounts/$ref` pins `account_ref` to the account in the path.
 
+A window is one field, not two: `DateRangePickerField` puts the two native date inputs under a
+single `When` label, joined by the word between them, and writes the `from` and `to` names the query
+already carries. The rail sticks below the header (`lg:sticky lg:top-[4.5rem]`), never under it.
+
 An account and a category are both accounts on the wire, so the rail keeps them apart and the
 query joins them: `account_ref=a,b,c` means "touching any of these", never "all of them", because
 that is the only semantics `GET /api/entries` has. Both fields are multi-selects
@@ -202,8 +206,8 @@ count, so a filter never reads as a hash.
 Every screen's top is one component, `components/primitives/page-header`: breadcrumb, a title, one
 sentence and one action. The title never repeats the last crumb — `PAYEES / Who you pay`, not
 `PAYEES / Payees` — and a detail page drops its own name from the trail so the name is said once, in
-the title. The sentence under it says what the screen is for (`Every entry, newest first. Narrow it
-with the rail.`), is desktop-only like the title, and is a sentence, not a hint. Page actions are
+the title. The sentence under it says what the screen is for (`Every entry, the newest day first.
+Narrow it with the rail.`), is desktop-only like the title, and is a sentence, not a hint. Page actions are
 the transparent `quiet` button, never a filled one.
 
 The same filter layer sits under `/manage/accounts/$ref`, `/manage/categories/$ref` and

@@ -5,7 +5,7 @@ import { Button } from '@/components/primitives/button'
 import { Drawer } from '@/components/primitives/drawer'
 import { Panel } from '@/components/primitives/panel'
 import { Text } from '@/components/primitives/text'
-import { DateField, MultiSelectField, QueryForm, TextField } from '@/components/ui/form'
+import { DateRangePickerField, MultiSelectField, QueryForm, TextField } from '@/components/ui/form'
 import { accountName, isCategoryKind, isMoneyKind } from '@/modules/account'
 
 import { entryDraft, filterCount, type EntrySearch } from './filters'
@@ -22,10 +22,7 @@ type FilterProps = {
 function FilterFields({ accounts, payees }: Pick<FilterProps, 'accounts' | 'payees'>) {
   return (
     <div className="grid gap-4">
-      <div className="grid grid-cols-2 gap-4">
-        <DateField<EntrySearch> name="from" label="From" />
-        <DateField<EntrySearch> name="to" label="To" />
-      </div>
+      <DateRangePickerField<EntrySearch> from="from" to="to" label="When" />
       <MultiSelectField<EntrySearch>
         name="account"
         label="Account"
@@ -64,7 +61,7 @@ export function EntryFilterRail({
   const active = filterCount(value)
 
   return (
-    <Panel className="space-y-4 p-4 lg:sticky lg:top-4">
+    <Panel className="space-y-4 p-4 lg:sticky lg:top-[4.5rem]">
       <div className="flex items-baseline justify-between gap-2">
         <Text as="p" tone="section">
           Filter
